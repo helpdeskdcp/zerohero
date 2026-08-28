@@ -90,11 +90,17 @@
       if (state.view === "overview") loadOverview();
     }
     if (state.view === "monitor" &&
-        /^(scalp_|position_|combo_|reversal_)/.test(msg.type || "")) loadMonitor();
+        /^(scalp_|position_|combo_|reversal_|turning_point_)/.test(msg.type || "")) loadMonitor();
     if (msg.type === "reversal_signal") {
       const d = msg.data || {};
       prependFeed({ direction: d.direction, decision: "REVERSAL " + (d.reversal || ""),
         market_regime: d.kind, probability: d.confidence, underlying: d.symbol, created_ts: new Date().toISOString() });
+    }
+    if (msg.type === "turning_point_signal") {
+      const d = msg.data || {};
+      prependFeed({ direction: (d.direction || "").includes("UP") ? "BUY" : "SELL",
+        decision: "TURN " + (d.direction || ""), market_regime: (d.timeframe || "") + " conf " + d.confidence,
+        probability: Math.round((d.p_up || 0.5) * 100), underlying: d.symbol, created_ts: new Date().toISOString() });
     }
     if (msg.type === "position_open" || msg.type === "position_update" || msg.type === "position_exit") {
       if (state.view === "scalp") loadScalp();
@@ -352,6 +358,29 @@
           <td>${fmt(r.risk_reward, 2)}</td>
           <td>${fmt(r.confidence, 0)}%</td>
         </tr>`).join("");
+    }
+
+    const tps = m.turning_points || [];
+    const tpp = $("#monTpPanel");
+    if (tpp) {
+      tpp.hidden = tps.length === 0;
+      $("#monTpTable tbody").innerHTML = tps.map(t => {
+        const tr = t.trade_ref || {};
+        return `<tr>
+          <td>${t.symbol}${t.timeframe ? ` <span class="hint">${t.timeframe}</span>` : ""}</td>
+          <td class="feed-dir ${(t.direction || "").includes("UP") ? "BUY" : "SELL"}">${(t.direction || "").replace("_TURN", "")}</td>
+          <td>${fmt(t.turn, 2)}</td>
+          <td>${fmt((t.p_up || 0) * 100, 0)}%</td>
+          <td${t.high_confidence ? ' style="color:var(--gold-soft);font-weight:600"' : ""}>${fmt(t.confidence, 0)}%</td>
+          <td>${(t.expected_move || {}).direction || "—"} ${fmt((t.expected_move || {}).pts, 1)}</td>
+          <td><b>${tr.option || "—"}</b></td>
+          <td>${fmt(tr.entry_ref, 1)}</td>
+          <td>${fmt(tr.stop_loss, 1)}</td>
+          <td>${fmt(tr.target_1, 1)}</td>
+          <td>${fmt(tr.target_2, 1)}</td>
+          <td>${fmt(tr.risk_reward, 2)}</td>
+        </tr>`;
+      }).join("");
     }
 
     $("#monMarks").innerHTML = Object.entries(feed.marks || {}).map(([t, mk]) =>

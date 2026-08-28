@@ -57,13 +57,45 @@ def run_scalp_pipeline(req: dict) -> dict:
         "config": req.get("scalp_config") or {},
     })
 
+    # --- 2b. Turning-Point Engine (deterministic; additive — informs, never
+    #         silently overrides). Reuses the scalp engine's indicator calc. ---
+    tp = None
+    if req.get("turning_point", True) and (conn.get("candles") or []):
+        try:
+            from .engines.turning_point_engine import run_turning_point_engine
+            from . import tp_calibration
+            tp = run_turning_point_engine({
+                "candles": conn.get("candles") or [],
+                "signal_calc": sig.get("calculations"),
+                "chain": req.get("chain"),
+                "config": req.get("tp_config") or {},
+                "calibration": tp_calibration.load(),
+            })
+            if req.get("tp_record", True):
+                tp_calibration.record(tp, sig.get("symbol") or req.get("symbol") or "",
+                                      sig.get("timeframe") or req.get("timeframe") or "1m")
+        except Exception:
+            tp = None
+
+    _tp_dir = {"UP_TURN": "BUY", "DOWN_TURN": "SELL"}.get((tp or {}).get("direction"))
+    tp_agrees = bool(_tp_dir and _tp_dir == sig.get("direction"))
+    tp_opposes = bool(_tp_dir and sig.get("direction") in ("BUY", "SELL") and _tp_dir != sig.get("direction"))
+    tp_confirmed = bool(tp and tp.get("high_confidence") and tp_agrees)
+
     # --- 3. risk engine ---
     ez = sig.get("entry_zone") or {}
+    # when the turn is confirmed and tp_use_levels is on, hand Risk the
+    # zone-based entry/stop instead of the raw scalp levels
+    _tref = (tp or {}).get("trade_ref") or {}
+    if tp_confirmed and req.get("tp_use_levels") and _tref.get("entry_ref"):
+        risk_entry, risk_stop = _tref["entry_ref"], _tref["stop_loss"]
+    else:
+        risk_entry, risk_stop = ez.get("ref"), sig.get("stop_loss")
     risk = run_risk_engine({
         "signal": {
             "direction": sig.get("direction") or "NONE",
-            "entry_ref": ez.get("ref"),
-            "stop_loss": sig.get("stop_loss"),
+            "entry_ref": risk_entry,
+            "stop_loss": risk_stop,
         },
         "account": req.get("account") or {},
         "instrument": req.get("risk_instrument") or {},
@@ -80,6 +112,8 @@ def run_scalp_pipeline(req: dict) -> dict:
         gate.append(f"GATE: scalp.decision={sig.get('decision', 'MISSING')} (require TRADE)")
     if risk.get("risk_status") != "APPROVED":
         gate.append(f"GATE: risk_status={risk.get('risk_status', 'MISSING')} (require APPROVED)")
+    if req.get("tp_veto") and tp and tp.get("high_confidence") and tp_opposes:
+        gate.append(f"GATE: turning-point engine opposes ({tp['direction']} conf {tp['confidence']}%)")
     approved = not gate
 
     signal_id = _signal_id()
@@ -124,7 +158,15 @@ def run_scalp_pipeline(req: dict) -> dict:
         "final_decision": "APPROVED" if approved else "NO_TRADE",
         "approved": approved,
         "allowed_quantity": risk.get("allowed_quantity") or 0,
+        "turning_point": tp,
+        "tp_confirmed": tp_confirmed,
+        "tp_agrees": tp_agrees,
+        "tp_opposes": tp_opposes,
     }
+    if tp_confirmed:
+        reason_parts.append(f"TP-CONFIRMED ({tp['direction']} conf {tp['confidence']}%, "
+                            f"p_up {tp['p_up']}, exp {tp['expected_move']['pts']}pts)")
+        contract["reason"] = " | ".join(reason_parts)[:900]
 
     pipeline_core.log_and_notify(contract)
 
@@ -135,4 +177,5 @@ def run_scalp_pipeline(req: dict) -> dict:
             extra={"strategy": "SCALP", "setup": contract["setup"],
                    "atr_pct": contract["atr_pct"], "max_hold_sec": contract["max_hold_sec"]})
 
-    return {"contract": contract, "connector": conn, "signal": sig, "risk": risk, "trade": trade}
+    return {"contract": contract, "connector": conn, "signal": sig, "risk": risk,
+            "turning_point": tp, "trade": trade}

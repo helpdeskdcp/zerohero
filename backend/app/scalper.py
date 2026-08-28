@@ -65,6 +65,11 @@ DEFAULT_CONFIG = {
     "wrong_side_check": True,   # run the signal engine on the underlying, flag opposing bias
     "reversal_watch": [],       # ["NATGASMINI","NIFTY",...] — alert on S/R reversals
     "reversal_tf": "15m",        # a single timeframe or a list, e.g. ["5m","15m"]
+    "tp_engine": True,          # run the Turning-Point Engine on scan + pipeline (additive)
+    "tp_calibration": True,     # record predictions + resolve them against future OHLC
+    "tp_veto": False,           # let a high-confidence opposing turn block a scalp entry
+    "tp_use_levels": False,     # use TP zone entry/stop/target when the turn is confirmed
+    "tp_config": {},            # forwarded verbatim to run_turning_point_engine
     "ignore_session": False,
     "session_tz_offset_min": 330,
     "session_start": "09:20",
@@ -127,8 +132,11 @@ class ScalpRunner:
         self._sig_cache = {}        # underlying token -> (epoch, signal dict)
         self._rev_alerted = {}      # symbol -> "BULLISH"|"BEARISH" last alerted
         self.reversals = {}         # symbol -> last reversal dict (for /api/monitor)
+        self.turning_points = {}    # "sym@tf" -> last turning_point dict (for /api/monitor)
+        self._tp_alerted = {}       # "sym@tf" -> last high-confidence direction alerted
+        self._fresh_tp = []         # TP alerts to emit this tick (set by _scan_reversals)
         self._latch_maps = (        # every dict here is persisted across restarts
-            "_alerted", "_broker_miss", "_ws_alerted", "_rev_alerted")
+            "_alerted", "_broker_miss", "_ws_alerted", "_rev_alerted", "_tp_alerted")
         self._owner = f"{socket.gethostname()}:{os.getpid()}"
         self.is_leader = False      # True only in the ONE process that holds the lease
         self._mkt_open = True       # cached each loop; gates reversal scan + sync cadence
@@ -324,6 +332,12 @@ class ScalpRunner:
                 {k: cfg[k] for k in ("ignore_session", "session_tz_offset_min", "session_start",
                                      "session_end", "skip_open_min", "skip_close_min")},
                 cfg.get("scalp_config") or {}),
+            # Turning-Point Engine wiring (additive by default; veto/levels opt-in)
+            "turning_point": cfg.get("tp_engine", True),
+            "tp_record": cfg.get("tp_calibration", True),
+            "tp_veto": bool(cfg.get("tp_veto", False)),
+            "tp_use_levels": bool(cfg.get("tp_use_levels", False)),
+            "tp_config": cfg.get("tp_config") or {},
         }
         req.update(item)
         if item.get("replay_candles") is not None:
@@ -517,7 +531,7 @@ class ScalpRunner:
                 syms.add(t["underlying"])
         tfs = cfg.get("reversal_tf") or "15m"
         tfs = [tfs] if isinstance(tfs, str) else list(tfs)
-        fresh = []
+        fresh, fresh_tp = [], []
         for sym in syms:
             meta = instruments.resolve(sym)
             if not meta:
@@ -551,6 +565,26 @@ class ScalpRunner:
                     fresh.append(r)
                 elif not rev and lkey in self._rev_alerted:
                     self._rev_alerted.pop(lkey, None)
+
+                # Turning-Point engine on the same candles → continuous
+                # prediction stream for calibration (+ high-confidence alert)
+                if cfg.get("tp_engine", True):
+                    try:
+                        from .engines.turning_point_engine import run_turning_point_engine
+                        from . import tp_calibration
+                        tp = run_turning_point_engine({
+                            "candles": cds, "config": cfg.get("tp_config") or {},
+                            "calibration": tp_calibration.load()})
+                        self.turning_points[lkey] = {**tp, "symbol": sym, "timeframe": tf}
+                        tp_calibration.record(tp, sym, tf)
+                        if tp.get("high_confidence") and self._tp_alerted.get(lkey) != tp["direction"]:
+                            self._tp_alerted[lkey] = tp["direction"]
+                            fresh_tp.append({**tp, "symbol": sym, "timeframe": tf})
+                        elif not tp.get("high_confidence") and lkey in self._tp_alerted:
+                            self._tp_alerted.pop(lkey, None)
+                    except Exception:
+                        pass
+        self._fresh_tp = fresh_tp
         return fresh
 
     def _wrong_side(self, trade: dict, cfg: dict):
@@ -800,6 +834,31 @@ class ScalpRunner:
                 await self._emit("reversal_signal", r)
         except Exception as e:
             self.last_error = f"reversal scan: {type(e).__name__}: {e}"
+
+        # Turning-Point high-confidence alerts (populated by _scan_reversals)
+        for tp in getattr(self, "_fresh_tp", []):
+            tr = tp.get("trade_ref") or {}
+            await asyncio.to_thread(_tg_send,
+                f"🎯 <b>TURNING POINT {tp.get('timeframe','')} — {tp['symbol']} {tp['direction']}</b>\n"
+                f"conf {tp['confidence']}%  ·  p_up {tp['p_up']}  ·  turn {tp['turn']}\n"
+                f"Expected move: {tp['expected_move']['direction']} {tp['expected_move']['pts']} pts "
+                f"({tp['expected_move']['pct']}%)\n"
+                f"Plan: buy {tr.get('option','?')}  entry {tr.get('entry_ref')}  "
+                f"SL {tr.get('stop_loss')}  T1 {tr.get('target_1')}  T2 {tr.get('target_2')}  "
+                f"(RR {tr.get('risk_reward')})\n"
+                f"{' · '.join(tp.get('reason') or [])[:3] if isinstance(tp.get('reason'), list) else ''}\n"
+                f"⚠️ Deterministic zone estimate — monitor-only, you place it.",
+                os.environ.get("TELEGRAM_CHAT_ID"))
+            await self._emit("turning_point_signal", tp)
+        self._fresh_tp = []
+
+        # Turning-Point calibration: resolve due predictions, recalibrate
+        if self._mkt_open and cfg.get("tp_calibration", True):
+            try:
+                from . import tp_calibration
+                await asyncio.to_thread(tp_calibration.tick, angelone.fetch_candles)
+            except Exception as e:
+                self.last_error = f"tp calib: {type(e).__name__}: {e}"
 
     async def _entries(self):
         cfg = self.get_config()

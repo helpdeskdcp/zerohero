@@ -66,6 +66,22 @@ def run_pipeline(req: dict) -> dict:
     }
     oi = run_oi_options_engine(oi_input)
 
+    # --- 3b. Turning-Point Engine (deterministic, additive/informational) ---
+    tp = None
+    if (req.get("signal_config") or {}).get("turning_point", True) and (conn.get("candles") or []):
+        try:
+            from .engines.turning_point_engine import run_turning_point_engine
+            from . import tp_calibration
+            tp = run_turning_point_engine({
+                "candles": conn.get("candles") or [],
+                "signal_calc": sig.get("calculations"),
+                "chain": req.get("chain"),
+                "config": req.get("tp_config") or {},
+                "calibration": tp_calibration.load(),
+            })
+        except Exception:
+            tp = None
+
     # --- 4. Risk Engine ---
     calc = sig.get("calculations") or {}
     ez = sig.get("entry_zone") or {}
@@ -148,6 +164,7 @@ def run_pipeline(req: dict) -> dict:
         "approved": approved,
         "allowed_quantity": risk.get("allowed_quantity") or 0,
         "oi_evidence": oi_evidence,
+        "turning_point": tp,
     }
 
     # --- 6. Log + notify ---
@@ -164,5 +181,6 @@ def run_pipeline(req: dict) -> dict:
         "signal": sig,
         "oi": oi,
         "risk": risk,
+        "turning_point": tp,
         "trade": trade,
     }

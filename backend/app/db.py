@@ -87,6 +87,34 @@ CREATE TABLE IF NOT EXISTS app_settings (
     value TEXT
 );
 
+-- Turning-Point Engine predictions, resolved against future OHLC for
+-- deterministic closed-form calibration (no ML).
+CREATE TABLE IF NOT EXISTS tp_predictions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT,
+    symbol TEXT,
+    timeframe TEXT,
+    direction TEXT,              -- UP_TURN | DOWN_TURN | NO_TURN
+    turn REAL,
+    raw REAL,
+    p_up REAL,
+    confidence INTEGER,
+    close_at_pred REAL,
+    atr_at_pred REAL,
+    horizon_bars INTEGER,
+    next_hi_lo REAL, next_hi_hi REAL,
+    next_lo_lo REAL, next_lo_hi REAL,
+    expected_move_pts REAL,
+    feature_scores TEXT,        -- JSON
+    resolved INTEGER DEFAULT 0,
+    resolved_ts TEXT,
+    outcome TEXT,               -- DIRECTION_HIT | ZONE_HIT | BOTH | MISS | TIMEOUT
+    fwd_close REAL,
+    mfe_atr REAL, mae_atr REAL,
+    signed_outcome REAL,        -- realised (fwd_close - close_at_pred)/atr, for weight corr
+    err_pts REAL
+);
+
 CREATE INDEX IF NOT EXISTS ix_trades_status_strategy ON ai_paper_trades(status, strategy);
 CREATE INDEX IF NOT EXISTS ix_trades_symboltoken     ON ai_paper_trades(symboltoken);
 CREATE INDEX IF NOT EXISTS ix_trades_opened_ts       ON ai_paper_trades(opened_ts);
