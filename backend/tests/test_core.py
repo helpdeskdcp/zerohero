@@ -64,6 +64,29 @@ def test_gate_opens_a_trade_when_all_stages_pass(fresh_db):
     assert res["trade"] and res["trade"]["strategy"] == "SCALP"
 
 
+# ---------------------------------------------------------------- orchestrator (core pipeline)
+def test_orchestrator_no_trade_still_logs_a_signal(fresh_db):
+    from app.orchestrator import run_pipeline
+    res = run_pipeline({"symbol": "X", "instrument": "FUTURES", "timeframe": "5m",
+                        "candles": candles([100.0] * 60),
+                        "account": {"capital": 200000, "risk_pct": 1}})
+    c = res["contract"]
+    assert c["final_decision"] == "NO_TRADE" and res["trade"] is None
+    # contract keeps its full shape and a row lands in the ledger
+    for k in ("signal_id", "decision", "risk_status", "data_status", "model_version"):
+        assert k in c
+    assert len(fresh_db.list_signals(limit=10)) == 1
+    assert fresh_db.list_signals(limit=1)[0]["signal_id"].startswith("SIG-")
+
+
+def test_scalp_pipeline_signal_id_prefix(fresh_db):
+    from app.scalp_pipeline import run_scalp_pipeline
+    res = run_scalp_pipeline({"underlying": "X", "candles": candles([100.0] * 40),
+                              "scalp_config": {"ignore_session": True},
+                              "account": {"capital": 200000, "risk_pct": 0.5}})
+    assert res["contract"]["signal_id"].startswith("SCL-")
+
+
 # ---------------------------------------------------------------- combos
 def test_combo_stop_alerts_once(fresh_db):
     from app.engines.paper_trading import open_trade

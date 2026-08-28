@@ -339,7 +339,7 @@
       rp.hidden = revs.length === 0;
       $("#monRevTable tbody").innerHTML = revs.map(r => `
         <tr>
-          <td>${r.symbol}</td>
+          <td>${r.symbol}${r.timeframe ? ` <span class="hint">${r.timeframe}</span>` : ""}</td>
           <td class="feed-dir ${r.direction === "SELL" ? "SELL" : "BUY"}">${r.reversal || "—"}</td>
           <td>${(r.kind || "").replace("AT_", "")}</td>
           <td>${fmt(r.level, 1)}</td>

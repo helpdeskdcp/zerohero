@@ -11,19 +11,17 @@ WebSocket feed treat both the same.
 
 live_trading is hard-coded False. No broker order call exists in this file.
 """
-import time
-import random
 from datetime import datetime, timezone
 
 from .engines.scalp_engine import run_scalp_engine
 from .engines.risk_engine import run_risk_engine
-from .engines.paper_trading import open_trade
-from .connectors import angelone, telegram
+from .connectors import angelone
 from . import db
+from . import pipeline_core
 
 
 def _signal_id():
-    return "SCL-" + format(int(time.time() * 1000), "x") + "-" + format(random.randint(0, 0xFFFFF), "x")
+    return pipeline_core.signal_id("SCL")
 
 
 def run_scalp_pipeline(req: dict) -> dict:
@@ -128,33 +126,13 @@ def run_scalp_pipeline(req: dict) -> dict:
         "allowed_quantity": risk.get("allowed_quantity") or 0,
     }
 
-    db.insert_signal({k: contract[k] for k in contract if k in (
-        "signal_id", "created_ts", "market", "symbol", "instrument", "underlying",
-        "expiry", "strike", "option_type", "direction", "timeframe", "entry_ref",
-        "target_1", "target_2", "stop_loss", "trailing_stop", "probability",
-        "confidence", "risk_reward", "market_regime", "decision", "data_status",
-        "risk_status", "reason", "model_version", "live_trading")})
-    try:
-        telegram.notify_signal(contract)
-    except Exception:
-        pass
+    pipeline_core.log_and_notify(contract)
 
     trade = None
     if approved:
-        trade = open_trade({
-            "signal_id": contract["signal_id"],
-            "market": contract["market"], "underlying": contract["underlying"],
-            "instrument": contract["instrument"], "expiry": contract["expiry"],
-            "strike": contract["strike"], "option_type": contract["option_type"],
-            "direction": contract["direction"], "timeframe": contract["timeframe"],
-            "entry": contract["entry_ref"], "target_1": contract["target_1"],
-            "target_2": contract["target_2"], "stop_loss": contract["stop_loss"],
-            "trailing_stop": contract["trailing_stop"], "quantity": contract["allowed_quantity"],
-            "probability": contract["probability"], "confidence": contract["confidence"],
-            "market_regime": contract["market_regime"], "oi_evidence": "",
-            "reason": f"scalp {contract['setup']} approved",
-            "strategy": "SCALP", "setup": contract["setup"], "atr_pct": contract["atr_pct"],
-            "max_hold_sec": contract["max_hold_sec"],
-        })
+        trade = pipeline_core.open_from_contract(
+            contract, reason=f"scalp {contract['setup']} approved",
+            extra={"strategy": "SCALP", "setup": contract["setup"],
+                   "atr_pct": contract["atr_pct"], "max_hold_sec": contract["max_hold_sec"]})
 
     return {"contract": contract, "connector": conn, "signal": sig, "risk": risk, "trade": trade}

@@ -64,7 +64,7 @@ DEFAULT_CONFIG = {
     "trail_give_rs": 400,       # then keep alert-stop locking (unrealised - this)
     "wrong_side_check": True,   # run the signal engine on the underlying, flag opposing bias
     "reversal_watch": [],       # ["NATGASMINI","NIFTY",...] — alert on S/R reversals
-    "reversal_tf": "15m",
+    "reversal_tf": "15m",        # a single timeframe or a list, e.g. ["5m","15m"]
     "ignore_session": False,
     "session_tz_offset_min": 330,
     "session_start": "09:20",
@@ -515,38 +515,42 @@ class ScalpRunner:
         for t in db.list_trades(status="OPEN", limit=200, strategy="MANUAL"):
             if t.get("underlying"):
                 syms.add(t["underlying"])
-        tf = cfg.get("reversal_tf") or "15m"
+        tfs = cfg.get("reversal_tf") or "15m"
+        tfs = [tfs] if isinstance(tfs, str) else list(tfs)
         fresh = []
         for sym in syms:
             meta = instruments.resolve(sym)
             if not meta:
                 continue
-            key = "REV|" + str(meta.get("symboltoken"))
-            now = time.time()
-            hit = self._candle_cache.get(key)
-            if hit and now - hit[0] < 90:
-                cds = hit[1]
-            else:
-                try:
-                    conn = angelone.fetch_candles(
-                        market=meta.get("market"), symbol=sym, exchange=meta.get("exchange"),
-                        symboltoken=meta.get("symboltoken"), interval=None, fromdate=None,
-                        todate=None, timeframe=tf, instrument="FUT")
-                except Exception:
-                    continue
-                if conn.get("data_status") != "OK":
-                    continue
-                cds = conn["candles"]
-                self._candle_cache[key] = (now, cds)
-            r = detect_reversal(cds)
-            r["symbol"] = sym
-            self.reversals[sym] = r
-            rev = r.get("reversal")
-            if rev and self._rev_alerted.get(sym) != rev:
-                self._rev_alerted[sym] = rev
-                fresh.append(r)
-            elif not rev and sym in self._rev_alerted:
-                self._rev_alerted.pop(sym, None)
+            for tf in tfs:
+                key = f"REV|{meta.get('symboltoken')}|{tf}"
+                lkey = f"{sym}@{tf}"
+                now = time.time()
+                hit = self._candle_cache.get(key)
+                if hit and now - hit[0] < 90:
+                    cds = hit[1]
+                else:
+                    try:
+                        conn = angelone.fetch_candles(
+                            market=meta.get("market"), symbol=sym, exchange=meta.get("exchange"),
+                            symboltoken=meta.get("symboltoken"), interval=None, fromdate=None,
+                            todate=None, timeframe=tf, instrument="FUT")
+                    except Exception:
+                        continue
+                    if conn.get("data_status") != "OK":
+                        continue
+                    cds = conn["candles"]
+                    self._candle_cache[key] = (now, cds)
+                r = detect_reversal(cds)
+                r["symbol"] = sym
+                r["timeframe"] = tf
+                self.reversals[lkey] = r
+                rev = r.get("reversal")
+                if rev and self._rev_alerted.get(lkey) != rev:
+                    self._rev_alerted[lkey] = rev
+                    fresh.append(r)
+                elif not rev and lkey in self._rev_alerted:
+                    self._rev_alerted.pop(lkey, None)
         return fresh
 
     def _wrong_side(self, trade: dict, cfg: dict):
@@ -787,7 +791,7 @@ class ScalpRunner:
         try:
             for r in await asyncio.to_thread(self._scan_reversals, cfg):
                 await asyncio.to_thread(_tg_send,
-                    f"🔄 <b>REVERSAL — {r['symbol']} {r['reversal']} {r['kind']}</b>\n"
+                    f"🔄 <b>REVERSAL {r.get('timeframe','')} — {r['symbol']} {r['reversal']} {r['kind']}</b>\n"
                     f"Level {r.get('level')}  ·  price {r.get('price')}  ·  conf {r.get('confidence')}%\n"
                     f"Trade: buy {r.get('option')}  entry {r.get('entry')}  "
                     f"SL {r.get('stop')}  T1 {r.get('target_1')}  T2 {r.get('target_2')}  (RR {r.get('risk_reward')})\n"
