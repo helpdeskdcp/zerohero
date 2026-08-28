@@ -115,10 +115,61 @@ CREATE TABLE IF NOT EXISTS tp_predictions (
     err_pts REAL
 );
 
+-- Order Adapter: one row per broker order INTENT (entry / target / SL / exit).
+-- Written PREARMED before any submit so a crash mid-submit is recoverable by
+-- reconciliation instead of a blind re-send. client_tag is the idempotency key.
+CREATE TABLE IF NOT EXISTS broker_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_tag TEXT UNIQUE,       -- trade_id + ':' + leg  (idempotency key)
+    trade_id TEXT,
+    leg TEXT,                     -- ENTRY | TARGET | SL | EXIT
+    mode TEXT,                    -- PAPER | SHADOW | LIVE
+    side TEXT,                    -- BUY | SELL
+    order_type TEXT,             -- MARKET | LIMIT | SL | SL-M
+    variety TEXT,
+    product TEXT,
+    symbol TEXT,
+    symboltoken TEXT,
+    exchange TEXT,
+    tradingsymbol TEXT,
+    requested_qty REAL,
+    limit_price REAL,
+    trigger_price REAL,
+    status TEXT,                 -- PREARMED|ACCEPTED|OPEN|PARTIAL|COMPLETE|REJECTED|CANCELLED|UNKNOWN
+    broker_order_id TEXT,
+    unique_order_id TEXT,
+    filled_qty REAL DEFAULT 0,
+    avg_fill_price REAL,
+    prearm_ts TEXT,
+    submit_ts TEXT,
+    fill_ts TEXT,
+    last_reconcile_ts TEXT,
+    exit_reason TEXT,
+    error TEXT,
+    signal_confidence REAL,
+    signal_ts TEXT,
+    market_data_ts TEXT,
+    raw_json TEXT
+);
+
+-- Append-only audit trail: every state transition, reconcile, error, kill-switch
+-- toggle. Never updated, only inserted.
+CREATE TABLE IF NOT EXISTS order_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT,
+    trade_id TEXT,
+    client_tag TEXT,
+    kind TEXT,
+    detail TEXT                  -- JSON
+);
+
 CREATE INDEX IF NOT EXISTS ix_trades_status_strategy ON ai_paper_trades(status, strategy);
 CREATE INDEX IF NOT EXISTS ix_trades_symboltoken     ON ai_paper_trades(symboltoken);
 CREATE INDEX IF NOT EXISTS ix_trades_opened_ts       ON ai_paper_trades(opened_ts);
 CREATE INDEX IF NOT EXISTS ix_signals_created_ts     ON ai_signals_log(created_ts);
+CREATE INDEX IF NOT EXISTS ix_broker_orders_trade    ON broker_orders(trade_id);
+CREATE INDEX IF NOT EXISTS ix_broker_orders_status   ON broker_orders(status);
+CREATE INDEX IF NOT EXISTS ix_order_events_trade     ON order_events(trade_id);
 """
 
 
@@ -357,3 +408,75 @@ def find_open_by_token(symboltoken: str, strategy: str = "MANUAL"):
             (str(symboltoken), strategy))
         r = cur.fetchone()
         return dict(r) if r else None
+
+
+# ---------------------------------------------------------------- order adapter
+_BROKER_ORDER_COLS = (
+    "client_tag", "trade_id", "leg", "mode", "side", "order_type", "variety",
+    "product", "symbol", "symboltoken", "exchange", "tradingsymbol",
+    "requested_qty", "limit_price", "trigger_price", "status", "broker_order_id",
+    "unique_order_id", "filled_qty", "avg_fill_price", "prearm_ts", "submit_ts",
+    "fill_ts", "last_reconcile_ts", "exit_reason", "error", "signal_confidence",
+    "signal_ts", "market_data_ts", "raw_json",
+)
+
+
+def insert_broker_order(row: dict):
+    """INSERT OR IGNORE on client_tag — a second call with the same tag is a
+    no-op, which is exactly the idempotency guarantee the OrderManager relies on."""
+    vals = [row.get(c) for c in _BROKER_ORDER_COLS]
+    ph = ",".join(["?"] * len(_BROKER_ORDER_COLS))
+    with db() as conn:
+        conn.execute(
+            f"INSERT OR IGNORE INTO broker_orders ({','.join(_BROKER_ORDER_COLS)}) VALUES ({ph})",
+            vals)
+
+
+def update_broker_order(client_tag: str, fields: dict):
+    if not fields:
+        return
+    sets = ",".join([f"{k}=?" for k in fields])
+    with db() as conn:
+        conn.execute(f"UPDATE broker_orders SET {sets} WHERE client_tag=?",
+                     list(fields.values()) + [client_tag])
+
+
+def get_broker_order(client_tag: str):
+    with db() as conn:
+        r = conn.execute("SELECT * FROM broker_orders WHERE client_tag=?", (client_tag,)).fetchone()
+        return dict(r) if r else None
+
+
+def list_broker_orders(trade_id: str | None = None, status=None, limit: int = 500):
+    clauses, params = [], []
+    if trade_id:
+        clauses.append("trade_id=?")
+        params.append(trade_id)
+    if status:
+        stats = [status] if isinstance(status, str) else list(status)
+        clauses.append(f"status IN ({','.join(['?'] * len(stats))})")
+        params += stats
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        cur = conn.execute(f"SELECT * FROM broker_orders{where} ORDER BY id DESC LIMIT ?", params)
+        return [dict(r) for r in cur.fetchall()]
+
+
+def insert_order_event(trade_id, client_tag, kind, detail_json):
+    from datetime import datetime as _dt, timezone as _tz
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO order_events (ts, trade_id, client_tag, kind, detail) VALUES (?,?,?,?,?)",
+            (_dt.now(_tz.utc).isoformat(), trade_id, client_tag, kind, detail_json))
+
+
+def list_order_events(trade_id: str | None = None, limit: int = 500):
+    if trade_id:
+        q = "SELECT * FROM order_events WHERE trade_id=? ORDER BY id DESC LIMIT ?"
+        params = (trade_id, limit)
+    else:
+        q = "SELECT * FROM order_events ORDER BY id DESC LIMIT ?"
+        params = (limit,)
+    with db() as conn:
+        return [dict(r) for r in conn.execute(q, params).fetchall()]

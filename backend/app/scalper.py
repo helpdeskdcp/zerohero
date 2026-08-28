@@ -70,6 +70,21 @@ DEFAULT_CONFIG = {
     "tp_veto": False,           # let a high-confidence opposing turn block a scalp entry
     "tp_use_levels": False,     # use TP zone entry/stop/target when the turn is confirmed
     "tp_config": {},            # forwarded verbatim to run_turning_point_engine
+    # ---- Order Adapter (execution layer) — additive, LIVE hard-gated ----
+    "execution_enabled": False,   # route APPROVED scalps through the OrderManager
+    "execution_mode": "PAPER",    # PAPER | SHADOW | LIVE  (LIVE also needs env
+                                  # CHANAKYA_ALLOW_LIVE=1 AND live_confirm_token)
+    "execution_auto_exit": False,  # LIVE only: place a broker exit on a local TARGET/SL
+    "execution_place_broker_exits": False,   # LIVE only: pre-place SL-M after entry
+    "execution_reconcile_sec": 15,  # how often the runner reconciles open intents
+    "exec_stale_ltp_sec": 20,       # feed LTP older than this → no NEW entries
+    "exec_stale_reconcile_sec": 90,  # last reconcile older than this → freeze entries
+    "exec_rate_per_sec": 3,
+    "exec_burst": 5,
+    "exec_max_retries": 2,
+    "live_confirm_token": "",       # must be non-empty for LIVE order placement
+    "default_stop_pct": 0.35,       # fallback stop distance if the contract has none
+    "default_target_rr": 1.6,
     "ignore_session": False,
     "session_tz_offset_min": 330,
     "session_start": "09:20",
@@ -140,6 +155,11 @@ class ScalpRunner:
         self._owner = f"{socket.gethostname()}:{os.getpid()}"
         self.is_leader = False      # True only in the ONE process that holds the lease
         self._mkt_open = True       # cached each loop; gates reversal scan + sync cadence
+        # ---- Order Adapter ----
+        self.order_mgr = None            # lazily built; only the leader drives it
+        self._order_mgr_mode = None      # rebuild if execution_mode changes
+        self._last_exec_recon = 0.0
+        self._exec_alerts = deque(maxlen=50)   # OrderManager -> loop thread, drained in _manage
 
     # ---------------- error ring ----------------
     @property
@@ -274,6 +294,9 @@ class ScalpRunner:
             "broker_sync": bool(cfg.get("broker_sync", True)),
             "broker_sync_status": self.broker_sync_status if self.is_leader else pub.get("broker_sync_status"),
             "feed": self.feed.status() if self.is_leader else (pub.get("feed") or self.feed.status()),
+            "execution": (self.order_mgr.status() if (self.is_leader and self.order_mgr is not None)
+                          else {"enabled": bool(cfg.get("execution_enabled")),
+                                "mode": cfg.get("execution_mode", "PAPER")}),
             "config": cfg,
         }
 
@@ -339,6 +362,18 @@ class ScalpRunner:
             "tp_use_levels": bool(cfg.get("tp_use_levels", False)),
             "tp_config": cfg.get("tp_config") or {},
         }
+        if cfg.get("execution_enabled") and self.order_mgr is not None:
+            req["execution"] = {
+                "enabled": True,
+                "mode": cfg.get("execution_mode", "PAPER"),
+                "manager": self.order_mgr,
+                "ltp_provider": self.feed.get_ltp,
+                "symboltoken": item.get("symboltoken"),
+                "tradingsymbol": item.get("tradingsymbol"),
+                "instrument": {"exchange": item.get("exchange"),
+                               "product": item.get("product") or "INTRADAY",
+                               "option_type": item.get("option_type")},
+            }
         req.update(item)
         if item.get("replay_candles") is not None:
             req["candles"] = item["replay_candles"]
@@ -586,6 +621,73 @@ class ScalpRunner:
                         pass
         self._fresh_tp = fresh_tp
         return fresh
+
+    # ---------------- order adapter (execution layer) ----------------
+    def _exec_alert(self, kind: str, payload: dict):
+        """OrderManager callback — runs on whatever thread submit()/reconcile()
+        is on. Just queue; _manage drains on the loop thread."""
+        self._exec_alerts.append({"kind": kind, "data": payload})
+
+    def _ensure_order_mgr(self, cfg: dict):
+        """Leader-only. Build (or rebuild on a mode change) the single
+        OrderManager. Never raises — execution must not break the runner."""
+        if not cfg.get("execution_enabled"):
+            self.order_mgr = None
+            self._order_mgr_mode = None
+            return
+        mode = (cfg.get("execution_mode") or "PAPER").upper()
+        if self.order_mgr is not None and self._order_mgr_mode == mode:
+            return
+        try:
+            from .execution import OrderManager
+            ex_cfg = {
+                "execution_mode": mode,
+                "auto_exit": bool(cfg.get("execution_auto_exit")),
+                "place_broker_exits": bool(cfg.get("execution_place_broker_exits")),
+                "exec_stale_ltp_sec": cfg.get("exec_stale_ltp_sec", 20),
+                "exec_stale_reconcile_sec": cfg.get("exec_stale_reconcile_sec", 90),
+                "exec_reconcile_sec": cfg.get("execution_reconcile_sec", 15),
+                "exec_rate_per_sec": cfg.get("exec_rate_per_sec", 3),
+                "exec_burst": cfg.get("exec_burst", 5),
+                "exec_max_retries": cfg.get("exec_max_retries", 2),
+                "live_confirm_token": cfg.get("live_confirm_token", ""),
+                "default_stop_pct": cfg.get("default_stop_pct", 0.35),
+                "default_target_rr": cfg.get("default_target_rr", 1.6),
+            }
+            self.order_mgr = OrderManager(mode=mode, config=ex_cfg,
+                                          ltp_provider=self.feed.get_ltp,
+                                          on_alert=self._exec_alert)
+            self._order_mgr_mode = mode
+            try:
+                self.order_mgr.recover()     # reconcile any intents left by a prior process
+            except Exception as e:
+                self.last_error = f"order recover: {type(e).__name__}: {e}"
+        except Exception as e:
+            self.order_mgr = None
+            self.last_error = f"order mgr init: {type(e).__name__}: {e}"
+
+    def _drive_execution(self, cfg: dict):
+        """Leader-only, off the entry path. Mark every open local monitor to the
+        live feed LTP (target/SL/trail decisions) and periodically reconcile
+        open intents against the broker (source of truth)."""
+        om = self.order_mgr
+        if om is None:
+            return
+        for tid, mon in list(om.monitors.items()):
+            if mon.closed:
+                continue
+            st = om.states.get(tid)
+            tok = st.symboltoken if st else None
+            ltp = self.feed.get_ltp(tok) if tok else None
+            if ltp is not None:
+                om.on_ltp(tid, ltp)
+        now = time.time()
+        if now - self._last_exec_recon >= int(cfg.get("execution_reconcile_sec", 15)):
+            self._last_exec_recon = now
+            try:
+                om.reconcile_all()
+            except Exception as e:
+                self.last_error = f"order reconcile: {type(e).__name__}: {e}"
 
     def _wrong_side(self, trade: dict, cfg: dict):
         """Run the signal engine on the position's UNDERLYING; return
@@ -860,6 +962,30 @@ class ScalpRunner:
             except Exception as e:
                 self.last_error = f"tp calib: {type(e).__name__}: {e}"
 
+        # Order Adapter: keep the singleton alive, mark monitors to live LTP,
+        # reconcile open intents, and flush any alerts it raised.
+        self._ensure_order_mgr(cfg)
+        if self.order_mgr is not None:
+            try:
+                await asyncio.to_thread(self._drive_execution, cfg)
+            except Exception as e:
+                self.last_error = f"exec drive: {type(e).__name__}: {e}"
+        while self._exec_alerts:
+            a = self._exec_alerts.popleft()
+            await self._emit(f"execution_{a['kind']}", a["data"])
+            if a["kind"] in ("exit_signal", "reconcile_freeze", "order_rejected", "order_dead"):
+                try:
+                    d = a["data"]
+                    await asyncio.to_thread(_tg_send,
+                        f"⚙️ <b>ORDER ADAPTER — {a['kind'].replace('_', ' ').upper()}</b>\n"
+                        f"trade {d.get('trade_id')}  ·  {d.get('reason') or d.get('status') or ''}\n"
+                        f"{'; '.join(d.get('reasons') or []) if d.get('reasons') else d.get('note') or ''}\n"
+                        f"⚠️ Mode {self.get_config().get('execution_mode')} — "
+                        f"{'auto-exit ON' if self.get_config().get('execution_auto_exit') else 'monitor-only, you act'}.",
+                        os.environ.get("TELEGRAM_CHAT_ID"))
+                except Exception:
+                    pass
+
     async def _entries(self):
         cfg = self.get_config()
         session_ok, note = self._session_open(cfg)
@@ -925,6 +1051,8 @@ class ScalpRunner:
                 self.feed.start()             # only the leader connects the WS feed
             elif not leader and self.is_leader:
                 self.is_leader = False
+                self.order_mgr = None         # a standby must not drive execution
+                self._order_mgr_mode = None
                 try:
                     await self.feed.stop()    # relinquish the feed if leadership lost
                 except Exception:

@@ -177,5 +177,17 @@ def run_scalp_pipeline(req: dict) -> dict:
             extra={"strategy": "SCALP", "setup": contract["setup"],
                    "atr_pct": contract["atr_pct"], "max_hold_sec": contract["max_hold_sec"]})
 
+    # --- 5. Order Adapter (additive, opt-in via req['execution']['enabled']) ---
+    # Pre-arm + submit the approved contract through the OrderManager. The paper
+    # trade row above is the POSITION ledger; broker_orders is the ORDER ledger.
+    # Default OFF — with no execution block this is a no-op.
+    execution = None
+    if approved:
+        from .execution.integration import run_execution
+        execution = run_execution({**contract, "trade_id": (trade or {}).get("trade_id")
+                                   or contract["signal_id"]}, req, connector=conn)
+        if execution:
+            contract["execution"] = execution
+
     return {"contract": contract, "connector": conn, "signal": sig, "risk": risk,
-            "turning_point": tp, "trade": trade}
+            "turning_point": tp, "trade": trade, "execution": execution}

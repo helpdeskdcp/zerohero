@@ -175,6 +175,15 @@ def run_pipeline(req: dict) -> dict:
     if approved:
         trade = pipeline_core.open_from_contract(contract, reason="orchestrator approved")
 
+    # --- 8. Order Adapter (additive, opt-in via req['execution']['enabled']) ---
+    execution = None
+    if approved:
+        from .execution.integration import run_execution
+        execution = run_execution({**contract, "trade_id": (trade or {}).get("trade_id")
+                                   or contract["signal_id"]}, req, connector=conn)
+        if execution:
+            contract["execution"] = execution
+
     return {
         "contract": contract,
         "connector": conn,
@@ -183,4 +192,5 @@ def run_pipeline(req: dict) -> dict:
         "risk": risk,
         "turning_point": tp,
         "trade": trade,
+        "execution": execution,
     }
