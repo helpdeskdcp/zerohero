@@ -29,11 +29,23 @@
     catch { return iso; }
   };
 
+  // optional API token — only needed if the server sets CHANAKYA_API_TOKEN
+  let apiToken = "";
+  try { apiToken = localStorage.getItem("chanakya_token") || ""; } catch { /* private mode */ }
+  function setToken(t) {
+    apiToken = (t || "").trim();
+    try { localStorage.setItem("chanakya_token", apiToken); } catch { /* ignore */ }
+  }
+
   async function api(path, opts = {}) {
-    const res = await fetch(path, {
-      headers: { "Content-Type": "application/json" },
-      ...opts,
-    });
+    const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+    if (apiToken) headers["Authorization"] = "Bearer " + apiToken;
+    const res = await fetch(path, { ...opts, headers });
+    if (res.status === 401) {
+      const t = prompt("API token required (server has CHANAKYA_API_TOKEN set):", apiToken);
+      if (t !== null && t.trim()) { setToken(t); location.reload(); }
+      throw new Error("401 unauthorized");
+    }
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     return res.json();
   }
@@ -42,7 +54,8 @@
   let ws;
   function connectWs() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    const q = apiToken ? `?token=${encodeURIComponent(apiToken)}` : "";
+    ws = new WebSocket(`${proto}://${location.host}/ws${q}`);
     ws.onopen = () => setWsStatus(true);
     ws.onclose = () => { setWsStatus(false); setTimeout(connectWs, 2500); };
     ws.onerror = () => ws.close();

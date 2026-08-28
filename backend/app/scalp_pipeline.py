@@ -13,7 +13,6 @@ live_trading is hard-coded False. No broker order call exists in this file.
 """
 import time
 import random
-import json
 from datetime import datetime, timezone
 
 from .engines.scalp_engine import run_scalp_engine

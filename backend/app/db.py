@@ -78,13 +78,19 @@ CREATE TABLE IF NOT EXISTS ai_paper_trades (
     max_hold_sec REAL,
     mfe REAL DEFAULT 0,             -- max favourable excursion (price)
     mae REAL DEFAULT 0,            -- max adverse excursion (price)
-    exit_reason TEXT               -- TARGET | STOP | TRAIL | TIME | MANUAL
+    exit_reason TEXT,              -- TARGET | STOP | TRAIL | TIME | MANUAL | BROKER_*
+    symboltoken TEXT              -- Angel One token (for the live feed / dedupe)
 );
 
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE INDEX IF NOT EXISTS ix_trades_status_strategy ON ai_paper_trades(status, strategy);
+CREATE INDEX IF NOT EXISTS ix_trades_symboltoken     ON ai_paper_trades(symboltoken);
+CREATE INDEX IF NOT EXISTS ix_trades_opened_ts       ON ai_paper_trades(opened_ts);
+CREATE INDEX IF NOT EXISTS ix_signals_created_ts     ON ai_signals_log(created_ts);
 """
 
 

@@ -59,7 +59,6 @@ def detect_reversal(candles: list, cfg: dict | None = None) -> dict:
     if len(norm) < C["min_candles"]:
         return {"reversal": None, "reason": [f"insufficient candles ({len(norm)})"]}
 
-    opens = [x[0] for x in norm]
     highs = [x[1] for x in norm]
     lows = [x[2] for x in norm]
     closes = [x[3] for x in norm]

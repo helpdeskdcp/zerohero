@@ -4,8 +4,14 @@ No fabricated data, no forward-looking prediction, no accuracy claim.
 Probabilities are RULE_BASED (transparent rule output), NOT ML and NOT
 statistically calibrated.
 """
+import time as _time
 from datetime import datetime, timezone
 from . import db
+
+# /api/research is polled by up to 4 pages and does two full-table scans + a
+# 3-way aggregation each call. A short TTL cache makes repeated reads free.
+_CACHE = {"ts": 0.0, "data": None}
+_CACHE_TTL_SEC = 45
 
 
 def _parse_ts(s):
@@ -71,7 +77,16 @@ def _strategy_stats(trades: list) -> dict:
     }
 
 
-def aggregate_research() -> dict:
+def aggregate_research(force: bool = False) -> dict:
+    now = _time.time()
+    if not force and _CACHE["data"] is not None and (now - _CACHE["ts"]) < _CACHE_TTL_SEC:
+        return _CACHE["data"]
+    data = _aggregate()
+    _CACHE.update(ts=now, data=data)
+    return data
+
+
+def _aggregate() -> dict:
     signals = db.list_signals(limit=100000)
     trades = db.list_trades(limit=100000)
 

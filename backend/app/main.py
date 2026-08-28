@@ -42,6 +42,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Opt-in bearer auth. If CHANAKYA_API_TOKEN is set, every /api/* call (except
+# /api/health) and the /ws upgrade must present it (Authorization: Bearer <t>
+# or ?token=<t>). If unset, this is a no-op and the app behaves as before.
+API_TOKEN = (os.environ.get("CHANAKYA_API_TOKEN") or "").strip()
+
+
+def _token_from(request) -> str:
+    a = request.headers.get("authorization", "")
+    if a[:7].lower() == "bearer ":
+        return a[7:].strip()
+    return request.query_params.get("token", "")
+
+
+@app.middleware("http")
+async def _auth_gate(request, call_next):
+    if API_TOKEN:
+        p = request.url.path
+        if p.startswith("/api/") and p != "/api/health" and _token_from(request) != API_TOKEN:
+            return JSONResponse({"detail": "unauthorized"}, status_code=401)
+    return await call_next(request)
+
 
 @app.on_event("startup")
 def _startup():
@@ -88,6 +109,9 @@ async def _stop_scalp_runner():
 
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
+    if API_TOKEN and websocket.query_params.get("token") != API_TOKEN:
+        await websocket.close(code=1008)
+        return
     await manager.connect(websocket)
     try:
         while True:
@@ -150,7 +174,7 @@ def api_risk_engine(payload: dict):
 # ---------------------------------------------------------------- Full pipeline
 @app.post("/api/run")
 async def api_run_pipeline(req: SignalRequest):
-    result = run_pipeline(req.dict(exclude_none=True))
+    result = run_pipeline(req.model_dump(exclude_none=True))
     await manager.broadcast({"type": "signal", "data": result["contract"]})
     if result.get("trade"):
         await manager.broadcast({"type": "trade_open", "data": result["trade"]})

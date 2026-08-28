@@ -24,6 +24,7 @@ import json
 import socket
 import asyncio
 import traceback
+from collections import deque
 from datetime import datetime, timezone, timedelta
 
 # ---- single-active-runner lease (survives multi-worker uvicorn) ----
@@ -31,6 +32,7 @@ LEASE_KEY = "runner_lease"
 LEASE_TTL_SEC = 30          # a leader that misses this many seconds of heartbeat is replaced
 ARMED_KEY = "runner_armed"  # arm/disarm intent, shared across workers
 PUB_KEY = "runner_pub"      # leader publishes its live status here for standby workers to serve
+LATCH_KEY = "runner_latches"  # persisted alert latches — a restart must not re-spam Telegram
 
 from . import db
 from . import instruments
@@ -41,7 +43,7 @@ from .connectors.angel_ws import AngelMarketFeed, EXCHANGE_TYPE
 from .engines.paper_trading import update_trade_price, open_trade, close_trade
 from .engines.signal_engine import run_signal_engine
 from .connectors.telegram import notify_position_alert, _send as _tg_send
-from .engines.scalp_engine import _candle_minute_of_day, _parse_hhmm
+from .engines.scalp_engine import _parse_hhmm
 
 CONFIG_KEY = "scalp_config"
 
@@ -102,11 +104,14 @@ def _deep_merge(base: dict, over: dict) -> dict:
 class ScalpRunner:
     def __init__(self, broadcast=None):
         self._broadcast = broadcast
+        self._errors = deque(maxlen=20)    # bounded (ts, msg) ring — see last_error setter
+        self._last_error = None
+        self._latch_dirty = False
+        self._latch_loaded = False
         self.armed = False
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self.last_tick_ts = None
-        self.last_error = None
         self.cooldown_until = None          # datetime or None
         self.consecutive_losses = 0
         self.session_note = None
@@ -122,9 +127,44 @@ class ScalpRunner:
         self._sig_cache = {}        # underlying token -> (epoch, signal dict)
         self._rev_alerted = {}      # symbol -> "BULLISH"|"BEARISH" last alerted
         self.reversals = {}         # symbol -> last reversal dict (for /api/monitor)
+        self._latch_maps = (        # every dict here is persisted across restarts
+            "_alerted", "_broker_miss", "_ws_alerted", "_rev_alerted")
         self._owner = f"{socket.gethostname()}:{os.getpid()}"
         self.is_leader = False      # True only in the ONE process that holds the lease
         self._mkt_open = True       # cached each loop; gates reversal scan + sync cadence
+
+    # ---------------- error ring ----------------
+    @property
+    def last_error(self):
+        return self._last_error
+
+    @last_error.setter
+    def last_error(self, v):
+        self._last_error = v
+        if v:
+            self._errors.append({"ts": datetime.now(timezone.utc).isoformat(), "msg": str(v)[:300]})
+
+    # ---------------- alert-latch persistence ----------------
+    def _load_latches(self):
+        try:
+            data = json.loads(db.get_setting(LATCH_KEY) or "{}")
+        except Exception:
+            data = {}
+        for name in self._latch_maps:
+            v = data.get(name)
+            if isinstance(v, dict):
+                setattr(self, name, dict(v))
+        self._latch_loaded = True
+
+    def _save_latches(self):
+        snap = json.dumps({name: getattr(self, name) for name in self._latch_maps}, default=str)
+        if snap == getattr(self, "_latch_snap", None):
+            return                      # unchanged — skip the write
+        try:
+            db.set_setting(LATCH_KEY, snap)
+            self._latch_snap = snap
+        except Exception:
+            pass
 
     # ---------------- config ----------------
     def get_config(self) -> dict:
@@ -158,6 +198,7 @@ class ScalpRunner:
         self._stop.set()
         try:
             if self.is_leader:
+                self._save_latches()
                 await self.feed.stop()
         except Exception:
             pass
@@ -208,6 +249,7 @@ class ScalpRunner:
             "paper_mode": True,
             "last_tick_ts": self.last_tick_ts if self.is_leader else pub.get("last_tick_ts"),
             "last_error": self.last_error if self.is_leader else pub.get("last_error"),
+            "errors": list(self._errors) if self.is_leader else (pub.get("errors") or []),
             "session_open": self._session_open(cfg)[0],
             "session_note": self.session_note if self.is_leader else pub.get("session_note"),
             "cooldown_sec_remaining": cd,
@@ -233,6 +275,7 @@ class ScalpRunner:
             db.set_setting(PUB_KEY, json.dumps({
                 "last_tick_ts": self.last_tick_ts,
                 "last_error": self.last_error,
+                "errors": list(self._errors),
                 "session_note": self.session_note,
                 "manage_latency_ms": self._manage_latency_ms,
                 "broker_sync_status": self.broker_sync_status,
@@ -697,7 +740,7 @@ class ScalpRunner:
                     ws = self._wrong_side(updated, cfg)
                     if ws and not self._ws_alerted.get(tid):
                         self._ws_alerted[tid] = True
-                        _tg_send(
+                        await asyncio.to_thread(_tg_send,
                             f"⚠️ <b>WRONG-SIDE — {updated.get('underlying')} "
                             f"{updated.get('option_type')}{int(updated.get('strike') or 0)}</b>\n"
                             f"Signal engine now reads against this position: {ws}\n"
@@ -738,10 +781,12 @@ class ScalpRunner:
         except Exception as e:
             self.last_error = f"combo eval: {type(e).__name__}: {e}"
 
+        self._save_latches()   # persist alert latches (only writes when changed)
+
         # reversal scan — S/R turn detection for held + watched symbols
         try:
             for r in await asyncio.to_thread(self._scan_reversals, cfg):
-                _tg_send(
+                await asyncio.to_thread(_tg_send,
                     f"🔄 <b>REVERSAL — {r['symbol']} {r['reversal']} {r['kind']}</b>\n"
                     f"Level {r.get('level')}  ·  price {r.get('price')}  ·  conf {r.get('confidence')}%\n"
                     f"Trade: buy {r.get('option')}  entry {r.get('entry')}  "
@@ -812,6 +857,8 @@ class ScalpRunner:
             if leader and not self.is_leader:
                 self.is_leader = True
                 self.last_error = None
+                if not self._latch_loaded:
+                    self._load_latches()     # restore alert latches — no re-spam on restart
                 self.feed.start()             # only the leader connects the WS feed
             elif not leader and self.is_leader:
                 self.is_leader = False

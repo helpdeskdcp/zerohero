@@ -28,6 +28,28 @@ _HEADERS_BASE = {
 _session_cache = {"jwt": None, "feed_token": None, "ts": 0}
 SESSION_TTL_SEC = 3600  # AngelOne session tokens are valid several hours; be conservative
 
+_RETRIES = 2          # extra attempts on a transient network/5xx error
+_RETRY_BACKOFF = 0.4  # seconds, linear
+
+
+def _http(method: str, url: str, **kw):
+    """requests.{get,post} with a small retry on connection errors / 5xx.
+    Raises the last exception if all attempts fail (callers already catch)."""
+    last = None
+    for attempt in range(_RETRIES + 1):
+        try:
+            resp = requests.request(method, url, timeout=kw.pop("timeout", 10), **kw)
+            if resp.status_code >= 500 and attempt < _RETRIES:
+                last = RuntimeError(f"HTTP {resp.status_code}")
+                time.sleep(_RETRY_BACKOFF * (attempt + 1))
+                continue
+            return resp
+        except requests.RequestException as e:
+            last = e
+            if attempt < _RETRIES:
+                time.sleep(_RETRY_BACKOFF * (attempt + 1))
+    raise last
+
 
 def _creds():
     return {
@@ -56,7 +78,7 @@ def _login():
         "totp": totp,
     }
     try:
-        resp = requests.post(LOGIN_URL, json=body, headers=headers, timeout=10)
+        resp = _http("POST", LOGIN_URL, json=body, headers=headers)
         data = resp.json() if resp.content else {}
     except Exception:
         return "AUTH_FAILED", None, "network_error"
@@ -156,7 +178,7 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
              "fromdate": fromdate, "todate": todate}
 
     try:
-        resp = requests.post(CANDLE_URL, json=body, headers=headers, timeout=10)
+        resp = _http("POST", CANDLE_URL, json=body, headers=headers)
         res = resp.json() if resp.content else {}
     except Exception:
         return out("DATA_UNAVAILABLE", {"reason": "FACT: network error contacting broker"})
@@ -229,7 +251,7 @@ def fetch_positions() -> dict:
     headers["X-PrivateKey"] = creds["api_key"]
     headers["Authorization"] = f"Bearer {jwt}"
     try:
-        resp = requests.get(POSITION_URL, headers=headers, timeout=10)
+        resp = _http("GET", POSITION_URL, headers=headers)
         res = resp.json() if resp.content else {}
     except Exception as e:
         return {"status": "DATA_UNAVAILABLE", "error": str(e)[:60], "positions": []}
