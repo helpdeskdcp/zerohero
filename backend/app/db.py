@@ -163,6 +163,13 @@ CREATE TABLE IF NOT EXISTS order_events (
     detail TEXT                  -- JSON
 );
 
+"""
+
+# Indexes are created AFTER _migrate() runs, because some of them
+# (ix_trades_status_strategy, ix_trades_symboltoken) reference columns that
+# _migrate adds to a pre-existing ai_paper_trades. Creating them inside SCHEMA
+# blows up on an old DB where the table exists without those columns.
+_SCHEMA_INDEXES = """
 CREATE INDEX IF NOT EXISTS ix_trades_status_strategy ON ai_paper_trades(status, strategy);
 CREATE INDEX IF NOT EXISTS ix_trades_symboltoken     ON ai_paper_trades(symboltoken);
 CREATE INDEX IF NOT EXISTS ix_trades_opened_ts       ON ai_paper_trades(opened_ts);
@@ -218,8 +225,9 @@ def _migrate(conn):
 
 def init_db():
     with db() as conn:
-        conn.executescript(SCHEMA)
-        _migrate(conn)
+        conn.executescript(SCHEMA)      # tables (CREATE TABLE IF NOT EXISTS)
+        _migrate(conn)                  # add late columns to a pre-existing DB
+        conn.executescript(_SCHEMA_INDEXES)   # indexes, now that columns exist
 
 
 def insert_signal(row: dict):
