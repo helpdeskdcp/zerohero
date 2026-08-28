@@ -666,13 +666,40 @@ class ScalpRunner:
             self.order_mgr = None
             self.last_error = f"order mgr init: {type(e).__name__}: {e}"
 
+    def _daily_realised_pnl(self) -> float:
+        """Sum of realised P&L on trades CLOSED since midnight UTC (SCALP+MANUAL).
+        Feeds the OrderManager's daily risk halt."""
+        total = 0.0
+        start = _today_start_iso()
+        for strat in ("SCALP", "MANUAL"):
+            for t in db.list_trades(status="CLOSED", limit=500, strategy=strat):
+                if (t.get("closed_ts") or "") >= start:
+                    try:
+                        total += float(t.get("pnl") or 0)
+                    except (TypeError, ValueError):
+                        pass
+        return round(total, 2)
+
     def _drive_execution(self, cfg: dict):
         """Leader-only, off the entry path. Mark every open local monitor to the
-        live feed LTP (target/SL/trail decisions) and periodically reconcile
-        open intents against the broker (source of truth)."""
+        live feed LTP (target/SL/trail decisions), enforce the daily max-loss
+        halt, and periodically reconcile open intents against the broker
+        (source of truth)."""
         om = self.order_mgr
         if om is None:
             return
+
+        # daily risk / max-loss halt — blocks NEW entries only
+        cap = float((cfg.get("account") or {}).get("capital") or 0)
+        max_loss_pct = float((cfg.get("limits") or {}).get("max_daily_loss_pct") or 0)
+        if cap > 0 and max_loss_pct > 0:
+            pnl = self._daily_realised_pnl()
+            limit = -(cap * max_loss_pct / 100.0)
+            if pnl <= limit:
+                om.set_risk_halt(True, f"daily realised {pnl} <= limit {round(limit, 2)}")
+            else:
+                om.set_risk_halt(False)
+
         for tid, mon in list(om.monitors.items()):
             if mon.closed:
                 continue

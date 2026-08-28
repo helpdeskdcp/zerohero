@@ -59,7 +59,8 @@ def make_broker(mode: str, config: dict | None = None, *, ltp_provider=None) -> 
 @dataclass
 class SubmitResult:
     status: str                       # SUBMITTED|DUPLICATE_SUPPRESSED|AMBIGUOUS|REJECTED|
-                                      # BLOCKED_KILLSWITCH|BLOCKED_STALE|BLOCKED_FROZEN|LIVE_DISABLED
+                                      # BLOCKED_KILLSWITCH|BLOCKED_RISK|BLOCKED_STALE|
+                                      # BLOCKED_FROZEN|LIVE_DISABLED
     state: Optional[TradeState] = None
     monitor: Optional[TradeMonitor] = None
     ack: object = None
@@ -83,6 +84,11 @@ class OrderManager:
         self._on_alert = on_alert          # callable(kind:str, payload:dict) — off critical path
         self.frozen = False
         self.freeze_reason = ""
+        # daily risk halt — set by the runner from realised P&L vs max_daily_loss.
+        # Distinct from `frozen` (reconciler FREEZE) and the kill switch; it
+        # clears on its own when P&L recovers / the day rolls.
+        self.risk_halt = False
+        self.risk_halt_reason = ""
         # live registries (also persisted via broker_orders / order_events)
         self.states: dict[str, TradeState] = {}
         self.monitors: dict[str, TradeMonitor] = {}
@@ -100,10 +106,24 @@ class OrderManager:
             self.freeze_reason = ""
             audit.event(None, None, "UNFREEZE", {"reason": reason})
 
+    def set_risk_halt(self, active: bool, reason: str = ""):
+        """Daily risk / max-loss guard. Blocks NEW entries; running monitors are
+        untouched. Idempotent — only logs on a transition."""
+        active = bool(active)
+        if active == self.risk_halt:
+            self.risk_halt_reason = reason if active else ""
+            return
+        self.risk_halt = active
+        self.risk_halt_reason = reason if active else ""
+        audit.event(None, None, "RISK_HALT_ON" if active else "RISK_HALT_OFF", {"reason": reason})
+
     def _entries_blocked(self, state: TradeState | None) -> Optional[SubmitResult]:
         if killswitch.is_active():
             return SubmitResult("BLOCKED_KILLSWITCH", state,
                                 reasons=[f"kill switch active: {killswitch.state().get('reason')}"])
+        if self.risk_halt:
+            return SubmitResult("BLOCKED_RISK", state,
+                                reasons=[f"daily risk halt: {self.risk_halt_reason}"])
         if self.frozen:
             return SubmitResult("BLOCKED_FROZEN", state,
                                 reasons=[f"order manager frozen: {self.freeze_reason}"])
@@ -413,8 +433,11 @@ class OrderManager:
             "broker": self.broker.name,
             "frozen": self.frozen,
             "freeze_reason": self.freeze_reason,
+            "risk_halt": self.risk_halt,
+            "risk_halt_reason": self.risk_halt_reason,
             "kill_switch": ks,
             "live_enabled": getattr(self.broker, "live_enabled", False),
+            "entries_allowed": not (ks.get("active") or self.frozen or self.risk_halt),
             "open_states": len(self.states),
             "open_monitors": sum(1 for m in self.monitors.values() if not m.closed),
             "config": {k: self.config.get(k) for k in (
