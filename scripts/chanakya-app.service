@@ -1,0 +1,27 @@
+[Unit]
+Description=Chanakya AI - Trading Control Room (FastAPI backend + dashboard)
+After=network.target
+
+[Service]
+Type=simple
+User=chanakya
+Group=chanakya
+WorkingDirectory=/opt/chanakya-app/backend
+EnvironmentFile=/opt/chanakya-app/backend/.env
+# --workers 1: the app runs an in-process background runner (ScalpRunner). A
+# DB lease (runner_lease) guarantees only one runner is ever active even if this
+# is raised, but extra workers just add idle standbys — keep it at 1.
+ExecStart=/opt/chanakya-app/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8420 --workers 1
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/chanakya-app/app.log
+StandardError=append:/var/log/chanakya-app/error.log
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/chanakya-app/backend/data /var/log/chanakya-app
+
+[Install]
+WantedBy=multi-user.target

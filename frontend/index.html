@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0f14" />
+<title>Chanakya AI — Trading Control Room</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♟️</text></svg>" />
+<link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div id="app" class="app">
+
+    <!-- ===== Top bar ===== -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">C</span>
+        <div class="brand-text">
+          <span class="brand-title">CHANAKYA <em>AI</em></span>
+          <span class="brand-sub">Paper Trading Control Room</span>
+        </div>
+      </div>
+      <div class="status-cluster">
+        <span id="wsStatus" class="pill pill--offline">● connecting</span>
+        <span class="pill pill--paper">PAPER MODE</span>
+      </div>
+    </header>
+
+    <!-- ===== Nav (tabs on mobile, sidebar on desktop) ===== -->
+    <nav class="nav" id="mainNav">
+      <button class="nav-item active" data-view="overview">Overview</button>
+      <button class="nav-item" data-view="monitor">Live Monitor</button>
+      <button class="nav-item" data-view="signals">Signal Ledger</button>
+      <button class="nav-item" data-view="trades">Paper Trades</button>
+      <button class="nav-item" data-view="scalp">Scalping</button>
+      <button class="nav-item" data-view="runner">Run Pipeline</button>
+      <button class="nav-item" data-view="research">Research</button>
+      <button class="nav-item" data-view="system">System</button>
+    </nav>
+
+    <main class="content">
+
+      <!-- ===== OVERVIEW ===== -->
+      <section class="view active" id="view-overview">
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-card"><span class="stat-label">Total Signals</span><span class="stat-value" id="statSignals">—</span></div>
+          <div class="stat-card"><span class="stat-label">Open Trades</span><span class="stat-value" id="statOpen">—</span></div>
+          <div class="stat-card"><span class="stat-label">Closed Trades</span><span class="stat-value" id="statClosed">—</span></div>
+          <div class="stat-card"><span class="stat-label">Win Rate</span><span class="stat-value" id="statWinRate">—</span></div>
+          <div class="stat-card"><span class="stat-label">Realized PnL</span><span class="stat-value" id="statPnl">—</span></div>
+          <div class="stat-card"><span class="stat-label">Profit Factor</span><span class="stat-value" id="statPF">—</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Live Feed</h2>
+            <span class="hint">Streams as signals fire — no refresh needed</span>
+          </div>
+          <ul class="feed" id="liveFeed">
+            <li class="feed-empty">Waiting for the first signal…</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ===== LIVE MONITOR ===== -->
+      <section class="view" id="view-monitor">
+        <div class="mon-strip" id="monStrip">
+          <div class="mon-cell"><span>Runner</span><b id="monRunner">—</b></div>
+          <div class="mon-cell"><span>Feed</span><b id="monFeed">—</b></div>
+          <div class="mon-cell"><span>Calc latency</span><b id="monLatency">—</b></div>
+          <div class="mon-cell"><span>Session</span><b id="monSession">—</b></div>
+          <div class="mon-cell"><span>Open</span><b id="monOpen">—</b></div>
+          <div class="mon-cell"><span>Updated</span><b id="monClock">—</b></div>
+        </div>
+        <p class="scalp-err" id="monErr" hidden></p>
+
+        <div class="panel" id="monComboPanel" hidden>
+          <div class="panel-head"><h2>Combos / Strangles</h2><span class="hint">managed as one unit — combined debit vs mark</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="monComboTable">
+              <thead><tr>
+                <th>Kind</th><th>Legs</th><th>Debit</th><th>Mark</th><th>Pair P&amp;L</th>
+                <th>→ Target</th><th>→ Stop</th><th>BE up</th><th>BE dn</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Tracked Positions</h2><span class="hint">live mark · P&amp;L · distance to target / stop</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="monPosTable">
+              <thead><tr>
+                <th>Sym</th><th>Type</th><th>Dir</th><th>Entry</th><th>Mark</th><th>Age</th>
+                <th>Live P&amp;L</th><th>→ Target</th><th>→ Stop</th><th>MFE</th><th>MAE</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Live Scalps</h2></div>
+          <div class="table-wrap">
+            <table class="ledger" id="monScalpTable">
+              <thead><tr>
+                <th>Setup</th><th>Sym</th><th>Dir</th><th>Entry</th><th>Mark</th>
+                <th>Live P&amp;L</th><th>→ Target</th><th>→ Stop</th><th>Status</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel" id="monRevPanel" hidden>
+          <div class="panel-head"><h2>Reversal Signals</h2><span class="hint">S/R turn detected — CE/PE pick with levels</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="monRevTable">
+              <thead><tr>
+                <th>Symbol</th><th>Turn</th><th>At</th><th>Level</th><th>Price</th>
+                <th>Buy</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>RR</th><th>Conf</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Feed Marks</h2></div>
+          <div class="mon-marks" id="monMarks"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Signal Stream</h2></div>
+          <ul class="feed" id="monStream"><li class="feed-empty">Waiting…</li></ul>
+        </div>
+      </section>
+
+      <!-- ===== SIGNAL LEDGER ===== -->
+      <section class="view" id="view-signals">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Signal Ledger</h2>
+            <button class="btn btn-ghost" id="refreshSignals">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="ledger" id="signalsTable">
+              <thead>
+                <tr>
+                  <th>Time</th><th>Symbol</th><th>Dir</th><th>Decision</th>
+                  <th>Regime</th><th>Prob</th><th>Conf</th><th>RR</th><th>Risk</th><th>Reason</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PAPER TRADES ===== -->
+      <section class="view" id="view-trades">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Paper Trades</h2>
+            <div class="seg" id="tradeFilter">
+              <button class="seg-btn active" data-status="">All</button>
+              <button class="seg-btn" data-status="OPEN">Open</button>
+              <button class="seg-btn" data-status="CLOSED">Closed</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="ledger" id="tradesTable">
+              <thead>
+                <tr>
+                  <th>Opened</th><th>Strat</th><th>Underlying</th><th>Type</th><th>Dir</th>
+                  <th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Status</th><th>PnL</th><th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SCALPING ===== -->
+      <section class="view" id="view-scalp">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Scalp Runner</h2>
+            <span class="hint">Automated loop · paper only · fail-closed · live_trading=false</span>
+          </div>
+          <div class="armbar">
+            <button id="scalpArmBtn" class="arm-btn" data-armed="false">ARM</button>
+            <div class="armstate">
+              <div class="kv"><span>State</span><b id="scalpState">—</b></div>
+              <div class="kv"><span>Session</span><b id="scalpSession">—</b></div>
+              <div class="kv"><span>Cooldown</span><b id="scalpCooldown">—</b></div>
+              <div class="kv"><span>Open / Max</span><b id="scalpOpen">—</b></div>
+              <div class="kv"><span>Today / Cap</span><b id="scalpToday">—</b></div>
+              <div class="kv"><span>Last tick</span><b id="scalpTick">—</b></div>
+              <div class="kv"><span>Data feed</span><b id="scalpFeed">—</b></div>
+              <div class="kv"><span>Live marks</span><b id="scalpMarks">—</b></div>
+            </div>
+          </div>
+          <p class="scalp-err" id="scalpErr" hidden></p>
+        </div>
+
+        <div class="stat-grid" id="scalpStatGrid">
+          <div class="stat-card"><span class="stat-label">Closed Scalps</span><span class="stat-value" id="scStatClosed">—</span></div>
+          <div class="stat-card"><span class="stat-label">Win Rate</span><span class="stat-value" id="scStatWin">—</span></div>
+          <div class="stat-card"><span class="stat-label">Expectancy / Trade</span><span class="stat-value" id="scStatExp">—</span></div>
+          <div class="stat-card"><span class="stat-label">Profit Factor</span><span class="stat-value" id="scStatPF">—</span></div>
+          <div class="stat-card"><span class="stat-label">Avg Hold</span><span class="stat-value" id="scStatHold">—</span></div>
+          <div class="stat-card"><span class="stat-label">Net PnL</span><span class="stat-value" id="scStatPnl">—</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Scalp Blotter</h2>
+            <button class="btn btn-ghost" id="refreshScalp">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="ledger" id="scalpTable">
+              <thead>
+                <tr>
+                  <th>Opened</th><th>Sym</th><th>Setup</th><th>Dir</th><th>Entry</th>
+                  <th>SL</th><th>T1</th><th>Qty</th><th>Held</th><th>MFE</th><th>MAE</th>
+                  <th>Status</th><th>Exit</th><th>PnL</th><th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Runner Config</h2>
+            <span class="hint">Saved server-side; applied on next tick</span>
+          </div>
+          <form class="run-form" id="scalpConfigForm">
+            <div class="grid2">
+              <label>Poll seconds<input type="number" name="poll_sec" min="1" step="1" /></label>
+              <label>Max concurrent<input type="number" name="max_concurrent" min="1" step="1" /></label>
+              <label>Daily cap<input type="number" name="daily_cap" min="1" step="1" /></label>
+              <label>Loss cooldown (s)<input type="number" name="loss_cooldown_sec" min="0" step="1" /></label>
+              <label>Session start<input type="text" name="session_start" placeholder="09:20" /></label>
+              <label>Session end<input type="text" name="session_end" placeholder="15:05" /></label>
+              <label>Skip open (min)<input type="number" name="skip_open_min" min="0" step="1" /></label>
+              <label>Skip close (min)<input type="number" name="skip_close_min" min="0" step="1" /></label>
+              <label class="chk"><input type="checkbox" name="ignore_session" /> Ignore session (replay/demo)</label>
+            </div>
+            <details class="advanced">
+              <summary>Watchlist / account / engine overrides (JSON)</summary>
+              <label>Watchlist (JSON array)
+                <textarea name="watchlist_json" rows="6" placeholder='[{"symbol":"DEMO","underlying":"DEMO","replay_candles":[[t,o,h,l,c,v], ...]}]'></textarea>
+              </label>
+              <label>Account (JSON)
+                <textarea name="account_json" rows="2"></textarea>
+              </label>
+              <label>Scalp engine overrides (JSON)
+                <textarea name="scalp_config_json" rows="3" placeholder='{"atr_target_mult":0.6,"atr_stop_mult":0.5,"max_hold_sec":300}'></textarea>
+              </label>
+            </details>
+            <div class="live-wl">
+              <span class="hint">Live watchlist — pick registry symbols + timeframe, then Apply:</span>
+              <div class="live-wl-row">
+                <span id="scalpSymPicker" class="sym-picker"></span>
+                <select id="scalpWlTf">
+                  <option>1m</option><option>3m</option><option>5m</option>
+                </select>
+                <button type="button" class="btn" id="scalpLiveBtn">Apply to watchlist JSON</button>
+              </div>
+            </div>
+            <div class="scalp-config-actions">
+              <button type="submit" class="btn btn-primary">Save Config</button>
+              <button type="button" class="btn" id="scalpDemoBtn">Load demo watchlist</button>
+            </div>
+            <p class="scalp-msg hint" id="scalpConfigMsg"></p>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Track a Live Position</h2>
+            <span class="hint">Monitor-only — app alerts on target/stop, never places an order</span>
+          </div>
+          <form class="run-form" id="trackForm">
+            <div class="grid2">
+              <label>Symbol<input type="text" name="symbol" placeholder="NATGASMINI" list="instrumentList" required /></label>
+              <label>Symboltoken<input type="text" name="symboltoken" placeholder="578429" /></label>
+              <label>Type<select name="option_type"><option value="">FUT</option><option>CE</option><option>PE</option></select></label>
+              <label>Strike<input type="number" name="strike" step="0.05" placeholder="275" /></label>
+              <label>Expiry<input type="text" name="expiry" placeholder="23SEP2026" /></label>
+              <label>Direction<select name="direction"><option>BUY</option><option>SELL</option></select></label>
+              <label>Entry<input type="number" name="entry" step="0.05" required /></label>
+              <label>Target<input type="number" name="target" step="0.05" required /></label>
+              <label>Stop<input type="number" name="stop" step="0.05" required /></label>
+              <label>Lots<input type="number" name="lots" step="1" value="1" /></label>
+              <label>Lot size<input type="number" name="lot_size" step="1" value="1" /></label>
+              <label>Trailing (0 = off)<input type="number" name="trailing_stop" step="0.05" value="0" /></label>
+            </div>
+            <button type="submit" class="btn btn-primary">Track Position</button>
+            <p class="scalp-msg hint" id="trackMsg"></p>
+          </form>
+          <div class="table-wrap">
+            <table class="ledger" id="posTable">
+              <thead><tr>
+                <th>Since</th><th>Sym</th><th>Type</th><th>Dir</th><th>Entry</th><th>Mark</th>
+                <th>Target</th><th>Stop</th><th>Qty</th><th>P&L</th><th>Status</th><th>Exit</th><th></th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== RUN PIPELINE ===== -->
+      <section class="view" id="view-runner">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Run Pipeline</h2>
+            <span class="hint">Connector → Signal → OI → Risk → Gate → Paper Trade</span>
+          </div>
+          <form class="run-form" id="runForm">
+            <div class="grid2">
+              <label>Market
+                <select name="market">
+                  <option>NSE</option><option>MCX</option>
+                </select>
+              </label>
+              <label>Symbol
+                <input type="text" name="symbol" value="NIFTY" list="instrumentList" />
+              </label>
+              <label>Instrument
+                <input type="text" name="instrument" value="OPTION" />
+              </label>
+              <label>Timeframe
+                <select name="timeframe">
+                  <option>1m</option><option>3m</option><option>5m</option><option>15m</option><option>1h</option>
+                </select>
+              </label>
+              <label>Underlying
+                <input type="text" name="underlying" value="NIFTY" list="instrumentList" />
+              </label>
+              <label>Spot
+                <input type="number" name="spot" value="22150" />
+              </label>
+            </div>
+            <details class="advanced">
+              <summary>Advanced: paste raw candles / chain JSON (for backtest/replay)</summary>
+              <label>Candles (JSON array)
+                <textarea name="candles_json" rows="4" placeholder="[[t,o,h,l,c,v], ...]"></textarea>
+              </label>
+              <label>Option chain (JSON array)
+                <textarea name="chain_json" rows="4" placeholder='[{"strike":22150,"ce_ltp":80,...}]'></textarea>
+              </label>
+              <label>Account (JSON)
+                <textarea name="account_json" rows="2">{"capital": 500000, "risk_pct": 1, "available_margin": 1000000}</textarea>
+              </label>
+            </details>
+            <button type="submit" class="btn btn-primary">Run Pipeline</button>
+          </form>
+          <pre class="result-box" id="runResult">Result will appear here.</pre>
+        </div>
+      </section>
+
+      <!-- ===== RESEARCH ===== -->
+      <section class="view" id="view-research">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Research — Descriptive Aggregation</h2>
+            <button class="btn btn-ghost" id="refreshResearch">Refresh</button>
+          </div>
+          <p class="disclaimer" id="researchDisclaimer"></p>
+          <div class="research-grid" id="researchGrid"></div>
+        </div>
+      </section>
+
+      <!-- ===== SYSTEM ===== -->
+      <section class="view" id="view-system">
+        <div class="panel">
+          <div class="panel-head"><h2>System Status</h2></div>
+          <div class="sysgrid" id="sysGrid"></div>
+          <p class="hint">Credential presence only — values are never sent to the browser.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Mobile bottom tab bar (auto-shown under 720px via CSS) -->
+    <nav class="tabbar" id="tabbar">
+      <button class="tab-item active" data-view="overview"><span class="tab-ic">◈</span>Home</button>
+      <button class="tab-item" data-view="signals"><span class="tab-ic">≡</span>Signals</button>
+      <button class="tab-item" data-view="trades"><span class="tab-ic">⇄</span>Trades</button>
+      <button class="tab-item" data-view="monitor"><span class="tab-ic">◉</span>Monitor</button>
+      <button class="tab-item" data-view="scalp"><span class="tab-ic">⚡</span>Scalp</button>
+      <button class="tab-item" data-view="runner"><span class="tab-ic">▶</span>Run</button>
+      <button class="tab-item" data-view="research"><span class="tab-ic">∑</span>Research</button>
+    </nav>
+  </div>
+
+  <datalist id="instrumentList"></datalist>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

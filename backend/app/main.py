@@ -1,0 +1,546 @@
+"""
+Chanakya AI — FastAPI backend.
+Serves the REST API + the responsive web dashboard (auto-detects
+mobile/desktop client-side, single codebase).
+"""
+import os
+import json
+import asyncio
+from pathlib import Path
+from typing import Optional
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from . import db
+from . import instruments
+from . import combos
+from .reversal import detect_reversal
+from .orchestrator import run_pipeline
+from .scalp_pipeline import run_scalp_pipeline
+from .scalper import ScalpRunner
+from .engines.signal_engine import run_signal_engine
+from .engines.scalp_engine import run_scalp_engine
+from .engines.oi_options_engine import run_oi_options_engine
+from .engines.risk_engine import run_risk_engine
+from .engines.paper_trading import open_trade, close_trade, update_trade_price
+from .research import aggregate_research
+
+APP_ROOT = Path(__file__).resolve().parent.parent.parent
+FRONTEND_DIR = APP_ROOT / "frontend"
+
+app = FastAPI(title="Chanakya AI", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+def _startup():
+    db.init_db()
+
+
+# ---------------------------------------------------------------- WebSocket
+class ConnectionManager:
+    def __init__(self):
+        self.active: list[WebSocket] = []
+
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.active.append(ws)
+
+    def disconnect(self, ws: WebSocket):
+        if ws in self.active:
+            self.active.remove(ws)
+
+    async def broadcast(self, message: dict):
+        dead = []
+        for ws in self.active:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
+
+manager = ConnectionManager()
+scalp_runner = ScalpRunner(broadcast=manager.broadcast)
+
+
+@app.on_event("startup")
+async def _start_scalp_runner():
+    scalp_runner.start()
+
+
+@app.on_event("shutdown")
+async def _stop_scalp_runner():
+    await scalp_runner.stop()
+
+
+@app.websocket("/ws")
+async def ws_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()  # keepalive ping/pong from client
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+# ---------------------------------------------------------------- Schemas
+class SignalRequest(BaseModel):
+    market: Optional[str] = None
+    symbol: Optional[str] = None
+    instrument: Optional[str] = None
+    exchange: Optional[str] = None
+    symboltoken: Optional[str] = None
+    interval: Optional[str] = None
+    fromdate: Optional[str] = None
+    todate: Optional[str] = None
+    timeframe: Optional[str] = None
+    expiry: Optional[str] = None
+    strike: Optional[float] = None
+    underlying: Optional[str] = None
+    spot: Optional[float] = None
+    chain: Optional[list] = None
+    candles: Optional[list] = None
+    signal_config: Optional[dict] = None
+    oi_config: Optional[dict] = None
+    account: Optional[dict] = None
+    risk_instrument: Optional[dict] = None
+    state: Optional[dict] = None
+    limits: Optional[dict] = None
+
+
+class CloseTradeRequest(BaseModel):
+    trade_id: str
+    exit_price: float
+
+
+class MarkPriceRequest(BaseModel):
+    trade_id: str
+    ltp: float
+
+
+# ---------------------------------------------------------------- Engine-level (raw) endpoints
+@app.post("/api/engine/signal")
+def api_signal_engine(payload: dict):
+    return run_signal_engine(payload)
+
+
+@app.post("/api/engine/oi")
+def api_oi_engine(payload: dict):
+    return run_oi_options_engine(payload)
+
+
+@app.post("/api/engine/risk")
+def api_risk_engine(payload: dict):
+    return run_risk_engine(payload)
+
+
+# ---------------------------------------------------------------- Full pipeline
+@app.post("/api/run")
+async def api_run_pipeline(req: SignalRequest):
+    result = run_pipeline(req.dict(exclude_none=True))
+    await manager.broadcast({"type": "signal", "data": result["contract"]})
+    if result.get("trade"):
+        await manager.broadcast({"type": "trade_open", "data": result["trade"]})
+    return result
+
+
+# ---------------------------------------------------------------- Instrument registry
+class InstrumentRequest(BaseModel):
+    name: str
+    exchange: str
+    symboltoken: str
+    market: Optional[str] = None
+    aliases: Optional[list] = None
+
+
+@app.get("/api/instruments")
+def api_instruments():
+    """What the connector can resolve by name (seeds + user additions)."""
+    reg = instruments.registry()
+    return {
+        "instruments": [
+            {"name": k, "exchange": v.get("exchange"), "symboltoken": v.get("symboltoken"),
+             "market": v.get("market"), "aliases": v.get("aliases") or []}
+            for k, v in sorted(reg.items())
+        ],
+        "timeframes": ["1m", "3m", "5m", "15m", "1h"],
+    }
+
+
+@app.post("/api/instruments")
+def api_add_instrument(req: InstrumentRequest):
+    try:
+        added = instruments.add_instrument(
+            req.name, req.exchange, req.symboltoken, req.market, req.aliases)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"added": added, "registry": instruments.registry()}
+
+
+# ---------------------------------------------------------------- Scalping
+@app.post("/api/scalp/signal")
+def api_scalp_signal(payload: dict):
+    """Scalp engine only — raw candles in, scalp decision out."""
+    return run_scalp_engine(payload)
+
+
+@app.post("/api/scalp/run")
+async def api_scalp_run(payload: dict):
+    """One-shot scalp pipeline: data -> scalp engine -> risk -> gate -> paper trade."""
+    result = await asyncio.to_thread(run_scalp_pipeline, payload or {})
+    await manager.broadcast({"type": "scalp_signal", "data": result["contract"]})
+    if result.get("trade"):
+        await manager.broadcast({"type": "scalp_open", "data": result["trade"]})
+    return result
+
+
+@app.get("/api/scalp/status")
+def api_scalp_status():
+    return scalp_runner.status()
+
+
+@app.get("/api/scalp/feed")
+def api_scalp_feed():
+    """Angel One WebSocket market-data feed: connection + per-token live marks."""
+    return scalp_runner.feed.status()
+
+
+@app.get("/api/reversal")
+def api_reversal(symbol: str, timeframe: str = "15m"):
+    """Resistance→support / support→resistance reversal read for a symbol,
+    with a concrete CE/PE + entry / stop / target if a turn is firing."""
+    from .connectors import angelone as _a
+    conn = _a.fetch_candles(market=None, symbol=symbol, exchange=None, symboltoken=None,
+                            interval=None, fromdate=None, todate=None, timeframe=timeframe,
+                            instrument="FUT")
+    if conn.get("data_status") != "OK":
+        return {"symbol": symbol, "data_status": conn.get("data_status"),
+                "reason": conn.get("reason"), "reversal": None}
+    r = detect_reversal(conn["candles"])
+    r["symbol"] = symbol
+    r["timeframe"] = timeframe
+    return r
+
+
+@app.get("/api/monitor")
+def api_monitor():
+    """One-shot snapshot for the Live Monitor page: runner health, live feed
+    marks, open positions/scalps with live P&L + distance-to-target/stop, and
+    the most recent signals. Deltas thereafter arrive over the WebSocket."""
+    st = scalp_runner.status()
+    feed_marks = (st.get("feed") or {}).get("marks") or {}
+
+    def enrich(rows):
+        out = []
+        for r in rows:
+            m = feed_marks.get(str(r.get("symboltoken") or ""))
+            entry = r.get("entry") or 0
+            qty = r.get("quantity") or 0
+            sign = 1 if r.get("direction") == "BUY" else -1
+            mark_src = "ws" if m else None
+            mark = m["ltp"] if m else None
+            # no live WS tick (illiquid contract) → imply the mark the runner's
+            # REST-fed pnl already reflects, so the page still shows target/stop gaps
+            if mark is None and qty and (r.get("pnl") is not None):
+                mark = round(entry + sign * (r["pnl"] / qty), 2)
+                mark_src = "rest"
+            live_pnl = round(sign * (mark - entry) * qty, 2) if (mark is not None and entry) else r.get("pnl")
+            t1, sl = r.get("target_1"), r.get("stop_loss")
+            hit = None
+            if mark is not None:
+                if t1 and ((sign > 0 and mark >= t1) or (sign < 0 and mark <= t1)):
+                    hit = "TARGET"
+                elif sl and ((sign > 0 and mark <= sl) or (sign < 0 and mark >= sl)):
+                    hit = "STOP"
+            out.append({
+                **r,
+                "mark": mark,
+                "mark_source": mark_src,
+                "mark_age_sec": m["age_sec"] if m else None,
+                "live_pnl": live_pnl,
+                "hit": hit,
+                "dist_to_target": round(t1 - mark, 2) if (t1 and mark is not None) else None,
+                "dist_to_stop": round(mark - sl, 2) if (sl and mark is not None) else None,
+            })
+        return out
+
+    return {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "runner": {k: st.get(k) for k in (
+            "armed", "running", "is_leader", "runner_owner", "auto_arm", "fast_mode",
+            "manage_latency_ms", "broker_sync", "broker_sync_status",
+            "last_tick_ts", "last_error", "session_open", "session_note",
+            "cooldown_sec_remaining", "open_scalps", "max_concurrent",
+            "traded_today", "daily_cap", "poll_sec")},
+        "feed": st.get("feed"),
+        "positions": enrich(db.list_trades(strategy="MANUAL", limit=100)),
+        "scalps": enrich(db.list_trades(strategy="SCALP", limit=100)),
+        "combos": combos.snapshot(),
+        "reversals": [v for v in (scalp_runner.reversals or {}).values() if v.get("reversal")],
+        "recent_signals": db.list_signals(limit=20),
+    }
+
+
+@app.post("/api/scalp/arm")
+def api_scalp_arm():
+    scalp_runner.start()
+    scalp_runner.arm()
+    return scalp_runner.status()
+
+
+@app.post("/api/scalp/disarm")
+def api_scalp_disarm():
+    scalp_runner.disarm()
+    return scalp_runner.status()
+
+
+@app.get("/api/scalp/config")
+def api_scalp_get_config():
+    return scalp_runner.get_config()
+
+
+@app.post("/api/scalp/config")
+def api_scalp_set_config(payload: dict):
+    return scalp_runner.set_config(payload or {})
+
+
+@app.get("/api/scalp/trades")
+def api_scalp_trades(status: Optional[str] = None, limit: int = Query(200, le=2000)):
+    return db.list_trades(status=status, limit=limit, strategy="SCALP")
+
+
+# ---------------------------------------------------------------- External position tracker
+class TrackPositionRequest(BaseModel):
+    symbol: str                         # e.g. "NATGASMINI" or a display name
+    symboltoken: Optional[str] = None   # Angel One token; resolved from registry if omitted
+    exchange: Optional[str] = None
+    option_type: Optional[str] = None   # CE | PE | "" for futures/equity
+    strike: Optional[float] = None
+    expiry: Optional[str] = None
+    direction: Optional[str] = "BUY"
+    entry: float
+    target: float
+    stop: float
+    lots: float = 1
+    lot_size: float = 1
+    trailing_stop: Optional[float] = 0   # 0 = honour the literal stop, no ratchet
+
+
+@app.post("/api/positions/track")
+async def api_track_position(req: TrackPositionRequest):
+    """Register a real broker position for MONITOR-ONLY tracking. The app marks
+    it to the live WebSocket feed and alerts (WS + Telegram) on target / stop.
+    It NEVER places a broker order."""
+    tok = req.symboltoken
+    exch = req.exchange
+    if not tok:
+        meta = instruments.resolve(req.symbol)
+        if meta:
+            tok, exch = meta.get("symboltoken"), exch or meta.get("exchange")
+    if not tok:
+        raise HTTPException(400, f"no symboltoken for '{req.symbol}' — pass symboltoken or add it via /api/instruments")
+
+    # de-dup: if a mirror for this contract already exists (manual or auto-synced),
+    # update its levels instead of creating a second OPEN row.
+    existing = db.find_open_by_token(str(tok), strategy="MANUAL")
+    if existing:
+        db.update_trade(existing["trade_id"], {
+            "target_1": req.target, "stop_loss": req.stop,
+            "trailing_stop": req.trailing_stop or 0})
+        row = db.get_trade(existing["trade_id"])
+        await manager.broadcast({"type": "position_update", "data": row})
+        return row
+
+    row = open_trade({
+        "signal_id": None,
+        "market": exch or "", "underlying": req.symbol.upper(),
+        "instrument": "OPTION" if req.option_type else "FUT",
+        "expiry": req.expiry or "", "strike": req.strike or 0,
+        "option_type": (req.option_type or "").upper(),
+        "direction": (req.direction or "BUY").upper(), "timeframe": "",
+        "entry": req.entry, "target_1": req.target, "target_2": None,
+        "stop_loss": req.stop, "trailing_stop": req.trailing_stop or 0,
+        "quantity": (req.lots or 1) * (req.lot_size or 1),
+        "probability": None, "confidence": None, "market_regime": "",
+        "oi_evidence": "", "reason": "external broker position — monitor only",
+        "strategy": "MANUAL", "setup": None, "atr_pct": None,
+        "max_hold_sec": None, "symboltoken": str(tok),
+    })
+    # the active runner picks up the new token on its next tick (it rebuilds the
+    # feed subscription from list_open_managed()); don't touch the feed here —
+    # a non-leader worker must never start a second WebSocket connection.
+    await manager.broadcast({"type": "position_open", "data": row})
+    return row
+
+
+@app.get("/api/positions")
+def api_positions(status: Optional[str] = None, limit: int = Query(200, le=2000)):
+    return db.list_trades(status=status, limit=limit, strategy="MANUAL")
+
+
+@app.get("/api/broker/positions")
+def api_broker_positions():
+    """Live net positions straight from Angel One (getPosition). The runner also
+    auto-registers any of these that aren't tracked yet."""
+    from .connectors import angelone as _a
+    return _a.fetch_positions()
+
+
+class LevelsRequest(BaseModel):
+    trade_id: str
+    target: Optional[float] = None
+    stop: Optional[float] = None
+    trailing_stop: Optional[float] = None
+
+
+@app.post("/api/positions/levels")
+async def api_position_levels(req: LevelsRequest):
+    """Set / update target, stop, trailing on a tracked (or auto-synced) position."""
+    t = db.get_trade(req.trade_id)
+    if not t or t.get("status") != "OPEN":
+        raise HTTPException(404, "open position not found")
+    fields = {}
+    if req.target is not None:
+        fields["target_1"] = req.target
+    if req.stop is not None:
+        fields["stop_loss"] = req.stop
+    if req.trailing_stop is not None:
+        fields["trailing_stop"] = req.trailing_stop
+    if not fields:
+        raise HTTPException(400, "nothing to set")
+    db.update_trade(req.trade_id, fields)
+    updated = db.get_trade(req.trade_id)
+    await manager.broadcast({"type": "position_update", "data": updated})
+    return updated
+
+
+class ComboRequest(BaseModel):
+    legs: list[str]
+    kind: Optional[str] = "STRANGLE"
+    target: Optional[float] = None
+    stop: Optional[float] = None
+    trail: Optional[float] = None
+
+
+class ComboLevelsRequest(BaseModel):
+    combo_id: str
+    target: Optional[float] = None
+    stop: Optional[float] = None
+    trail: Optional[float] = None
+
+
+@app.get("/api/positions/combos")
+def api_combos():
+    """Live combined figures for every strangle/combo: combined debit vs mark,
+    pair P&L, expiry break-evens, distance to combined target / stop."""
+    return combos.snapshot()
+
+
+@app.post("/api/positions/combo")
+def api_create_combo(req: ComboRequest):
+    try:
+        return combos.create(req.legs, kind=(req.kind or "STRANGLE"),
+                             target_combined=req.target, stop_combined=req.stop,
+                             trail_combined=req.trail)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/positions/combo/levels")
+def api_combo_levels(req: ComboLevelsRequest):
+    try:
+        return combos.set_levels(req.combo_id, target_combined=req.target,
+                                 stop_combined=req.stop, trail_combined=req.trail)
+    except KeyError:
+        raise HTTPException(404, "combo not found")
+
+
+@app.post("/api/positions/untrack")
+async def api_untrack_position(req: CloseTradeRequest):
+    updated = close_trade(req.trade_id, req.exit_price, exit_reason="UNTRACKED")
+    if not updated:
+        raise HTTPException(404, "position not found")
+    await manager.broadcast({"type": "position_exit", "data": updated})
+    return updated
+
+
+# ---------------------------------------------------------------- Data endpoints
+@app.get("/api/signals")
+def api_signals(limit: int = Query(200, le=2000)):
+    return db.list_signals(limit=limit)
+
+
+@app.get("/api/trades")
+def api_trades(status: Optional[str] = None, limit: int = Query(200, le=2000)):
+    return db.list_trades(status=status, limit=limit)
+
+
+@app.get("/api/research")
+def api_research():
+    return aggregate_research()
+
+
+@app.post("/api/trades/mark")
+async def api_mark_price(req: MarkPriceRequest):
+    updated = update_trade_price(req.trade_id, req.ltp)
+    if not updated:
+        raise HTTPException(404, "trade not found")
+    if updated.get("status") == "CLOSED":
+        await manager.broadcast({"type": "trade_closed", "data": updated})
+    else:
+        await manager.broadcast({"type": "trade_update", "data": updated})
+    return updated
+
+
+@app.post("/api/trades/close")
+async def api_close_trade(req: CloseTradeRequest):
+    updated = close_trade(req.trade_id, req.exit_price)
+    if not updated:
+        raise HTTPException(404, "trade not found")
+    await manager.broadcast({"type": "trade_closed", "data": updated})
+    return updated
+
+
+@app.get("/api/health")
+def api_health():
+    return {"status": "ok", "live_trading": False, "paper_mode": True}
+
+
+@app.get("/api/env-check")
+def api_env_check():
+    """Reports which credentials are configured WITHOUT ever revealing values."""
+    keys = [
+        "ANGEL_API_KEY", "ANGEL_CLIENT_ID", "ANGEL_PASSWORD", "ANGEL_TOTP_SECRET",
+        "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_SIGNALS_CHANNEL_ID",
+    ]
+    return {k: bool(os.environ.get(k)) for k in keys}
+
+
+# ---------------------------------------------------------------- Frontend (static SPA)
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
+
+
+@app.get("/")
+def index():
+    return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+
+@app.get("/{full_path:path}")
+def spa_catchall(full_path: str):
+    # Let real API/static paths 404 normally; everything else serves the SPA
+    if full_path.startswith("api/") or full_path.startswith("static/") or full_path == "ws":
+        raise HTTPException(404)
+    return FileResponse(str(FRONTEND_DIR / "index.html"))

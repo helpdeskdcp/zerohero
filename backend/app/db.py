@@ -1,0 +1,325 @@
+"""
+SQLite persistence layer.
+Tables mirror the n8n Data Tables: ai_signals_log, ai_paper_trades.
+"""
+import sqlite3
+import os
+import threading
+from contextlib import contextmanager
+
+DB_PATH = os.environ.get("CHANAKYA_DB_PATH", os.path.join(os.path.dirname(__file__), "..", "data", "chanakya.db"))
+DB_PATH = os.path.abspath(DB_PATH)
+
+_lock = threading.Lock()
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS ai_signals_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_id TEXT UNIQUE,
+    created_ts TEXT,
+    market TEXT,
+    symbol TEXT,
+    instrument TEXT,
+    underlying TEXT,
+    expiry TEXT,
+    strike REAL,
+    option_type TEXT,
+    direction TEXT,
+    timeframe TEXT,
+    entry_ref REAL,
+    target_1 REAL,
+    target_2 REAL,
+    stop_loss REAL,
+    trailing_stop REAL,
+    probability REAL,
+    confidence REAL,
+    risk_reward REAL,
+    market_regime TEXT,
+    decision TEXT,
+    data_status TEXT,
+    risk_status TEXT,
+    reason TEXT,
+    model_version TEXT,
+    live_trading INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS ai_paper_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trade_id TEXT UNIQUE,
+    signal_id TEXT,
+    opened_ts TEXT,
+    closed_ts TEXT,
+    status TEXT,               -- OPEN | CLOSED
+    result TEXT,                -- WIN | LOSS | FLAT
+    market TEXT,
+    underlying TEXT,
+    instrument TEXT,
+    expiry TEXT,
+    strike REAL,
+    option_type TEXT,
+    direction TEXT,
+    timeframe TEXT,
+    entry REAL,
+    exit_price REAL,
+    target_1 REAL,
+    target_2 REAL,
+    stop_loss REAL,
+    trailing_stop REAL,
+    quantity REAL,
+    probability REAL,
+    confidence REAL,
+    market_regime TEXT,
+    oi_evidence TEXT,
+    pnl REAL,
+    reason TEXT,
+    strategy TEXT DEFAULT 'CORE',   -- CORE | SCALP
+    setup TEXT,                      -- scalp setup name
+    atr_pct REAL,
+    max_hold_sec REAL,
+    mfe REAL DEFAULT 0,             -- max favourable excursion (price)
+    mae REAL DEFAULT 0,            -- max adverse excursion (price)
+    exit_reason TEXT               -- TARGET | STOP | TRAIL | TIME | MANUAL
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+"""
+
+
+def get_conn():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
+
+
+@contextmanager
+def db():
+    with _lock:
+        conn = get_conn()
+        try:
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
+
+
+# Columns added after the initial release — applied idempotently on every boot
+# so an existing chanakya.db picks them up without a manual migration.
+_MIGRATIONS = {
+    "ai_paper_trades": {
+        "strategy": "TEXT DEFAULT 'CORE'",
+        "setup": "TEXT",
+        "atr_pct": "REAL",
+        "max_hold_sec": "REAL",
+        "mfe": "REAL DEFAULT 0",
+        "mae": "REAL DEFAULT 0",
+        "exit_reason": "TEXT",
+        "symboltoken": "TEXT",
+    },
+}
+
+
+def _migrate(conn):
+    for table, cols in _MIGRATIONS.items():
+        have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, decl in cols.items():
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+
+
+def init_db():
+    with db() as conn:
+        conn.executescript(SCHEMA)
+        _migrate(conn)
+
+
+def insert_signal(row: dict):
+    cols = ["signal_id", "created_ts", "market", "symbol", "instrument", "underlying",
+            "expiry", "strike", "option_type", "direction", "timeframe", "entry_ref",
+            "target_1", "target_2", "stop_loss", "trailing_stop", "probability",
+            "confidence", "risk_reward", "market_regime", "decision", "data_status",
+            "risk_status", "reason", "model_version", "live_trading"]
+    vals = [row.get(c) for c in cols]
+    placeholders = ",".join(["?"] * len(cols))
+    with db() as conn:
+        conn.execute(
+            f"INSERT OR REPLACE INTO ai_signals_log ({','.join(cols)}) VALUES ({placeholders})",
+            vals,
+        )
+
+
+def list_signals(limit=200):
+    with db() as conn:
+        cur = conn.execute("SELECT * FROM ai_signals_log ORDER BY id DESC LIMIT ?", (limit,))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def insert_trade(row: dict):
+    cols = ["trade_id", "signal_id", "opened_ts", "closed_ts", "status", "result",
+            "market", "underlying", "instrument", "expiry", "strike", "option_type",
+            "direction", "timeframe", "entry", "exit_price", "target_1", "target_2",
+            "stop_loss", "trailing_stop", "quantity", "probability", "confidence",
+            "market_regime", "oi_evidence", "pnl", "reason",
+            "strategy", "setup", "atr_pct", "max_hold_sec", "mfe", "mae", "exit_reason",
+            "symboltoken"]
+    vals = [row.get(c) for c in cols]
+    placeholders = ",".join(["?"] * len(cols))
+    with db() as conn:
+        conn.execute(
+            f"INSERT OR REPLACE INTO ai_paper_trades ({','.join(cols)}) VALUES ({placeholders})",
+            vals,
+        )
+
+
+def update_trade(trade_id: str, fields: dict):
+    if not fields:
+        return
+    sets = ",".join([f"{k}=?" for k in fields.keys()])
+    vals = list(fields.values()) + [trade_id]
+    with db() as conn:
+        conn.execute(f"UPDATE ai_paper_trades SET {sets} WHERE trade_id=?", vals)
+
+
+def get_trade(trade_id: str):
+    with db() as conn:
+        cur = conn.execute("SELECT * FROM ai_paper_trades WHERE trade_id=?", (trade_id,))
+        r = cur.fetchone()
+        return dict(r) if r else None
+
+
+def list_trades(status=None, limit=200, strategy=None):
+    clauses, params = [], []
+    if status:
+        clauses.append("status=?")
+        params.append(status)
+    if strategy:
+        clauses.append("COALESCE(strategy,'CORE')=?")
+        params.append(strategy)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        cur = conn.execute(f"SELECT * FROM ai_paper_trades{where} ORDER BY id DESC LIMIT ?", params)
+        return [dict(r) for r in cur.fetchall()]
+
+
+def list_open_managed():
+    """OPEN trades the scalp runner is responsible for marking to market."""
+    with db() as conn:
+        cur = conn.execute(
+            "SELECT * FROM ai_paper_trades WHERE status='OPEN' "
+            "AND COALESCE(strategy,'CORE') IN ('SCALP','MANUAL') ORDER BY id DESC")
+        return [dict(r) for r in cur.fetchall()]
+
+
+def count_trades_since(iso_ts, strategy=None):
+    clauses = ["opened_ts >= ?"]
+    params = [iso_ts]
+    if strategy:
+        clauses.append("COALESCE(strategy,'CORE')=?")
+        params.append(strategy)
+    with db() as conn:
+        cur = conn.execute(
+            f"SELECT COUNT(*) AS c FROM ai_paper_trades WHERE {' AND '.join(clauses)}", params)
+        return int(cur.fetchone()["c"])
+
+
+def get_setting(key, default=None):
+    with db() as conn:
+        cur = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,))
+        r = cur.fetchone()
+        return r["value"] if r else default
+
+
+def set_setting(key, value):
+    with db() as conn:
+        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (key, str(value)))
+
+
+# ---------------------------------------------------------------- singleton lease
+# Cross-PROCESS mutual exclusion so only ONE background runner is ever active,
+# no matter how many uvicorn workers are launched. `_lock` above only guards
+# threads within one process; this uses SQLite's own write lock (BEGIN IMMEDIATE)
+# which IS honoured across processes.
+import time as _time  # noqa: E402
+import json as _json  # noqa: E402
+
+
+def lease_acquire(key: str, owner: str, ttl_sec: int = 30) -> bool:
+    """Claim or renew the lease `key` for `owner`. Returns True if `owner` holds
+    it after the call. A lease whose heartbeat is older than ttl_sec is stale and
+    can be stolen (covers a crashed holder)."""
+    now = _time.time()
+    with _lock:
+        conn = get_conn()
+        conn.isolation_level = None          # explicit transaction control
+        try:
+            conn.execute("PRAGMA busy_timeout=3000")
+            conn.execute("BEGIN IMMEDIATE")
+            r = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,)).fetchone()
+            cur_owner, hb = None, 0.0
+            if r:
+                try:
+                    d = _json.loads(r["value"])
+                    cur_owner, hb = d.get("owner"), float(d.get("hb") or 0)
+                except Exception:
+                    pass
+            if (not cur_owner) or cur_owner == owner or (now - hb) > ttl_sec:
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
+                    (key, _json.dumps({"owner": owner, "hb": now})))
+                conn.commit()
+                return True
+            conn.commit()
+            return False
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+
+def lease_release(key: str, owner: str):
+    with _lock:
+        conn = get_conn()
+        try:
+            r = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,)).fetchone()
+            if r:
+                try:
+                    if _json.loads(r["value"]).get("owner") == owner:
+                        conn.execute("DELETE FROM app_settings WHERE key=?", (key,))
+                        conn.commit()
+                except Exception:
+                    pass
+        finally:
+            conn.close()
+
+
+def lease_owner(key: str):
+    raw = get_setting(key)
+    if not raw:
+        return None
+    try:
+        return _json.loads(raw).get("owner")
+    except Exception:
+        return None
+
+
+def find_open_by_token(symboltoken: str, strategy: str = "MANUAL"):
+    """Newest OPEN trade for a symboltoken+strategy, or None. Used to keep
+    position auto-sync and manual /track from creating duplicate mirrors."""
+    if not symboltoken:
+        return None
+    with db() as conn:
+        cur = conn.execute(
+            "SELECT * FROM ai_paper_trades WHERE status='OPEN' AND symboltoken=? "
+            "AND COALESCE(strategy,'CORE')=? ORDER BY id DESC LIMIT 1",
+            (str(symboltoken), strategy))
+        r = cur.fetchone()
+        return dict(r) if r else None
