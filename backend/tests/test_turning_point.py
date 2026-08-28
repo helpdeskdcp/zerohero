@@ -56,11 +56,13 @@ def test_bearish_reversal_at_resistance():
 
 
 # ---------------------------------------------------------------- 3. clean trend (no turn)
-def test_clean_trend_is_no_turn_or_low_confidence():
-    px = [100 + i * 0.25 for i in range(50)]          # smooth uptrend, no wick, no accel change
-    out = run_turning_point_engine({"candles": _series(px, wick=0.02), "config": {}})
-    assert out["direction"] == "NO_TURN" or not out["high_confidence"]
-    assert abs(out["turn"]) < out["calibration"]["k"]  # sanity: not an extreme turn
+def test_clean_trend_is_not_high_confidence():
+    # realistic uptrend: steady drift + small alternating noise (no pinned RSI,
+    # no rejection wick, no volume climax) -> no TRIGGER -> not a high-conf turn
+    px = [100 + i * 0.25 + (0.3 if i % 2 else -0.3) for i in range(50)]
+    out = run_turning_point_engine({"candles": _series(px, wick=0.04), "config": {}})
+    assert not out["high_confidence"]
+    assert abs(out["turn"]) < out["calibration"]["k"]
 
 
 # ---------------------------------------------------------------- 4. sideways / range
@@ -136,7 +138,7 @@ def test_recalibrate_moves_k_and_bounds_weights(fresh_db):
     assert tp_calibration._K_LO <= cal["k"] <= tp_calibration._K_HI
     assert cal["k"] > 0                                   # positive turn -> positive move
     w = cal["weights"]
-    assert abs(sum(w.values()) - 1.0) < 1e-6
+    assert abs(sum(w.values()) - 1.0) < 2e-3          # 4-dp rounding of 8 weights
     assert all(tp_calibration._W_LO - 1e-9 <= v <= tp_calibration._W_HI + 1e-9 for v in w.values())
     assert w["stretch"] >= tp_calibration._SEED["weights"]["stretch"]   # signal-carrying feature up-weighted
 

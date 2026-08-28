@@ -137,8 +137,8 @@ def run_turning_point_engine(inp: dict) -> dict:
         "min_candles": int(_num(cfg.get("min_candles")) or 30),
         "k": _num(cal.get("k")) if _num(cal.get("k")) is not None else (_num(cfg.get("k")) or 3.2),
         "b": _num(cal.get("b")) if _num(cal.get("b")) is not None else (_num(cfg.get("b")) or 0.0),
-        "tau": _num(cfg.get("tau")) if _num(cfg.get("tau")) is not None else 0.15,
-        "tau_hi": _num(cfg.get("tau_hi")) if _num(cfg.get("tau_hi")) is not None else 0.28,
+        "tau": _num(cfg.get("tau")) if _num(cfg.get("tau")) is not None else 0.12,
+        "tau_hi": _num(cfg.get("tau_hi")) if _num(cfg.get("tau_hi")) is not None else 0.25,
         "conf_min": _num(cfg.get("conf_min")) or 62,
         "div_lookback": int(_num(cfg.get("div_lookback")) or 8),
         "sr_touch_atr": _num(cfg.get("sr_touch_atr")) or 0.75,
@@ -300,7 +300,13 @@ def run_turning_point_engine(inp: dict) -> dict:
     S["mom"] = _clamp(s_mom)
 
     if is_climax:
-        S["vol"] = _clamp(-(1 if last["c"] >= last["o"] else -1) * min((vr - 1) / 2, 1))
+        # direction of a climax bar = its net REJECTION, not close-vs-open:
+        # a down-spike-and-recover (big lower wick) is a bullish capitulation;
+        # a blow-off (big upper wick) is a bearish exhaustion.
+        net_rej = lw - uw
+        if abs(net_rej) < 0.12:
+            net_rej = (last["c"] - last["o"])
+        S["vol"] = _clamp((1 if net_rej > 0 else -1) * min((vr - 1) / 2, 1))
     else:
         S["vol"] = 0.0
 
@@ -320,15 +326,35 @@ def run_turning_point_engine(inp: dict) -> dict:
 
     raw = sum(w[k] * S[k] for k in S)
 
-    # regime dampener: turning-point signals are weaker in a strong trend
+    # Trend dampening applies to CONTEXT features only. Genuine exhaustion
+    # (wick / volume-climax / RSI-extreme+divergence / band-edge) fires even
+    # mid-trend — that is the whole point of a turning-point engine.
+    _EXHAUST = ("rsi", "band", "wick", "vol")
+    _CONTEXT = ("stretch", "sr", "mom", "oi")
+    # a turn needs a TRIGGER, not just an overextended reading — a rejection
+    # wick, a volume climax, an RSI divergence, or clear momentum fade.
+    has_trigger = (abs(S["wick"]) > 0.25 or S["vol"] != 0.0 or div != 0
+                   or abs(S["mom"]) > 0.30)
+    raw_ex = sum(w[k] * S[k] for k in _EXHAUST)
+    if not has_trigger:
+        raw_ex *= 0.6                     # "overextended" but not yet turning
+    raw_ctx = sum(w[k] * S[k] for k in _CONTEXT)
+
     if adx_val is not None:
-        g_regime = _clamp(1 - (adx_val - 20) / 30, 0.25, 1)
+        g_regime = _clamp(1 - (adx_val - 20) / 30, 0.40, 1)
     else:
-        g_regime = 0.7
+        g_regime = 0.75
     is_flat = bool(sc.get("flat_market")) or (vol_pct is not None and vol_pct < 0.03)
     if structure in ("RANGE", "EXPANSION") or (sc.get("market_regime") in ("RANGE", "FLAT", "TRANSITION")):
         g_regime = max(g_regime, 0.9)
-    turn = raw * g_regime
+
+    turn = raw_ex + g_regime * raw_ctx
+
+    # climax boost: volume-climax rejection wick at an RSI extreme, all agreeing
+    if (is_climax and abs(S["wick"]) > 0.3 and abs(S["rsi"]) > 0.4
+            and (S["wick"] > 0) == (S["rsi"] > 0) and (turn > 0) == (S["wick"] > 0)):
+        turn *= 1.4
+    turn = _clamp(turn, -1.0, 1.0)
 
     # ---- probability + direction ---------------------------------------
     p_up = round(_sigmoid(C["k"] * turn + C["b"]), 4)
@@ -344,7 +370,7 @@ def run_turning_point_engine(inp: dict) -> dict:
     nz_w = sum(w[k] for k in S if S[k] != 0.0) or _EPS
     agree_w = sum(w[k] for k in S if S[k] != 0.0 and (S[k] > 0) == (turn > 0))
     agree = agree_w / nz_w
-    strength = min(1.0, abs(raw) / 0.55)
+    strength = min(1.0, abs(turn) / 0.45)
 
     stale_sec = None
     lt = norm[-1]["t"]
@@ -360,7 +386,7 @@ def run_turning_point_engine(inp: dict) -> dict:
     data_q = min(1.0, n / 40.0) * (0.5 if (stale_sec and stale_sec > C["max_stale_sec"]) else 1.0)
     confidence = int(round(100 * agree * (strength ** 0.7) * data_q * (g_regime ** 0.3)))
     high_conf = (confidence >= C["conf_min"] and abs(turn) >= C["tau_hi"]
-                 and not is_flat and direction != "NO_TURN")
+                 and not is_flat and direction != "NO_TURN" and has_trigger)
 
     # ---- zones (ATR-scaled) ---------------------------------------
     hw = max(C["hw_atr"] * atr14, C["hw_pct"] * price)

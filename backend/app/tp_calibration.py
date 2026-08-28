@@ -244,12 +244,14 @@ def recalibrate() -> dict:
         if s > 1e-9:
             target = {f: raw_w[f] / s for f in feats}
             prior = cal["weights"]
-            blended = {f: (1 - _ALPHA) * prior.get(f, _SEED["weights"][f]) + _ALPHA * target[f]
-                       for f in feats}
-            bs = sum(blended.values()) or 1e-9
-            clamped = {f: min(_W_HI, max(_W_LO, blended[f] / bs)) for f in feats}
-            cs = sum(clamped.values()) or 1e-9
-            cal["weights"] = {f: round(clamped[f] / cs, 4) for f in feats}
+            w = {f: (1 - _ALPHA) * prior.get(f, _SEED["weights"][f]) + _ALPHA * target[f]
+                 for f in feats}
+            # project onto {sum==1, _W_LO<=wi<=_W_HI} by alternating renormalize/clamp;
+            # deterministic and converges (feasible: 8*[0.02,0.35] brackets 1.0)
+            for _ in range(24):
+                s = sum(w.values()) or 1e-9
+                w = {f: min(_W_HI, max(_W_LO, w[f] / s)) for f in feats}
+            cal["weights"] = {f: round(w[f], 4) for f in feats}
 
     cal["updated_ts"] = datetime.now(timezone.utc).isoformat()
     _save(cal)
