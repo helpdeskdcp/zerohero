@@ -1,129 +1,147 @@
 # Chanakya AI — Trading Control Room
 
-Full backend + responsive web UI, ported 1:1 from your n8n workflows
-(`AI-SIGNAL-ENGINE`, `AI-OI-OPTIONS`, `AI-RISK-ENGINE`, `AI-MASTER-ORCHESTRATOR`,
-`AI-ANGELONE-CONNECTOR`, `AI-PAPER-TRADING`, `AI-RESEARCH-ANALYSIS`) into a
-standalone Python/FastAPI service with a single-page dashboard that
-auto-adapts between mobile and desktop.
+A single-process **FastAPI modular monolith** for deterministic (rule-based, *not*
+ML) options-trading signals + live position monitoring on Angel One, with a
+vanilla-JS dashboard, SQLite storage, and an in-process background runner.
 
-**Paper mode only.** `live_trading` is hard-coded `false` everywhere in the
-pipeline and is never derived from input — same fail-closed design as your
-n8n `NO-TRADE GATE` node.
+**Paper / monitor only.** `live_trading` is hard-wired `false`; there is **no
+order-placement code anywhere**. The app watches, computes, and alerts — you
+place every real order yourself (or via a broker GTT/OCO).
 
-## Architecture
+---
+
+## Architecture at a glance
 
 ```
-backend/
-  app/
-    engines/
-      signal_engine.py       ← AI-SIGNAL-ENGINE  (RSI/EMA/ATR/ADX/VWAP/MACD, flat-market + stale guards)
-      oi_options_engine.py   ← AI-OI-OPTIONS      (PCR, max pain, strike selection score)
-      risk_engine.py         ← AI-RISK-ENGINE     (hard gates, ATR-based position sizing)
-      paper_trading.py       ← AI-PAPER-TRADING   (OPEN/mark/CLOSE lifecycle)
-    connectors/
-      angelone.py            ← AI-ANGELONE-CONNECTOR (TOTP login + historical candles)
-      telegram.py            ← Signal/trade alerts to your bot + channel
-    orchestrator.py          ← AI-MASTER-ORCHESTRATOR (fail-closed gate, chains everything)
-    research.py              ← AI-RESEARCH-ANALYSIS (descriptive stats only, no forward prediction)
-    db.py                    ← SQLite: ai_signals_log, ai_paper_trades
-    main.py                  ← FastAPI app, REST + WebSocket, serves the frontend
-  .env                        ← your credentials (chmod 600, never commit)
-  requirements.txt
-
-frontend/
-  index.html                 ← single-page dashboard shell
-  static/css/style.css       ← responsive: sidebar+tabs on desktop, bottom tab bar on mobile
-  static/js/app.js           ← view routing, live WebSocket feed, REST calls
-
-scripts/
-  chanakya-app.service       ← systemd unit
-  nginx-chanakya-app.conf    ← reverse proxy template (WebSocket-aware)
-
-install.sh                   ← one-key Debian installer
+Browser SPA ── HTTP + /ws ──▶ FastAPI (uvicorn, --workers 1)
+                                │  startup hook
+                                ▼
+                         ScalpRunner._loop  ── single active instance via a
+                         (asyncio task, in-process)   SQLite lease (runner_lease)
+                                │
+         ┌──────────────────────┼───────────────────────────┐
+         ▼                      ▼                           ▼
+  Trading engines        Angel One connectors         SQLite (WAL, 1 file)
+  (pure functions)       REST: candles / getPosition  ai_signals_log
+  signal · scalp · OI    WS : SmartWebSocketV2 LTP    ai_paper_trades
+  risk · reversal        (binary parser + reconnect)  app_settings (KV)
+  paper_trading · combos
 ```
 
-## Quick install (Debian VPS, e.g. bramha.cloud)
+- **Modular monolith.** One deployable, one DB. `connectors/`, `engines/`,
+  pipelines, runner, registry are cleanly separated (no circular imports).
+- **Runtime.** `ScalpRunner` runs on the web server's event loop. A cross-process
+  **lease** (`db.lease_acquire`) guarantees exactly one active runner even under
+  multiple uvicorn workers; the rest are hot standbys that serve the leader's
+  published view.
+- **Adaptive cadence.** Markets closed + nothing open → 60 s loop, broker poll
+  ≥ 5 min, reversal/wrong-side scans skipped. Market hours + open positions →
+  1 s (`fast_mode`) with REST candles cached ≤ 60 s.
 
-1. Copy this whole folder to your server, e.g.:
-   ```bash
-   rsync -avz chanakya-app/ you@bramha.cloud:/home/you/chanakya-app/
-   ```
-2. SSH in and run the installer as root:
-   ```bash
-   ssh you@bramha.cloud
-   cd chanakya-app
-   sudo bash install.sh                      # HTTP only, bound to server IP
-   # or, with a domain for automatic HTTPS:
-   sudo bash install.sh chanakya.yourdomain.com
-   ```
-3. Open the URL it prints. That's it — systemd keeps it running and
-   restarts it on crash/reboot; Nginx reverse-proxies port 8420 including
-   the `/ws` WebSocket route for the live feed.
+---
 
-The installer is idempotent — re-run it any time you `rsync` updated code
-over; it rebuilds the venv, reinstalls deps, and restarts the service.
+## Directory map
 
-## Local dev (no install script)
+```
+backend/app/
+  main.py            FastAPI app — 34 routes + /ws, opt-in bearer auth, SPA
+  db.py              SQLite: schema, idempotent migrations, indexes, singleton lease
+  instruments.py     friendly-name → {exchange, symboltoken}; timeframe→interval; lookback window
+  orchestrator.py    CORE pipeline  : connector → signal → OI → risk → gate → log → paper
+  scalp_pipeline.py  SCALP pipeline : connector → scalp → risk → gate → log → paper (no OI)
+  pipeline_core.py   shared plumbing for the two pipelines (signal-id, log+notify, open_trade map)
+  scalper.py         ScalpRunner: monitor + broker-sync + scalp automation + reversal scan
+  combos.py          strangle/combo grouping — combined-exit alerts (no auto-close)
+  reversal.py        S/R reversal detector → CE/PE + entry/stop/target
+  research.py        descriptive aggregation over logged rows (45 s cached)
+  mcp_server.py      stdio MCP server exposing the engines as tools (manual entry point)
+  connectors/
+    angelone.py      REST: TOTP login, getCandleData, getPosition (+ retry)
+    angel_ws.py      AngelMarketFeed: SmartWebSocketV2 binary LTP cache + 1m OHLC ring
+    telegram.py      alert sender (never raises)
+  engines/
+    signal_engine.py     EMA/RSI/ATR/VWAP/MACD/ADX · regime · sigmoid probability · ATR targets
+    scalp_engine.py      VWAP_RECLAIM / EMA_PULLBACK / MOMENTUM_BREAK · tight ticks · session filter
+    oi_options_engine.py PCR · max-pain · OI S/R · strike-selection score  (needs a chain input)
+    risk_engine.py       hard gates + ATR position sizing
+    paper_trading.py     OPEN/mark/CLOSE · MFE/MAE · SCALP trail+time-stop · MANUAL = monitor-only
+frontend/              index.html + static/js/app.js + static/css/style.css  (no build step)
+backend/tests/         pytest — engines, gate, combos, WS parser, DB lease (29 tests)
+scripts/               systemd unit (--workers 1) + nginx vhost
+install.sh             one-key Debian installer (venv, systemd, nginx, ufw, certbot)
+```
 
+Entry points: `uvicorn app.main:app` (the app) and `python -m app.mcp_server` (manual tool).
+
+---
+
+## Run
+
+**Local dev**
 ```bash
 cd backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8420
+cp .env.example .env    # fill in Angel One SmartAPI + TOTP + Telegram
+uvicorn app.main:app --reload --port 8420 --env-file .env
 # open http://localhost:8420
 ```
 
-## Credentials (`backend/.env`)
+**Tests**
+```bash
+cd backend && ./venv/bin/python -m pytest tests/ -q
+```
 
-Already populated from the files you uploaded (Angel One SmartAPI + TOTP,
-Telegram bot/chat/channel IDs). The file is `chmod 600` by the installer.
-Rotate any of these values by editing `.env` on the server and running
-`sudo systemctl restart chanakya-app` — nothing is hardcoded elsewhere.
+**Deploy (Debian VPS)** — `sudo bash install.sh [yourdomain.com]`. Idempotent;
+re-run after `rsync`-ing updated code. systemd keeps it running; Nginx
+reverse-proxies including `/ws`.
 
-`GET /api/env-check` reports which variables are set (booleans only,
-values are never sent to the browser).
+---
 
-## REST API
+## Configuration
 
-| Method | Path                  | Purpose |
-|--------|------------------------|---------|
-| POST   | `/api/run`             | Runs the full pipeline: connector → signal → OI → risk → gate → paper trade |
-| POST   | `/api/engine/signal`   | Signal engine only (raw candles in, decision out) |
-| POST   | `/api/engine/oi`       | OI/options engine only |
-| POST   | `/api/engine/risk`     | Risk engine only |
-| GET    | `/api/signals`         | Signal ledger (from `ai_signals_log`) |
-| GET    | `/api/trades`          | Paper trades (`?status=OPEN\|CLOSED`) |
-| POST   | `/api/trades/mark`     | Mark-to-market an open trade with a new LTP (auto-closes on SL/T1) |
-| POST   | `/api/trades/close`    | Manually close a trade at a given exit price |
-| GET    | `/api/research`        | Descriptive aggregation (win rate, profit factor, regime breakdown) |
-| GET    | `/api/health`          | Liveness check |
-| GET    | `/api/env-check`       | Which credentials are configured (no values) |
-| WS     | `/ws`                  | Live signal/trade stream powering the dashboard feed |
+`backend/.env` (chmod 600, never committed):
 
-## Notes carried over from your n8n workflows
+| Var | Purpose |
+|---|---|
+| `ANGEL_API_KEY` / `ANGEL_CLIENT_ID` / `ANGEL_PASSWORD` / `ANGEL_TOTP_SECRET` | Angel One SmartAPI login |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_SIGNALS_CHANNEL_ID` | alerts |
+| `CHANAKYA_DB_PATH` | SQLite file location |
+| `CHANAKYA_API_TOKEN` | **optional** — if set, `/api/*` (except `/api/health`) and `/ws` require `Authorization: Bearer <t>` or `?token=<t>`. Unset = open dashboard. |
 
-- **Flat-market detection** and the **RSI neutral-50 fix** (zero gain + zero
-  loss → 50, not 100) are preserved exactly.
-- **Staleness guard**: candles older than `max_stale_sec` (default 900s)
-  force `NO_TRADE`.
-- **ATR-based sizing** in the risk engine floors to whole lots and caps by
-  available margin; kill switch, daily-loss, consecutive-loss, and
-  max-open-position gates are hard rejects before any sizing math runs.
-- **Strike selection** in the OI engine is a deterministic score (liquidity
-  + spread + moneyness + OI momentum), not "nearest strike."
-- The **orchestrator gate** only approves a trade when data is `OK`, the
-  signal decision is `TRADE`, risk is `APPROVED`, and — for options — the OI
-  engine also independently returns `TRADE`. Any one failure logs the
-  attempt as `NO_TRADE` and nothing is opened.
-- Verified against the scenarios in your `AI-TEST-MATRIX.json`
-  (insufficient candles, flat market, stale data, uptrend/downtrend,
-  determinism, thin/illiquid chains, kill switch, zero-stop, wrong-side
-  stop, daily-loss limit) — all pass against this Python port.
+Runner config lives in `app_settings.scalp_config` (JSON) and is edited live via
+`POST /api/scalp/config` or the Scalping tab. Instrument tokens: seeds for the
+liquid indices + `POST /api/instruments` to add/correct (MCX contracts are
+expiry-dated — roll them each expiry).
 
-## What wasn't ported
+`GET /api/env-check` reports which credentials are set (booleans only).
 
-- `AI-APP-CONNECTOR` (generic outbound webhook forwarder) and
-  `AI agent chat` (a general-purpose n8n LLM chat agent using SerpAPI) are
-  n8n-specific integration conveniences, not core to the trading pipeline.
-  If you want either wired in (e.g. forwarding approved signals to another
-  app, or an in-dashboard chat assistant), say so and I'll add it.
+---
+
+## REST API (selected)
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/run` | Core pipeline (connector → signal → OI → risk → gate → paper) |
+| POST | `/api/scalp/run` · `/api/scalp/signal` | Scalp pipeline / engine only |
+| GET  | `/api/scalp/status` · `/api/scalp/feed` | Runner + WebSocket-feed health |
+| GET/POST | `/api/scalp/config` · `/api/scalp/{arm,disarm}` | Runner config + arm switch |
+| GET  | `/api/monitor` | One-shot Live Monitor snapshot (positions, scalps, combos, reversals, feed) |
+| POST | `/api/positions/track` · `/api/positions/levels` · `/api/positions/untrack` | Monitor-only external position tracking |
+| GET  | `/api/positions` · `/api/broker/positions` | Tracked mirrors / live Angel One net positions |
+| GET/POST | `/api/positions/combo*` | Strangle/combo groups |
+| GET  | `/api/reversal?symbol=&timeframe=` | S/R reversal read with a CE/PE + levels |
+| GET  | `/api/signals` · `/api/trades` · `/api/research` | Ledger / paper trades / descriptive stats |
+| GET  | `/api/instruments` GET/POST · `/api/health` · `/api/env-check` | Registry / liveness / creds |
+| WS   | `/ws` | Live stream: `signal`, `scalp_*`, `position_*`, `combo_*`, `reversal_signal` |
+
+---
+
+## What it is NOT
+
+- **No ML / no LLM in the app.** "AI-" names are legacy n8n labels. Probabilities
+  are deterministic sigmoid-of-evidence — no calibration, no forward claim.
+- **No live order execution.** No `placeOrder` / GTT calls. For hands-off exits,
+  set a broker-side GTT-OCO yourself.
+- **No option-chain fetcher / Greeks.** The OI engine works only with a chain
+  passed in.
