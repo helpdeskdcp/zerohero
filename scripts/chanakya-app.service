@@ -11,7 +11,7 @@ EnvironmentFile=/opt/chanakya-app/backend/.env
 # --workers 1: the app runs an in-process background runner (ScalpRunner). A
 # DB lease (runner_lease) guarantees only one runner is ever active even if this
 # is raised, but extra workers just add idle standbys — keep it at 1.
-ExecStart=/opt/chanakya-app/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8420 --workers 1
+ExecStart=/opt/chanakya-app/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 7060 --workers 1
 Restart=always
 RestartSec=5
 StandardOutput=append:/var/log/chanakya-app/app.log

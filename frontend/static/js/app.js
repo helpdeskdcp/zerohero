@@ -383,6 +383,51 @@
       }).join("");
     }
 
+    const ex = m.execution || {};
+    const ks = ex.kill_switch || {};
+    const exStatus = $("#monExecStatus");
+    if (exStatus) {
+      exStatus.textContent =
+        `mode ${ex.mode || "PAPER"} · ${ex.enabled ? "enabled" : "disabled"}` +
+        (ex.frozen ? " · FROZEN" : "") +
+        (ks.active ? ` · KILL SWITCH ON (${ks.policy || "MONITOR"})` : "");
+      exStatus.style.color = (ks.active || ex.frozen) ? "var(--danger, #e5484d)" : "";
+    }
+    const killBtn = $("#monKillBtn");
+    if (killBtn) {
+      killBtn.textContent = ks.active ? "Kill switch: ON — click to clear" : "Kill switch: OFF — click to activate";
+      killBtn.classList.toggle("danger", !!ks.active);
+      killBtn.dataset.active = ks.active ? "1" : "0";
+      if (!killBtn.dataset.bound) {
+        killBtn.dataset.bound = "1";
+        killBtn.addEventListener("click", async () => {
+          const turnOn = killBtn.dataset.active !== "1";
+          if (turnOn && !confirm("Activate the emergency kill switch? No new entries / auto re-entry; open positions stay monitored.")) return;
+          try {
+            await api("/api/execution/kill", { method: "POST", body: JSON.stringify({ active: turnOn, reason: "dashboard" }) });
+          } catch (e) { alert("kill switch: " + e.message); }
+          loadMonitor();
+        });
+      }
+    }
+    const exOrders = ex.orders || [];
+    const exWrap = $("#monExecOrdersWrap");
+    if (exWrap) {
+      exWrap.hidden = exOrders.length === 0;
+      $("#monExecTable tbody").innerHTML = exOrders.map(o => `
+        <tr>
+          <td class="hint">${(o.trade_id || "").slice(-8)}</td>
+          <td>${o.leg || "—"}</td>
+          <td class="feed-dir ${o.side === "SELL" ? "SELL" : "BUY"}">${o.side || "—"}</td>
+          <td>${o.order_type || "—"}</td>
+          <td>${fmt(o.requested_qty, 0)}</td>
+          <td>${fmt(o.filled_qty, 0)}</td>
+          <td>${o.avg_fill_price != null ? fmt(o.avg_fill_price, 2) : "—"}</td>
+          <td><span class="badge">${o.status || "—"}</span></td>
+          <td class="hint">${(o.exit_reason || o.error || "").slice(0, 40)}</td>
+        </tr>`).join("");
+    }
+
     $("#monMarks").innerHTML = Object.entries(feed.marks || {}).map(([t, mk]) =>
       `<div class="mon-mark"><span>${t}</span><b>${fmt(mk.ltp, 2)}</b><em>${Math.round(mk.age_sec)}s</em></div>`
     ).join("") || `<span class="hint">No live marks yet.</span>`;

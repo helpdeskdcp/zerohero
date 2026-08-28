@@ -411,8 +411,19 @@ def api_monitor():
         "reversals": [v for v in (scalp_runner.reversals or {}).values() if v.get("reversal")],
         "turning_points": [v for v in (scalp_runner.turning_points or {}).values()
                            if v.get("direction") != "NO_TURN"],
+        "execution": {**(st.get("execution") or {}),
+                      "kill_switch": _ks_state(),
+                      "orders": db.list_broker_orders(limit=25)},
         "recent_signals": db.list_signals(limit=20),
     }
+
+
+def _ks_state():
+    try:
+        from .execution import killswitch
+        return killswitch.state()
+    except Exception:
+        return {"active": False, "policy": "MONITOR"}
 
 
 @app.post("/api/scalp/arm")

@@ -139,6 +139,26 @@
           </div>
         </div>
 
+        <div class="panel" id="monExecPanel">
+          <div class="panel-head">
+            <h2>Order Adapter</h2>
+            <span class="hint" id="monExecStatus">—</span>
+          </div>
+          <div class="mon-exec-bar">
+            <button class="btn btn-ghost" id="monKillBtn" type="button">Kill switch</button>
+            <span class="hint">blocks new entries · existing positions stay monitored</span>
+          </div>
+          <div class="table-wrap" id="monExecOrdersWrap" hidden>
+            <table class="ledger" id="monExecTable">
+              <thead><tr>
+                <th>Trade</th><th>Leg</th><th>Side</th><th>Type</th><th>Qty</th>
+                <th>Filled</th><th>Avg</th><th>Status</th><th>Note</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="panel">
           <div class="panel-head"><h2>Feed Marks</h2></div>
           <div class="mon-marks" id="monMarks"></div>
