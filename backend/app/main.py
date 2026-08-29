@@ -7,6 +7,8 @@ import os
 import json
 import asyncio
 import math
+import base64
+import hmac
 from pathlib import Path
 from typing import Optional
 from datetime import datetime, timezone
@@ -48,6 +50,8 @@ app.add_middleware(
 # /api/health) and the /ws upgrade must present it (Authorization: Bearer <t>
 # or ?token=<t>). If unset, this is a no-op and the app behaves as before.
 API_TOKEN = (os.environ.get("CHANAKYA_API_TOKEN") or "").strip()
+ADMIN_USERNAME = os.environ.get("CHANAKYA_ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("CHANAKYA_ADMIN_PASSWORD", "admin@1234")
 
 
 def _token_from(request) -> str:
@@ -57,12 +61,24 @@ def _token_from(request) -> str:
     return request.query_params.get("token", "")
 
 
+def _basic_ok(value: str) -> bool:
+    try:
+        raw = base64.b64decode(value[6:].strip(), validate=True).decode("utf-8")
+        user, password = raw.split(":", 1)
+    except Exception:
+        return False
+    return hmac.compare_digest(user, ADMIN_USERNAME) and hmac.compare_digest(password, ADMIN_PASSWORD)
+
+
 @app.middleware("http")
 async def _auth_gate(request, call_next):
-    if API_TOKEN:
-        p = request.url.path
-        if p.startswith("/api/") and p != "/api/health" and _token_from(request) != API_TOKEN:
-            return JSONResponse({"detail": "unauthorized"}, status_code=401)
+    p = request.url.path
+    if p != "/api/health":
+        basic = request.headers.get("authorization", "")
+        token_ok = API_TOKEN and _token_from(request) == API_TOKEN
+        if not token_ok and not (basic.lower().startswith("basic ") and _basic_ok(basic)):
+            return JSONResponse({"detail": "unauthorized"}, status_code=401,
+                                headers={"WWW-Authenticate": 'Basic realm="Chanakya AI"'})
     return await call_next(request)
 
 
@@ -111,7 +127,9 @@ async def _stop_scalp_runner():
 
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
-    if API_TOKEN and websocket.query_params.get("token") != API_TOKEN:
+    auth = websocket.headers.get("authorization", "")
+    if not ((API_TOKEN and websocket.query_params.get("token") == API_TOKEN)
+            or (auth.lower().startswith("basic ") and _basic_ok(auth))):
         await websocket.close(code=1008)
         return
     await manager.connect(websocket)
