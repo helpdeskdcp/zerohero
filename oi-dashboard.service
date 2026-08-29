@@ -1,0 +1,18 @@
+[Unit]
+Description=Chanakya Dashboard (FastAPI on port 7060)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/zerohero/backend
+EnvironmentFile=-/root/zerohero/backend/.env
+ExecStart=/root/zerohero/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 7060 --workers 1
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
