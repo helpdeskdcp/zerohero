@@ -9,6 +9,7 @@ scalp is flattened when max_hold_sec elapses regardless of price.
 from __future__ import annotations
 import time
 import random
+import math
 from datetime import datetime, timezone
 
 from .. import db
@@ -90,6 +91,17 @@ def update_trade_price(trade_id: str, ltp: float, now: datetime | None = None) -
     """
     t = db.get_trade(trade_id)
     if not t or t["status"] != "OPEN":
+        return t
+
+    # Legacy/malformed rows must never be interpreted as implicit SELL trades
+    # or evaluated against a malformed quote.  Leave them untouched for human
+    # correction rather than producing a false monitor alert or paper exit.
+    if t.get("direction") not in ("BUY", "SELL"):
+        return t
+    try:
+        if not math.isfinite(float(ltp)) or float(ltp) <= 0:
+            return t
+    except (TypeError, ValueError):
         return t
 
     now = now or datetime.now(timezone.utc)

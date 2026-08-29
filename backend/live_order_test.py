@@ -7,15 +7,15 @@ terminal). It goes through the SAME OrderManager / AngelOneBroker / idempotency 
 audit / reconciliation path that AUTO LIVE uses — no shortcuts, no gate bypass.
 
     LIVE run needs ALL of:
-      --live  --confirm  --confirm-token <matches scalp_config.live_confirm_token>
-      env CHANAKYA_ALLOW_LIVE=1
+      --live  --confirm
+      env CHANAKYA_ALLOW_LIVE=1 and CHANAKYA_LIVE_CONFIRM_TOKEN=<secret>
       execution_mode LIVE is forced by --live
     Otherwise it runs against the PAPER broker (safe dry run) so you can rehearse.
 
 Typical safe LIVE test: a 1-unit LIMIT BUY on a liquid cash equity, priced well
 BELOW the last trade so it rests OPEN and never fills, then --cancel.
 
-    python live_order_test.py --live --confirm --confirm-token XXX \
+    python live_order_test.py --live --confirm \
         --exchange NSE --symbol IDEA --tradingsymbol IDEA-EQ --token 14366 \
         --order-type LIMIT --side BUY --qty 1 --price 6.50 --cancel --poll 8
 
@@ -55,7 +55,6 @@ def build_args():
     ap = argparse.ArgumentParser(description="One controlled Angel One order lifecycle test")
     ap.add_argument("--live", action="store_true", help="use the real AngelOneBroker (else PAPER)")
     ap.add_argument("--confirm", action="store_true", help="required alongside --live")
-    ap.add_argument("--confirm-token", default="", help="must equal the configured live_confirm_token")
     ap.add_argument("--exchange", default="NSE")
     ap.add_argument("--symbol", required=True, help="registry name or plain symbol")
     ap.add_argument("--tradingsymbol", default="", help="Angel One tradingsymbol (e.g. IDEA-EQ)")
@@ -99,17 +98,18 @@ def main():
             sys.exit("ABORT: --live also requires --confirm")
         if os.environ.get("CHANAKYA_ALLOW_LIVE") != "1":
             sys.exit("ABORT: env CHANAKYA_ALLOW_LIVE=1 is required for --live")
+        if not os.environ.get("CHANAKYA_LIVE_CONFIRM_TOKEN"):
+            sys.exit("ABORT: env CHANAKYA_LIVE_CONFIRM_TOKEN is required for --live")
 
     cfg = {
         "execution_mode": mode,
-        "live_confirm_token": a.confirm_token,
         "paper_scenario": {"fill_mode": "WORKING"},   # PAPER: rest OPEN like a real resting limit
     }
     broker = make_broker(mode, cfg, ltp_provider=lambda t: None)
     if a.live and not getattr(broker, "live_enabled", False):
         sys.exit("ABORT: broker.live_enabled is False — triple gate not satisfied "
-                 "(execution_mode=LIVE + env CHANAKYA_ALLOW_LIVE=1 + non-empty --confirm-token "
-                 "matching scalp_config.live_confirm_token).")
+                 "(execution_mode=LIVE + env CHANAKYA_ALLOW_LIVE=1 + "
+                 "non-empty CHANAKYA_LIVE_CONFIRM_TOKEN).")
 
     om = OrderManager(mode=mode, broker=broker, config=cfg, ltp_provider=lambda t: None)
 

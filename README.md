@@ -4,9 +4,12 @@ A single-process **FastAPI modular monolith** for deterministic (rule-based, *no
 ML) options-trading signals + live position monitoring on Angel One, with a
 vanilla-JS dashboard, SQLite storage, and an in-process background runner.
 
-**Paper / monitor only.** `live_trading` is hard-wired `false`; there is **no
-order-placement code anywhere**. The app watches, computes, and alerts — you
-place every real order yourself (or via a broker GTT/OCO).
+**Execution is disabled by default.** The runner supports PAPER, SHADOW and a
+triple-gated LIVE adapter. LIVE order routing requires all server-side guards:
+`CHANAKYA_API_TOKEN`, `CHANAKYA_ALLOW_LIVE=1`, and a non-empty
+`CHANAKYA_LIVE_CONFIRM_TOKEN`, plus `execution_enabled=true` and
+`execution_mode=LIVE` in the runner config. The confirmation secret is never
+stored in SQLite or returned by an API. Leave these unset for paper/monitor use.
 
 ---
 
@@ -108,6 +111,7 @@ reverse-proxies including `/ws`.
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_SIGNALS_CHANNEL_ID` | alerts |
 | `CHANAKYA_DB_PATH` | SQLite file location |
 | `CHANAKYA_API_TOKEN` | **optional** — if set, `/api/*` (except `/api/health`) and `/ws` require `Authorization: Bearer <t>` or `?token=<t>`. Unset = open dashboard. |
+| `CHANAKYA_ALLOW_LIVE` / `CHANAKYA_LIVE_CONFIRM_TOKEN` | Server-only LIVE-execution gates. Set only together with `CHANAKYA_API_TOKEN`; otherwise LIVE remains blocked. |
 
 Runner config lives in `app_settings.scalp_config` (JSON) and is edited live via
 `POST /api/scalp/config` or the Scalping tab. Instrument tokens: seeds for the
@@ -141,7 +145,7 @@ expiry-dated — roll them each expiry).
 
 - **No ML / no LLM in the app.** "AI-" names are legacy n8n labels. Probabilities
   are deterministic sigmoid-of-evidence — no calibration, no forward claim.
-- **No live order execution.** No `placeOrder` / GTT calls. For hands-off exits,
-  set a broker-side GTT-OCO yourself.
+- **LIVE is opt-in and guarded.** Never enable it from an open dashboard.
+  Keep a broker-side GTT/OCO as the independent protection layer.
 - **No option-chain fetcher / Greeks.** The OI engine works only with a chain
   passed in.

@@ -126,7 +126,8 @@ def test_cancel_marks_cancelled():
 # ---------------------------------------------------------------- angel: live gate
 def test_angelone_live_guard_blocks_by_default(monkeypatch):
     monkeypatch.delenv("CHANAKYA_ALLOW_LIVE", raising=False)
-    b = AngelOneBroker({"execution_mode": "LIVE", "live_confirm_token": "x"})
+    monkeypatch.setenv("CHANAKYA_LIVE_CONFIRM_TOKEN", "x")
+    b = AngelOneBroker({"execution_mode": "LIVE"})
     assert not b.live_enabled
     for fn in ("market_entry", "limit_entry", "stoploss_market", "target_exit"):
         with pytest.raises(LiveDisabled):
@@ -135,12 +136,15 @@ def test_angelone_live_guard_blocks_by_default(monkeypatch):
 
 def test_angelone_live_needs_all_three_gates(monkeypatch):
     monkeypatch.setenv("CHANAKYA_ALLOW_LIVE", "1")
+    monkeypatch.setenv("CHANAKYA_LIVE_CONFIRM_TOKEN", "x")
     # env set, but mode not LIVE -> still disabled
-    assert not AngelOneBroker({"execution_mode": "PAPER", "live_confirm_token": "x"}).live_enabled
+    assert not AngelOneBroker({"execution_mode": "PAPER"}).live_enabled
     # env + mode, but no confirm token -> still disabled
-    assert not AngelOneBroker({"execution_mode": "LIVE", "live_confirm_token": ""}).live_enabled
+    monkeypatch.delenv("CHANAKYA_LIVE_CONFIRM_TOKEN")
+    assert not AngelOneBroker({"execution_mode": "LIVE"}).live_enabled
     # all three -> enabled
-    assert AngelOneBroker({"execution_mode": "LIVE", "live_confirm_token": "yes"}).live_enabled
+    monkeypatch.setenv("CHANAKYA_LIVE_CONFIRM_TOKEN", "yes")
+    assert AngelOneBroker({"execution_mode": "LIVE"}).live_enabled
 
 
 def test_angelone_reads_work_without_live(monkeypatch):
@@ -151,3 +155,47 @@ def test_angelone_reads_work_without_live(monkeypatch):
     assert snap.ok is False
     st = b.get_order_status(broker_order_id="NOPE")
     assert st.status == OStatus.UNKNOWN
+
+
+def test_live_config_never_persists_or_exposes_confirmation_secret(fresh_db, monkeypatch):
+    from app.scalper import ScalpRunner
+
+    runner = ScalpRunner()
+    with pytest.raises(ValueError, match="server safeguards"):
+        runner.set_config({"execution_mode": "LIVE", "execution_enabled": True})
+
+    monkeypatch.setenv("CHANAKYA_API_TOKEN", "api-token")
+    monkeypatch.setenv("CHANAKYA_ALLOW_LIVE", "1")
+    monkeypatch.setenv("CHANAKYA_LIVE_CONFIRM_TOKEN", "server-secret")
+    cfg = runner.set_config({"execution_mode": "LIVE", "execution_enabled": True})
+    assert cfg["execution_mode"] == "LIVE" and cfg["execution_enabled"] is True
+    assert "live_confirm_token" not in cfg
+    assert "server-secret" not in fresh_db.get_setting("scalp_config")
+
+
+def test_legacy_live_confirmation_is_removed_from_stored_config(fresh_db):
+    from app.scalper import ScalpRunner
+
+    fresh_db.set_setting("scalp_config", '{"live_confirm_token":"old-secret"}')
+    cfg = ScalpRunner().get_config()
+    assert "live_confirm_token" not in cfg
+    assert "old-secret" not in fresh_db.get_setting("scalp_config")
+
+
+def test_execution_config_rejects_invalid_mode_and_auto_exit_outside_live(fresh_db):
+    from app.scalper import ScalpRunner
+
+    runner = ScalpRunner()
+    with pytest.raises(ValueError, match="execution_mode"):
+        runner.set_config({"execution_mode": "REAL"})
+    with pytest.raises(ValueError, match="automatic broker exits"):
+        runner.set_config({"execution_mode": "PAPER", "execution_auto_exit": True})
+
+
+def test_execution_mode_cannot_change_while_enabled(fresh_db):
+    from app.scalper import ScalpRunner
+
+    runner = ScalpRunner()
+    runner.set_config({"execution_mode": "PAPER", "execution_enabled": True})
+    with pytest.raises(ValueError, match="disable execution"):
+        runner.set_config({"execution_mode": "SHADOW"})

@@ -72,8 +72,7 @@ DEFAULT_CONFIG = {
     "tp_config": {},            # forwarded verbatim to run_turning_point_engine
     # ---- Order Adapter (execution layer) — additive, LIVE hard-gated ----
     "execution_enabled": False,   # route APPROVED scalps through the OrderManager
-    "execution_mode": "PAPER",    # PAPER | SHADOW | LIVE  (LIVE also needs env
-                                  # CHANAKYA_ALLOW_LIVE=1 AND live_confirm_token)
+    "execution_mode": "PAPER",    # PAPER | SHADOW | LIVE (LIVE has server-side gates)
     "execution_auto_exit": False,  # LIVE only: place a broker exit on a local TARGET/SL
     "execution_place_broker_exits": False,   # LIVE only: pre-place SL-M after entry
     "execution_reconcile_sec": 15,  # how often the runner reconciles open intents
@@ -82,7 +81,6 @@ DEFAULT_CONFIG = {
     "exec_rate_per_sec": 3,
     "exec_burst": 5,
     "exec_max_retries": 2,
-    "live_confirm_token": "",       # must be non-empty for LIVE order placement
     "default_stop_pct": 0.35,       # fallback stop distance if the contract has none
     "default_target_rr": 1.6,
     "ignore_session": False,
@@ -203,10 +201,48 @@ class ScalpRunner:
                 stored = json.loads(raw)
             except Exception:
                 stored = {}
+        # Older versions persisted this secret in SQLite and sent it back from
+        # status/config APIs.  Live confirmation is now server environment
+        # only, so erase the legacy value while retaining all non-secret config.
+        legacy_secret = stored.pop("live_confirm_token", None)
+        if legacy_secret is not None:
+            # Best-effort migration: do not leave a previously exposed token at
+            # rest merely because nobody has saved the config again.
+            try:
+                db.set_setting(CONFIG_KEY, json.dumps(stored))
+            except Exception:
+                pass
         return _deep_merge(DEFAULT_CONFIG, stored)
 
     def set_config(self, patch: dict) -> dict:
-        cfg = _deep_merge(self.get_config(), patch or {})
+        if not isinstance(patch, dict):
+            raise ValueError("configuration must be an object")
+        if "live_confirm_token" in patch:
+            raise ValueError("live confirmation must be configured with CHANAKYA_LIVE_CONFIRM_TOKEN on the server")
+        unknown = set(patch) - set(DEFAULT_CONFIG)
+        if unknown:
+            raise ValueError(f"unknown configuration field(s): {', '.join(sorted(unknown))}")
+        current = self.get_config()
+        cfg = _deep_merge(current, patch)
+        mode = str(cfg.get("execution_mode") or "").upper()
+        if mode not in ("PAPER", "SHADOW", "LIVE"):
+            raise ValueError("execution_mode must be PAPER, SHADOW, or LIVE")
+        cfg["execution_mode"] = mode
+        for key in ("execution_enabled", "execution_auto_exit", "execution_place_broker_exits"):
+            if not isinstance(cfg.get(key), bool):
+                raise ValueError(f"{key} must be true or false")
+        if (cfg.get("execution_auto_exit") or cfg.get("execution_place_broker_exits")) and mode != "LIVE":
+            raise ValueError("automatic broker exits require execution_mode LIVE")
+        if (current.get("execution_enabled") and cfg.get("execution_enabled")
+                and current.get("execution_mode") != mode):
+            raise ValueError("disable execution before changing execution_mode")
+        if mode == "LIVE" and cfg.get("execution_enabled"):
+            missing = [name for name in ("CHANAKYA_API_TOKEN", "CHANAKYA_ALLOW_LIVE", "CHANAKYA_LIVE_CONFIRM_TOKEN")
+                       if not os.environ.get(name)]
+            if os.environ.get("CHANAKYA_ALLOW_LIVE") not in (None, "1"):
+                missing.append("CHANAKYA_ALLOW_LIVE=1")
+            if missing:
+                raise ValueError("LIVE execution is blocked until server safeguards are set: " + ", ".join(missing))
         db.set_setting(CONFIG_KEY, json.dumps(cfg))
         return cfg
 
@@ -267,14 +303,17 @@ class ScalpRunner:
             except Exception:
                 pub = {}
 
+        execution = (self.order_mgr.status() if (self.is_leader and self.order_mgr is not None)
+                     else {"mode": cfg.get("execution_mode", "PAPER")})
+        execution["enabled"] = bool(cfg.get("execution_enabled"))
         return {
             "armed": armed,
             "running": bool(self._task and not self._task.done()),
             "is_leader": self.is_leader,
             "runner_owner": db.lease_owner(LEASE_KEY),
             "this_worker": self._owner,
-            "live_trading": False,
-            "paper_mode": True,
+            "live_trading": bool(execution.get("enabled") and execution.get("live_enabled")),
+            "paper_mode": not bool(execution.get("enabled") and execution.get("live_enabled")),
             "last_tick_ts": self.last_tick_ts if self.is_leader else pub.get("last_tick_ts"),
             "last_error": self.last_error if self.is_leader else pub.get("last_error"),
             "errors": list(self._errors) if self.is_leader else (pub.get("errors") or []),
@@ -294,9 +333,7 @@ class ScalpRunner:
             "broker_sync": bool(cfg.get("broker_sync", True)),
             "broker_sync_status": self.broker_sync_status if self.is_leader else pub.get("broker_sync_status"),
             "feed": self.feed.status() if self.is_leader else (pub.get("feed") or self.feed.status()),
-            "execution": (self.order_mgr.status() if (self.is_leader and self.order_mgr is not None)
-                          else {"enabled": bool(cfg.get("execution_enabled")),
-                                "mode": cfg.get("execution_mode", "PAPER")}),
+            "execution": execution,
             "config": cfg,
         }
 
@@ -492,9 +529,10 @@ class ScalpRunner:
         """Mark price for an open position, freshest source first:
         1. live WebSocket LTP for THIS contract's own token
         2. replay_candles close (scalp watchlist)
-        3. REST last-1m-close for this token (illiquid MANUAL contracts)
         Registry resolution is NOT used here — that maps index *spot* symbols
-        and must never price an option leg. Returns None if nothing sane."""
+        and must never price an option leg.  An un-timestamped REST candle is
+        not safe for manual target/stop alerts, so unavailable data returns
+        None and the monitor fails closed."""
         tok = str(trade.get("symboltoken") or "")
         if tok:
             live = self._sane_option_mark(trade, self.feed.get_ltp(tok))
@@ -519,9 +557,6 @@ class ScalpRunner:
                 except (TypeError, ValueError, IndexError):
                     return None
 
-        # illiquid contract, no WS tick — REST last-close for its OWN token
-        if tok and (trade.get("strategy") or "").upper() == "MANUAL":
-            return self._sane_option_mark(trade, self._rest_mark_for(trade, cfg))
         return None
 
     def _smart_stop(self, trade: dict, cfg: dict, live_pnl):
@@ -631,12 +666,23 @@ class ScalpRunner:
     def _ensure_order_mgr(self, cfg: dict):
         """Leader-only. Build (or rebuild on a mode change) the single
         OrderManager. Never raises — execution must not break the runner."""
+        # Turning execution off must halt new submissions immediately, but an
+        # already-created manager remains in monitor/reconcile mode.  Dropping
+        # it would abandon visibility of an in-flight or live broker position.
         if not cfg.get("execution_enabled"):
-            self.order_mgr = None
-            self._order_mgr_mode = None
+            if self.order_mgr is not None:
+                self.order_mgr.config["auto_exit"] = False
+                self.order_mgr.config["place_broker_exits"] = False
             return
         mode = (cfg.get("execution_mode") or "PAPER").upper()
         if self.order_mgr is not None and self._order_mgr_mode == mode:
+            self.order_mgr.config.update({
+                "auto_exit": bool(cfg.get("execution_auto_exit")),
+                "place_broker_exits": bool(cfg.get("execution_place_broker_exits")),
+                "exec_stale_ltp_sec": cfg.get("exec_stale_ltp_sec", 20),
+                "exec_stale_reconcile_sec": cfg.get("exec_stale_reconcile_sec", 90),
+                "exec_reconcile_sec": cfg.get("execution_reconcile_sec", 15),
+            })
             return
         try:
             from .execution import OrderManager
@@ -650,7 +696,6 @@ class ScalpRunner:
                 "exec_rate_per_sec": cfg.get("exec_rate_per_sec", 3),
                 "exec_burst": cfg.get("exec_burst", 5),
                 "exec_max_retries": cfg.get("exec_max_retries", 2),
-                "live_confirm_token": cfg.get("live_confirm_token", ""),
                 "default_stop_pct": cfg.get("default_stop_pct", 0.35),
                 "default_target_rr": cfg.get("default_target_rr", 1.6),
             }

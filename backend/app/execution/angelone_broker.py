@@ -7,7 +7,7 @@ LIVE order placement is triple-gated. `market_entry` / `limit_entry` /
 
     * config["execution_mode"] == "LIVE"
     * os.environ["CHANAKYA_ALLOW_LIVE"] == "1"
-    * config["live_confirm_token"] is a non-empty string
+    * os.environ["CHANAKYA_LIVE_CONFIRM_TOKEN"] is a non-empty string
 
 Read methods (`get_order_status`, `get_order_book`, `get_positions`,
 `reconcile_position`, `login`, `refresh_session`) work in any mode — they are
@@ -42,7 +42,9 @@ class AngelOneBroker(BrokerBase):
     def __init__(self, config: dict | None = None):
         cfg = config or {}
         self.mode = (cfg.get("execution_mode") or "PAPER").upper()
-        self._confirm = str(cfg.get("live_confirm_token") or "").strip()
+        # Never accept this secret from API-persisted runtime configuration.
+        # It must exist only in the process environment of the deployment.
+        self._confirm = (os.environ.get("CHANAKYA_LIVE_CONFIRM_TOKEN") or "").strip()
         self._bucket = TokenBucket(cfg.get("exec_rate_per_sec", 3), cfg.get("exec_burst", 5))
         self._breaker = CircuitBreaker(cfg.get("exec_fail_threshold", 4),
                                        cfg.get("exec_breaker_reset_sec", 30))
@@ -63,7 +65,7 @@ class AngelOneBroker(BrokerBase):
             if os.environ.get("CHANAKYA_ALLOW_LIVE") != "1":
                 why.append("env CHANAKYA_ALLOW_LIVE!=1")
             if not self._confirm:
-                why.append("live_confirm_token empty")
+                why.append("env CHANAKYA_LIVE_CONFIRM_TOKEN empty")
             raise LiveDisabled(f"{what} blocked — live trading not fully enabled ({', '.join(why)})")
 
     def _rate(self):

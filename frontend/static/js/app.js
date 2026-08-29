@@ -23,6 +23,11 @@
   // ---------------- Helpers ----------------
   const $ = (sel, root = document) => root.querySelector(sel);
   const fmt = (n, d = 2) => (n === null || n === undefined || isNaN(n)) ? "—" : Number(n).toFixed(d);
+  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[ch]);
+  const text = (value, fallback = "—") => esc(value === null || value === undefined || value === "" ? fallback : value);
+  const directionClass = value => value === "BUY" ? "BUY" : value === "SELL" ? "SELL" : "UNKNOWN";
   const timeStr = (iso) => {
     if (!iso) return "—";
     try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
@@ -90,7 +95,7 @@
       if (state.view === "overview") loadOverview();
     }
     if (state.view === "monitor" &&
-        /^(scalp_|position_|combo_|reversal_|turning_point_)/.test(msg.type || "")) loadMonitor();
+        /^(scalp_|position_|combo_|reversal_|turning_point_|execution_)/.test(msg.type || "")) loadMonitor();
     if (msg.type === "reversal_signal") {
       const d = msg.data || {};
       prependFeed({ direction: d.direction, decision: "REVERSAL " + (d.reversal || ""),
@@ -244,10 +249,44 @@
   });
 
   // ---------------- Live Monitor ----------------
-  async function loadMonitor() {
+  let monitorRequestSeq = 0;
+  let monitorFetchInFlight = false;
+  let monitorRefreshQueued = false;
+
+  function loadMonitor() {
+    ++monitorRequestSeq;
+    if (monitorFetchInFlight) {
+      monitorRefreshQueued = true;
+      return;
+    }
+    return fetchMonitor();
+  }
+
+  async function fetchMonitor() {
+    monitorFetchInFlight = true;
+    const requestSeq = monitorRequestSeq;
+    const finish = () => {
+      monitorFetchInFlight = false;
+      if (monitorRefreshQueued || requestSeq !== monitorRequestSeq) {
+        monitorRefreshQueued = false;
+        fetchMonitor();
+      }
+    };
     let m;
     try { m = await api("/api/monitor"); }
-    catch (e) { const el = $("#monErr"); el.hidden = false; el.textContent = "monitor fetch failed: " + e.message; return; }
+    catch (e) {
+      if (requestSeq === monitorRequestSeq) {
+        const el = $("#monErr"); el.hidden = false; el.textContent = "monitor fetch failed: " + e.message;
+      }
+      finish();
+      return;
+    }
+    // A slower response can never overwrite a newer periodic, WebSocket, or
+    // user-triggered refresh.
+    if (requestSeq !== monitorRequestSeq) {
+      finish();
+      return;
+    }
     $("#monErr").hidden = true;
     const r = m.runner || {}, feed = m.feed || {};
     const set = (id, txt, cls) => { const el = $("#" + id); if (!el) return; el.textContent = txt; el.className = cls || ""; };
@@ -272,8 +311,8 @@
       cp.hidden = combos.length === 0;
       $("#monComboTable tbody").innerHTML = combos.map(c => `
         <tr>
-          <td>${c.kind}</td>
-          <td>${(c.legs || []).join(" + ")}</td>
+          <td>${text(c.kind)}</td>
+          <td>${text((c.legs || []).join(" + "))}</td>
           <td>${fmt(c.entry_combined, 2)}</td>
           <td><b>${fmt(c.combined_mark, 2)}</b></td>
           <td class="${pnlCls(c.combined_pnl)}" style="font-size:12px">${fmt(c.combined_pnl, 2)}</td>
@@ -281,8 +320,8 @@
           <td${near(c.dist_to_stop, 1)}>${fmt(c.dist_to_stop, 2)}</td>
           <td>${fmt(c.be_upper, 1)}</td>
           <td>${fmt(c.be_lower, 1)}</td>
-          <td><span class="badge ${c.status === "OPEN" ? "OPEN" : "TRADE"}">${c.status}</span></td>
-          <td>${c.status === "OPEN" ? `<button class="btn btn-ghost combo-lv-btn" data-id="${c.combo_id}" data-t="${c.target_combined}" data-s="${c.stop_combined}">levels</button>` : ""}</td>
+          <td><span class="badge ${c.status === "OPEN" ? "OPEN" : "TRADE"}">${text(c.status)}</span></td>
+          <td>${c.status === "OPEN" ? `<button class="btn btn-ghost combo-lv-btn" data-id="${esc(c.combo_id)}" data-t="${esc(c.target_combined)}" data-s="${esc(c.stop_combined)}">levels</button>` : ""}</td>
         </tr>`).join("");
       cp.querySelectorAll(".combo-lv-btn").forEach(b => b.addEventListener("click", async () => {
         const t = prompt("Combined TARGET (exit both legs when CE+PE mark ≥):", b.dataset.t);
@@ -298,20 +337,27 @@
     pt.innerHTML = (m.positions || []).map(p => {
       const noLevels = p.status === "OPEN" && (p.target_1 == null || p.stop_loss == null);
       const synced = /auto-synced/.test(p.reason || "");
+      const monitorStatus = p.monitor_status || p.status || "UNKNOWN";
+      const statusText = monitorStatus === "TARGET_HIT" ? "TARGET HIT" :
+        monitorStatus === "STOP_HIT" ? "STOP HIT" :
+        monitorStatus === "STALE_DATA" ? "STALE DATA" :
+        monitorStatus === "INVALID_DATA" ? "INVALID DATA" : monitorStatus;
+      const statusClass = monitorStatus === "OPEN" ? "OPEN" :
+        monitorStatus === "STALE_DATA" || monitorStatus === "INVALID_DATA" ? "UNKNOWN" : "TRADE";
       return `
       <tr>
-        <td>${p.underlying || "—"}${synced ? ' <span class="badge UNKNOWN" title="from broker">sync</span>' : ""}</td>
-        <td>${p.option_type || p.instrument || "—"} ${p.strike || ""}</td>
-        <td class="feed-dir ${p.direction}">${p.direction || "—"}</td>
+        <td>${text(p.underlying)}${synced ? ' <span class="badge UNKNOWN" title="from broker">sync</span>' : ""}</td>
+        <td>${text(p.option_type || p.instrument)} ${text(p.strike, "")}</td>
+        <td class="feed-dir ${directionClass(p.direction)}">${text(p.direction)}</td>
         <td>${fmt(p.entry, 2)}</td>
         <td><b>${p.mark != null ? fmt(p.mark, 2) : "—"}</b></td>
-        <td>${p.mark_age_sec != null ? Math.round(p.mark_age_sec) + "s" : "—"}</td>
+        <td>${p.freshness === "STALE" && p.stale_age_sec != null ? `STALE ${Math.round(p.stale_age_sec)}s` : (p.mark_age_sec != null ? Math.round(p.mark_age_sec) + "s" : "—")}</td>
         <td class="${pnlCls(p.live_pnl)}" style="font-size:12px">${fmt(p.live_pnl, 2)}</td>
-        <td${near(p.dist_to_target, 0.5)}>${p.target_1 != null ? fmt(p.dist_to_target, 2) : `<button class="btn btn-ghost set-levels-btn" data-id="${p.trade_id}" data-entry="${p.entry}">set</button>`}</td>
+        <td${near(p.dist_to_target, 0.5)}>${p.target_1 != null ? fmt(p.dist_to_target, 2) : `<button class="btn btn-ghost set-levels-btn" data-id="${esc(p.trade_id)}" data-entry="${esc(p.entry)}">set</button>`}</td>
         <td${near(p.dist_to_stop, 0.5)}>${p.stop_loss != null ? fmt(p.dist_to_stop, 2) : (noLevels ? "" : "—")}</td>
         <td>${fmt(p.mfe, 2)}</td><td>${fmt(p.mae, 2)}</td>
-        <td><span class="badge ${p.status}">${p.status}</span>${p.exit_reason ? " " + p.exit_reason : ""}</td>
-        <td>${p.status === "OPEN" ? `<button class="btn btn-ghost set-levels-btn" data-id="${p.trade_id}" data-t="${p.target_1 ?? ""}" data-s="${p.stop_loss ?? ""}" data-entry="${p.entry}">levels</button>` : ""}</td>
+        <td><span class="badge ${statusClass}">${text(statusText)}</span>${p.exit_reason ? " " + text(p.exit_reason, "") : ""}</td>
+        <td>${p.status === "OPEN" ? `<button class="btn btn-ghost set-levels-btn" data-id="${esc(p.trade_id)}" data-t="${esc(p.target_1 ?? "")}" data-s="${esc(p.stop_loss ?? "")}" data-entry="${esc(p.entry)}">levels</button>` : ""}</td>
       </tr>`;
     }).join("") || `<tr><td colspan="13" class="hint">No positions. Take one in your broker (auto-syncs in ≤30s) or use the Track form on the Scalping tab.</td></tr>`;
     pt.querySelectorAll(".set-levels-btn").forEach(b => b.addEventListener("click", async () => {
@@ -326,18 +372,25 @@
       loadMonitor();
     }));
 
-    $("#monScalpTable tbody").innerHTML = (m.scalps || []).filter(s => s.status === "OPEN").map(s => `
+    $("#monScalpTable tbody").innerHTML = (m.scalps || []).filter(s => s.status === "OPEN").map(s => {
+      const monitorStatus = s.monitor_status || s.status || "UNKNOWN";
+      const statusText = monitorStatus === "TARGET_HIT" ? "TARGET HIT" :
+        monitorStatus === "STOP_HIT" ? "STOP HIT" :
+        monitorStatus === "STALE_DATA" ? "STALE DATA" : monitorStatus;
+      const statusClass = monitorStatus === "OPEN" ? "OPEN" : "TRADE";
+      return `
       <tr>
-        <td>${s.setup || "—"}</td>
-        <td>${s.underlying || "—"}</td>
-        <td class="feed-dir ${s.direction}">${s.direction || "—"}</td>
+        <td>${text(s.setup)}</td>
+        <td>${text(s.underlying)}</td>
+        <td class="feed-dir ${directionClass(s.direction)}">${text(s.direction)}</td>
         <td>${fmt(s.entry, 2)}</td>
         <td><b>${s.mark != null ? fmt(s.mark, 2) : "—"}</b></td>
         <td class="${pnlCls(s.live_pnl)}" style="font-size:12px">${fmt(s.live_pnl, 2)}</td>
         <td${near(s.dist_to_target, 0.5)}>${fmt(s.dist_to_target, 2)}</td>
         <td${near(s.dist_to_stop, 0.5)}>${fmt(s.dist_to_stop, 2)}</td>
-        <td><span class="badge ${s.status}">${s.status}</span></td>
-      </tr>`).join("") || `<tr><td colspan="9" class="hint">No open scalps.</td></tr>`;
+        <td><span class="badge ${statusClass}">${text(statusText)}</span></td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="9" class="hint">No open scalps.</td></tr>`;
 
     const revs = m.reversals || [];
     const rp = $("#monRevPanel");
@@ -345,12 +398,12 @@
       rp.hidden = revs.length === 0;
       $("#monRevTable tbody").innerHTML = revs.map(r => `
         <tr>
-          <td>${r.symbol}${r.timeframe ? ` <span class="hint">${r.timeframe}</span>` : ""}</td>
-          <td class="feed-dir ${r.direction === "SELL" ? "SELL" : "BUY"}">${r.reversal || "—"}</td>
-          <td>${(r.kind || "").replace("AT_", "")}</td>
+          <td>${text(r.symbol)}${r.timeframe ? ` <span class="hint">${text(r.timeframe, "")}</span>` : ""}</td>
+          <td class="feed-dir ${r.direction === "SELL" ? "SELL" : "BUY"}">${text(r.reversal)}</td>
+          <td>${text((r.kind || "").replace("AT_", ""))}</td>
           <td>${fmt(r.level, 1)}</td>
           <td>${fmt(r.price, 1)}</td>
-          <td><b>${r.option || "—"}</b></td>
+          <td><b>${text(r.option)}</b></td>
           <td>${fmt(r.entry, 1)}</td>
           <td>${fmt(r.stop, 1)}</td>
           <td>${fmt(r.target_1, 1)}</td>
@@ -367,13 +420,13 @@
       $("#monTpTable tbody").innerHTML = tps.map(t => {
         const tr = t.trade_ref || {};
         return `<tr>
-          <td>${t.symbol}${t.timeframe ? ` <span class="hint">${t.timeframe}</span>` : ""}</td>
-          <td class="feed-dir ${(t.direction || "").includes("UP") ? "BUY" : "SELL"}">${(t.direction || "").replace("_TURN", "")}</td>
+          <td>${text(t.symbol)}${t.timeframe ? ` <span class="hint">${text(t.timeframe, "")}</span>` : ""}</td>
+          <td class="feed-dir ${(t.direction || "").includes("UP") ? "BUY" : "SELL"}">${text((t.direction || "").replace("_TURN", ""))}</td>
           <td>${fmt(t.turn, 2)}</td>
           <td>${fmt((t.p_up || 0) * 100, 0)}%</td>
           <td${t.high_confidence ? ' style="color:var(--gold-soft);font-weight:600"' : ""}>${fmt(t.confidence, 0)}%</td>
-          <td>${(t.expected_move || {}).direction || "—"} ${fmt((t.expected_move || {}).pts, 1)}</td>
-          <td><b>${tr.option || "—"}</b></td>
+          <td>${text((t.expected_move || {}).direction)} ${fmt((t.expected_move || {}).pts, 1)}</td>
+          <td><b>${text(tr.option)}</b></td>
           <td>${fmt(tr.entry_ref, 1)}</td>
           <td>${fmt(tr.stop_loss, 1)}</td>
           <td>${fmt(tr.target_1, 1)}</td>
@@ -416,29 +469,30 @@
       exWrap.hidden = exOrders.length === 0;
       $("#monExecTable tbody").innerHTML = exOrders.map(o => `
         <tr>
-          <td class="hint">${(o.trade_id || "").slice(-8)}</td>
-          <td>${o.leg || "—"}</td>
-          <td class="feed-dir ${o.side === "SELL" ? "SELL" : "BUY"}">${o.side || "—"}</td>
-          <td>${o.order_type || "—"}</td>
+          <td class="hint">${text((o.trade_id || "").slice(-8), "")}</td>
+          <td>${text(o.leg)}</td>
+          <td class="feed-dir ${o.side === "SELL" ? "SELL" : "BUY"}">${text(o.side)}</td>
+          <td>${text(o.order_type)}</td>
           <td>${fmt(o.requested_qty, 0)}</td>
           <td>${fmt(o.filled_qty, 0)}</td>
           <td>${o.avg_fill_price != null ? fmt(o.avg_fill_price, 2) : "—"}</td>
-          <td><span class="badge">${o.status || "—"}</span></td>
-          <td class="hint">${(o.exit_reason || o.error || "").slice(0, 40)}</td>
+          <td><span class="badge">${text(o.status)}</span></td>
+          <td class="hint">${text((o.exit_reason || o.error || "").slice(0, 40), "")}</td>
         </tr>`).join("");
     }
 
     $("#monMarks").innerHTML = Object.entries(feed.marks || {}).map(([t, mk]) =>
-      `<div class="mon-mark"><span>${t}</span><b>${fmt(mk.ltp, 2)}</b><em>${Math.round(mk.age_sec)}s</em></div>`
+      `<div class="mon-mark"><span>${text(t)}</span><b>${fmt(mk.ltp, 2)}</b><em>${Math.round(mk.age_sec)}s</em></div>`
     ).join("") || `<span class="hint">No live marks yet.</span>`;
 
     const stream = $("#monStream");
     stream.innerHTML = (m.recent_signals || []).slice(0, 20).map(s => `
       <li class="feed-item ${s.direction === "BUY" ? "buy" : s.direction === "SELL" ? "sell" : "none"}">
-        <span class="feed-dir ${s.direction}">${s.direction || "—"}</span>
-        <span class="feed-meta">${s.underlying || s.symbol || "—"} · ${s.decision} · ${s.market_regime || "—"} · ${(s.reason || "").slice(0, 80)}</span>
+        <span class="feed-dir ${directionClass(s.direction)}">${text(s.direction)}</span>
+        <span class="feed-meta">${text(s.underlying || s.symbol)} · ${text(s.decision)} · ${text(s.market_regime)} · ${text((s.reason || "").slice(0, 80), "")}</span>
         <span class="feed-time">${timeStr(s.created_ts)}</span>
       </li>`).join("") || `<li class="feed-empty">No signals yet.</li>`;
+    finish();
   }
 
   // ---------------- Scalping ----------------
@@ -599,6 +653,8 @@
     const f = $("#scalpConfigForm");
     SCALP_SIMPLE_FIELDS.forEach(k => { if (f[k] != null && cfg[k] != null) f[k].value = cfg[k]; });
     f.ignore_session.checked = !!cfg.ignore_session;
+    f.execution_mode.value = cfg.execution_mode || "PAPER";
+    f.execution_enabled.checked = !!cfg.execution_enabled;
     f.watchlist_json.value = JSON.stringify(cfg.watchlist || [], null, 2);
     f.account_json.value = JSON.stringify(cfg.account || {}, null, 2);
     f.scalp_config_json.value = JSON.stringify(cfg.scalp_config || {}, null, 2);
@@ -617,7 +673,13 @@
   $("#scalpConfigForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target;
-    const patch = { ignore_session: f.ignore_session.checked };
+    const patch = {
+      ignore_session: f.ignore_session.checked,
+      execution_mode: f.execution_mode.value,
+      execution_enabled: f.execution_enabled.checked,
+    };
+    if (patch.execution_enabled && patch.execution_mode === "LIVE" &&
+        !confirm("Enable LIVE order routing? This only succeeds when all server safeguards are configured. Continue?")) return;
     SCALP_SIMPLE_FIELDS.forEach(k => {
       const v = f[k].value.trim();
       if (v === "") return;

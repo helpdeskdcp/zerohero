@@ -221,7 +221,7 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Scalp Runner</h2>
-            <span class="hint">Automated loop · paper only · fail-closed · live_trading=false</span>
+            <span class="hint">Execution off by default · paper/shadow rehearsal · LIVE requires server safeguards</span>
           </div>
           <div class="armbar">
             <button id="scalpArmBtn" class="arm-btn" data-armed="false">ARM</button>
@@ -283,6 +283,8 @@
               <label>Skip open (min)<input type="number" name="skip_open_min" min="0" step="1" /></label>
               <label>Skip close (min)<input type="number" name="skip_close_min" min="0" step="1" /></label>
               <label class="chk"><input type="checkbox" name="ignore_session" /> Ignore session (replay/demo)</label>
+              <label>Execution mode<select name="execution_mode"><option>PAPER</option><option>SHADOW</option><option>LIVE</option></select></label>
+              <label class="chk"><input type="checkbox" name="execution_enabled" /> Enable order adapter</label>
             </div>
             <details class="advanced">
               <summary>Watchlist / account / engine overrides (JSON)</summary>
@@ -310,6 +312,7 @@
               <button type="submit" class="btn btn-primary">Save Config</button>
               <button type="button" class="btn" id="scalpDemoBtn">Load demo watchlist</button>
             </div>
+            <p class="hint">LIVE is blocked unless server-only <code>CHANAKYA_API_TOKEN</code>, <code>CHANAKYA_ALLOW_LIVE=1</code>, and <code>CHANAKYA_LIVE_CONFIRM_TOKEN</code> are set. Disabling stops new automated entries; use the kill switch for an immediate entry halt.</p>
             <p class="scalp-msg hint" id="scalpConfigMsg"></p>
           </form>
         </div>

@@ -30,6 +30,7 @@ import json
 import time
 import struct
 import asyncio
+import math
 from collections import deque
 
 WS_URL = "wss://smartapisocket.angelone.in/smart-stream"
@@ -47,7 +48,21 @@ EXCHANGE_TYPE = {
 
 _LTP_PACKET = 51
 _HEARTBEAT_SEC = 25
-_LTP_MAX_AGE_SEC = 12          # a mark older than this is considered stale
+LTP_MAX_AGE_SEC = 12           # a mark older than this is considered stale
+
+
+def is_ltp_fresh(age_sec, max_age_sec: float = LTP_MAX_AGE_SEC) -> bool:
+    """Return whether a quoted LTP is safe to use for live monitoring.
+
+    This is deliberately the single freshness rule used by both the execution
+    feed and API presentation.  Missing, malformed and non-finite ages fail
+    closed rather than being treated as current market data.
+    """
+    try:
+        age = float(age_sec)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(age) and 0 <= age <= max_age_sec
 
 
 def parse_binary(payload: bytes) -> list[dict]:
@@ -119,11 +134,11 @@ class AngelMarketFeed:
             self._desired = new
             self.subscribe_generation += 1
 
-    def get_ltp(self, token: str, max_age_sec: float = _LTP_MAX_AGE_SEC):
+    def get_ltp(self, token: str, max_age_sec: float = LTP_MAX_AGE_SEC):
         rec = self.ltp.get(str(token))
         if not rec:
             return None
-        if (time.time() - rec["recv"]) > max_age_sec:
+        if not is_ltp_fresh(time.time() - rec["recv"], max_age_sec):
             return None
         return rec["ltp"]
 
@@ -132,6 +147,9 @@ class AngelMarketFeed:
 
     def status(self) -> dict:
         now = time.time()
+        def mark_status(r):
+            age = now - r["recv"]
+            return {"ltp": r["ltp"], "age_sec": age, "fresh": is_ltp_fresh(age)}
         return {
             "connected": self.connected,
             "last_error": self.last_error,
@@ -139,7 +157,7 @@ class AngelMarketFeed:
             "desired_tokens": sorted(self._desired.keys()),
             "active_tokens": sorted(self._active),
             "marks": {
-                tok: {"ltp": r["ltp"], "age_sec": round(now - r["recv"], 1)}
+                tok: mark_status(r)
                 for tok, r in sorted(self.ltp.items())
             },
         }

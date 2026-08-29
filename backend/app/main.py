@@ -6,6 +6,7 @@ mobile/desktop client-side, single codebase).
 import os
 import json
 import asyncio
+import math
 from pathlib import Path
 from typing import Optional
 from datetime import datetime, timezone
@@ -29,6 +30,7 @@ from .engines.oi_options_engine import run_oi_options_engine
 from .engines.risk_engine import run_risk_engine
 from .engines.paper_trading import open_trade, close_trade, update_trade_price
 from .research import aggregate_research
+from .connectors.angel_ws import LTP_MAX_AGE_SEC, is_ltp_fresh
 
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = APP_ROOT / "frontend"
@@ -368,31 +370,60 @@ def api_monitor():
             m = feed_marks.get(str(r.get("symboltoken") or ""))
             entry = r.get("entry") or 0
             qty = r.get("quantity") or 0
-            sign = 1 if r.get("direction") == "BUY" else -1
-            mark_src = "ws" if m else None
-            mark = m["ltp"] if m else None
-            # no live WS tick (illiquid contract) → imply the mark the runner's
-            # REST-fed pnl already reflects, so the page still shows target/stop gaps
-            if mark is None and qty and (r.get("pnl") is not None):
-                mark = round(entry + sign * (r["pnl"] / qty), 2)
-                mark_src = "rest"
-            live_pnl = round(sign * (mark - entry) * qty, 2) if (mark is not None and entry) else r.get("pnl")
+            direction = r.get("direction")
+            direction_valid = direction in ("BUY", "SELL")
+            sign = 1 if direction == "BUY" else -1
+            age = m.get("age_sec") if isinstance(m, dict) else None
+            fresh = is_ltp_fresh(age)
+            raw_mark = m.get("ltp") if isinstance(m, dict) else None
+            try:
+                mark_is_valid = math.isfinite(float(raw_mark)) and float(raw_mark) > 0
+            except (TypeError, ValueError):
+                mark_is_valid = False
+            # A cached or malformed quote must not be re-labelled as a live
+            # REST mark.  There is no timestamp on persisted P&L, so it is
+            # deliberately unavailable for live-monitor calculations.
+            mark = float(raw_mark) if fresh and mark_is_valid else None
+            mark_src = "ws" if mark is not None else None
+            freshness = "FRESH" if mark is not None else ("STALE" if m else "UNAVAILABLE")
+            live_pnl = round(sign * (mark - entry) * qty, 2) if (direction_valid and mark is not None and entry) else None
             t1, sl = r.get("target_1"), r.get("stop_loss")
             hit = None
-            if mark is not None:
+            if direction_valid and mark is not None:
                 if t1 and ((sign > 0 and mark >= t1) or (sign < 0 and mark <= t1)):
                     hit = "TARGET"
                 elif sl and ((sign > 0 and mark <= sl) or (sign < 0 and mark >= sl)):
                     hit = "STOP"
+            if r.get("status") != "OPEN":
+                monitor_status = r.get("status") or "UNKNOWN"
+            elif not direction_valid:
+                monitor_status = "INVALID_DATA"
+            elif freshness != "FRESH":
+                monitor_status = "STALE_DATA"
+            elif hit:
+                monitor_status = f"{hit}_HIT"
+            else:
+                monitor_status = "OPEN"
+            if not direction_valid:
+                target_distance = stop_distance = None
+            elif direction == "BUY":
+                target_distance = t1 - mark if (t1 and mark is not None) else None
+                stop_distance = mark - sl if (sl and mark is not None) else None
+            else:
+                target_distance = mark - t1 if (t1 and mark is not None) else None
+                stop_distance = sl - mark if (sl and mark is not None) else None
             out.append({
                 **r,
                 "mark": mark,
                 "mark_source": mark_src,
-                "mark_age_sec": m["age_sec"] if m else None,
+                "mark_age_sec": age,
+                "stale_age_sec": age if freshness == "STALE" else None,
+                "freshness": freshness,
                 "live_pnl": live_pnl,
                 "hit": hit,
-                "dist_to_target": round(t1 - mark, 2) if (t1 and mark is not None) else None,
-                "dist_to_stop": round(mark - sl, 2) if (sl and mark is not None) else None,
+                "monitor_status": monitor_status,
+                "dist_to_target": round(target_distance, 2) if target_distance is not None else None,
+                "dist_to_stop": round(stop_distance, 2) if stop_distance is not None else None,
             })
         return out
 
@@ -405,6 +436,7 @@ def api_monitor():
             "cooldown_sec_remaining", "open_scalps", "max_concurrent",
             "traded_today", "daily_cap", "poll_sec")},
         "feed": st.get("feed"),
+        "ltp_max_age_sec": LTP_MAX_AGE_SEC,
         "positions": enrich(db.list_trades(strategy="MANUAL", limit=100)),
         "scalps": enrich(db.list_trades(strategy="SCALP", limit=100)),
         "combos": combos.snapshot(),
@@ -446,7 +478,10 @@ def api_scalp_get_config():
 
 @app.post("/api/scalp/config")
 def api_scalp_set_config(payload: dict):
-    return scalp_runner.set_config(payload or {})
+    try:
+        return scalp_runner.set_config(payload or {})
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.get("/api/scalp/trades")
@@ -462,7 +497,7 @@ class TrackPositionRequest(BaseModel):
     option_type: Optional[str] = None   # CE | PE | "" for futures/equity
     strike: Optional[float] = None
     expiry: Optional[str] = None
-    direction: Optional[str] = "BUY"
+    direction: str
     entry: float
     target: float
     stop: float
@@ -471,11 +506,55 @@ class TrackPositionRequest(BaseModel):
     trailing_stop: Optional[float] = 0   # 0 = honour the literal stop, no ratchet
 
 
+def _positive_finite(value, name: str, *, required: bool = False):
+    if value is None:
+        if required:
+            raise HTTPException(422, f"{name} is required")
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise HTTPException(422, f"{name} must be a finite positive number")
+    if not math.isfinite(number) or number <= 0:
+        raise HTTPException(422, f"{name} must be a finite positive number")
+    return number
+
+
+def _nonnegative_finite(value, name: str):
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise HTTPException(422, f"{name} must be a finite non-negative number")
+    if not math.isfinite(number) or number < 0:
+        raise HTTPException(422, f"{name} must be a finite non-negative number")
+    return number
+
+
+def _validate_monitor_levels(direction, entry, target=None, stop=None):
+    """Validate monitor-only levels without inventing optional missing levels."""
+    direction = str(direction or "").upper()
+    if direction not in ("BUY", "SELL"):
+        raise HTTPException(422, "direction must be BUY or SELL")
+    entry = _positive_finite(entry, "entry", required=True)
+    target = _positive_finite(target, "target")
+    stop = _positive_finite(stop, "stop")
+    if target is not None and stop is not None:
+        valid = (stop < entry < target) if direction == "BUY" else (target < entry < stop)
+        if not valid:
+            rule = "stop < entry < target" if direction == "BUY" else "target < entry < stop"
+            raise HTTPException(422, f"invalid {direction} levels: require {rule}")
+    return direction, entry, target, stop
+
+
 @app.post("/api/positions/track")
 async def api_track_position(req: TrackPositionRequest):
     """Register a real broker position for MONITOR-ONLY tracking. The app marks
     it to the live WebSocket feed and alerts (WS + Telegram) on target / stop.
     It NEVER places a broker order."""
+    direction, entry, target, stop = _validate_monitor_levels(req.direction, req.entry, req.target, req.stop)
+    trailing_stop = _nonnegative_finite(req.trailing_stop, "trailing_stop")
     tok = req.symboltoken
     exch = req.exchange
     if not tok:
@@ -490,8 +569,8 @@ async def api_track_position(req: TrackPositionRequest):
     existing = db.find_open_by_token(str(tok), strategy="MANUAL")
     if existing:
         db.update_trade(existing["trade_id"], {
-            "target_1": req.target, "stop_loss": req.stop,
-            "trailing_stop": req.trailing_stop or 0})
+            "target_1": target, "stop_loss": stop,
+            "trailing_stop": trailing_stop or 0})
         row = db.get_trade(existing["trade_id"])
         await manager.broadcast({"type": "position_update", "data": row})
         return row
@@ -502,9 +581,9 @@ async def api_track_position(req: TrackPositionRequest):
         "instrument": "OPTION" if req.option_type else "FUT",
         "expiry": req.expiry or "", "strike": req.strike or 0,
         "option_type": (req.option_type or "").upper(),
-        "direction": (req.direction or "BUY").upper(), "timeframe": "",
-        "entry": req.entry, "target_1": req.target, "target_2": None,
-        "stop_loss": req.stop, "trailing_stop": req.trailing_stop or 0,
+        "direction": direction, "timeframe": "",
+        "entry": entry, "target_1": target, "target_2": None,
+        "stop_loss": stop, "trailing_stop": trailing_stop or 0,
         "quantity": (req.lots or 1) * (req.lot_size or 1),
         "probability": None, "confidence": None, "market_regime": "",
         "oi_evidence": "", "reason": "external broker position — monitor only",
@@ -544,13 +623,18 @@ async def api_position_levels(req: LevelsRequest):
     t = db.get_trade(req.trade_id)
     if not t or t.get("status") != "OPEN":
         raise HTTPException(404, "open position not found")
+    direction, _entry, target, stop = _validate_monitor_levels(
+        t.get("direction"), t.get("entry"),
+        req.target if req.target is not None else t.get("target_1"),
+        req.stop if req.stop is not None else t.get("stop_loss"),
+    )
     fields = {}
     if req.target is not None:
-        fields["target_1"] = req.target
+        fields["target_1"] = target
     if req.stop is not None:
-        fields["stop_loss"] = req.stop
+        fields["stop_loss"] = stop
     if req.trailing_stop is not None:
-        fields["trailing_stop"] = req.trailing_stop
+        fields["trailing_stop"] = _nonnegative_finite(req.trailing_stop, "trailing_stop")
     if not fields:
         raise HTTPException(400, "nothing to set")
     db.update_trade(req.trade_id, fields)

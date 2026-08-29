@@ -9,7 +9,7 @@ Risk engines.
 
 Nothing in here changes signal maths or strategy logic. LIVE order placement is
 disabled unless execution_mode == "LIVE" AND env CHANAKYA_ALLOW_LIVE == "1" AND
-a non-empty live_confirm_token is configured — otherwise AngelOneBroker raises
+a non-empty CHANAKYA_LIVE_CONFIRM_TOKEN is configured — otherwise AngelOneBroker raises
 LiveDisabled.
 """
 from .broker_base import (  # noqa: F401
