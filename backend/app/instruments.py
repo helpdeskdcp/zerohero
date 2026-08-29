@@ -13,6 +13,9 @@ expiry-dated, single stocks, weekly option strikes) the user adds at
 runtime via POST /api/instruments — persisted in app_settings, no redeploy.
 """
 import json
+import os
+import time
+import requests
 from datetime import datetime, timezone, timedelta
 
 from . import db
@@ -60,6 +63,8 @@ _TF_TO_INTERVAL = {
 }
 
 _IST = timezone(timedelta(hours=5, minutes=30))
+MASTER_URL = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+MASTER_CACHE = os.environ.get("CHANAKYA_INSTRUMENT_MASTER", "./data/instrument_master.json")
 
 
 def interval_for(timeframe: str):
@@ -116,6 +121,85 @@ def resolve(symbol: str) -> dict | None:
         if want == key or want in {_norm(a) for a in (meta.get("aliases") or [])}:
             return meta
     return None
+
+
+def refresh_master(*, timeout: float = 15) -> dict:
+    """Download official Angel One scrip master (read-only) and cache locally."""
+    try:
+        r = requests.get(MASTER_URL, timeout=timeout)
+        r.raise_for_status()
+        data = r.json()
+        if not isinstance(data, list) or not data:
+            raise ValueError("empty instrument master")
+        path = os.path.abspath(MASTER_CACHE)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        return {"status": "OK", "rows": len(data), "source": "ANGELONE_SCRIP_MASTER", "timestamp": time.time()}
+    except Exception as e:
+        return {"status": "API_ERROR", "rows": 0, "reason": type(e).__name__}
+
+
+def master_rows(*, refresh: bool = False) -> list[dict]:
+    path = os.path.abspath(MASTER_CACHE)
+    if refresh or not os.path.exists(path):
+        refresh_master()
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _master_meta(r: dict) -> dict:
+    exch = str(r.get("exch_seg") or r.get("exchange") or "").upper()
+    raw_strike = r.get("strike")
+    try: strike = float(raw_strike) / 100 if float(raw_strike) > 100000 else float(raw_strike)
+    except (TypeError, ValueError): strike = None
+    return {"exchange": exch, "symbol": r.get("symbol") or "", "symboltoken": str(r.get("token") or r.get("symboltoken") or ""),
+            "underlying": str(r.get("name") or "").upper(), "expiry": r.get("expiry") or "", "strike": strike,
+            "option_type": str(r.get("symbol") or "").upper().rstrip("0123456789").endswith("CE") and "CE" or ("PE" if str(r.get("symbol") or "").upper().endswith("PE") else ""),
+            "lot_size": r.get("lotsize"), "tick_size": r.get("tick_size") or r.get("ticksize"), "instrumenttype": r.get("instrumenttype") or ""}
+
+
+def resolve_nse_option(underlying: str, expiry: str = "AUTO", strike="ATM", option_type: str = "CE", *, spot: float | None = None) -> dict:
+    """Resolve an NFO option solely from the current official master."""
+    u = canonical(underlying); typ = str(option_type or "").upper()
+    rows = [_master_meta(r) for r in master_rows()]
+    rows = [r for r in rows if r["exchange"] == "NFO" and r["underlying"] == u and r["option_type"] == typ and r["symboltoken"]]
+    if not rows: return {"status": "DATA_UNAVAILABLE", "reason": "no NFO contracts in instrument master"}
+    valid = sorted({r["expiry"] for r in rows if r["expiry"]})
+    now = datetime.now(_IST).date()
+    def key(x):
+        for f in ("%d%b%Y", "%Y-%m-%d", "%d-%b-%Y"):
+            try: return datetime.strptime(x.upper(), f).date()
+            except ValueError: pass
+        return None
+    valid = [x for x in valid if key(x) and key(x) >= now]
+    if not valid: return {"status": "CONTRACT_INVALID", "reason": "no non-expired expiry"}
+    mode = str(expiry or "AUTO").upper()
+    selected = valid[0] if mode in ("AUTO", "CURRENT") else (valid[1] if mode == "NEXT" and len(valid) > 1 else valid[-1] if mode == "LATEST" else mode)
+    rows = [r for r in rows if r["expiry"] == selected]
+    if not rows: return {"status": "CONTRACT_INVALID", "reason": "requested expiry unavailable"}
+    if strike == "ATM":
+        if spot is None: return {"status": "DATA_UNAVAILABLE", "reason": "spot required for ATM"}
+        chosen = min(rows, key=lambda r: abs((r["strike"] or 0) - float(spot)))
+    else:
+        try: chosen = next(r for r in rows if abs((r["strike"] or 0) - float(strike)) < 1e-9)
+        except (StopIteration, TypeError, ValueError): return {"status": "CONTRACT_INVALID", "reason": "strike unavailable"}
+    return {**chosen, "status": "OK", "expiry_selection_mode": mode, "available_expiries": valid,
+            "current_expiry": valid[0], "next_expiry": valid[1] if len(valid) > 1 else None, "latest_expiry": valid[-1]}
+
+
+def resolve_mcx_future(symbol: str, expiry: str = "AUTO") -> dict:
+    u = canonical(symbol); rows = [_master_meta(r) for r in master_rows()]
+    rows = [r for r in rows if r["exchange"] == "MCX" and (r["underlying"] == u or u in str(r["symbol"]).upper()) and r["symboltoken"]]
+    valid = sorted({r["expiry"] for r in rows if r["expiry"]})
+    if not valid: return {"status": "DATA_UNAVAILABLE", "reason": "no MCX contracts in instrument master"}
+    selected = valid[0] if str(expiry).upper() in ("AUTO", "CURRENT") else valid[1] if str(expiry).upper() == "NEXT" and len(valid) > 1 else valid[-1]
+    row = next((r for r in rows if r["expiry"] == selected), None)
+    return {**row, "status": "OK", "available_expiries": valid, "expiry_selection_mode": str(expiry).upper()} if row else {"status": "CONTRACT_INVALID"}
 
 
 def lookback_window(timeframe: str, bars: int = 120, now: datetime | None = None):

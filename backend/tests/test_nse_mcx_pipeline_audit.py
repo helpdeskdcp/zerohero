@@ -76,3 +76,14 @@ def test_read_only_quote_adapter_normalizes_oi_without_orders(monkeypatch):
     q = angelone.fetch_nse_option_chain("NIFTY", [{"symboltoken": "T",
         "exchange": "NFO", "strike": 22000, "expiry": "2026-09-03", "option_type": "CE"}])
     assert q["data_status"] == "OK" and q["rows"][0]["oi"] == 1000
+
+
+def test_dynamic_expiry_and_atm_resolver_uses_master(monkeypatch):
+    from app import instruments
+    monkeypatch.setattr(instruments, "master_rows", lambda **_k: [
+        {"exch_seg": "NFO", "symbol": "NIFTY01SEP2026CE22000", "token": "1", "name": "NIFTY", "expiry": "01SEP2026", "strike": "2200000"},
+        {"exch_seg": "NFO", "symbol": "NIFTY08SEP2026CE22000", "token": "2", "name": "NIFTY", "expiry": "08SEP2026", "strike": "2200000"},
+    ])
+    c = instruments.resolve_nse_option("NIFTY", "AUTO", "ATM", "CE", spot=22000)
+    assert c["status"] == "OK" and c["expiry"] == "01SEP2026" and c["symboltoken"] == "1"
+    assert c["next_expiry"] == "08SEP2026"

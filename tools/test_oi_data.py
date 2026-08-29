@@ -55,8 +55,10 @@ def test_nse(symbol):
         print("data_timestamp:", data.get("data_timestamp"))
         print("data_age_seconds:", data.get("data_age_seconds"))
         print("rows:", len(data.get("candles") or []))
-        chain = angelone.fetch_nse_option_chain(symbol, contracts=[])
-        result(symbol, False, "option-chain requires instrument-master option tokens (no contracts supplied)")
+        spot = (data.get("candles") or [{}])[-1].get("c") if data.get("candles") else None
+        contract = __import__("app.instruments", fromlist=["resolve_nse_option"]).resolve_nse_option(symbol, "AUTO", "ATM", "CE", spot=spot)
+        print("selected_expiry:", contract.get("expiry"), "token_present:", bool(contract.get("symboltoken")))
+        result(symbol, False, "option-chain/OI unavailable" if contract.get("status") != "OK" else "OI chain requires quote rows")
         return False
     except Exception as e:
         result(symbol, False, f"{type(e).__name__}: {e}")
