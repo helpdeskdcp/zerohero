@@ -5,6 +5,7 @@ import requests, pyotp
 
 LOGIN = "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword"
 QUOTE = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/"
+GREEKS = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/optionGreek"
 MASTER = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
 
 class AngelOneClient:
@@ -16,7 +17,9 @@ class AngelOneClient:
         if self.jwt and time.time() - self.login_ts < 3600: return True
         key, cid, pwd, secret = (os.getenv(k) for k in ("ANGEL_API_KEY", "ANGEL_CLIENT_ID", "ANGEL_PASSWORD", "ANGEL_TOTP_SECRET"))
         if not all((key, cid, pwd, secret)): return False
-        h = {"Content-Type":"application/json", "X-PrivateKey":key, "X-UserType":"USER", "X-SourceID":"WEB"}
+        h = {"Content-Type":"application/json", "Accept":"application/json", "X-PrivateKey":key,
+             "X-UserType":"USER", "X-SourceID":"WEB", "X-ClientLocalIP":"127.0.0.1",
+             "X-ClientPublicIP":"127.0.0.1", "X-MACAddress":"00:00:00:00:00:00"}
         try:
             r = requests.post(LOGIN, json={"clientcode":cid,"password":pwd,"totp":pyotp.TOTP(secret).now()}, headers=h, timeout=self.timeout)
             d = r.json(); data = d.get("data") or {}
@@ -65,6 +68,38 @@ class AngelOneClient:
         chosen = min(rows, key=lambda r: abs((st(r) or 0)-float(spot))) if strike == "ATM" and spot is not None else next((r for r in rows if st(r) == float(strike)), None)
         if not chosen: return {"status":"CONTRACT_INVALID", "reason":"strike unavailable or spot missing"}
         return {"status":"OK", "exchange":"NFO", "symbol":chosen.get("symbol"), "token":str(chosen.get("token")), "underlying":u, "expiry":selected, "strike":st(chosen), "option_type":typ, "lot_size":chosen.get("lotsize"), "expiry_selection_mode":mode, "available_expiries":exps}
+
+    def resolve_index(self, symbol):
+        rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE") if r.get("instrumenttype") == "AMXIDX"]
+        return {"status":"OK", "symbol":str(symbol).upper(), "token":str(rows[0].get("token")), "exchange":"NSE", "underlying":str(symbol).upper()} if rows else {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
+
+    def get_option_chain(self, underlying, expiry="AUTO", window=5):
+        idx = self.resolve_index(underlying); spot_q = self.get_quote("NSE", idx.get("token")) if idx.get("status") == "OK" else {}
+        spot = spot_q.get("ltp") or spot_q.get("lastTradedPrice")
+        if spot is None: return {"status":"DATA_UNAVAILABLE", "reason":"spot unavailable"}
+        probe = self.resolve_option_contract(underlying, expiry, "ATM", "CE", spot=float(spot))
+        if probe.get("status") != "OK": return probe
+        selected = probe["expiry"]; rows = [r for r in self.search_instruments(symbol=str(underlying).upper(), exchange="NFO") if r.get("expiry") == selected and r.get("instrumenttype") in ("OPTIDX","OPTSTK")]
+        strikes = sorted({round(float(r.get("strike"))/100, 6) for r in rows if r.get("strike") is not None})
+        atm_i = min(range(len(strikes)), key=lambda i: abs(strikes[i]-float(spot)))
+        strikes = strikes[max(0, atm_i-window):atm_i+window+1]
+        out_rows=[]
+        for strike in strikes:
+            legs={}
+            for typ in ("CE","PE"):
+                c=next((r for r in rows if str(r.get("symbol","")).upper().endswith(typ) and abs(float(r.get("strike"))/100-strike)<1e-6), None)
+                if not c: continue
+                q=self.get_quote("NFO", c.get("token")); legs[typ]={"token":str(c.get("token")),"ltp":q.get("ltp") or q.get("lastTradedPrice"),"oi":q.get("opnInterest") if q.get("opnInterest") is not None else q.get("openInterest"),"oi_change":q.get("changeinOpenInterest"),"volume":q.get("tradeVolume"),"timestamp":q.get("exchangeTimestamp") or q.get("exchange_timestamp")}
+            out_rows.append({"strike":strike,"ce":legs.get("CE"),"pe":legs.get("PE")})
+        return {"status":"OK" if out_rows else "DATA_UNAVAILABLE","symbol":str(underlying).upper(),"underlying":str(underlying).upper(),"spot":spot,"expiry":selected,"rows":out_rows,"timestamp":datetime.now(timezone.utc).isoformat()}
+
+    def get_greeks(self, symbol, expiry):
+        if not self.authenticate(): return {"status":"AUTH_FAILED"}
+        h={"Content-Type":"application/json","X-PrivateKey":os.getenv("ANGEL_API_KEY"),"Authorization":"Bearer "+self.jwt,"X-UserType":"USER","X-SourceID":"WEB"}
+        try:
+            d=requests.post(GREEKS,json={"name":str(symbol).upper(),"expirydate":expiry},headers=h,timeout=self.timeout).json()
+            return {"status":"OK" if d.get("status") and d.get("data") else "DATA_UNAVAILABLE","rows":d.get("data") or []}
+        except Exception: return {"status":"API_ERROR","rows":[]}
 
     def get_quote(self, exchange, token):
         if not self.authenticate(): return {"status":"AUTH_FAILED", "data_status":"AUTH_FAILED"}
