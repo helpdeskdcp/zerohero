@@ -227,10 +227,14 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
     elif mkt == "MCX":
         market_open = (9 * 60) <= mins_ist <= (23 * 60 + 30)
 
-    return out("OK", {
+    max_age = float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900"))
+    data_status = "OK" if stale_sec is not None and stale_sec <= max_age else "STALE"
+    return out(data_status, {
         "candles": mapped,
         "candle_count": len(mapped),
         "stale_seconds": stale_sec,
+        "data_timestamp": last_t,
+        "data_age_seconds": stale_sec,
         "market_open": market_open,
     })
 

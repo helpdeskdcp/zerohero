@@ -79,6 +79,17 @@ def test_orchestrator_no_trade_still_logs_a_signal(fresh_db):
     assert fresh_db.list_signals(limit=1)[0]["signal_id"].startswith("SIG-")
 
 
+def test_orchestrator_rejects_missing_snapshot_and_contract_fields(fresh_db):
+    from app.orchestrator import run_pipeline
+    res = run_pipeline({"market": "NSE", "symbol": "NIFTY", "instrument": "OPTION",
+                        "candles": candles([100.0] * 60), "account": {"capital": 200000}})
+    c = res["contract"]
+    assert c["final_decision"] == "NO_TRADE" and c["approved"] is False
+    assert c["data_age_seconds"] is None
+    assert "data timestamp missing" in c["reason"]
+    assert "expiry missing" in c["reason"] and "strike missing" in c["reason"]
+
+
 def test_scalp_pipeline_signal_id_prefix(fresh_db):
     from app.scalp_pipeline import run_scalp_pipeline
     res = run_scalp_pipeline({"underlying": "X", "candles": candles([100.0] * 40),

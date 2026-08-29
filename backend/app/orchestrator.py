@@ -7,6 +7,9 @@ live_trading is hard-coded False everywhere and never derived from input.
 This mirrors the n8n workflow's node-by-node data prep exactly.
 """
 import json
+import math
+import os
+import time
 from datetime import datetime, timezone
 
 from .engines.signal_engine import run_signal_engine
@@ -101,9 +104,20 @@ def run_pipeline(req: dict) -> dict:
 
     # --- 5. NO-TRADE GATE (authoritative, fail-closed) ---
     gate_msgs = []
-    data_ok = conn.get("data_status") == "OK"
+    data_status = conn.get("data_status") or "DATA_UNAVAILABLE"
+    data_ok = data_status == "OK"
     if not data_ok:
-        gate_msgs.append(f"GATE: data_status={conn.get('data_status','MISSING')} (require OK)")
+        gate_msgs.append(f"GATE: data_status={data_status} (require OK)")
+    # Connector timestamps are authoritative.  A fetched_at timestamp alone
+    # must never make an old candle set appear live.
+    age = conn.get("stale_seconds")
+    max_age = float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900"))
+    if age is None or not math.isfinite(float(age)):
+        gate_msgs.append("GATE: data timestamp missing (DATA_VALID/DATA_FRESH failed)")
+    elif float(age) > max_age:
+        gate_msgs.append(f"GATE: data stale ({age}s > {max_age:g}s)")
+    if conn.get("market_open") is False:
+        gate_msgs.append("GATE: MARKET_CLOSED")
 
     signal_trade = sig.get("decision") == "TRADE"
     if not signal_trade:
@@ -123,6 +137,31 @@ def run_pipeline(req: dict) -> dict:
         oi_evidence = json.dumps(oi.get("oi_evidence") or {})
     if is_option and not (oi and oi.get("decision") == "TRADE"):
         gate_msgs.append(f"GATE: options trade requires OI decision=TRADE (got {oi.get('decision') if oi else 'MISSING'})")
+
+    # Mandatory contract/level gates.  These run even when an upstream model
+    # reports a high probability, preventing zero/default fields from reaching
+    # paper trading.
+    direction = sig.get("direction")
+    if direction not in ("BUY", "SELL"):
+        gate_msgs.append("GATE: DIRECTION_VALID failed")
+    def positive(value):
+        try:
+            return math.isfinite(float(value)) and float(value) > 0
+        except (TypeError, ValueError):
+            return False
+    if not positive(ez.get("ref")):
+        gate_msgs.append("GATE: ENTRY_VALID failed (entry_ref must be > 0)")
+    if not positive(sig.get("stop_loss")):
+        gate_msgs.append("GATE: STOP_VALID failed (stop_loss must be > 0)")
+    if not positive(sig.get("target_1")):
+        gate_msgs.append("GATE: TARGET_VALID failed (target_1 must be > 0)")
+    if is_option:
+        if not str(req.get("expiry") or "").strip():
+            gate_msgs.append("GATE: CONTRACT_VALID failed (expiry missing)")
+        if not positive(strike or sig.get("strike")):
+            gate_msgs.append("GATE: CONTRACT_VALID failed (strike missing)")
+        if option_type not in ("CE", "PE"):
+            gate_msgs.append("GATE: CONTRACT_VALID failed (option_type missing)")
 
     approved = len(gate_msgs) == 0
     signal_id = _signal_id()
@@ -165,6 +204,9 @@ def run_pipeline(req: dict) -> dict:
         "allowed_quantity": risk.get("allowed_quantity") or 0,
         "oi_evidence": oi_evidence,
         "turning_point": tp,
+        "snapshot_id": conn.get("snapshot_id") or f"{(conn.get('market') or req.get('market') or 'UNKNOWN').upper()}-{int(time.time()*1000)}",
+        "data_timestamp": conn.get("data_timestamp") or conn.get("fetched_at"),
+        "data_age_seconds": age,
     }
 
     # --- 6. Log + notify ---
