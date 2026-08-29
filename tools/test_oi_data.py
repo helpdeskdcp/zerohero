@@ -6,9 +6,19 @@ repository currently has candle and position reads, but no option-chain/OI
 read API, so unsupported paths are reported explicitly and never synthesized.
 """
 import sys
+from pathlib import Path
 from datetime import datetime, timezone
 
 sys.path.insert(0, "/root/zerohero/backend")
+try:
+    from dotenv import load_dotenv
+    # Prefer the deployed service environment, then the workspace environment.
+    for _env in (Path("/opt/chanakya-app/backend/.env"), Path("/root/zerohero/backend/.env")):
+        if _env.exists():
+            load_dotenv(_env, override=False)
+            break
+except Exception:
+    pass
 from app.connectors import angelone  # noqa: E402
 
 MAX_AGE = 900
