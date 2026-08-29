@@ -54,7 +54,7 @@ class AngelOneClient:
         return None
 
     def search_instruments(self, *, symbol=None, exchange=None, instrumenttype=None):
-        rows = self.load_instrument_master(); s = str(symbol or "").upper(); e = str(exchange or "").upper()
+        rows = self.load_instrument_master(); s = {"CRUDEOILMINI":"CRUDEOILM"}.get(str(symbol or "").upper(), str(symbol or "").upper()); e = str(exchange or "").upper()
         return [r for r in rows if (not s or str(r.get("name") or r.get("symbol") or "").upper() == s)
                 and (not e or str(r.get("exch_seg") or "").upper() == e)
                 and (not instrumenttype or r.get("instrumenttype") == instrumenttype)]
@@ -77,6 +77,13 @@ class AngelOneClient:
     def resolve_index(self, symbol):
         rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE") if r.get("instrumenttype") == "AMXIDX"]
         return {"status":"OK", "symbol":str(symbol).upper(), "token":str(rows[0].get("token")), "exchange":"NSE", "underlying":str(symbol).upper()} if rows else {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
+
+    def resolve_future_contract(self, symbol, expiry="AUTO"):
+        rows=[r for r in self.search_instruments(symbol=symbol, exchange="MCX", instrumenttype="FUTCOM") if r.get("token") and r.get("expiry")]
+        today=datetime.now(timezone.utc).date(); rows=[r for r in rows if self._date(r.get("expiry")) and self._date(r.get("expiry"))>=today]
+        if not rows: return {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
+        rows.sort(key=lambda r:self._date(r.get("expiry"))); chosen=rows[0] if str(expiry).upper() in ("AUTO","CURRENT") else rows[1] if str(expiry).upper()=="NEXT" and len(rows)>1 else rows[-1]
+        return {"status":"OK","exchange":"MCX","symbol":chosen.get("symbol"),"token":str(chosen.get("token")),"underlying":str(symbol).upper(),"expiry":chosen.get("expiry"),"lot_size":chosen.get("lotsize"),"expiry_selection_mode":str(expiry).upper()}
 
     def get_option_chain(self, underlying, expiry="AUTO", window=5):
         idx = self.resolve_index(underlying); spot_q = self.get_quote("NSE", idx.get("token")) if idx.get("status") == "OK" else {}

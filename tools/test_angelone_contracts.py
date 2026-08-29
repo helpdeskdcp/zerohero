@@ -38,11 +38,10 @@ for symbol in ("NIFTY", "BANKNIFTY"):
 
 for symbol in ("NATGASMINI", "CRUDEOILMINI"):
     print(f"\n{symbol}")
-    rows=client.search_instruments(symbol=symbol, exchange="MCX", instrumenttype="FUTCOM")
-    valid=[r for r in rows if r.get("token") and r.get("expiry")]
-    mark("Contract", bool(valid), "INSTRUMENT_MASTER_CONTRACT_NOT_FOUND" if not valid else "")
-    if valid:
-        r=sorted(valid,key=lambda x:x.get("expiry"))[0]; q=client.get_quote("MCX",r["token"])
+    contract=client.resolve_future_contract(symbol, "AUTO")
+    mark("Contract", contract.get("status") == "OK", "INSTRUMENT_MASTER_CONTRACT_NOT_FOUND" if contract.get("status") != "OK" else "")
+    if contract.get("status") == "OK":
+        q=client.get_quote("MCX",contract["token"])
         mark("Quote", q.get("status") == "OK"); mark("OI", q.get("opnInterest") is not None, "BROKER_FEED_OI_UNAVAILABLE" if q.get("opnInterest") is None else "")
     else: mark("Quote", False, "contract unavailable"); mark("OI", False, "contract unavailable")
 print("\nMCX Options: NOT_SUPPORTED (no broker chain capability confirmed)")
