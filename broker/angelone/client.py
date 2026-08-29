@@ -12,20 +12,25 @@ class AngelOneClient:
     def __init__(self, *, cache_path=None, timeout=15):
         self.timeout = timeout; self.cache_path = cache_path or os.getenv("ANGEL_MASTER_CACHE", "/tmp/angelone_instrument_master.json")
         self.jwt = None; self.feed_token = None; self.login_ts = 0; self._master = []
+        self.last_auth = {"status": "NOT_ATTEMPTED"}
 
     def authenticate(self):
         if self.jwt and time.time() - self.login_ts < 3600: return True
         key, cid, pwd, secret = (os.getenv(k) for k in ("ANGEL_API_KEY", "ANGEL_CLIENT_ID", "ANGEL_PASSWORD", "ANGEL_TOTP_SECRET"))
+        self.last_auth = {"status": "CONFIG_REQUIRED", "fields": {"api_key": bool(key), "client_id": bool(cid), "password": bool(pwd), "totp_secret": bool(secret)}}
         if not all((key, cid, pwd, secret)): return False
-        h = {"Content-Type":"application/json", "Accept":"application/json", "X-PrivateKey":key,
+        h = {"Content-Type":"application/json", "Accept":"application/json", "User-Agent":"SmartAPI Python Client",
+             "X-PrivateKey":key,
              "X-UserType":"USER", "X-SourceID":"WEB", "X-ClientLocalIP":"127.0.0.1",
              "X-ClientPublicIP":"127.0.0.1", "X-MACAddress":"00:00:00:00:00:00"}
         try:
             r = requests.post(LOGIN, json={"clientcode":cid,"password":pwd,"totp":pyotp.TOTP(secret).now()}, headers=h, timeout=self.timeout)
             d = r.json(); data = d.get("data") or {}
             if d.get("status") and data.get("jwtToken"):
-                self.jwt, self.feed_token, self.login_ts = data["jwtToken"], data.get("feedToken"), time.time(); return True
-        except Exception: pass
+                self.jwt, self.feed_token, self.login_ts = data["jwtToken"], data.get("feedToken"), time.time(); self.last_auth = {"status":"OK"}; return True
+            self.last_auth = {"status": "AUTH_FAILED", "errorcode": d.get("errorcode"), "message": str(d.get("message") or d.get("error_type") or "")[:120]}
+        except Exception as e:
+            self.last_auth = {"status": "AUTH_FAILED", "message": type(e).__name__}
         return False
 
     def load_instrument_master(self, refresh=False):

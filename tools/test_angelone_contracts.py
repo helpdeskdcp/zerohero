@@ -16,6 +16,8 @@ def mark(label, ok, reason=""):
 client = AngelOneClient(cache_path="/root/zerohero/data/instrument_master.json")
 print("=" * 48); print("ANGELONE REAL CONTRACT/OI/GREEKS TEST")
 auth = client.authenticate(); mark("AUTHENTICATION", auth, "credentials/session unavailable" if not auth else "")
+if not auth:
+    print("AUTH RESPONSE:", client.last_auth.get("status"), client.last_auth.get("errorcode"), client.last_auth.get("message", ""))
 master = client.load_instrument_master(); mark("INSTRUMENT_MASTER", bool(master), "empty or unavailable")
 
 for symbol in ("NIFTY", "BANKNIFTY"):
