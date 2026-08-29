@@ -18,6 +18,7 @@ from .engines.risk_engine import run_risk_engine
 from .connectors import angelone
 from . import db
 from . import pipeline_core
+from . import instruments
 
 
 def _signal_id():
@@ -26,13 +27,36 @@ def _signal_id():
 
 def run_pipeline(req: dict) -> dict:
     req = req or {}
+    symbol = instruments.canonical(req.get("symbol"))
+    supplied_underlying = instruments.canonical(req.get("underlying")) if req.get("underlying") else symbol
+    # The symbol is authoritative; an inconsistent caller-provided underlying
+    # is rejected below rather than allowed to contaminate downstream engines.
+    requested_underlying = symbol
 
     # --- 1. Connector (or pass through pre-supplied candles for backtest/replay) ---
     if req.get("candles") is not None:
+        candles = req.get("candles") or []
+        data_ts = candles[-1][0] if candles and isinstance(candles[-1], (list, tuple)) else None
+        try:
+            from datetime import datetime, timezone
+            if isinstance(data_ts, (int, float)):
+                ts = data_ts / 1000 if data_ts > 1e12 else data_ts
+                data_iso = datetime.fromtimestamp(ts, timezone.utc).isoformat()
+            else:
+                data_iso = datetime.fromisoformat(str(data_ts).replace("Z", "+00:00")).isoformat()
+            age = max(0.0, time.time() - datetime.fromisoformat(data_iso).timestamp())
+        except Exception:
+            data_iso, age = None, None
         conn = {
-            "market": req.get("market"), "symbol": req.get("symbol"),
+            "market": req.get("market"), "symbol": symbol,
             "instrument": req.get("instrument"), "timeframe": req.get("timeframe"),
-            "data_status": "OK", "candles": req.get("candles"),
+            "data_status": "OK" if age is not None and age <= float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900")) else "STALE",
+            "candles": candles, "data_timestamp": data_iso,
+            "stale_seconds": age, "data_age_seconds": age,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "server_timestamp": datetime.now(timezone.utc).isoformat(),
+            "snapshot_id": f"{(req.get('market') or 'UNKNOWN').upper()}-{symbol}-{int(time.time()*1000)}",
+            "market_status": "UNKNOWN",
         }
     else:
         conn = angelone.fetch_candles(
@@ -46,7 +70,7 @@ def run_pipeline(req: dict) -> dict:
     # --- 2. Signal Engine ---
     sig_input = {
         "market": conn.get("market") or req.get("market"),
-        "symbol": conn.get("symbol") or req.get("symbol"),
+        "symbol": conn.get("symbol") or symbol,
         "instrument": conn.get("instrument") or req.get("instrument"),
         "timeframe": conn.get("timeframe") or req.get("timeframe"),
         "expiry": req.get("expiry"),
@@ -60,7 +84,7 @@ def run_pipeline(req: dict) -> dict:
 
     # --- 3. OI Options Engine ---
     oi_input = {
-        "underlying": req.get("underlying") or sig.get("symbol"),
+        "underlying": requested_underlying,
         "spot": req.get("spot"),
         "expiry": req.get("expiry"),
         "directional_bias": sig.get("direction") or "NONE",
@@ -104,6 +128,12 @@ def run_pipeline(req: dict) -> dict:
 
     # --- 5. NO-TRADE GATE (authoritative, fail-closed) ---
     gate_msgs = []
+    if (req.get("market") or conn.get("market") or "").upper() not in ("NSE", "MCX"):
+        gate_msgs.append("GATE: MARKET_VALID failed")
+    if symbol and supplied_underlying and symbol != supplied_underlying:
+        gate_msgs.append(f"GATE: UNDERLYING_VALID failed (symbol={symbol}, underlying={supplied_underlying})")
+    if not instruments.resolve(req.get("symbol")):
+        gate_msgs.append("GATE: SYMBOL_VALID failed (instrument not in canonical registry)")
     data_status = conn.get("data_status") or "DATA_UNAVAILABLE"
     data_ok = data_status == "OK"
     if not data_ok:
@@ -176,7 +206,7 @@ def run_pipeline(req: dict) -> dict:
         "market": sig.get("market") or req.get("market") or "",
         "symbol": sig.get("symbol") or req.get("symbol") or "",
         "instrument": sig.get("instrument") or req.get("instrument") or "",
-        "underlying": req.get("underlying") or sig.get("symbol") or "",
+        "underlying": requested_underlying or sig.get("symbol") or "",
         "expiry": sig.get("expiry") or req.get("expiry") or "",
         "strike": strike or sig.get("strike") or 0,
         "option_type": option_type or "",
@@ -207,6 +237,8 @@ def run_pipeline(req: dict) -> dict:
         "snapshot_id": conn.get("snapshot_id") or f"{(conn.get('market') or req.get('market') or 'UNKNOWN').upper()}-{int(time.time()*1000)}",
         "data_timestamp": conn.get("data_timestamp") or conn.get("fetched_at"),
         "data_age_seconds": age,
+        "server_timestamp": conn.get("server_timestamp") or datetime.now(timezone.utc).isoformat(),
+        "market_status": conn.get("market_status") or ("OPEN" if conn.get("market_open") is True else "CLOSED" if conn.get("market_open") is False else "UNKNOWN"),
     }
 
     # --- 6. Log + notify ---

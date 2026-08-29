@@ -36,6 +36,12 @@ _SEED = {
     "NATGASMINI": {"exchange": "MCX", "symboltoken": "568246", "market": "MCX", "aliases": ["NGMINI", "NATURALGASMINI"]},
 }
 
+
+def canonical(symbol: str) -> str:
+    """Return the canonical underlying name, never a loose alias."""
+    meta = resolve(symbol)
+    return str(meta.get("canonical") if meta else _norm(symbol)).upper()
+
 # minute-per-bar for each Angel interval, used for the lookback window
 _TF_TO_INTERVAL = {
     "1m": ("ONE_MINUTE", 1), "1": ("ONE_MINUTE", 1), "one_minute": ("ONE_MINUTE", 1),
@@ -70,9 +76,10 @@ def _load_overrides() -> dict:
 
 def registry() -> dict:
     """Merged view: seeds overlaid with user-added / user-corrected entries."""
-    merged = {k: dict(v) for k, v in _SEED.items()}
+    merged = {k: {**dict(v), "canonical": k} for k, v in _SEED.items()}
     for k, v in _load_overrides().items():
-        merged[_norm(k)] = {**merged.get(_norm(k), {}), **(v or {})}
+        key = _norm(k)
+        merged[key] = {**merged.get(key, {}), **(v or {}), "canonical": key}
     return merged
 
 

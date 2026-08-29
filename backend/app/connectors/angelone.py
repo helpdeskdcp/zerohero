@@ -229,12 +229,16 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
 
     max_age = float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900"))
     data_status = "OK" if stale_sec is not None and stale_sec <= max_age else "STALE"
+    market_status = "OPEN" if market_open is True else ("CLOSED" if market_open is False else "UNKNOWN")
     return out(data_status, {
         "candles": mapped,
         "candle_count": len(mapped),
         "stale_seconds": stale_sec,
         "data_timestamp": last_t,
         "data_age_seconds": stale_sec,
+        "server_timestamp": datetime.now(timezone.utc).isoformat(),
+        "snapshot_id": f"{(market or 'UNKNOWN').upper()}-{str(symbol or '').upper()}-{int(time.time()*1000)}",
+        "market_status": market_status,
         "market_open": market_open,
     })
 
