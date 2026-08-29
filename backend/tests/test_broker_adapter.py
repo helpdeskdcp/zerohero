@@ -149,6 +149,12 @@ def test_angelone_live_needs_all_three_gates(monkeypatch):
 
 def test_angelone_reads_work_without_live(monkeypatch):
     monkeypatch.delenv("CHANAKYA_ALLOW_LIVE", raising=False)
+    monkeypatch.setattr("app.execution.angelone_broker.angelone.fetch_positions",
+                        lambda: {"status": "CONFIG_REQUIRED"})
+    monkeypatch.setattr("app.execution.angelone_broker.angelone_orders.order_details",
+                        lambda *_a, **_k: {"status": "CONFIG_REQUIRED"})
+    monkeypatch.setattr("app.execution.angelone_broker.angelone_orders.find_in_book",
+                        lambda **_k: {"status": "CONFIG_REQUIRED"})
     b = AngelOneBroker({"execution_mode": "SHADOW"})
     # no network in the test env — must degrade, not raise
     snap = b.get_positions()

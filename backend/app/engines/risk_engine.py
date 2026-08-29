@@ -64,6 +64,8 @@ def run_risk_engine(inp: dict) -> dict:
         risk_pct = 1
     entry = _num(sig.get("entry_ref"))
     sl = _num(sig.get("stop_loss"))
+    target = _num(sig.get("target_1"))
+    rr_min = _num(lim.get("rr_min")) if _num(lim.get("rr_min")) is not None else 1.0
     lot = _num(ins.get("lot_size"))
     if lot is None:
         lot = 1
@@ -75,6 +77,10 @@ def run_risk_engine(inp: dict) -> dict:
         rejects.append("RISK: capital not configured")
     if entry is None or sl is None:
         rejects.append("RISK: entry/stop missing - cannot size")
+    if target is not None and entry is not None and sl is not None and abs(entry - sl) > 0:
+        rr = abs(target - entry) / abs(entry - sl)
+        if rr < rr_min:
+            rejects.append(f"RISK: risk/reward {rr:.2f} < minimum {rr_min:g}")
     if sig.get("direction") not in ("BUY", "SELL"):
         rejects.append("RISK: no actionable direction")
 

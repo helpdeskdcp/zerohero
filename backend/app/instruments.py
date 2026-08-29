@@ -34,6 +34,11 @@ _SEED = {
     "NATURALGAS": {"exchange": "MCX", "symboltoken": "568245", "market": "MCX", "aliases": ["NATGAS", "NG"]},
     # NATGASMINI (lot 250) front month: 25SEP2026 (roll to 27OCT2026 = 570751).
     "NATGASMINI": {"exchange": "MCX", "symboltoken": "568246", "market": "MCX", "aliases": ["NGMINI", "NATURALGASMINI"]},
+    "CRUDEOILMINI": {"exchange": "MCX", "symboltoken": "", "market": "MCX", "aliases": ["CRUDE OIL MINI"]},
+    "GOLD": {"exchange": "MCX", "symboltoken": "", "market": "MCX", "aliases": []},
+    "GOLDMINI": {"exchange": "MCX", "symboltoken": "", "market": "MCX", "aliases": ["GOLD MINI"]},
+    "SILVER": {"exchange": "MCX", "symboltoken": "", "market": "MCX", "aliases": []},
+    "SILVERMINI": {"exchange": "MCX", "symboltoken": "", "market": "MCX", "aliases": ["SILVER MINI"]},
 }
 
 

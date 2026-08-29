@@ -117,6 +117,7 @@ def run_pipeline(req: dict) -> dict:
             "direction": sig.get("direction") or "NONE",
             "entry_ref": ez.get("ref"),
             "stop_loss": sig.get("stop_loss"),
+            "target_1": sig.get("target_1"),
         },
         "account": req.get("account") or {},
         "instrument": req.get("risk_instrument") or {},
