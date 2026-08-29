@@ -36,6 +36,16 @@ def _candle_read(symbol):
         todate=None, timeframe="5m", instrument="OPTION")
 
 
+def get_nse_option_chain(symbol):
+    # Contract tokens must come from an instrument-master import; never guess.
+    return angelone.fetch_nse_option_chain(symbol, contracts=[])
+
+
+def get_mcx_oi(symbol):
+    meta = __import__("app.instruments", fromlist=["resolve"]).resolve(symbol) or {}
+    return angelone.fetch_mcx_quote(symbol, meta.get("symboltoken") or "", None)
+
+
 def test_nse(symbol):
     print(f"\n--- NSE {symbol} ---")
     try:
@@ -45,7 +55,8 @@ def test_nse(symbol):
         print("data_timestamp:", data.get("data_timestamp"))
         print("data_age_seconds:", data.get("data_age_seconds"))
         print("rows:", len(data.get("candles") or []))
-        result(symbol, False, "option-chain/OI function is not implemented in existing connector")
+        chain = angelone.fetch_nse_option_chain(symbol, contracts=[])
+        result(symbol, False, "option-chain requires instrument-master option tokens (no contracts supplied)")
         return False
     except Exception as e:
         result(symbol, False, f"{type(e).__name__}: {e}")
@@ -56,9 +67,9 @@ def test_mcx(symbol):
     print(f"\n--- MCX {symbol} ---")
     try:
         # Existing read-only positions endpoint does not provide MCX quote/OI.
-        data = angelone.fetch_positions()
-        print("positions_connector_status:", data.get("status") if isinstance(data, dict) else "UNAVAILABLE")
-        result(symbol, False, "MCX OI/quote function is not implemented in existing connector")
+        data = get_mcx_oi(symbol)
+        print("quote_status:", data.get("status") if isinstance(data, dict) else "UNAVAILABLE")
+        result(symbol, False, "MCX token unavailable in instrument master" if data.get("status") == "INSTRUMENT_INVALID" else "MCX OI unavailable")
         return False
     except Exception as e:
         result(symbol, False, f"{type(e).__name__}: {e}")

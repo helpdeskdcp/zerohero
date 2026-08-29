@@ -65,3 +65,14 @@ def test_risk_engine_rejects_missing_levels_and_low_rr():
         "stop_loss": 90}})["risk_status"] == "REJECTED"
     assert run_risk_engine({**base, "signal": {"direction": "BUY", "entry_ref": 100,
         "stop_loss": 99, "target_1": 100.5}})["risk_status"] == "REJECTED"
+
+
+def test_read_only_quote_adapter_normalizes_oi_without_orders(monkeypatch):
+    from app.connectors import angelone
+    monkeypatch.setattr(angelone, "fetch_market_quote", lambda *_a, **_k: {
+        "status": "OK", "ltp": 12.5, "opnInterest": 1000,
+        "changeinOpenInterest": 50, "tradeVolume": 900,
+    })
+    q = angelone.fetch_nse_option_chain("NIFTY", [{"symboltoken": "T",
+        "exchange": "NFO", "strike": 22000, "expiry": "2026-09-03", "option_type": "CE"}])
+    assert q["data_status"] == "OK" and q["rows"][0]["oi"] == 1000

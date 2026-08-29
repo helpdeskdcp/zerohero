@@ -14,6 +14,7 @@ from .. import instruments
 LOGIN_URL = "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword"
 POSITION_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition"
 CANDLE_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getCandleData"
+QUOTE_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/"
 
 _HEADERS_BASE = {
     "Content-Type": "application/json",
@@ -312,3 +313,57 @@ def fetch_positions() -> dict:
                 "realised_pnl": round(realised, 2),
             })
     return {"status": "OK", "positions": positions, "closed": closed, "raw_count": len(data)}
+
+
+def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> dict:
+    """Read-only SmartAPI quote/OI snapshot; never calls an order endpoint."""
+    exchange, token = str(exchange or "").upper(), str(symboltoken or "")
+    if exchange not in ("NSE", "NFO", "MCX", "BSE") or not token:
+        return {"status": "INSTRUMENT_INVALID", "data_status": "DATA_UNAVAILABLE"}
+    status, jwt, err = _get_jwt()
+    if status != "OK":
+        return {"status": status, "data_status": status, "reason": err or "authentication required"}
+    c = _creds(); headers = dict(_HEADERS_BASE)
+    headers["X-PrivateKey"] = c["api_key"]; headers["Authorization"] = f"Bearer {jwt}"
+    try:
+        resp = _http("POST", QUOTE_URL, json={"mode": mode, "exchangeTokens": {exchange: [token]}}, headers=headers)
+        body = resp.json() if resp.content else {}
+    except Exception:
+        return {"status": "API_ERROR", "data_status": "API_ERROR"}
+    if not isinstance(body, dict) or body.get("status") is False:
+        return {"status": "API_ERROR", "data_status": "API_ERROR"}
+    data = body.get("data") or {}
+    rows = data.get("fetched") if isinstance(data, dict) else None
+    row = rows[0] if isinstance(rows, list) and rows else {}
+    if not row:
+        return {"status": "DATA_UNAVAILABLE", "data_status": "DATA_UNAVAILABLE"}
+    return {**row, "status": "OK", "exchange": exchange, "symboltoken": token,
+            "data_status": "OK", "server_timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+def fetch_mcx_quote(symbol: str, symboltoken: str, expiry: str | None = None) -> dict:
+    q = fetch_market_quote("MCX", symboltoken)
+    q.update({"symbol": symbol, "market": "MCX", "expiry": expiry})
+    q["oi_status"] = "AVAILABLE" if any(q.get(k) is not None for k in ("opnInterest", "openInterest", "oi")) else "DATA_UNAVAILABLE"
+    return q
+
+
+def fetch_nse_option_chain(symbol: str, contracts: list[dict] | None = None) -> dict:
+    """Fetch quotes for instrument-master option tokens; no token discovery/fabrication."""
+    rows = []
+    for c in contracts or []:
+        if not isinstance(c, dict) or not c.get("symboltoken"):
+            continue
+        q = fetch_market_quote(c.get("exchange") or "NFO", c["symboltoken"])
+        if q.get("status") != "OK":
+            continue
+        rows.append({"strike": c.get("strike"), "expiry": c.get("expiry"),
+                     "option_type": c.get("option_type"), "symboltoken": c["symboltoken"],
+                     "ltp": q.get("ltp") or q.get("lastTradedPrice"),
+                     "oi": q.get("opnInterest") or q.get("openInterest"),
+                     "oi_change": q.get("changeinOpenInterest"), "volume": q.get("tradeVolume"),
+                     "iv": q.get("iv"), "greeks_source": "BROKER" if q.get("iv") is not None else "UNAVAILABLE"})
+    return {"symbol": symbol, "underlying": symbol, "rows": rows,
+            "data_status": "OK" if rows else "DATA_UNAVAILABLE",
+            "option_chain_status": "OK" if rows else "NOT_SUPPORTED_OR_UNAVAILABLE",
+            "snapshot_timestamp": datetime.now(timezone.utc).isoformat()}
