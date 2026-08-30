@@ -65,7 +65,7 @@ def _score_to_prob(signal_score, calib, *, regime, signal_type):
     logistic prior, never to a flat 0.5."""
     import math
     s = max(0.0, min(100.0, float(signal_score or 0))) / 100.0
-    prior = 1.0 / (1.0 + math.exp(-(2.6 * (s - 0.55))))
+    prior = 1.0 / (1.0 + math.exp(-(2.3 * (s - 0.58))))
     curve = None
     if isinstance(calib, dict):
         curves = calib.get("curves") or {}
@@ -238,7 +238,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                          "option_quality": sel["final_quality"]})
 
     confidence = _confidence(prob, st["false_risk"]["verdict"], mtf["conflict"])
-    if confidence == "LOW" and cfg.get("require_min_confidence", "MEDIUM") != "LOW":
+    if confidence == "LOW" and cfg.get("require_min_confidence", "LOW") != "LOW":
         return {"decision": "WATCH", "signal_type": st["state"], "direction": direction,
                 "reason": "confidence LOW -> watch only", "probability": round(prob, 4),
                 "regime": reg["regime"], "state_score": st["state_score"],

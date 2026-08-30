@@ -118,15 +118,62 @@ class ConnectionManager:
 manager = ConnectionManager()
 scalp_runner = ScalpRunner(broadcast=manager.broadcast)
 
+# --- Autonomous PAPER scalper (P7). Shares the ScalpRunner's WS feed; a live
+# chain snapshot comes from the read-only market-data SDK. LIVE order routing is
+# never reached from here. ---
+from .autoscalp.runner import AutoScalpRunner
+
+
+def _autoscalp_chain(symbol, atm, window):
+    """Canonical ATM+/-window chain from the read-only quote SDK (best effort)."""
+    try:
+        from .connectors.angelone import _market_sdk
+        sdk = _market_sdk(require_auth=False)
+        if not sdk:
+            return []
+        snap = market_data.selection_snapshot(sdk, "NSE", symbol, expiry="AUTO",
+                                              option_type="BOTH", window=window)
+        out = []
+        for r in snap.get("chain") or []:
+            out.append({
+                "strike": r.get("strike"),
+                "ce": {"ltp": r.get("ce_ltp"), "oi": r.get("ce_oi"), "oi_chg": r.get("ce_oi_change"),
+                       "vol_delta": r.get("ce_volume"), "token": r.get("ce_token"),
+                       "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
+                       "tradingsymbol": None, "expiry": snap.get("expiry")},
+                "pe": {"ltp": r.get("pe_ltp"), "oi": r.get("pe_oi"), "oi_chg": r.get("pe_oi_change"),
+                       "vol_delta": r.get("pe_volume"), "token": r.get("pe_token"),
+                       "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
+                       "tradingsymbol": None, "expiry": snap.get("expiry")},
+            })
+        return out
+    except Exception:
+        return []
+
+
+def _autoscalp_tg(text):
+    try:
+        from .connectors import telegram
+        telegram._send(text, os.environ.get("TELEGRAM_CHAT_ID"))
+    except Exception:
+        pass
+
+
+autoscalp = AutoScalpRunner(feed=scalp_runner.feed, chain_provider=_autoscalp_chain,
+                            broadcast=manager.broadcast, telegram_fn=_autoscalp_tg,
+                            owner=f"{os.uname().nodename}:{os.getpid()}")
+
 
 @app.on_event("startup")
 async def _start_scalp_runner():
     scalp_runner.start()
+    autoscalp.start()
 
 
 @app.on_event("shutdown")
 async def _stop_scalp_runner():
     await scalp_runner.stop()
+    await autoscalp.stop()
 
 
 @app.websocket("/ws")
@@ -562,6 +609,59 @@ def api_scalp_set_config(payload: dict):
 @app.get("/api/scalp/trades")
 def api_scalp_trades(status: Optional[str] = None, limit: int = Query(200, le=2000)):
     return db.list_trades(status=status, limit=limit, strategy="SCALP")
+
+
+# ---------------------------------------------------------------- Autonomous scalper (P7, PAPER)
+@app.get("/api/autoscalp/status")
+def api_autoscalp_status():
+    return autoscalp.status()
+
+
+@app.get("/api/autoscalp/signals")
+def api_autoscalp_signals(status: Optional[str] = None, symbol: Optional[str] = None,
+                          limit: int = Query(200, le=2000)):
+    return db.list_scalp_signals(source="LIVE", status=status, symbol=symbol, limit=limit)
+
+
+@app.get("/api/autoscalp/snapshots")
+def api_autoscalp_snapshots(symbol: Optional[str] = None, limit: int = Query(200, le=2000)):
+    return db.list_live_snapshots(symbol=symbol, limit=limit)
+
+
+@app.get("/api/autoscalp/config")
+def api_autoscalp_get_config():
+    return autoscalp.get_config()
+
+
+@app.post("/api/autoscalp/config")
+def api_autoscalp_set_config(payload: dict):
+    try:
+        return autoscalp.set_config(payload or {})
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/autoscalp/arm")
+def api_autoscalp_arm():
+    autoscalp.start()
+    autoscalp.arm()
+    return autoscalp.status()
+
+
+@app.post("/api/autoscalp/disarm")
+def api_autoscalp_disarm():
+    autoscalp.disarm()
+    return autoscalp.status()
+
+
+@app.post("/api/autoscalp/kill")
+def api_autoscalp_kill(req: KillSwitchRequest):
+    """Reuses the global execution kill switch — blocks all new autoscalp
+    entries. Open PAPER positions keep being monitored."""
+    from .execution import killswitch
+    state = (killswitch.activate(req.reason or "autoscalp-api") if req.active
+             else killswitch.deactivate(req.reason or "autoscalp-api"))
+    return {"kill_switch": state, "autoscalp": autoscalp.status()}
 
 
 # ---------------------------------------------------------------- External position tracker

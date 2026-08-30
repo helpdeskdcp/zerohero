@@ -89,8 +89,10 @@ def fit(samples, *, version: str | None = None) -> dict:
 
 
 def _prior(s):
-    """Conservative logistic prior, used until a real curve exists."""
-    return 1.0 / (1.0 + math.exp(-(2.6 * (s - 0.55))))
+    """Conservative logistic prior, used until a real curve exists. Centre 0.58 /
+    gentle slope: predicted probs stay close to the observed ~0.45-0.55 win
+    rates of a thin scalping edge rather than over-claiming (spec-19)."""
+    return 1.0 / (1.0 + math.exp(-(2.3 * (s - 0.58))))
 
 
 def predict(calib: dict, score_0_100, *, regime: str = "?", signal_type: str = "?") -> float:

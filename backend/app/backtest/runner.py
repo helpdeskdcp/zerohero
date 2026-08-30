@@ -158,30 +158,48 @@ def _metrics(res, calib, label):
     }
 
 
-def run_backtest(symbol: str, *, train: tuple, test: tuple,
-                 config: dict | None = None, persist: bool = False,
-                 decide_every_sec: float = 30.0) -> dict:
-    """train / test = (start_date, end_date) inclusive, disjoint & chronological."""
-    cfg = config or {}
-    sym = symbol.upper()
-
-    # ---- TRAIN: prior replay -> calibration samples + magnitude stats ----
-    tr_cache = _LegCache(sym, train[0], train[1])
-    res_tr = ReplayHarness(sym, train[0], train[1], source="BACKTEST", persist=persist,
-                           max_concurrent=cfg.get("max_concurrent", 1),
-                           decide_every_sec=decide_every_sec).run(_build_decide(None, None, None, cfg, tr_cache))
-    tr_closed = [t for t in res_tr.trades if t.status == "CLOSED"]
-    by_id_tr = {s["signal_id"]: s for s in res_tr.signals}
+def _train_samples(sym, train, cfg, decide_every_sec, persist):
+    """One TRAIN replay for `sym` -> (calibration samples, win pts, loss pts)."""
+    cache = _LegCache(sym, train[0], train[1])
+    res = ReplayHarness(sym, train[0], train[1], source="BACKTEST", persist=persist,
+                        max_concurrent=cfg.get("max_concurrent", 1),
+                        decide_every_sec=decide_every_sec).run(_build_decide(None, None, None, cfg, cache))
+    closed = [t for t in res.trades if t.status == "CLOSED"]
+    by_id = {s["signal_id"]: s for s in res.signals}
     samples = []
-    for t in tr_closed:
-        row = by_id_tr.get(t.signal_id, {})
+    for t in closed:
+        row = by_id.get(t.signal_id, {})
         if row.get("signal_score") is None:
             continue
         samples.append({"score": row["signal_score"], "regime": row.get("regime"),
                         "signal_type": row.get("signal_type"), "win": t.outcome == "WIN"})
-    calib = calibration.fit(samples, version=f"bt-{sym}-{train[0]}_{train[1]}")
-    wins = [t.points for t in tr_closed if t.outcome == "WIN"]
-    losses = [-t.points for t in tr_closed if t.outcome == "LOSS"]
+    return res, samples, [t.points for t in closed if t.outcome == "WIN"], \
+        [-t.points for t in closed if t.outcome == "LOSS"]
+
+
+def run_backtest(symbol: str, *, train: tuple, test: tuple,
+                 config: dict | None = None, persist: bool = False,
+                 decide_every_sec: float = 30.0,
+                 calib_symbols: list | None = None) -> dict:
+    """train / test = (start_date, end_date) inclusive, disjoint & chronological.
+    calib_symbols: extra index symbols whose TRAIN trades are POOLED into the one
+    calibration fit (TEST still runs only on `symbol`). Bigger, better-fit
+    calibration curves without any test leakage (spec-19)."""
+    cfg = config or {}
+    sym = symbol.upper()
+    pool = [sym] + [s.upper() for s in (calib_symbols or []) if s.upper() != sym]
+
+    # ---- TRAIN: replay every calibration symbol, POOL the samples ----
+    res_tr, samples, wins, losses = _train_samples(sym, train, cfg, decide_every_sec, persist)
+    per_symbol = {sym: len(samples)}
+    for xs in pool[1:]:
+        _, xsamp, xw, xl = _train_samples(xs, train, cfg, decide_every_sec, persist)
+        samples += xsamp
+        wins += xw
+        losses += xl
+        per_symbol[xs] = len(xsamp)
+    tr_closed = [t for t in res_tr.trades if t.status == "CLOSED"]
+    calib = calibration.fit(samples, version=f"bt-{'+'.join(pool)}-{train[0]}_{train[1]}")
     avg_win = round(mean(wins), 3) if wins else None
     avg_loss = round(mean(losses), 3) if losses else None
 
@@ -196,8 +214,8 @@ def run_backtest(symbol: str, *, train: tuple, test: tuple,
         "manifest": res_te.manifest,
         "config_filters": (cfg.get("filters") or {}),
         "train": {"range": list(train), "closed_trades": len(tr_closed),
-                  "calibration_samples": len(samples), "avg_win": avg_win,
-                  "avg_loss": avg_loss, "calibration": calib,
+                  "calibration_samples": len(samples), "calibration_pool": per_symbol,
+                  "avg_win": avg_win, "avg_loss": avg_loss, "calibration": calib,
                   "in_sample": _metrics(res_tr, None, "TRAIN (in-sample, uncalibrated)")},
         "test": {"range": list(test),
                  "out_of_sample": _metrics(res_te, calib, "TEST (out-of-sample, calibrated)")},

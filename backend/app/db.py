@@ -210,6 +210,26 @@ CREATE TABLE IF NOT EXISTS scalp_signals (
     resolved INTEGER DEFAULT 0
 );
 
+-- Canonical ZeroHero LIVE market store. The autonomous scalper writes one row
+-- per evaluated cycle here (never to the read-only oi_history.db). Normalised
+-- to mirror oi_history.cycles + a compact chain blob -- the minimum needed to
+-- replay/audit/recalibrate a live signal later (spec-17).
+CREATE TABLE IF NOT EXISTS live_market_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT,                        -- ISO, decision time
+    session_date TEXT,
+    symbol TEXT,
+    source TEXT DEFAULT 'LIVE',
+    provenance TEXT,                -- JSON {feed, run_id, ...}
+    index_ltp REAL, atm REAL, vwap REAL, atr REAL,
+    pcr REAL, max_pain REAL,
+    regime TEXT, mtf_alignment REAL,
+    support REAL, resistance REAL, support_strength REAL, resistance_strength REAL,
+    signal_type TEXT, direction TEXT, signal_score REAL, probability REAL,
+    confidence TEXT, decision TEXT, reason TEXT,
+    feed_age_sec REAL, chain_json TEXT
+);
+
 """
 
 # Indexes are created AFTER _migrate() runs, because some of them
@@ -227,6 +247,8 @@ CREATE INDEX IF NOT EXISTS ix_order_events_trade     ON order_events(trade_id);
 CREATE INDEX IF NOT EXISTS ix_scalp_signals_src      ON scalp_signals(source, session_date);
 CREATE INDEX IF NOT EXISTS ix_scalp_signals_status   ON scalp_signals(status, resolved);
 CREATE INDEX IF NOT EXISTS ix_scalp_signals_symbol   ON scalp_signals(symbol, created_ts);
+CREATE INDEX IF NOT EXISTS ix_live_snap_symbol_ts     ON live_market_snapshots(symbol, ts);
+CREATE INDEX IF NOT EXISTS ix_live_snap_date          ON live_market_snapshots(session_date, symbol);
 """
 
 
@@ -594,4 +616,36 @@ def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
     params.append(limit)
     with db() as conn:
         cur = conn.execute(f"SELECT * FROM scalp_signals{where} ORDER BY id DESC LIMIT ?", params)
+        return [dict(r) for r in cur.fetchall()]
+
+
+# ---------------------------------------------------------------- canonical LIVE market store
+_LIVE_SNAP_COLS = (
+    "ts", "session_date", "symbol", "source", "provenance", "index_ltp", "atm",
+    "vwap", "atr", "pcr", "max_pain", "regime", "mtf_alignment", "support",
+    "resistance", "support_strength", "resistance_strength", "signal_type",
+    "direction", "signal_score", "probability", "confidence", "decision",
+    "reason", "feed_age_sec", "chain_json",
+)
+
+
+def insert_live_snapshot(row: dict):
+    vals = [row.get(c) for c in _LIVE_SNAP_COLS]
+    ph = ",".join(["?"] * len(_LIVE_SNAP_COLS))
+    with db() as conn:
+        conn.execute(
+            f"INSERT INTO live_market_snapshots ({','.join(_LIVE_SNAP_COLS)}) VALUES ({ph})", vals)
+
+
+def list_live_snapshots(symbol=None, session_date=None, decision=None, limit: int = 500):
+    clauses, params = [], []
+    for col, val in (("symbol", symbol), ("session_date", session_date), ("decision", decision)):
+        if val is not None:
+            clauses.append(f"{col}=?")
+            params.append(val)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        cur = conn.execute(
+            f"SELECT * FROM live_market_snapshots{where} ORDER BY id DESC LIMIT ?", params)
         return [dict(r) for r in cur.fetchall()]
