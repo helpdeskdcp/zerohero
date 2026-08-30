@@ -216,7 +216,28 @@
     });
   });
 
-  // ---------------- Run Pipeline ----------------
+  // ---------------- Run Pipeline (read-only AngelOne market-data snapshot) ----------------
+  let runMarketSnapshot = null;
+  const valueOrNA = (value) => value === null || value === undefined || value === "" ? "N/A" : String(value);
+  function marketSnapshotText(s) {
+    if (!s) return "Market data has not been resolved.";
+    const lines = ["CHANAKYA AI MARKET DATA", "", `Exchange: ${valueOrNA(s.market)}`, `Symbol: ${valueOrNA(s.symbol)}`,
+      `Instrument: ${valueOrNA(s.instrument)}`, `Underlying: ${valueOrNA(s.underlying)}`, `Spot: ${valueOrNA(s.spot)}`,
+      `Expiry: ${valueOrNA(s.expiry)}`, `ATM: ${valueOrNA(s.atm)}`, `Status: ${valueOrNA(s.data_status)}`];
+    if (s.quote) {
+      lines.push("", "FUTURE / SPOT:", `LTP: ${valueOrNA(s.quote.ltp)}`, `Open: ${valueOrNA(s.quote.open)}`,
+        `High: ${valueOrNA(s.quote.high)}`, `Low: ${valueOrNA(s.quote.low)}`, `Close: ${valueOrNA(s.quote.close)}`,
+        `OI: ${valueOrNA(s.quote.oi)}`, `Change OI: ${valueOrNA(s.quote.oi_change)}`, `Volume: ${valueOrNA(s.quote.volume)}`);
+    }
+    if (s.chain && s.chain.length) {
+      lines.push("", "OPTION CHAIN:");
+      s.chain.forEach(row => lines.push(`Strike: ${valueOrNA(row.strike)}`, "CE:", `LTP: ${valueOrNA(row.ce_ltp)}`, `OI: ${valueOrNA(row.ce_oi)}`, `Change OI: ${valueOrNA(row.ce_oi_change)}`, `Volume: ${valueOrNA(row.ce_volume)}`, "IV: N/A", "Delta: N/A", "Gamma: N/A", "Theta: N/A", "Vega: N/A", "PE:", `LTP: ${valueOrNA(row.pe_ltp)}`, `OI: ${valueOrNA(row.pe_oi)}`, `Change OI: ${valueOrNA(row.pe_oi_change)}`, `Volume: ${valueOrNA(row.pe_volume)}`, "IV: N/A", "Delta: N/A", "Gamma: N/A", "Theta: N/A", "Vega: N/A", ""));
+    }
+    lines.push("", `Data Timestamp: ${valueOrNA(s.timestamp)}`, `Source: ${valueOrNA(s.source)}`);
+    if (s.reason) lines.push(`Reason: ${s.reason}`);
+    return lines.join("\n");
+  }
+
   $("#runForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -226,8 +247,17 @@
       instrument: fd.get("instrument"),
       timeframe: fd.get("timeframe"),
       underlying: fd.get("underlying"),
-      spot: parseFloat(fd.get("spot")) || null,
+      spot: runMarketSnapshot && runMarketSnapshot.spot != null ? runMarketSnapshot.spot : null,
+      expiry: fd.get("expiry") || "AUTO",
     };
+    if (runMarketSnapshot) {
+      const underlying = runMarketSnapshot.underlying_contract || {};
+      const contract = runMarketSnapshot.contract || underlying;
+      if (underlying.exchange && underlying.token) { payload.exchange = underlying.exchange; payload.symboltoken = underlying.token; }
+      if (runMarketSnapshot.instrument === "FUTURE" && contract.exchange && contract.token) { payload.exchange = contract.exchange; payload.symboltoken = contract.token; }
+      if (runMarketSnapshot.atm != null) payload.strike = runMarketSnapshot.atm;
+      if (runMarketSnapshot.chain) payload.chain = runMarketSnapshot.chain;
+    }
     const candlesJson = fd.get("candles_json").trim();
     const chainJson = fd.get("chain_json").trim();
     const accountJson = fd.get("account_json").trim();
@@ -242,10 +272,20 @@
     $("#runResult").textContent = "Running pipeline…";
     try {
       const result = await api("/api/run", { method: "POST", body: JSON.stringify(payload) });
-      $("#runResult").textContent = JSON.stringify(result.contract, null, 2);
+      $("#runResult").textContent = marketSnapshotText(runMarketSnapshot) + "\n\nPIPELINE:\n" + JSON.stringify(result.contract || result, null, 2);
     } catch (err) {
       $("#runResult").textContent = "Error: " + err.message;
     }
+  });
+
+  const copyMarketSnapshot = $("#copyMarketSnapshot");
+  if (copyMarketSnapshot) copyMarketSnapshot.addEventListener("click", async () => {
+    if (!runMarketSnapshot || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(marketSnapshotText(runMarketSnapshot));
+      copyMarketSnapshot.textContent = "Copied";
+      setTimeout(() => { copyMarketSnapshot.textContent = "Copy"; }, 1600);
+    } catch (_) { copyMarketSnapshot.textContent = "Copy unavailable"; setTimeout(() => { copyMarketSnapshot.textContent = "Copy"; }, 1600); }
   });
 
   // ---------------- Live Monitor ----------------
@@ -743,6 +783,66 @@
         `<label class="chk"><input type="checkbox" value="${i.name}" data-market="${i.market || i.exchange}" /> ${i.name}</label>`).join("");
     } catch (e) { console.error(e); }
   }
+
+  async function loadRunSymbols(market) {
+    const sel = $("#runSymbol");
+    if (!sel) return;
+    runMarketSnapshot = null;
+    if (copyMarketSnapshot) copyMarketSnapshot.disabled = true;
+    // Explicit "market instruments unavailable" state — never fabricate a symbol
+    // list, spot, or ATM. The Advanced → raw candles JSON path still works.
+    const showUnavailable = (note) => {
+      sel.innerHTML = `<option value="">— market instruments unavailable —</option>`;
+      sel.disabled = true;
+      const rr = $("#runResult");
+      if (rr) rr.textContent = "Market instruments unavailable — live broker / market data is not reachable"
+        + (note ? " (" + note + ")" : "") + ".\n"
+        + "Spot / ATM / Underlying stay blank until market data resolves.\n"
+        + "You can still run a backtest/replay via Advanced → paste raw candles JSON.";
+    };
+    try {
+      const r = await api(`/api/market-instruments?market=${encodeURIComponent(market)}`);
+      const items = r.instruments || [];
+      if (!items.length || r.data_status === "DATA_UNAVAILABLE") { showUnavailable(r && r.reason); return; }
+      sel.disabled = false;
+      sel.innerHTML = items.map(i => `<option value="${text(i.name)}">${text(i.name)}</option>`).join("");
+      await refreshRunSelection();
+    } catch (e) { showUnavailable(e && e.message); }
+  }
+  async function refreshRunSelection() {
+    const form = $("#runForm"), market = form?.elements.market?.value, symbol = $("#runSymbol")?.value;
+    if (!market || !symbol) return;
+    const instrument = $("#runInstrument"), expiry = $("#runExpiry"), optionType = $("#runOptionType");
+    if (market === "MCX") { instrument.value = "FUTURE"; instrument.disabled = true; optionType.disabled = true; }
+    else { instrument.disabled = false; optionType.disabled = false; }
+    try {
+      const s = await api(`/api/market-selection?market=${encodeURIComponent(market)}&symbol=${encodeURIComponent(symbol)}&instrument=${encodeURIComponent(instrument.value)}&expiry=${encodeURIComponent(expiry.value || "AUTO")}&option_type=${encodeURIComponent(optionType.value)}&window=5`);
+      runMarketSnapshot = s;
+      form.elements.underlying.value = s.underlying || symbol;
+      form.elements.spot.value = s.spot == null ? "" : s.spot;
+      form.elements.atm.value = s.atm == null ? "" : s.atm;
+      if (market === "NSE" && s.instrument === "OPTION") instrument.value = "OPTION";
+      const current = expiry.value;
+      const expiries = s.available_expiries || (s.expiry ? [s.expiry] : []);
+      if (expiries.length) {
+        expiry.innerHTML = expiries.map(x => `<option value="${text(x)}">${text(x)}</option>`).join("");
+        expiry.value = expiries.includes(current) ? current : (s.expiry || expiries[0]);
+      } else expiry.innerHTML = `<option value="AUTO">AUTO</option>`;
+      $("#runResult").textContent = marketSnapshotText(s);
+      if (copyMarketSnapshot) copyMarketSnapshot.disabled = false;
+    } catch (_) {
+      runMarketSnapshot = null;
+      $("#runResult").textContent = "DATA_UNAVAILABLE — market selection could not be resolved.";
+    }
+  }
+  const runMarket = document.querySelector('#runForm [name="market"]');
+  if (runMarket) { runMarket.addEventListener("change", () => loadRunSymbols(runMarket.value)); loadRunSymbols(runMarket.value); }
+  const runSymbol = $("#runSymbol");
+  if (runSymbol) runSymbol.addEventListener("change", refreshRunSelection);
+  const runExpiry = $("#runExpiry"), runOptionType = $("#runOptionType"), runInstrument = $("#runInstrument");
+  if (runExpiry) runExpiry.addEventListener("change", refreshRunSelection);
+  if (runOptionType) runOptionType.addEventListener("change", refreshRunSelection);
+  if (runInstrument) runInstrument.addEventListener("change", refreshRunSelection);
 
   const liveBtn = $("#scalpLiveBtn");
   if (liveBtn) liveBtn.addEventListener("click", () => {

@@ -7,6 +7,7 @@ LOGIN = "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPa
 QUOTE = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/"
 GREEKS = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/optionGreek"
 MASTER = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+CANDLES = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getCandleData"
 
 class AngelOneClient:
     def __init__(self, *, cache_path=None, timeout=15):
@@ -59,6 +60,20 @@ class AngelOneClient:
                 and (not e or str(r.get("exch_seg") or "").upper() == e)
                 and (not instrumenttype or r.get("instrumenttype") == instrumenttype)]
 
+    def search_indices(self, query=""):
+        return self.search_instruments(symbol=query or None, exchange="NSE", instrumenttype="AMXIDX")
+
+    def search_equities(self, query=""):
+        return [r for r in self.search_instruments(symbol=query or None, exchange="NSE")
+                if r.get("instrumenttype") in (None, "EQ")]
+
+    def search_futures(self, query=""):
+        return self.search_instruments(symbol=query or None, instrumenttype="FUTCOM")
+
+    def search_options(self, query=""):
+        return [r for r in self.search_instruments(symbol=query or None)
+                if r.get("instrumenttype") in ("OPTIDX", "OPTSTK", "OPTFUT")]
+
     def resolve_option_contract(self, underlying, expiry="AUTO", strike="ATM", option_type="CE", spot=None):
         u, typ = str(underlying).upper(), str(option_type).upper()
         rows = [r for r in self.search_instruments(symbol=u, exchange="NFO") if r.get("instrumenttype") in ("OPTIDX","OPTSTK") and str(r.get("symbol","")).upper().endswith(typ)]
@@ -78,12 +93,31 @@ class AngelOneClient:
         rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE") if r.get("instrumenttype") == "AMXIDX"]
         return {"status":"OK", "symbol":str(symbol).upper(), "token":str(rows[0].get("token")), "exchange":"NSE", "underlying":str(symbol).upper()} if rows else {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
 
+    def resolve_equity(self, symbol):
+        rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE")
+                if str(r.get("instrumenttype") or "").upper() in ("EQ", "")]
+        if not rows:
+            return {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
+        r = rows[0]
+        return {"status":"OK", "exchange":"NSE", "symbol":r.get("symbol"),
+                "token":str(r.get("token")), "underlying":str(symbol).upper(),
+                "instrument_type":r.get("instrumenttype"), "lot_size":r.get("lotsize")}
+
     def resolve_future_contract(self, symbol, expiry="AUTO"):
         rows=[r for r in self.search_instruments(symbol=symbol, exchange="MCX", instrumenttype="FUTCOM") if r.get("token") and r.get("expiry")]
         today=datetime.now(timezone.utc).date(); rows=[r for r in rows if self._date(r.get("expiry")) and self._date(r.get("expiry"))>=today]
         if not rows: return {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
-        rows.sort(key=lambda r:self._date(r.get("expiry"))); chosen=rows[0] if str(expiry).upper() in ("AUTO","CURRENT") else rows[1] if str(expiry).upper()=="NEXT" and len(rows)>1 else rows[-1]
-        return {"status":"OK","exchange":"MCX","symbol":chosen.get("symbol"),"token":str(chosen.get("token")),"underlying":str(symbol).upper(),"expiry":chosen.get("expiry"),"lot_size":chosen.get("lotsize"),"expiry_selection_mode":str(expiry).upper()}
+        rows.sort(key=lambda r:self._date(r.get("expiry")))
+        mode = str(expiry or "AUTO").upper()
+        if mode in ("AUTO", "CURRENT"): chosen = rows[0]
+        elif mode == "NEXT":
+            if len(rows) < 2: return {"status":"CONTRACT_NOT_FOUND", "reason":"next expiry unavailable"}
+            chosen = rows[1]
+        elif mode == "LATEST": chosen = rows[-1]
+        else:
+            chosen = next((r for r in rows if str(r.get("expiry")) == str(expiry)), None)
+            if chosen is None: return {"status":"CONTRACT_NOT_FOUND", "reason":"expiry unavailable"}
+        return {"status":"OK","exchange":"MCX","symbol":chosen.get("symbol"),"token":str(chosen.get("token")),"underlying":str(symbol).upper(),"expiry":chosen.get("expiry"),"lot_size":chosen.get("lotsize"),"expiry_selection_mode":mode}
 
     def get_option_chain(self, underlying, expiry="AUTO", window=5):
         idx = self.resolve_index(underlying); spot_q = self.get_quote("NSE", idx.get("token")) if idx.get("status") == "OK" else {}
@@ -96,12 +130,17 @@ class AngelOneClient:
         atm_i = min(range(len(strikes)), key=lambda i: abs(strikes[i]-float(spot)))
         strikes = strikes[max(0, atm_i-window):atm_i+window+1]
         out_rows=[]
+        def field(data, *keys):
+            for key in keys:
+                if data.get(key) is not None:
+                    return data[key]
+            return None
         for strike in strikes:
             legs={}
             for typ in ("CE","PE"):
                 c=next((r for r in rows if str(r.get("symbol","")).upper().endswith(typ) and abs(float(r.get("strike"))/100-strike)<1e-6), None)
                 if not c: continue
-                q=self.get_quote("NFO", c.get("token")); legs[typ]={"token":str(c.get("token")),"ltp":q.get("ltp") or q.get("lastTradedPrice"),"oi":q.get("opnInterest") if q.get("opnInterest") is not None else q.get("openInterest"),"oi_change":q.get("changeinOpenInterest"),"volume":q.get("tradeVolume"),"timestamp":q.get("exchangeTimestamp") or q.get("exchange_timestamp")}
+                q=self.get_quote("NFO", c.get("token")); legs[typ]={"token":str(c.get("token")),"ltp":field(q, "ltp", "lastTradedPrice"),"oi":field(q, "opnInterest", "openInterest"),"oi_change":field(q, "changeinOpenInterest", "changeInOpenInterest"),"volume":field(q, "tradeVolume", "volume"),"timestamp":field(q, "exchangeTimestamp", "exchange_timestamp")}
             out_rows.append({"strike":strike,"ce":legs.get("CE"),"pe":legs.get("PE")})
         return {"status":"OK" if out_rows else "DATA_UNAVAILABLE","symbol":str(underlying).upper(),"underlying":str(underlying).upper(),"spot":spot,"expiry":selected,"rows":out_rows,"timestamp":datetime.now(timezone.utc).isoformat()}
 
@@ -120,3 +159,39 @@ class AngelOneClient:
             d=requests.post(QUOTE,json={"mode":"FULL","exchangeTokens":{exchange:[str(token)]}},headers=h,timeout=self.timeout).json(); rows=(d.get("data") or {}).get("fetched") or []
             return {**(rows[0] if rows else {}),"status":"OK" if rows else "DATA_UNAVAILABLE","data_status":"OK" if rows else "DATA_UNAVAILABLE","server_timestamp":datetime.now(timezone.utc).isoformat()}
         except Exception: return {"status":"API_ERROR","data_status":"API_ERROR"}
+
+    def get_quotes(self, exchange, tokens):
+        return {str(token): self.get_quote(exchange, token) for token in tokens}
+
+    def get_candles(self, exchange, token, interval="ONE_MINUTE", from_date=None, to_date=None):
+        """Read-only historical candles; broker timestamps are preserved."""
+        if not self.authenticate():
+            return {"status": "AUTH_FAILED", "data_status": "AUTH_FAILED", "candles": []}
+        if not from_date or not to_date:
+            return {"status": "INVALID_REQUEST", "data_status": "DATA_UNAVAILABLE", "candles": []}
+        h = {"Content-Type":"application/json", "X-PrivateKey":os.getenv("ANGEL_API_KEY"),
+             "Authorization":"Bearer "+self.jwt, "X-UserType":"USER", "X-SourceID":"WEB"}
+        body = {"exchange": str(exchange), "symboltoken": str(token), "interval": str(interval),
+                "fromdate": str(from_date), "todate": str(to_date)}
+        try:
+            d = requests.post(CANDLES, json=body, headers=h, timeout=self.timeout).json()
+            raw = d.get("data") or []
+            candles = []
+            for row in raw:
+                if not isinstance(row, (list, tuple)) or len(row) < 6:
+                    continue
+                candles.append({"timestamp": row[0], "open": row[1], "high": row[2],
+                                "low": row[3], "close": row[4], "volume": row[5]})
+            return {"status":"OK" if candles else "DATA_UNAVAILABLE",
+                    "data_status":"OK" if candles else "DATA_UNAVAILABLE", "candles":candles}
+        except Exception:
+            return {"status":"API_ERROR", "data_status":"API_ERROR", "candles":[]}
+
+    def resolve_current_expiry(self, underlying):
+        return self.resolve_option_contract(underlying, expiry="CURRENT", strike="ATM", option_type="CE")
+
+    def resolve_next_expiry(self, underlying):
+        return self.resolve_option_contract(underlying, expiry="NEXT", strike="ATM", option_type="CE")
+
+    def resolve_nearest_expiry(self, underlying):
+        return self.resolve_current_expiry(underlying)

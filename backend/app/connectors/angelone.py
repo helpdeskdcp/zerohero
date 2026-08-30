@@ -5,9 +5,13 @@ Credentials are read from environment variables only (see .env).
 """
 import os
 import time
+import math
+import threading
 import requests
 import pyotp
-from datetime import datetime, timezone
+import sys
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
 
 from .. import instruments
 
@@ -31,6 +35,70 @@ SESSION_TTL_SEC = 3600  # AngelOne session tokens are valid several hours; be co
 
 _RETRIES = 2          # extra attempts on a transient network/5xx error
 _RETRY_BACKOFF = 0.4  # seconds, linear
+
+# Reuse the repository-level read-only SDK for market data.  The legacy
+# connector remains available for position/order compatibility, but quote and
+# candle reads share the same authenticated SDK session when importable.
+_sdk_client = None
+_sdk_lock = threading.Lock()
+
+
+def _market_sdk(require_auth=True):
+    """Return the shared read-only market-data SDK client with a current
+    session, or None when auth is required but unavailable.
+
+    `_sdk_lock` serialises the singleton construction and the JWT / feed-token /
+    login-timestamp copy onto it: FastAPI runs sync endpoints in a threadpool,
+    so two concurrent requests would otherwise race here and could build the
+    client twice or observe a half-updated session triple.
+    """
+    global _sdk_client
+    with _sdk_lock:
+        if _sdk_client is None:
+            root = str(Path(__file__).resolve().parents[3])
+            if root not in sys.path:
+                sys.path.insert(0, root)
+            from broker.angelone import AngelOneClient
+            _sdk_client = AngelOneClient()
+        status, jwt, _ = _get_jwt() if require_auth else ("OK", _session_cache.get("jwt"), "")
+        if status == "OK":
+            _sdk_client.jwt = jwt
+            _sdk_client.feed_token = _session_cache.get("feed_token")
+            _sdk_client.login_ts = _session_cache.get("ts", 0)
+        return _sdk_client if status == "OK" else None
+
+
+def _freshness_meta(last_t, market):
+    """Derive (stale_seconds, market_open, market_status, data_status) from the
+    newest candle timestamp.  Shared by the SDK candle path and the legacy
+    candle path so both return an identical, fail-closed schema: an unparseable
+    or missing timestamp, or an age beyond CHANAKYA_MAX_DATA_AGE_SEC, is
+    reported STALE and never silently upgraded to OK.
+    """
+    stale_sec = None
+    try:
+        if isinstance(last_t, (int, float)):
+            tms = last_t if last_t > 1e12 else last_t * 1000
+        else:
+            tms = datetime.fromisoformat(str(last_t).replace("Z", "+00:00")).timestamp() * 1000
+        if math.isfinite(tms):
+            stale_sec = round((time.time() * 1000 - tms) / 1000)
+    except Exception:
+        stale_sec = None
+
+    now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+    mins_ist = now_ist.hour * 60 + now_ist.minute
+    mkt = (market or "").upper()
+    market_open = None
+    if mkt == "NSE":
+        market_open = (9 * 60 + 15) <= mins_ist <= (15 * 60 + 30)
+    elif mkt == "MCX":
+        market_open = (9 * 60) <= mins_ist <= (23 * 60 + 30)
+
+    max_age = float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900"))
+    data_status = "OK" if (stale_sec is not None and stale_sec <= max_age) else "STALE"
+    market_status = "OPEN" if market_open is True else ("CLOSED" if market_open is False else "UNKNOWN")
+    return stale_sec, market_open, market_status, data_status
 
 
 def _http(method: str, url: str, **kw):
@@ -140,6 +208,38 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
     if not fromdate or not todate:
         fromdate, todate = instruments.lookback_window(timeframe, bars=150)
 
+    # Canonical SDK market-data path.  Keep the established response shape for
+    # downstream engines while sourcing values from the shared adapter —
+    # INCLUDING the staleness / market-hours metadata the orchestrator's
+    # DATA_VALID / DATA_FRESH gate requires.  A stale SDK read is surfaced as
+    # STALE and never silently upgraded to OK (fail-closed).
+    try:
+        sdk = _market_sdk()
+        if sdk and symboltoken and exchange:
+            q = sdk.get_candles(exchange, symboltoken, interval or "FIVE_MINUTE", fromdate, todate)
+            if q.get("status") in ("OK", "DATA_UNAVAILABLE"):
+                mapped = [{"t": c.get("timestamp"), "o": float(c["open"]), "h": float(c["high"]),
+                           "l": float(c["low"]), "c": float(c["close"]), "v": float(c["volume"])}
+                          for c in (q.get("candles") or []) if all(c.get(k) is not None for k in ("open","high","low","close","volume"))]
+                if mapped:
+                    last_t = mapped[-1]["t"]
+                    stale_sec, market_open, market_status, data_status = _freshness_meta(last_t, market)
+                    now_iso = datetime.now(timezone.utc).isoformat()
+                    return {"market": market, "symbol": symbol, "instrument": instrument,
+                            "timeframe": timeframe, "exchange": exchange, "symboltoken": symboltoken,
+                            "interval": interval, "fromdate": fromdate, "todate": todate,
+                            "resolved_from": resolved_from,
+                            "source": "ANGELONE_SDK", "data_status": data_status, "candles": mapped,
+                            "candle_count": len(mapped), "data_timestamp": last_t,
+                            "stale_seconds": stale_sec, "data_age_seconds": stale_sec,
+                            "fetched_at": now_iso, "server_timestamp": now_iso,
+                            "snapshot_id": f"{(market or 'UNKNOWN').upper()}-{str(symbol or '').upper()}-{int(time.time()*1000)}",
+                            "market_status": market_status, "market_open": market_open}
+    except Exception:
+        # Fall through to the existing guarded connector path; no strategy or
+        # execution behavior is changed by an SDK read failure.
+        pass
+
     def out(data_status, extra=None):
         base = {
             "market": market, "symbol": symbol, "instrument": instrument,
@@ -208,29 +308,7 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
         return out("DATA_UNAVAILABLE", {"reason": "FACT: all candle rows malformed"})
 
     last_t = mapped[-1]["t"]
-    stale_sec = None
-    try:
-        if isinstance(last_t, (int, float)):
-            tms = last_t if last_t > 1e12 else last_t * 1000
-        else:
-            tms = datetime.fromisoformat(str(last_t).replace("Z", "+00:00")).timestamp() * 1000
-        stale_sec = round(time.time() - tms / 1000) if False else round((time.time() * 1000 - tms) / 1000)
-    except Exception:
-        stale_sec = None
-
-    from datetime import timedelta
-    now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
-    mins_ist = now_ist.hour * 60 + now_ist.minute
-    mkt = (market or "").upper()
-    market_open = None
-    if mkt == "NSE":
-        market_open = (9 * 60 + 15) <= mins_ist <= (15 * 60 + 30)
-    elif mkt == "MCX":
-        market_open = (9 * 60) <= mins_ist <= (23 * 60 + 30)
-
-    max_age = float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900"))
-    data_status = "OK" if stale_sec is not None and stale_sec <= max_age else "STALE"
-    market_status = "OPEN" if market_open is True else ("CLOSED" if market_open is False else "UNKNOWN")
+    stale_sec, market_open, market_status, data_status = _freshness_meta(last_t, market)
     return out(data_status, {
         "candles": mapped,
         "candle_count": len(mapped),
@@ -320,6 +398,13 @@ def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> d
     exchange, token = str(exchange or "").upper(), str(symboltoken or "")
     if exchange not in ("NSE", "NFO", "MCX", "BSE") or not token:
         return {"status": "INSTRUMENT_INVALID", "data_status": "DATA_UNAVAILABLE"}
+    try:
+        sdk = _market_sdk()
+        if sdk:
+            return {**sdk.get_quote(exchange, token), "exchange": exchange, "symboltoken": token,
+                    "source": "ANGELONE_SDK"}
+    except Exception:
+        pass
     status, jwt, err = _get_jwt()
     if status != "OK":
         return {"status": status, "data_status": status, "reason": err or "authentication required"}

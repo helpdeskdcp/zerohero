@@ -9,6 +9,7 @@ import asyncio
 import math
 import base64
 import hmac
+import logging
 from pathlib import Path
 from typing import Optional
 from datetime import datetime, timezone
@@ -21,6 +22,7 @@ from pydantic import BaseModel
 
 from . import db
 from . import instruments
+from . import market_data
 from . import combos
 from .reversal import detect_reversal
 from .orchestrator import run_pipeline
@@ -36,6 +38,8 @@ from .connectors.angel_ws import LTP_MAX_AGE_SEC, is_ltp_fresh
 
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = APP_ROOT / "frontend"
+
+_log = logging.getLogger("chanakya.api")
 
 app = FastAPI(title="Chanakya AI", version="1.0.0")
 
@@ -194,11 +198,28 @@ def api_risk_engine(payload: dict):
 # ---------------------------------------------------------------- Full pipeline
 @app.post("/api/run")
 async def api_run_pipeline(req: SignalRequest):
-    result = run_pipeline(req.model_dump(exclude_none=True))
-    await manager.broadcast({"type": "signal", "data": result["contract"]})
-    if result.get("trade"):
-        await manager.broadcast({"type": "trade_open", "data": result["trade"]})
-    return result
+    try:
+        # run_pipeline() makes blocking broker / network calls; run it off the
+        # event loop so /ws broadcasts and the in-process ScalpRunner keep
+        # ticking while it is in flight.
+        result = await asyncio.to_thread(run_pipeline, req.model_dump(exclude_none=True))
+        await manager.broadcast({"type": "signal", "data": result.get("contract") or {}})
+        if result.get("trade"):
+            await manager.broadcast({"type": "trade_open", "data": result["trade"]})
+        return result
+    except Exception as exc:
+        # A pipeline failure (broker outage, malformed payload, or an unexpected
+        # bug) must never become an opaque HTTP 500, leak broker credentials or
+        # internals to the client, or drop the fail-closed NO_TRADE contract.
+        # Log the full traceback server-side; return only a coarse error class.
+        _log.exception("api_run_pipeline failed")
+        expected = isinstance(exc, (ConnectionError, TimeoutError, OSError))
+        return {"contract": {"decision": "NO_TRADE", "approved": False,
+                             "final_decision": "NO_TRADE",
+                             "data_status": "DATA_UNAVAILABLE",
+                             "reason": "MARKET_DATA_UNAVAILABLE"},
+                "trade": None, "error": "DATA_UNAVAILABLE",
+                "error_class": "UPSTREAM_DATA_UNAVAILABLE" if expected else "INTERNAL_ERROR"}
 
 
 # ---------------------------------------------------------------- Instrument registry
@@ -222,6 +243,42 @@ def api_instruments():
         ],
         "timeframes": ["1m", "3m", "5m", "15m", "1h"],
     }
+
+
+@app.get("/api/market-instruments")
+def api_market_instruments(market: str = Query("NSE")):
+    """Current valid symbols from the official AngelOne master (read-only)."""
+    market = str(market or "NSE").upper()
+    if market not in ("NSE", "MCX"):
+        return {"market": market, "instruments": [], "data_status": "DATA_UNAVAILABLE"}
+    try:
+        from .connectors.angelone import _market_sdk
+        sdk = _market_sdk(require_auth=False)
+        if not sdk:
+            return {"market": market, "instruments": [], "data_status": "DATA_UNAVAILABLE"}
+        return {"market": market, "instruments": market_data.available_symbols(sdk, market),
+                "data_status": "OK", "source": "ANGELONE_SDK"}
+    except Exception:
+        return {"market": market, "instruments": [], "data_status": "DATA_UNAVAILABLE"}
+
+
+@app.get("/api/market-selection")
+def api_market_selection(market: str = Query("NSE"), symbol: str = Query(...),
+                         expiry: str = Query("AUTO"), option_type: str = Query("BOTH"),
+                         instrument: Optional[str] = Query(None),
+                         window: int = Query(5, ge=0, le=20)):
+    """Read-only resolved contract and display snapshot for the Run form."""
+    try:
+        from .connectors.angelone import _market_sdk
+        sdk = _market_sdk(require_auth=False)
+        if not sdk:
+            return {"status": "DATA_UNAVAILABLE", "data_status": "DATA_UNAVAILABLE",
+                    "market": market, "symbol": symbol, "reason": "SDK unavailable"}
+        return market_data.selection_snapshot(sdk, market, symbol, expiry=expiry,
+                                              option_type=option_type, window=window, instrument=instrument)
+    except Exception:
+        return {"status": "DATA_UNAVAILABLE", "data_status": "DATA_UNAVAILABLE",
+                "market": market, "symbol": symbol, "reason": "market data unavailable"}
 
 
 @app.post("/api/instruments")

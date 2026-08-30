@@ -367,10 +367,10 @@
                 </select>
               </label>
               <label>Symbol
-                <input type="text" name="symbol" value="NIFTY" list="instrumentList" />
+                <select name="symbol" id="runSymbol"><option value="NIFTY">NIFTY</option></select>
               </label>
               <label>Instrument
-                <input type="text" name="instrument" value="OPTION" />
+                <select name="instrument" id="runInstrument"><option value="OPTION">OPTION</option><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select>
               </label>
               <label>Timeframe
                 <select name="timeframe">
@@ -378,10 +378,19 @@
                 </select>
               </label>
               <label>Underlying
-                <input type="text" name="underlying" value="NIFTY" list="instrumentList" />
+                <input type="text" name="underlying" value="NIFTY" readonly />
               </label>
               <label>Spot
-                <input type="number" name="spot" value="22150" />
+                <input type="text" name="spot" value="" readonly placeholder="Live quote required" />
+              </label>
+              <label>Expiry
+                <select name="expiry" id="runExpiry"><option value="AUTO">AUTO</option></select>
+              </label>
+              <label>Option type
+                <select name="option_type" id="runOptionType"><option value="BOTH">BOTH / CHAIN</option><option value="CE">CE</option><option value="PE">PE</option></select>
+              </label>
+              <label>ATM
+                <input type="text" name="atm" value="" readonly placeholder="Resolved from live spot" />
               </label>
             </div>
             <details class="advanced">
@@ -397,6 +406,7 @@
               </label>
             </details>
             <button type="submit" class="btn btn-primary">Run Pipeline</button>
+            <button type="button" class="btn btn-ghost" id="copyMarketSnapshot" disabled>Copy</button>
           </form>
           <pre class="result-box" id="runResult">Result will appear here.</pre>
         </div>

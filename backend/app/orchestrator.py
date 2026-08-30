@@ -38,7 +38,6 @@ def run_pipeline(req: dict) -> dict:
         candles = req.get("candles") or []
         data_ts = candles[-1][0] if candles and isinstance(candles[-1], (list, tuple)) else None
         try:
-            from datetime import datetime, timezone
             if isinstance(data_ts, (int, float)):
                 ts = data_ts / 1000 if data_ts > 1e12 else data_ts
                 data_iso = datetime.fromtimestamp(ts, timezone.utc).isoformat()
