@@ -158,16 +158,17 @@ def _metrics(res, calib, label):
 
 
 def run_backtest(symbol: str, *, train: tuple, test: tuple,
-                 config: dict | None = None, persist: bool = False) -> dict:
+                 config: dict | None = None, persist: bool = False,
+                 decide_every_sec: float = 30.0) -> dict:
     """train / test = (start_date, end_date) inclusive, disjoint & chronological."""
     cfg = config or {}
     sym = symbol.upper()
 
     # ---- TRAIN: prior replay -> calibration samples + magnitude stats ----
     tr_cache = _LegCache(sym, train[0], train[1])
-    res_tr = ReplayHarness(sym, train[0], train[1], source="BACKTEST",
-                           persist=persist, max_concurrent=cfg.get("max_concurrent", 1)
-                           ).run(_build_decide(None, None, None, cfg, tr_cache))
+    res_tr = ReplayHarness(sym, train[0], train[1], source="BACKTEST", persist=persist,
+                           max_concurrent=cfg.get("max_concurrent", 1),
+                           decide_every_sec=decide_every_sec).run(_build_decide(None, None, None, cfg, tr_cache))
     tr_closed = [t for t in res_tr.trades if t.status == "CLOSED"]
     by_id_tr = {s["signal_id"]: s for s in res_tr.signals}
     samples = []
@@ -185,9 +186,9 @@ def run_backtest(symbol: str, *, train: tuple, test: tuple,
 
     # ---- TEST: frozen calibration, out-of-sample ----
     te_cache = _LegCache(sym, test[0], test[1])
-    res_te = ReplayHarness(sym, test[0], test[1], source="BACKTEST",
-                           persist=persist, max_concurrent=cfg.get("max_concurrent", 1)
-                           ).run(_build_decide(calib, avg_win, avg_loss, cfg, te_cache))
+    res_te = ReplayHarness(sym, test[0], test[1], source="BACKTEST", persist=persist,
+                           max_concurrent=cfg.get("max_concurrent", 1),
+                           decide_every_sec=decide_every_sec).run(_build_decide(calib, avg_win, avg_loss, cfg, te_cache))
 
     return {
         "symbol": sym,

@@ -37,20 +37,20 @@ def _num(x):
 def _score_to_prob(signal_score, calib, *, regime, signal_type):
     """Raw 0-100 signal score -> probability of a winning trade.
 
-    Uses the P5 calibration table when available (per regime / signal_type
-    empirical curve), else a conservative logistic prior centred at 50/0.55."""
-    s = max(0.0, min(100.0, float(signal_score or 0))) / 100.0
-    if calib and isinstance(calib, dict):
-        curve = (calib.get("curves") or {}).get(f"{regime}|{signal_type}") \
-            or (calib.get("curves") or {}).get(f"*|{signal_type}") \
-            or calib.get("global")
-        if curve:
-            k = curve.get("k", 3.0)
-            b = curve.get("b", 0.0)
-            import math
-            return 1.0 / (1.0 + math.exp(-(k * (s - 0.5) + b)))
+    P5 calibration table (regime|signal_type curve -> signal_type -> global);
+    a missing or degenerate (k==0,b==0) curve falls back to a conservative
+    logistic prior, never to a flat 0.5."""
     import math
-    return 1.0 / (1.0 + math.exp(-(2.6 * (s - 0.55))))
+    s = max(0.0, min(100.0, float(signal_score or 0))) / 100.0
+    prior = 1.0 / (1.0 + math.exp(-(2.6 * (s - 0.55))))
+    curve = None
+    if isinstance(calib, dict):
+        curves = calib.get("curves") or {}
+        curve = (curves.get(f"{regime}|{signal_type}") or curves.get(f"*|{signal_type}")
+                 or calib.get("global"))
+    if not curve or (curve.get("k", 0.0) == 0.0 and curve.get("b", 0.0) == 0.0):
+        return prior
+    return 1.0 / (1.0 + math.exp(-(curve["k"] * (s - 0.5) + curve.get("b", 0.0))))
 
 
 def _confidence(prob, false_verdict, mtf_conflict):
@@ -168,8 +168,8 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         row = _leg_row(k, want)
         if not row or _num(row.get("ltp")) in (None, 0.0):
             continue
-        cands.append(analyse_leg(_bars_for(k, want), row, opt_type=want,
-                                 index_move_pts=index_move_pts, chain=chain, config=cfg.get("opt") or {}))
+        cands.append(analyse_leg(_bars_for(k, want), row, opt_type=want, index_move_pts=index_move_pts,
+                                 chain=chain, config=cfg.get("opt") or {}, light=True))
     sel = select_option(cands, direction, atm=float(atm or base), config=cfg.get("opt") or {})
     if not sel:
         return out_none("no tradeable contract on the wanted side",
@@ -178,6 +178,9 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         return out_none(f"option quality {sel['final_quality']} < min",
                         {"regime": reg["regime"], "signal_type": st["state"], "option_quality": sel["final_quality"]})
 
+    sel_full = analyse_leg(_bars_for(sel["strike"], want), _leg_row(sel["strike"], want) or {"strike": sel["strike"]},
+                           opt_type=want, index_move_pts=index_move_pts, chain=chain, config=cfg.get("opt") or {})
+    sel = {**sel, "sr": sel_full.get("sr"), "quality_score": sel_full.get("quality_score", sel["quality_score"])}
     plan = _plan_from_leg(sel, direction, cfg)
 
     # --- calibrated probability + EV gate ---

@@ -218,13 +218,17 @@ class ReplayResult:
 class ReplayHarness:
     def __init__(self, symbol: str, start: str | None = None, end: str | None = None, *,
                  source: str = "BACKTEST", max_concurrent: int = 1,
-                 persist: bool = True, log_all_decisions: bool = False):
+                 persist: bool = True, log_all_decisions: bool = False,
+                 decide_every_sec: float = 30.0):
         self.symbol = str(symbol).upper()
         self.start, self.end = start, end
         self.source = source
         self.max_concurrent = max_concurrent
         self.persist = persist
         self.log_all = log_all_decisions
+        # throttle: run decide() at most once per this many seconds of tape time
+        # (open trades are still marked every cycle). 0 = every cycle.
+        self.decide_every_sec = float(decide_every_sec or 0)
         self.run_id = uuid.uuid4().hex[:12]
 
     # -- persistence -------------------------------------------------------- #
@@ -256,6 +260,7 @@ class ReplayHarness:
 
         open_trades: list[SimTrade] = []
         cur_date: Optional[str] = None
+        _last_decide_ts = None
 
         for state in ad.iter_market_states(self.symbol, self.start, self.end):
             res.states_seen += 1
@@ -297,9 +302,17 @@ class ReplayHarness:
                     self._flatten(t, px, ts, reason, res)
                     open_trades.remove(t)
 
-            # 2) decision
+            # 2) decision (throttled to decide_every_sec of tape time)
             if not (in_session and has_data):
                 continue
+            if self.decide_every_sec and _last_decide_ts is not None:
+                try:
+                    gap = (datetime.fromisoformat(ts) - datetime.fromisoformat(_last_decide_ts)).total_seconds()
+                except (TypeError, ValueError):
+                    gap = self.decide_every_sec
+                if 0 <= gap < self.decide_every_sec:
+                    continue
+            _last_decide_ts = ts
             ctx._set_now(ts)
             try:
                 sig = decide(state, ctx)

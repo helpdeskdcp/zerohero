@@ -78,13 +78,19 @@ def fit(samples, *, version: str | None = None) -> dict:
         c = _fit_logistic(r)
         if c:
             curves[key] = c
-    glob = _fit_logistic(everything) or {"k": 0.0, "b": 0.0, "n": len(everything), "win_rate": None, "spread": 0}
+    glob = _fit_logistic(everything)          # None when < _MIN_ROWS -> use the prior
     return {
         "version": version or MODEL_VERSION,
         "n_samples": len(everything),
         "global": glob, "curves": curves,
+        "fitted": glob is not None or bool(curves),
         "model_version": MODEL_VERSION,
     }
+
+
+def _prior(s):
+    """Conservative logistic prior, used until a real curve exists."""
+    return 1.0 / (1.0 + math.exp(-(2.6 * (s - 0.55))))
 
 
 def predict(calib: dict, score_0_100, *, regime: str = "?", signal_type: str = "?") -> float:
@@ -92,9 +98,12 @@ def predict(calib: dict, score_0_100, *, regime: str = "?", signal_type: str = "
     curve = None
     if calib:
         curves = calib.get("curves") or {}
-        curve = curves.get(f"{regime}|{signal_type}") or curves.get(f"*|{signal_type}") or calib.get("global")
-    if not curve:
-        return 1.0 / (1.0 + math.exp(-(2.6 * (s - 0.55))))
+        curve = (curves.get(f"{regime}|{signal_type}") or curves.get(f"*|{signal_type}")
+                 or calib.get("global"))
+    # a missing or degenerate (k==0 and b==0) curve -> fall back to the prior,
+    # never to a flat 0.5.
+    if not curve or (curve.get("k", 0.0) == 0.0 and curve.get("b", 0.0) == 0.0):
+        return _prior(s)
     return 1.0 / (1.0 + math.exp(-(curve.get("k", 0.0) * (s - 0.5) + curve.get("b", 0.0))))
 
 

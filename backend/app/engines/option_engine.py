@@ -90,11 +90,14 @@ def _translation(leg, opt_type, index_move_pts, own_trend, cfg):
 
 def analyse_leg(leg_bars_by_tf: dict, leg: dict, *, opt_type: str,
                 index_move_pts: float, chain: list | None = None,
-                config: dict | None = None) -> dict:
+                config: dict | None = None, light: bool = False) -> dict:
     cfg = config or {}
     ot = str(opt_type).upper()
     own = _own_trend(leg_bars_by_tf.get("5m") or leg_bars_by_tf.get("3m") or [])
-    sr = compute_sr(leg_bars_by_tf, mode="option", config=cfg.get("sr") or {})
+    # `light` skips the per-leg S/R (the hot cost) -- used to screen many
+    # candidate strikes; the selected leg is re-analysed in full.
+    sr = ({"status": "SKIPPED"} if light
+          else compute_sr(leg_bars_by_tf, mode="option", config=cfg.get("sr") or {}))
     trans, trans_dbg = _translation(leg, ot, index_move_pts, own, cfg)
 
     ltp = _num(leg.get("ltp")) or 0.0
