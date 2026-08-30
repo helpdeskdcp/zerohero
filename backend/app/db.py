@@ -163,6 +163,53 @@ CREATE TABLE IF NOT EXISTS order_events (
     detail TEXT                  -- JSON
 );
 
+-- Autonomous scalper: one row per decision (the spec-4 rich signal/outcome
+-- record). Shared shape for HISTORICAL_REPLAY / BACKTEST / LIVE so a signal can
+-- be reproduced and graded identically. Historical BATI data is NEVER written
+-- here; `source` + `provenance` keep the origins distinguishable.
+CREATE TABLE IF NOT EXISTS scalp_signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_id TEXT UNIQUE,           -- globally unique per decision
+    source TEXT,                     -- LIVE | REPLAY | BACKTEST
+    provenance TEXT,                 -- JSON: {db, cycle_id, run_id, ...}
+    created_ts TEXT,                 -- decision timestamp (ISO)
+    session_date TEXT,
+    tod_bucket TEXT,                 -- OPEN / MORNING / MIDDAY / AFTERNOON / CLOSE
+    symbol TEXT,
+    -- market snapshot at decision time
+    index_ltp REAL, vwap REAL, atr REAL, pcr REAL, max_pain REAL,
+    regime TEXT, momentum REAL,
+    -- support / resistance context
+    support REAL, resistance REAL,
+    support_strength REAL, resistance_strength REAL,
+    sr_level REAL, sr_side TEXT,     -- SUPPORT | RESISTANCE
+    -- signal
+    signal_type TEXT,               -- SUPPORT_REVERSAL|SUPPORT_BREAKDOWN|RESISTANCE_REVERSAL|RESISTANCE_BREAKOUT|NONE
+    direction TEXT,                 -- BULLISH | BEARISH | NONE
+    mtf_alignment REAL,
+    component_scores TEXT,          -- JSON {price_action,level_strength,volume,oi,momentum,vwap,atr,htf,retest}
+    signal_score REAL,              -- 0-100
+    probability REAL,               -- calibrated 0-1
+    confidence TEXT,                -- LOW | MEDIUM | HIGH
+    ev REAL, rr REAL,
+    decision TEXT,                  -- BUY_CE|BUY_PE|NO_TRADE|WATCH|WAIT_FOR_CONFIRMATION
+    reason TEXT,
+    calib_version TEXT,
+    -- locked option contract (never changes for the life of the trade)
+    opt_underlying TEXT, opt_strike REAL, opt_expiry TEXT, opt_type TEXT,
+    opt_token TEXT, opt_tradingsymbol TEXT,
+    -- trade plan
+    entry REAL, stop_loss REAL, target_1 REAL, target_2 REAL, trailing_stop REAL,
+    max_hold_sec REAL, entry_ts TEXT,
+    -- outcome (filled by the replay simulator / live monitor)
+    status TEXT DEFAULT 'PENDING',  -- PENDING|OPEN|CLOSED|CANCELLED|EXPIRED|NO_FILL
+    exit_price REAL, exit_ts TEXT, exit_reason TEXT,
+    points REAL, r_multiple REAL, mfe REAL, mae REAL,
+    outcome TEXT,                   -- WIN | LOSS | FLAT | NO_FILL
+    holding_sec REAL,
+    resolved INTEGER DEFAULT 0
+);
+
 """
 
 # Indexes are created AFTER _migrate() runs, because some of them
@@ -177,6 +224,9 @@ CREATE INDEX IF NOT EXISTS ix_signals_created_ts     ON ai_signals_log(created_t
 CREATE INDEX IF NOT EXISTS ix_broker_orders_trade    ON broker_orders(trade_id);
 CREATE INDEX IF NOT EXISTS ix_broker_orders_status   ON broker_orders(status);
 CREATE INDEX IF NOT EXISTS ix_order_events_trade     ON order_events(trade_id);
+CREATE INDEX IF NOT EXISTS ix_scalp_signals_src      ON scalp_signals(source, session_date);
+CREATE INDEX IF NOT EXISTS ix_scalp_signals_status   ON scalp_signals(status, resolved);
+CREATE INDEX IF NOT EXISTS ix_scalp_signals_symbol   ON scalp_signals(symbol, created_ts);
 """
 
 
@@ -488,3 +538,60 @@ def list_order_events(trade_id: str | None = None, limit: int = 500):
         params = (limit,)
     with db() as conn:
         return [dict(r) for r in conn.execute(q, params).fetchall()]
+
+
+# ---------------------------------------------------------------- autonomous scalper (spec-4)
+_SCALP_SIGNAL_COLS = (
+    "signal_id", "source", "provenance", "created_ts", "session_date", "tod_bucket",
+    "symbol", "index_ltp", "vwap", "atr", "pcr", "max_pain", "regime", "momentum",
+    "support", "resistance", "support_strength", "resistance_strength", "sr_level",
+    "sr_side", "signal_type", "direction", "mtf_alignment", "component_scores",
+    "signal_score", "probability", "confidence", "ev", "rr", "decision", "reason",
+    "calib_version", "opt_underlying", "opt_strike", "opt_expiry", "opt_type",
+    "opt_token", "opt_tradingsymbol", "entry", "stop_loss", "target_1", "target_2",
+    "trailing_stop", "max_hold_sec", "entry_ts", "status", "exit_price", "exit_ts",
+    "exit_reason", "points", "r_multiple", "mfe", "mae", "outcome", "holding_sec",
+    "resolved",
+)
+
+
+def insert_scalp_signal(row: dict):
+    """INSERT OR IGNORE on signal_id — a signal row is written once at decision
+    time; the outcome is filled later with update_scalp_signal()."""
+    vals = [row.get(c) for c in _SCALP_SIGNAL_COLS]
+    ph = ",".join(["?"] * len(_SCALP_SIGNAL_COLS))
+    with db() as conn:
+        conn.execute(
+            f"INSERT OR IGNORE INTO scalp_signals ({','.join(_SCALP_SIGNAL_COLS)}) VALUES ({ph})",
+            vals)
+
+
+def update_scalp_signal(signal_id: str, fields: dict):
+    fields = {k: v for k, v in (fields or {}).items() if k in _SCALP_SIGNAL_COLS}
+    if not fields:
+        return
+    sets = ",".join(f"{k}=?" for k in fields)
+    with db() as conn:
+        conn.execute(f"UPDATE scalp_signals SET {sets} WHERE signal_id=?",
+                     list(fields.values()) + [signal_id])
+
+
+def get_scalp_signal(signal_id: str):
+    with db() as conn:
+        r = conn.execute("SELECT * FROM scalp_signals WHERE signal_id=?", (signal_id,)).fetchone()
+        return dict(r) if r else None
+
+
+def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
+                       session_date=None, limit: int = 1000):
+    clauses, params = [], []
+    for col, val in (("source", source), ("status", status), ("symbol", symbol),
+                     ("resolved", resolved), ("session_date", session_date)):
+        if val is not None:
+            clauses.append(f"{col}=?")
+            params.append(val)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        cur = conn.execute(f"SELECT * FROM scalp_signals{where} ORDER BY id DESC LIMIT ?", params)
+        return [dict(r) for r in cur.fetchall()]
