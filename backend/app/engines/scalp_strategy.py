@@ -22,8 +22,24 @@ from .option_engine import analyse_leg, ce_pe_confirmation, ev_gate, select_opti
 
 MODEL_VERSION = "scalp-strategy-v1"
 
-# regimes in which the S/R reversal / breakout playbook is simply not run
-_BLOCK_REGIMES = {"UNSTABLE"}
+# Default filter policy (spec-11/12, informed by the P6 ablation). Every value
+# is overridable via config["filters"]; nothing is permanently hard-coded.
+#   block_*            -> the signal is dropped to NO_TRADE
+#   *_score_mult       -> the blended score is multiplied (down-weight, not drop)
+_DEFAULT_FILTERS = {
+    "block_regimes": ["UNSTABLE"],
+    "block_signal_types": [],
+    "block_tod": [],
+    "regime_score_mult": {},          # e.g. {"RANGE": 0.6}
+    "signal_type_score_mult": {},     # e.g. {"RESISTANCE_BREAKOUT": 0.6}
+    "tod_score_mult": {},             # e.g. {"AFTERNOON": 0.7}
+}
+
+
+def _filters(cfg):
+    f = dict(_DEFAULT_FILTERS)
+    f.update(cfg.get("filters") or {})
+    return f
 
 
 def _num(x):
@@ -92,10 +108,13 @@ def _plan_from_leg(sel, direction, cfg):
 def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                         atm: float | None = None, calib: dict | None = None,
                         avg_win: float | None = None, avg_loss: float | None = None,
-                        leg_bars_fn=None, config: dict | None = None) -> dict:
+                        leg_bars_fn=None, tod_bucket: str | None = None,
+                        config: dict | None = None) -> dict:
     """leg_bars_fn(strike, opt_type) -> {tf: bars} for that option's own candles.
-    If None, per-leg analysis runs on the index bars (degraded)."""
+    If None, per-leg analysis runs on the index bars (degraded).
+    tod_bucket: OPEN/MORNING/MIDDAY/AFTERNOON/CLOSE for the time-of-day filter."""
     cfg = config or {}
+    flt = _filters(cfg)
     out_none = lambda why, extra=None: {**({"decision": "NO_TRADE", "signal_type": "NONE",
                                             "direction": "NONE", "reason": why,
                                             "model_version": MODEL_VERSION}), **(extra or {})}
@@ -110,9 +129,18 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
     if st["state"] == "NONE":
         return out_none("no clean state", {"regime": reg["regime"], "state_score": st.get("state_score"),
                                            "mtf_alignment": mtf["alignment"]})
-    if reg["regime"] in _BLOCK_REGIMES:
-        return out_none(f"regime {reg['regime']} blocks the S/R playbook",
-                        {"regime": reg["regime"], "signal_type": st["state"]})
+
+    # --- configurable P6.1 filters (block) ---
+    if reg["regime"] in flt["block_regimes"]:
+        return out_none(f"filter: regime {reg['regime']} blocked",
+                        {"regime": reg["regime"], "signal_type": st["state"], "filtered": "regime"})
+    if st["state"] in flt["block_signal_types"]:
+        return out_none(f"filter: signal type {st['state']} blocked",
+                        {"regime": reg["regime"], "signal_type": st["state"], "filtered": "signal_type"})
+    if tod_bucket and tod_bucket in flt["block_tod"]:
+        return out_none(f"filter: time-of-day {tod_bucket} blocked",
+                        {"regime": reg["regime"], "signal_type": st["state"],
+                         "tod_bucket": tod_bucket, "filtered": "tod"})
 
     direction = st["direction"]                    # BULLISH | BEARISH
     want = "CE" if st["state"] in BULLISH else "PE"
@@ -186,6 +214,13 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
     # --- calibrated probability + EV gate ---
     # blend the state score with the option quality + MTF magnitude
     blended = 0.62 * st["state_score"] + 0.24 * sel["final_quality"] + 0.14 * min(100.0, mtf["magnitude"] + 40)
+    # configurable P6.1 down-weights (multiplicative, then clamped)
+    raw_blended = blended
+    blended *= float(flt["regime_score_mult"].get(reg["regime"], 1.0))
+    blended *= float(flt["signal_type_score_mult"].get(st["state"], 1.0))
+    if tod_bucket:
+        blended *= float(flt["tod_score_mult"].get(tod_bucket, 1.0))
+    blended = max(0.0, min(100.0, blended))
     prob = _score_to_prob(blended, calib, regime=reg["regime"], signal_type=st["state"])
     gate = ev_gate(prob, plan["entry"], plan["stop_loss"], plan["target_1"],
                    avg_win=avg_win, avg_loss=avg_loss, config=cfg.get("ev") or {})

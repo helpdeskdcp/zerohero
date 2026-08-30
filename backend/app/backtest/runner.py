@@ -20,7 +20,7 @@ from statistics import mean
 
 from . import calibration
 from . import oi_history_adapter as ad
-from .replay import ReplayHarness, ReplayContext
+from .replay import ReplayHarness, ReplayContext, _mod, _tod_bucket
 from ..engines.scalp_strategy import decide_from_context
 
 _LEG_TFS = ("1m", "3m", "5m", "15m", "30m")
@@ -56,7 +56,8 @@ def _build_decide(calib, avg_win, avg_loss, cfg, leg_cache):
         return decide_from_context(
             bt, state.get("chain"), atm=state.get("atm"), calib=calib,
             avg_win=avg_win, avg_loss=avg_loss,
-            leg_bars_fn=leg_cache.fn_at(state["ts"]), config=cfg)
+            leg_bars_fn=leg_cache.fn_at(state["ts"]),
+            tod_bucket=_tod_bucket(_mod(state["ts"])), config=cfg)
     return decide
 
 
@@ -193,6 +194,7 @@ def run_backtest(symbol: str, *, train: tuple, test: tuple,
     return {
         "symbol": sym,
         "manifest": res_te.manifest,
+        "config_filters": (cfg.get("filters") or {}),
         "train": {"range": list(train), "closed_trades": len(tr_closed),
                   "calibration_samples": len(samples), "avg_win": avg_win,
                   "avg_loss": avg_loss, "calibration": calib,
@@ -202,3 +204,40 @@ def run_backtest(symbol: str, *, train: tuple, test: tuple,
         "disclaimer": "Backtest on synthetic-from-tick candles + degraded-greeks archive. "
                       "NOT a profitability claim. Requires live forward validation.",
     }
+
+
+# P6.1 ablation -- each variant is a FULL independent pipeline (own TRAIN replay,
+# own TRAIN-only calibration, own OOS TEST); no test leakage, no shared state.
+_ABLATION_VARIANTS = {
+    "baseline": {},
+    "block_RANGE": {"filters": {"block_regimes": ["UNSTABLE", "RANGE"]}},
+    "block_RESISTANCE_BREAKOUT": {"filters": {"block_signal_types": ["RESISTANCE_BREAKOUT"]}},
+    "block_AFTERNOON": {"filters": {"block_tod": ["AFTERNOON"]}},
+    "combined": {"filters": {"block_regimes": ["UNSTABLE", "RANGE"],
+                             "block_signal_types": ["RESISTANCE_BREAKOUT"],
+                             "block_tod": ["AFTERNOON"]}},
+}
+
+
+def run_ablation(symbol: str, *, train: tuple, test: tuple, decide_every_sec: float = 60.0,
+                 variants: dict | None = None, base_config: dict | None = None) -> dict:
+    variants = variants or _ABLATION_VARIANTS
+    base = dict(base_config or {})
+    out = {}
+    for name, vcfg in variants.items():
+        cfg = dict(base)
+        cfg.update({k: v for k, v in vcfg.items() if k != "filters"})
+        if "filters" in vcfg:
+            cfg["filters"] = {**(base.get("filters") or {}), **vcfg["filters"]}
+        rep = run_backtest(symbol, train=train, test=test,
+                           decide_every_sec=decide_every_sec, config=cfg)
+        out[name] = {
+            "filters": rep["config_filters"],
+            "train": {k: rep["train"][k] for k in ("closed_trades", "calibration_samples",
+                                                   "avg_win", "avg_loss")},
+            "train_curves": list(rep["train"]["calibration"]["curves"].keys()),
+            "train_global": rep["train"]["calibration"]["global"],
+            "oos": rep["test"]["out_of_sample"],
+        }
+    return {"symbol": symbol.upper(), "train_range": list(train), "test_range": list(test),
+            "decide_every_sec": decide_every_sec, "variants": out}
