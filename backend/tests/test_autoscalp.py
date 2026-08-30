@@ -202,3 +202,29 @@ def test_runner_config_roundtrip_and_unknown_field(fresh_db):
     assert r.get_config()["symbols"] == ["NIFTY", "BANKNIFTY"]
     with pytest.raises(ValueError):
         r.set_config({"nonsense": 1})
+
+
+# ---------------- P8 Telegram formatting (notify.py) ----------------
+def test_notify_signal_card_and_lifecycle():
+    from app.autoscalp import notify
+    sig = {"decision": "BUY_PE", "direction": "BEARISH", "signal_type": "SUPPORT_BREAKDOWN",
+           "sr_side": "SUPPORT", "sr_level": 24085, "strike": 24100, "tradingsymbol": "NIFTY24100PE",
+           "entry": 95.0, "stop_loss": 83.0, "target_1": 116.0, "target_2": 128.0,
+           "signal_score": 63.0, "probability": 0.58, "confidence": "MEDIUM",
+           "regime": "TRENDING_DOWN", "mtf_alignment": -30, "rr": 1.6, "ev": 6.0,
+           "support_strength": 60, "resistance_strength": 62}
+    card = notify.signal_card(sig, symbol="NIFTY", index_ltp=24095)
+    assert "IDADDY AI SIGNAL" in card and "NIFTY PE 24100" in card
+    assert "Probability:\n58%" in card and "Confidence:\nMEDIUM" in card
+    assert "no live order" in card
+    lc = notify.lifecycle("TARGET", {"underlying": "NIFTY", "option_type": "PE", "strike": 24100,
+                                     "entry": 95.0, "exit_price": 116.0, "pnl": 21.0, "result": "WIN"})
+    assert "AUTO-SCALP TARGET" in lc and "P&L 21.0" in lc and "(WIN)" in lc
+
+
+def test_notify_push_is_non_blocking_on_failure():
+    from app.autoscalp import notify
+    calls = []
+    assert notify.push(lambda t: (_ for _ in ()).throw(RuntimeError("tg down")), "x") is False
+    assert notify.push(lambda t: calls.append(t), "hello") is True and calls == ["hello"]
+    assert notify.push(None, "x") is False

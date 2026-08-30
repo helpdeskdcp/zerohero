@@ -25,6 +25,7 @@ from ..engines.scalp_strategy import decide_from_context
 from ..engines.paper_trading import open_trade, update_trade_price, close_trade
 from ..backtest import calibration as _cal
 from ..backtest.replay import _mod, _tod_bucket
+from . import notify
 
 LEASE_KEY = "autoscalp_lease"
 LEASE_TTL = 30
@@ -228,6 +229,10 @@ class AutoScalpRunner:
         self._persist_snapshot(sym, agg, atm, chain, sig, feed_age)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
+        if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):
+            notify.push(self._telegram, notify.lifecycle("FALSE_BREAKOUT",
+                        {"underlying": sym, "opt_type": "", "strike": 0},
+                        note=f"{sig.get('signal_type','')} {sig.get('reason','')}"))
 
         if sig.get("decision") not in ("BUY_CE", "BUY_PE"):
             return
@@ -289,10 +294,9 @@ class AutoScalpRunner:
             "status": "OPEN", "resolved": 0,
         })
         asyncio.create_task(self._emit("autoscalp_open", {"symbol": sym, "trade": row, "signal_id": signal_id}))
-        self._tg(f"▶ <b>AUTO-SCALP PAPER {sig['decision']} {sym} {sig.get('strike')}"
-                 f"{sig['decision'].split('_')[1]}</b>\nentry {sig['entry']}  SL {sig['stop_loss']}  "
-                 f"T1 {sig['target_1']}  p {sig.get('probability')}  {sig.get('confidence')}\n"
-                 f"{sig.get('reason','')}\n⚠ PAPER — no live order")
+        notify.push(self._telegram, notify.signal_card(
+            {**sig, "opt_tradingsymbol": sig.get("tradingsymbol")}, symbol=sym,
+            index_ltp=self._aggs[sym.upper()].last_price))
 
     def _monitor(self):
         for t in self._open_positions():
@@ -311,11 +315,9 @@ class AutoScalpRunner:
                     "outcome": updated.get("result"), "resolved": 1,
                     "holding_sec": None, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
                 asyncio.create_task(self._emit("autoscalp_close", {"trade": updated}))
-                self._tg(f"✔ <b>AUTO-SCALP EXIT {updated.get('exit_reason')} — "
-                         f"{updated.get('underlying')} {updated.get('option_type')}"
-                         f"{int(updated.get('strike') or 0)}</b>\n"
-                         f"entry {updated.get('entry')} exit {updated.get('exit_price')}  "
-                         f"P&L {updated.get('pnl')}  ({updated.get('result')})\n⚠ PAPER")
+                notify.push(self._telegram, notify.lifecycle(
+                    updated.get("exit_reason") or "EXIT", updated,
+                    note=f"held; MFE {updated.get('mfe')} MAE {updated.get('mae')}"))
 
     # ---------------- persistence + calibration ----------------
     def _persist_snapshot(self, sym, agg, atm, chain, sig, feed_age):
