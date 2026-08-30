@@ -22,17 +22,24 @@ from .option_engine import analyse_leg, ce_pe_confirmation, ev_gate, select_opti
 
 MODEL_VERSION = "scalp-strategy-v1"
 
-# Default filter policy (spec-11/12, informed by the P6 ablation). Every value
-# is overridable via config["filters"]; nothing is permanently hard-coded.
-#   block_*            -> the signal is dropped to NO_TRADE
-#   *_score_mult       -> the blended score is multiplied (down-weight, not drop)
+# Default filter policy (spec-11/12). Every value is overridable via
+# config["filters"]; these defaults are the ones the P6/P6.1 ablation actually
+# validated on out-of-sample NIFTY data, not guesses:
+#   * RESISTANCE_BREAKOUT was net-negative in two independent OOS slices
+#     (P6: -17.5 / n11 ; P6.1: -17.5 / n11) -> blocked. Removing it ~doubled
+#     win rate & PF and dropped ECE from 0.14 to 0.09.
+#   * AFTERNOON underperformed in both slices -> blocked.
+#   * RANGE was only marginally negative and blocking it cost a lot of sample
+#     -> down-weighted (0.7), not blocked.
+#   block_*      -> the signal is dropped to NO_TRADE
+#   *_score_mult -> the blended score is multiplied (down-weight, not drop)
 _DEFAULT_FILTERS = {
     "block_regimes": ["UNSTABLE"],
-    "block_signal_types": [],
-    "block_tod": [],
-    "regime_score_mult": {},          # e.g. {"RANGE": 0.6}
-    "signal_type_score_mult": {},     # e.g. {"RESISTANCE_BREAKOUT": 0.6}
-    "tod_score_mult": {},             # e.g. {"AFTERNOON": 0.7}
+    "block_signal_types": ["RESISTANCE_BREAKOUT"],
+    "block_tod": ["AFTERNOON"],
+    "regime_score_mult": {"RANGE": 0.7},
+    "signal_type_score_mult": {},
+    "tod_score_mult": {},
 }
 
 

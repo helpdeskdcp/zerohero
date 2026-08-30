@@ -16,11 +16,16 @@ from tests.test_calibration_backtest import _DDL, _synth_day  # reuse the synth 
 def test_filters_merge_defaults_and_overrides():
     f = ss._filters({"filters": {"block_regimes": ["UNSTABLE", "RANGE"],
                                  "regime_score_mult": {"RANGE": 0.5}}})
-    assert f["block_regimes"] == ["UNSTABLE", "RANGE"]
-    assert f["regime_score_mult"] == {"RANGE": 0.5}
-    assert f["block_signal_types"] == []            # default preserved
-    # nothing hard-coded permanently: empty config -> only UNSTABLE blocked
-    assert ss._filters({})["block_regimes"] == ["UNSTABLE"]
+    assert f["block_regimes"] == ["UNSTABLE", "RANGE"]      # override wins
+    assert f["regime_score_mult"] == {"RANGE": 0.5}         # override wins
+    assert f["block_tod"] == ["AFTERNOON"]                  # non-overridden default preserved
+    # validated defaults (P6.1 ablation): breakout + afternoon blocked, range down-weighted
+    d = ss._filters({})
+    assert d["block_signal_types"] == ["RESISTANCE_BREAKOUT"]
+    assert d["block_tod"] == ["AFTERNOON"]
+    assert d["regime_score_mult"] == {"RANGE": 0.7}
+    # every default is still overridable to empty
+    assert ss._filters({"filters": {"block_signal_types": []}})["block_signal_types"] == []
 
 
 def test_block_regime_short_circuits(monkeypatch):
@@ -45,7 +50,8 @@ def test_block_regime_short_circuits(monkeypatch):
     assert d2["decision"] == "NO_TRADE" and d2["filtered"] == "signal_type"
 
     d3 = ss.decide_from_context({"5m": []}, [], atm=100.0, tod_bucket="AFTERNOON",
-                                config={"filters": {"block_tod": ["AFTERNOON"]}})
+                                config={"filters": {"block_signal_types": [],
+                                                    "block_tod": ["AFTERNOON"]}})
     assert d3["decision"] == "NO_TRADE" and d3["filtered"] == "tod"
 
 
