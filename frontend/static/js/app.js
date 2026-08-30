@@ -15,6 +15,7 @@
     if (view === "scalp") loadScalp();
     if (view === "research") loadResearch();
     if (view === "system") loadSystem();
+    if (view === "autoscalp") loadAutoscalp();
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
     btn.addEventListener("click", () => setView(btn.dataset.view));
@@ -919,6 +920,101 @@
     } catch (e) { console.error(e); }
   }
 
+  // ---------------- Auto-Scalp (spec-16) ----------------
+  async function loadAutoscalp() {
+    let st, sigs, pos;
+    try {
+      [st, sigs, pos] = await Promise.all([
+        api("/api/autoscalp/status"),
+        api("/api/autoscalp/signals?limit=60"),
+        api("/api/autoscalp/status").then(() => api("/api/trades?limit=100&status=OPEN")),
+      ]);
+    } catch (e) {
+      const el = $("#asErr"); el.hidden = false; el.textContent = "autoscalp: " + e.message; return;
+    }
+    $("#asErr").hidden = true;
+    const set = (id, v, cls) => { const el = $("#" + id); if (el) { el.textContent = v; if (cls !== undefined) el.className = cls; } };
+    const armed = !!st.armed;
+    $("#asArmBtn").textContent = armed ? "DISARM" : "ARM";
+    $("#asArmBtn").dataset.armed = String(armed);
+    const ks = (st.safeguards && st.safeguards.kill_switch) || {};
+    set("asState", `${armed ? "ARMED" : "disarmed"} · leader ${st.is_leader ? "yes" : "no"} · ${st.paper_mode ? "PAPER" : "?"}` +
+      (ks.active ? ` · KILL ON` : "") + (st.last_error ? ` · err: ${text(st.last_error)}` : ""), armed ? "on" : "off");
+    $("#asKillBtn").textContent = ks.active ? "Kill switch: ON — clear" : "Kill switch: OFF — activate";
+    $("#asKillBtn").dataset.active = ks.active ? "1" : "0";
+
+    const latest = (sigs || [])[0] || {};
+    set("asRegime", text(latest.regime));
+    set("asIndex", fmt(latest.index_ltp, 1));
+    set("asVwap", fmt(latest.vwap, 1));
+    set("asAtr", fmt(latest.atr, 2));
+    set("asSup", fmt(latest.support, 1)); set("asRes", fmt(latest.resistance, 1));
+    set("asSupS", fmt(latest.support_strength, 0)); set("asResS", fmt(latest.resistance_strength, 0));
+    set("asMtf", fmt(latest.mtf_alignment, 1));
+    const sg = st.safeguards || {};
+    set("asOpen", `${st.open_positions ?? 0} / ${sg.trades_today ?? 0}`);
+    set("asPnl", fmt(sg.realised_pnl_today, 2), (sg.realised_pnl_today > 0 ? "pos" : sg.realised_pnl_today < 0 ? "neg" : ""));
+    set("asCalib", text(st.calibration, "prior"));
+
+    set("asSignal", text(latest.decision), latest.decision === "BUY_CE" ? "on" : latest.decision === "BUY_PE" ? "warn" : "");
+    set("asSetup", text(latest.signal_type));
+    set("asProb", latest.probability != null ? Math.round(latest.probability * 100) + "%" : "—");
+    set("asConf", text(latest.confidence));
+    set("asScore", fmt(latest.signal_score, 0));
+    set("asRrEv", `${fmt(latest.rr, 2)} / ${fmt(latest.ev, 1)}`);
+    set("asReason", text(latest.reason));
+
+    const asMark = {};
+    $("#asPosTable tbody").innerHTML = (pos || []).filter(t => t.strategy === "AUTOSCALP").map(t => `
+      <tr><td>${timeStr(t.opened_ts)}</td><td>${text(t.underlying)}</td>
+      <td>${text(t.option_type)} ${text(t.strike, "")}</td>
+      <td class="feed-dir ${directionClass(t.direction)}">${text(t.direction)}</td>
+      <td>${fmt(t.entry, 2)}</td><td><b>${fmt(t.exit_price ?? asMark[t.symboltoken], 2)}</b></td>
+      <td>${fmt(t.stop_loss, 2)}</td><td>${fmt(t.target_1, 2)}</td>
+      <td class="${(t.pnl || 0) > 0 ? 'stat-value pos' : (t.pnl || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(t.pnl, 2)}</td>
+      <td><span class="badge ${t.status}">${t.status}</span></td><td>${text(t.exit_reason, "")}</td></tr>`).join("")
+      || `<tr><td colspan="11" class="hint">No open PAPER positions.</td></tr>`;
+
+    $("#asSigTable tbody").innerHTML = (sigs || []).map(s => `
+      <tr><td>${timeStr(s.created_ts)}</td><td>${text(s.symbol)}</td>
+      <td class="badge ${s.decision}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
+      <td class="feed-dir ${directionClass(s.direction === "BULLISH" ? "BUY" : s.direction === "BEARISH" ? "SELL" : "")}">${text(s.direction)}</td>
+      <td>${text(s.opt_strike, "")}</td><td>${fmt(s.entry, 2)}</td><td>${fmt(s.stop_loss, 2)}</td>
+      <td>${fmt(s.target_1, 2)}</td><td>${s.probability != null ? Math.round(s.probability * 100) + "%" : "—"}</td>
+      <td>${text(s.confidence, "")}</td><td><span class="badge ${s.status}">${text(s.status)}</span></td>
+      <td>${text(s.outcome, "")}</td>
+      <td class="${(s.points || 0) > 0 ? 'stat-value pos' : (s.points || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(s.points, 1)}</td></tr>`).join("")
+      || `<tr><td colspan="14" class="hint">No live signals yet.</td></tr>`;
+
+    $("#asGuards").innerHTML = Object.entries(sg.config || {}).map(([k, v]) =>
+      `<div class="syscell"><span>${text(k)}</span><span>${text(typeof v === "object" ? JSON.stringify(v) : v)}</span></div>`).join("")
+      + `<div class="syscell"><span>consecutive_losses</span><span>${sg.consecutive_losses ?? 0}</span></div>`
+      + `<div class="syscell"><span>halt_reason</span><span>${text(sg.halt_reason, "none")}</span></div>`;
+  }
+
+  (function bindAutoscalp() {
+    const arm = $("#asArmBtn"), kill = $("#asKillBtn");
+    if (arm) arm.addEventListener("click", async () => {
+      const on = arm.dataset.armed === "true";
+      try { await api(on ? "/api/autoscalp/disarm" : "/api/autoscalp/arm", { method: "POST" }); }
+      catch (e) { alert("autoscalp: " + e.message); }
+      loadAutoscalp();
+    });
+    if (kill) kill.addEventListener("click", async () => {
+      const turnOn = kill.dataset.active !== "1";
+      if (turnOn && !confirm("Activate the emergency kill switch? Blocks all new auto-scalp entries.")) return;
+      try { await api("/api/autoscalp/kill", { method: "POST", body: JSON.stringify({ active: turnOn, reason: "dashboard" }) }); }
+      catch (e) { alert("kill: " + e.message); }
+      loadAutoscalp();
+    });
+  })();
+
+  const _origHandleWs = handleWsMessage;
+  handleWsMessage = function (msg) {
+    _origHandleWs(msg);
+    if (state.view === "autoscalp" && /^autoscalp_/.test(msg.type || "")) loadAutoscalp();
+  };
+
   // ---------------- Boot ----------------
   connectWs();
   loadInstruments();
@@ -926,4 +1022,5 @@
   setInterval(() => { if (state.view === "overview") loadOverview(); }, 15000);
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
+  setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
 })();
