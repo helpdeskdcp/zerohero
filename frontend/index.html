@@ -33,6 +33,7 @@
       <button class="nav-item" data-view="signals">Signal Ledger</button>
       <button class="nav-item" data-view="trades">Paper Trades</button>
       <button class="nav-item" data-view="scalp">Scalping</button>
+      <button class="nav-item" data-view="autoscalp">Auto-Scalp</button>
       <button class="nav-item" data-view="runner">Run Pipeline</button>
       <button class="nav-item" data-view="research">Research</button>
       <button class="nav-item" data-view="system">System</button>
@@ -412,6 +413,77 @@
         </div>
       </section>
 
+      <!-- ===== AUTO-SCALP (spec-16 decision-first) ===== -->
+      <section class="view" id="view-autoscalp">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Autonomous Scalper <span class="pill pill--paper">PAPER</span></h2>
+            <div class="mon-exec-bar">
+              <button class="btn btn-primary" id="asArmBtn" type="button">ARM</button>
+              <button class="btn btn-ghost danger" id="asKillBtn" type="button">Kill switch</button>
+              <span class="hint" id="asState">—</span>
+            </div>
+          </div>
+          <p class="scalp-err" id="asErr" hidden></p>
+          <div class="mon-strip" id="asStrip">
+            <div class="mon-cell"><span>Regime</span><b id="asRegime">—</b></div>
+            <div class="mon-cell"><span>Index</span><b id="asIndex">—</b></div>
+            <div class="mon-cell"><span>VWAP</span><b id="asVwap">—</b></div>
+            <div class="mon-cell"><span>ATR</span><b id="asAtr">—</b></div>
+            <div class="mon-cell"><span>Support</span><b id="asSup">—</b></div>
+            <div class="mon-cell"><span>Resistance</span><b id="asRes">—</b></div>
+            <div class="mon-cell"><span>Sup str</span><b id="asSupS">—</b></div>
+            <div class="mon-cell"><span>Res str</span><b id="asResS">—</b></div>
+            <div class="mon-cell"><span>MTF align</span><b id="asMtf">—</b></div>
+            <div class="mon-cell"><span>Open / Today</span><b id="asOpen">—</b></div>
+            <div class="mon-cell"><span>P&L today</span><b id="asPnl">—</b></div>
+            <div class="mon-cell"><span>Calibration</span><b id="asCalib">—</b></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Current Decision</h2></div>
+          <div class="mon-strip">
+            <div class="mon-cell"><span>Signal</span><b id="asSignal">—</b></div>
+            <div class="mon-cell"><span>Setup</span><b id="asSetup">—</b></div>
+            <div class="mon-cell"><span>Probability</span><b id="asProb">—</b></div>
+            <div class="mon-cell"><span>Confidence</span><b id="asConf">—</b></div>
+            <div class="mon-cell"><span>Score</span><b id="asScore">—</b></div>
+            <div class="mon-cell"><span>RR / EV</span><b id="asRrEv">—</b></div>
+          </div>
+          <p class="hint" id="asReason" style="margin:8px 0 0">—</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Open PAPER Positions</h2></div>
+          <div class="table-wrap">
+            <table class="ledger" id="asPosTable">
+              <thead><tr><th>Opened</th><th>Sym</th><th>Contract</th><th>Dir</th><th>Entry</th>
+                <th>Mark</th><th>SL</th><th>T1</th><th>P&L</th><th>Status</th><th>Exit</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Signal Log (live)</h2></div>
+          <div class="table-wrap">
+            <table class="ledger" id="asSigTable">
+              <thead><tr><th>Time</th><th>Sym</th><th>Decision</th><th>Setup</th><th>Dir</th>
+                <th>Strike</th><th>Entry</th><th>SL</th><th>T1</th><th>Prob</th><th>Conf</th>
+                <th>Status</th><th>Outcome</th><th>Pts</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Safeguards (spec-15)</h2></div>
+          <div class="sysgrid" id="asGuards"></div>
+          <p class="hint">LIVE order routing is hard-disabled here. Arming trades PAPER only.</p>
+        </div>
+      </section>
+
       <!-- ===== RESEARCH ===== -->
       <section class="view" id="view-research">
         <div class="panel">
@@ -442,6 +514,7 @@
       <button class="tab-item" data-view="trades"><span class="tab-ic">⇄</span>Trades</button>
       <button class="tab-item" data-view="monitor"><span class="tab-ic">◉</span>Monitor</button>
       <button class="tab-item" data-view="scalp"><span class="tab-ic">⚡</span>Scalp</button>
+      <button class="tab-item" data-view="autoscalp"><span class="tab-ic">🤖</span>Auto</button>
       <button class="tab-item" data-view="runner"><span class="tab-ic">▶</span>Run</button>
       <button class="tab-item" data-view="research"><span class="tab-ic">∑</span>Research</button>
     </nav>
