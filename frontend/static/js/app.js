@@ -922,11 +922,12 @@
 
   // ---------------- Auto-Scalp (spec-16) ----------------
   async function loadAutoscalp() {
-    let st, sigs, pos;
+    let st, sigs, snaps, pos;
     try {
-      [st, sigs, pos] = await Promise.all([
+      [st, sigs, snaps, pos] = await Promise.all([
         api("/api/autoscalp/status"),
         api("/api/autoscalp/signals?limit=60"),
+        api("/api/autoscalp/snapshots?limit=60"),
         api("/api/autoscalp/status").then(() => api("/api/trades?limit=100&status=OPEN")),
       ]);
     } catch (e) {
@@ -943,7 +944,11 @@
     $("#asKillBtn").textContent = ks.active ? "Kill switch: ON — clear" : "Kill switch: OFF — activate";
     $("#asKillBtn").dataset.active = ks.active ? "1" : "0";
 
-    const latest = (sigs || [])[0] || {};
+    // Decision-first strip + Current Decision are driven by the latest *evaluation*
+    // (live_market_snapshots), which the runner writes every cycle — not only when
+    // a paper trade opens (scalp_signals). Fall back to the last trade row if the
+    // snapshot stream is empty (e.g. an old DB before this was wired).
+    const latest = (snaps || [])[0] || (sigs || [])[0] || {};
     set("asRegime", text(latest.regime));
     set("asIndex", fmt(latest.index_ltp, 1));
     set("asVwap", fmt(latest.vwap, 1));
@@ -955,6 +960,9 @@
     set("asOpen", `${st.open_positions ?? 0} / ${sg.trades_today ?? 0}`);
     set("asPnl", fmt(sg.realised_pnl_today, 2), (sg.realised_pnl_today > 0 ? "pos" : sg.realised_pnl_today < 0 ? "neg" : ""));
     set("asCalib", text(st.calibration, "prior"));
+    const asEval = $("#asEval");
+    if (asEval) asEval.textContent = latest.ts ? `last eval ${timeStr(latest.ts)}` +
+      (latest.feed_age_sec != null ? ` · feed ${fmt(latest.feed_age_sec, 0)}s` : "") : "no evaluation yet";
 
     set("asSignal", text(latest.decision), latest.decision === "BUY_CE" ? "on" : latest.decision === "BUY_PE" ? "warn" : "");
     set("asSetup", text(latest.signal_type));
@@ -975,7 +983,10 @@
       <td><span class="badge ${t.status}">${t.status}</span></td><td>${text(t.exit_reason, "")}</td></tr>`).join("")
       || `<tr><td colspan="11" class="hint">No open PAPER positions.</td></tr>`;
 
-    $("#asSigTable tbody").innerHTML = (sigs || []).map(s => `
+    // Signal Log: the actual PAPER trades (locked contract + outcome) come first;
+    // if there are none yet, show the recent decision stream so the operator can
+    // see the engine is evaluating and *why* it is holding (NO_TRADE / WATCH).
+    const sigRows = (sigs || []).map(s => `
       <tr><td>${timeStr(s.created_ts)}</td><td>${text(s.symbol)}</td>
       <td class="badge ${s.decision}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
       <td class="feed-dir ${directionClass(s.direction === "BULLISH" ? "BUY" : s.direction === "BEARISH" ? "SELL" : "")}">${text(s.direction)}</td>
@@ -983,8 +994,16 @@
       <td>${fmt(s.target_1, 2)}</td><td>${s.probability != null ? Math.round(s.probability * 100) + "%" : "—"}</td>
       <td>${text(s.confidence, "")}</td><td><span class="badge ${s.status}">${text(s.status)}</span></td>
       <td>${text(s.outcome, "")}</td>
-      <td class="${(s.points || 0) > 0 ? 'stat-value pos' : (s.points || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(s.points, 1)}</td></tr>`).join("")
-      || `<tr><td colspan="14" class="hint">No live signals yet.</td></tr>`;
+      <td class="${(s.points || 0) > 0 ? 'stat-value pos' : (s.points || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(s.points, 1)}</td></tr>`).join("");
+    const evalRows = (snaps || []).slice(0, 30).map(s => `
+      <tr class="hint"><td>${timeStr(s.ts)}</td><td>${text(s.symbol)}</td>
+      <td class="badge ${s.decision}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
+      <td class="feed-dir ${directionClass(s.direction === "BULLISH" ? "BUY" : s.direction === "BEARISH" ? "SELL" : "")}">${text(s.direction)}</td>
+      <td>${text(s.atm, "")}</td><td>—</td><td>—</td><td>—</td>
+      <td>${s.probability != null ? Math.round(s.probability * 100) + "%" : "—"}</td>
+      <td>${text(s.confidence, "")}</td><td>eval</td><td colspan="2">${text(s.reason, "")}</td></tr>`).join("");
+    $("#asSigTable tbody").innerHTML = sigRows || evalRows ||
+      `<tr><td colspan="14" class="hint">No evaluations yet.</td></tr>`;
 
     $("#asGuards").innerHTML = Object.entries(sg.config || {}).map(([k, v]) =>
       `<div class="syscell"><span>${text(k)}</span><span>${text(typeof v === "object" ? JSON.stringify(v) : v)}</span></div>`).join("")

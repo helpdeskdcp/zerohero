@@ -227,6 +227,7 @@ CREATE TABLE IF NOT EXISTS live_market_snapshots (
     support REAL, resistance REAL, support_strength REAL, resistance_strength REAL,
     signal_type TEXT, direction TEXT, signal_score REAL, probability REAL,
     confidence TEXT, decision TEXT, reason TEXT,
+    ev REAL, rr REAL,
     feed_age_sec REAL, chain_json TEXT
 );
 
@@ -283,6 +284,10 @@ _MIGRATIONS = {
         "mae": "REAL DEFAULT 0",
         "exit_reason": "TEXT",
         "symboltoken": "TEXT",
+    },
+    "live_market_snapshots": {
+        "ev": "REAL",
+        "rr": "REAL",
     },
 }
 
@@ -625,7 +630,7 @@ _LIVE_SNAP_COLS = (
     "vwap", "atr", "pcr", "max_pain", "regime", "mtf_alignment", "support",
     "resistance", "support_strength", "resistance_strength", "signal_type",
     "direction", "signal_score", "probability", "confidence", "decision",
-    "reason", "feed_age_sec", "chain_json",
+    "reason", "ev", "rr", "feed_age_sec", "chain_json",
 )
 
 

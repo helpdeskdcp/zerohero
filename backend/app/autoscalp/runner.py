@@ -334,7 +334,8 @@ class AutoScalpRunner:
                 "signal_type": sig.get("signal_type"), "direction": sig.get("direction"),
                 "signal_score": sig.get("signal_score"), "probability": sig.get("probability"),
                 "confidence": sig.get("confidence"), "decision": sig.get("decision"),
-                "reason": sig.get("reason"), "feed_age_sec": feed_age,
+                "reason": sig.get("reason"), "ev": sig.get("ev"), "rr": sig.get("rr"),
+                "feed_age_sec": feed_age,
                 "chain_json": json.dumps(chain, default=str)[:20000],
             })
         except Exception as e:

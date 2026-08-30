@@ -133,22 +133,37 @@ def _autoscalp_chain(symbol, atm, window):
             return []
         snap = market_data.selection_snapshot(sdk, "NSE", symbol, expiry="AUTO",
                                               option_type="BOTH", window=window)
+        expiry = snap.get("expiry")
         out = []
         for r in snap.get("chain") or []:
+            strike = r.get("strike")
             out.append({
-                "strike": r.get("strike"),
+                "strike": strike,
                 "ce": {"ltp": r.get("ce_ltp"), "oi": r.get("ce_oi"), "oi_chg": r.get("ce_oi_change"),
                        "vol_delta": r.get("ce_volume"), "token": r.get("ce_token"),
                        "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
-                       "tradingsymbol": None, "expiry": snap.get("expiry")},
+                       "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "CE"), "expiry": expiry},
                 "pe": {"ltp": r.get("pe_ltp"), "oi": r.get("pe_oi"), "oi_chg": r.get("pe_oi_change"),
                        "vol_delta": r.get("pe_volume"), "token": r.get("pe_token"),
                        "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
-                       "tradingsymbol": None, "expiry": snap.get("expiry")},
+                       "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "PE"), "expiry": expiry},
             })
         return out
     except Exception:
         return []
+
+
+def _opt_tradingsymbol(symbol, expiry, strike, opt_type):
+    """Best-effort AngelOne NFO trading symbol, e.g. NIFTY01SEP2624200CE.
+    Returns None if the expiry string is not the expected DDMMMYYYY form —
+    the token is the authoritative contract lock, this is only for display/audit."""
+    try:
+        e = str(expiry or "").strip().upper()
+        if len(e) == 9 and e[:2].isdigit() and e[5:].isdigit():   # 01SEP2026
+            return f"{str(symbol).upper()}{e[:5]}{e[7:9]}{int(round(float(strike)))}{opt_type}"
+    except Exception:
+        pass
+    return None
 
 
 def _autoscalp_tg(text):
