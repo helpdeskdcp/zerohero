@@ -315,6 +315,11 @@ def test_runner_safeguard_blocks_entry(fresh_db, monkeypatch):
     # premium 3.0 < min_option_premium 8 -> blocked
     asyncio.run(r.tick_once())
     assert fresh_db.list_trades(strategy="AUTOSCALP") == []
+    # the block reason is now both in status.entry_blocks and stamped on the snapshot
+    eb = r.status()["entry_blocks"].get("NIFTY")
+    assert eb and eb["n"] >= 1 and "min" in eb["last"] and eb["signal"] == "BUY_PE"
+    snap = fresh_db.list_live_snapshots(symbol="NIFTY")[0]
+    assert snap["reason"].startswith("BLOCKED[") and "min" in snap["reason"]
 
 
 def test_runner_config_roundtrip_and_unknown_field(fresh_db):

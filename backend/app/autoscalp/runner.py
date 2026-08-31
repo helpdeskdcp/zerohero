@@ -468,7 +468,7 @@ class AutoScalpRunner:
             avg_win=None, avg_loss=None, leg_bars_fn=self._leg_bars_fn(chain),
             tod_bucket=tod, config=strat_cfg)
 
-        self._persist_snapshot(sym, agg, atm, chain, sig, feed_age)
+        snap_id = self._persist_snapshot(sym, agg, atm, chain, sig, feed_age)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
         if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):
@@ -482,8 +482,16 @@ class AutoScalpRunner:
         if sig.get("decision") not in ("BUY_CE", "BUY_PE"):
             return
 
+        def _record_block(why):
+            b = self._blocks.setdefault(sym.upper(), {"n": 0})
+            b.update(n=b["n"] + 1, last=why, ts=_now_iso(), signal=sig["decision"])
+            if snap_id:
+                db.update_live_snapshot(snap_id, {
+                    "reason": (f"BLOCKED[{why}] :: {sig.get('reason') or ''}")[:2000]})
+
         # Expiry day: stop opening fresh 0-DTE risk into the pin / spread blow-out.
         if is_expiry_day and _ist_hhmm() >= str(cfg.get("expiry_day_entry_cutoff", "14:15")):
+            _record_block("expiry_day_entry_cutoff")
             await self._emit("autoscalp_blocked", {"symbol": sym, "signal": sig["decision"],
                                                    "reason": "expiry_day_entry_cutoff"})
             return
@@ -498,8 +506,7 @@ class AutoScalpRunner:
             option_premium=sig.get("entry"), underlying_price=agg.last_price,
             exchange=smeta["exchange"])
         if not allow:
-            b = self._blocks.setdefault(sym.upper(), {"n": 0})
-            b.update(n=b["n"] + 1, last=why, ts=_now_iso(), signal=sig["decision"])
+            _record_block(why)
             await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why, "signal": sig["decision"]})
             return
 
@@ -721,7 +728,7 @@ class AutoScalpRunner:
     # ---------------- persistence + calibration ----------------
     def _persist_snapshot(self, sym, agg, atm, chain, sig, feed_age):
         try:
-            db.insert_live_snapshot({
+            return db.insert_live_snapshot({
                 "ts": _now_iso(), "session_date": _now_iso()[:10], "symbol": sym.upper(),
                 "source": "LIVE", "provenance": json.dumps({"feed": "angel_ws", "owner": self.owner}),
                 "index_ltp": agg.last_price, "atm": atm,
@@ -739,6 +746,7 @@ class AutoScalpRunner:
             })
         except Exception as e:
             self.last_error = f"persist: {type(e).__name__}: {e}"
+        return None
 
     def _maybe_recalibrate(self, cfg):
         now = self._now()

@@ -635,12 +635,22 @@ _LIVE_SNAP_COLS = (
 )
 
 
-def insert_live_snapshot(row: dict):
+def insert_live_snapshot(row: dict) -> int:
     vals = [row.get(c) for c in _LIVE_SNAP_COLS]
     ph = ",".join(["?"] * len(_LIVE_SNAP_COLS))
     with db() as conn:
-        conn.execute(
+        cur = conn.execute(
             f"INSERT INTO live_market_snapshots ({','.join(_LIVE_SNAP_COLS)}) VALUES ({ph})", vals)
+        return int(cur.lastrowid)
+
+
+def update_live_snapshot(snap_id: int, fields: dict):
+    if not fields or not snap_id:
+        return
+    sets = ",".join(f"{k}=?" for k in fields)
+    with db() as conn:
+        conn.execute(f"UPDATE live_market_snapshots SET {sets} WHERE id=?",
+                     list(fields.values()) + [snap_id])
 
 
 def list_live_snapshots(symbol=None, session_date=None, decision=None, limit: int = 500):
