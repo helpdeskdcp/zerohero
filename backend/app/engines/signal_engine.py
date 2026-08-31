@@ -172,6 +172,12 @@ def run_signal_engine(inp: dict) -> dict:
             "target_1": None, "target_2": None, "final_target": None,
             "stop_loss": None, "break_even": None, "trailing_stop": None,
             "probability": None, "confidence": None, "risk_reward": None,
+            # `direction_lean` / `lean_score` are populated on NO_TRADE only: the
+            # directional read that was computed but then discarded, and its raw
+            # uncalibrated sigmoid-of-evidence score (0-100). They are NOT a
+            # probability of trade success — `probability` stays None when there
+            # is no actionable trade.
+            "direction_lean": None, "lean_score": None,
             "market_regime": None,
             "decision": status,
             "reason": [], "invalidation": [],
@@ -356,8 +362,16 @@ def run_signal_engine(inp: dict) -> dict:
     if no_trade_reasons:
         return base_out("NO_TRADE", {
             "direction": "NONE",
+            # Preserve the discarded directional read explicitly instead of
+            # letting it leak out through `probability`. `lean_score` is the raw
+            # sigmoid-of-evidence in that lean's direction (uncalibrated,
+            # rule-based, NOT P(trade wins)); `confidence` is the evidence
+            # magnitude meter (|ev| rescaled to 0-100). `probability` is None:
+            # a rejected signal has no trade to assign a probability to.
+            "direction_lean": direction_raw,
+            "lean_score": prob_dir,
             "market_regime": regime,
-            "probability": prob_dir,
+            "probability": None,
             "confidence": confidence,
             "risk_reward": rr,
             "reason": no_trade_reasons + reasons,

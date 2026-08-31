@@ -97,6 +97,46 @@ def test_scalp_pipeline_signal_id_prefix(fresh_db):
     assert res["contract"]["signal_id"].startswith("SCL-")
 
 
+# --------------------------------------------------- legacy SIG-*/SCL-* Telegram gate (Fix 2)
+def test_log_and_notify_suppresses_no_trade_telegram(fresh_db, monkeypatch):
+    from app import pipeline_core
+    sent = []
+    monkeypatch.setattr(pipeline_core.telegram, "notify_signal", lambda c: sent.append(c))
+    base = {"signal_id": "SIG-test-1", "created_ts": "2026-08-31T00:00:00+00:00",
+            "symbol": "NIFTY", "decision": "NO_TRADE", "probability": 0, "confidence": 100.0,
+            "risk_reward": 0.83, "risk_status": "REJECTED", "direction": "NONE"}
+
+    pipeline_core.log_and_notify({**base, "final_decision": "NO_TRADE"})
+    assert sent == []                                   # NO_TRADE -> no Telegram card
+    assert len(fresh_db.list_signals(limit=5)) == 1     # ... still written to the ledger
+
+    pipeline_core.log_and_notify({**base, "signal_id": "SIG-test-2", "decision": "TRADE",
+                                  "direction": "BUY", "final_decision": "APPROVED"})
+    assert [c["signal_id"] for c in sent] == ["SIG-test-2"]   # APPROVED -> Telegram fires
+
+
+def test_orchestrator_no_trade_sends_no_telegram_end_to_end(fresh_db, monkeypatch):
+    from app import pipeline_core
+    from app.orchestrator import run_pipeline
+    sent = []
+    monkeypatch.setattr(pipeline_core.telegram, "notify_signal", lambda c: sent.append(c))
+    res = run_pipeline({"symbol": "X", "instrument": "FUTURES", "timeframe": "5m",
+                        "candles": candles([100.0] * 60),
+                        "account": {"capital": 200000, "risk_pct": 1}})
+    assert res["contract"]["final_decision"] == "NO_TRADE"
+    assert sent == []                                   # the misleading card never leaves
+
+
+def test_autoscalp_notifier_is_isolated_from_legacy_telegram_path():
+    # The ASC-* autonomous scalper uses its own notifier; Fix 1/2 must not have
+    # touched it and it must not route through pipeline_core / notify_signal.
+    import pathlib
+    src_dir = pathlib.Path(__file__).resolve().parents[1] / "app" / "autoscalp"
+    blob = "\n".join(p.read_text() for p in sorted(src_dir.glob("*.py")))
+    assert "pipeline_core" not in blob
+    assert "notify_signal" not in blob
+
+
 # ---------------------------------------------------------------- combos
 def test_combo_stop_alerts_once(fresh_db):
     from app.engines.paper_trading import open_trade

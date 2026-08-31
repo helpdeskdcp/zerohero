@@ -1,6 +1,8 @@
 """Deterministic engine behaviour — signal / scalp / risk / reversal / OI."""
 import time
 
+import pytest
+
 from conftest import candles
 
 from app.engines.signal_engine import run_signal_engine
@@ -29,6 +31,39 @@ def test_signal_is_deterministic():
     assert a["decision"] == b["decision"]
     assert a["probability"] == b["probability"]
     assert a["risk_reward"] == b["risk_reward"]
+
+
+def test_signal_no_trade_hides_probability_but_keeps_lean():
+    # Clean uptrend: every evidence check bullish (ev ~ 5.4) so the raw
+    # sigmoid-of-evidence saturates near 99.6 -- but default RR (1.0/1.2 ATR)
+    # is 0.83 < rr_min 1.5, so the engine returns NO_TRADE.
+    up = [100 + i * 0.25 for i in range(120)]
+    out = run_signal_engine({"candles": candles(up), "config": {}})
+    assert out["decision"] == "NO_TRADE"
+    assert out["direction"] == "NONE"
+    # Fix 1: a rejected signal presents no trade-probability ...
+    assert out["probability"] is None
+    # ... but the discarded directional read is preserved explicitly
+    assert out["direction_lean"] == "BUY"
+    assert out["lean_score"] == pytest.approx(99.6, abs=0.5)
+    # `confidence` stays as the evidence-magnitude meter (|ev| rescaled to
+    # 0-100, clamped) -- it is NOT re-presented as a win probability.
+    assert out["confidence"] == pytest.approx(100.0, abs=0.01)
+    # risk-gate math is untouched
+    assert out["risk_reward"] == 0.83
+    assert out["market_regime"] == "TRENDING_UP"
+
+
+def test_signal_trade_path_probability_unchanged():
+    # Loosen rr_min via *config input only* (no code / ATR-multiplier / rr_min
+    # source change) so the same uptrend is actionable. The TRADE return must
+    # be untouched by Fix 1: `probability` is still the real number.
+    up = [100 + i * 0.25 for i in range(120)]
+    out = run_signal_engine({"candles": candles(up),
+                             "config": {"rr_min": 0.5, "prob_min": 40}})
+    assert out["decision"] == "TRADE"
+    assert out["direction"] == "BUY"
+    assert out["probability"] == pytest.approx(99.6, abs=0.5)
 
 
 # ---------------------------------------------------------------- scalp_engine

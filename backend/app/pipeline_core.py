@@ -34,6 +34,14 @@ def signal_id(prefix: str) -> str:
 
 def log_and_notify(contract: dict) -> None:
     db.insert_signal({k: contract[k] for k in contract if k in _SIGNAL_COLS})
+    # Legacy SIG-*/SCL-* Telegram alerts fire ONLY for a gate-approved,
+    # actionable signal. A NO_TRADE/rejected result is still written to
+    # ai_signals_log above, but is not pushed to Telegram: its probability /
+    # confidence fields are an uncalibrated directional lean, not a trade-win
+    # probability, and "Prob: 99.6%" on a killed signal misleads the reader.
+    # (The ASC-* autonomous scalper uses a separate notifier and is unaffected.)
+    if str(contract.get("final_decision", "")).upper() != "APPROVED":
+        return
     try:
         telegram.notify_signal(contract)
     except Exception:
