@@ -86,8 +86,25 @@ def _underlying_ref(sym):
     if meta["exchange"] != "MCX":
         from .. import instruments
         r = instruments.resolve(key) or {}
-        return {"token": str(r.get("symboltoken") or ""), "exchange": r.get("exchange") or "NSE",
-                "expiry": None}
+        tok = str(r.get("symboltoken") or "")
+        if tok:
+            return {"token": tok, "exchange": r.get("exchange") or "NSE", "expiry": None}
+        # not an index in the static registry -> resolve it as an NSE equity
+        # (F&O stock). Its EQ token is static, so cache it for a day.
+        hit = _UND_CACHE.get(key)
+        if hit and time.time() < hit[0]:
+            return hit[1]
+        ref = {"token": "", "exchange": "NSE", "expiry": None}
+        try:
+            from ..connectors.angelone import _market_sdk
+            sdk = _market_sdk(require_auth=False)
+            eq = sdk.resolve_equity(key) if sdk else {}
+            if eq.get("status") == "OK":
+                ref = {"token": str(eq.get("token") or ""), "exchange": "NSE", "expiry": None}
+        except Exception:
+            pass
+        _UND_CACHE[key] = (time.time() + 86400, ref)
+        return ref
     hit = _UND_CACHE.get(key)
     if hit and time.time() < hit[0]:
         return hit[1]

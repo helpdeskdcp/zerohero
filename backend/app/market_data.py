@@ -110,7 +110,12 @@ def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH"
     spot_quote = sdk.get_quote(underlying["exchange"], underlying["token"])
     spot = _quote_fields(spot_quote).get("ltp")
     is_index = underlying.get("exchange") == "NSE" and str(underlying.get("symbol") or "").upper() == symbol
-    if str(instrument or "").upper() == "SPOT" or not is_index:
+    # An NSE equity with listed NFO options is scalped the same way an index is
+    # (the SDK's resolve_option_contract / get_option_chain are already
+    # OPTSTK-aware via _option_universe). Only fall back to the bare SPOT view
+    # for an explicit instrument="SPOT" request or a cash-only name.
+    has_fno = is_index or bool(sdk.search_instruments(symbol=symbol, exchange="NFO"))
+    if str(instrument or "").upper() == "SPOT" or not has_fno:
         return {"status": "OK" if spot_quote.get("status") == "OK" else "DATA_UNAVAILABLE",
                 "data_status": "OK" if spot_quote.get("status") == "OK" else "DATA_UNAVAILABLE",
                 "market": market, "symbol": symbol, "instrument": "SPOT", "underlying": symbol,

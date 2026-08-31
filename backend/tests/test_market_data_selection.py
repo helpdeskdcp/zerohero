@@ -52,6 +52,37 @@ def test_banknifty_selection_and_mcx_contract_resolution():
     assert mcx["quote"]["ltp"] == 0.0 and mcx["quote"]["oi"] == 0.0
 
 
+class EquityFakeSDK(FakeSDK):
+    """An NSE F&O stock: not an index, but has listed NFO options."""
+    def resolve_index(self, symbol):
+        return {"status": "INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
+    def resolve_equity(self, symbol):
+        return {"status": "OK", "exchange": "NSE", "symbol": symbol + "-EQ",
+                "token": "eq1", "underlying": symbol, "instrument_type": "EQ"}
+    def search_instruments(self, *, symbol=None, exchange=None, instrumenttype=None):
+        if str(exchange or "").upper() == "NFO" and symbol == "RELIANCE":
+            return [{"exch_seg": "NFO", "instrumenttype": "OPTSTK", "name": "RELIANCE"}]
+        return []
+
+
+def test_equity_fno_stock_routes_to_option_chain_not_spot():
+    r = market_data.selection_snapshot(EquityFakeSDK(), "NSE", "RELIANCE")
+    assert r["instrument"] == "OPTION" and r["status"] == "OK"
+    assert r["underlying"] == "RELIANCE" and r["atm"] == 22500
+    assert r["contracts"]["CE"]["token"] == "CE1"
+
+
+def test_cash_only_stock_still_falls_back_to_spot():
+    # no NFO rows for this name -> SPOT view, not a spurious DATA_UNAVAILABLE
+    r = market_data.selection_snapshot(EquityFakeSDK(), "NSE", "SOMECASHONLY")
+    assert r["instrument"] == "SPOT" and r["underlying"] == "SOMECASHONLY"
+
+
+def test_explicit_spot_request_on_equity_is_honoured():
+    r = market_data.selection_snapshot(EquityFakeSDK(), "NSE", "RELIANCE", instrument="SPOT")
+    assert r["instrument"] == "SPOT"
+
+
 def test_missing_quote_is_controlled_data_unavailable():
     sdk = FakeSDK()
     sdk.get_quote = lambda *_: {"status": "DATA_UNAVAILABLE"}
