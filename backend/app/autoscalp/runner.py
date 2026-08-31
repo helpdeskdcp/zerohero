@@ -477,7 +477,8 @@ class AutoScalpRunner:
             feed_connected=bool(feed_st.get("connected", True)),
             feed_age_sec=feed_age, underlying=sym.upper(),
             side=sig["decision"].split("_")[1], open_keys=open_keys,
-            option_premium=sig.get("entry"), exchange=smeta["exchange"])
+            option_premium=sig.get("entry"), underlying_price=agg.last_price,
+            exchange=smeta["exchange"])
         if not allow:
             await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why, "signal": sig["decision"]})
             return

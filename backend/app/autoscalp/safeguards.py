@@ -25,6 +25,12 @@ DEFAULTS = {
     "max_feed_age_sec": 12,          # WS mark older than this -> fail closed
     "max_spread_pct": 1.2,           # option (ask-bid)/mid; proxy if quotes lack depth
     "min_option_premium": 8.0,
+    # reject a leg whose premium is too rich for a scalp (deep-ITM / long-dated /
+    # mispriced) — expressed as a % of the underlying spot so one bar works
+    # across NIFTY ~24000, NG ~280, CRUDE ~8000. None disables. `max_option_premium`
+    # is an optional absolute (rupees) cap on top; None disables.
+    "max_option_premium_pct": 8.0,
+    "max_option_premium": None,
     "require_feed_connected": True,
     "allow_weekend": False,   # replay/paper-rehearsal only
 }
@@ -81,6 +87,7 @@ class Safeguards:
     def check_entry(self, *, open_count: int, feed_connected: bool, feed_age_sec,
                     underlying: str, side: str, open_keys: set,
                     option_premium: float | None = None,
+                    underlying_price: float | None = None,
                     spread_pct: float | None = None,
                     realised_pnl_today: float | None = None,
                     exchange: str = "NSE") -> tuple[bool, str]:
@@ -132,8 +139,20 @@ class Safeguards:
         if self._halt_reason:
             return False, self._halt_reason
 
-        if option_premium is not None and option_premium < c["min_option_premium"]:
-            return False, f"premium {option_premium} < min {c['min_option_premium']}"
+        if option_premium is not None:
+            if option_premium < c["min_option_premium"]:
+                return False, f"premium {option_premium} < min {c['min_option_premium']}"
+            cap_abs = c.get("max_option_premium")
+            if cap_abs is not None and option_premium > float(cap_abs):
+                return False, f"premium {option_premium} > max {cap_abs}"
+            cap_pct = c.get("max_option_premium_pct")
+            try:
+                spot = float(underlying_price) if underlying_price else None
+            except (TypeError, ValueError):
+                spot = None
+            if cap_pct is not None and spot and option_premium > float(cap_pct) / 100.0 * spot:
+                return False, (f"premium {option_premium} > {cap_pct}% of spot "
+                               f"{round(spot, 2)} ({round(float(cap_pct) / 100.0 * spot, 1)})")
         if spread_pct is not None and spread_pct > c["max_spread_pct"]:
             return False, f"spread {spread_pct}% > {c['max_spread_pct']}%"
 

@@ -168,6 +168,23 @@ def test_safeguards_premium_and_spread(fresh_db):
     assert _base_check(sg)[0] is True
 
 
+def test_safeguards_rejects_premium_too_rich_vs_spot(fresh_db):
+    sg = Safeguards({"session_start_hhmm": "00:00", "daily_cutoff_hhmm": "23:59",
+                     "max_option_premium_pct": 8.0})
+    # NG: 67.50 premium on a ~280 future = 24% of spot -> blocked
+    ok, why = _base_check(sg, option_premium=67.5, underlying_price=280.0)
+    assert ok is False and "% of spot" in why
+    # a normal ATM leg (15 on 280 = 5.4%) passes
+    assert _base_check(sg, option_premium=15.0, underlying_price=280.0)[0] is True
+    # no spot available -> the pct gate is skipped, not fail-closed
+    assert _base_check(sg, option_premium=67.5, underlying_price=None)[0] is True
+    # absolute cap still works independently
+    sg2 = Safeguards({"session_start_hhmm": "00:00", "daily_cutoff_hhmm": "23:59",
+                      "max_option_premium_pct": None, "max_option_premium": 50.0})
+    assert _base_check(sg2, option_premium=67.5, underlying_price=280.0)[0] is False
+    assert _base_check(sg2, option_premium=40.0, underlying_price=280.0)[0] is True
+
+
 # ---------------- Runner wiring ----------------
 class FakeFeed:
     def __init__(self, marks):
