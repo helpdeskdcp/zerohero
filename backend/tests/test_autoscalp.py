@@ -526,3 +526,72 @@ def test_expiry_day_entry_cutoff_blocks_new_scalp(fresh_db, monkeypatch):
     asyncio.run(r.tick_once())
     assert fresh_db.list_trades(strategy="AUTOSCALP") == []
     assert fresh_db.list_trades(strategy="AUTOSCALP-ZTH") == []
+
+
+# --------------------------------------------------------------------------- #
+# self-reporting: session_report + self_check + the daily auto-push hook
+# --------------------------------------------------------------------------- #
+def test_session_report_rolls_up_per_symbol(fresh_db, monkeypatch):
+    from app.autoscalp import report
+    from app.engines.paper_trading import open_trade, close_trade
+    day = report._ist_today()
+    for res, pnl, reason in (("WIN", 6.0, "TARGET"), ("LOSS", -3.0, "STOP"), ("FLAT", 0.0, "TIME")):
+        row = open_trade({"signal_id": "ASC-" + res, "market": "NSE", "underlying": "NIFTY",
+                          "instrument": "OPTION", "option_type": "CE", "direction": "BUY",
+                          "entry": 100.0, "stop_loss": 90.0, "target_1": 120.0, "quantity": 1,
+                          "strategy": "AUTOSCALP", "symboltoken": "T" + res})
+        close_trade(row["trade_id"], 106.0 if res == "WIN" else (97.0 if res == "LOSS" else 100.0),
+                    forced_result=res, exit_reason=reason)
+    fresh_db.insert_live_snapshot({"ts": fresh_db_now(), "session_date": day, "symbol": "NIFTY",
+                                   "source": "LIVE", "decision": "BUY_CE", "regime": "TRENDING_UP",
+                                   "reason": "x"})
+    fresh_db.insert_live_snapshot({"ts": fresh_db_now(), "session_date": day, "symbol": "CRUDEOIL",
+                                   "source": "LIVE", "decision": "BUY_PE", "regime": "TRENDING_DOWN",
+                                   "reason": "BLOCKED[premium 2.0 < min 8.0] :: SUPPORT_BREAKDOWN"})
+
+    rep = report.session_report(day)
+    assert rep["totals"]["trades"] == 3 and rep["totals"]["wins"] == 1 and rep["totals"]["losses"] == 1
+    n = rep["per_symbol"]["NIFTY"]
+    assert n["closed"] == 3 and n["exit_reasons"] == {"TARGET": 1, "STOP": 1, "TIME": 1}
+    assert n["decisions"].get("BUY_CE") == 1
+    c = rep["per_symbol"]["CRUDEOIL"]
+    assert c["closed"] == 0 and c["entry_blocks"].get("premium 2.0 < min 8.0") == 1
+    # BANKNIFTY never appeared -> not in the rollup
+    assert "BANKNIFTY" not in rep["per_symbol"]
+    # card renders without error
+    from app.autoscalp import notify
+    assert "AUTO-SCALP SESSION" in notify.session_report_card(rep, segment="NSE")
+
+
+def fresh_db_now():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
+def test_self_check_reports_readiness(fresh_db, monkeypatch):
+    from app.autoscalp import report
+    sig = dict(_EXP_SIG)
+    r, feed = _runner(monkeypatch, sig)
+    sc = report.self_check(r)
+    assert set(sc["checks"]) >= {"armed", "running", "is_leader", "feed_connected",
+                                 "feed_fresh", "no_last_error", "all_aggs_seeded",
+                                 "live_trading_disabled"}
+    assert sc["checks"]["live_trading_disabled"] is True
+    assert "NIFTY" in sc["bars_ready"] and sc["bars_ready"]["NIFTY"]["ready"] is True
+
+
+def test_daily_report_pushes_once_per_segment(fresh_db, monkeypatch):
+    sent = []
+    sig = dict(_EXP_SIG)
+    r, feed = _runner(monkeypatch, sig)
+    r._telegram = lambda text: sent.append(text)
+    _pin_ist(monkeypatch, "23:40")                      # past MCX close 23:35
+    day = ascr._ist_now().date().isoformat()
+    r.disarm()                                          # report fires regardless of arm state
+    asyncio.run(r.tick_once())
+    assert fresh_db.get_setting(f"autoscalp_report_sent:MCX:{day}")
+    assert any("AUTO-SCALP SESSION" in t for t in sent)
+    # second tick must not re-send
+    sent.clear()
+    asyncio.run(r.tick_once())
+    assert sent == []

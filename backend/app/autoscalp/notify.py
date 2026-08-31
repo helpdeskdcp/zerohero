@@ -67,6 +67,33 @@ def lifecycle(kind: str, trade: dict, *, note: str = "", status: str = "PAPER") 
     return "\n".join(lines)
 
 
+def session_report_card(rep: dict, *, segment: str = "") -> str:
+    """Compact Telegram card for report.session_report(day)."""
+    t = rep.get("totals") or {}
+    head = f"\U0001F4CA <b>AUTO-SCALP SESSION</b> {rep.get('day_ist', '')}"
+    if segment:
+        head += f"  ({segment} close)"
+    lines = [head,
+             f"{t.get('trades', 0)} closed · {t.get('wins', 0)}W/"
+             f"{t.get('losses', 0)}L/{t.get('flat', 0)}F · "
+             f"net {t.get('net_points', 0)} pts"]
+    for sym, s in (rep.get("per_symbol") or {}).items():
+        wr = f"{round(100 * s['win_rate'])}%" if s.get("win_rate") is not None else "-"
+        ex = ",".join(f"{k}:{v}" for k, v in (s.get("exit_reasons") or {}).items()) or "-"
+        blk = sum((s.get("entry_blocks") or {}).values())
+        row = f"• {sym}: {s['closed']}t {wr} · {s['net_points']}pts · exits {ex}"
+        if blk:
+            top = max((s.get("entry_blocks") or {}).items(), key=lambda kv: kv[1])[0]
+            row += f" · {blk} blocked ({top})"
+        lines.append(row)
+    z = rep.get("zero_to_hero") or []
+    if z:
+        lines.append("ZTH: " + ", ".join(
+            f"{x['symbol']} {x.get('result', '?')} {x.get('pnl', '')}" for x in z))
+    lines.append("PAPER — no live order")
+    return "\n".join(lines)
+
+
 def push(send_fn, text: str) -> bool:
     """Fire-and-forget. Any error (network, config, formatting) is swallowed."""
     try:

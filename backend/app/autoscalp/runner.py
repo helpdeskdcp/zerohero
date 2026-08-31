@@ -748,6 +748,30 @@ class AutoScalpRunner:
             self.last_error = f"persist: {type(e).__name__}: {e}"
         return None
 
+    def _maybe_daily_report(self):
+        """Once per IST day per exchange, after its session close, push the
+        day's per-symbol rollup to Telegram. Bypasses the confidence gate;
+        a settings key makes it fire exactly once."""
+        hhmm = _ist_hhmm()
+        day = _ist_now().date().isoformat()
+        for ex, close_hhmm in (("NSE", "15:35"), ("MCX", "23:35")):
+            if hhmm < close_hhmm:
+                continue
+            key = f"autoscalp_report_sent:{ex}:{day}"
+            try:
+                if db.get_setting(key):
+                    continue
+                db.set_setting(key, _now_iso())
+                from . import report as _report
+                rep = _report.session_report(day)
+                self._tg_send(f"report:{ex}:{day}",
+                              notify.session_report_card(rep, segment=ex),
+                              conf="HIGH", dedup=False, gate=False)
+                asyncio.create_task(self._emit("autoscalp_daily_report",
+                                               {"segment": ex, "report": rep}))
+            except Exception as e:
+                self.last_error = f"daily report {ex}: {type(e).__name__}: {e}"
+
     def _maybe_recalibrate(self, cfg):
         now = self._now()
         if now - self._last_recal < int(cfg.get("recalibrate_every_sec", 900)):
@@ -811,6 +835,7 @@ class AutoScalpRunner:
         await self._seed_aggs(cfg)
         self._pump_feed()
         self._monitor()
+        self._maybe_daily_report()
         if not self.armed:
             return
         every = max(2, int(cfg.get("decide_every_sec", 30)))

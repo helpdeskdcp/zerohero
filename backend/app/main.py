@@ -690,6 +690,25 @@ def api_autoscalp_snapshots(symbol: Optional[str] = None, limit: int = Query(200
     return db.list_live_snapshots(symbol=symbol, limit=limit)
 
 
+@app.get("/api/autoscalp/report")
+def api_autoscalp_report(day: Optional[str] = None):
+    """Per-symbol rollup of an IST trading day (default today): trades, W/L,
+    net points, avg R, exit-reason / decision / regime distribution, ZTH legs,
+    and why entries were refused."""
+    from .autoscalp import report as _report
+    try:
+        return _report.session_report(day)
+    except Exception as e:
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+
+
+@app.get("/api/autoscalp/selfcheck")
+def api_autoscalp_selfcheck():
+    """One-glance operational readiness of the autonomous engine."""
+    from .autoscalp import report as _report
+    return _report.self_check(autoscalp)
+
+
 @app.get("/api/autoscalp/universe")
 def api_autoscalp_universe():
     """Grouped, searchable symbol universe for the dashboard picker.
