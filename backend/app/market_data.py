@@ -80,7 +80,8 @@ def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH"
     if market not in ("NSE", "MCX") or not symbol:
         return _unavailable(market, symbol, "market and symbol are required")
     if market == "MCX":
-        contract = sdk.resolve_future_contract(symbol, expiry if str(expiry).upper() != "AUTO" else "AUTO")
+        contract = sdk.resolve_future_contract(
+            symbol, "AUTO" if str(expiry).upper() in ("AUTO", "AUTO_ROLL") else expiry)
         if contract.get("status") != "OK":
             return _unavailable(market, symbol, contract.get("reason") or "current MCX contract unavailable")
         quote = sdk.get_quote("MCX", contract["token"])

@@ -124,10 +124,11 @@ scalp_runner = ScalpRunner(broadcast=manager.broadcast)
 from .autoscalp.runner import AutoScalpRunner
 
 
-def _autoscalp_chain(symbol, atm, window, market="NSE"):
+def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
     """Canonical ATM+/-window chain from the read-only quote SDK (best effort).
     `market` is NSE for index options, MCX for NATURALGAS/CRUDEOIL options-on-
-    futures — selection_snapshot + the SDK are exchange-aware."""
+    futures — selection_snapshot + the SDK are exchange-aware. `expiry_mode`
+    is AUTO or AUTO_ROLL (skip the 0-DTE contract on expiry day)."""
     try:
         from .connectors.angelone import _market_sdk
         sdk = _market_sdk(require_auth=False)
@@ -135,7 +136,7 @@ def _autoscalp_chain(symbol, atm, window, market="NSE"):
             return []
         mkt = str(market or "NSE").upper()
         et = 5 if mkt == "MCX" else 2                       # WS exchange type for the legs
-        snap = market_data.selection_snapshot(sdk, mkt, symbol, expiry="AUTO",
+        snap = market_data.selection_snapshot(sdk, mkt, symbol, expiry=str(expiry_mode or "AUTO"),
                                               option_type="BOTH", window=window,
                                               instrument="OPTION" if mkt == "MCX" else None)
         expiry = snap.get("expiry")

@@ -375,3 +375,99 @@ def test_notify_push_is_non_blocking_on_failure():
     assert notify.push(lambda t: (_ for _ in ()).throw(RuntimeError("tg down")), "x") is False
     assert notify.push(lambda t: calls.append(t), "hello") is True and calls == ["hello"]
     assert notify.push(None, "x") is False
+
+
+# --------------------------------------------------------------------------- #
+# expiry-day (0-DTE) trading + "zero to hero" lottery leg
+# --------------------------------------------------------------------------- #
+def _expiry_chain_provider(expiry, far_prem=6.0):
+    """chain_provider stub: the ATM window returns just the ATM row; a wide
+    window (>= otm_strikes+1) additionally returns the far-OTM 24300 row."""
+    def _leg(tok, ts):
+        return {"ltp": None, "token": tok, "tradingsymbol": ts, "expiry": expiry,
+                "oi": 1, "oi_chg": 0, "vol_delta": 0, "exchange_type": 2}
+    atm_row = {"strike": 24100,
+               "ce": {**_leg("CE24100", "NIFTY24100CE"), "ltp": 130.0},
+               "pe": {**_leg("PE24100", "NIFTY24100PE"), "ltp": 95.0}}
+    far_row = {"strike": 24300,
+               "ce": {**_leg("CE24300", "NIFTY24300CE"), "ltp": far_prem},
+               "pe": {**_leg("PE24300", "NIFTY24300PE"), "ltp": far_prem}}
+
+    def cp(sym, atm, window, market="NSE", emode="AUTO"):
+        return [atm_row, far_row] if window >= 5 else [atm_row]
+    return cp
+
+
+_EXP_SIG = {"decision": "BUY_CE", "signal_type": "RESISTANCE_BREAKOUT", "direction": "BULLISH",
+            "strike": 24100, "token": "CE24100", "tradingsymbol": "NIFTY24100CE",
+            "entry": 130.0, "stop_loss": 115.0, "target_1": 160.0, "target_2": 180.0,
+            "trailing_stop": 10.0, "max_hold_sec": 480, "probability": 0.62,
+            "confidence": "HIGH", "ev": 8.0, "rr": 1.8, "regime": "TRENDING_UP",
+            "mtf_alignment": 35.0, "signal_score": 70.0, "component_scores": {"x": 1},
+            "reason": "test", "support": 24050, "resistance": 24120,
+            "support_strength": 60, "resistance_strength": 62, "sr_level": 24120,
+            "sr_side": "RESISTANCE", "atr": 12.0, "vwap": 24090.0}
+
+
+def _pin_ist(monkeypatch, hhmm="10:00"):
+    """Freeze IST wall-clock to today's real date at hhmm (keeps expiry-date
+    matching real while making the time-of-day gates deterministic)."""
+    h, m = (int(x) for x in hhmm.split(":"))
+    fixed = ascr._ist_now().replace(hour=h, minute=m, second=0, microsecond=0)
+    monkeypatch.setattr(ascr, "_ist_now", lambda: fixed)
+    return fixed
+
+
+def test_zero_to_hero_opens_far_otm_lottery_on_expiry_day(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, dict(_EXP_SIG))
+    _pin_ist(monkeypatch, "10:00")
+    today = ascr._ist_now().strftime("%d%b%Y").upper()
+    r.chain_provider = _expiry_chain_provider(today, far_prem=6.0)
+    feed.marks["CE24300"] = 6.0
+    r.arm()
+    asyncio.run(r.tick_once())
+
+    core = fresh_db.list_trades(strategy="AUTOSCALP")
+    zth = fresh_db.list_trades(strategy="AUTOSCALP-ZTH")
+    assert len(core) == 1 and core[0]["status"] == "OPEN"
+    assert len(zth) == 1
+    z = zth[0]
+    assert z["option_type"] == "CE" and z["strike"] == 24300 and z["symboltoken"] == "CE24300"
+    assert z["entry"] == 6.0 and z["target_1"] == 18.0 and z["stop_loss"] == 3.0
+    assert z["max_hold_sec"] and z["max_hold_sec"] > 0
+    # a second tick must not open a second ZTH (max_per_day)
+    asyncio.run(r.tick_once())
+    assert len(fresh_db.list_trades(strategy="AUTOSCALP-ZTH")) == 1
+
+
+def test_zth_skipped_when_not_expiry_day(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, dict(_EXP_SIG))
+    _pin_ist(monkeypatch, "10:00")
+    r.chain_provider = _expiry_chain_provider("08SEP2099", far_prem=6.0)
+    feed.marks["CE24300"] = 6.0
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert len(fresh_db.list_trades(strategy="AUTOSCALP")) == 1
+    assert fresh_db.list_trades(strategy="AUTOSCALP-ZTH") == []
+
+
+def test_zth_skipped_when_far_premium_too_rich(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, dict(_EXP_SIG))
+    _pin_ist(monkeypatch, "10:00")
+    today = ascr._ist_now().strftime("%d%b%Y").upper()
+    r.chain_provider = _expiry_chain_provider(today, far_prem=25.0)   # > zth.max_premium
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert len(fresh_db.list_trades(strategy="AUTOSCALP")) == 1
+    assert fresh_db.list_trades(strategy="AUTOSCALP-ZTH") == []
+
+
+def test_expiry_day_entry_cutoff_blocks_new_scalp(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, dict(_EXP_SIG))
+    _pin_ist(monkeypatch, "15:00")                                   # past 14:15 cutoff
+    today = ascr._ist_now().strftime("%d%b%Y").upper()
+    r.chain_provider = _expiry_chain_provider(today, far_prem=6.0)
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert fresh_db.list_trades(strategy="AUTOSCALP") == []
+    assert fresh_db.list_trades(strategy="AUTOSCALP-ZTH") == []

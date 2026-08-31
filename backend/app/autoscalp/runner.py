@@ -16,7 +16,7 @@ import asyncio
 import json
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from .. import db
 from .aggregator import CandleAggregator
@@ -124,15 +124,84 @@ DEFAULT_CONFIG = {
     },
     "safeguards": {},
     "auto_arm": False,
+    # ---- expiry-day (0-DTE) trading ----------------------------------------
+    # On an NSE index option's own expiry day the runner TRADES the 0-DTE
+    # contract (theta is brutal but gamma pays fast when the read is right).
+    #   expiry_day_mode: "trade" (default) | "roll" (skip 0-DTE -> next weekly)
+    # `expiry_day_profile` is merged over the symbol's strategy ONLY on its
+    # expiry day, so NIFTY's frozen base profile is untouched on every other
+    # day. Faster targets + far shorter hold: a 0-DTE scalp that has not paid
+    # in a few minutes is decaying, not developing.
+    "expiry_day_mode": "trade",
+    "expiry_day_profile": {
+        "max_hold_sec": 480, "t1_atr": 1.1, "t2_atr": 1.8, "sl_atr": 0.9,
+        "ev": {"rr_min": 1.15}, "est_cost_r": 0.12,
+    },
+    "expiry_day_entry_cutoff": "14:15",   # no fresh 0-DTE entries after this IST time
+    # ---- "zero to hero": one tiny far-OTM lottery leg on expiry day --------
+    # Only fires on a HIGH-confidence trending signal. Premium IS the risk
+    # (capped at stop_frac); books at target_mult or hard time-exit. Kept out
+    # of the calibration sample and the scalp safeguard budget on purpose.
+    "zth": {
+        "enabled": True, "otm_strikes": 4, "max_premium": 12.0,
+        "target_mult": 3.0, "stop_frac": 0.5, "hard_exit": "13:30",
+        "max_per_day": 1, "min_confidence": "HIGH",
+        "require_regime": ["TRENDING_UP", "TRENDING_DOWN", "TRENDING", "STRONG_TREND"],
+    },
     "telegram_min_confidence": "HIGH",   # only push TG cards at/above this (LOW|MEDIUM|HIGH)
     "telegram_dedup_sec": 900,           # drop a repeat of the same TG key within this window
 }
 
 _CONF_RANK = {"LOW": 1, "MEDIUM": 2, "HIGH": 3}
 
+_MONTHS = {m: i for i, m in enumerate(
+    ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], start=1)}
+
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _ist_now():
+    return datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+
+
+def _ist_hhmm():
+    return _ist_now().strftime("%H:%M")
+
+
+def _parse_ddmmmyyyy(s):
+    """'01SEP2026' -> date(2026, 9, 1); None if not that exact form."""
+    s = str(s or "").strip().upper()
+    if len(s) == 9 and s[:2].isdigit() and s[5:].isdigit() and s[2:5] in _MONTHS:
+        try:
+            return date(int(s[5:]), _MONTHS[s[2:5]], int(s[:2]))
+        except ValueError:
+            return None
+    return None
+
+
+def _secs_until_ist(hhmm, *, floor=60):
+    """Seconds from now until today's HH:MM IST. `floor` if that moment has passed."""
+    try:
+        h, m = (int(x) for x in str(hhmm).split(":"))
+    except (TypeError, ValueError):
+        return floor
+    now = _ist_now()
+    target = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    return max(floor, int((target - now).total_seconds()))
+
+
+def _chain_is_expiry_day(chain):
+    """True when the resolved option chain's expiry is today (IST). Best-effort:
+    an unparseable / missing expiry -> False."""
+    exp = None
+    for row in chain or []:
+        exp = (row.get("ce") or {}).get("expiry") or (row.get("pe") or {}).get("expiry")
+        if exp:
+            break
+    d = _parse_ddmmmyyyy(exp)
+    return d is not None and d == _ist_now().date()
 
 
 class AutoScalpRunner:
@@ -309,7 +378,8 @@ class AutoScalpRunner:
 
     # ---------------- decision + trade ----------------
     def _open_positions(self):
-        return [t for t in db.list_trades(status="OPEN", limit=100, strategy="AUTOSCALP")]
+        return [t for t in db.list_trades(status="OPEN", limit=100, strategy="AUTOSCALP")
+                ] + [t for t in db.list_trades(status="OPEN", limit=100, strategy="AUTOSCALP-ZTH")]
 
     def _leg_bars_fn(self, chain):
         tok_by = {}
@@ -352,12 +422,20 @@ class AutoScalpRunner:
         if len(bars.get("5m") or []) < 20:
             return
         chain = []
+        emode = "AUTO"
         if self.chain_provider:
             try:
-                chain = self.chain_provider(sym, atm, cfg["strike_window"], smeta["exchange"]) or []
+                emode = ("AUTO_ROLL" if str(cfg.get("expiry_day_mode", "trade")).lower() == "roll"
+                         and smeta["exchange"] in ("NSE", "BSE") else "AUTO")
+                chain = self.chain_provider(sym, atm, cfg["strike_window"], smeta["exchange"], emode) or []
             except Exception as e:
                 self.last_error = f"chain: {type(e).__name__}: {e}"
         self._ensure_option_subs(chain)
+
+        # 0-DTE today? Only NSE index weeklies expire intraday-often; when the
+        # operator chose "roll" we are already on the next weekly, so never.
+        is_expiry_day = (smeta["exchange"] in ("NSE", "BSE") and emode != "AUTO_ROLL"
+                         and _chain_is_expiry_day(chain))
 
         feed_st = self.feed.status() if self.feed else {}
         feed_age = feed_st.get("last_msg_age_sec")
@@ -365,7 +443,8 @@ class AutoScalpRunner:
 
         strat_cfg = {"strike_step": step, "strike_window": cfg["strike_window"],
                      **(cfg.get("strategy") or {}),
-                     **((cfg.get("symbol_profiles") or {}).get(sym.upper()) or {})}
+                     **((cfg.get("symbol_profiles") or {}).get(sym.upper()) or {}),
+                     **((cfg.get("expiry_day_profile") or {}) if is_expiry_day else {})}
         sig = decide_from_context(
             bars, chain, atm=atm, calib=self.calibration(),
             avg_win=None, avg_loss=None, leg_bars_fn=self._leg_bars_fn(chain),
@@ -385,6 +464,12 @@ class AutoScalpRunner:
         if sig.get("decision") not in ("BUY_CE", "BUY_PE"):
             return
 
+        # Expiry day: stop opening fresh 0-DTE risk into the pin / spread blow-out.
+        if is_expiry_day and _ist_hhmm() >= str(cfg.get("expiry_day_entry_cutoff", "14:15")):
+            await self._emit("autoscalp_blocked", {"symbol": sym, "signal": sig["decision"],
+                                                   "reason": "expiry_day_entry_cutoff"})
+            return
+
         opens = self._open_positions()
         open_keys = {(t.get("underlying"), t.get("option_type")) for t in opens}
         allow, why = self.safeguards.check_entry(
@@ -398,6 +483,77 @@ class AutoScalpRunner:
             return
 
         self._open_paper(sym, sig)
+        if is_expiry_day:
+            self._maybe_open_zth(sym, sig, cfg, atm, step, smeta)
+
+    def _maybe_open_zth(self, sym, sig, cfg, atm, step, smeta):
+        """Expiry-day 'zero to hero': one tiny far-OTM long in the signal's
+        direction. Premium is the risk (capped at zth.stop_frac); books at
+        zth.target_mult or a hard IST time-exit. Deliberately kept out of the
+        calibration sample and the scalp safeguard budget."""
+        z = cfg.get("zth") or {}
+        if not z.get("enabled"):
+            return
+        need = _CONF_RANK.get(str(z.get("min_confidence", "HIGH")).upper(), 3)
+        if _CONF_RANK.get(str(sig.get("confidence") or "").upper(), 0) < need:
+            return
+        want_regimes = {str(r).upper() for r in (z.get("require_regime") or [])}
+        if want_regimes and str(sig.get("regime") or "").upper() not in want_regimes:
+            return
+        if _ist_hhmm() >= str(z.get("hard_exit", "13:30")):
+            return
+        # one ZTH per symbol per IST session
+        cap = int(z.get("max_per_day", 1) or 1)
+        today = _ist_now().date().isoformat()
+        done = [t for t in db.list_trades(status=None, limit=200, strategy="AUTOSCALP-ZTH")
+                if str(t.get("underlying") or "").upper() == sym.upper()
+                and str(t.get("opened_ts") or "")[:10] == today]
+        if len(done) >= cap:
+            return
+        ot = sig["decision"].split("_")[1]                       # CE | PE
+        n = int(z.get("otm_strikes", 4) or 4)
+        target_strike = atm + (n * step if ot == "CE" else -n * step)
+        # a wide one-shot chain pull just for the far strike (rare path)
+        wide = []
+        if self.chain_provider:
+            try:
+                wide = self.chain_provider(sym, atm, max(int(cfg["strike_window"]), n + 1),
+                                           smeta["exchange"], "AUTO") or []
+            except Exception as e:
+                self.last_error = f"zth chain: {type(e).__name__}: {e}"
+        row = next((r for r in wide
+                    if abs(float(r.get("strike") or 0) - target_strike) < step / 2), None)
+        leg = (row or {}).get(ot.lower()) or {}
+        prem = leg.get("ltp")
+        try:
+            prem = float(prem)
+        except (TypeError, ValueError):
+            prem = None
+        if not prem or prem <= 0 or prem > float(z.get("max_premium", 12.0)):
+            return
+        self._ensure_option_subs([row])
+        zid = "ZTH-" + format(int(time.time() * 1000), "x")
+        trow = open_trade({
+            "signal_id": zid, "market": smeta["exchange"], "underlying": sym.upper(),
+            "instrument": "OPTION", "expiry": leg.get("expiry") or sig.get("expiry") or "",
+            "strike": row.get("strike"), "option_type": ot, "direction": "BUY",
+            "timeframe": "5m", "entry": round(prem, 2),
+            "target_1": round(prem * float(z.get("target_mult", 3.0)), 2), "target_2": None,
+            "stop_loss": round(prem * float(z.get("stop_frac", 0.5)), 2), "trailing_stop": 0,
+            "quantity": 1, "probability": sig.get("probability"),
+            "confidence": sig.get("confidence"), "market_regime": sig.get("regime"),
+            "oi_evidence": "", "reason": "expiry-day zero-to-hero | " + (sig.get("reason") or ""),
+            "strategy": "AUTOSCALP-ZTH", "setup": sig.get("signal_type"), "atr_pct": None,
+            "max_hold_sec": _secs_until_ist(z.get("hard_exit", "13:30")),
+            "symboltoken": str(leg.get("token") or ""),
+        })
+        asyncio.create_task(self._emit("autoscalp_open",
+                                       {"symbol": sym, "trade": trow, "signal_id": zid, "zth": True}))
+        self._tg_send("zth:" + zid, notify.lifecycle(
+            "ZERO_TO_HERO", {"underlying": sym.upper(), "opt_type": ot,
+                             "strike": row.get("strike"), "entry": round(prem, 2)},
+            note=f"far-OTM {ot} @ {round(prem, 2)} -> {round(prem * float(z.get('target_mult', 3.0)), 2)}"),
+            conf=sig.get("confidence"))
 
     def _tg_send(self, key, text, conf=None, *, dedup=True, gate=True):
         """Single Telegram exit point: HIGH-confidence gate + de-duplication.
@@ -478,7 +634,10 @@ class AutoScalpRunner:
             updated = update_trade_price(t["trade_id"], float(ltp))
             if updated and updated.get("status") == "CLOSED":
                 pnl = updated.get("pnl")
-                self.safeguards.on_trade_closed(pnl)
+                # ZTH is a fixed-premium lottery leg — its P&L must not move the
+                # scalp daily-loss / streak budget that halts the core engine.
+                if (updated.get("strategy") or "") != "AUTOSCALP-ZTH":
+                    self.safeguards.on_trade_closed(pnl)
                 _entry = updated.get("entry") or 0
                 _pts = (updated.get("exit_price") or 0) - _entry
                 _risk = abs(_entry - (updated.get("stop_loss") or _entry))

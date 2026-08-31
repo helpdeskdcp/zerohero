@@ -106,7 +106,13 @@ class AngelOneClient:
                 if r.get("instrumenttype") in uni["types"] and str(r.get("symbol", "")).upper().endswith(typ)]
         today = datetime.now(timezone.utc).date(); exps = sorted({r.get("expiry") for r in rows if self._date(r.get("expiry")) and self._date(r.get("expiry")) >= today}, key=self._date)
         if not exps: return {"status":"CONTRACT_INVALID", "reason":"no valid expiry"}
-        mode = str(expiry or "AUTO").upper(); selected = exps[0] if mode in ("AUTO","CURRENT") else exps[1] if mode == "NEXT" and len(exps)>1 else exps[-1] if mode == "LATEST" else expiry
+        mode = str(expiry or "AUTO").upper()
+        # AUTO_ROLL: like AUTO, but on expiry day itself skip the 0-DTE contract
+        # (theta cliff / gamma whipsaw / spread blowout) and take the next one.
+        _roll0 = mode == "AUTO_ROLL" and len(exps) > 1 and self._date(exps[0]) == today
+        selected = (exps[1] if _roll0 else exps[0]) if mode in ("AUTO", "CURRENT", "AUTO_ROLL") \
+            else exps[1] if mode == "NEXT" and len(exps) > 1 \
+            else exps[-1] if mode == "LATEST" else expiry
         rows = [r for r in rows if r.get("expiry") == selected]
         if not rows: return {"status":"CONTRACT_INVALID", "reason":"expiry unavailable"}
         def st(r):

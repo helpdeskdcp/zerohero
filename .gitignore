@@ -11,3 +11,14 @@ __pycache__/
 backend/data/*.log
 *.zip
 .claude/
+.aider*
+
+# top-level runtime data dir (live DB + master cache, never committed)
+/data/
+# instrument master cache (~35MB, refetched on demand)
+backend/data/instrument_master.json
+# session monitors / wake scripts / jsonl written at runtime
+backend/data/*.sh
+backend/data/*.jsonl
+backend/data/autoscalp_session_*.md
+backend/data/ngcrude_session_report.md
