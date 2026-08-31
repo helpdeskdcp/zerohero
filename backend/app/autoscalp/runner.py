@@ -478,12 +478,23 @@ class AutoScalpRunner:
             if updated and updated.get("status") == "CLOSED":
                 pnl = updated.get("pnl")
                 self.safeguards.on_trade_closed(pnl)
+                _entry = updated.get("entry") or 0
+                _pts = (updated.get("exit_price") or 0) - _entry
+                _risk = abs(_entry - (updated.get("stop_loss") or _entry))
+                _held = None
+                try:
+                    _o = datetime.fromisoformat(str(updated.get("opened_ts")).replace("Z", "+00:00"))
+                    _c = datetime.fromisoformat(str(updated.get("closed_ts")).replace("Z", "+00:00"))
+                    _held = round((_c - _o).total_seconds())
+                except (TypeError, ValueError):
+                    pass
                 db.update_scalp_signal(updated.get("signal_id") or "", {
                     "status": "CLOSED", "exit_price": updated.get("exit_price"),
                     "exit_ts": _now_iso(), "exit_reason": updated.get("exit_reason"),
-                    "points": (updated.get("exit_price") or 0) - (updated.get("entry") or 0),
+                    "points": round(_pts, 2),
+                    "r_multiple": round(_pts / _risk, 3) if _risk > 0 else None,
                     "outcome": updated.get("result"), "resolved": 1,
-                    "holding_sec": None, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
+                    "holding_sec": _held, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
                 asyncio.create_task(self._emit("autoscalp_close", {"trade": updated}))
                 self._tg_send("exit:" + str(updated.get("trade_id")), notify.lifecycle(
                     updated.get("exit_reason") or "EXIT", updated,

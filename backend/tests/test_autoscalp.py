@@ -250,6 +250,10 @@ def test_runner_opens_paper_trade_and_persists(fresh_db, monkeypatch):
     assert trades[0]["status"] == "CLOSED" and trades[0]["exit_reason"] in ("TARGET", "TRAIL")
     sigs = fresh_db.list_scalp_signals(source="LIVE")
     assert sigs[0]["status"] == "CLOSED" and sigs[0]["resolved"] == 1 and sigs[0]["outcome"] == "WIN"
+    # close now backfills the full outcome record, not just points
+    assert sigs[0]["points"] is not None
+    assert sigs[0]["r_multiple"] is not None and sigs[0]["r_multiple"] > 0   # win -> positive R
+    assert sigs[0]["holding_sec"] is not None and sigs[0]["holding_sec"] >= 0
 
 
 def test_runner_safeguard_blocks_entry(fresh_db, monkeypatch):
