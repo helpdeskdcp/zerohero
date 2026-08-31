@@ -43,7 +43,11 @@ DEFAULT_CONFIG = {
     "strategy": {},                 # forwarded to decide_from_context config
     "safeguards": {},
     "auto_arm": False,
+    "telegram_min_confidence": "HIGH",   # only push TG cards at/above this (LOW|MEDIUM|HIGH)
+    "telegram_dedup_sec": 900,           # drop a repeat of the same TG key within this window
 }
+
+_CONF_RANK = {"LOW": 1, "MEDIUM": 2, "HIGH": 3}
 
 
 def _now_iso():
@@ -72,6 +76,7 @@ class AutoScalpRunner:
         self._last_recal = 0.0
         self.safeguards = Safeguards()
         self._sg_cfg_sig = None
+        self._tg_last: dict[str, float] = {}   # dedup key -> last-sent epoch
 
     # ---------------- config ----------------
     def get_config(self) -> dict:
@@ -230,9 +235,12 @@ class AutoScalpRunner:
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
         if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):
-            notify.push(self._telegram, notify.lifecycle("FALSE_BREAKOUT",
-                        {"underlying": sym, "opt_type": "", "strike": 0},
-                        note=f"{sig.get('signal_type','')} {sig.get('reason','')}"))
+            self._tg_send(
+                f"fb:{sym}:{sig.get('signal_type')}:{sig.get('filtered') or sig.get('false_risk')}",
+                notify.lifecycle("FALSE_BREAKOUT",
+                                 {"underlying": sym, "opt_type": "", "strike": 0},
+                                 note=f"{sig.get('signal_type','')} {sig.get('reason','')}"),
+                conf=sig.get("confidence"))
 
         if sig.get("decision") not in ("BUY_CE", "BUY_PE"):
             return
@@ -250,6 +258,29 @@ class AutoScalpRunner:
             return
 
         self._open_paper(sym, sig)
+
+    def _tg_send(self, key, text, conf=None, *, dedup=True, gate=True):
+        """Single Telegram exit point: HIGH-confidence gate + de-duplication.
+
+        - `conf`: the signal's confidence label. Unless `gate=False`, the card is
+          dropped unless `conf` is at or above config.telegram_min_confidence
+          (default HIGH). An unknown/None confidence fails closed (dropped).
+        - `key`: dedup identity. A repeat of the same key inside
+          config.telegram_dedup_sec is silently dropped.
+        """
+        cfg = self.get_config()
+        if gate:
+            need = _CONF_RANK.get(str(cfg.get("telegram_min_confidence", "HIGH")).upper(), 3)
+            if _CONF_RANK.get(str(conf or "").upper(), 0) < need:
+                return
+        now = self._now()
+        if dedup:
+            gap = float(cfg.get("telegram_dedup_sec", 900) or 0)
+            last = self._tg_last.get(key)
+            if last is not None and (now - last) < gap:
+                return
+        self._tg_last[key] = now
+        notify.push(self._telegram, text)
 
     def _open_paper(self, sym, sig):
         signal_id = "ASC-" + format(int(time.time() * 1000), "x")
@@ -294,9 +325,9 @@ class AutoScalpRunner:
             "status": "OPEN", "resolved": 0,
         })
         asyncio.create_task(self._emit("autoscalp_open", {"symbol": sym, "trade": row, "signal_id": signal_id}))
-        notify.push(self._telegram, notify.signal_card(
+        self._tg_send("entry:" + signal_id, notify.signal_card(
             {**sig, "opt_tradingsymbol": sig.get("tradingsymbol")}, symbol=sym,
-            index_ltp=self._aggs[sym.upper()].last_price))
+            index_ltp=self._aggs[sym.upper()].last_price), conf=sig.get("confidence"))
 
     def _monitor(self):
         for t in self._open_positions():
@@ -315,9 +346,10 @@ class AutoScalpRunner:
                     "outcome": updated.get("result"), "resolved": 1,
                     "holding_sec": None, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
                 asyncio.create_task(self._emit("autoscalp_close", {"trade": updated}))
-                notify.push(self._telegram, notify.lifecycle(
+                self._tg_send("exit:" + str(updated.get("trade_id")), notify.lifecycle(
                     updated.get("exit_reason") or "EXIT", updated,
-                    note=f"held; MFE {updated.get('mfe')} MAE {updated.get('mae')}"))
+                    note=f"held; MFE {updated.get('mfe')} MAE {updated.get('mae')}"),
+                    conf=updated.get("confidence"))
 
     # ---------------- persistence + calibration ----------------
     def _persist_snapshot(self, sym, agg, atm, chain, sig, feed_age):

@@ -204,6 +204,58 @@ def test_runner_config_roundtrip_and_unknown_field(fresh_db):
         r.set_config({"nonsense": 1})
 
 
+def test_tg_send_confidence_gate_and_dedup(fresh_db):
+    # clock is fixed by now_fn, so a repeat inside telegram_dedup_sec is dropped
+    r = ascr.AutoScalpRunner(now_fn=lambda: 1_800_000_000.0)
+    sent = []
+    r._telegram = lambda text: sent.append(text)
+
+    # default telegram_min_confidence == HIGH -> MEDIUM/LOW/None are gated out
+    r._tg_send("k1", "med", conf="MEDIUM")
+    r._tg_send("k1", "low", conf="LOW")
+    r._tg_send("k1", "none", conf=None)
+    assert sent == []
+
+    # HIGH passes once, then the same key is de-duplicated
+    r._tg_send("k1", "high", conf="HIGH")
+    r._tg_send("k1", "high-again", conf="HIGH")
+    assert sent == ["high"]
+
+    # a different key still gets through
+    r._tg_send("k2", "other", conf="HIGH")
+    assert sent == ["high", "other"]
+
+    # lowering the bar lets MEDIUM through
+    r.set_config({"telegram_min_confidence": "MEDIUM"})
+    r._tg_send("k3", "med-ok", conf="MEDIUM")
+    assert sent[-1] == "med-ok"
+
+    # dedup can be disabled explicitly
+    r._tg_send("k4", "a", conf="HIGH", dedup=False)
+    r._tg_send("k4", "b", conf="HIGH", dedup=False)
+    assert sent[-2:] == ["a", "b"]
+
+
+def test_runner_medium_confidence_opens_trade_but_no_telegram(fresh_db, monkeypatch):
+    sig = {"decision": "BUY_PE", "signal_type": "SUPPORT_BREAKDOWN", "direction": "BEARISH",
+           "strike": 24100, "token": "PE24100", "tradingsymbol": "NIFTY24100PE",
+           "expiry": "2026-09-03", "entry": 95.0, "stop_loss": 83.0, "target_1": 116.0,
+           "target_2": 128.0, "trailing_stop": 8.0, "max_hold_sec": 1500,
+           "probability": 0.58, "confidence": "MEDIUM", "ev": 6.0, "rr": 1.6,
+           "regime": "TRENDING_DOWN", "mtf_alignment": -30.0, "signal_score": 63.0,
+           "component_scores": {}, "reason": "test", "support": 24080, "resistance": 24150,
+           "support_strength": 60, "resistance_strength": 62, "sr_level": 24085,
+           "sr_side": "SUPPORT", "atr": 11.0, "vwap": 24110.0}
+    r, _ = _runner(monkeypatch, sig)
+    sent = []
+    r._telegram = lambda text: sent.append(text)
+    r.arm()
+    asyncio.run(r.tick_once())
+    # trade still opens in PAPER + persists, but no MEDIUM card on Telegram
+    assert len(fresh_db.list_trades(strategy="AUTOSCALP")) == 1
+    assert sent == []
+
+
 # ---------------- P8 Telegram formatting (notify.py) ----------------
 def test_notify_signal_card_and_lifecycle():
     from app.autoscalp import notify
