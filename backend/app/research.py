@@ -40,6 +40,11 @@ def _strategy_stats(trades: list) -> dict:
     # expectancy per trade in currency, and in R (avg_win / |avg_loss|)
     expectancy = (gross_win + gross_loss) / n
     payoff = (avg_win / abs(avg_loss)) if avg_loss != 0 else None
+    # excursion — favourable / adverse — pulled from the logged trade rows
+    mfes = [float(t["mfe"]) for t in closed if t.get("mfe") is not None]
+    maes = [float(t["mae"]) for t in closed if t.get("mae") is not None]
+    avg_mfe = round(100 * sum(mfes) / len(mfes)) / 100 if mfes else None
+    avg_mae = round(100 * sum(maes) / len(maes)) / 100 if maes else None
     holds = []
     for t in closed:
         o, c = _parse_ts(t.get("opened_ts")), _parse_ts(t.get("closed_ts"))
@@ -66,6 +71,8 @@ def _strategy_stats(trades: list) -> dict:
         "expectancy_per_trade": round(100 * expectancy) / 100,
         "profit_factor": round(100 * gross_win / abs(gross_loss)) / 100 if gross_loss != 0 else None,
         "total_realized_pnl": round(100 * (gross_win + gross_loss)) / 100,
+        "avg_mfe": avg_mfe,
+        "avg_mae": avg_mae,
         "avg_hold_sec": round(sum(holds) / len(holds)) if holds else None,
         "exit_reason_breakdown": by_exit,
         "by_setup": by_setup,

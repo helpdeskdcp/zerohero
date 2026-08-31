@@ -184,7 +184,14 @@ class PaperBroker(BrokerBase):
         if not rec and client_tag:
             rec = self._orders.get(self._by_tag.get(client_tag, ""))
         if not rec:
-            return OrderStatusResult(status=OStatus.UNKNOWN, text="not found")
+            # A paper order the simulator has no record of was never placed at a
+            # real venue, so it is safe to call dead rather than ambiguous. This
+            # is the normal case after a restart (the in-memory order book is
+            # wiped) and it stops recover() from FREEZing the OrderManager on
+            # every orphaned broker_orders row. A REAL broker's "not found" is
+            # genuinely dangerous and must still surface as UNKNOWN.
+            return OrderStatusResult(status=OStatus.CANCELLED,
+                                     text="paper: no record (never placed / lost on restart)")
         self._try_fill(rec)
         status = map_broker_status(rec["status_text"], rec["requested_qty"], rec["filled_qty"])
         return OrderStatusResult(

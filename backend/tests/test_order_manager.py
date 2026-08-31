@@ -227,3 +227,24 @@ def test_recover_reconciles_open_intents_without_resubmitting(fresh_db):
     assert len([r for r in fresh_db.list_broker_orders(trade_id="T1") if r["leg"] == "ENTRY"]) == 1
     # and the recovered state picked up the real fill
     assert om2.states["T1"].avg_fill_price == 100.0
+
+
+def test_recover_abandons_paper_intent_the_broker_lost_on_restart(fresh_db):
+    """A restart wipes PaperBroker's in-memory order book. recover() must mark
+    the orphaned broker_orders row DEAD (abandoned) -- NOT FREEZE the manager on
+    every restart. A real broker's 'not found' still FREEZEs (tested elsewhere)."""
+    from app.execution.paper_broker import PaperBroker
+    om = _mgr(fresh_db, broker=PaperBroker(ltp_provider=lambda t: 100.0,
+                                           scenario={"fill_mode": "FULL"}))
+    st = om.prearm(_contract())
+    om.submit(st, clocks=_fresh_clocks())
+
+    # brand-new process: fresh manager AND fresh (empty) PaperBroker
+    om2 = _mgr(fresh_db, broker=PaperBroker(ltp_provider=lambda t: 100.0))
+    recovered = om2.recover()
+
+    assert recovered.get("T1") == "DEAD"
+    assert om2.frozen is False                      # <-- the fix: no freeze on restart
+    assert "T1" not in om2.states
+    row = next(r for r in fresh_db.list_broker_orders(trade_id="T1") if r["leg"] == "ENTRY")
+    assert row["status"] == OStatus.CANCELLED       # terminal -> not re-reconciled next boot

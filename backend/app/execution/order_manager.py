@@ -376,6 +376,7 @@ class OrderManager:
                         {"action": res.action, "status": res.order_status})
             if res.action in ("DEAD",):
                 self.monitors.pop(tid, None)
+                self.states.pop(tid, None)      # abandoned intent — don't keep it "open"
         return recovered
 
     def _state_from_rows(self, trade_id: str, legs: list) -> TradeState:

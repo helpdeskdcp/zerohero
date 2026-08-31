@@ -137,6 +137,7 @@ class ScalpRunner:
         self._candle_cache = {}          # symbol -> (epoch_fetched, connector_dict)
         self._last_manage_ms = None      # wall-clock of last manage pass (latency probe)
         self._manage_latency_ms = None
+        self._manage_idle = False        # True when disarmed + flat -> lean manage pass
         self._last_broker_sync = None
         self.broker_sync_status = None
         self._alerted = {}          # trade_id -> "TARGET" | "STOP" (latch, monitor-only)
@@ -330,6 +331,7 @@ class ScalpRunner:
             "auto_arm": bool(cfg.get("auto_arm")),
             "fast_mode": bool(cfg.get("fast_mode")),
             "manage_latency_ms": self._manage_latency_ms if self.is_leader else pub.get("manage_latency_ms"),
+            "manage_idle": self._manage_idle,
             "broker_sync": bool(cfg.get("broker_sync", True)),
             "broker_sync_status": self.broker_sync_status if self.is_leader else pub.get("broker_sync_status"),
             "feed": self.feed.status() if self.is_leader else (pub.get("feed") or self.feed.status()),
@@ -940,9 +942,21 @@ class ScalpRunner:
         except Exception as e:
             self.last_error = f"feed subscribe: {type(e).__name__}: {e}"
 
+        open_managed = db.list_open_managed()
+        # Disarmed AND flat -> nothing to reconcile, mark, combo-link or scan.
+        # Keep the feed alive and return: a getPosition poll or reversal scan
+        # here can block the loop for 15-20s on a slow post-market endpoint for
+        # zero benefit (this was the ~17s manage-latency spike).
+        self._manage_idle = not self.armed and not open_managed
+        if self._manage_idle:
+            return
+
         if cfg.get("broker_sync", True):
             try:
-                await self._sync_broker_positions(cfg)
+                # hard cap so a stalled broker endpoint can't wedge the loop
+                await asyncio.wait_for(self._sync_broker_positions(cfg), timeout=9)
+            except asyncio.TimeoutError:
+                self.last_error = "broker sync: timed out (>9s) — skipped this cycle"
             except Exception as e:
                 self.last_error = f"broker sync: {type(e).__name__}: {e}"
 
