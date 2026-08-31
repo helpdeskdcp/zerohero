@@ -9,6 +9,14 @@ import pytest
 # make `import app...` work when pytest is run from backend/
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# HARD GUARD: never let a test touch the live data/chanakya.db. Point the DB at
+# a session temp file BEFORE app.db is first imported. Tests that need a clean
+# schema still use the `fresh_db` fixture (which swaps in its own tmp file);
+# this only ensures a stray main.autoscalp.set_config / api_* call in a test
+# without fresh_db writes to a throwaway, not to the running service's DB.
+_SESSION_DB = os.path.join(tempfile.mkdtemp(prefix="chanakya-test-"), "session.db")
+os.environ["CHANAKYA_DB_PATH"] = _SESSION_DB
+
 
 @pytest.fixture()
 def fresh_db(monkeypatch):
