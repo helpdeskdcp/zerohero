@@ -75,6 +75,21 @@ def test_feed_freshness_boundary_and_stale_get_ltp():
     assert feed.get_ltp("x") is None
 
 
+def test_feed_subscribe_unions_owners_no_clobber():
+    # autoscalp + scalp_runner share one feed; each subscribe() call is that
+    # owner's set, and the wire subscription is the union -> neither drops the
+    # other's tokens (this was starving autoscalp's option marks).
+    from app.connectors.angel_ws import AngelMarketFeed
+    f = AngelMarketFeed()
+    f.subscribe([{"token": "A", "exchange_type": 1}, {"token": "B", "exchange_type": 5}], owner="autoscalp")
+    f.subscribe([{"token": "C", "exchange_type": 1}], owner="scalp")
+    assert set(f._desired) == {"A", "B", "C"}
+    f.subscribe([{"token": "A", "exchange_type": 1}], owner="autoscalp")   # autoscalp shrinks
+    assert set(f._desired) == {"A", "C"}                                   # scalp's C survives
+    f.subscribe([], owner="scalp")                                        # scalp releases
+    assert set(f._desired) == {"A"}
+
+
 def test_runner_does_not_turn_stale_manual_data_into_an_alert(monkeypatch):
     from app.scalper import ScalpRunner
 

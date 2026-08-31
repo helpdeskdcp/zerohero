@@ -964,13 +964,15 @@
     await asLoadUniverse();
     const sym = asSelectedSymbol();
     const q = sym ? `&symbol=${encodeURIComponent(sym)}` : "";
-    let st, sigs, snaps, pos;
+    let st, sigs, snaps, pos, allTr, allSnap;
     try {
-      [st, sigs, snaps, pos] = await Promise.all([
+      [st, sigs, snaps, pos, allTr, allSnap] = await Promise.all([
         api("/api/autoscalp/status"),
         api(`/api/autoscalp/signals?limit=60${q}`),
         api(`/api/autoscalp/snapshots?limit=60${q}`),
         api("/api/trades?limit=100&status=OPEN"),
+        api("/api/trades?limit=300"),
+        api("/api/autoscalp/snapshots?limit=40"),
       ]);
     } catch (e) {
       const el = $("#asErr"); el.hidden = false; el.textContent = "autoscalp: " + e.message; return;
@@ -983,6 +985,32 @@
     set("asSymTag", sym ? `${sym} · ${inWl ? "trading" : "view-only"}` : "—");
     const wlb = $("#asWlBtn");
     if (wlb) { wlb.textContent = inWl ? "− Stop" : "+ Trade"; wlb.disabled = !sym; wlb.dataset.in = inWl ? "1" : "0"; }
+
+    // per-symbol watchlist summary — the whole autonomous operation at a glance
+    const ws = $("#asWlSummary");
+    if (ws) {
+      const asc = (allTr || []).filter(t => (t.strategy || "").toUpperCase() === "AUTOSCALP");
+      const lastBy = {};
+      (allSnap || []).forEach(s => { if (!lastBy[s.symbol]) lastBy[s.symbol] = s; });
+      ws.innerHTML = wl.map(s => {
+        const rows = asc.filter(t => String(t.underlying || "").toUpperCase() === s);
+        const closed = rows.filter(t => String(t.status || "").toUpperCase() !== "OPEN");
+        const w = closed.filter(t => (t.pnl || 0) > 0).length, l = closed.filter(t => (t.pnl || 0) < 0).length;
+        const net = closed.reduce((a, t) => a + (t.pnl || 0), 0);
+        const open = rows.length - closed.length;
+        const dec = (lastBy[s] || {}).decision || "—";
+        const cls = net > 0 ? "pos" : net < 0 ? "neg" : "";
+        const on = s === sym ? " on" : "";
+        return `<button class="as-wl-chip${on}" data-sym="${s}" type="button">
+          <b>${s}</b> <span class="${cls}">${net >= 0 ? "+" : ""}${fmt(net, 1)}</span>
+          <em>${w}W/${l}L${open ? ` · ${open} open` : ""}</em>
+          <i class="badge ${dec}">${dec}</i></button>`;
+      }).join("");
+      ws.querySelectorAll(".as-wl-chip").forEach(b => b.addEventListener("click", () => {
+        const pk = $("#asSymPick"); if (pk) { pk.value = b.dataset.sym; try { localStorage.setItem("asSymbol", b.dataset.sym); } catch (e) {} }
+        loadAutoscalp();
+      }));
+    }
     const armed = !!st.armed;
     $("#asArmBtn").textContent = armed ? "DISARM" : "ARM";
     $("#asArmBtn").dataset.armed = String(armed);

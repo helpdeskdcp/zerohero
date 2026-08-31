@@ -175,7 +175,7 @@ class FakeFeed:
         self.subscribed = []
         self.connected = True
 
-    def subscribe(self, toks):
+    def subscribe(self, toks, *, owner="default"):
         self.subscribed = toks
 
     def get_ltp(self, token, *_a, **_k):

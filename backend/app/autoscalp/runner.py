@@ -232,7 +232,7 @@ class AutoScalpRunner:
         for tok, meta in list(self._sub_tokens.items()):
             want.append({"token": tok, "exchange_type": meta.get("exchange_type", 2)})
         try:
-            self.feed.subscribe(want)
+            self.feed.subscribe(want, owner="autoscalp")
         except Exception as e:
             self.last_error = f"subscribe: {type(e).__name__}: {e}"
 

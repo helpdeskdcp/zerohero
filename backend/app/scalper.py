@@ -937,17 +937,16 @@ class ScalpRunner:
         scalp loss-cooldown."""
         cfg = self.get_config()
         self.last_tick_ts = datetime.now(timezone.utc).isoformat()
-        try:
-            self.feed.subscribe(self._feed_tokens(cfg))
-        except Exception as e:
-            self.last_error = f"feed subscribe: {type(e).__name__}: {e}"
-
         open_managed = db.list_open_managed()
         # Disarmed AND flat -> nothing to reconcile, mark, combo-link or scan.
-        # Keep the feed alive and return: a getPosition poll or reversal scan
-        # here can block the loop for 15-20s on a slow post-market endpoint for
-        # zero benefit (this was the ~17s manage-latency spike).
+        # Release this owner's feed subscriptions (the shared feed unions owners,
+        # so a disarmed SCALP should not hold tokens autoscalp isn't using) and
+        # get out before the getPosition poll / reversal scan (the ~17s spike).
         self._manage_idle = not self.armed and not open_managed
+        try:
+            self.feed.subscribe([] if self._manage_idle else self._feed_tokens(cfg), owner="scalp")
+        except Exception as e:
+            self.last_error = f"feed subscribe: {type(e).__name__}: {e}"
         if self._manage_idle:
             return
 

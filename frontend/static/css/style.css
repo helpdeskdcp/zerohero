@@ -79,6 +79,17 @@ input, select, textarea { font-family: var(--font-mono); }
   letter-spacing: 0; border: 1px solid var(--line); border-radius: 5px;
   background: var(--bg); color: var(--ink); }
 
+.as-wl-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.as-wl-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--bg-raised);
+  color: var(--ink-dim); font-size: 12px; cursor: pointer; }
+.as-wl-chip.on { border-color: var(--gold-soft); color: var(--ink); }
+.as-wl-chip b { color: var(--ink); font-size: 13px; }
+.as-wl-chip em { font-style: normal; color: var(--ink-faint); }
+.as-wl-chip .pos { color: var(--pos, #3fae72); }
+.as-wl-chip .neg { color: var(--neg, #d9534f); }
+.as-wl-chip i.badge { font-size: 10px; padding: 1px 5px; }
+
 /* Narrow phones: stop the brand title / status pills clipping at the header edges */
 @media (max-width: 520px) {
   .topbar { padding: 10px 12px; gap: 8px; }

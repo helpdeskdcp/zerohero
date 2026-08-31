@@ -93,7 +93,8 @@ class AngelMarketFeed:
         self._cred_provider = cred_provider
         self.ltp: dict[str, dict] = {}          # token -> {ltp, ts_ms, recv}
         self._candles: dict[str, deque] = {}    # token -> deque[[t,o,h,l,c,v]]
-        self._desired: dict[str, int] = {}      # token -> exchange_type
+        self._desired: dict[str, int] = {}      # token -> exchange_type (union of all owners)
+        self._desired_by_owner: dict[str, dict[str, int]] = {}   # owner -> its token set
         self._active: set[str] = set()          # tokens currently subscribed on the wire
         self.connected = False
         self.last_error = None
@@ -118,9 +119,11 @@ class AngelMarketFeed:
             except Exception:
                 pass
 
-    def subscribe(self, tokens: list[dict]):
-        """tokens: [{'token': '99926000', 'exchange_type': 1}, ...]. Sets the
-        desired subscription set; the run loop reconciles on its next pass."""
+    def subscribe(self, tokens: list[dict], *, owner: str = "default"):
+        """tokens: [{'token': '99926000', 'exchange_type': 1}, ...]. Sets THIS
+        owner's desired set; the wire subscription is the UNION across owners so
+        two engines sharing one feed (autoscalp + scalp_runner) never clobber
+        each other. The run loop reconciles on its next pass."""
         new = {}
         for t in tokens or []:
             tok = str(t.get("token") or "").strip()
@@ -130,8 +133,14 @@ class AngelMarketFeed:
             if ex is None:
                 ex = EXCHANGE_TYPE.get(str(t.get("exchange") or "NSE").upper(), 1)
             new[tok] = int(ex)
-        if new != self._desired:
-            self._desired = new
+        if self._desired_by_owner.get(owner) == new:
+            return
+        self._desired_by_owner[owner] = new
+        union: dict[str, int] = {}
+        for s in self._desired_by_owner.values():
+            union.update(s)
+        if union != self._desired:
+            self._desired = union
             self.subscribe_generation += 1
 
     def get_ltp(self, token: str, max_age_sec: float = LTP_MAX_AGE_SEC):
