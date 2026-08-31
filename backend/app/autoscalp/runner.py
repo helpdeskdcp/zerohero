@@ -228,6 +228,7 @@ class AutoScalpRunner:
         self._sg_cfg_sig = None
         self._tg_last: dict[str, float] = {}   # dedup key -> last-sent epoch
         self._seeded: set[str] = set()         # aggs already backfilled from broker candles
+        self._blocks: dict[str, dict] = {}     # sym -> {n, last, ts, signal} — why entries were refused
 
     # ---------------- config ----------------
     def get_config(self) -> dict:
@@ -480,6 +481,8 @@ class AutoScalpRunner:
             option_premium=sig.get("entry"), underlying_price=agg.last_price,
             exchange=smeta["exchange"])
         if not allow:
+            b = self._blocks.setdefault(sym.upper(), {"n": 0})
+            b.update(n=b["n"] + 1, last=why, ts=_now_iso(), signal=sig["decision"])
             await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why, "signal": sig["decision"]})
             return
 
@@ -765,6 +768,7 @@ class AutoScalpRunner:
             "calibration": (self.calibration() or {}).get("version"),
             "feed": self.feed.status() if self.feed else None,
             "safeguards": self.safeguards.status(),
+            "entry_blocks": self._blocks,   # per-symbol: why BUY signals were refused entry
             "live_trading": False, "paper_mode": True,
             "config": cfg,
         }
