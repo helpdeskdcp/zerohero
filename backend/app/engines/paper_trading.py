@@ -69,6 +69,12 @@ def open_trade(signal: dict) -> dict:
         "mae": 0.0,
         "exit_reason": None,
     }
+    # 1R reference captured at open (stop moves later; this stays fixed)
+    _e, _s = signal.get("entry"), signal.get("stop_loss")
+    try:
+        row["risk_ref"] = abs(float(_e) - float(_s)) or None
+    except (TypeError, ValueError):
+        row["risk_ref"] = None
     db.insert_trade(row)
     return row
 
@@ -156,8 +162,32 @@ def update_trade_price(trade_id: str, ltp: float, now: datetime | None = None) -
     trail_dist = t.get("trailing_stop")
     tick_stop_dist = abs(entry - sl) if sl is not None else None
     new_sl = sl
+
+    # --- profit-lock: bank a scalp's gains instead of letting them decay to the
+    # TIME stop. Purely protective — the stop only ever ratchets favourably, so
+    # this can turn a would-be scratch into a small win, never force a loss.
+    #   MFE >= 0.6R  -> stop to entry + 0.2R
+    #   MFE >= 1.0R  -> stop to entry + 0.5R
+    risk_ref = t.get("risk_ref")
+    try:
+        risk_ref = float(risk_ref) if risk_ref else None
+    except (TypeError, ValueError):
+        risk_ref = None
+    if risk_ref and risk_ref > 0:
+        mfe_r = mfe / risk_ref
+        lock = None
+        if mfe_r >= 1.0:
+            lock = entry + sign * 0.5 * risk_ref
+        elif mfe_r >= 0.6:
+            lock = entry + sign * 0.2 * risk_ref
+        if lock is not None and (new_sl is None
+                                 or (direction == "BUY" and lock > new_sl)
+                                 or (direction == "SELL" and lock < new_sl)):
+            new_sl = round(lock, 2)
+
     if tick_stop_dist and mfe >= tick_stop_dist and not stop_moved_favourably:
-        new_sl = entry  # 1R reached -> risk-free
+        if new_sl is None or (direction == "BUY" and entry > new_sl) or (direction == "SELL" and entry < new_sl):
+            new_sl = entry  # 1R reached -> at least risk-free
     if trail_dist and mfe >= float(trail_dist):
         cand = ltp - sign * float(trail_dist)
         if new_sl is None or (direction == "BUY" and cand > new_sl) or (direction == "SELL" and cand < new_sl):

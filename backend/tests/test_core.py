@@ -26,6 +26,33 @@ def test_scalp_trade_hits_stop(fresh_db):
     assert r["status"] == "CLOSED" and r["exit_reason"] == "STOP" and r["result"] == "LOSS"
 
 
+def test_profit_lock_banks_a_fading_scalp(fresh_db):
+    """risk_ref = 2.0 (entry 100, stop 98). Trade runs to 101.4 (+0.7R) then
+    fades: the locked stop (entry + 0.2R = 100.4) catches it -> small WIN via
+    TRAIL, not a scratch held to the TIME clock."""
+    from app.engines import paper_trading as pt
+    t = pt.open_trade({"underlying": "X", "direction": "BUY", "entry": 100.0,
+                       "target_1": 105.0, "stop_loss": 98.0, "quantity": 10,
+                       "strategy": "SCALP", "max_hold_sec": 9999})
+    assert t["risk_ref"] == 2.0
+    assert pt.update_trade_price(t["trade_id"], 101.4)["status"] == "OPEN"   # +0.7R, arms the 0.2R lock
+    r = pt.update_trade_price(t["trade_id"], 100.3)                          # fades below the lock
+    assert r["status"] == "CLOSED" and r["exit_reason"] == "TRAIL" and r["result"] == "WIN"
+    assert r["pnl"] > 0
+
+
+def test_profit_lock_never_forces_a_loss(fresh_db):
+    from app.engines import paper_trading as pt
+    t = pt.open_trade({"underlying": "X", "direction": "BUY", "entry": 100.0,
+                       "target_1": 105.0, "stop_loss": 98.0, "quantity": 10,
+                       "strategy": "SCALP", "max_hold_sec": 9999})
+    # never reached +0.6R -> lock never arms; original stop still governs
+    assert pt.update_trade_price(t["trade_id"], 100.9)["status"] == "OPEN"
+    assert pt.update_trade_price(t["trade_id"], 99.0)["status"] == "OPEN"
+    r = pt.update_trade_price(t["trade_id"], 97.9)
+    assert r["exit_reason"] == "STOP" and r["result"] == "LOSS"
+
+
 def test_manual_position_is_monitor_only(fresh_db):
     from app.engines import paper_trading as pt
     t = pt.open_trade({"underlying": "X", "option_type": "CE", "strike": 100,

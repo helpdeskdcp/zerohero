@@ -117,9 +117,10 @@ DEFAULT_CONFIG = {
     # (best live win-rate). MCX commodities move slower and trend longer, so
     # they get more hold time + a slightly stricter EV bar.
     "symbol_profiles": {
-        "NATURALGAS": {"max_hold_sec": 1800, "ev": {"min_ev_r": 0.15, "rr_min": 1.4}},
+        "NATURALGAS": {"max_hold_sec": 1800, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
+                       "est_cost_r": 0.10},        # ~0.1R round-trip on the NG option spread
         "CRUDEOIL":   {"max_hold_sec": 2400, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
-                       "sl_atr": 1.2, "t1_atr": 1.9},
+                       "sl_atr": 1.2, "t1_atr": 1.9, "est_cost_r": 0.10},
     },
     "safeguards": {},
     "auto_arm": False,

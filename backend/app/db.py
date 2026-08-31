@@ -284,6 +284,7 @@ _MIGRATIONS = {
         "mae": "REAL DEFAULT 0",
         "exit_reason": "TEXT",
         "symboltoken": "TEXT",
+        "risk_ref": "REAL",          # |entry - initial stop| captured at open (1R)
     },
     "live_market_snapshots": {
         "ev": "REAL",
@@ -335,7 +336,7 @@ def insert_trade(row: dict):
             "stop_loss", "trailing_stop", "quantity", "probability", "confidence",
             "market_regime", "oi_evidence", "pnl", "reason",
             "strategy", "setup", "atr_pct", "max_hold_sec", "mfe", "mae", "exit_reason",
-            "symboltoken"]
+            "symboltoken", "risk_ref"]
     vals = [row.get(c) for c in cols]
     placeholders = ",".join(["?"] * len(cols))
     with db() as conn:

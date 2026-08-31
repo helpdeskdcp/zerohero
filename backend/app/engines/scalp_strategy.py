@@ -258,8 +258,13 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         blended *= float(flt["tod_score_mult"].get(tod_bucket, 1.0))
     blended = max(0.0, min(100.0, blended))
     prob = _score_to_prob(blended, calib, regime=reg["regime"], signal_type=st["state"])
+    # cost haircut: a round-trip on a wide MCX option spread eats real EV.
+    # `est_cost_r` (fraction of 1R) is 0 for NIFTY (tight weeklies) and set on
+    # the MCX profiles. Fed to ev_gate as an absolute `cost` in price terms.
+    _risk = max(1e-9, plan["entry"] - plan["stop_loss"])
+    _cost = float(cfg.get("est_cost_r", 0.0) or 0.0) * _risk
     gate = ev_gate(prob, plan["entry"], plan["stop_loss"], plan["target_1"],
-                   avg_win=avg_win, avg_loss=avg_loss, config=cfg.get("ev") or {})
+                   avg_win=avg_win, avg_loss=avg_loss, cost=_cost, config=cfg.get("ev") or {})
     if not gate["pass"]:
         return out_none(f"EV gate: {gate['reason']}",
                         {**ctx, "signal_score": round(blended, 1),
