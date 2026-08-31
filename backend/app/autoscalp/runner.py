@@ -631,36 +631,72 @@ class AutoScalpRunner:
             tok = str(t.get("symboltoken") or "")
             ltp = self.feed.get_ltp(tok) if (self.feed and tok) else None
             if ltp is None:
+                # The WS feed has no mark for this option token (feed gap /
+                # illiquid strike). Such a position cannot be time-stopped the
+                # normal way — sweep it if it is now badly overdue.
+                swept = self._sweep_unmarkable(t)
+                if swept:
+                    self._finalize_close(swept)
                 continue
             updated = update_trade_price(t["trade_id"], float(ltp))
             if updated and updated.get("status") == "CLOSED":
-                pnl = updated.get("pnl")
-                # ZTH is a fixed-premium lottery leg — its P&L must not move the
-                # scalp daily-loss / streak budget that halts the core engine.
-                if (updated.get("strategy") or "") != "AUTOSCALP-ZTH":
-                    self.safeguards.on_trade_closed(pnl)
-                _entry = updated.get("entry") or 0
-                _pts = (updated.get("exit_price") or 0) - _entry
-                _risk = abs(_entry - (updated.get("stop_loss") or _entry))
-                _held = None
-                try:
-                    _o = datetime.fromisoformat(str(updated.get("opened_ts")).replace("Z", "+00:00"))
-                    _c = datetime.fromisoformat(str(updated.get("closed_ts")).replace("Z", "+00:00"))
-                    _held = round((_c - _o).total_seconds())
-                except (TypeError, ValueError):
-                    pass
-                db.update_scalp_signal(updated.get("signal_id") or "", {
-                    "status": "CLOSED", "exit_price": updated.get("exit_price"),
-                    "exit_ts": _now_iso(), "exit_reason": updated.get("exit_reason"),
-                    "points": round(_pts, 2),
-                    "r_multiple": round(_pts / _risk, 3) if _risk > 0 else None,
-                    "outcome": updated.get("result"), "resolved": 1,
-                    "holding_sec": _held, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
-                asyncio.create_task(self._emit("autoscalp_close", {"trade": updated}))
-                self._tg_send("exit:" + str(updated.get("trade_id")), notify.lifecycle(
-                    updated.get("exit_reason") or "EXIT", updated,
-                    note=f"held; MFE {updated.get('mfe')} MAE {updated.get('mae')}"),
-                    conf=updated.get("confidence"))
+                self._finalize_close(updated)
+
+    def _sweep_unmarkable(self, t):
+        """Force-close a position the WS feed has never marked, once it is well
+        past its max-hold (2x, min 20 min). Closes FLAT at entry with a
+        TIME_NODATA exit — a clean scratch beats carrying a phantom position
+        that the monitor can never resolve. Returns the closed row or None."""
+        mh = t.get("max_hold_sec")
+        try:
+            mh = float(mh) if mh else 900.0
+        except (TypeError, ValueError):
+            mh = 900.0
+        try:
+            opened = datetime.fromisoformat(str(t.get("opened_ts")).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+        age = (datetime.now(timezone.utc) - opened).total_seconds()
+        if age < max(1200.0, 2.0 * mh):
+            return None
+        entry = t.get("entry")
+        if entry is None:
+            return None
+        self.last_error = (f"swept unmarkable {t.get('underlying')} "
+                           f"{t.get('option_type')}{t.get('strike')} after {int(age)}s (no WS mark)")
+        return close_trade(t["trade_id"], float(entry), forced_result="FLAT",
+                           exit_reason="TIME_NODATA")
+
+    def _finalize_close(self, updated):
+        """Shared close bookkeeping: safeguard feedback, scalp_signal outcome
+        backfill, WS emit, Telegram exit card."""
+        pnl = updated.get("pnl")
+        # ZTH is a fixed-premium lottery leg — its P&L must not move the
+        # scalp daily-loss / streak budget that halts the core engine.
+        if (updated.get("strategy") or "") != "AUTOSCALP-ZTH":
+            self.safeguards.on_trade_closed(pnl)
+        _entry = updated.get("entry") or 0
+        _pts = (updated.get("exit_price") or 0) - _entry
+        _risk = abs(_entry - (updated.get("stop_loss") or _entry))
+        _held = None
+        try:
+            _o = datetime.fromisoformat(str(updated.get("opened_ts")).replace("Z", "+00:00"))
+            _c = datetime.fromisoformat(str(updated.get("closed_ts")).replace("Z", "+00:00"))
+            _held = round((_c - _o).total_seconds())
+        except (TypeError, ValueError):
+            pass
+        db.update_scalp_signal(updated.get("signal_id") or "", {
+            "status": "CLOSED", "exit_price": updated.get("exit_price"),
+            "exit_ts": _now_iso(), "exit_reason": updated.get("exit_reason"),
+            "points": round(_pts, 2),
+            "r_multiple": round(_pts / _risk, 3) if _risk > 0 else None,
+            "outcome": updated.get("result"), "resolved": 1,
+            "holding_sec": _held, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
+        asyncio.create_task(self._emit("autoscalp_close", {"trade": updated}))
+        self._tg_send("exit:" + str(updated.get("trade_id")), notify.lifecycle(
+            updated.get("exit_reason") or "EXIT", updated,
+            note=f"held; MFE {updated.get('mfe')} MAE {updated.get('mae')}"),
+            conf=updated.get("confidence"))
 
     # ---------------- persistence + calibration ----------------
     def _persist_snapshot(self, sym, agg, atm, chain, sig, feed_age):

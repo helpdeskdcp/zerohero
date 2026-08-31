@@ -273,6 +273,39 @@ def test_runner_opens_paper_trade_and_persists(fresh_db, monkeypatch):
     assert sigs[0]["holding_sec"] is not None and sigs[0]["holding_sec"] >= 0
 
 
+def test_monitor_sweeps_a_position_the_feed_never_marks(fresh_db, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    sig = {"decision": "BUY_PE", "signal_type": "SUPPORT_BREAKDOWN", "direction": "BEARISH",
+           "strike": 24100, "token": "PE24100", "tradingsymbol": "NIFTY24100PE",
+           "expiry": "2026-09-03", "entry": 95.0, "stop_loss": 83.0, "target_1": 116.0,
+           "target_2": 128.0, "trailing_stop": 8.0, "max_hold_sec": 1500,
+           "probability": 0.58, "confidence": "MEDIUM", "ev": 6.0, "rr": 1.6,
+           "regime": "TRENDING_DOWN", "mtf_alignment": -30.0, "signal_score": 63.0,
+           "component_scores": {"x": 1}, "reason": "test", "support": 24080,
+           "resistance": 24150, "support_strength": 60, "resistance_strength": 62,
+           "sr_level": 24085, "sr_side": "SUPPORT", "atr": 11.0, "vwap": 24110.0}
+    r, feed = _runner(monkeypatch, sig)
+    r.arm()
+    asyncio.run(r.tick_once())
+    tid = fresh_db.list_trades(strategy="AUTOSCALP")[0]["trade_id"]
+
+    # the WS feed never delivers a mark for PE24100
+    feed.marks.pop("PE24100", None)
+    # not yet overdue -> left open
+    asyncio.run(r.tick_once())
+    assert fresh_db.get_trade(tid)["status"] == "OPEN"
+
+    # backdate the open to 2x max_hold ago -> swept FLAT with a TIME_NODATA exit
+    old = (datetime.now(timezone.utc) - timedelta(seconds=3600)).isoformat()
+    fresh_db.update_trade(tid, {"opened_ts": old})
+    asyncio.run(r.tick_once())
+    done = fresh_db.get_trade(tid)
+    assert done["status"] == "CLOSED" and done["exit_reason"] == "TIME_NODATA"
+    assert done["result"] == "FLAT" and done["exit_price"] == 95.0
+    s = fresh_db.list_scalp_signals(source="LIVE")[0]
+    assert s["status"] == "CLOSED" and s["resolved"] == 1
+
+
 def test_runner_safeguard_blocks_entry(fresh_db, monkeypatch):
     r, _ = _runner(monkeypatch, {"decision": "BUY_PE", "signal_type": "SUPPORT_BREAKDOWN",
                                  "direction": "BEARISH", "strike": 24100, "entry": 3.0,
