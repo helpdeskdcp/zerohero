@@ -16,6 +16,7 @@
     if (view === "research") loadResearch();
     if (view === "system") loadSystem();
     if (view === "autoscalp") loadAutoscalp();
+    if (view === "runner") { try { refreshRunSelection(); } catch (e) {} }
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
     btn.addEventListener("click", () => setView(btn.dataset.view));
@@ -964,15 +965,16 @@
     await asLoadUniverse();
     const sym = asSelectedSymbol();
     const q = sym ? `&symbol=${encodeURIComponent(sym)}` : "";
-    let st, sigs, snaps, pos, allTr, allSnap;
+    let st, sigs, snaps, pos, allTr, allSnap, cal;
     try {
-      [st, sigs, snaps, pos, allTr, allSnap] = await Promise.all([
+      [st, sigs, snaps, pos, allTr, allSnap, cal] = await Promise.all([
         api("/api/autoscalp/status"),
         api(`/api/autoscalp/signals?limit=60${q}`),
         api(`/api/autoscalp/snapshots?limit=60${q}`),
         api("/api/trades?limit=100&status=OPEN"),
         api("/api/trades?limit=300"),
         api("/api/autoscalp/snapshots?limit=40"),
+        api("/api/market/calendar").catch(() => null),
       ]);
     } catch (e) {
       const el = $("#asErr"); el.hidden = false; el.textContent = "autoscalp: " + e.message; return;
@@ -985,6 +987,14 @@
     set("asSymTag", sym ? `${sym} · ${inWl ? "trading" : "view-only"}` : "—");
     const wlb = $("#asWlBtn");
     if (wlb) { wlb.textContent = inWl ? "− Stop" : "+ Trade"; wlb.disabled = !sym; wlb.dataset.in = inWl ? "1" : "0"; }
+
+    // market session status — so MARKET_CLOSED on NIFTY / a live MCX regime make sense
+    const ms = $("#asMktStatus");
+    if (ms && cal) {
+      const seg = cal.segments || {};
+      ms.textContent = "Session — " + Object.entries(seg).map(([k, v]) => `${k} ${String(v).replace("_", " ").toLowerCase()}`).join(" · ")
+        + (cal.holiday ? " · HOLIDAY" : "");
+    }
 
     // per-symbol watchlist summary — the whole autonomous operation at a glance
     const ws = $("#asWlSummary");
