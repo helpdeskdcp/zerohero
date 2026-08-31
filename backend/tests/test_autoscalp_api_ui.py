@@ -15,7 +15,7 @@ def test_autoscalp_endpoints_present_and_paper(fresh_db):
     assert main.api_autoscalp_signals(limit=50) == []
     assert main.api_autoscalp_snapshots(limit=50) == []
     cfg = main.api_autoscalp_get_config()
-    assert "symbols" in cfg and cfg["symbols"] == ["NIFTY"]
+    assert "symbols" in cfg and "NIFTY" in cfg["symbols"]
     # arm/disarm toggles the shared setting; PAPER only, no live path
     main.autoscalp.arm()
     assert main.api_autoscalp_status()["armed"] is True

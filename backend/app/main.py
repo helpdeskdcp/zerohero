@@ -124,15 +124,20 @@ scalp_runner = ScalpRunner(broadcast=manager.broadcast)
 from .autoscalp.runner import AutoScalpRunner
 
 
-def _autoscalp_chain(symbol, atm, window):
-    """Canonical ATM+/-window chain from the read-only quote SDK (best effort)."""
+def _autoscalp_chain(symbol, atm, window, market="NSE"):
+    """Canonical ATM+/-window chain from the read-only quote SDK (best effort).
+    `market` is NSE for index options, MCX for NATURALGAS/CRUDEOIL options-on-
+    futures — selection_snapshot + the SDK are exchange-aware."""
     try:
         from .connectors.angelone import _market_sdk
         sdk = _market_sdk(require_auth=False)
         if not sdk:
             return []
-        snap = market_data.selection_snapshot(sdk, "NSE", symbol, expiry="AUTO",
-                                              option_type="BOTH", window=window)
+        mkt = str(market or "NSE").upper()
+        et = 5 if mkt == "MCX" else 2                       # WS exchange type for the legs
+        snap = market_data.selection_snapshot(sdk, mkt, symbol, expiry="AUTO",
+                                              option_type="BOTH", window=window,
+                                              instrument="OPTION" if mkt == "MCX" else None)
         expiry = snap.get("expiry")
         out = []
         for r in snap.get("chain") or []:
@@ -140,11 +145,11 @@ def _autoscalp_chain(symbol, atm, window):
             out.append({
                 "strike": strike,
                 "ce": {"ltp": r.get("ce_ltp"), "oi": r.get("ce_oi"), "oi_chg": r.get("ce_oi_change"),
-                       "vol_delta": r.get("ce_volume"), "token": r.get("ce_token"),
+                       "vol_delta": r.get("ce_volume"), "token": r.get("ce_token"), "exchange_type": et,
                        "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
                        "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "CE"), "expiry": expiry},
                 "pe": {"ltp": r.get("pe_ltp"), "oi": r.get("pe_oi"), "oi_chg": r.get("pe_oi_change"),
-                       "vol_delta": r.get("pe_volume"), "token": r.get("pe_token"),
+                       "vol_delta": r.get("pe_volume"), "token": r.get("pe_token"), "exchange_type": et,
                        "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
                        "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "PE"), "expiry": expiry},
             })

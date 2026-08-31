@@ -199,8 +199,9 @@ def _runner(monkeypatch, decide_ret):
     feed = FakeFeed({"99926000": 24095.0, "CE24100": 130.0, "PE24100": 95.0})
     r = ascr.AutoScalpRunner(feed=feed, chain_provider=lambda *_a, **_k: _CHAIN,
                              telegram_fn=lambda *_a: None, now_fn=lambda: 1_800_000_000.0)
-    r.set_config({"safeguards": {"allow_weekend": True, "session_start_hhmm": "00:00",
-                                "daily_cutoff_hhmm": "23:59"}})
+    r.set_config({"symbols": ["NIFTY"],           # single-symbol runner mechanics
+                  "safeguards": {"allow_weekend": True, "session_start_hhmm": "00:00",
+                                 "daily_cutoff_hhmm": "23:59"}})
     # NIFTY seed resolves to token 99926000
     monkeypatch.setattr(ascr, "decide_from_context", lambda *a, **k: decide_ret)
     # give the NIFTY aggregator >= 20 5m bars so _evaluate proceeds
@@ -269,6 +270,20 @@ def test_runner_config_roundtrip_and_unknown_field(fresh_db):
     assert r.get_config()["symbols"] == ["NIFTY", "BANKNIFTY"]
     with pytest.raises(ValueError):
         r.set_config({"nonsense": 1})
+
+
+def test_symbol_meta_and_default_watchlist():
+    # NG / Crude ship in the default watchlist and carry MCX metadata
+    assert set(ascr.DEFAULT_CONFIG["symbols"]) >= {"NIFTY", "NATURALGAS", "CRUDEOIL"}
+    assert ascr._sym_meta("NATURALGAS") == {"exchange": "MCX", "strike_step": 2.5}
+    assert ascr._sym_meta("CRUDEOIL")["exchange"] == "MCX"
+    assert ascr._sym_meta("NIFTY") == {"exchange": "NSE", "strike_step": 50.0}
+    assert ascr._sym_meta("WHATEVER")["exchange"] == "NSE"        # graceful default
+
+
+def test_underlying_ref_nse_uses_registry(fresh_db):
+    ref = ascr._underlying_ref("NIFTY")
+    assert ref["exchange"] == "NSE" and ref["token"] == "99926000"
 
 
 def test_tg_send_confidence_gate_and_dedup(fresh_db):

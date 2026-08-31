@@ -74,9 +74,36 @@ class AngelOneClient:
         return [r for r in self.search_instruments(symbol=query or None)
                 if r.get("instrumenttype") in ("OPTIDX", "OPTSTK", "OPTFUT")]
 
+    def _option_universe(self, underlying):
+        """Where this underlying's options live: NSE index/stock (NFO) vs MCX
+        commodity options-on-futures (OPTFUT). Returns
+        {exchange, types, quote_ex, spot}."""
+        u = {"CRUDEOILMINI": "CRUDEOILM"}.get(str(underlying or "").upper(), str(underlying or "").upper())
+        mcx = self.search_instruments(symbol=u, exchange="MCX", instrumenttype="OPTFUT")
+        if mcx:
+            fut = self.resolve_future_contract(u, "AUTO")
+            spot = None
+            if fut.get("status") == "OK":
+                q = self.get_quote("MCX", fut.get("token")) or {}
+                spot = q.get("ltp") or q.get("lastTradedPrice")
+            return {"exchange": "MCX", "types": ("OPTFUT",), "quote_ex": "MCX", "spot": spot,
+                    "fut_expiry": fut.get("expiry") if fut.get("status") == "OK" else None}
+        idx = self.resolve_index(u)
+        if idx.get("status") == "OK":
+            q = self.get_quote("NSE", idx.get("token")) or {}
+        else:
+            eq = self.resolve_equity(u)
+            q = self.get_quote("NSE", eq.get("token")) if eq.get("status") == "OK" else {}
+        spot = (q or {}).get("ltp") or (q or {}).get("lastTradedPrice")
+        return {"exchange": "NFO", "types": ("OPTIDX", "OPTSTK"), "quote_ex": "NFO", "spot": spot, "fut_expiry": None}
+
     def resolve_option_contract(self, underlying, expiry="AUTO", strike="ATM", option_type="CE", spot=None):
         u, typ = str(underlying).upper(), str(option_type).upper()
-        rows = [r for r in self.search_instruments(symbol=u, exchange="NFO") if r.get("instrumenttype") in ("OPTIDX","OPTSTK") and str(r.get("symbol","")).upper().endswith(typ)]
+        uni = self._option_universe(u)
+        if spot is None:
+            spot = uni.get("spot")
+        rows = [r for r in self.search_instruments(symbol=u, exchange=uni["exchange"])
+                if r.get("instrumenttype") in uni["types"] and str(r.get("symbol", "")).upper().endswith(typ)]
         today = datetime.now(timezone.utc).date(); exps = sorted({r.get("expiry") for r in rows if self._date(r.get("expiry")) and self._date(r.get("expiry")) >= today})
         if not exps: return {"status":"CONTRACT_INVALID", "reason":"no valid expiry"}
         mode = str(expiry or "AUTO").upper(); selected = exps[0] if mode in ("AUTO","CURRENT") else exps[1] if mode == "NEXT" and len(exps)>1 else exps[-1] if mode == "LATEST" else expiry
@@ -87,7 +114,7 @@ class AngelOneClient:
             except (TypeError, ValueError): return None
         chosen = min(rows, key=lambda r: abs((st(r) or 0)-float(spot))) if strike == "ATM" and spot is not None else next((r for r in rows if st(r) == float(strike)), None)
         if not chosen: return {"status":"CONTRACT_INVALID", "reason":"strike unavailable or spot missing"}
-        return {"status":"OK", "exchange":"NFO", "symbol":chosen.get("symbol"), "token":str(chosen.get("token")), "underlying":u, "expiry":selected, "strike":st(chosen), "option_type":typ, "lot_size":chosen.get("lotsize"), "expiry_selection_mode":mode, "available_expiries":exps}
+        return {"status":"OK", "exchange":uni["exchange"], "symbol":chosen.get("symbol"), "token":str(chosen.get("token")), "underlying":u, "expiry":selected, "strike":st(chosen), "option_type":typ, "lot_size":chosen.get("lotsize"), "expiry_selection_mode":mode, "available_expiries":exps}
 
     def resolve_index(self, symbol):
         rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE") if r.get("instrumenttype") == "AMXIDX"]
@@ -120,12 +147,11 @@ class AngelOneClient:
         return {"status":"OK","exchange":"MCX","symbol":chosen.get("symbol"),"token":str(chosen.get("token")),"underlying":str(symbol).upper(),"expiry":chosen.get("expiry"),"lot_size":chosen.get("lotsize"),"expiry_selection_mode":mode}
 
     def get_option_chain(self, underlying, expiry="AUTO", window=5):
-        idx = self.resolve_index(underlying); spot_q = self.get_quote("NSE", idx.get("token")) if idx.get("status") == "OK" else {}
-        spot = spot_q.get("ltp") or spot_q.get("lastTradedPrice")
+        uni = self._option_universe(underlying); spot = uni.get("spot")
         if spot is None: return {"status":"DATA_UNAVAILABLE", "reason":"spot unavailable"}
         probe = self.resolve_option_contract(underlying, expiry, "ATM", "CE", spot=float(spot))
         if probe.get("status") != "OK": return probe
-        selected = probe["expiry"]; rows = [r for r in self.search_instruments(symbol=str(underlying).upper(), exchange="NFO") if r.get("expiry") == selected and r.get("instrumenttype") in ("OPTIDX","OPTSTK")]
+        selected = probe["expiry"]; rows = [r for r in self.search_instruments(symbol=str(underlying).upper(), exchange=uni["exchange"]) if r.get("expiry") == selected and r.get("instrumenttype") in uni["types"]]
         strikes = sorted({round(float(r.get("strike"))/100, 6) for r in rows if r.get("strike") is not None})
         atm_i = min(range(len(strikes)), key=lambda i: abs(strikes[i]-float(spot)))
         strikes = strikes[max(0, atm_i-window):atm_i+window+1]
@@ -140,9 +166,9 @@ class AngelOneClient:
             for typ in ("CE","PE"):
                 c=next((r for r in rows if str(r.get("symbol","")).upper().endswith(typ) and abs(float(r.get("strike"))/100-strike)<1e-6), None)
                 if not c: continue
-                q=self.get_quote("NFO", c.get("token")); legs[typ]={"token":str(c.get("token")),"ltp":field(q, "ltp", "lastTradedPrice"),"oi":field(q, "opnInterest", "openInterest"),"oi_change":field(q, "changeinOpenInterest", "changeInOpenInterest"),"volume":field(q, "tradeVolume", "volume"),"timestamp":field(q, "exchangeTimestamp", "exchange_timestamp")}
+                q=self.get_quote(uni["quote_ex"], c.get("token")); legs[typ]={"token":str(c.get("token")),"ltp":field(q, "ltp", "lastTradedPrice"),"oi":field(q, "opnInterest", "openInterest"),"oi_change":field(q, "changeinOpenInterest", "changeInOpenInterest"),"volume":field(q, "tradeVolume", "volume"),"timestamp":field(q, "exchangeTimestamp", "exchange_timestamp")}
             out_rows.append({"strike":strike,"ce":legs.get("CE"),"pe":legs.get("PE")})
-        return {"status":"OK" if out_rows else "DATA_UNAVAILABLE","symbol":str(underlying).upper(),"underlying":str(underlying).upper(),"spot":spot,"expiry":selected,"rows":out_rows,"timestamp":datetime.now(timezone.utc).isoformat()}
+        return {"status":"OK" if out_rows else "DATA_UNAVAILABLE","symbol":str(underlying).upper(),"underlying":str(underlying).upper(),"spot":spot,"expiry":selected,"exchange":uni["exchange"],"rows":out_rows,"timestamp":datetime.now(timezone.utc).isoformat()}
 
     def get_greeks(self, symbol, expiry):
         if not self.authenticate(): return {"status":"AUTH_FAILED"}

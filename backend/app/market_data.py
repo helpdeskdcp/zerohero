@@ -80,12 +80,21 @@ def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH"
     if market not in ("NSE", "MCX") or not symbol:
         return _unavailable(market, symbol, "market and symbol are required")
     if market == "MCX":
-        contract = sdk.resolve_future_contract(symbol, expiry)
+        contract = sdk.resolve_future_contract(symbol, expiry if str(expiry).upper() != "AUTO" else "AUTO")
         if contract.get("status") != "OK":
             return _unavailable(market, symbol, contract.get("reason") or "current MCX contract unavailable")
         quote = sdk.get_quote("MCX", contract["token"])
         fields = _quote_fields(quote)
         status = "OK" if quote.get("status") == "OK" else "DATA_UNAVAILABLE"
+        # OPTIONS-on-futures view — opt-in via instrument="OPTION"; mirrors the
+        # NSE chain path with the front-month future's LTP as the ATM anchor.
+        if str(instrument or "").upper() == "OPTION":
+            spot = fields.get("ltp")
+            if spot is None:
+                return _unavailable(market, symbol, "live MCX future price unavailable")
+            return _option_snapshot(sdk, market, symbol, spot, expiry, option_type, window,
+                                    underlying_contract=contract)
+        # default: the front-month future itself (unchanged)
         return {"status": status, "data_status": status, "market": market, "symbol": symbol,
                 "instrument": "FUTURE", "underlying": contract.get("underlying"),
                 "contract": contract, "expiry": contract.get("expiry"), "quote": fields,
@@ -109,6 +118,14 @@ def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH"
                 "source": "ANGELONE_SDK"}
     if spot is None:
         return _unavailable(market, symbol, "live underlying spot unavailable")
+    return _option_snapshot(sdk, market, symbol, spot, expiry, option_type, window,
+                            underlying_contract=underlying)
+
+
+def _option_snapshot(sdk, market, symbol, spot, expiry, option_type, window, *, underlying_contract):
+    """Build the normalized ATM option chain around `spot`. Shared by the NSE
+    index/stock path and the MCX options-on-futures path (the SDK's
+    resolve_option_contract / get_option_chain are exchange-aware)."""
     ce = sdk.resolve_option_contract(symbol, expiry, "ATM", "CE", spot)
     pe = sdk.resolve_option_contract(symbol, expiry, "ATM", "PE", spot)
     if ce.get("status") != "OK" and pe.get("status") != "OK":
@@ -126,7 +143,7 @@ def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH"
                                  "ce_token": ce_leg.get("token"), "pe_token": pe_leg.get("token")})
     chain_status = "OK" if chain.get("status") == "OK" else "DATA_UNAVAILABLE"
     return {"status": chain_status, "data_status": chain_status, "market": market, "symbol": symbol,
-            "instrument": "OPTION", "underlying": symbol, "underlying_contract": underlying,
+            "instrument": "OPTION", "underlying": symbol, "underlying_contract": underlying_contract,
             "spot": spot, "expiry": selected.get("expiry"), "atm": selected.get("strike"),
             "available_expiries": selected.get("available_expiries") or [],
             "option_type": str(option_type or "BOTH").upper(), "contracts": {"CE": ce, "PE": pe},

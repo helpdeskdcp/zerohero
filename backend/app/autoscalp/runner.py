@@ -33,8 +33,55 @@ ARMED_KEY = "autoscalp_armed"
 CALIB_KEY = "autoscalp_calibration"
 CONFIG_KEY = "autoscalp_config"
 
+# Per-symbol trading metadata. `strike_step` is the option strike grid (NIFTY
+# 50 pts; NATURALGAS ~2.5; CRUDEOIL ~50). `exchange` drives the market-hours
+# gate + WS exchange type. MCX underlyings are priced off the front-month
+# future, whose token is resolved live (it rolls monthly).
+_SYMBOL_META = {
+    "NIFTY":      {"exchange": "NSE", "strike_step": 50.0},
+    "BANKNIFTY":  {"exchange": "NSE", "strike_step": 100.0},
+    "NATURALGAS": {"exchange": "MCX", "strike_step": 2.5},
+    "CRUDEOIL":   {"exchange": "MCX", "strike_step": 50.0},
+    "CRUDEOILM":  {"exchange": "MCX", "strike_step": 50.0},
+}
+
+
+def _sym_meta(sym):
+    return _SYMBOL_META.get(str(sym or "").upper(), {"exchange": "NSE", "strike_step": 50.0})
+
+
+_UND_CACHE: dict[str, tuple] = {}          # SYM -> (expiry_epoch, {token, exchange, expiry})
+
+
+def _underlying_ref(sym):
+    """WS-subscribable underlying for `sym`: the NSE index/stock token (static
+    registry) or the MCX front-month future token (resolved live, cached 1h --
+    it rolls monthly)."""
+    key = str(sym or "").upper()
+    meta = _sym_meta(key)
+    if meta["exchange"] != "MCX":
+        from .. import instruments
+        r = instruments.resolve(key) or {}
+        return {"token": str(r.get("symboltoken") or ""), "exchange": r.get("exchange") or "NSE",
+                "expiry": None}
+    hit = _UND_CACHE.get(key)
+    if hit and time.time() < hit[0]:
+        return hit[1]
+    ref = {"token": "", "exchange": "MCX", "expiry": None}
+    try:
+        from ..connectors.angelone import _market_sdk
+        sdk = _market_sdk(require_auth=False)
+        fut = sdk.resolve_future_contract(key, "AUTO") if sdk else {}
+        if fut.get("status") == "OK":
+            ref = {"token": str(fut.get("token") or ""), "exchange": "MCX", "expiry": fut.get("expiry")}
+    except Exception:
+        pass
+    _UND_CACHE[key] = (time.time() + 3600, ref)
+    return ref
+
+
 DEFAULT_CONFIG = {
-    "symbols": ["NIFTY"],
+    "symbols": ["NIFTY", "NATURALGAS", "CRUDEOIL"],
     "decide_every_sec": 30,
     "poll_sec": 2,
     "strike_window": 2,
@@ -143,12 +190,11 @@ class AutoScalpRunner:
             return
         want = []
         from ..connectors.angel_ws import EXCHANGE_TYPE
-        from .. import instruments
         for sym in cfg["symbols"]:
-            meta = instruments.resolve(sym)
-            if meta and meta.get("symboltoken"):
-                want.append({"token": str(meta["symboltoken"]),
-                             "exchange_type": EXCHANGE_TYPE.get(str(meta.get("exchange") or "NSE").upper(), 1)})
+            ref = _underlying_ref(sym)
+            if ref.get("token"):
+                want.append({"token": ref["token"],
+                             "exchange_type": EXCHANGE_TYPE.get(str(ref.get("exchange") or "NSE").upper(), 1)})
                 self._aggs.setdefault(sym.upper(), CandleAggregator())
         for tok, meta in list(self._sub_tokens.items()):
             want.append({"token": tok, "exchange_type": meta.get("exchange_type", 2)})
@@ -164,7 +210,6 @@ class AutoScalpRunner:
         until its option candles rebuild. Runs at most once per symbol/token
         per process; seed_from_ohlc is itself a no-op once live ticks arrive."""
         from ..connectors import angelone
-        from .. import instruments
         for sym in cfg["symbols"]:
             key = sym.upper()
             agg = self._aggs.get(key)
@@ -173,12 +218,12 @@ class AutoScalpRunner:
             self._seeded.add(key)
             if agg.last_ts is not None:
                 continue
-            meta = instruments.resolve(sym) or {}
+            ref = _underlying_ref(sym)
             try:
                 conn = await asyncio.to_thread(
-                    angelone.fetch_candles, meta.get("market") or "NSE", sym,
-                    meta.get("exchange") or "NSE", meta.get("symboltoken"),
-                    None, None, None, "1m", meta.get("instrument"))
+                    angelone.fetch_candles, ref.get("exchange") or "NSE", sym,
+                    ref.get("exchange") or "NSE", ref.get("token"),
+                    None, None, None, "1m", "FUTURE" if _sym_meta(sym)["exchange"] == "MCX" else None)
                 agg.seed_from_ohlc(conn.get("candles") or [])
             except Exception as e:
                 self.last_error = f"seed {sym}: {type(e).__name__}: {e}"
@@ -187,13 +232,15 @@ class AutoScalpRunner:
             if not tok or tok in self._seeded:
                 continue
             self._seeded.add(tok)
+            is_mcx = str(t.get("market") or "").upper() == "MCX"
+            opt_ex = "MCX" if is_mcx else "NFO"
             agg = self._opt_aggs.setdefault(tok, CandleAggregator())
-            self._sub_tokens.setdefault(tok, {"exchange_type": 2})
+            self._sub_tokens.setdefault(tok, {"exchange_type": 5 if is_mcx else 2})
             if agg.last_ts is not None:
                 continue
             try:
                 conn = await asyncio.to_thread(
-                    angelone.fetch_candles, "NSE", "", "NFO", tok,
+                    angelone.fetch_candles, opt_ex, "", opt_ex, tok,
                     None, None, None, "1m", "OPTION")
                 agg.seed_from_ohlc(conn.get("candles") or [])
             except Exception as e:
@@ -208,7 +255,7 @@ class AutoScalpRunner:
                 leg = row.get(ot) or {}
                 tok = leg.get("token")
                 if tok and str(tok) not in self._sub_tokens:
-                    self._sub_tokens[str(tok)] = {"exchange_type": 2}
+                    self._sub_tokens[str(tok)] = {"exchange_type": int(leg.get("exchange_type") or 2)}
                     self._opt_aggs.setdefault(str(tok), CandleAggregator())
 
     def _pump_feed(self):
@@ -217,9 +264,7 @@ class AutoScalpRunner:
             return
         now = self._now()
         for sym, agg in self._aggs.items():
-            from .. import instruments
-            meta = instruments.resolve(sym)
-            tok = meta and meta.get("symboltoken")
+            tok = _underlying_ref(sym).get("token")
             ltp = self.feed.get_ltp(str(tok)) if tok else None
             if ltp is not None:
                 agg.add_tick(now, float(ltp))
@@ -253,15 +298,18 @@ class AutoScalpRunner:
         agg = self._aggs.get(sym.upper())
         if not agg or agg.last_price is None:
             return
+        smeta = _sym_meta(sym)
+        step = float(smeta["strike_step"])
+        atm = round(agg.last_price / step) * step
         # Market-hours awareness: suspend the strategy and publish an explicit
-        # MARKET_CLOSED regime outside NSE trading hours / on an exchange holiday.
+        # MARKET_CLOSED regime outside THIS symbol's exchange hours / on a holiday.
         if not (cfg.get("safeguards") or {}).get("allow_weekend"):
             from .. import market_calendar
-            if market_calendar.segment_status("NSE") != "OPEN":
+            seg = market_calendar.segment_status(smeta["exchange"])
+            if seg != "OPEN":
                 sig = {"decision": "NO_TRADE", "signal_type": "NONE", "direction": "NONE",
-                       "regime": "MARKET_CLOSED",
-                       "reason": f"NSE {market_calendar.segment_status('NSE').lower()}"}
-                self._persist_snapshot(sym, agg, round(agg.last_price / 50.0) * 50, [], sig,
+                       "regime": "MARKET_CLOSED", "reason": f"{smeta['exchange']} {seg.lower()}"}
+                self._persist_snapshot(sym, agg, atm, [], sig,
                                        (self.feed.status() if self.feed else {}).get("last_msg_age_sec"))
                 await self._emit("autoscalp_signal", {"symbol": sym, "decision": "NO_TRADE",
                                                       "regime": "MARKET_CLOSED", "reason": sig["reason"]})
@@ -269,11 +317,10 @@ class AutoScalpRunner:
         bars = agg.snapshot(now_epoch=self._now())
         if len(bars.get("5m") or []) < 20:
             return
-        atm = round(agg.last_price / 50.0) * 50
         chain = []
         if self.chain_provider:
             try:
-                chain = self.chain_provider(sym, atm, cfg["strike_window"]) or []
+                chain = self.chain_provider(sym, atm, cfg["strike_window"], smeta["exchange"]) or []
             except Exception as e:
                 self.last_error = f"chain: {type(e).__name__}: {e}"
         self._ensure_option_subs(chain)
@@ -282,10 +329,12 @@ class AutoScalpRunner:
         feed_age = feed_st.get("last_msg_age_sec")
         tod = _tod_bucket(_mod(datetime.now(timezone.utc).astimezone().isoformat()))
 
+        strat_cfg = {"strike_step": step, "strike_window": cfg["strike_window"],
+                     **(cfg.get("strategy") or {})}
         sig = decide_from_context(
             bars, chain, atm=atm, calib=self.calibration(),
             avg_win=None, avg_loss=None, leg_bars_fn=self._leg_bars_fn(chain),
-            tod_bucket=tod, config=cfg.get("strategy") or {})
+            tod_bucket=tod, config=strat_cfg)
 
         self._persist_snapshot(sym, agg, atm, chain, sig, feed_age)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
@@ -308,7 +357,7 @@ class AutoScalpRunner:
             feed_connected=bool(feed_st.get("connected", True)),
             feed_age_sec=feed_age, underlying=sym.upper(),
             side=sig["decision"].split("_")[1], open_keys=open_keys,
-            option_premium=sig.get("entry"))
+            option_premium=sig.get("entry"), exchange=smeta["exchange"])
         if not allow:
             await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why, "signal": sig["decision"]})
             return
@@ -342,7 +391,7 @@ class AutoScalpRunner:
         signal_id = "ASC-" + format(int(time.time() * 1000), "x")
         qty = 1
         row = open_trade({
-            "signal_id": signal_id, "market": "NSE", "underlying": sym.upper(),
+            "signal_id": signal_id, "market": _sym_meta(sym)["exchange"], "underlying": sym.upper(),
             "instrument": "OPTION", "expiry": sig.get("expiry") or "",
             "strike": sig.get("strike") or 0, "option_type": sig["decision"].split("_")[1],
             "direction": "BUY", "timeframe": "5m", "entry": sig["entry"],

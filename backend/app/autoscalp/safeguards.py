@@ -16,11 +16,12 @@ _IST = timezone(timedelta(hours=5, minutes=30))
 
 DEFAULTS = {
     "max_daily_loss": 3000.0,        # rupees of realised P&L; halt new entries at -this
-    "max_trades_per_day": 12,
-    "max_concurrent": 1,
+    "max_trades_per_day": 18,
+    "max_concurrent": 3,             # one position per watchlist symbol (NIFTY / NG / CRUDE)
     "max_consecutive_losses": 4,
-    "daily_cutoff_hhmm": "15:00",    # no new entries after this (IST)
+    "daily_cutoff_hhmm": "15:00",    # NSE: no new entries after this (IST)
     "session_start_hhmm": "09:20",
+    "mcx_daily_cutoff_hhmm": "23:00",  # MCX: no new entries after this (close is 23:30)
     "max_feed_age_sec": 12,          # WS mark older than this -> fail closed
     "max_spread_pct": 1.2,           # option (ask-bid)/mid; proxy if quotes lack depth
     "min_option_premium": 8.0,
@@ -81,9 +82,11 @@ class Safeguards:
                     underlying: str, side: str, open_keys: set,
                     option_premium: float | None = None,
                     spread_pct: float | None = None,
-                    realised_pnl_today: float | None = None) -> tuple[bool, str]:
+                    realised_pnl_today: float | None = None,
+                    exchange: str = "NSE") -> tuple[bool, str]:
         c = self.cfg
         mod, wd = _mod_now()
+        ex = str(exchange or "NSE").upper()
 
         if killswitch.is_active():
             return False, f"kill switch active ({killswitch.state().get('reason')})"
@@ -93,10 +96,16 @@ class Safeguards:
             from .. import market_calendar
             if market_calendar.is_holiday():
                 return False, "exchange holiday"
-        if mod < _hhmm(c["session_start_hhmm"], 560):
-            return False, "pre-session"
-        if mod >= _hhmm(c["daily_cutoff_hhmm"], 900):
-            return False, f"past daily cutoff {c['daily_cutoff_hhmm']}"
+        # NB: the runner's _evaluate already suspends the strategy outside this
+        # symbol's exchange hours; here we only enforce the operator window.
+        if ex in ("NSE", "BSE"):
+            if mod < _hhmm(c["session_start_hhmm"], 560):
+                return False, "pre-session"
+            if mod >= _hhmm(c["daily_cutoff_hhmm"], 900):
+                return False, f"past daily cutoff {c['daily_cutoff_hhmm']}"
+        else:                                    # MCX / other: exchange hours + a late cutoff
+            if mod >= _hhmm(c.get("mcx_daily_cutoff_hhmm", "23:00"), 1380):
+                return False, f"past MCX cutoff {c.get('mcx_daily_cutoff_hhmm', '23:00')}"
 
         if c["require_feed_connected"] and not feed_connected:
             return False, "market-data feed not connected"
