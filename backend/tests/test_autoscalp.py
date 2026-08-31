@@ -286,6 +286,15 @@ def test_underlying_ref_nse_uses_registry(fresh_db):
     assert ref["exchange"] == "NSE" and ref["token"] == "99926000"
 
 
+def test_equity_fno_strike_step_is_inferred_from_master(fresh_db):
+    # an F&O stock not in _SYMBOL_META gets its real option strike grid so it
+    # scalps correctly when the operator adds it to `symbols`
+    m = ascr._sym_meta("RELIANCE")
+    assert m["exchange"] == "NSE" and 1.0 <= m["strike_step"] <= 100.0
+    # an unresolvable symbol falls back safely, never crashes
+    assert ascr._sym_meta("NOTATICKER")["strike_step"] == 50.0
+
+
 def test_tg_send_confidence_gate_and_dedup(fresh_db):
     # clock is fixed by now_fn, so a repeat inside telegram_dedup_sec is dropped
     r = ascr.AutoScalpRunner(now_fn=lambda: 1_800_000_000.0)

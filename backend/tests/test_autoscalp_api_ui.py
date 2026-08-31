@@ -59,6 +59,30 @@ def test_market_calendar_endpoint(fresh_db):
     assert isinstance(out["restart_allowed"], bool)
 
 
+def test_autoscalp_universe_grouped(fresh_db):
+    from app import main
+    u = main.api_autoscalp_universe()
+    assert "NIFTY" in u["watchlist"] and "NATURALGAS" in u["watchlist"]
+    assert set(u["groups"]) == {"NSE Index", "MCX", "Equity (F&O)"}
+    assert "NATURALGAS" in u["groups"]["MCX"]
+    # F&O equity list resolves off the instrument master (may be empty if the
+    # cache is absent in a sandbox) but the key must exist
+    assert isinstance(u["groups"]["Equity (F&O)"], list)
+
+
+def test_symbol_profiles_leave_nifty_frozen(fresh_db):
+    from app.autoscalp.runner import DEFAULT_CONFIG
+    sp = DEFAULT_CONFIG["symbol_profiles"]
+    assert "NIFTY" not in sp                              # NIFTY runs on validated defaults
+    assert sp["NATURALGAS"]["max_hold_sec"] == 1800
+    assert sp["CRUDEOIL"]["ev"]["min_ev_r"] == 0.15
+    # symbol_profiles is a known config key (settable via /api/autoscalp/config)
+    from app.autoscalp.runner import AutoScalpRunner
+    r = AutoScalpRunner()
+    out = r.set_config({"symbol_profiles": {"BANKNIFTY": {"max_hold_sec": 900}}})
+    assert out["symbol_profiles"]["BANKNIFTY"]["max_hold_sec"] == 900
+
+
 def test_no_endpoint_enables_live():
     """Grep guard: nothing under /api/autoscalp/* flips a LIVE flag."""
     src = (Path(__file__).parents[1] / "app" / "main.py").read_text()

@@ -421,6 +421,12 @@
           <div class="panel-head">
             <h2>Autonomous Scalper <span class="pill pill--paper">PAPER</span></h2>
             <div class="mon-exec-bar">
+              <label class="as-sym">View
+                <input id="asSymPick" list="asUniverseList" autocomplete="off" spellcheck="false"
+                       placeholder="Search symbol…" />
+                <datalist id="asUniverseList"></datalist>
+              </label>
+              <span class="hint" id="asSymTag">—</span>
               <button class="btn btn-primary" id="asArmBtn" type="button">ARM</button>
               <button class="btn btn-ghost danger" id="asKillBtn" type="button">Kill switch</button>
               <span class="hint" id="asState">—</span>
@@ -429,7 +435,7 @@
           <p class="scalp-err" id="asErr" hidden></p>
           <div class="mon-strip" id="asStrip">
             <div class="mon-cell"><span>Regime</span><b id="asRegime">—</b></div>
-            <div class="mon-cell"><span>Index</span><b id="asIndex">—</b></div>
+            <div class="mon-cell"><span>Price</span><b id="asIndex">—</b></div>
             <div class="mon-cell"><span>VWAP</span><b id="asVwap">—</b></div>
             <div class="mon-cell"><span>ATR</span><b id="asAtr">—</b></div>
             <div class="mon-cell"><span>Support</span><b id="asSup">—</b></div>

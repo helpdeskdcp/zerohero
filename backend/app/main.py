@@ -689,6 +689,43 @@ def api_autoscalp_snapshots(symbol: Optional[str] = None, limit: int = Query(200
     return db.list_live_snapshots(symbol=symbol, limit=limit)
 
 
+@app.get("/api/autoscalp/universe")
+def api_autoscalp_universe():
+    """Grouped, searchable symbol universe for the dashboard picker.
+    `watchlist` = symbols the runner actually trades; the groups are for
+    viewing S/R / VWAP / regime of any symbol."""
+    reg = instruments.registry()
+    nse_idx, mcx = [], []
+    for k, v in sorted(reg.items()):
+        ex = str(v.get("exchange") or "").upper()
+        (mcx if ex == "MCX" else nse_idx).append(k)
+    equity_fno = []
+    try:
+        seen = set()
+        for r in instruments.master_rows():
+            if r.get("exch_seg") == "NFO" and r.get("instrumenttype") == "OPTSTK":
+                n = str(r.get("name") or "").upper()
+                if n and n not in seen:
+                    seen.add(n)
+                    equity_fno.append(n)
+        equity_fno.sort()
+    except Exception:
+        equity_fno = []
+    wl = []
+    try:
+        wl = list(autoscalp.get_config().get("symbols") or [])
+    except Exception:
+        pass
+    return {
+        "watchlist": wl,
+        "groups": {
+            "NSE Index": [s for s in nse_idx if s not in mcx],
+            "MCX": mcx,
+            "Equity (F&O)": equity_fno,
+        },
+    }
+
+
 @app.get("/api/autoscalp/config")
 def api_autoscalp_get_config():
     return autoscalp.get_config()

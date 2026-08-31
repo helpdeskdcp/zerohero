@@ -938,20 +938,48 @@
   }
 
   // ---------------- Auto-Scalp (spec-16) ----------------
+  let AS_UNIVERSE = null;
+  function asSelectedSymbol() {
+    const v = ($("#asSymPick") && $("#asSymPick").value || "").trim().toUpperCase();
+    if (v) return v;
+    try { return (localStorage.getItem("asSymbol") || "").toUpperCase() || null; } catch (e) { return null; }
+  }
+  async function asLoadUniverse(defaultSym) {
+    try {
+      AS_UNIVERSE = AS_UNIVERSE || await api("/api/autoscalp/universe");
+    } catch (e) { AS_UNIVERSE = { watchlist: [], groups: {} }; }
+    const dl = $("#asUniverseList"); if (!dl) return;
+    const wl = AS_UNIVERSE.watchlist || [];
+    const g = AS_UNIVERSE.groups || {};
+    const opt = (s, lbl) => `<option value="${text(s)}"${lbl ? ` label="${lbl}"` : ""}></option>`;
+    dl.innerHTML =
+      wl.map(s => opt(s, "★ trading")).join("") +
+      Object.entries(g).flatMap(([grp, syms]) =>
+        (syms || []).filter(s => !wl.includes(s)).map(s => opt(s, grp))).join("");
+    const pick = $("#asSymPick");
+    if (pick && !pick.value) pick.value = defaultSym || wl[0] || "NIFTY";
+  }
+
   async function loadAutoscalp() {
+    await asLoadUniverse();
+    const sym = asSelectedSymbol();
+    const q = sym ? `&symbol=${encodeURIComponent(sym)}` : "";
     let st, sigs, snaps, pos;
     try {
       [st, sigs, snaps, pos] = await Promise.all([
         api("/api/autoscalp/status"),
-        api("/api/autoscalp/signals?limit=60"),
-        api("/api/autoscalp/snapshots?limit=60"),
-        api("/api/autoscalp/status").then(() => api("/api/trades?limit=100&status=OPEN")),
+        api(`/api/autoscalp/signals?limit=60${q}`),
+        api(`/api/autoscalp/snapshots?limit=60${q}`),
+        api("/api/trades?limit=100&status=OPEN"),
       ]);
     } catch (e) {
       const el = $("#asErr"); el.hidden = false; el.textContent = "autoscalp: " + e.message; return;
     }
     $("#asErr").hidden = true;
     const set = (id, v, cls) => { const el = $("#" + id); if (el) { el.textContent = v; if (cls !== undefined) el.className = cls; } };
+    // which symbol's analysis is on screen, and is it actually trading?
+    const wl = (AS_UNIVERSE && AS_UNIVERSE.watchlist) || [];
+    set("asSymTag", sym ? `${sym} · ${wl.includes(sym) ? "trading" : "view-only"}` : "—");
     const armed = !!st.armed;
     $("#asArmBtn").textContent = armed ? "DISARM" : "ARM";
     $("#asArmBtn").dataset.armed = String(armed);
@@ -990,7 +1018,9 @@
     set("asReason", text(latest.reason));
 
     const asMark = {};
-    $("#asPosTable tbody").innerHTML = (pos || []).filter(t => t.strategy === "AUTOSCALP").map(t => `
+    $("#asPosTable tbody").innerHTML = (pos || [])
+      .filter(t => t.strategy === "AUTOSCALP" && (!sym || String(t.underlying || "").toUpperCase() === sym))
+      .map(t => `
       <tr><td>${timeStr(t.opened_ts)}</td><td>${text(t.underlying)}</td>
       <td>${text(t.option_type)} ${text(t.strike, "")}</td>
       <td class="feed-dir ${directionClass(t.direction)}">${text(t.direction)}</td>
@@ -1043,6 +1073,19 @@
       catch (e) { alert("kill: " + e.message); }
       loadAutoscalp();
     });
+    const pick = $("#asSymPick");
+    if (pick) {
+      const onPick = () => {
+        const v = pick.value.trim().toUpperCase();
+        if (v) { try { localStorage.setItem("asSymbol", v); } catch (e) {} }
+        loadAutoscalp();
+      };
+      pick.addEventListener("change", onPick);
+      pick.addEventListener("input", () => {
+        const opts = Array.from($("#asUniverseList") ? $("#asUniverseList").options : []).map(o => o.value.toUpperCase());
+        if (opts.includes(pick.value.trim().toUpperCase())) onPick();
+      });
+    }
   })();
 
   const _origHandleWs = handleWsMessage;

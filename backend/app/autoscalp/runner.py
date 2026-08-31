@@ -46,8 +46,32 @@ _SYMBOL_META = {
 }
 
 
+_META_CACHE: dict[str, dict] = {}
+
+
 def _sym_meta(sym):
-    return _SYMBOL_META.get(str(sym or "").upper(), {"exchange": "NSE", "strike_step": 50.0})
+    key = str(sym or "").upper()
+    if key in _SYMBOL_META:
+        return _SYMBOL_META[key]
+    if key in _META_CACHE:
+        return _META_CACHE[key]
+    meta = {"exchange": "NSE", "strike_step": 50.0}
+    # Unknown symbol: infer from the instrument master. An F&O stock (NFO
+    # OPTSTK) gets its real strike grid so equity options scalp correctly when
+    # the operator adds it to `symbols`.
+    try:
+        from .. import instruments
+        strikes = sorted({round(float(r["strike"]) / 100.0, 4)
+                          for r in instruments.master_rows()
+                          if r.get("exch_seg") == "NFO" and r.get("instrumenttype") == "OPTSTK"
+                          and str(r.get("name") or "").upper() == key and r.get("strike")})
+        gaps = sorted(round(b - a, 4) for a, b in zip(strikes, strikes[1:]) if b > a)
+        if gaps:
+            meta = {"exchange": "NSE", "strike_step": gaps[len(gaps) // 2]}  # modal-ish gap
+    except Exception:
+        pass
+    _META_CACHE[key] = meta
+    return meta
 
 
 _UND_CACHE: dict[str, tuple] = {}          # SYM -> (expiry_epoch, {token, exchange, expiry})
@@ -87,7 +111,16 @@ DEFAULT_CONFIG = {
     "strike_window": 2,
     "recalibrate_every_sec": 900,
     "min_recalibrate_samples": 40,
-    "strategy": {},                 # forwarded to decide_from_context config
+    "strategy": {},                 # base decide_from_context config (all symbols)
+    # Per-symbol strategy overrides, merged over `strategy`. NIFTY is DELIBERATELY
+    # absent -> it runs on the P6-validated defaults and must stay that way
+    # (best live win-rate). MCX commodities move slower and trend longer, so
+    # they get more hold time + a slightly stricter EV bar.
+    "symbol_profiles": {
+        "NATURALGAS": {"max_hold_sec": 1800, "ev": {"min_ev_r": 0.15, "rr_min": 1.4}},
+        "CRUDEOIL":   {"max_hold_sec": 2400, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
+                       "sl_atr": 1.2, "t1_atr": 1.9},
+    },
     "safeguards": {},
     "auto_arm": False,
     "telegram_min_confidence": "HIGH",   # only push TG cards at/above this (LOW|MEDIUM|HIGH)
@@ -330,7 +363,8 @@ class AutoScalpRunner:
         tod = _tod_bucket(_mod(datetime.now(timezone.utc).astimezone().isoformat()))
 
         strat_cfg = {"strike_step": step, "strike_window": cfg["strike_window"],
-                     **(cfg.get("strategy") or {})}
+                     **(cfg.get("strategy") or {}),
+                     **((cfg.get("symbol_profiles") or {}).get(sym.upper()) or {})}
         sig = decide_from_context(
             bars, chain, atm=atm, calib=self.calibration(),
             avg_win=None, avg_loss=None, leg_bars_fn=self._leg_bars_fn(chain),

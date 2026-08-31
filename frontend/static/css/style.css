@@ -73,6 +73,12 @@ input, select, textarea { font-family: var(--font-mono); }
 
 .status-cluster { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
+.as-sym { display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+  color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+.as-sym input { width: 140px; padding: 5px 8px; font-size: 13px; text-transform: none;
+  letter-spacing: 0; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg); color: var(--ink); }
+
 /* Narrow phones: stop the brand title / status pills clipping at the header edges */
 @media (max-width: 520px) {
   .topbar { padding: 10px 12px; gap: 8px; }
