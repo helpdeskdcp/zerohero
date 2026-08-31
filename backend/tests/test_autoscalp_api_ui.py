@@ -70,6 +70,26 @@ def test_autoscalp_universe_grouped(fresh_db):
     assert isinstance(u["groups"]["Equity (F&O)"], list)
 
 
+def test_watchlist_add_remove(fresh_db):
+    from app import main
+    from fastapi import HTTPException
+    base = list(main.autoscalp.get_config()["symbols"])
+    out = main.api_autoscalp_watchlist({"symbol": "reliance", "action": "add"})
+    assert "RELIANCE" in out["symbols"]
+    out = main.api_autoscalp_watchlist({"symbol": "RELIANCE", "action": "add"})   # idempotent
+    assert out["symbols"].count("RELIANCE") == 1
+    out = main.api_autoscalp_watchlist({"symbol": "RELIANCE", "action": "remove"})
+    assert "RELIANCE" not in out["symbols"] and set(out["symbols"]) == set(base)
+    with pytest.raises(HTTPException):
+        main.api_autoscalp_watchlist({"symbol": "X", "action": "bogus"})
+    # cannot empty the watchlist
+    for s in list(main.autoscalp.get_config()["symbols"])[:-1]:
+        main.api_autoscalp_watchlist({"symbol": s, "action": "remove"})
+    with pytest.raises(HTTPException):
+        last = main.autoscalp.get_config()["symbols"][0]
+        main.api_autoscalp_watchlist({"symbol": last, "action": "remove"})
+
+
 def test_symbol_profiles_leave_nifty_frozen(fresh_db):
     from app.autoscalp.runner import DEFAULT_CONFIG
     sp = DEFAULT_CONFIG["symbol_profiles"]

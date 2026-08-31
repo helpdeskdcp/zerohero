@@ -739,6 +739,25 @@ def api_autoscalp_set_config(payload: dict):
         raise HTTPException(422, str(e))
 
 
+@app.post("/api/autoscalp/watchlist")
+def api_autoscalp_watchlist(payload: dict):
+    """Add or remove one symbol from the trading watchlist.
+    {"symbol": "RELIANCE", "action": "add" | "remove"}"""
+    sym = str((payload or {}).get("symbol") or "").strip().upper()
+    action = str((payload or {}).get("action") or "").lower()
+    if not sym or action not in ("add", "remove"):
+        raise HTTPException(422, "symbol and action ('add'|'remove') required")
+    cur = list(autoscalp.get_config().get("symbols") or [])
+    if action == "add" and sym not in cur:
+        cur.append(sym)
+    elif action == "remove":
+        cur = [s for s in cur if s != sym]
+    if not cur:
+        raise HTTPException(422, "watchlist cannot be empty")
+    autoscalp.set_config({"symbols": cur})
+    return {"symbols": cur}
+
+
 @app.post("/api/autoscalp/arm")
 def api_autoscalp_arm():
     autoscalp.start()

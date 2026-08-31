@@ -979,7 +979,10 @@
     const set = (id, v, cls) => { const el = $("#" + id); if (el) { el.textContent = v; if (cls !== undefined) el.className = cls; } };
     // which symbol's analysis is on screen, and is it actually trading?
     const wl = (AS_UNIVERSE && AS_UNIVERSE.watchlist) || [];
-    set("asSymTag", sym ? `${sym} · ${wl.includes(sym) ? "trading" : "view-only"}` : "—");
+    const inWl = sym && wl.includes(sym);
+    set("asSymTag", sym ? `${sym} · ${inWl ? "trading" : "view-only"}` : "—");
+    const wlb = $("#asWlBtn");
+    if (wlb) { wlb.textContent = inWl ? "− Stop" : "+ Trade"; wlb.disabled = !sym; wlb.dataset.in = inWl ? "1" : "0"; }
     const armed = !!st.armed;
     $("#asArmBtn").textContent = armed ? "DISARM" : "ARM";
     $("#asArmBtn").dataset.armed = String(armed);
@@ -1086,6 +1089,19 @@
         if (opts.includes(pick.value.trim().toUpperCase())) onPick();
       });
     }
+    const wlb = $("#asWlBtn");
+    if (wlb) wlb.addEventListener("click", async () => {
+      const sym = (pick && pick.value || "").trim().toUpperCase();
+      if (!sym) return;
+      const action = wlb.dataset.in === "1" ? "remove" : "add";
+      if (action === "add" && !confirm(`Add ${sym} to the trading watchlist? It will scalp PAPER on its own profile.`)) return;
+      if (action === "remove" && !confirm(`Stop trading ${sym}? Open positions keep being monitored to exit.`)) return;
+      try {
+        await api("/api/autoscalp/watchlist", { method: "POST", body: JSON.stringify({ symbol: sym, action }) });
+        AS_UNIVERSE = null;                       // force universe refetch (watchlist changed)
+      } catch (e) { alert("watchlist: " + e.message); }
+      loadAutoscalp();
+    });
   })();
 
   const _origHandleWs = handleWsMessage;
