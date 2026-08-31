@@ -262,7 +262,7 @@ class AutoScalpRunner:
             "target_1": sig["target_1"], "target_2": sig.get("target_2"),
             "stop_loss": sig["stop_loss"], "trailing_stop": sig.get("trailing_stop") or 0,
             "quantity": qty, "probability": sig.get("probability"),
-            "confidence": None, "market_regime": sig.get("regime"),
+            "confidence": sig.get("confidence"), "market_regime": sig.get("regime"),
             "oi_evidence": "", "reason": sig.get("reason", "autoscalp"),
             "strategy": "AUTOSCALP", "setup": sig.get("signal_type"),
             "atr_pct": None, "max_hold_sec": sig.get("max_hold_sec"),
