@@ -155,13 +155,33 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         return out_none("no clean state", ctx)
 
     # --- configurable P6.1 filters (block) ---
+    # A filter block keeps decision == NO_TRADE, but we still surface an ADVISORY
+    # score / probability / confidence for the setup (Home UI keeps streaming the
+    # numbers even when regime is UNSTABLE). No contract is selected, so ev / rr
+    # stay null. `advisory: True` marks these as "what the model reads, not a
+    # trade" -- nothing here changes execution.
+    def _advisory(reason, filtered, extra=None):
+        s = 0.78 * (st.get("state_score") or 0.0) + 0.22 * min(100.0, mtf["magnitude"] + 40)
+        s *= float(flt["regime_score_mult"].get(reg["regime"], 1.0))
+        s *= float(flt["signal_type_score_mult"].get(st["state"], 1.0))
+        if tod_bucket:
+            s *= float(flt["tod_score_mult"].get(tod_bucket, 1.0))
+        s = max(0.0, min(100.0, s))
+        p = _score_to_prob(s, calib, regime=reg["regime"], signal_type=st["state"])
+        return out_none(reason, {**ctx, "filtered": filtered, "advisory": True,
+                                 "direction": st["direction"],
+                                 "signal_score": round(s, 1), "probability": round(p, 4),
+                                 "confidence": _confidence(p, st["false_risk"]["verdict"],
+                                                           mtf["conflict"]),
+                                 **(extra or {})})
+
     if reg["regime"] in flt["block_regimes"]:
-        return out_none(f"filter: regime {reg['regime']} blocked", {**ctx, "filtered": "regime"})
+        return _advisory(f"filter: regime {reg['regime']} blocked", "regime")
     if st["state"] in flt["block_signal_types"]:
-        return out_none(f"filter: signal type {st['state']} blocked", {**ctx, "filtered": "signal_type"})
+        return _advisory(f"filter: signal type {st['state']} blocked", "signal_type")
     if tod_bucket and tod_bucket in flt["block_tod"]:
-        return out_none(f"filter: time-of-day {tod_bucket} blocked",
-                        {**ctx, "tod_bucket": tod_bucket, "filtered": "tod"})
+        return _advisory(f"filter: time-of-day {tod_bucket} blocked", "tod",
+                         {"tod_bucket": tod_bucket})
 
     direction = st["direction"]                    # BULLISH | BEARISH
     want = "CE" if st["state"] in BULLISH else "PE"

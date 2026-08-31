@@ -354,27 +354,45 @@ class ScalpRunner:
 
     # ---------------- internals ----------------
     def _markets_open(self, cfg) -> bool:
-        """Any Indian market (NSE cash or MCX) plausibly open right now (IST)."""
-        now_ist = datetime.now(timezone.utc) + timedelta(minutes=int(cfg["session_tz_offset_min"]))
-        if now_ist.weekday() >= 5:
-            return False
-        m = now_ist.hour * 60 + now_ist.minute
-        return (9 * 60 + 15 <= m <= 15 * 60 + 30) or (9 * 60 <= m <= 23 * 60 + 30)
+        """Any exchange on the watchlist trading right now (calendar-driven)."""
+        from . import market_calendar
+        wl = cfg.get("watchlist") or []
+        exchanges = {(it.get("market") or "NSE").upper() for it in wl} or {"NSE"}
+        return any(market_calendar.is_trading(e) for e in exchanges)
+
+    def _symbol_tradable(self, item: dict, cfg: dict) -> bool:
+        """Per-symbol session gate: an MCX energy symbol stays tradable to 23:30
+        even after NSE has closed."""
+        if cfg.get("ignore_session"):
+            return True
+        from . import market_calendar
+        return market_calendar.is_trading((item.get("market") or "NSE").upper(),
+                                          instrument=item.get("instrument") or "")
 
     def _session_open(self, cfg):
+        """Coarse 'is any relevant market open' gate; per-symbol refinement is
+        _symbol_tradable(). Honours skip_open_min / skip_close_min on NSE."""
         if cfg.get("ignore_session"):
             return True, "session filter disabled (replay/demo)"
+        from . import market_calendar
+        wl = cfg.get("watchlist") or []
+        exchanges = {(it.get("market") or "NSE").upper() for it in wl} or {"NSE"}
         now_ist = datetime.now(timezone.utc) + timedelta(minutes=int(cfg["session_tz_offset_min"]))
         mod = now_ist.hour * 60 + now_ist.minute
-        s_start = _parse_hhmm(cfg["session_start"], 9 * 60 + 20) + int(cfg["skip_open_min"])
-        s_end = _parse_hhmm(cfg["session_end"], 15 * 60 + 5) - int(cfg["skip_close_min"])
-        if now_ist.weekday() >= 5:
-            return False, "weekend — market closed"
-        if mod < s_start:
-            return False, f"pre-session ({mod//60:02d}:{mod%60:02d} < {s_start//60:02d}:{s_start%60:02d})"
-        if mod > s_end:
-            return False, f"post-session ({mod//60:02d}:{mod%60:02d} > {s_end//60:02d}:{s_end%60:02d})"
-        return True, "session open"
+        open_ex = []
+        for e in exchanges:
+            if not market_calendar.is_trading(e):
+                continue
+            if e in ("NSE", "BSE"):
+                skip_o = _parse_hhmm(cfg["session_start"], 9 * 60 + 20) + int(cfg["skip_open_min"])
+                skip_c = _parse_hhmm(cfg["session_end"], 15 * 60 + 30) - int(cfg["skip_close_min"])
+                if mod < skip_o or mod > skip_c:
+                    continue
+            open_ex.append(e)
+        if open_ex:
+            return True, f"session open ({', '.join(sorted(open_ex))})"
+        seg = {e: market_calendar.segment_status(e) for e in sorted(exchanges)}
+        return False, f"no tradable segment {seg}"
 
     async def _emit(self, kind, data):
         if self._broadcast:
@@ -1084,6 +1102,8 @@ class ScalpRunner:
                 break
             u = item.get("underlying") or item.get("symbol")
             if u in held_underlyings:
+                continue
+            if not self._symbol_tradable(item, cfg):
                 continue
             try:
                 res = await asyncio.to_thread(

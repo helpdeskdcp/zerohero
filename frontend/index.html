@@ -368,7 +368,9 @@
                 </select>
               </label>
               <label>Symbol
-                <select name="symbol" id="runSymbol"><option value="NIFTY">NIFTY</option></select>
+                <input name="symbol" id="runSymbol" list="runSymbolList" autocomplete="off"
+                       spellcheck="false" placeholder="Type to search…" value="NIFTY" />
+                <datalist id="runSymbolList"><option value="NIFTY"></option></datalist>
               </label>
               <label>Instrument
                 <select name="instrument" id="runInstrument"><option value="OPTION">OPTION</option><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select>

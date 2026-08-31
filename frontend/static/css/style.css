@@ -71,7 +71,20 @@ input, select, textarea { font-family: var(--font-mono); }
 .brand-title em { font-style: normal; color: var(--gold-soft); }
 .brand-sub { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.03em; text-transform: uppercase; }
 
-.status-cluster { display: flex; gap: 8px; }
+.status-cluster { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Narrow phones: stop the brand title / status pills clipping at the header edges */
+@media (max-width: 520px) {
+  .topbar { padding: 10px 12px; gap: 8px; }
+  .brand { gap: 8px; min-width: 0; }
+  .brand-mark { width: 30px; height: 30px; font-size: 16px; }
+  .brand-title { font-size: 14px; letter-spacing: 0.02em; }
+  .brand-sub { font-size: 9px; }
+  .brand-text { min-width: 0; overflow: hidden; }
+  .brand-title, .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-cluster { gap: 5px; }
+  .status-cluster .pill { font-size: 10px; padding: 3px 6px; }
+}
 .pill {
   font-family: var(--font-mono); font-size: 11px; padding: 5px 10px; border-radius: 999px;
   border: 1px solid var(--line); color: var(--ink-dim); letter-spacing: 0.02em;

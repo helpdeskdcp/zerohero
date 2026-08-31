@@ -81,9 +81,14 @@ def test_filtered_no_trade_still_carries_market_context(monkeypatch):
     assert d["mtf_alignment"] == -22.0
     assert d["regime"] == "UNSTABLE" and d["signal_type"] == "SUPPORT_BREAKDOWN"
     assert d["state_score"] == 68.0 and d["momentum"] == -0.3
-    # decision math NOT fabricated for a signal the engine never scored
-    assert d.get("signal_score") is None and d.get("probability") is None
+    # ADVISORY score/prob/confidence ARE streamed (Home UI keeps its numbers on
+    # UNSTABLE) but flagged advisory, and ev/rr stay null (no contract selected)
+    assert d["advisory"] is True
+    assert isinstance(d["signal_score"], float) and 0.0 <= d["signal_score"] <= 100.0
+    assert isinstance(d["probability"], float) and 0.0 < d["probability"] < 1.0
+    assert d["confidence"] in ("LOW", "MEDIUM", "HIGH")
     assert d.get("ev") is None and d.get("rr") is None
+    assert d["decision"] == "NO_TRADE"          # advisory never becomes a trade
 
 
 # ---------------- ablation on synthetic history ----------------

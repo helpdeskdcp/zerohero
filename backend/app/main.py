@@ -370,15 +370,55 @@ async def api_scalp_run(payload: dict):
     return result
 
 
+def _label_marks(status: dict) -> dict:
+    """Add a human-readable `label` to each feed mark (99919000 -> SENSEX).
+    Accepts either a runner status (has `feed`) or a bare feed status (has
+    `marks`)."""
+    fs = status.get("feed") if isinstance(status, dict) and isinstance(status.get("feed"), dict) else status
+    marks = (fs or {}).get("marks") if isinstance(fs, dict) else None
+    if isinstance(marks, dict):
+        for tok, mk in marks.items():
+            if isinstance(mk, dict):
+                mk.setdefault("label", instruments.label_for_token(tok))
+    return status
+
+
+def _compact(status: dict) -> dict:
+    """Shrink a status payload for low-token consumers: collapse per-mark dicts
+    to `label: ltp`, replace token arrays with counts, drop the nested config."""
+    s = dict(status or {})
+    fs = s.get("feed") if isinstance(s.get("feed"), dict) else s
+    if isinstance(fs, dict) and isinstance(fs.get("marks"), dict):
+        stale = sum(1 for m in fs["marks"].values() if isinstance(m, dict) and not m.get("fresh"))
+        fs2 = {k: v for k, v in fs.items() if k not in ("desired_tokens", "active_tokens")}
+        fs2["marks"] = {(instruments.label_for_token(t) if str(t).isdigit() else t):
+                        round((m or {}).get("ltp", 0), 2) if isinstance(m, dict) else m
+                        for t, m in fs["marks"].items()}
+        fs2["n_desired"] = len(fs.get("desired_tokens") or [])
+        fs2["n_active"] = len(fs.get("active_tokens") or [])
+        fs2["stale_marks"] = stale
+        if s.get("feed") is fs:
+            s["feed"] = fs2
+        else:
+            s = fs2
+    for k in ("config",):
+        s.pop(k, None)
+    if isinstance(s.get("safeguards"), dict):
+        s["safeguards"].pop("config", None)
+    return s
+
+
 @app.get("/api/scalp/status")
-def api_scalp_status():
-    return scalp_runner.status()
+def api_scalp_status(compact: bool = False):
+    st = scalp_runner.status()
+    return _compact(st) if compact else _label_marks(st)
 
 
 @app.get("/api/scalp/feed")
-def api_scalp_feed():
+def api_scalp_feed(compact: bool = False):
     """Angel One WebSocket market-data feed: connection + per-token live marks."""
-    return scalp_runner.feed.status()
+    st = scalp_runner.feed.status()
+    return _compact({"feed": st})["feed"] if compact else _label_marks(st)
 
 
 @app.get("/api/reversal")
@@ -628,8 +668,9 @@ def api_scalp_trades(status: Optional[str] = None, limit: int = Query(200, le=20
 
 # ---------------------------------------------------------------- Autonomous scalper (P7, PAPER)
 @app.get("/api/autoscalp/status")
-def api_autoscalp_status():
-    return autoscalp.status()
+def api_autoscalp_status(compact: bool = False):
+    st = autoscalp.status()
+    return _compact(st) if compact else _label_marks(st)
 
 
 @app.get("/api/autoscalp/signals")
@@ -923,6 +964,13 @@ async def api_close_trade(req: CloseTradeRequest):
 @app.get("/api/health")
 def api_health():
     return {"status": "ok", "live_trading": False, "paper_mode": True}
+
+
+@app.get("/api/market/calendar")
+def api_market_calendar():
+    """NSE / MCX / BSE segment status + whether a restart is currently allowed."""
+    from . import market_calendar
+    return market_calendar.status_all()
 
 
 @app.get("/api/env-check")

@@ -89,6 +89,10 @@ class Safeguards:
             return False, f"kill switch active ({killswitch.state().get('reason')})"
         if wd >= 5 and not c.get("allow_weekend"):
             return False, "weekend"
+        if not c.get("allow_weekend"):
+            from .. import market_calendar
+            if market_calendar.is_holiday():
+                return False, "exchange holiday"
         if mod < _hhmm(c["session_start_hhmm"], 560):
             return False, "pre-session"
         if mod >= _hhmm(c["daily_cutoff_hhmm"], 900):

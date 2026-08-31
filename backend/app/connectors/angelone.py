@@ -86,14 +86,8 @@ def _freshness_meta(last_t, market):
     except Exception:
         stale_sec = None
 
-    now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
-    mins_ist = now_ist.hour * 60 + now_ist.minute
-    mkt = (market or "").upper()
-    market_open = None
-    if mkt == "NSE":
-        market_open = (9 * 60 + 15) <= mins_ist <= (15 * 60 + 30)
-    elif mkt == "MCX":
-        market_open = (9 * 60) <= mins_ist <= (23 * 60 + 30)
+    from .. import market_calendar
+    market_open = market_calendar.market_open_flag(market)
 
     max_age = float(os.environ.get("CHANAKYA_MAX_DATA_AGE_SEC", "900"))
     data_status = "OK" if (stale_sec is not None and stale_sec <= max_age) else "STALE"

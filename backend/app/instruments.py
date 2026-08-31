@@ -93,6 +93,22 @@ def registry() -> dict:
     return merged
 
 
+_TOKEN_ALIAS = {"NATURALGAS": "NATGAS", "NATGASMINI": "NATGAS-M", "CRUDEOILMINI": "CRUDE-M",
+                "CRUDEOIL": "CRUDE", "BANKNIFTY": "BANKNIFTY", "MIDCPNIFTY": "MIDCPNIFTY"}
+
+
+def label_for_token(token) -> str:
+    """WS feed token -> short human tag (e.g. '99919000' -> 'SENSEX',
+    '568245' -> 'NATGAS'). Registry-only (fast, no master scan); falls back to
+    the raw token for anything not in the registry (e.g. option strikes)."""
+    tok = str(token or "")
+    if not tok:
+        return tok
+    rev = {str(m.get("symboltoken")): k for k, m in registry().items() if m.get("symboltoken")}
+    name = rev.get(tok)
+    return _TOKEN_ALIAS.get(name, name) if name else tok
+
+
 def add_instrument(name: str, exchange: str, symboltoken: str, market: str | None = None,
                    aliases: list | None = None) -> dict:
     if not name or not exchange or not symboltoken:

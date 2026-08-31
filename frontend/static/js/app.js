@@ -523,7 +523,7 @@
     }
 
     $("#monMarks").innerHTML = Object.entries(feed.marks || {}).map(([t, mk]) =>
-      `<div class="mon-mark"><span>${text(t)}</span><b>${fmt(mk.ltp, 2)}</b><em>${Math.round(mk.age_sec)}s</em></div>`
+      `<div class="mon-mark"><span title="${text(t)}">${text(mk.label || t)}</span><b>${fmt(mk.ltp, 2)}</b><em>${Math.round(mk.age_sec)}s</em></div>`
     ).join("") || `<span class="hint">No live marks yet.</span>`;
 
     const stream = $("#monStream");
@@ -625,7 +625,7 @@
       feed.connected ? (fresh ? "on" : "warn") : "off");
     const marks = Object.entries(feed.marks || {});
     set("scalpMarks", marks.length
-      ? marks.map(([t, m]) => `${t}:${fmt(m.ltp, 1)}`).slice(0, 3).join("  ")
+      ? marks.map(([t, m]) => `${(m && m.label) || t}: ${fmt(m.ltp, 1)}`).slice(0, 4).join("   ")
       : "—");
     const err = $("#scalpErr");
     if (s.last_error) { err.hidden = false; err.textContent = "last error: " + s.last_error; }
@@ -785,16 +785,20 @@
     } catch (e) { console.error(e); }
   }
 
+  // popular F&O indices float to the top of the searchable symbol list
+  const POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BANKEX"];
   async function loadRunSymbols(market) {
     const sel = $("#runSymbol");
-    if (!sel) return;
+    const dl = $("#runSymbolList");
+    if (!sel || !dl) return;
     runMarketSnapshot = null;
     if (copyMarketSnapshot) copyMarketSnapshot.disabled = true;
     // Explicit "market instruments unavailable" state — never fabricate a symbol
     // list, spot, or ATM. The Advanced → raw candles JSON path still works.
     const showUnavailable = (note) => {
-      sel.innerHTML = `<option value="">— market instruments unavailable —</option>`;
+      dl.innerHTML = "";
       sel.disabled = true;
+      sel.placeholder = "— market instruments unavailable —";
       const rr = $("#runResult");
       if (rr) rr.textContent = "Market instruments unavailable — live broker / market data is not reachable"
         + (note ? " (" + note + ")" : "") + ".\n"
@@ -806,7 +810,13 @@
       const items = r.instruments || [];
       if (!items.length || r.data_status === "DATA_UNAVAILABLE") { showUnavailable(r && r.reason); return; }
       sel.disabled = false;
-      sel.innerHTML = items.map(i => `<option value="${text(i.name)}">${text(i.name)}</option>`).join("");
+      sel.placeholder = "Type to search…";
+      const names = items.map(i => text(i.name));
+      const top = POPULAR_SYMS.filter(s => names.includes(s));
+      const rest = names.filter(s => !top.includes(s)).sort();
+      dl.innerHTML = top.map(s => `<option value="${s}" label="★ index"></option>`).join("")
+        + rest.map(s => `<option value="${s}"></option>`).join("");
+      if (!names.includes(sel.value)) sel.value = top[0] || names[0] || "";
       await refreshRunSelection();
     } catch (e) { showUnavailable(e && e.message); }
   }
@@ -839,7 +849,14 @@
   const runMarket = document.querySelector('#runForm [name="market"]');
   if (runMarket) { runMarket.addEventListener("change", () => loadRunSymbols(runMarket.value)); loadRunSymbols(runMarket.value); }
   const runSymbol = $("#runSymbol");
-  if (runSymbol) runSymbol.addEventListener("change", refreshRunSelection);
+  if (runSymbol) {
+    runSymbol.addEventListener("change", refreshRunSelection);
+    // fire as soon as the typed text is an exact match in the datalist
+    runSymbol.addEventListener("input", () => {
+      const opts = Array.from($("#runSymbolList")?.options || []).map(o => o.value);
+      if (opts.includes(runSymbol.value)) refreshRunSelection();
+    });
+  }
   const runExpiry = $("#runExpiry"), runOptionType = $("#runOptionType"), runInstrument = $("#runInstrument");
   if (runExpiry) runExpiry.addEventListener("change", refreshRunSelection);
   if (runOptionType) runOptionType.addEventListener("change", refreshRunSelection);

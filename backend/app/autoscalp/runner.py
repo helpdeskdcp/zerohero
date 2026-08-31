@@ -253,6 +253,19 @@ class AutoScalpRunner:
         agg = self._aggs.get(sym.upper())
         if not agg or agg.last_price is None:
             return
+        # Market-hours awareness: suspend the strategy and publish an explicit
+        # MARKET_CLOSED regime outside NSE trading hours / on an exchange holiday.
+        if not (cfg.get("safeguards") or {}).get("allow_weekend"):
+            from .. import market_calendar
+            if market_calendar.segment_status("NSE") != "OPEN":
+                sig = {"decision": "NO_TRADE", "signal_type": "NONE", "direction": "NONE",
+                       "regime": "MARKET_CLOSED",
+                       "reason": f"NSE {market_calendar.segment_status('NSE').lower()}"}
+                self._persist_snapshot(sym, agg, round(agg.last_price / 50.0) * 50, [], sig,
+                                       (self.feed.status() if self.feed else {}).get("last_msg_age_sec"))
+                await self._emit("autoscalp_signal", {"symbol": sym, "decision": "NO_TRADE",
+                                                      "regime": "MARKET_CLOSED", "reason": sig["reason"]})
+                return
         bars = agg.snapshot(now_epoch=self._now())
         if len(bars.get("5m") or []) < 20:
             return
