@@ -45,6 +45,73 @@ def test_aggregator_snapshot_multi_tf():
     assert len(snap["1m"]) >= 19 and len(snap["5m"]) >= 3
 
 
+def _ohlc_1m(n, base=1_800_000_000, px=24000.0, drift=0.4):
+    rows = []
+    for i in range(n):
+        o = px + i * drift
+        c = o + drift
+        rows.append([base + i * 60, round(o, 2), round(max(o, c) + 1.5, 2),
+                     round(min(o, c) - 1.5, 2), round(c, 2), 1000])
+    return rows
+
+
+def test_aggregator_seed_from_ohlc_builds_higher_tfs():
+    a = CandleAggregator()
+    rows = _ohlc_1m(150)                       # 2.5h of 1m bars
+    n = a.seed_from_ohlc(rows)
+    assert n == 150
+    snap = a.snapshot(now_epoch=rows[-1][0] + 120)
+    assert len(snap["1m"]) >= 140
+    assert len(snap["5m"]) >= 20               # <-- the engine's gate now clears on a fresh start
+    b0 = snap["5m"][0]
+    assert b0["h"] >= b0["o"] and b0["h"] >= b0["c"] and b0["l"] <= b0["o"]
+    assert a.last_price == rows[-1][4]
+
+
+def test_aggregator_seed_is_noop_after_a_live_tick():
+    a = CandleAggregator()
+    a.add_tick(1_800_100_000, 24100.0)        # live tick first
+    assert a.seed_from_ohlc(_ohlc_1m(150)) == 0
+    assert a.last_price == 24100.0            # history was not rewritten
+
+
+def test_runner_seeds_index_agg_from_broker_on_start(fresh_db, monkeypatch):
+    # No manual pre-fill of the aggregator: prove tick_once() backfills it from
+    # the broker so a (re)start does not blind the engine for ~100 minutes.
+    now = 1_800_000_000.0 + 150 * 60
+    rows = _ohlc_1m(150, base=1_800_000_000)
+    calls = []
+
+    def fake_fetch(market, symbol, exchange, symboltoken, interval, fromdate,
+                   todate, timeframe=None, instrument=None):
+        calls.append((symbol, timeframe))
+        return {"candles": [{"t": r[0], "o": r[1], "h": r[2], "l": r[3], "c": r[4], "v": r[5]}
+                            for r in rows], "data_status": "OK"}
+
+    import app.connectors.angelone as _ang
+    monkeypatch.setattr(_ang, "fetch_candles", fake_fetch)   # runner imports it lazily
+
+    captured = {}
+
+    def fake_decide(bars, *a, **k):
+        captured["n5"] = len(bars.get("5m") or [])
+        return {"decision": "NO_TRADE", "signal_type": "NONE", "reason": "x"}
+
+    monkeypatch.setattr(ascr, "decide_from_context", fake_decide)
+
+    feed = FakeFeed({"99926000": 24099.0})
+    r = ascr.AutoScalpRunner(feed=feed, chain_provider=lambda *a, **k: [],
+                             telegram_fn=lambda *a: None, now_fn=lambda: now)
+    r.set_config({"safeguards": {"allow_weekend": True, "session_start_hhmm": "00:00",
+                                 "daily_cutoff_hhmm": "23:59"}})
+    r.arm()
+    asyncio.run(r.tick_once())
+
+    assert ("NIFTY", "1m") in calls                     # broker candles were fetched
+    assert len(r._aggs["NIFTY"].snapshot(now_epoch=now)["5m"]) >= 20
+    assert captured.get("n5", 0) >= 20                   # _evaluate actually ran the engine
+
+
 # ---------------- Safeguards ----------------
 @pytest.fixture(autouse=True)
 def _ks_off(fresh_db, monkeypatch):

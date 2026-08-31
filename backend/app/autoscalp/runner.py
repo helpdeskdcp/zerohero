@@ -77,6 +77,7 @@ class AutoScalpRunner:
         self.safeguards = Safeguards()
         self._sg_cfg_sig = None
         self._tg_last: dict[str, float] = {}   # dedup key -> last-sent epoch
+        self._seeded: set[str] = set()         # aggs already backfilled from broker candles
 
     # ---------------- config ----------------
     def get_config(self) -> dict:
@@ -155,6 +156,48 @@ class AutoScalpRunner:
             self.feed.subscribe(want)
         except Exception as e:
             self.last_error = f"subscribe: {type(e).__name__}: {e}"
+
+    async def _seed_aggs(self, cfg):
+        """One-time broker backfill for a fresh aggregator. Without this a
+        (re)start blinds the engine for ~100 min (it needs 20 closed 5m bars
+        from live ticks alone) and an open position cannot be time-stopped
+        until its option candles rebuild. Runs at most once per symbol/token
+        per process; seed_from_ohlc is itself a no-op once live ticks arrive."""
+        from ..connectors import angelone
+        from .. import instruments
+        for sym in cfg["symbols"]:
+            key = sym.upper()
+            agg = self._aggs.get(key)
+            if agg is None or key in self._seeded:
+                continue
+            self._seeded.add(key)
+            if agg.last_ts is not None:
+                continue
+            meta = instruments.resolve(sym) or {}
+            try:
+                conn = await asyncio.to_thread(
+                    angelone.fetch_candles, meta.get("market") or "NSE", sym,
+                    meta.get("exchange") or "NSE", meta.get("symboltoken"),
+                    None, None, None, "1m", meta.get("instrument"))
+                agg.seed_from_ohlc(conn.get("candles") or [])
+            except Exception as e:
+                self.last_error = f"seed {sym}: {type(e).__name__}: {e}"
+        for t in self._open_positions():
+            tok = str(t.get("symboltoken") or "")
+            if not tok or tok in self._seeded:
+                continue
+            self._seeded.add(tok)
+            agg = self._opt_aggs.setdefault(tok, CandleAggregator())
+            self._sub_tokens.setdefault(tok, {"exchange_type": 2})
+            if agg.last_ts is not None:
+                continue
+            try:
+                conn = await asyncio.to_thread(
+                    angelone.fetch_candles, "NSE", "", "NFO", tok,
+                    None, None, None, "1m", "OPTION")
+                agg.seed_from_ohlc(conn.get("candles") or [])
+            except Exception as e:
+                self.last_error = f"seed opt {tok}: {type(e).__name__}: {e}"
 
     def _ensure_option_subs(self, chain):
         """Subscribe the ATM-band option tokens so their premium candles build."""
@@ -432,6 +475,7 @@ class AutoScalpRunner:
             self.safeguards = Safeguards(cfg.get("safeguards") or {})
             self._sg_cfg_sig = sg_sig
         self._refresh_subscription(cfg)
+        await self._seed_aggs(cfg)
         self._pump_feed()
         self._monitor()
         if not self.armed:

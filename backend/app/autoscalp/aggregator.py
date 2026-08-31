@@ -21,6 +21,18 @@ def _bucket(epoch: float, tf_min: int) -> str:
     return f"{dt.date().isoformat()}T{m // 60:02d}:{m % 60:02d}:00"
 
 
+def _epoch(t) -> float | None:
+    """epoch seconds from an epoch (s or ms) or an ISO-8601 string."""
+    if t is None:
+        return None
+    if isinstance(t, (int, float)):
+        return t / 1000.0 if t > 1e12 else float(t)
+    try:
+        return datetime.fromisoformat(str(t).replace("Z", "+00:00")).timestamp()
+    except (ValueError, TypeError):
+        return None
+
+
 class CandleAggregator:
     """One per instrument (index or a specific option token)."""
 
@@ -47,6 +59,43 @@ class CandleAggregator:
                 c["l"] = min(c["l"], price)
                 c["c"] = price
                 c["v"] += float(volume or 0.0)
+
+    def seed_from_ohlc(self, rows) -> int:
+        """Prefill from historical bars BEFORE live ticks arrive so a (re)start
+        does not blind the engine for ~100 minutes. Accepts [t,o,h,l,c,v] lists
+        or {t,o,h,l,c,v} dicts; t is epoch (s/ms) or ISO-8601. No-op once a live
+        tick has been seen (last_ts set) — a late seed never rewrites history.
+        Returns the number of source bars replayed."""
+        if self.last_ts is not None:
+            return 0
+        n = 0
+        for r in rows or []:
+            if isinstance(r, dict):
+                t = r.get("t", r.get("time"))
+                o, h, l, c = r.get("o"), r.get("h"), r.get("l"), r.get("c")
+                v = r.get("v", r.get("volume", 0.0))
+            else:
+                try:
+                    t, o, h, l, c = r[0], r[1], r[2], r[3], r[4]
+                    v = r[5] if len(r) > 5 else 0.0
+                except (IndexError, TypeError):
+                    continue
+            ep = _epoch(t)
+            try:
+                o, h, l, c = float(o), float(h), float(l), float(c)
+                v = float(v or 0.0)
+            except (TypeError, ValueError):
+                continue
+            if ep is None or min(o, h, l, c) <= 0:
+                continue
+            # replay each bar as O -> low -> high -> C inside its own minute so
+            # every timeframe bucket gets a faithful open/high/low/close
+            self.add_tick(ep + 1.0, o)
+            self.add_tick(ep + 20.0, min(o, h, l, c))
+            self.add_tick(ep + 40.0, max(o, h, l, c))
+            self.add_tick(ep + 58.0, c, v)
+            n += 1
+        return n
 
     def bars(self, tf: str, *, closed_only: bool = True, now_epoch: float | None = None) -> list[dict]:
         """Bars for `tf`. With closed_only, the still-forming last bar is dropped
