@@ -133,21 +133,35 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
     mtf = mtf_alignment(bars_by_tf, config=cfg.get("mtf") or {})
     st = classify(bars_by_tf, sr, chain=chain, config=cfg.get("state") or {})
 
+    # Live market read, computed before any gate. Attached to EVERY outcome
+    # below (trade, WATCH or NO_TRADE) so the decision-first dashboard always
+    # shows the current picture instead of blanks when the strategy declines.
+    # Decision math (signal_score / probability / confidence / ev / rr) is NOT
+    # fabricated here -- it is only added by the exits that actually compute it.
+    ctx = {
+        "regime": reg["regime"],
+        "mtf_alignment": mtf["alignment"],
+        "atr": sr.get("atr"), "vwap": sr.get("vwap"),
+        "support": (sr.get("support") or {}).get("level"),
+        "resistance": (sr.get("resistance") or {}).get("level"),
+        "support_strength": sr.get("support_strength"),
+        "resistance_strength": sr.get("resistance_strength"),
+        "signal_type": st["state"],
+        "state_score": st.get("state_score"),
+        "momentum": st.get("roc_pct"),
+    }
+
     if st["state"] == "NONE":
-        return out_none("no clean state", {"regime": reg["regime"], "state_score": st.get("state_score"),
-                                           "mtf_alignment": mtf["alignment"]})
+        return out_none("no clean state", ctx)
 
     # --- configurable P6.1 filters (block) ---
     if reg["regime"] in flt["block_regimes"]:
-        return out_none(f"filter: regime {reg['regime']} blocked",
-                        {"regime": reg["regime"], "signal_type": st["state"], "filtered": "regime"})
+        return out_none(f"filter: regime {reg['regime']} blocked", {**ctx, "filtered": "regime"})
     if st["state"] in flt["block_signal_types"]:
-        return out_none(f"filter: signal type {st['state']} blocked",
-                        {"regime": reg["regime"], "signal_type": st["state"], "filtered": "signal_type"})
+        return out_none(f"filter: signal type {st['state']} blocked", {**ctx, "filtered": "signal_type"})
     if tod_bucket and tod_bucket in flt["block_tod"]:
         return out_none(f"filter: time-of-day {tod_bucket} blocked",
-                        {"regime": reg["regime"], "signal_type": st["state"],
-                         "tod_bucket": tod_bucket, "filtered": "tod"})
+                        {**ctx, "tod_bucket": tod_bucket, "filtered": "tod"})
 
     direction = st["direction"]                    # BULLISH | BEARISH
     want = "CE" if st["state"] in BULLISH else "PE"
@@ -156,9 +170,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
     aligned = (direction == "BULLISH" and mtf["alignment"] > 8) or \
               (direction == "BEARISH" and mtf["alignment"] < -8) or abs(mtf["alignment"]) <= 12
     if mtf["htf_dominant"] and not aligned:
-        return out_none("MTF: strong opposing higher-timeframe structure",
-                        {"regime": reg["regime"], "signal_type": st["state"],
-                         "mtf_alignment": mtf["alignment"]})
+        return out_none("MTF: strong opposing higher-timeframe structure", ctx)
 
     # --- CE/PE independent reads on their own candles ---
     price = sr["price"]
@@ -193,9 +205,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                        opt_type="PE", index_move_pts=index_move_pts, chain=chain, config=cfg.get("opt") or {}) if pe_row else None
     conf = ce_pe_confirmation(direction, ce_a, pe_a)
     if conf["agreement"] in ("CONFLICT", "OPPOSING"):
-        return out_none(f"CE/PE confirmation {conf['agreement']}",
-                        {"regime": reg["regime"], "signal_type": st["state"],
-                         "mtf_alignment": mtf["alignment"], "ce_pe": conf})
+        return out_none(f"CE/PE confirmation {conf['agreement']}", {**ctx, "ce_pe": conf})
 
     # --- select the best contract on the wanted side ---
     cands = []
@@ -207,11 +217,10 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                                  chain=chain, config=cfg.get("opt") or {}, light=True))
     sel = select_option(cands, direction, atm=float(atm or base), config=cfg.get("opt") or {})
     if not sel:
-        return out_none("no tradeable contract on the wanted side",
-                        {"regime": reg["regime"], "signal_type": st["state"]})
+        return out_none("no tradeable contract on the wanted side", ctx)
     if sel["final_quality"] < cfg.get("min_option_quality", 45.0):
         return out_none(f"option quality {sel['final_quality']} < min",
-                        {"regime": reg["regime"], "signal_type": st["state"], "option_quality": sel["final_quality"]})
+                        {**ctx, "option_quality": sel["final_quality"]})
 
     sel_full = analyse_leg(_bars_for(sel["strike"], want), _leg_row(sel["strike"], want) or {"strike": sel["strike"]},
                            opt_type=want, index_move_pts=index_move_pts, chain=chain, config=cfg.get("opt") or {})
@@ -233,16 +242,17 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                    avg_win=avg_win, avg_loss=avg_loss, config=cfg.get("ev") or {})
     if not gate["pass"]:
         return out_none(f"EV gate: {gate['reason']}",
-                        {"regime": reg["regime"], "signal_type": st["state"],
+                        {**ctx, "signal_score": round(blended, 1),
                          "probability": round(prob, 4), "ev": gate["ev"], "rr": gate["rr"],
                          "option_quality": sel["final_quality"]})
 
     confidence = _confidence(prob, st["false_risk"]["verdict"], mtf["conflict"])
     if confidence == "LOW" and cfg.get("require_min_confidence", "LOW") != "LOW":
-        return {"decision": "WATCH", "signal_type": st["state"], "direction": direction,
-                "reason": "confidence LOW -> watch only", "probability": round(prob, 4),
-                "regime": reg["regime"], "state_score": st["state_score"],
-                "mtf_alignment": mtf["alignment"], "model_version": MODEL_VERSION}
+        return {**ctx, "decision": "WATCH", "direction": direction,
+                "reason": "confidence LOW -> watch only",
+                "signal_score": round(blended, 1), "probability": round(prob, 4),
+                "confidence": confidence, "ev": gate["ev"], "rr": gate["rr"],
+                "model_version": MODEL_VERSION}
 
     return {
         "decision": "BUY_CE" if want == "CE" else "BUY_PE",

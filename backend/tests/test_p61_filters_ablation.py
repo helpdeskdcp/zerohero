@@ -55,6 +55,37 @@ def test_block_regime_short_circuits(monkeypatch):
     assert d3["decision"] == "NO_TRADE" and d3["filtered"] == "tod"
 
 
+def test_filtered_no_trade_still_carries_market_context(monkeypatch):
+    # A gate-blocked NO_TRADE must still report the live market read the engine
+    # already computed (dashboard shows the picture, not blanks) -- but must NOT
+    # fabricate decision math it never ran.
+    monkeypatch.setattr(ss, "compute_sr", lambda *a, **k: {
+        "status": "OK", "price": 24000.0, "atr": 18.5, "vwap": 24010.0,
+        "support": {"level": 23950.0}, "resistance": {"level": 24075.0},
+        "support_strength": 61.0, "resistance_strength": 55.0})
+    monkeypatch.setattr(ss, "detect_regime", lambda *a, **k: {"regime": "UNSTABLE", "confidence": 0.5})
+    monkeypatch.setattr(ss, "mtf_alignment", lambda *a, **k: {"alignment": -22.0, "magnitude": 30.0,
+                                                              "conflict": False, "htf_dominant": False})
+    monkeypatch.setattr(ss, "classify", lambda *a, **k: {"state": "SUPPORT_BREAKDOWN",
+                                                         "direction": "BEARISH", "state_score": 68.0,
+                                                         "anchor": {"level": 23950.0, "side": "SUPPORT"},
+                                                         "components": {}, "reason": ["x"],
+                                                         "false_risk": {"verdict": "CLEAN", "score": 100},
+                                                         "roc_pct": -0.3})
+    d = ss.decide_from_context({"5m": []}, [], atm=24000.0, config={})   # default filters block UNSTABLE
+    assert d["decision"] == "NO_TRADE" and d["filtered"] == "regime"
+    # market context present
+    assert d["atr"] == 18.5 and d["vwap"] == 24010.0
+    assert d["support"] == 23950.0 and d["resistance"] == 24075.0
+    assert d["support_strength"] == 61.0 and d["resistance_strength"] == 55.0
+    assert d["mtf_alignment"] == -22.0
+    assert d["regime"] == "UNSTABLE" and d["signal_type"] == "SUPPORT_BREAKDOWN"
+    assert d["state_score"] == 68.0 and d["momentum"] == -0.3
+    # decision math NOT fabricated for a signal the engine never scored
+    assert d.get("signal_score") is None and d.get("probability") is None
+    assert d.get("ev") is None and d.get("rr") is None
+
+
 # ---------------- ablation on synthetic history ----------------
 @pytest.fixture()
 def synth_hist(tmp_path, monkeypatch):
