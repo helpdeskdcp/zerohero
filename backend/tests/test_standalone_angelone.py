@@ -32,3 +32,20 @@ def test_resolver_handles_mcx_options_on_futures(monkeypatch, tmp_path):
     r = c.resolve_option_contract("NATURALGAS", "AUTO", "ATM", "CE", spot=250.5)
     assert r["status"] == "OK" and r["exchange"] == "MCX" and r["token"] == "12"
     assert r["strike"] == 250.0 and r["option_type"] == "CE"
+
+
+def test_auto_expiry_is_chronological_not_lexical(tmp_path):
+    # MCX expiries span months; "20NOV" sorts before "23SEP" lexically. AUTO
+    # must still pick the NEAREST by date (23SEP), not the alphabetical first.
+    c = AngelOneClient(cache_path=str(tmp_path / "m.json"))
+    c._master = [
+        {"exch_seg":"MCX","name":"NATURALGAS","symbol":"NATURALGAS23SEP26250CE","token":"1",
+         "instrumenttype":"OPTFUT","expiry":"23SEP2026","strike":"25000","lotsize":"1250"},
+        {"exch_seg":"MCX","name":"NATURALGAS","symbol":"NATURALGAS23OCT26250CE","token":"2",
+         "instrumenttype":"OPTFUT","expiry":"23OCT2026","strike":"25000","lotsize":"1250"},
+        {"exch_seg":"MCX","name":"NATURALGAS","symbol":"NATURALGAS20NOV26250CE","token":"3",
+         "instrumenttype":"OPTFUT","expiry":"20NOV2026","strike":"25000","lotsize":"1250"},
+    ]
+    r = c.resolve_option_contract("NATURALGAS", "AUTO", "ATM", "CE", spot=250.0)
+    assert r["expiry"] == "23SEP2026" and r["token"] == "1"
+    assert r["available_expiries"] == ["23SEP2026", "23OCT2026", "20NOV2026"]
