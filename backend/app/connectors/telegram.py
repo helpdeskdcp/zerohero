@@ -27,8 +27,20 @@ def _send(text, chat_id):
 def notify_signal(contract: dict):
     d = contract.get("direction", "NONE")
     emoji = "🟢" if d == "BUY" else ("🔴" if d == "SELL" else "⚪")
+    und = contract.get("underlying") or contract.get("symbol", "") or "?"
+    ot = str(contract.get("option_type") or "").upper()
+    strike = contract.get("strike") or 0
+    exp = contract.get("expiry") or ""
+    # readable instrument line: "NIFTY 24050 PE  (01SEP2026)" / "CRUDEOIL FUT"
+    if ot in ("CE", "PE") and strike:
+        instr = f"{und} {int(float(strike))} {ot}" + (f"  ({exp})" if exp else "")
+    elif contract.get("instrument"):
+        instr = f"{und} {str(contract.get('instrument')).upper()}" + (f"  ({exp})" if exp else "")
+    else:
+        instr = und
     lines = [
-        f"{emoji} <b>{contract.get('decision','NO_TRADE')}</b> — {contract.get('underlying') or contract.get('symbol','')}",
+        f"{emoji} <b>{contract.get('decision','NO_TRADE')}</b> — {instr}",
+        f"Market: {contract.get('market','-')}  |  TF: {contract.get('timeframe','-')}",
         f"Direction: {d}  |  Regime: {contract.get('market_regime','-')}",
         f"Entry: {contract.get('entry_ref','-')}  SL: {contract.get('stop_loss','-')}  T1: {contract.get('target_1','-')}",
         f"Prob: {contract.get('probability','-')}%  Conf: {contract.get('confidence','-')}%  RR: {contract.get('risk_reward','-')}",

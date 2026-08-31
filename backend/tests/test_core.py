@@ -127,6 +127,18 @@ def test_orchestrator_no_trade_sends_no_telegram_end_to_end(fresh_db, monkeypatc
     assert sent == []                                   # the misleading card never leaves
 
 
+def test_notify_signal_card_names_the_instrument(monkeypatch):
+    from app.connectors import telegram
+    # an option contract renders "<UND> <STRIKE> <CE|PE>  (<expiry>)"
+    txt = []
+    monkeypatch.setattr(telegram, "_send", lambda t, c: txt.append(t) or {"ok": True})
+    telegram.notify_signal({"decision": "TRADE", "direction": "BUY", "underlying": "NATURALGAS",
+                            "option_type": "pe", "strike": 280, "expiry": "23SEP2026",
+                            "market": "MCX", "timeframe": "5m", "risk_status": "APPROVED",
+                            "entry_ref": 15.8, "stop_loss": 14.6, "target_1": 17.8})
+    assert txt and "NATURALGAS 280 PE" in txt[0] and "23SEP2026" in txt[0] and "MCX" in txt[0]
+
+
 def test_autoscalp_notifier_is_isolated_from_legacy_telegram_path():
     # The ASC-* autonomous scalper uses its own notifier; Fix 1/2 must not have
     # touched it and it must not route through pipeline_core / notify_signal.

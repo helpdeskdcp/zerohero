@@ -17,6 +17,24 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _SESSION_DB = os.path.join(tempfile.mkdtemp(prefix="chanakya-test-"), "session.db")
 os.environ["CHANAKYA_DB_PATH"] = _SESSION_DB
 
+# HARD GUARD #2: a test must never hit the real Telegram. run_pipeline /
+# run_scalp_pipeline call telegram.notify_signal for real. Strip the creds AND
+# (below, via the autouse fixture) stub the HTTP sender.
+for _k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_SIGNALS_CHANNEL_ID"):
+    os.environ.pop(_k, None)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_telegram(monkeypatch):
+    """Every test: the Telegram HTTP call is a no-op. Belt-and-braces with the
+    env strip above -- nothing a test does can reach api.telegram.org."""
+    try:
+        from app.connectors import telegram
+        monkeypatch.setattr(telegram, "_send",
+                            lambda text, chat_id: {"ok": False, "reason": "TEST_STUB"})
+    except Exception:
+        pass
+
 
 @pytest.fixture()
 def fresh_db(monkeypatch):
