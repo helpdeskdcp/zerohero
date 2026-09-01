@@ -796,14 +796,6 @@ class AutoScalpRunner:
             except Exception:
                 pass
 
-    def _tg(self, text):
-        if not self._telegram:
-            return
-        try:
-            self._telegram(text)
-        except Exception:
-            pass
-
     # ---------------- status ----------------
     def status(self) -> dict:
         cfg = self.get_config()

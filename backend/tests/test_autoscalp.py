@@ -580,6 +580,7 @@ def test_self_check_reports_readiness(fresh_db, monkeypatch):
     assert sc["checks"]["live_trading_disabled"] is True
     assert "NIFTY" in sc["bars_ready"] and sc["bars_ready"]["NIFTY"]["ready"] is True
     assert "market_open" in sc and "segments" in sc
+    assert sc["segments_error"] is None          # market-hours lookup succeeded
     # the test fixture runs with allow_weekend on (sandbox clock) -> surfaced
     assert any("allow_weekend" in x for x in sc["config_warnings"])
 

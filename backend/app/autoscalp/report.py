@@ -119,7 +119,7 @@ def self_check(runner) -> dict:
         bars_ready[s] = {"bars_5m": n5, "ready": n5 >= 20, "last_price": a.last_price}
 
     # which of THIS engine's exchanges are open right now
-    segments, market_open = {}, False
+    segments, market_open, segments_error = {}, False, None
     try:
         from .. import market_calendar
         from .runner import _sym_meta
@@ -127,8 +127,10 @@ def self_check(runner) -> dict:
         for ex in {_sym_meta(s)["exchange"] for s in syms}:
             segments[ex] = market_calendar.segment_status(ex)
         market_open = any(v == "OPEN" for v in segments.values())
-    except Exception:
-        pass
+    except Exception as e:
+        # keep going (feed checks stay gating -> fail toward "assume open"),
+        # but surface why the market-hours lookup failed
+        segments_error = f"{type(e).__name__}: {e}"
 
     checks = {
         "armed": bool(st.get("armed")),
@@ -165,6 +167,7 @@ def self_check(runner) -> dict:
         "armed": bool(st.get("armed")),
         "market_open": market_open,
         "segments": segments,
+        "segments_error": segments_error,
         "config_warnings": warnings,
         "checks": checks,
         "feed_age_sec": age,
