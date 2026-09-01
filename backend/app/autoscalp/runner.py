@@ -542,7 +542,12 @@ class AutoScalpRunner:
             try:
                 emode = ("AUTO_ROLL" if str(cfg.get("expiry_day_mode", "trade")).lower() == "roll"
                          and smeta["exchange"] in ("NSE", "BSE") else "AUTO")
-                chain = self.chain_provider(sym, atm, cfg["strike_window"], smeta["exchange"], emode) or []
+                # broker REST for ~10 option quotes -- run OFF the event loop so
+                # a slow chain fetch cannot starve the WS feed reader (which
+                # shares this loop) and drive last_msg_age_sec past the stale
+                # cutoff. See FEED_STALENESS_AUDIT.md.
+                chain = await asyncio.to_thread(
+                    self.chain_provider, sym, atm, cfg["strike_window"], smeta["exchange"], emode) or []
             except Exception as e:
                 self.last_error = f"chain: {type(e).__name__}: {e}"
         self._ensure_option_subs(chain)
@@ -561,9 +566,11 @@ class AutoScalpRunner:
                      **(cfg.get("strategy") or {}),
                      **((cfg.get("symbol_profiles") or {}).get(sym.upper()) or {}),
                      **((cfg.get("expiry_day_profile") or {}) if is_expiry_day else {})}
-        sig = decide_from_context(
-            bars, chain, atm=atm, calib=self.calibration(),
-            avg_win=None, avg_loss=None, leg_bars_fn=self._leg_bars_fn(chain),
+        # CPU-bound S/R + regime + MTF + per-leg analysis -- also off the loop.
+        _leg_fn = self._leg_bars_fn(chain)
+        sig = await asyncio.to_thread(
+            decide_from_context, bars, chain, atm=atm, calib=self.calibration(),
+            avg_win=None, avg_loss=None, leg_bars_fn=_leg_fn,
             tod_bucket=tod, config=strat_cfg)
 
         # NSE cash index has no volume of its own -> borrow a VWAP from its
@@ -571,13 +578,13 @@ class AutoScalpRunner:
         # made above; compute_sr never sees this, so the strategy is unchanged.
         if (sig.get("vwap") is None and cfg.get("index_vwap_from_future", True)
                 and smeta["exchange"] in ("NSE", "BSE")):
-            _fv, _fs = _index_future_vwap(sym)
+            _fv, _fs = await asyncio.to_thread(_index_future_vwap, sym)
             if _fv is not None:
                 sig["vwap"] = round(_fv, 2)
                 sig["vwap_status"] = "available"
                 sig["vwap_reason"] = "from front-month index future (cash index has no volume)"
 
-        snap_id = self._persist_snapshot(sym, agg, atm, chain, sig, feed_age)
+        snap_id = await asyncio.to_thread(self._persist_snapshot, sym, agg, atm, chain, sig, feed_age)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
         if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):
