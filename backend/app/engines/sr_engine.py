@@ -127,19 +127,26 @@ def _candidates(highs, lows, closes, vols, atr, vwap, *, mode, chain, prev_day,
             cand.append((base + d * round_step, "round", 0.35))
 
     if mode == "index" and chain:
-        tot_ce = sum(_num((r.get("ce") or {}).get("oi")) or 0 for r in chain) or 1.0
-        tot_pe = sum(_num((r.get("pe") or {}).get("oi")) or 0 for r in chain) or 1.0
-        ce_wall = max(chain, key=lambda r: _num((r.get("ce") or {}).get("oi")) or 0)
-        pe_wall = max(chain, key=lambda r: _num((r.get("pe") or {}).get("oi")) or 0)
-        cand.append((_num(ce_wall.get("strike")),
-                     "oi_wall_ce", 0.5 + 0.8 * ((_num((ce_wall.get("ce") or {}).get("oi")) or 0) / tot_ce)))
-        cand.append((_num(pe_wall.get("strike")),
-                     "oi_wall_pe", 0.5 + 0.8 * ((_num((pe_wall.get("pe") or {}).get("oi")) or 0) / tot_pe)))
-        ce_write = max(chain, key=lambda r: _num((r.get("ce") or {}).get("oi_chg")) or 0)
-        pe_write = max(chain, key=lambda r: _num((r.get("pe") or {}).get("oi_chg")) or 0)
-        if (_num((ce_write.get("ce") or {}).get("oi_chg")) or 0) > 0:
+        _ce_oi = lambda r: _num((r.get("ce") or {}).get("oi")) or 0.0
+        _pe_oi = lambda r: _num((r.get("pe") or {}).get("oi")) or 0.0
+        tot_ce = sum(_ce_oi(r) for r in chain) or 1.0
+        tot_pe = sum(_pe_oi(r) for r in chain) or 1.0
+        ce_wall = max(chain, key=_ce_oi)
+        pe_wall = max(chain, key=_pe_oi)
+        # A strike with no OI is not a wall — never let missing/zero OI seed a
+        # phantom candidate (would otherwise land on chain[0] with weight 0.5).
+        if _ce_oi(ce_wall) > 0:
+            cand.append((_num(ce_wall.get("strike")),
+                         "oi_wall_ce", 0.5 + 0.8 * (_ce_oi(ce_wall) / tot_ce)))
+        if _pe_oi(pe_wall) > 0:
+            cand.append((_num(pe_wall.get("strike")),
+                         "oi_wall_pe", 0.5 + 0.8 * (_pe_oi(pe_wall) / tot_pe)))
+        _ce_chg = lambda r: _num((r.get("ce") or {}).get("oi_chg")) or 0.0
+        _pe_chg = lambda r: _num((r.get("pe") or {}).get("oi_chg")) or 0.0
+        ce_write, pe_write = max(chain, key=_ce_chg), max(chain, key=_pe_chg)
+        if _ce_chg(ce_write) > 0:
             cand.append((_num(ce_write.get("strike")), "oi_write_ce", 0.6))
-        if (_num((pe_write.get("pe") or {}).get("oi_chg")) or 0) > 0:
+        if _pe_chg(pe_write) > 0:
             cand.append((_num(pe_write.get("strike")), "oi_write_pe", 0.6))
 
     return [(lvl, src, w) for lvl, src, w in cand if _num(lvl) is not None]
@@ -226,9 +233,83 @@ def _strength(zone, *, highs, lows, closes, atr, vwap, chain, mode, weights):
     }
 
 
+def _oi_wall_diag(chain, price, symbol):
+    """Per-side OI-wall trace: the raw wall, its distance from spot, the
+    distance-weighted view, and why it does / does not dominate. Read-only —
+    does not feed the score. Distances are % of spot (option-agnostic)."""
+    if not chain:
+        return {}
+    exp = _chain_expiry(chain)
+    tot_ce = sum(_num((r.get("ce") or {}).get("oi")) or 0 for r in chain) or 1.0
+    tot_pe = sum(_num((r.get("pe") or {}).get("oi")) or 0 for r in chain) or 1.0
+
+    def side(key, tot):
+        ranked = sorted(
+            ({"strike": _num(r.get("strike")),
+              "oi": _num((r.get(key) or {}).get("oi")) or 0.0,
+              "oi_chg": _num((r.get(key) or {}).get("oi_chg"))}
+             for r in chain if _num(r.get("strike")) is not None),
+            key=lambda x: -x["oi"])
+        out = []
+        for x in ranked[:3]:
+            if x["oi"] <= 0:
+                continue
+            dist_pct = round(100.0 * (x["strike"] - price) / price, 3) if price else None
+            raw = round(x["oi"] / tot, 4)                     # share of side OI
+            # illustrative distance-weighted view (NOT used by the score):
+            # linear decay to 0 by 5% of spot away.
+            decay = max(0.0, 1.0 - abs(dist_pct or 0) / 5.0)
+            out.append({
+                "strike": x["strike"], "oi": x["oi"], "oi_chg": x["oi_chg"],
+                "dist_pct": dist_pct, "raw_wall_score": raw,
+                "dist_weighted_score": round(raw * decay, 4),
+            })
+        return out
+
+    return {
+        "symbol": symbol, "expiry": exp, "spot": round(price, 2) if price else None,
+        "call_walls": side("ce", tot_ce), "put_walls": side("pe", tot_pe),
+        "note": "OI is ~17% of the strength score; walls that do not coincide "
+                "with a price-structure level score low and are not selected. "
+                "dist_weighted_score is illustrative only, it does not feed the model.",
+    }
+
+
+def _chain_expiry(chain):
+    for r in chain or []:
+        e = (r.get("ce") or {}).get("expiry") or (r.get("pe") or {}).get("expiry")
+        if e:
+            return e
+    return None
+
+
+def _level_diag(z, chain, price, symbol, kind):
+    if not z:
+        return None
+    d = {"kind": kind, "symbol": symbol, "spot": round(price, 2) if price else None,
+         "expiry": _chain_expiry(chain),
+         "level": z["level"], "zone": z["zone"], "strength": z["strength"],
+         "dist_pct": round(100.0 * (z["level"] - price) / price, 3) if price else None,
+         "dist_atr": z["dist_atr"], "touches": z["touches"], "rejections": z["rejections"],
+         "families": z["families"], "sources": z["sources"],
+         "components": z["components"]}
+    if chain:
+        near = min(chain, key=lambda r: abs((_num(r.get("strike")) or 1e18) - z["level"]))
+        ce, pe = near.get("ce") or {}, near.get("pe") or {}
+        d["nearest_strike"] = _num(near.get("strike"))
+        d["call_oi"] = _num(ce.get("oi"))
+        d["put_oi"] = _num(pe.get("oi"))
+        d["oi_change"] = (_num(ce.get("oi_chg")), _num(pe.get("oi_chg")))
+    d["reason"] = (
+        f"selected {kind}: {'|'.join(z['families'])} confluence, "
+        f"{z['touches']} touches / {z['rejections']} rejections, "
+        f"oi_backing={z['components'].get('oi_backing')}")
+    return d
+
+
 def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
                prev_day: dict | None = None, mode: str = "index",
-               config: dict | None = None) -> dict:
+               symbol: str | None = None, config: dict | None = None) -> dict:
     cfg = config or {}
     weights = {**_W, **(cfg.get("weights") or {})}
     round_step = cfg.get("round_step", 50.0 if mode == "index" else 5.0)
@@ -279,4 +360,10 @@ def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
         "resistance_strength": resistance["strength"] if resistance else 0.0,
         "levels": sorted(scored, key=lambda z: z["level"]),
         "n_zones": len(scored),
+        # read-only diagnostics (do not feed the model / strategy)
+        "sr_diag": {
+            "oi_walls": _oi_wall_diag(chain, price, symbol) if mode == "index" else {},
+            "support": _level_diag(support, chain, price, symbol, "support"),
+            "resistance": _level_diag(resistance, chain, price, symbol, "resistance"),
+        },
     }

@@ -115,3 +115,130 @@ def test_strength_bounds_and_shape():
         assert 0.0 <= z["strength"] <= 100.0
         assert z["zone"][0] <= z["level"] <= z["zone"][1] + 1e-6
         assert set(z["components"]) >= {"confluence", "touch_quality", "recency", "vwap_prox"}
+
+
+# --------------------------------------------------------------------------- #
+# Audit (2026-09-01): S/R + OI-wall engine vs a real NATURALGAS chain snapshot
+# --------------------------------------------------------------------------- #
+_L = 100_000
+_NG_CHAIN = [
+    {"strike": 255, "ce": {"oi": 1.98 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 44.99 * _L, "expiry": "23SEP2026"}},
+    {"strike": 260, "ce": {"oi": 21.65 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 82.21 * _L, "expiry": "23SEP2026"}},
+    {"strike": 265, "ce": {"oi": 12.01 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 53.24 * _L, "expiry": "23SEP2026"}},
+    {"strike": 270, "ce": {"oi": 49.70 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 96.85 * _L, "expiry": "23SEP2026"}},
+    {"strike": 275, "ce": {"oi": 38.24 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 68.19 * _L, "expiry": "23SEP2026"}},
+    {"strike": 280, "ce": {"oi": 94.09 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 70.22 * _L, "expiry": "23SEP2026"}},
+    {"strike": 285, "ce": {"oi": 36.68 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 19.41 * _L, "expiry": "23SEP2026"}},
+    {"strike": 290, "ce": {"oi": 57.94 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 15.30 * _L, "expiry": "23SEP2026"}},
+    {"strike": 295, "ce": {"oi": 20.30 * _L, "expiry": "23SEP2026"}, "pe": {"oi": 2.34 * _L, "expiry": "23SEP2026"}},
+]
+
+
+def _ng_bars():
+    # a plausible ~278.7 tape that oscillates a couple of points — deterministic
+    seg = [278.7, 279.1, 279.6, 279.2, 278.4, 277.9, 278.3, 278.9, 279.4, 278.6]
+    return mk(seg * 6, wick=0.35, vol=1000)
+
+
+def test_ng_snapshot_oi_walls_recognised_as_candidates():
+    r = compute_sr({"5m": _ng_bars(), "15m": _ng_bars()}, chain=_NG_CHAIN, mode="index",
+                   symbol="NATURALGAS")
+    assert r["status"] == "OK"
+    srcs = {s for z in r["levels"] for s in z["sources"]}
+    # the single largest CE OI (280, 94.09L) and PE OI (270, 96.85L) DO become walls
+    assert "oi_wall_ce" in srcs and "oi_wall_pe" in srcs
+    ce_zone = next((z for z in r["levels"] if 279.5 <= z["level"] <= 280.5 and "oi" in z["families"]), None)
+    pe_zone = next((z for z in r["levels"] if 269.5 <= z["level"] <= 270.5 and "oi" in z["families"]), None)
+    assert ce_zone and pe_zone, "280 CE wall and 270 PE wall must appear as OI-family zones"
+
+
+def test_ng_snapshot_oi_is_a_minor_factor_not_dominant():
+    # RES STR < SUP STR despite 280 holding the biggest wall in the chain is
+    # mathematically consistent: OI is ~17% of the score, the rest is price
+    # structure. Prove OI is not the dominant driver.
+    r = compute_sr({"5m": _ng_bars(), "15m": _ng_bars()}, chain=_NG_CHAIN, mode="index",
+                   symbol="NATURALGAS")
+    d = r["sr_diag"]
+    # the biggest CE/PE OI strikes are correctly identified as the top walls
+    assert d["oi_walls"]["call_walls"][0]["strike"] == 280
+    assert d["oi_walls"]["put_walls"][0]["strike"] == 270
+    # the SELECTED support / resistance are price-structure zones, not the raw
+    # OI strikes — a lone OI wall with no swing/pivot confluence does not win
+    for kind in ("support", "resistance"):
+        z = r[kind]
+        if z is None:
+            continue
+        assert z["families"] != ["oi"], f"{kind} must not be a lone OI wall"
+    # any zone whose ONLY family is 'oi' scores modestly (confluence 0.25 +
+    # oi_backing only) — never OI-dominant
+    for z in r["levels"]:
+        if z["families"] == ["oi"]:
+            assert z["strength"] < 45
+            assert z["components"]["oi_backing"] > 0.3
+
+
+def test_ng_snapshot_diagnostic_shape():
+    r = compute_sr({"5m": _ng_bars(), "15m": _ng_bars()}, chain=_NG_CHAIN, mode="index",
+                   symbol="NATURALGAS")
+    d = r["sr_diag"]
+    ow = d["oi_walls"]
+    assert ow["symbol"] == "NATURALGAS" and ow["expiry"] == "23SEP2026" and ow["spot"]
+    # top-3 walls each side, with the required fields
+    for w in ow["call_walls"] + ow["put_walls"]:
+        assert set(w) >= {"strike", "oi", "oi_chg", "dist_pct", "raw_wall_score", "dist_weighted_score"}
+    # the far 290 CE wall is present but its distance-weighted view is penalised
+    c290 = next(w for w in ow["call_walls"] if w["strike"] == 290)
+    c280 = next(w for w in ow["call_walls"] if w["strike"] == 280)
+    assert abs(c290["dist_pct"]) > abs(c280["dist_pct"])
+    assert c290["dist_weighted_score"] < c280["dist_weighted_score"]
+    # per selected level: symbol / expiry / spot / nearest strike / OI / reason
+    for kind in ("support", "resistance"):
+        lv = d[kind]
+        if lv is None:
+            continue
+        assert set(lv) >= {"kind", "symbol", "expiry", "spot", "level", "strength",
+                           "dist_pct", "dist_atr", "nearest_strike", "call_oi", "put_oi",
+                           "oi_change", "components", "reason"}
+
+
+def test_zero_or_missing_oi_creates_no_phantom_wall():
+    from app.engines.sr_engine import _candidates
+    blank = [{"strike": s, "ce": {}, "pe": {}} for s in (270, 275, 280, 285, 290)]
+    cands = _candidates([278.0] * 20, [277.0] * 20, [278.0] * 20, [0.0] * 20,
+                        atr=0.5, vwap=278.0, mode="index", chain=blank,
+                        prev_day=None, round_step=50.0)
+    assert not [c for c in cands if c[1].startswith("oi_")], "missing OI must not seed a wall"
+    # and a chain where only PE OI is present -> only a PE wall, no CE wall
+    half = [{"strike": s, "ce": {}, "pe": {"oi": 1000 * (s - 265)}} for s in (270, 275, 280, 285)]
+    cands = _candidates([278.0] * 20, [277.0] * 20, [278.0] * 20, [0.0] * 20,
+                        atr=0.5, vwap=278.0, mode="index", chain=half,
+                        prev_day=None, round_step=50.0)
+    kinds = {c[1] for c in cands if c[1].startswith("oi_")}
+    assert kinds == {"oi_wall_pe"}
+
+
+def test_shared_engine_nifty_and_crude_still_ok():
+    # the engine is shared across NIFTY / NG / CRUDE — a smoke check that the
+    # new symbol kwarg + diagnostic do not perturb other symbols
+    nifty_chain = [{"strike": 24000 + 50 * i,
+                    "ce": {"oi": 1e6 * (1 + (i % 3)), "expiry": "04SEP2026"},
+                    "pe": {"oi": 1e6 * (3 - (i % 3)), "expiry": "04SEP2026"}} for i in range(9)]
+    r = compute_sr({"5m": mk(_range_path())}, chain=nifty_chain, mode="index", symbol="NIFTY")
+    assert r["status"] == "OK" and 0 <= r["support_strength"] <= 100
+    assert r["sr_diag"]["oi_walls"]["symbol"] == "NIFTY"
+
+    crude_chain = [{"strike": 8000 + 50 * i,
+                    "ce": {"oi": 5e4 * (1 + i), "expiry": "17SEP2026"},
+                    "pe": {"oi": 5e4 * (9 - i), "expiry": "17SEP2026"}} for i in range(9)]
+    bars = mk([8100 + (i % 6) * 3 for i in range(40)], wick=4)
+    r = compute_sr({"5m": bars}, chain=crude_chain, mode="index", symbol="CRUDEOIL")
+    assert r["status"] == "OK" and 0 <= r["resistance_strength"] <= 100
+    assert r["sr_diag"]["oi_walls"]["expiry"] == "17SEP2026"
+
+
+def test_compute_sr_symbol_kwarg_is_optional_and_backwards_compatible():
+    a = compute_sr({"5m": mk(_range_path())}, mode="index")               # old call
+    b = compute_sr({"5m": mk(_range_path())}, mode="index", symbol=None)  # new kwarg
+    assert a["support_strength"] == b["support_strength"]
+    assert a["resistance_strength"] == b["resistance_strength"]
+    assert "sr_diag" in a
