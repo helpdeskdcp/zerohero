@@ -41,4 +41,42 @@ assert.match(source, /STALE DATA/);
 assert.match(source, /execution_enabled/);
 assert.match(source, /Enable LIVE order routing/);
 
+// ---- frontend audit (2026-09-01) regression guards ----
+const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+// The two self-reporting endpoints are now consumed by the UI.
+assert.match(source, /\/api\/autoscalp\/selfcheck/, "selfcheck must be wired");
+assert.match(source, /\/api\/autoscalp\/report\?day=/, "report endpoint must be wired");
+assert.match(html, /id="healthBanner"/);
+assert.match(html, /id="reportDay"/);
+assert.match(html, /id="reportBody"/);
+
+// WS keepalive timer is cleared before a reconnect stacks another.
+assert.match(source, /clearInterval\(wsPingTimer\)/);
+assert.match(source, /wsReconnectTimer/);
+
+// A burst of autoscalp_* events is coalesced, not one reload per event.
+assert.match(source, /scheduleAutoscalpReload/);
+
+// Data-derived values in the non-monitor views are escaped before innerHTML.
+assert.ok(!/<td class="feed-dir \$\{r\.direction\}">\$\{r\.direction \|\| "—"\}/.test(source),
+  "signals row must not interpolate raw r.direction");
+assert.ok(!/data-id="\$\{r\.trade_id\}"/.test(source),
+  "trade_id must be escaped in data attributes");
+assert.match(source, /class="badge \$\{esc\(r\.decision\)\}"/);
+
+// LIVE trading status is shown as explicit text, never a bare colour dot.
+assert.match(source, /DISABLED ✓/);
+assert.match(source, /ENABLED ⚠/);
+// The SCALP execution-mode LIVE option is disabled in the dashboard.
+assert.match(html, /<option value="LIVE" disabled>/);
+
+// Fetch failures surface to the operator, not just console.error.
+assert.match(source, /function showError/);
+assert.ok(!/catch \(e\) \{ console\.error\(e\); \}/.test(source),
+  "no silent console-only catch should remain");
+
+// Stale / market-closed market data is visually distinguished.
+assert.match(source, /is-closed|is-stale/);
+
 console.log("live monitor frontend regression checks passed");

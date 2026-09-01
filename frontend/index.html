@@ -36,7 +36,7 @@
       <button class="nav-item" data-view="autoscalp">Auto-Scalp</button>
       <button class="nav-item" data-view="runner">Run Pipeline</button>
       <button class="nav-item" data-view="research">Research</button>
-      <button class="nav-item" data-view="system">System</button>
+      <button class="nav-item" data-view="system">System &amp; Health</button>
     </nav>
 
     <main class="content">
@@ -80,8 +80,8 @@
           <div class="table-wrap">
             <table class="ledger" id="monComboTable">
               <thead><tr>
-                <th>Kind</th><th>Legs</th><th>Debit</th><th>Mark</th><th>Pair P&amp;L</th>
-                <th>→ Target</th><th>→ Stop</th><th>BE up</th><th>BE dn</th><th>Status</th><th></th>
+                <th scope="col">Kind</th><th scope="col">Legs</th><th scope="col">Debit</th><th scope="col">Mark</th><th scope="col">Pair P&amp;L</th>
+                <th scope="col">→ Target</th><th scope="col">→ Stop</th><th scope="col">BE up</th><th scope="col">BE dn</th><th scope="col">Status</th><th scope="col"></th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -93,8 +93,8 @@
           <div class="table-wrap">
             <table class="ledger" id="monPosTable">
               <thead><tr>
-                <th>Sym</th><th>Type</th><th>Dir</th><th>Entry</th><th>Mark</th><th>Age</th>
-                <th>Live P&amp;L</th><th>→ Target</th><th>→ Stop</th><th>MFE</th><th>MAE</th><th>Status</th><th></th>
+                <th scope="col">Sym</th><th scope="col">Type</th><th scope="col">Dir</th><th scope="col">Entry</th><th scope="col">Mark</th><th scope="col">Age</th>
+                <th scope="col">Live P&amp;L</th><th scope="col">→ Target</th><th scope="col">→ Stop</th><th scope="col">MFE</th><th scope="col">MAE</th><th scope="col">Status</th><th scope="col"></th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -106,8 +106,8 @@
           <div class="table-wrap">
             <table class="ledger" id="monScalpTable">
               <thead><tr>
-                <th>Setup</th><th>Sym</th><th>Dir</th><th>Entry</th><th>Mark</th>
-                <th>Live P&amp;L</th><th>→ Target</th><th>→ Stop</th><th>Status</th>
+                <th scope="col">Setup</th><th scope="col">Sym</th><th scope="col">Dir</th><th scope="col">Entry</th><th scope="col">Mark</th>
+                <th scope="col">Live P&amp;L</th><th scope="col">→ Target</th><th scope="col">→ Stop</th><th scope="col">Status</th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -119,8 +119,8 @@
           <div class="table-wrap">
             <table class="ledger" id="monRevTable">
               <thead><tr>
-                <th>Symbol</th><th>Turn</th><th>At</th><th>Level</th><th>Price</th>
-                <th>Buy</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>RR</th><th>Conf</th>
+                <th scope="col">Symbol</th><th scope="col">Turn</th><th scope="col">At</th><th scope="col">Level</th><th scope="col">Price</th>
+                <th scope="col">Buy</th><th scope="col">Entry</th><th scope="col">SL</th><th scope="col">T1</th><th scope="col">T2</th><th scope="col">RR</th><th scope="col">Conf</th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -132,8 +132,8 @@
           <div class="table-wrap">
             <table class="ledger" id="monTpTable">
               <thead><tr>
-                <th>Symbol</th><th>Dir</th><th>turn</th><th>p(up)</th><th>Conf</th>
-                <th>Exp.Move</th><th>Buy</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>RR</th>
+                <th scope="col">Symbol</th><th scope="col">Dir</th><th scope="col">turn</th><th scope="col">p(up)</th><th scope="col">Conf</th>
+                <th scope="col">Exp.Move</th><th scope="col">Buy</th><th scope="col">Entry</th><th scope="col">SL</th><th scope="col">T1</th><th scope="col">T2</th><th scope="col">RR</th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -152,8 +152,8 @@
           <div class="table-wrap" id="monExecOrdersWrap" hidden>
             <table class="ledger" id="monExecTable">
               <thead><tr>
-                <th>Trade</th><th>Leg</th><th>Side</th><th>Type</th><th>Qty</th>
-                <th>Filled</th><th>Avg</th><th>Status</th><th>Note</th>
+                <th scope="col">Trade</th><th scope="col">Leg</th><th scope="col">Side</th><th scope="col">Type</th><th scope="col">Qty</th>
+                <th scope="col">Filled</th><th scope="col">Avg</th><th scope="col">Status</th><th scope="col">Note</th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -182,8 +182,8 @@
             <table class="ledger" id="signalsTable">
               <thead>
                 <tr>
-                  <th>Time</th><th>Symbol</th><th>Dir</th><th>Decision</th>
-                  <th>Regime</th><th>Prob</th><th>Conf</th><th>RR</th><th>Risk</th><th>Reason</th>
+                  <th scope="col">Time</th><th scope="col">Symbol</th><th scope="col">Dir</th><th scope="col">Decision</th>
+                  <th scope="col">Regime</th><th scope="col">Prob</th><th scope="col">Conf</th><th scope="col">RR</th><th scope="col">Risk</th><th scope="col">Reason</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -207,8 +207,8 @@
             <table class="ledger" id="tradesTable">
               <thead>
                 <tr>
-                  <th>Opened</th><th>Strat</th><th>Underlying</th><th>Type</th><th>Dir</th>
-                  <th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Status</th><th>PnL</th><th></th>
+                  <th scope="col">Opened</th><th scope="col">Strat</th><th scope="col">Underlying</th><th scope="col">Type</th><th scope="col">Dir</th>
+                  <th scope="col">Entry</th><th scope="col">SL</th><th scope="col">T1</th><th scope="col">Qty</th><th scope="col">Status</th><th scope="col">PnL</th><th scope="col"></th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -258,9 +258,9 @@
             <table class="ledger" id="scalpTable">
               <thead>
                 <tr>
-                  <th>Opened</th><th>Sym</th><th>Setup</th><th>Dir</th><th>Entry</th>
-                  <th>SL</th><th>T1</th><th>Qty</th><th>Held</th><th>MFE</th><th>MAE</th>
-                  <th>Status</th><th>Exit</th><th>PnL</th><th></th>
+                  <th scope="col">Opened</th><th scope="col">Sym</th><th scope="col">Setup</th><th scope="col">Dir</th><th scope="col">Entry</th>
+                  <th scope="col">SL</th><th scope="col">T1</th><th scope="col">Qty</th><th scope="col">Held</th><th scope="col">MFE</th><th scope="col">MAE</th>
+                  <th scope="col">Status</th><th scope="col">Exit</th><th scope="col">PnL</th><th scope="col"></th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -284,8 +284,8 @@
               <label>Skip open (min)<input type="number" name="skip_open_min" min="0" step="1" /></label>
               <label>Skip close (min)<input type="number" name="skip_close_min" min="0" step="1" /></label>
               <label class="chk"><input type="checkbox" name="ignore_session" /> Ignore session (replay/demo)</label>
-              <label>Execution mode<select name="execution_mode"><option>PAPER</option><option>SHADOW</option><option>LIVE</option></select></label>
-              <label class="chk"><input type="checkbox" name="execution_enabled" /> Enable order adapter</label>
+              <label>Execution mode<select name="execution_mode"><option>PAPER</option><option>SHADOW</option><option value="LIVE" disabled>LIVE (server-gated — off)</option></select></label>
+              <label class="chk"><input type="checkbox" name="execution_enabled" /> Enable order adapter (PAPER / SHADOW only from here)</label>
             </div>
             <details class="advanced">
               <summary>Watchlist / account / engine overrides (JSON)</summary>
@@ -344,8 +344,8 @@
           <div class="table-wrap">
             <table class="ledger" id="posTable">
               <thead><tr>
-                <th>Since</th><th>Sym</th><th>Type</th><th>Dir</th><th>Entry</th><th>Mark</th>
-                <th>Target</th><th>Stop</th><th>Qty</th><th>P&L</th><th>Status</th><th>Exit</th><th></th>
+                <th scope="col">Since</th><th scope="col">Sym</th><th scope="col">Type</th><th scope="col">Dir</th><th scope="col">Entry</th><th scope="col">Mark</th>
+                <th scope="col">Target</th><th scope="col">Stop</th><th scope="col">Qty</th><th scope="col">P&L</th><th scope="col">Status</th><th scope="col">Exit</th><th scope="col"></th>
               </tr></thead>
               <tbody></tbody>
             </table>
@@ -434,6 +434,7 @@
             </div>
           </div>
           <p class="scalp-err" id="asErr" hidden></p>
+          <div class="health-line" id="asHealthLine">—</div>
           <p class="hint" id="asMktStatus" style="margin:2px 0 6px">—</p>
           <div class="as-wl-summary" id="asWlSummary"></div>
           <div class="mon-strip" id="asStrip">
@@ -469,8 +470,8 @@
           <div class="panel-head"><h2>Open PAPER Positions</h2></div>
           <div class="table-wrap">
             <table class="ledger" id="asPosTable">
-              <thead><tr><th>Opened</th><th>Sym</th><th>Contract</th><th>Dir</th><th>Entry</th>
-                <th>Mark</th><th>SL</th><th>T1</th><th>P&L</th><th>Status</th><th>Exit</th></tr></thead>
+              <thead><tr><th scope="col">Opened</th><th scope="col">Sym</th><th scope="col">Contract</th><th scope="col">Dir</th><th scope="col">Entry</th>
+                <th scope="col">Mark</th><th scope="col">SL</th><th scope="col">T1</th><th scope="col">P&L</th><th scope="col">Status</th><th scope="col">Exit</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -480,9 +481,9 @@
           <div class="panel-head"><h2>Signal Log (live)</h2></div>
           <div class="table-wrap">
             <table class="ledger" id="asSigTable">
-              <thead><tr><th>Time</th><th>Sym</th><th>Decision</th><th>Setup</th><th>Dir</th>
-                <th>Strike</th><th>Entry</th><th>SL</th><th>T1</th><th>Prob</th><th>Conf</th>
-                <th>Status</th><th>Outcome</th><th>Pts</th></tr></thead>
+              <thead><tr><th scope="col">Time</th><th scope="col">Sym</th><th scope="col">Decision</th><th scope="col">Setup</th><th scope="col">Dir</th>
+                <th scope="col">Strike</th><th scope="col">Entry</th><th scope="col">SL</th><th scope="col">T1</th><th scope="col">Prob</th><th scope="col">Conf</th>
+                <th scope="col">Status</th><th scope="col">Outcome</th><th scope="col">Pts</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -507,8 +508,35 @@
         </div>
       </section>
 
-      <!-- ===== SYSTEM ===== -->
+      <!-- ===== SYSTEM & HEALTH ===== -->
       <section class="view" id="view-system">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Operational Health</h2>
+            <span class="hint" id="healthGen">—</span>
+          </div>
+          <p class="scalp-err" id="healthErr" hidden></p>
+          <div class="health-banner" id="healthBanner">—</div>
+          <div class="sysgrid" id="healthChecks"></div>
+          <div class="health-sub" id="healthDetail"></div>
+          <div class="health-sub" id="healthBlocks"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Session Report <span class="pill pill--paper">PAPER</span></h2>
+            <div class="mon-exec-bar">
+              <label class="as-sym">Day
+                <input type="date" id="reportDay" />
+              </label>
+              <button class="btn btn-ghost" id="reportLoadBtn" type="button">Load</button>
+            </div>
+          </div>
+          <p class="hint">PAPER results only — no real-money trading. <span id="reportNote"></span></p>
+          <p class="scalp-err" id="reportErr" hidden></p>
+          <div id="reportBody"><span class="hint">Pick a day and press Load.</span></div>
+        </div>
+
         <div class="panel">
           <div class="panel-head"><h2>System Status</h2></div>
           <div class="sysgrid" id="sysGrid"></div>
@@ -526,11 +554,12 @@
       <button class="tab-item" data-view="monitor"><span class="tab-ic">◉</span>Monitor</button>
       <button class="tab-item" data-view="scalp"><span class="tab-ic">⚡</span>Scalp</button>
       <button class="tab-item" data-view="autoscalp"><span class="tab-ic">🤖</span>Auto</button>
-      <button class="tab-item" data-view="runner"><span class="tab-ic">▶</span>Run</button>
       <button class="tab-item" data-view="research"><span class="tab-ic">∑</span>Research</button>
+      <button class="tab-item" data-view="system"><span class="tab-ic">✚</span>Health</button>
     </nav>
   </div>
 
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <datalist id="instrumentList"></datalist>
   <script src="/static/js/app.js"></script>
 </body>

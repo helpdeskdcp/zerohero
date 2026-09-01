@@ -13,7 +13,7 @@
   --line-soft: #1c222d;
   --ink: #e7e6de;
   --ink-dim: #9099ab;
-  --ink-faint: #5c6478;
+  --ink-faint: #737d94;   /* raised from #5c6478 for AA contrast on small text */
   --gold: #c9a227;
   --gold-soft: #e8c85a;
   --teal: #4fb8a3;
@@ -262,10 +262,12 @@ textarea { resize: vertical; }
 }
 .tab-item {
   background: none; border: none; color: var(--ink-faint); font-size: 10px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; padding: 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1;
+  min-width: 0; padding: 4px 2px; white-space: nowrap;
 }
 .tab-item.active { color: var(--gold-soft); }
 .tab-ic { font-size: 17px; }
+@media (max-width: 380px) { .tab-item { font-size: 9px; } .tab-ic { font-size: 15px; } }
 
 /* ============================================================
    Desktop layout (>= 860px): sidebar nav, hide bottom tab bar,
@@ -366,7 +368,62 @@ td.exit-cell { color: var(--ink-faint); font-size: 11px; }
   .mon-strip { grid-template-columns: repeat(6, 1fr); }
 }
 
+/* ---------------- Global error toast ---------------- */
+.toast {
+  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+  z-index: 40; max-width: min(92vw, 560px);
+  padding: 10px 14px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.4;
+  background: var(--bg-raised); border: 1px solid var(--line); color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.toast--err { border-color: rgba(217,97,79,0.5); color: var(--ember); }
+@media (min-width: 860px) { .toast { bottom: 24px; } }
+
+/* ---------------- Health / status colours ---------------- */
+.hc-ok   { color: var(--teal); }
+.hc-warn { color: var(--gold-soft); }
+.hc-err  { color: var(--ember); }
+.syscell b { font-family: var(--font-mono); font-size: 12px; }
+
+.health-banner {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  padding: 8px 12px; border-radius: 5px; margin-bottom: 12px;
+  border: 1px solid var(--line); background: var(--bg-raised);
+}
+.health-banner.hc-ok  { border-color: rgba(79,184,163,0.4); }
+.health-banner.hc-err { border-color: rgba(217,97,79,0.5); }
+.health-line {
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-dim);
+  padding: 5px 9px; border-radius: 4px; margin: 4px 0 6px;
+  border: 1px solid var(--line-soft); background: var(--bg-raised);
+}
+.health-line.hc-ok   { border-color: rgba(79,184,163,0.35); }
+.health-line.hc-warn { border-color: rgba(201,162,39,0.35); }
+.health-sub { margin-top: 10px; }
+.health-sub .kv {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-family: var(--font-mono); font-size: 12px; padding: 3px 0;
+  color: var(--ink-dim); border-bottom: 1px solid var(--line-soft);
+}
+.health-sub .kv b { color: var(--ink); font-weight: 600; text-align: right; }
+
+/* stale / market-closed data must not read as fresh */
+.mon-strip.is-stale .mon-cell, .mon-strip.is-closed .mon-cell { opacity: 0.5; filter: grayscale(0.6); }
+.mon-strip.is-closed::before, .mon-strip.is-stale::before {
+  content: "MARKET CLOSED — showing last values"; grid-column: 1 / -1;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em;
+  color: var(--gold-soft); text-transform: uppercase;
+}
+.mon-strip.is-stale::before { content: "STALE FEED — showing last values"; color: var(--ember); }
+
 /* Scrollbars */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* keyboard focus visibility (was relying on UA default only) */
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--gold-soft); outline-offset: 2px;
+}

@@ -24,7 +24,30 @@
 
   // ---------------- Helpers ----------------
   const $ = (sel, root = document) => root.querySelector(sel);
-  const fmt = (n, d = 2) => (n === null || n === undefined || isNaN(n)) ? "—" : Number(n).toFixed(d);
+  const fmt = (n, d = 2) =>
+    (n === null || n === undefined || n === "" || isNaN(Number(n))) ? "—" : Number(n).toFixed(d);
+  // signed number for P&L cells so gain/loss is not colour-only
+  const fmtSigned = (n, d = 2) => {
+    if (n === null || n === undefined || n === "" || isNaN(Number(n))) return "—";
+    const v = Number(n);
+    return (v > 0 ? "+" : "") + v.toFixed(d);
+  };
+
+  // Non-silent load-failure surface. A fetch failure used to only reach the
+  // console; the operator now sees a dismissable toast and each view keeps its
+  // last-known content instead of silently going stale.
+  let _toastTimer = null;
+  function showError(where, err) {
+    console.error(where, err);
+    const box = $("#toast");
+    if (!box) return;
+    box.textContent = `${where}: ${(err && err.message) || err || "request failed"}`;
+    box.hidden = false;
+    box.className = "toast toast--err";
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { box.hidden = true; }, 8000);
+  }
+  function clearError() { const b = $("#toast"); if (b) b.hidden = true; }
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[ch]);
@@ -59,18 +82,29 @@
 
   // ---------------- WebSocket live feed ----------------
   let ws;
+  let wsPingTimer = null;
+  let wsReconnectTimer = null;
   function connectWs() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const q = apiToken ? `?token=${encodeURIComponent(apiToken)}` : "";
     ws = new WebSocket(`${proto}://${location.host}/ws${q}`);
     ws.onopen = () => setWsStatus(true);
-    ws.onclose = () => { setWsStatus(false); setTimeout(connectWs, 2500); };
-    ws.onerror = () => ws.close();
-    ws.onmessage = (evt) => {
-      try { handleWsMessage(JSON.parse(evt.data)); } catch { /* ignore */ }
+    ws.onclose = () => {
+      setWsStatus(false);
+      // one keepalive timer at a time — clear the old one before reconnecting
+      if (wsPingTimer) { clearInterval(wsPingTimer); wsPingTimer = null; }
+      if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = setTimeout(connectWs, 2500);
     };
-    // keepalive ping
-    setInterval(() => { if (ws.readyState === 1) ws.send("ping"); }, 20000);
+    ws.onerror = () => { try { ws.close(); } catch (_) { /* already closing */ } };
+    ws.onmessage = (evt) => {
+      try { handleWsMessage(JSON.parse(evt.data)); } catch { /* ignore malformed frame */ }
+    };
+    // keepalive ping — replace any previous timer so reconnects don't stack them
+    if (wsPingTimer) clearInterval(wsPingTimer);
+    wsPingTimer = setInterval(() => {
+      try { if (ws && ws.readyState === 1) ws.send("ping"); } catch (_) { /* socket gone */ }
+    }, 20000);
   }
   function setWsStatus(online) {
     const el = $("#wsStatus");
@@ -127,8 +161,8 @@
     const dirClass = sig.direction === "BUY" ? "buy" : sig.direction === "SELL" ? "sell" : "none";
     li.className = "feed-item " + dirClass;
     li.innerHTML = `
-      <span class="feed-dir ${sig.direction}">${sig.direction}</span>
-      <span class="feed-meta">${sig.underlying || sig.symbol || "—"} · ${sig.decision} · ${sig.market_regime || "—"} · prob ${fmt(sig.probability, 1)}%</span>
+      <span class="feed-dir ${directionClass(sig.direction)}">${text(sig.direction)}</span>
+      <span class="feed-meta">${text(sig.underlying || sig.symbol)} · ${text(sig.decision)} · ${text(sig.market_regime)} · prob ${fmt(sig.probability, 1)}%</span>
       <span class="feed-time">${timeStr(sig.created_ts)}</span>
     `;
     feed.prepend(li);
@@ -151,7 +185,7 @@
       pnlEl.textContent = fmt(research.paper_trades.total_realized_pnl, 2);
       pnlEl.className = "stat-value " + (research.paper_trades.total_realized_pnl > 0 ? "pos" : research.paper_trades.total_realized_pnl < 0 ? "neg" : "");
       $("#statPF").textContent = research.paper_trades.profit_factor !== null ? fmt(research.paper_trades.profit_factor, 2) : "—";
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("overview", e); }
   }
 
   // ---------------- Signal Ledger ----------------
@@ -162,18 +196,18 @@
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${timeStr(r.created_ts)}</td>
-          <td>${r.underlying || r.symbol || "—"}</td>
-          <td class="feed-dir ${r.direction}">${r.direction || "—"}</td>
-          <td><span class="badge ${r.decision}">${r.decision || "—"}</span></td>
-          <td>${r.market_regime || "—"}</td>
+          <td>${text(r.underlying || r.symbol)}</td>
+          <td class="feed-dir ${directionClass(r.direction)}">${text(r.direction)}</td>
+          <td><span class="badge ${esc(r.decision)}">${text(r.decision)}</span></td>
+          <td>${text(r.market_regime)}</td>
           <td>${fmt(r.probability, 1)}%</td>
           <td>${fmt(r.confidence, 1)}%</td>
           <td>${fmt(r.risk_reward, 2)}</td>
-          <td><span class="badge ${r.risk_status}">${r.risk_status || "—"}</span></td>
-          <td class="reason-cell">${(r.reason || "").slice(0, 160)}</td>
+          <td><span class="badge ${esc(r.risk_status)}">${text(r.risk_status)}</span></td>
+          <td class="reason-cell">${esc((r.reason || "").slice(0, 160))}</td>
         </tr>
       `).join("") || `<tr><td colspan="10" class="hint">No signals logged yet.</td></tr>`;
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("signals", e); }
   }
   $("#refreshSignals").addEventListener("click", loadSignals);
 
@@ -185,17 +219,17 @@
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${timeStr(r.opened_ts)}</td>
-          <td><span class="badge ${r.strategy === "SCALP" ? "OPEN" : "UNKNOWN"}">${r.strategy || "CORE"}</span></td>
-          <td>${r.underlying || "—"}</td>
-          <td>${r.option_type || r.instrument || "—"} ${r.strike || ""}</td>
-          <td class="feed-dir ${r.direction}">${r.direction || "—"}</td>
+          <td><span class="badge ${r.strategy === "SCALP" ? "OPEN" : "UNKNOWN"}">${text(r.strategy, "CORE")}</span></td>
+          <td>${text(r.underlying)}</td>
+          <td>${text(r.option_type || r.instrument)} ${text(r.strike, "")}</td>
+          <td class="feed-dir ${directionClass(r.direction)}">${text(r.direction)}</td>
           <td>${fmt(r.entry, 2)}</td>
           <td>${fmt(r.stop_loss, 2)}</td>
           <td>${fmt(r.target_1, 2)}</td>
           <td>${fmt(r.quantity, 0)}</td>
-          <td><span class="badge ${r.status}">${r.status}</span></td>
-          <td class="${(r.pnl||0) > 0 ? 'stat-value pos' : (r.pnl||0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(r.pnl, 2)}</td>
-          <td>${r.status === "OPEN" ? `<button class="btn btn-ghost close-trade-btn" data-id="${r.trade_id}" data-entry="${r.entry}">Close</button>` : ""}</td>
+          <td><span class="badge ${esc(r.status)}">${text(r.status)}</span></td>
+          <td class="${(r.pnl||0) > 0 ? 'stat-value pos' : (r.pnl||0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmtSigned(r.pnl, 2)}</td>
+          <td>${r.status === "OPEN" ? `<button class="btn btn-ghost close-trade-btn" data-id="${esc(r.trade_id)}" data-entry="${esc(r.entry)}">Close</button>` : ""}</td>
         </tr>
       `).join("") || `<tr><td colspan="12" class="hint">No trades yet.</td></tr>`;
 
@@ -207,7 +241,7 @@
           loadTrades();
         });
       });
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("trades", e); }
   }
   document.querySelectorAll("#tradeFilter .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -554,7 +588,7 @@
       renderScalpBlotter(trades);
       renderPositions(positions, status.feed);
       if (!scalpState.configTouched) fillScalpConfig(status.config);
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("scalp", e); }
   }
 
   function renderPositions(rows, feed) {
@@ -567,18 +601,18 @@
       const since = r.opened_ts ? ((r.closed_ts ? new Date(r.closed_ts) : now) - new Date(r.opened_ts)) / 1000 : null;
       return `<tr>
         <td>${timeStr(r.opened_ts)}${since !== null ? " · " + fmtHold(since) : ""}</td>
-        <td>${r.underlying || "—"}</td>
-        <td>${r.option_type || r.instrument || "—"} ${r.strike || ""}</td>
-        <td class="feed-dir ${r.direction}">${r.direction || "—"}</td>
+        <td>${text(r.underlying)}</td>
+        <td>${text(r.option_type || r.instrument)} ${text(r.strike, "")}</td>
+        <td class="feed-dir ${directionClass(r.direction)}">${text(r.direction)}</td>
         <td>${fmt(r.entry, 2)}</td>
         <td>${mark !== null ? fmt(mark, 2) : "—"}</td>
         <td>${fmt(r.target_1, 2)}</td>
         <td>${fmt(r.stop_loss, 2)}</td>
         <td>${fmt(r.quantity, 0)}</td>
-        <td class="${(r.pnl||0) > 0 ? 'stat-value pos' : (r.pnl||0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(r.pnl, 2)}</td>
-        <td><span class="badge ${r.status}">${r.status}</span></td>
-        <td class="exit-cell">${r.exit_reason || ""}</td>
-        <td>${r.status === "OPEN" ? `<button class="btn btn-ghost untrack-btn" data-id="${r.trade_id}" data-mark="${mark ?? r.entry}">Untrack</button>` : ""}</td>
+        <td class="${(r.pnl||0) > 0 ? 'stat-value pos' : (r.pnl||0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmtSigned(r.pnl, 2)}</td>
+        <td><span class="badge ${esc(r.status)}">${text(r.status)}</span></td>
+        <td class="exit-cell">${text(r.exit_reason, "")}</td>
+        <td>${r.status === "OPEN" ? `<button class="btn btn-ghost untrack-btn" data-id="${esc(r.trade_id)}" data-mark="${esc(mark ?? r.entry)}">Untrack</button>` : ""}</td>
       </tr>`;
     }).join("") || `<tr><td colspan="13" class="hint">No tracked positions.</td></tr>`;
     tbody.querySelectorAll(".untrack-btn").forEach(b => b.addEventListener("click", async () => {
@@ -660,9 +694,9 @@
       return `
         <tr>
           <td>${timeStr(r.opened_ts)}</td>
-          <td>${r.underlying || r.market || "—"}</td>
-          <td>${r.setup || "—"}</td>
-          <td class="feed-dir ${r.direction}">${r.direction || "—"}</td>
+          <td>${text(r.underlying || r.market)}</td>
+          <td>${text(r.setup)}</td>
+          <td class="feed-dir ${directionClass(r.direction)}">${text(r.direction)}</td>
           <td>${fmt(r.entry, 2)}</td>
           <td>${fmt(r.stop_loss, 2)}</td>
           <td>${fmt(r.target_1, 2)}</td>
@@ -670,10 +704,10 @@
           <td>${fmtHold(held)}</td>
           <td class="stat-value pos" style="font-size:11px">${fmt(r.mfe, 2)}</td>
           <td class="stat-value neg" style="font-size:11px">${fmt(r.mae, 2)}</td>
-          <td><span class="badge ${r.status}">${r.status}</span></td>
-          <td class="exit-cell">${r.exit_reason || ""}</td>
-          <td class="${(r.pnl||0) > 0 ? 'stat-value pos' : (r.pnl||0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(r.pnl, 2)}</td>
-          <td>${r.status === "OPEN" ? `<button class="btn btn-ghost close-scalp-btn" data-id="${r.trade_id}" data-entry="${r.entry}">Close</button>` : ""}</td>
+          <td><span class="badge ${esc(r.status)}">${text(r.status)}</span></td>
+          <td class="exit-cell">${text(r.exit_reason, "")}</td>
+          <td class="${(r.pnl||0) > 0 ? 'stat-value pos' : (r.pnl||0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmtSigned(r.pnl, 2)}</td>
+          <td>${r.status === "OPEN" ? `<button class="btn btn-ghost close-scalp-btn" data-id="${esc(r.trade_id)}" data-entry="${esc(r.entry)}">Close</button>` : ""}</td>
         </tr>`;
     }).join("") || `<tr><td colspan="15" class="hint">No scalps yet. Configure a watchlist and ARM the runner.</td></tr>`;
 
@@ -695,7 +729,14 @@
     const f = $("#scalpConfigForm");
     SCALP_SIMPLE_FIELDS.forEach(k => { if (f[k] != null && cfg[k] != null) f[k].value = cfg[k]; });
     f.ignore_session.checked = !!cfg.ignore_session;
-    f.execution_mode.value = cfg.execution_mode || "PAPER";
+    // LIVE is server-gated and not selectable from the dashboard; if a stored
+    // config still carries it, say so rather than silently showing PAPER.
+    if ((cfg.execution_mode || "").toUpperCase() === "LIVE") {
+      f.execution_mode.value = "SHADOW";
+      $("#scalpConfigMsg").textContent = "Stored execution_mode is LIVE (server-gated). Dashboard shows SHADOW; saving from here will set SHADOW.";
+    } else {
+      f.execution_mode.value = cfg.execution_mode || "PAPER";
+    }
     f.execution_enabled.checked = !!cfg.execution_enabled;
     f.watchlist_json.value = JSON.stringify(cfg.watchlist || [], null, 2);
     f.account_json.value = JSON.stringify(cfg.account || {}, null, 2);
@@ -709,7 +750,7 @@
     try {
       const s = await api(armed ? "/api/scalp/disarm" : "/api/scalp/arm", { method: "POST" });
       renderScalpStatus(s);
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("scalp arm", e); }
   });
 
   $("#scalpConfigForm").addEventListener("submit", async (e) => {
@@ -783,7 +824,7 @@
       const picker = $("#scalpSymPicker");
       if (picker) picker.innerHTML = INSTRUMENTS.map(i =>
         `<label class="chk"><input type="checkbox" value="${i.name}" data-market="${i.market || i.exchange}" /> ${i.name}</label>`).join("");
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("loadInstruments", e); }
   }
 
   // popular F&O indices float to the top of the searchable symbol list
@@ -885,8 +926,8 @@
       const r = await api("/api/research");
       $("#researchDisclaimer").textContent = r.probability_disclaimer;
       const grid = $("#researchGrid");
-      const decisionRows = Object.entries(r.signals.by_decision).map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join("");
-      const regimeRows = Object.entries(r.signals.by_market_regime).map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join("");
+      const decisionRows = Object.entries(r.signals.by_decision || {}).map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+      const regimeRows = Object.entries(r.signals.by_market_regime || {}).map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
       grid.innerHTML = `
         <div class="rcard">
           <h3>Signals by Decision</h3>
@@ -919,23 +960,127 @@
           </div>`;
         }).join("")}
       `;
-    } catch (e) { console.error(e); }
+    } catch (e) { showError("research", e); }
   }
   $("#refreshResearch").addEventListener("click", loadResearch);
 
-  // ---------------- System ----------------
+  // ---------------- System & Health ----------------
+  // GREEN when true; the failing colour depends on whether the check is a hard
+  // fault (ERROR) or an expected-when-closed condition (WARN).
+  const HEALTH_SOFT = new Set(["feed_fresh", "feed_connected", "armed"]);
+  function healthCheckClass(key, ok, marketOpen) {
+    if (ok) return "hc-ok";
+    return (HEALTH_SOFT.has(key) && !marketOpen) ? "hc-warn" : "hc-err";
+  }
+
+  function renderHealthLine(sc) {
+    const el = $("#asHealthLine");
+    if (!el || !sc) return;
+    const parts = [
+      sc.ok ? "● healthy" : "● attention",
+      sc.paper_mode === false ? "LIVE?!" : "PAPER",
+      (sc.checks && sc.checks.live_trading_disabled) ? "LIVE off ✓" : "LIVE ⚠",
+      "feed " + (sc.checks && sc.checks.feed_fresh ? "fresh" : (sc.market_open ? "STALE" : "quiet")),
+      "aggs " + (sc.checks && sc.checks.all_aggs_seeded ? "ready" : "warming"),
+    ];
+    if ((sc.config_warnings || []).length) parts.push("⚠ " + sc.config_warnings.length + " cfg");
+    el.textContent = parts.join(" · ");
+    el.className = "health-line " + (sc.ok ? "hc-ok" : "hc-warn");
+  }
+
   async function loadSystem() {
+    // three independent panels — a failure in one must not blank the others
     try {
-      const env = await api("/api/env-check");
-      const health = await api("/api/health");
-      const grid = $("#sysGrid");
-      grid.innerHTML = Object.entries(env).map(([k, v]) => `
-        <div class="syscell"><span>${k}</span><span class="dot ${v ? "on" : "off"}"></span></div>
+      const [env, health] = await Promise.all([api("/api/env-check"), api("/api/health")]);
+      $("#sysGrid").innerHTML = Object.entries(env).map(([k, v]) => `
+        <div class="syscell"><span>${esc(k)}</span><span class="dot ${v ? "on" : "off"}" title="${v ? "configured" : "missing"}"></span></div>
       `).join("") + `
-        <div class="syscell"><span>API</span><span class="dot on"></span></div>
-        <div class="syscell"><span>Live Trading</span><span class="dot ${health.live_trading ? "on" : "off"}"></span></div>
-      `;
-    } catch (e) { console.error(e); }
+        <div class="syscell"><span>API</span><span class="dot on" title="reachable"></span></div>
+        <div class="syscell"><span>Live Trading</span><b class="${health.live_trading ? "hc-err" : "hc-ok"}">${health.live_trading ? "ENABLED ⚠" : "DISABLED ✓"}</b></div>
+        <div class="syscell"><span>Mode</span><b class="hc-ok">${health.paper_mode ? "PAPER" : text(health.paper_mode)}</b></div>`;
+    } catch (e) { showError("system", e); }
+
+    try {
+      const sc = await api("/api/autoscalp/selfcheck");
+      $("#healthErr").hidden = true;
+      $("#healthGen").textContent = sc.generated ? "as of " + timeStr(sc.generated) : "";
+      const banner = $("#healthBanner");
+      banner.textContent = sc.ok ? "● HEALTHY — engine operational" : "● ATTENTION — one or more checks failing";
+      banner.className = "health-banner " + (sc.ok ? "hc-ok" : "hc-err");
+      $("#healthChecks").innerHTML = Object.entries(sc.checks || {}).map(([k, v]) =>
+        `<div class="syscell"><span>${esc(k)}</span><b class="${healthCheckClass(k, v, sc.market_open)}">${v ? "OK" : "—"}</b></div>`
+      ).join("");
+      const seg = Object.entries(sc.segments || {}).map(([k, v]) => `${esc(k)} ${esc(String(v).toLowerCase())}`).join(" · ");
+      const bars = Object.entries(sc.bars_ready || {}).map(([k, v]) =>
+        `${esc(k)} ${v.ready ? "✓" : v.bars_5m + "/20"}`).join("  ");
+      $("#healthDetail").innerHTML =
+        `<div class="kv"><span>market</span><b>${sc.market_open ? "OPEN" : "closed"} — ${seg || "—"}</b></div>` +
+        `<div class="kv"><span>feed age</span><b>${sc.feed_age_sec == null ? "—" : fmt(sc.feed_age_sec, 0) + "s"}</b></div>` +
+        `<div class="kv"><span>aggregators</span><b>${bars || "—"}</b></div>` +
+        `<div class="kv"><span>open / calib</span><b>${sc.open_positions ?? 0} · ${text(sc.calibration, "prior")}</b></div>` +
+        (sc.segments_error ? `<div class="kv"><span>segments err</span><b class="hc-err">${esc(sc.segments_error)}</b></div>` : "") +
+        ((sc.config_warnings || []).length
+          ? sc.config_warnings.map(w => `<div class="kv"><span>⚠ config</span><b class="hc-warn">${esc(w)}</b></div>`).join("")
+          : `<div class="kv"><span>config</span><b class="hc-ok">no warnings</b></div>`);
+      const eb = sc.entry_blocks || {};
+      $("#healthBlocks").innerHTML = Object.keys(eb).length
+        ? `<div class="kv"><span>entry blocks</span><b></b></div>` + Object.entries(eb).map(([s, b]) =>
+            `<div class="kv"><span>${esc(s)}</span><b class="hc-warn">${esc(b.signal)} ×${b.n} — ${esc(b.last)}</b></div>`).join("")
+        : "";
+    } catch (e) {
+      const el = $("#healthErr"); el.hidden = false; el.textContent = "selfcheck: " + e.message;
+    }
+  }
+
+  // ---------------- Session Report ----------------
+  function _istToday() {
+    const d = new Date(Date.now() + (5 * 60 + 30) * 60000);   // shift to IST
+    return d.toISOString().slice(0, 10);
+  }
+  async function loadReport() {
+    const day = ($("#reportDay").value || "").trim() || _istToday();
+    const body = $("#reportBody");
+    body.innerHTML = `<span class="hint">Loading ${esc(day)}…</span>`;
+    $("#reportErr").hidden = true;
+    let rep;
+    try { rep = await api(`/api/autoscalp/report?day=${encodeURIComponent(day)}`); }
+    catch (e) {
+      const el = $("#reportErr"); el.hidden = false;
+      el.textContent = "report: " + e.message;
+      body.innerHTML = `<span class="hint">Could not load. <button class="btn btn-ghost" id="reportRetry" type="button">Retry</button></span>`;
+      const rb = $("#reportRetry"); if (rb) rb.addEventListener("click", loadReport);
+      return;
+    }
+    $("#reportNote").textContent = rep.note || "";
+    const t = rep.totals || {};
+    const syms = rep.per_symbol || {};
+    if (!Object.keys(syms).length && !(t.trades)) {
+      body.innerHTML = `<span class="hint">No PAPER activity recorded for ${esc(rep.day_ist || day)}.</span>`;
+      return;
+    }
+    const rows = Object.entries(syms).map(([s, v]) => {
+      const wr = v.win_rate == null ? "—" : Math.round(v.win_rate * 100) + "%";
+      const ex = Object.entries(v.exit_reasons || {}).map(([k, n]) => `${esc(k)}:${n}`).join(" ") || "—";
+      const blk = Object.entries(v.entry_blocks || {}).map(([k, n]) => `${esc(k)}×${n}`).join(" ");
+      return `<tr>
+        <td>${esc(s)}</td>
+        <td>${v.closed}${v.open ? ` <span class="hint">+${v.open} open</span>` : ""}</td>
+        <td>${v.wins}/${v.losses}${v.flat ? `/${v.flat}` : ""}</td>
+        <td>${wr}</td>
+        <td class="${v.net_points > 0 ? 'stat-value pos' : v.net_points < 0 ? 'stat-value neg' : ''}">${fmtSigned(v.net_points, 2)}</td>
+        <td>${v.avg_r == null ? "—" : fmtSigned(v.avg_r, 2) + "R"}</td>
+        <td class="hint">${ex}</td>
+        <td class="hint">${blk || "—"}</td>
+      </tr>`;
+    }).join("");
+    const zth = (rep.zero_to_hero || []).map(z =>
+      `<tr><td>${esc(z.symbol)}</td><td colspan="7">${esc(z.option_type)}${esc(z.strike)} · ${esc(z.result || "?")} · ${fmtSigned(z.pnl, 2)} · ${esc(z.exit_reason || "")}</td></tr>`).join("");
+    body.innerHTML = `
+      <p class="hint">${esc(rep.day_ist || day)} · totals: ${t.trades || 0} closed · ${t.wins || 0}W/${t.losses || 0}L${t.flat ? `/${t.flat}F` : ""} · net <b class="${(t.net_points||0) > 0 ? 'stat-value pos' : (t.net_points||0) < 0 ? 'stat-value neg' : ''}">${fmtSigned(t.net_points, 2)}</b> pts</p>
+      <div class="table-wrap"><table class="ledger">
+        <thead><tr><th>Symbol</th><th>Closed</th><th>W/L/F</th><th>Win%</th><th>Net pts</th><th>Avg R</th><th>Exits</th><th>Blocks</th></tr></thead>
+        <tbody>${rows}${zth ? `<tr><td colspan="8" class="hint">Zero-to-hero legs</td></tr>${zth}` : ""}</tbody>
+      </table></div>`;
   }
 
   // ---------------- Auto-Scalp (spec-16) ----------------
@@ -965,9 +1110,9 @@
     await asLoadUniverse();
     const sym = asSelectedSymbol();
     const q = sym ? `&symbol=${encodeURIComponent(sym)}` : "";
-    let st, sigs, snaps, pos, allTr, allSnap, cal;
+    let st, sigs, snaps, pos, allTr, allSnap, cal, sc;
     try {
-      [st, sigs, snaps, pos, allTr, allSnap, cal] = await Promise.all([
+      [st, sigs, snaps, pos, allTr, allSnap, cal, sc] = await Promise.all([
         api("/api/autoscalp/status"),
         api(`/api/autoscalp/signals?limit=60${q}`),
         api(`/api/autoscalp/snapshots?limit=60${q}`),
@@ -975,11 +1120,13 @@
         api("/api/trades?limit=300"),
         api("/api/autoscalp/snapshots?limit=40"),
         api("/api/market/calendar").catch(() => null),
+        api("/api/autoscalp/selfcheck").catch(() => null),
       ]);
     } catch (e) {
       const el = $("#asErr"); el.hidden = false; el.textContent = "autoscalp: " + e.message; return;
     }
     $("#asErr").hidden = true;
+    if (sc) renderHealthLine({ ...sc, paper_mode: st && st.paper_mode });
     const set = (id, v, cls) => { const el = $("#" + id); if (el) { el.textContent = v; if (cls !== undefined) el.className = cls; } };
     // which symbol's analysis is on screen, and is it actually trading?
     const wl = (AS_UNIVERSE && AS_UNIVERSE.watchlist) || [];
@@ -1011,10 +1158,10 @@
         const dec = (lastBy[s] || {}).decision || "—";
         const cls = net > 0 ? "pos" : net < 0 ? "neg" : "";
         const on = s === sym ? " on" : "";
-        return `<button class="as-wl-chip${on}" data-sym="${s}" type="button">
-          <b>${s}</b> <span class="${cls}">${net >= 0 ? "+" : ""}${fmt(net, 1)}</span>
+        return `<button class="as-wl-chip${on}" data-sym="${esc(s)}" type="button">
+          <b>${esc(s)}</b> <span class="${cls}">${fmtSigned(net, 1)}</span>
           <em>${w}W/${l}L${open ? ` · ${open} open` : ""}</em>
-          <i class="badge ${dec}">${dec}</i></button>`;
+          <i class="badge ${esc(dec)}">${esc(dec)}</i></button>`;
       }).join("");
       ws.querySelectorAll(".as-wl-chip").forEach(b => b.addEventListener("click", () => {
         const pk = $("#asSymPick"); if (pk) { pk.value = b.dataset.sym; try { localStorage.setItem("asSymbol", b.dataset.sym); } catch (e) {} }
@@ -1035,6 +1182,11 @@
     // a paper trade opens (scalp_signals). Fall back to the last trade row if the
     // snapshot stream is empty (e.g. an old DB before this was wired).
     const latest = (snaps || [])[0] || (sigs || [])[0] || {};
+    // Do not let a stale / market-closed snapshot render as fresh live data.
+    const marketClosed = (sc && sc.market_open === false) || latest.regime === "MARKET_CLOSED";
+    const feedStale = latest.feed_age_sec != null && latest.feed_age_sec > 30;
+    const stripEl = $("#asStrip");
+    if (stripEl) stripEl.className = "mon-strip" + (marketClosed ? " is-closed" : feedStale ? " is-stale" : "");
     set("asRegime", text(latest.regime));
     set("asIndex", fmt(latest.index_ltp, 1));
     set("asVwap", fmt(latest.vwap, 1));
@@ -1067,8 +1219,8 @@
       <td class="feed-dir ${directionClass(t.direction)}">${text(t.direction)}</td>
       <td>${fmt(t.entry, 2)}</td><td><b>${fmt(t.exit_price ?? asMark[t.symboltoken], 2)}</b></td>
       <td>${fmt(t.stop_loss, 2)}</td><td>${fmt(t.target_1, 2)}</td>
-      <td class="${(t.pnl || 0) > 0 ? 'stat-value pos' : (t.pnl || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(t.pnl, 2)}</td>
-      <td><span class="badge ${t.status}">${t.status}</span></td><td>${text(t.exit_reason, "")}</td></tr>`).join("")
+      <td class="${(t.pnl || 0) > 0 ? 'stat-value pos' : (t.pnl || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmtSigned(t.pnl, 2)}</td>
+      <td><span class="badge ${esc(t.status)}">${text(t.status)}</span></td><td>${text(t.exit_reason, "")}</td></tr>`).join("")
       || `<tr><td colspan="11" class="hint">No open PAPER positions.</td></tr>`;
 
     // Signal Log: the actual PAPER trades (locked contract + outcome) come first;
@@ -1076,16 +1228,16 @@
     // see the engine is evaluating and *why* it is holding (NO_TRADE / WATCH).
     const sigRows = (sigs || []).map(s => `
       <tr><td>${timeStr(s.created_ts)}</td><td>${text(s.symbol)}</td>
-      <td class="badge ${s.decision}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
+      <td class="badge ${esc(s.decision)}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
       <td class="feed-dir ${directionClass(s.direction === "BULLISH" ? "BUY" : s.direction === "BEARISH" ? "SELL" : "")}">${text(s.direction)}</td>
       <td>${text(s.opt_strike, "")}</td><td>${fmt(s.entry, 2)}</td><td>${fmt(s.stop_loss, 2)}</td>
       <td>${fmt(s.target_1, 2)}</td><td>${s.probability != null ? Math.round(s.probability * 100) + "%" : "—"}</td>
-      <td>${text(s.confidence, "")}</td><td><span class="badge ${s.status}">${text(s.status)}</span></td>
+      <td>${text(s.confidence, "")}</td><td><span class="badge ${esc(s.status)}">${text(s.status)}</span></td>
       <td>${text(s.outcome, "")}</td>
-      <td class="${(s.points || 0) > 0 ? 'stat-value pos' : (s.points || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmt(s.points, 1)}</td></tr>`).join("");
+      <td class="${(s.points || 0) > 0 ? 'stat-value pos' : (s.points || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${fmtSigned(s.points, 1)}</td></tr>`).join("");
     const evalRows = (snaps || []).slice(0, 30).map(s => `
       <tr class="hint"><td>${timeStr(s.ts)}</td><td>${text(s.symbol)}</td>
-      <td class="badge ${s.decision}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
+      <td class="badge ${esc(s.decision)}">${text(s.decision)}</td><td>${text(s.signal_type)}</td>
       <td class="feed-dir ${directionClass(s.direction === "BULLISH" ? "BUY" : s.direction === "BEARISH" ? "SELL" : "")}">${text(s.direction)}</td>
       <td>${text(s.atm, "")}</td><td>—</td><td>—</td><td>—</td>
       <td>${s.probability != null ? Math.round(s.probability * 100) + "%" : "—"}</td>
@@ -1142,11 +1294,35 @@
     });
   })();
 
+  // A burst of autoscalp_* WS events (common in an active session) used to fire
+  // loadAutoscalp() — 8 parallel requests — once per event. Coalesce them.
+  let _asReloadTimer = null;
+  function scheduleAutoscalpReload() {
+    if (_asReloadTimer) return;
+    _asReloadTimer = setTimeout(() => { _asReloadTimer = null; loadAutoscalp(); }, 500);
+  }
   const _origHandleWs = handleWsMessage;
   handleWsMessage = function (msg) {
     _origHandleWs(msg);
-    if (state.view === "autoscalp" && /^autoscalp_/.test(msg.type || "")) loadAutoscalp();
+    if (state.view === "autoscalp" && /^autoscalp_/.test(msg.type || "")) scheduleAutoscalpReload();
   };
+
+  // ---------------- Session Report bindings ----------------
+  (function bindReport() {
+    const day = $("#reportDay"), btn = $("#reportLoadBtn");
+    if (day && !day.value) day.value = _istToday();
+    if (btn) btn.addEventListener("click", loadReport);
+    if (day) day.addEventListener("change", loadReport);
+  })();
+
+  // Test seam — inert in production (window.__CHK_TEST__ is never set there).
+  // Lets the dependency-free render smoke test drive view loaders without a DOM
+  // framework or a build step.
+  if (typeof window !== "undefined" && window.__CHK_TEST__) {
+    window.__chk = { setView, loadOverview, loadSignals, loadTrades, loadScalp,
+      loadResearch, loadSystem, loadReport, loadAutoscalp, loadMonitor,
+      prependFeed, renderHealthLine };
+  }
 
   // ---------------- Boot ----------------
   connectWs();
@@ -1156,4 +1332,6 @@
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
+  // refresh the health panel while it is on screen (selfcheck is cheap)
+  setInterval(() => { if (state.view === "system") loadSystem(); }, 10000);
 })();
