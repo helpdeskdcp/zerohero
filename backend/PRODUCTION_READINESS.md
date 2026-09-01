@@ -1,6 +1,10 @@
 # Autoscalp — Production-Readiness Evidence Report
 
-**Generated:** 2026-09-01 (IST) · **Deployed HEAD:** `254f0b4` · **Mode:** PAPER only, LIVE hard-disabled
+**Generated:** 2026-09-01 (IST) · **Deployed HEAD:** `0095240` (audited from `254f0b4`) · **Mode:** PAPER only, LIVE hard-disabled
+
+> **2026-09-01 dependency-readiness pass appended below (§M–§O).** Static + dependency audit clean;
+> 3 safe cleanups made (`a466c28`); `DEPENDENCIES.md` added (`0095240`); one controlled restart
+> verified (§O). Evidence collection (§D/§E) uninterrupted.
 
 This report separates four distinct states. Do not read "tests pass" as "ready to trade real money."
 
@@ -160,3 +164,76 @@ what-if caps 600s..3000s: net = +20.95 for ALL (proxy holds TIME-exit pnl consta
 - Strategy performance established: ❌ — explicitly not. Extended PAPER trading is exactly how K1/K4/K5/K7 get answered.
 
 **Recommended posture:** keep it armed in PAPER, let the daily report + `selfcheck` run, re-run `analyze_holdtime.py` weekly, and close K2 from the next MCX session. Do not discuss LIVE until K1, K4, K5 all show a positive, stable edge across many sessions and a human has reviewed the full trade log.
+
+---
+
+## M. Dependency-readiness audit (2026-09-01)
+
+**Static sweep (read-only, AST + import):**
+- TODO/FIXME/XXX/HACK: **0** in `app/` + `broker/`.
+- `NotImplementedError`: **13**, all in `broker_base.py` — an ABC overridden by `PaperBroker`/`ShadowBroker`/`AngelOneBroker`. Intentional (C).
+- `except: pass` (bare): **0**. `except Exception: pass`: **47**, sampled ~20 across autoscalp/db/combos/main — every one is best-effort side-effect isolation on a critical path (WS broadcast, telegram fire-and-forget, cache-fallback, lease fail-safe) or a scoped `(TypeError, ValueError)` parse fallback. Intentional (C).
+- Dead code: **1** — `AutoScalpRunner._tg()` (superseded by `_tg_send`, never called). Removed (D → done, `a466c28`).
+- Unreachable-after-return / ellipsis bodies / empty returns: **0**.
+- **67 modules import clean**; **0 `ModuleNotFoundError`** on full recursive import (incl. `mcp_server`).
+- All **12 `/api/autoscalp/*` endpoints** resolve to fully-implemented functions.
+
+**Dependencies:**
+- 6 third-party imports (`fastapi, pydantic, pyotp, requests, websockets, dotenv`) — all `==`-pinned in `requirements.txt`, all installed, `pip freeze` matches pins exactly. `+uvicorn` (entrypoint), `+pytest` (test). `python-dotenv` is `mcp_server`-only (optional).
+- No used-but-unpinned, no pinned-but-unused (bar the entrypoint/test).
+- Python 3.11.2. Repro: `python3.11 -m venv venv && venv/bin/pip install -r requirements.txt`.
+- DB: sqlite, single file, idempotent auto-migration on boot (`init_db` + `_MIGRATIONS`) — no external tool.
+- **Gap fixed:** 7 optional env vars (`ANGEL_MASTER_CACHE`, `CHANAKYA_INSTRUMENT_MASTER`, `CHANAKYA_MARKET_WINDOWS`, `CHANAKYA_MARKET_HOLIDAYS`, `CHANAKYA_MAX_DATA_AGE_SEC`, `OI_HISTORY_DB`, `CHANAKYA_ENV_FILE`) were undocumented — now in `.env.example` as commented entries. All have safe code defaults; no behaviour change.
+
+**Safe changes made (`a466c28`, no behaviour change, 277 tests green):**
+1. removed dead `runner._tg()`
+2. `self_check` surfaces `segments_error` instead of silently swallowing a market-hours lookup failure
+3. `.env.example` documents the 7 optional overrides
+
+**Not touched (per instruction):** the ABC stubs, the 47 deliberate `except: pass`, and every B/C item (NIFTY/CRUDEOIL evidence gaps, calibration, greeks).
+
+**Full deps/ops reference:** `backend/DEPENDENCIES.md`.
+
+## N. Kill-switch clarification
+
+`kill_switch = {active: false, policy: "MONITOR"}`. Interpretation for the evidence phase:
+- The kill-switch **control** is present, functional, wired into `safeguards.check_entry` (`if killswitch.is_active(): return False, "kill switch active"`), shared across workers via `app_settings`, and **survives restart**.
+- It is deliberately **not engaged** — engaging it would refuse all new entries and halt the very PAPER evidence collection this phase exists for. `policy: MONITOR` (alert-only) is the safe default; `FLATTEN` (the dangerous one) is not set.
+- This is the correct state for extended PAPER trading. Engaging the switch is an explicit "stop trading now" action, out of scope here.
+
+## O. Controlled restart record (2026-09-01 ~06:12 IST)
+
+**Pre-restart:** HEAD `0095240`, 0 unpushed, working tree clean; service pid 3489884; 3 evidence collectors alive; DB 13 trades / 5284 snapshots / 11 signals; forward-test jsonl 89 lines.
+
+**Action:** `systemctl restart oi-dashboard.service` (app-level only — no VPS/OS reboot). One restart.
+
+**Post-restart 10-point verification — ALL PASS:**
+
+| # | check | result |
+|---|---|---|
+| 1 | service running | ✅ `active`, pid 3492058 |
+| 2 | self-check healthy | ✅ `ok: true`, `segments_error: null`, all gating checks pass |
+| 3 | aggregators seeded | ✅ NIFTY 31 / NG 34 / CRUDE 34 5m bars |
+| 4 | configured symbols | ✅ `[NIFTY, NATURALGAS, CRUDEOIL]` |
+| 5 | PAPER-only enforced | ✅ `live_trading_disabled: true`, `config_warnings: []` |
+| 6 | LIVE trading disabled | ✅ `live_trading: false`, `paper_mode: true`; kill-switch mechanism intact; `allow_weekend` falsy (market-hours suspension ON) |
+| 7 | evidence collectors healthy | ✅ all 3 (pids 3480137, 3490027, 3486913) survived; resumed cleanly (samples at 06:13, `selfcheck.ok=true`) |
+| 8 | reporting endpoint | ✅ `/api/autoscalp/report?day=2026-08-31` → correct totals |
+| 9 | no new startup errors | ✅ `last_error: null`; no journal errors since restart |
+| 10 | no duplicate scheduler/reporting | ✅ single process, single `_loop`, single leader lease `srv1243704:3492058`. (The other `uvicorn app.main` on :8420 is the unrelated pre-existing `chanakya-ai.service` fork.) |
+
+**Evidence integrity across the restart:** forward-test jsonl 89→90, session_evidence 4→5, DB trades 13→13, snapshots 5284→5302 (grew), signals 11→11. Nothing lost.
+
+## Readiness verdict (updated)
+
+```
+CODE COMPLETE (where possible)   ✅   pipeline + audit clean; 1 dead fn removed
+DEPENDENCIES READY               ✅   pinned, installed, documented; repro deterministic
+TESTS GREEN                      ✅   277 passed
+SAFE RESTART VERIFIED            ✅   one controlled restart, 10/10 post-checks, evidence intact
+RUNTIME EVIDENCE CONTINUES       ⏳   D (NIFTY hold-time, n=4/20) + E (CRUDEOIL gate) open;
+                                     collectors running; K-table tracks the rest
+```
+
+**Not "100% complete."** Two items depend on future runtime evidence and are correctly left open.
+Ready for **extended PAPER trading with monitoring**. **Not** ready for LIVE.
