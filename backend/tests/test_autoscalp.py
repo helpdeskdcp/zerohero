@@ -580,6 +580,22 @@ def test_self_check_reports_readiness(fresh_db, monkeypatch):
     assert sc["checks"]["live_trading_disabled"] is True
     assert "NIFTY" in sc["bars_ready"] and sc["bars_ready"]["NIFTY"]["ready"] is True
     assert "market_open" in sc and "segments" in sc
+    # the test fixture runs with allow_weekend on (sandbox clock) -> surfaced
+    assert any("allow_weekend" in x for x in sc["config_warnings"])
+
+    # a clean production-shaped config produces no warnings
+    monkeypatch.setattr(r, "status", lambda: {
+        "armed": True, "running": True, "is_leader": True, "last_error": None,
+        "live_trading": False, "feed": {"connected": True, "last_msg_age_sec": 1},
+        "config": {"symbols": ["NIFTY", "NATURALGAS"], "safeguards": {}}})
+    assert report.self_check(r)["config_warnings"] == []
+
+    # empty watchlist is surfaced
+    monkeypatch.setattr(r, "status", lambda: {
+        "armed": True, "running": True, "is_leader": True, "last_error": None,
+        "live_trading": False, "feed": {"connected": True, "last_msg_age_sec": 1},
+        "config": {"symbols": [], "safeguards": {}}})
+    assert any("watchlist is empty" in x for x in report.self_check(r)["config_warnings"])
 
     # inject an otherwise-healthy base so we isolate the feed/market-hours logic
     base = {"armed": True, "running": True, "is_leader": True, "last_error": None,

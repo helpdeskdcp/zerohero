@@ -149,11 +149,23 @@ def self_check(runner) -> dict:
     if not market_open:
         gating.pop("feed_fresh", None)
         gating.pop("feed_connected", None)
+
+    # non-gating config smells worth surfacing on the operator dashboard
+    cfg = st.get("config") or {}
+    warnings = []
+    if not (cfg.get("symbols") or []):
+        warnings.append("watchlist is empty")
+    if (cfg.get("safeguards") or {}).get("allow_weekend"):
+        warnings.append("safeguards.allow_weekend is ON — market-hours suspension disabled")
+    if cfg.get("live_trading") or st.get("live_trading") is not False:
+        warnings.append("live_trading is not explicitly disabled")
+
     return {
         "ok": all(gating.values()),
         "armed": bool(st.get("armed")),
         "market_open": market_open,
         "segments": segments,
+        "config_warnings": warnings,
         "checks": checks,
         "feed_age_sec": age,
         "bars_ready": bars_ready,
