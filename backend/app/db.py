@@ -223,6 +223,7 @@ CREATE TABLE IF NOT EXISTS live_market_snapshots (
     provenance TEXT,                -- JSON {feed, run_id, ...}
     index_ltp REAL, atm REAL, vwap REAL, atr REAL,
     pcr REAL, max_pain REAL,
+    momentum REAL, state_score REAL,
     regime TEXT, mtf_alignment REAL,
     support REAL, resistance REAL, support_strength REAL, resistance_strength REAL,
     signal_type TEXT, direction TEXT, signal_score REAL, probability REAL,
@@ -290,6 +291,8 @@ _MIGRATIONS = {
         "ev": "REAL",
         "rr": "REAL",
         "vwap_status": "TEXT",   # available | invalid_volume | insufficient_data
+        "momentum": "REAL",      # state-classifier roc_pct at decision time
+        "state_score": "REAL",   # state-classifier composite score (0-100)
     },
 }
 
@@ -629,7 +632,8 @@ def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
 # ---------------------------------------------------------------- canonical LIVE market store
 _LIVE_SNAP_COLS = (
     "ts", "session_date", "symbol", "source", "provenance", "index_ltp", "atm",
-    "vwap", "vwap_status", "atr", "pcr", "max_pain", "regime", "mtf_alignment", "support",
+    "vwap", "vwap_status", "atr", "momentum", "state_score",
+    "pcr", "max_pain", "regime", "mtf_alignment", "support",
     "resistance", "support_strength", "resistance_strength", "signal_type",
     "direction", "signal_score", "probability", "confidence", "decision",
     "reason", "ev", "rr", "feed_age_sec", "chain_json",

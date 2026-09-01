@@ -185,6 +185,46 @@ def test_safeguards_rejects_premium_too_rich_vs_spot(fresh_db):
     assert _base_check(sg2, option_premium=40.0, underlying_price=280.0)[0] is True
 
 
+# ---------------- OI context helper (FIX-2: pcr / max_pain) ----------------
+_PCR_CHAIN = [
+    {"strike": 100, "ce": {"oi": 100}, "pe": {"oi": 1000}},
+    {"strike": 105, "ce": {"oi": 200}, "pe": {"oi": 800}},
+    {"strike": 110, "ce": {"oi": 500}, "pe": {"oi": 500}},
+    {"strike": 115, "ce": {"oi": 800}, "pe": {"oi": 200}},
+    {"strike": 120, "ce": {"oi": 1000}, "pe": {"oi": 100}},
+]
+
+
+def test_chain_pcr_maxpain_computes_ratio_and_pain_strike():
+    pcr, mp = ascr._chain_pcr_maxpain(_PCR_CHAIN)
+    assert pcr == 1.0                       # tot_pe 2600 / tot_ce 2600
+    assert mp == 110                        # minimises total option-holder payout
+
+
+def test_chain_pcr_maxpain_thin_or_empty_chain_is_none():
+    assert ascr._chain_pcr_maxpain([]) == (None, None)
+    assert ascr._chain_pcr_maxpain(_PCR_CHAIN[:2]) == (None, None)   # < 3 strikes
+
+
+def test_chain_pcr_maxpain_no_oi_is_none_not_zero():
+    flat = [{"strike": k, "ce": {}, "pe": {}} for k in (100, 105, 110)]
+    assert ascr._chain_pcr_maxpain(flat) == (None, None)
+
+
+def test_chain_pcr_maxpain_all_calls_pcr_zero_maxpain_still_set():
+    ce_only = [{"strike": k, "ce": {"oi": 100}, "pe": {"oi": 0}} for k in (100, 105, 110)]
+    pcr, mp = ascr._chain_pcr_maxpain(ce_only)
+    assert pcr == 0.0                       # genuinely no puts -> ratio is 0, a real value
+    assert mp == 100
+
+
+def test_chain_pcr_maxpain_all_puts_divide_by_zero_guarded():
+    pe_only = [{"strike": k, "ce": {"oi": 0}, "pe": {"oi": 100}} for k in (100, 105, 110)]
+    pcr, mp = ascr._chain_pcr_maxpain(pe_only)
+    assert pcr is None                      # tot_ce == 0 -> guarded, not an exception
+    assert mp == 110
+
+
 # ---------------- Runner wiring ----------------
 class FakeFeed:
     def __init__(self, marks):
@@ -245,6 +285,7 @@ def test_runner_opens_paper_trade_and_persists(fresh_db, monkeypatch):
            "target_2": 128.0, "trailing_stop": 8.0, "max_hold_sec": 1500,
            "probability": 0.58, "confidence": "MEDIUM", "ev": 6.0, "rr": 1.6,
            "regime": "TRENDING_DOWN", "mtf_alignment": -30.0, "signal_score": 63.0,
+           "momentum": -0.42, "state_score": 71.0,
            "component_scores": {"x": 1}, "reason": "test", "support": 24080,
            "resistance": 24150, "support_strength": 60, "resistance_strength": 62,
            "sr_level": 24085, "sr_side": "SUPPORT", "atr": 11.0, "vwap": 24110.0}
@@ -255,10 +296,13 @@ def test_runner_opens_paper_trade_and_persists(fresh_db, monkeypatch):
     sigs = fresh_db.list_scalp_signals(source="LIVE")
     assert len(sigs) == 1 and sigs[0]["decision"] == "BUY_PE" and sigs[0]["status"] == "OPEN"
     assert sigs[0]["opt_token"] == "PE24100" and sigs[0]["source"] == "LIVE"
+    assert sigs[0]["momentum"] == -0.42          # FIX-3: carried onto scalp_signals
     trades = fresh_db.list_trades(strategy="AUTOSCALP")
     assert len(trades) == 1 and trades[0]["status"] == "OPEN" and trades[0]["symboltoken"] == "PE24100"
     snaps = fresh_db.list_live_snapshots(symbol="NIFTY")
     assert len(snaps) == 1 and snaps[0]["decision"] == "BUY_PE" and snaps[0]["source"] == "LIVE"
+    assert snaps[0]["momentum"] == -0.42 and snaps[0]["state_score"] == 71.0   # FIX-3 persisted
+    assert "momentum" in snaps[0] and "pcr" in snaps[0]                        # FIX-2 columns present
 
     # PE premium jumps past target -> monitor closes it, outcome recorded
     feed.marks["PE24100"] = 118.0

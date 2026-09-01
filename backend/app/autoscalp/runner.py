@@ -221,6 +221,41 @@ def _chain_is_expiry_day(chain):
     return d is not None and d == _ist_now().date()
 
 
+def _chain_pcr_maxpain(chain):
+    """Read-only OI context from the canonical nested chain
+    ``[{strike, ce:{oi,..}, pe:{oi,..}}]``: put/call OI ratio and the classic
+    max-pain strike. NOT consumed by any gate — persisted only so a later audit
+    of ``live_market_snapshots`` has the OI picture without re-parsing the blob.
+    Returns ``(pcr, max_pain)`` with ``None`` where the chain is too thin
+    (< 3 strikes) or carries no OI."""
+    def _f(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 0.0
+
+    rows = []
+    for r in chain or []:
+        try:
+            k = float(r.get("strike"))
+        except (TypeError, ValueError):
+            continue
+        rows.append((k, _f((r.get("ce") or {}).get("oi")), _f((r.get("pe") or {}).get("oi"))))
+    if len(rows) < 3:
+        return None, None
+    tot_ce = sum(ce for _, ce, _ in rows)
+    tot_pe = sum(pe for _, _, pe in rows)
+    if tot_ce <= 0 and tot_pe <= 0:
+        return None, None
+    pcr = round(tot_pe / tot_ce, 3) if tot_ce > 0 else None
+    best_val, max_pain = float("inf"), None
+    for k, _, _ in rows:
+        pain = sum(max(0.0, k - ki) * ce + max(0.0, ki - k) * pe for ki, ce, pe in rows)
+        if pain < best_val:
+            best_val, max_pain = pain, k
+    return pcr, max_pain
+
+
 class AutoScalpRunner:
     def __init__(self, *, feed=None, chain_provider=None, broadcast=None,
                  telegram_fn=None, now_fn=time.time, owner="autoscalp"):
@@ -511,7 +546,7 @@ class AutoScalpRunner:
             await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why, "signal": sig["decision"]})
             return
 
-        self._open_paper(sym, sig)
+        self._open_paper(sym, sig, chain)
         if is_expiry_day:
             self._maybe_open_zth(sym, sig, cfg, atm, step, smeta)
 
@@ -607,7 +642,7 @@ class AutoScalpRunner:
         self._tg_last[key] = now
         notify.push(self._telegram, text)
 
-    def _open_paper(self, sym, sig):
+    def _open_paper(self, sym, sig, chain=None):
         signal_id = "ASC-" + format(int(time.time() * 1000), "x")
         qty = 1
         row = open_trade({
@@ -624,6 +659,7 @@ class AutoScalpRunner:
             "atr_pct": None, "max_hold_sec": sig.get("max_hold_sec"),
             "symboltoken": str(sig.get("token") or ""),
         })
+        _pcr, _max_pain = _chain_pcr_maxpain(chain)
         db.insert_scalp_signal({
             "signal_id": signal_id, "source": "LIVE",
             "provenance": json.dumps({"runner": "autoscalp", "owner": self.owner}),
@@ -632,6 +668,8 @@ class AutoScalpRunner:
             "symbol": sym.upper(), "index_ltp": self._aggs[sym.upper()].last_price,
             "regime": sig.get("regime"), "signal_type": sig.get("signal_type"),
             "direction": sig.get("direction"), "mtf_alignment": sig.get("mtf_alignment"),
+            "momentum": sig.get("momentum"), "vwap": sig.get("vwap"), "atr": sig.get("atr"),
+            "pcr": _pcr, "max_pain": _max_pain,
             "component_scores": json.dumps(sig.get("component_scores") or {}),
             "signal_score": sig.get("signal_score"), "probability": sig.get("probability"),
             "confidence": sig.get("confidence"), "ev": sig.get("ev"), "rr": sig.get("rr"),
@@ -729,12 +767,15 @@ class AutoScalpRunner:
     # ---------------- persistence + calibration ----------------
     def _persist_snapshot(self, sym, agg, atm, chain, sig, feed_age):
         try:
+            pcr, max_pain = _chain_pcr_maxpain(chain)
             return db.insert_live_snapshot({
                 "ts": _now_iso(), "session_date": _now_iso()[:10], "symbol": sym.upper(),
                 "source": "LIVE", "provenance": json.dumps({"feed": "angel_ws", "owner": self.owner}),
                 "index_ltp": agg.last_price, "atm": atm,
                 "vwap": sig.get("vwap"), "vwap_status": sig.get("vwap_status"),
                 "atr": sig.get("atr"),
+                "momentum": sig.get("momentum"), "state_score": sig.get("state_score"),
+                "pcr": pcr, "max_pain": max_pain,
                 "regime": sig.get("regime"), "mtf_alignment": sig.get("mtf_alignment"),
                 "support": sig.get("support"), "resistance": sig.get("resistance"),
                 "support_strength": sig.get("support_strength"),

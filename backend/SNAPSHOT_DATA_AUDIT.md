@@ -210,11 +210,11 @@ Verified against backend (`grep` over `app/`), frontend (`frontend/static/js/app
 | `provenance` | small; feed/owner attribution for replay |
 
 ### FIX
-| id | field / code | issue | recommended change | risk |
-|---|---|---|---|---|
-| **FIX-1** | `sr_engine._strength()` `vwap_prox` | weight (0.03) not redistributed when `vwap is None` → NIFTY zone strengths depressed ≤3 pts | renormalise the weight base (or spill the 0.03 like the `mode != "index"` OI branch) when vwap is unavailable | **shifts NIFTY strength values → trading-logic-affecting**; gate behind PAPER evidence like any strength-formula change; do not ship blind |
-| **FIX-2** | `runner._persist_snapshot` / `insert_scalp_signal` | `pcr`, `max_pain` columns 100% NULL though `chain_json` carries the data | compute PCR (`Σpe_oi / Σce_oi`) and max-pain from the chain already in scope and pass them; additive, **not** read by any gate | low — additive, non-gating; add a unit test asserting both are populated on an open-market row |
-| **FIX-3** | `_persist_snapshot` | `momentum` / `state_score` computed in `ctx` every cycle, never persisted to `live_market_snapshots` (no column) | add `momentum REAL` (already a column in `scalp_signals`) + optional `state_score REAL` via the idempotent `_MIGRATIONS` pattern and write them | low — additive column + one writer line |
+| id | field / code | issue | recommended change | risk | status |
+|---|---|---|---|---|---|
+| **FIX-1** | `sr_engine._strength()` `vwap_prox` | weight (0.03) not redistributed when `vwap is None` → NIFTY zone strengths depressed ≤3 pts | renormalise the weight base (or spill the 0.03 like the `mode != "index"` OI branch) when vwap is unavailable | **shifts NIFTY strength values → trading-logic-affecting**; gate behind PAPER evidence like any strength-formula change; do not ship blind | **not done** (needs PAPER A/B) |
+| **FIX-2** | `runner._persist_snapshot` / `insert_scalp_signal` | `pcr`, `max_pain` columns 100% NULL though `chain_json` carries the data | compute PCR (`Σpe_oi / Σce_oi`) and max-pain from the chain already in scope and pass them; additive, **not** read by any gate | low — additive, non-gating; add a unit test asserting both are populated on an open-market row | ✅ **implemented** — `_chain_pcr_maxpain()` helper in `runner.py`; both writers populate `pcr`/`max_pain`; 5 unit tests + persist-flow assertion. Deploy pending next restart. |
+| **FIX-3** | `_persist_snapshot` | `momentum` / `state_score` computed in `ctx` every cycle, never persisted to `live_market_snapshots` (no column) | add `momentum REAL` (already a column in `scalp_signals`) + optional `state_score REAL` via the idempotent `_MIGRATIONS` pattern and write them | low — additive column + one writer line | ✅ **implemented** — `_MIGRATIONS` adds `momentum`/`state_score`; `_persist_snapshot` + `insert_scalp_signal` write them; BUY return in `scalp_strategy.py` now also carries `state_score`. Migration verified idempotent on a copy of the live DB. Deploy pending next restart. |
 
 ### UNUSED (present, not consumed by the autoscalp decision path)
 - `pcr`, `max_pain` — NULL everywhere **and** no reader in `app/autoscalp/*`. → resolve via FIX-2
