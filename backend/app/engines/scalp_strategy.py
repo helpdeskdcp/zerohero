@@ -126,7 +126,8 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                                             "direction": "NONE", "reason": why,
                                             "model_version": MODEL_VERSION}), **(extra or {})}
 
-    sr = compute_sr(bars_by_tf, chain=chain, mode="index", config=cfg.get("sr") or {})
+    sr = compute_sr(bars_by_tf, chain=chain, mode="index",
+                    symbol=cfg.get("symbol"), config=cfg.get("sr") or {})
     if sr.get("status") != "OK":
         return out_none("S/R unavailable")
     reg = detect_regime(bars_by_tf, config=cfg.get("regime") or {})
@@ -146,6 +147,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         "resistance": (sr.get("resistance") or {}).get("level"),
         "support_strength": sr.get("support_strength"),
         "resistance_strength": sr.get("resistance_strength"),
+        "sr_diag": sr.get("sr_diag"),          # read-only S/R + OI-wall trace
         "signal_type": st["state"],
         "state_score": st.get("state_score"),
         "momentum": st.get("roc_pct"),
@@ -294,6 +296,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         "resistance": (sr.get("resistance") or {}).get("level"),
         "support_strength": sr.get("support_strength"),
         "resistance_strength": sr.get("resistance_strength"),
+        "sr_diag": sr.get("sr_diag"),
         "sr_level": st["anchor"]["level"], "sr_side": st["anchor"]["side"],
         "atr": sr.get("atr"), "vwap": sr.get("vwap"),
         "momentum": st.get("roc_pct"),

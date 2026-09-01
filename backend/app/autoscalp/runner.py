@@ -459,7 +459,8 @@ class AutoScalpRunner:
         feed_age = feed_st.get("last_msg_age_sec")
         tod = _tod_bucket(_mod(datetime.now(timezone.utc).astimezone().isoformat()))
 
-        strat_cfg = {"strike_step": step, "strike_window": cfg["strike_window"],
+        strat_cfg = {"symbol": sym.upper(),
+                     "strike_step": step, "strike_window": cfg["strike_window"],
                      **(cfg.get("strategy") or {}),
                      **((cfg.get("symbol_profiles") or {}).get(sym.upper()) or {}),
                      **((cfg.get("expiry_day_profile") or {}) if is_expiry_day else {})}
