@@ -855,6 +855,8 @@ class AutoScalpRunner:
                 "vwap": sig.get("vwap"), "vwap_status": sig.get("vwap_status"),
                 "atr": sig.get("atr"),
                 "momentum": sig.get("momentum"), "state_score": sig.get("state_score"),
+                "gex_flip": sig.get("gex_flip"), "gex_pin": sig.get("gex_pin"),
+                "gex_regime_sign": sig.get("gex_regime_sign"), "gex_sigma": sig.get("gex_sigma"),
                 "pcr": pcr, "max_pain": max_pain,
                 "regime": sig.get("regime"), "mtf_alignment": sig.get("mtf_alignment"),
                 "support": sig.get("support"), "resistance": sig.get("resistance"),

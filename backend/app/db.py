@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS live_market_snapshots (
     index_ltp REAL, atm REAL, vwap REAL, atr REAL,
     pcr REAL, max_pain REAL,
     momentum REAL, state_score REAL,
+    gex_flip REAL, gex_pin REAL, gex_regime_sign INTEGER, gex_sigma REAL,
     regime TEXT, mtf_alignment REAL,
     support REAL, resistance REAL, support_strength REAL, resistance_strength REAL,
     signal_type TEXT, direction TEXT, signal_score REAL, probability REAL,
@@ -293,6 +294,10 @@ _MIGRATIONS = {
         "vwap_status": "TEXT",   # available | invalid_volume | insufficient_data
         "momentum": "REAL",      # state-classifier roc_pct at decision time
         "state_score": "REAL",   # state-classifier composite score (0-100)
+        "gex_flip": "REAL",         # GEX zero-crossing strike (read-only, GEX_SR_SPEC.md)
+        "gex_pin": "REAL",          # gamma-weighted OI magnet strike
+        "gex_regime_sign": "INTEGER",  # -1 | 0 | 1
+        "gex_sigma": "REAL",        # flat IV used for the GEX gamma
     },
 }
 
@@ -633,6 +638,7 @@ def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
 _LIVE_SNAP_COLS = (
     "ts", "session_date", "symbol", "source", "provenance", "index_ltp", "atm",
     "vwap", "vwap_status", "atr", "momentum", "state_score",
+    "gex_flip", "gex_pin", "gex_regime_sign", "gex_sigma",
     "pcr", "max_pain", "regime", "mtf_alignment", "support",
     "resistance", "support_strength", "resistance_strength", "signal_type",
     "direction", "signal_score", "probability", "confidence", "decision",

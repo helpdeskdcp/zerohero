@@ -18,6 +18,7 @@ strategy math does not change when they are re-tuned.
 """
 from __future__ import annotations
 
+import math
 from statistics import mean
 from typing import Optional
 
@@ -283,6 +284,165 @@ def _chain_expiry(chain):
     return None
 
 
+# --------------------------------------------------------------------------- GEX
+# Gamma-Exposure profile (GEX_SR_SPEC.md, phase A / v1a). Read-only diagnostic:
+# it is surfaced in `sr_diag.gex` + as four scalars on the return, and is NOT
+# fed into `_candidates` / `_strength`, so no number the strategy uses changes.
+# Ported formula from vibe/analysis/gex.py:
+#     shape(K) = BS_gamma(K) * (call_OI(K) - put_OI(K))
+# `spot * lot_size * 100` is constant across strikes -> dropped (it scales the
+# magnitude only, never the flip / pin / sign).
+_SQRT2 = math.sqrt(2.0)
+_SQRT2PI = math.sqrt(2.0 * math.pi)
+_DEFAULT_T_YEARS = 4.0 / 365.25          # weekly-ish; v1b passes the real T in
+# picked-tf -> ~bars per NSE trading year (390-min day * 252), realized-vol proxy
+_TF_BPY = {"1m": 98280, "3m": 32760, "5m": 19656, "15m": 6552, "30m": 3276, "1h": 1638}
+
+
+def _norm_pdf(x):
+    return math.exp(-0.5 * x * x) / _SQRT2PI
+
+
+def _norm_cdf(x):
+    return 0.5 * (1.0 + math.erf(x / _SQRT2))
+
+
+def _bs_d1(S, K, T, sigma):
+    return (math.log(S / K) + 0.5 * sigma * sigma * T) / (sigma * math.sqrt(T))
+
+
+def _bs_price(S, K, T, sigma, is_call):
+    """European price, r = 0 (intraday). None on a degenerate input."""
+    if not (S > 0 and K > 0 and T > 0 and sigma > 0):
+        return None
+    d1 = _bs_d1(S, K, T, sigma)
+    d2 = d1 - sigma * math.sqrt(T)
+    if is_call:
+        return S * _norm_cdf(d1) - K * _norm_cdf(d2)
+    return K * _norm_cdf(-d2) - S * _norm_cdf(-d1)
+
+
+def _bs_gamma(S, K, T, sigma):
+    """d(delta)/dS -- identical for the call and the put at a strike. r = 0."""
+    if not (S > 0 and K > 0 and T > 0 and sigma > 0):
+        return 0.0
+    g = _norm_pdf(_bs_d1(S, K, T, sigma)) / (S * sigma * math.sqrt(T))
+    return g if (g == g and g not in (float("inf"), float("-inf"))) else 0.0
+
+
+def _solve_iv(S, K, T, price, is_call, *, lo=0.03, hi=3.0, tol=1e-4, iters=64):
+    """Bounded bisection: sigma s.t. BS(sigma) ~= price. None if not bracketed."""
+    if not (price and price > 0 and S > 0 and K > 0 and T > 0):
+        return None
+    plo, phi = _bs_price(S, K, T, lo, is_call), _bs_price(S, K, T, hi, is_call)
+    if plo is None or phi is None or not (plo < price < phi):
+        return None
+    for _ in range(iters):
+        mid = 0.5 * (lo + hi)
+        pm = _bs_price(S, K, T, mid, is_call)
+        if pm is None:
+            return None
+        if abs(pm - price) < tol * max(1.0, price):
+            return mid
+        lo, hi = (mid, hi) if pm < price else (lo, mid)
+    return 0.5 * (lo + hi)
+
+
+def _gex_profile(chain, price, atr, *, t_years=None, bars_per_year=19656, cfg=None):
+    """Read-only gamma-exposure profile. NEVER raises. See GEX_SR_SPEC.md.
+
+    Returns {status, flip, pin, total_shape, regime_sign(-1|0|1), regime,
+             sigma, sigma_src, t_years, flip_in_range, pin_in_range,
+             per_strike:[{strike, ce_oi, pe_oi, gamma, shape}]}.
+    `flip` = first zero-crossing of shape(K) scanning low->high (either
+    direction -- vibe's one-way rule misses the common pe-heavy-below chain),
+    interpolated. `pin` = strike of max |shape| (gamma-weighted OI magnet).
+    """
+    cfg = cfg or {}
+    out = {"status": "n/a", "flip": None, "pin": None, "total_shape": None,
+           "regime_sign": 0, "regime": "NEUTRAL", "sigma": None, "sigma_src": None,
+           "t_years": None, "flip_in_range": False, "pin_in_range": False,
+           "per_strike": []}
+    try:
+        if not price or price <= 0:
+            out["status"] = "no_spot"
+            return out
+        rows = []
+        for r in chain or []:
+            k = _num(r.get("strike"))
+            if k is None or k <= 0:
+                continue
+            ce, pe = r.get("ce") or {}, r.get("pe") or {}
+            ce_oi = _num(ce.get("oi")) or 0.0
+            pe_oi = _num(pe.get("oi")) or 0.0
+            if ce_oi <= 0 and pe_oi <= 0:
+                continue
+            rows.append((k, ce_oi, pe_oi, _num(ce.get("ltp")), _num(pe.get("ltp"))))
+        rows.sort(key=lambda x: x[0])
+        if len(rows) < 4:
+            out["status"] = "thin_chain"
+            return out
+
+        T = t_years if (t_years and t_years > 0) else _DEFAULT_T_YEARS
+        out["t_years"] = round(T, 6)
+        lo = float(cfg.get("iv_floor", 0.03))
+        hi = float(cfg.get("iv_cap", 3.0))
+
+        atm = min(rows, key=lambda x: abs(x[0] - price))
+        sigma = None
+        for is_call, px in ((True, atm[3]), (False, atm[4])):
+            sigma = _solve_iv(price, atm[0], T, px, is_call, lo=lo, hi=hi)
+            if sigma:
+                out["sigma_src"] = "atm_solve"
+                break
+        if not sigma and atr and atr > 0 and bars_per_year > 0:
+            sigma = max(lo, min(hi, (atr / price) * math.sqrt(bars_per_year)))
+            out["sigma_src"] = "realized"
+        if not sigma:
+            out["status"] = "no_vol"
+            return out
+        out["sigma"] = round(sigma, 4)
+
+        per = []
+        for k, ce_oi, pe_oi, _cl, _pl in rows:
+            g = _bs_gamma(price, k, T, sigma)
+            per.append({"strike": k, "ce_oi": ce_oi, "pe_oi": pe_oi,
+                        "gamma": g, "shape": g * (ce_oi - pe_oi)})
+
+        total = sum(p["shape"] for p in per)
+        absmass = sum(abs(p["shape"]) for p in per) or 1.0
+        out["total_shape"] = round(total, 2)
+        sign = (1 if total > 0 else -1) if abs(total) > 0.10 * absmass else 0
+        out["regime_sign"] = sign
+        # vibe's hypothesis (to be tested in A2): + = dealer long gamma / pinning,
+        # - = short gamma / breakout. Neutral labels until the evidence is in.
+        out["regime"] = {1: "CALL_SKEW", -1: "PUT_SKEW", 0: "NEUTRAL"}[sign]
+
+        pin_row = max(per, key=lambda p: abs(p["shape"]))
+        out["pin"] = round(pin_row["strike"], 2)
+
+        flip = None
+        for i in range(1, len(per)):
+            a, b = per[i - 1]["shape"], per[i]["shape"]
+            if (a > 0 >= b) or (a < 0 <= b):
+                ka, kb = per[i - 1]["strike"], per[i]["strike"]
+                flip = ka + (a / (a - b)) * (kb - ka) if a != b else kb
+                break
+        out["flip"] = round(flip, 2) if flip is not None else None
+
+        md = float(cfg.get("max_dist_atr", 4.0))
+        out["flip_in_range"] = bool(flip is not None and atr and abs(flip - price) <= md * atr)
+        out["pin_in_range"] = bool(atr and abs(pin_row["strike"] - price) <= md * atr)
+        out["per_strike"] = [{"strike": p["strike"], "ce_oi": p["ce_oi"], "pe_oi": p["pe_oi"],
+                              "gamma": round(p["gamma"], 9), "shape": round(p["shape"], 2)}
+                             for p in per]
+        out["status"] = "ok"
+        return out
+    except Exception as e:                       # never let a diagnostic break S/R
+        out["status"] = f"error: {type(e).__name__}"
+        return out
+
+
 def _level_diag(z, chain, price, symbol, kind):
     if not z:
         return None
@@ -342,6 +502,15 @@ def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
         else:
             vwap_status, vwap_reason = "available", ""
 
+    # Gamma-exposure profile -- read-only diagnostic, NOT fed to _candidates /
+    # _strength (v1a). Always computed in index mode; no-op elsewhere.
+    gcfg = cfg.get("gex") or {}
+    gex = (_gex_profile(chain, price, atr, t_years=gcfg.get("t_years"),
+                        bars_per_year=_TF_BPY.get(tf, 19656), cfg=gcfg)
+           if mode == "index" else
+           {"status": "n/a", "flip": None, "pin": None, "regime_sign": 0,
+            "regime": "NEUTRAL", "sigma": None})
+
     cands = _candidates(H, L, C, V, atr, vwap, mode=mode, chain=chain,
                         prev_day=prev_day, round_step=round_step)
     # add HTF swing levels
@@ -378,11 +547,15 @@ def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
         "resistance_strength": resistance["strength"] if resistance else 0.0,
         "levels": sorted(scored, key=lambda z: z["level"]),
         "n_zones": len(scored),
+        # GEX scalars for the snapshot -- read-only, do NOT gate anything (v1a)
+        "gex_flip": gex.get("flip"), "gex_pin": gex.get("pin"),
+        "gex_regime_sign": gex.get("regime_sign"), "gex_sigma": gex.get("sigma"),
         # read-only diagnostics (do not feed the model / strategy)
         "sr_diag": {
             "vwap": round(vwap, 2) if vwap is not None else None,
             "vwap_status": vwap_status, "vwap_reason": vwap_reason,
             "oi_walls": _oi_wall_diag(chain, price, symbol) if mode == "index" else {},
+            "gex": gex,
             "support": _level_diag(support, chain, price, symbol, "support"),
             "resistance": _level_diag(resistance, chain, price, symbol, "resistance"),
         },

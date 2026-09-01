@@ -143,7 +143,7 @@ pin 24200 · γ-regime PIN` — no interaction, no new endpoint.
 
 | phase | ships | gate to advance |
 |---|---|---|
-| **A1** | §4 items 1,2,7,8 + §6 (diag + persist only, `enabled` ignored) | full test suite green; deploy; ≥ 5 PAPER sessions recording `gex_*` |
+| **A1 — DONE (code)** | §4 items 1,2,7,8 + §6 persist (diag + 4 scalar columns; no candidates/strength). `_gex_profile` + `_bs_gamma`/`_solve_iv` in `sr_engine.py`; `sr_diag.gex` + `gex_flip/gex_pin/gex_regime_sign/gex_sigma` on the return, threaded through `decide_from_context` ctx/BUY and `_persist_snapshot`; 4 idempotent `_MIGRATIONS` columns. 9 tests, full suite 305 passed. Deviations from draft: `flip` = first zero-crossing **either direction** (vibe's one-way rule misses a pe-heavy-below chain); regime labels neutralised to `CALL_SKEW`/`PUT_SKEW`/`NEUTRAL`; `t_years` not yet threaded from the runner (uses `_DEFAULT_T_YEARS`, v1b passes the real T); thin-chain guard is `< 4` not `< 5`; no FE line yet (columns ride `SELECT *`). | full test suite green ✔; deploy; ≥ 5 PAPER sessions recording `gex_*` |
 | **A2** | analysis: does `|entry_level − gex_flip|` or `regime_sign` separate WIN vs LOSS / help the EV gate? (same method as `SNAPSHOT_DATA_AUDIT.md` §5, needs ≥ ~30 closed trades) | a **measurable** edge (win-rate or avg-R lift) on NG/CRUDE |
 | **A3** | flip `gex.enabled = True` for **NG/CRUDE only** via `symbol_profiles`; §4 items 3–6 | ≥ 10 PAPER sessions, S/R-selection diff reviewed, no regression in NG/CRUDE net-R |
 | **A4** | NIFTY A/B (frozen profile — needs an explicit before/after PAPER comparison, per the standing rule) | NIFTF win-rate / avg-R unchanged or better |

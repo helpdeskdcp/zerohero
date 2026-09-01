@@ -301,3 +301,100 @@ def test_vwap_status_present_on_every_ok_return():
         r = compute_sr(bars, mode="index", symbol=sym)
         assert "vwap_status" in r and "vwap_reason" in r
         assert r["vwap_status"] in ("available", "invalid_volume", "insufficient_data")
+
+
+# --------------------------------------------------------------------------- #
+# GEX (gamma exposure) v1a — read-only diagnostic (GEX_SR_SPEC.md phase A)
+# --------------------------------------------------------------------------- #
+from app.engines.sr_engine import _bs_gamma, _bs_price, _solve_iv, _gex_profile  # noqa: E402
+
+_T = 7.0 / 365.0
+
+
+def _synth_chain(spot=100.0):
+    # pe-OI heavy below spot, ce-OI heavy above -> shape crosses zero near ATM
+    rows = [(90, 50, 900), (95, 100, 600), (100, 300, 300), (105, 600, 100), (110, 900, 50)]
+    return [{"strike": k,
+             "ce": {"oi": ce, "ltp": max(0.5, spot - k + 5)},
+             "pe": {"oi": pe, "ltp": max(0.5, k - spot + 5)}} for k, ce, pe in rows]
+
+
+def test_bs_gamma_peaks_atm_and_decays():
+    atm = _bs_gamma(100, 100, _T, 0.2)
+    up = _bs_gamma(100, 110, _T, 0.2)
+    dn = _bs_gamma(100, 90, _T, 0.2)
+    assert atm > up > 0 and atm > dn > 0
+    assert atm == atm and atm not in (float("inf"), float("-inf"))
+    assert _bs_gamma(0, 100, _T, 0.2) == 0.0 and _bs_gamma(100, 100, 0, 0.2) == 0.0
+
+
+def test_solve_iv_recovers_known_sigma_and_rejects_unbracketed():
+    p = _bs_price(100, 100, 30 / 365, 0.18, True)
+    assert abs(_solve_iv(100, 100, 30 / 365, p, True) - 0.18) < 5e-3
+    assert _solve_iv(100, 100, 30 / 365, 0.0001, True) is None   # below the sigma-floor price
+    assert _solve_iv(100, 100, 30 / 365, 60.0, True) is None     # above the sigma-cap price
+    assert _solve_iv(100, 100, 30 / 365, None, True) is None
+
+
+def test_gex_profile_flip_pin_on_synthetic_chain():
+    g = _gex_profile(_synth_chain(100.0), 100.0, 0.8, t_years=_T)
+    assert g["status"] == "ok"
+    assert g["sigma"] is not None and g["sigma_src"] == "atm_solve"
+    # shape(K) = gamma * (ce_oi - pe_oi): negative below, ~0 at ATM, positive above
+    shp = {p["strike"]: p["shape"] for p in g["per_strike"]}
+    assert shp[90.0] < 0 < shp[110.0]
+    assert 97 <= g["flip"] <= 103           # zero-crossing near the money
+    assert g["pin"] in (90.0, 110.0)        # gamma-weighted OI magnet at an edge
+    assert g["regime_sign"] in (-1, 0, 1)
+
+
+def test_gex_profile_regime_sign_follows_total_shape():
+    # crush put OI everywhere -> ce_oi - pe_oi strongly positive -> sign +1
+    call_heavy = [{"strike": k, "ce": {"oi": 900, "ltp": 5.0}, "pe": {"oi": 10, "ltp": 5.0}}
+                  for k in (90, 95, 100, 105, 110)]
+    g = _gex_profile(call_heavy, 100.0, 0.8, t_years=_T)
+    assert g["status"] == "ok" and g["regime_sign"] == 1 and g["total_shape"] > 0
+
+
+def test_gex_profile_thin_chain_is_unavailable_no_raise():
+    g = _gex_profile(_synth_chain()[:3], 100.0, 0.8, t_years=_T)
+    assert g["status"] == "thin_chain" and g["flip"] is None and g["pin"] is None
+
+
+def test_gex_profile_no_vol_when_no_ltp_and_no_atr():
+    no_px = [{"strike": k, "ce": {"oi": 100}, "pe": {"oi": 100}} for k in (90, 95, 100, 105, 110)]
+    g = _gex_profile(no_px, 100.0, 0.0, t_years=_T, bars_per_year=0)
+    assert g["status"] == "no_vol" and g["flip"] is None
+    # with an ATR available the realized-vol fallback kicks in instead
+    g2 = _gex_profile(no_px, 100.0, 0.9, t_years=_T)
+    assert g2["status"] == "ok" and g2["sigma_src"] == "realized"
+
+
+def test_gex_diag_present_on_every_ok_index_return():
+    for bars, sym in ((_bars_no_volume(), "NIFTY"), ({"5m": _ng_bars()}, "NATURALGAS")):
+        r = compute_sr(bars, chain=_NG_CHAIN, mode="index", symbol=sym)
+        assert r["status"] == "OK"
+        assert isinstance(r["sr_diag"]["gex"], dict) and "status" in r["sr_diag"]["gex"]
+        for k in ("gex_flip", "gex_pin", "gex_regime_sign", "gex_sigma"):
+            assert k in r
+
+
+def test_gex_v1a_does_not_feed_candidates_or_strength():
+    a = compute_sr({"5m": _ng_bars()}, chain=_NG_CHAIN, mode="index", symbol="NATURALGAS")
+    b = compute_sr({"5m": _ng_bars()}, chain=_NG_CHAIN, mode="index", symbol="NATURALGAS")
+    # GEX never becomes a candidate / family / source
+    srcs = {s for z in a["levels"] for s in z["sources"]}
+    fams = {f for z in a["levels"] for f in z["families"]}
+    assert not (srcs & {"gex_flip", "gex_pin"}) and "gex" not in fams
+    for z in a["levels"]:
+        assert "gex" not in z["components"] and "gex_backing" not in z["components"]
+    # S/R output is byte-identical run to run (GEX added no nondeterminism)
+    assert (a["support"], a["resistance"], a["support_strength"],
+            a["resistance_strength"], a["n_zones"]) == \
+           (b["support"], b["resistance"], b["support_strength"],
+            b["resistance_strength"], b["n_zones"])
+
+
+def test_gex_option_mode_is_na():
+    r = compute_sr({"5m": mk([40 + (i % 6) for i in range(40)], vol=800)}, mode="option")
+    assert r["sr_diag"]["gex"]["status"] == "n/a" and r["gex_flip"] is None
