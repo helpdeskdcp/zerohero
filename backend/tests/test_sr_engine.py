@@ -242,3 +242,62 @@ def test_compute_sr_symbol_kwarg_is_optional_and_backwards_compatible():
     assert a["support_strength"] == b["support_strength"]
     assert a["resistance_strength"] == b["resistance_strength"]
     assert "sr_diag" in a
+
+
+# --------------------------------------------------------------------------- #
+# Audit (2026-09-01): NIFTY VWAP = None because an NSE cash index has no
+# traded volume. Not a bug — but the reason must be exposed, never faked.
+# --------------------------------------------------------------------------- #
+def _bars_no_volume(px=24050.0, n=40):
+    return {"5m": mk([px + (i % 7 - 3) * 4 for i in range(n)], wick=6, vol=0),
+            "15m": mk([px + (i % 5 - 2) * 6 for i in range(20)], wick=8, vol=0)}
+
+
+def _bars_with_volume(px=278.8, n=40):
+    return {"5m": mk([px + (i % 7 - 3) * 0.1 for i in range(n)], wick=0.35, vol=1000),
+            "15m": mk([px + (i % 5 - 2) * 0.15 for i in range(20)], wick=0.5, vol=900)}
+
+
+def test_vwap_unavailable_for_zero_volume_series_with_reason():
+    r = compute_sr(_bars_no_volume(), mode="index", symbol="NIFTY")
+    assert r["status"] == "OK"
+    assert r["vwap"] is None                                   # never fabricated
+    assert r["vwap_status"] == "invalid_volume"
+    assert "volume" in r["vwap_reason"].lower()
+    assert r["sr_diag"]["vwap_status"] == "invalid_volume"
+    # and the vwap structural factor is simply absent, not faked
+    assert "vwap" not in {f for z in r["levels"] for f in z["families"]}
+    for z in r["levels"]:
+        assert z["components"]["vwap_prox"] == 0.0
+
+
+def test_vwap_available_when_volume_present_unchanged():
+    r = compute_sr(_bars_with_volume(), mode="index", symbol="NATURALGAS")
+    assert r["status"] == "OK"
+    assert r["vwap"] is not None and r["vwap"] > 0
+    assert r["vwap_status"] == "available" and r["vwap_reason"] == ""
+    assert r["sr_diag"]["vwap"] == r["vwap"]
+
+
+def test_vwap_status_insufficient_data():
+    r = compute_sr({"5m": mk([100, 101, 102, 103, 104], vol=1000)}, mode="index", symbol="NIFTY")
+    assert r["status"] == "DATA_UNAVAILABLE"
+    assert r["vwap"] is None and r["vwap_status"] == "insufficient_data"
+
+
+def test_vwap_naturalgas_regression_value_stable_across_the_change():
+    # the audited NG snapshot chain + a fixed tape -> VWAP must be a number and
+    # identical run to run (deterministic), i.e. the diagnostic add did not
+    # perturb the calculation
+    a = compute_sr(_bars_with_volume(279.4), chain=_NG_CHAIN, mode="index", symbol="NATURALGAS")
+    b = compute_sr(_bars_with_volume(279.4), chain=_NG_CHAIN, mode="index", symbol="NATURALGAS")
+    assert a["vwap"] == b["vwap"] and a["vwap"] is not None
+    assert a["vwap_status"] == "available"
+    assert a["support_strength"] == b["support_strength"]
+
+
+def test_vwap_status_present_on_every_ok_return():
+    for bars, sym in ((_bars_no_volume(), "NIFTY"), (_bars_with_volume(), "NATURALGAS")):
+        r = compute_sr(bars, mode="index", symbol=sym)
+        assert "vwap_status" in r and "vwap_reason" in r
+        assert r["vwap_status"] in ("available", "invalid_volume", "insufficient_data")

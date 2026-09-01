@@ -289,6 +289,7 @@ _MIGRATIONS = {
     "live_market_snapshots": {
         "ev": "REAL",
         "rr": "REAL",
+        "vwap_status": "TEXT",   # available | invalid_volume | insufficient_data
     },
 }
 
@@ -628,7 +629,7 @@ def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
 # ---------------------------------------------------------------- canonical LIVE market store
 _LIVE_SNAP_COLS = (
     "ts", "session_date", "symbol", "source", "provenance", "index_ltp", "atm",
-    "vwap", "atr", "pcr", "max_pain", "regime", "mtf_alignment", "support",
+    "vwap", "vwap_status", "atr", "pcr", "max_pain", "regime", "mtf_alignment", "support",
     "resistance", "support_strength", "resistance_strength", "signal_type",
     "direction", "signal_score", "probability", "confidence", "decision",
     "reason", "ev", "rr", "feed_age_sec", "chain_json",

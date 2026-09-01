@@ -1189,7 +1189,23 @@
     if (stripEl) stripEl.className = "mon-strip" + (marketClosed ? " is-closed" : feedStale ? " is-stale" : "");
     set("asRegime", text(latest.regime));
     set("asIndex", fmt(latest.index_ltp, 1));
-    set("asVwap", fmt(latest.vwap, 1));
+    // VWAP is volume-weighted — unavailable for a cash index (no volume). Show
+    // the real reason instead of a bare dash, never a fabricated number.
+    const vwEl = $("#asVwap");
+    if (vwEl) {
+      if (latest.vwap != null) {
+        vwEl.textContent = fmt(latest.vwap, 1);
+        vwEl.removeAttribute("title");
+      } else {
+        const vs = latest.vwap_status;
+        vwEl.textContent = vs === "invalid_volume" ? "— n/a (no volume)"
+          : vs === "insufficient_data" ? "— warming up"
+          : "—";
+        vwEl.title = vs === "invalid_volume"
+          ? "VWAP needs traded volume; an NSE cash index has none"
+          : vs === "insufficient_data" ? "not enough bars yet" : "";
+      }
+    }
     set("asAtr", fmt(latest.atr, 2));
     set("asSup", fmt(latest.support, 1)); set("asRes", fmt(latest.resistance, 1));
     set("asSupS", fmt(latest.support_strength, 0)); set("asResS", fmt(latest.resistance_strength, 0));

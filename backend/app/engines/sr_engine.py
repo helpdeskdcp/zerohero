@@ -318,12 +318,29 @@ def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
     H, L, C, V, n = _bars(bars)
     if n < 12:
         return {"status": "DATA_UNAVAILABLE", "reason": f"only {n} bars on {tf}",
-                "model_version": MODEL_VERSION, "mode": mode}
+                "model_version": MODEL_VERSION, "mode": mode,
+                "vwap": None, "vwap_status": "insufficient_data",
+                "vwap_reason": f"only {n} bars on {tf} (need >= 12)"}
 
     price = C[-1]
     atr = _atr(H, L, C, n, min(14, n - 1)) or (mean(h - l for h, l in zip(H, L)) or price * 0.001)
     atr = max(atr, price * 1e-4)
-    vwap = _vwap(H, L, C, V, n) if any(V) else None
+    # VWAP is volume-weighted: it is only real when the bar series carries
+    # traded volume. An NSE cash index (NIFTY, BANKNIFTY, ...) has none, so
+    # VWAP is legitimately unavailable there — never fabricate one.
+    vsum = sum(v for v in V if v)
+    if not any(V):
+        vwap, vwap_status = None, "invalid_volume"
+        vwap_reason = ("bar series carries no traded volume — an NSE cash index "
+                       "has no volume, so a volume-weighted price cannot be computed")
+    elif vsum <= 0:
+        vwap, vwap_status, vwap_reason = None, "invalid_volume", "total bar volume <= 0"
+    else:
+        vwap = _vwap(H, L, C, V, n)
+        if vwap is None:
+            vwap_status, vwap_reason = "invalid_volume", "volume sum <= 0 in _vwap"
+        else:
+            vwap_status, vwap_reason = "available", ""
 
     cands = _candidates(H, L, C, V, atr, vwap, mode=mode, chain=chain,
                         prev_day=prev_day, round_step=round_step)
@@ -355,6 +372,7 @@ def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
         "status": "OK", "model_version": MODEL_VERSION, "mode": mode, "tf": tf,
         "price": round(price, 2), "atr": round(atr, 3),
         "vwap": round(vwap, 2) if vwap is not None else None,
+        "vwap_status": vwap_status, "vwap_reason": vwap_reason,
         "support": support, "resistance": resistance,
         "support_strength": support["strength"] if support else 0.0,
         "resistance_strength": resistance["strength"] if resistance else 0.0,
@@ -362,6 +380,8 @@ def compute_sr(bars_by_tf: dict, *, chain: list | None = None,
         "n_zones": len(scored),
         # read-only diagnostics (do not feed the model / strategy)
         "sr_diag": {
+            "vwap": round(vwap, 2) if vwap is not None else None,
+            "vwap_status": vwap_status, "vwap_reason": vwap_reason,
             "oi_walls": _oi_wall_diag(chain, price, symbol) if mode == "index" else {},
             "support": _level_diag(support, chain, price, symbol, "support"),
             "resistance": _level_diag(resistance, chain, price, symbol, "resistance"),
