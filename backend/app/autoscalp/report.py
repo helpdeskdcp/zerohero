@@ -117,6 +117,19 @@ def self_check(runner) -> dict:
         except Exception:
             n5 = 0
         bars_ready[s] = {"bars_5m": n5, "ready": n5 >= 20, "last_price": a.last_price}
+
+    # which of THIS engine's exchanges are open right now
+    segments, market_open = {}, False
+    try:
+        from .. import market_calendar
+        from .runner import _sym_meta
+        syms = list((st.get("config") or {}).get("symbols") or aggs.keys())
+        for ex in {_sym_meta(s)["exchange"] for s in syms}:
+            segments[ex] = market_calendar.segment_status(ex)
+        market_open = any(v == "OPEN" for v in segments.values())
+    except Exception:
+        pass
+
     checks = {
         "armed": bool(st.get("armed")),
         "running": bool(st.get("running")),
@@ -127,8 +140,20 @@ def self_check(runner) -> dict:
         "all_aggs_seeded": all(v["ready"] for v in bars_ready.values()) if bars_ready else False,
         "live_trading_disabled": st.get("live_trading") is False,
     }
+    # `ok` = "operationally healthy and could trade if armed". `armed` is an
+    # operator choice, not a failure, so it never gates `ok`. `feed_connected`
+    # / `feed_fresh` are expected to be false when every market this engine
+    # trades is closed (the WS feed goes quiet), so they only gate `ok` while a
+    # relevant exchange is OPEN. Everything else is always required.
+    gating = {k: v for k, v in checks.items() if k != "armed"}
+    if not market_open:
+        gating.pop("feed_fresh", None)
+        gating.pop("feed_connected", None)
     return {
-        "ok": all(checks.values()),
+        "ok": all(gating.values()),
+        "armed": bool(st.get("armed")),
+        "market_open": market_open,
+        "segments": segments,
         "checks": checks,
         "feed_age_sec": age,
         "bars_ready": bars_ready,

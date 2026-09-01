@@ -570,6 +570,7 @@ def fresh_db_now():
 
 def test_self_check_reports_readiness(fresh_db, monkeypatch):
     from app.autoscalp import report
+    from app import market_calendar
     sig = dict(_EXP_SIG)
     r, feed = _runner(monkeypatch, sig)
     sc = report.self_check(r)
@@ -578,6 +579,24 @@ def test_self_check_reports_readiness(fresh_db, monkeypatch):
                                  "live_trading_disabled"}
     assert sc["checks"]["live_trading_disabled"] is True
     assert "NIFTY" in sc["bars_ready"] and sc["bars_ready"]["NIFTY"]["ready"] is True
+    assert "market_open" in sc and "segments" in sc
+
+    # inject an otherwise-healthy base so we isolate the feed/market-hours logic
+    base = {"armed": True, "running": True, "is_leader": True, "last_error": None,
+            "live_trading": False, "config": {"symbols": ["NIFTY"]},
+            "feed": {"connected": True, "last_msg_age_sec": 999}}   # <- stale feed
+    monkeypatch.setattr(r, "status", lambda: dict(base))
+
+    # market CLOSED -> a stale feed must NOT fail `ok`
+    monkeypatch.setattr(market_calendar, "segment_status", lambda ex, *a, **k: "CLOSED")
+    sc = report.self_check(r)
+    assert sc["market_open"] is False
+    assert sc["checks"]["feed_fresh"] is False and sc["ok"] is True   # not gated while closed
+
+    # market OPEN -> the same stale feed DOES fail `ok`
+    monkeypatch.setattr(market_calendar, "segment_status", lambda ex, *a, **k: "OPEN")
+    sc = report.self_check(r)
+    assert sc["market_open"] is True and sc["checks"]["feed_fresh"] is False and sc["ok"] is False
 
 
 def test_daily_report_pushes_once_per_segment(fresh_db, monkeypatch):
