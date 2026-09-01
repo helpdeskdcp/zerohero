@@ -218,6 +218,44 @@ def resolve_mcx_future(symbol: str, expiry: str = "AUTO") -> dict:
     return {**row, "status": "OK", "available_expiries": valid, "expiry_selection_mode": str(expiry).upper()} if row else {"status": "CONTRACT_INVALID"}
 
 
+def resolve_index_future(symbol: str, expiry: str = "AUTO") -> dict:
+    """Nearest non-expired NFO index/stock FUTURE for an NSE underlying.
+
+    An NSE cash index (NIFTY, BANKNIFTY, …) has no traded volume, so its own
+    candles cannot yield VWAP / volume. The front-month FUTURE does trade with
+    real volume — this resolves its token so a volume-bearing series is
+    available for VWAP and display. Read-only; nothing here feeds an order.
+    """
+    u = canonical(symbol)
+    rows = [_master_meta(r) for r in master_rows()]
+    rows = [r for r in rows if r["exchange"] == "NFO"
+            and r["underlying"] == u
+            and str(r["instrumenttype"]).upper() in ("FUTIDX", "FUTSTK")
+            and r["symboltoken"]]
+    if not rows:
+        return {"status": "DATA_UNAVAILABLE", "reason": "no NFO future in instrument master"}
+
+    def _d(x):
+        for f in ("%d%b%Y", "%d-%b-%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(str(x).upper(), f).date()
+            except ValueError:
+                pass
+        return None
+
+    now = datetime.now(_IST).date()
+    dated = sorted(((_d(r["expiry"]), r) for r in rows if _d(r["expiry"]) and _d(r["expiry"]) >= now),
+                   key=lambda t: t[0])
+    if not dated:
+        return {"status": "CONTRACT_INVALID", "reason": "no non-expired future expiry"}
+    order = [r for _, r in dated]
+    mode = str(expiry or "AUTO").upper()
+    row = order[1] if mode == "NEXT" and len(order) > 1 else order[-1] if mode == "LATEST" else order[0]
+    return {**row, "status": "OK", "exchange": "NFO",
+            "available_expiries": [d.isoformat() for d, _ in dated],
+            "expiry_selection_mode": mode}
+
+
 def lookback_window(timeframe: str, bars: int = 120, now: datetime | None = None):
     """Return (fromdate, todate) as Angel-formatted 'YYYY-MM-DD HH:MM' IST strings
     covering roughly `bars` candles ending at the most recent session time.

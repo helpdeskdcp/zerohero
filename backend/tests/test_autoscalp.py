@@ -261,6 +261,8 @@ def _runner(monkeypatch, decide_ret):
                                  "daily_cutoff_hhmm": "23:59"}})
     # NIFTY seed resolves to token 99926000
     monkeypatch.setattr(ascr, "decide_from_context", lambda *a, **k: decide_ret)
+    # default: no index-future VWAP (deterministic, no broker call in tests)
+    monkeypatch.setattr(ascr, "_index_future_vwap", lambda *_a, **_k: (None, "unavailable"))
     # give the NIFTY aggregator >= 20 5m bars so _evaluate proceeds
     from app.autoscalp.aggregator import CandleAggregator
     agg = CandleAggregator()
@@ -315,6 +317,44 @@ def test_runner_opens_paper_trade_and_persists(fresh_db, monkeypatch):
     assert sigs[0]["points"] is not None
     assert sigs[0]["r_multiple"] is not None and sigs[0]["r_multiple"] > 0   # win -> positive R
     assert sigs[0]["holding_sec"] is not None and sigs[0]["holding_sec"] >= 0
+
+
+def test_resolve_index_future_picks_front_month_nfo_token():
+    from app import instruments
+    r = instruments.resolve_index_future("NIFTY", "AUTO")
+    assert r["status"] == "OK" and r["exchange"] == "NFO"
+    assert str(r["instrumenttype"]).upper() == "FUTIDX" and r["symboltoken"]
+    # AUTO = nearest non-expired; NEXT must be strictly later
+    nxt = instruments.resolve_index_future("NIFTY", "NEXT")
+    assert nxt["status"] == "OK" and nxt["expiry"] != r["expiry"]
+
+
+def test_nifty_snapshot_vwap_borrowed_from_index_future(fresh_db, monkeypatch):
+    # index has no volume -> decide_from_context returns vwap None; the runner
+    # backfills it from the front-month future for the snapshot only.
+    sig = {"decision": "NO_TRADE", "signal_type": "NONE", "direction": "NONE",
+           "regime": "RANGE", "reason": "flat", "vwap": None, "atr": 11.0,
+           "support": 24080, "resistance": 24150}
+    r, _ = _runner(monkeypatch, sig)
+    monkeypatch.setattr(ascr, "_index_future_vwap", lambda *_a, **_k: (24123.45, "available"))
+    r.arm()
+    asyncio.run(r.tick_once())
+    snaps = fresh_db.list_live_snapshots(symbol="NIFTY")
+    assert len(snaps) == 1
+    assert snaps[0]["vwap"] == 24123.45 and snaps[0]["vwap_status"] == "available"
+    # and it must NOT have created a trade or altered the decision
+    assert fresh_db.list_trades(strategy="AUTOSCALP") == []
+    assert snaps[0]["decision"] == "NO_TRADE"
+
+
+def test_nifty_snapshot_vwap_stays_none_when_future_unavailable(fresh_db, monkeypatch):
+    sig = {"decision": "NO_TRADE", "signal_type": "NONE", "direction": "NONE",
+           "regime": "RANGE", "reason": "flat", "vwap": None}
+    r, _ = _runner(monkeypatch, sig)   # fixture default: _index_future_vwap -> (None, "unavailable")
+    r.arm()
+    asyncio.run(r.tick_once())
+    snaps = fresh_db.list_live_snapshots(symbol="NIFTY")
+    assert len(snaps) == 1 and snaps[0]["vwap"] is None   # never fabricated
 
 
 def test_monitor_sweeps_a_position_the_feed_never_marks(fresh_db, monkeypatch):

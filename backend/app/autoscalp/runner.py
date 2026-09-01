@@ -121,6 +121,65 @@ def _underlying_ref(sym):
     return ref
 
 
+# --- index VWAP from the front-month FUTURE ------------------------------------
+# An NSE cash index has no traded volume, so its own candles never yield a VWAP
+# (see VWAP_AUDIT.md). The front-month index FUTURE does trade with real volume.
+# We source a VWAP from it for the snapshot + dashboard ONLY. It is NOT fed into
+# compute_sr, so the frozen NIFTY strategy is byte-for-byte unchanged.
+_IDXFUT_TOK_TTL = 3600        # future rolls monthly -> re-resolve hourly
+_IDXFUT_VWAP_TTL = 60         # hit the broker at most once/min regardless of decide_every_sec
+_IDXFUT_VWAP_CACHE: dict[str, tuple] = {}   # SYM -> (expiry_epoch, vwap, status)
+
+
+def _index_future_token(sym):
+    """Cached NFO front-month FUTURE token for an NSE index. '' when unknown."""
+    key = "IDXFUT:" + str(sym or "").upper()
+    hit = _UND_CACHE.get(key)
+    if hit and time.time() < hit[0]:
+        return hit[1]
+    tok = ""
+    try:
+        from .. import instruments
+        fut = instruments.resolve_index_future(str(sym or "").upper(), "AUTO") or {}
+        if fut.get("status") == "OK":
+            tok = str(fut.get("symboltoken") or "")
+    except Exception:
+        tok = ""
+    _UND_CACHE[key] = (time.time() + _IDXFUT_TOK_TTL, tok)
+    return tok
+
+
+def _index_future_vwap(sym):
+    """(vwap, status) from the index future's own 1m candles, cached ~60s.
+    status in {available, insufficient_data, invalid_volume, unavailable}."""
+    key = str(sym or "").upper()
+    hit = _IDXFUT_VWAP_CACHE.get(key)
+    if hit and time.time() < hit[0]:
+        return hit[1], hit[2]
+    vwap, status = None, "unavailable"
+    tok = _index_future_token(key)
+    if tok:
+        try:
+            from ..connectors import angelone
+            from ..engines.signal_engine import _vwap
+            conn = angelone.fetch_candles("NFO", key, "NFO", tok, None, None, None, "1m", "FUTURE")
+            rows = conn.get("candles") or []
+            n = len(rows)
+            V = [float(r.get("v") or 0) for r in rows]
+            if n < 12:
+                status = "insufficient_data"
+            elif not any(V) or sum(v for v in V if v) <= 0:
+                status = "invalid_volume"
+            else:
+                vwap = _vwap([float(r["h"]) for r in rows], [float(r["l"]) for r in rows],
+                             [float(r["c"]) for r in rows], V, n)
+                status = "available" if vwap is not None else "invalid_volume"
+        except Exception:
+            vwap, status = None, "unavailable"
+    _IDXFUT_VWAP_CACHE[key] = (time.time() + _IDXFUT_VWAP_TTL, vwap, status)
+    return vwap, status
+
+
 DEFAULT_CONFIG = {
     "symbols": ["NIFTY", "NATURALGAS", "CRUDEOIL"],
     "decide_every_sec": 30,
@@ -128,6 +187,9 @@ DEFAULT_CONFIG = {
     "strike_window": 2,
     "recalibrate_every_sec": 900,
     "min_recalibrate_samples": 40,
+    # An NSE cash index has no volume -> no VWAP. Source it from the front-month
+    # index FUTURE for the snapshot + dashboard only (never fed to compute_sr).
+    "index_vwap_from_future": True,
     "strategy": {},                 # base decide_from_context config (all symbols)
     # Per-symbol strategy overrides, merged over `strategy`. NIFTY is DELIBERATELY
     # absent -> it runs on the P6-validated defaults and must stay that way
@@ -503,6 +565,17 @@ class AutoScalpRunner:
             bars, chain, atm=atm, calib=self.calibration(),
             avg_win=None, avg_loss=None, leg_bars_fn=self._leg_bars_fn(chain),
             tod_bucket=tod, config=strat_cfg)
+
+        # NSE cash index has no volume of its own -> borrow a VWAP from its
+        # front-month FUTURE for the snapshot + dashboard. Decision is already
+        # made above; compute_sr never sees this, so the strategy is unchanged.
+        if (sig.get("vwap") is None and cfg.get("index_vwap_from_future", True)
+                and smeta["exchange"] in ("NSE", "BSE")):
+            _fv, _fs = _index_future_vwap(sym)
+            if _fv is not None:
+                sig["vwap"] = round(_fv, 2)
+                sig["vwap_status"] = "available"
+                sig["vwap_reason"] = "from front-month index future (cash index has no volume)"
 
         snap_id = self._persist_snapshot(sym, agg, atm, chain, sig, feed_age)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
