@@ -185,16 +185,38 @@ autoscalp = AutoScalpRunner(feed=scalp_runner.feed, chain_provider=_autoscalp_ch
                             owner=f"{os.uname().nodename}:{os.getpid()}")
 
 
+# ---- historical market-data capture (standalone; own DB, no WS, no trading logic) ----
+try:
+    from .histcap.worker import CaptureWorker as _CaptureWorker
+    from .histcap import api as _histcap_api
+    histcap_worker = _CaptureWorker()
+    _histcap_api.bind_worker(histcap_worker)
+    app.include_router(_histcap_api.router)
+except Exception as _e:  # never let capture wiring break the app
+    histcap_worker = None
+    print(f"[histcap] disabled: {type(_e).__name__}: {_e}")
+
+
 @app.on_event("startup")
 async def _start_scalp_runner():
     scalp_runner.start()
     autoscalp.start()
+    if histcap_worker is not None:
+        try:
+            histcap_worker.start()
+        except Exception as e:
+            print(f"[histcap] start failed: {type(e).__name__}: {e}")
 
 
 @app.on_event("shutdown")
 async def _stop_scalp_runner():
     await scalp_runner.stop()
     await autoscalp.stop()
+    if histcap_worker is not None:
+        try:
+            await histcap_worker.stop()
+        except Exception:
+            pass
 
 
 @app.websocket("/ws")

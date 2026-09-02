@@ -343,6 +343,47 @@ class AngelOneClient:
     def get_quotes(self, exchange, tokens):
         return {str(token): self.get_quote(exchange, token) for token in tokens}
 
+    def get_quotes_batch(self, tokens_by_exchange: dict, mode: str = "FULL"):
+        """Real multi-token `market/v1/quote` — up to 50 tokens per exchange per
+        POST (AngelOne limit). `tokens_by_exchange` = {"NFO": ["t1","t2",...],
+        "NSE": [...]}. Returns {token: quote-dict} across all exchanges; a token
+        AngelOne did not return is {"status":"DATA_UNAVAILABLE"} (never faked).
+        Read-only; never calls an order endpoint."""
+        out: dict[str, dict] = {}
+        if not self.authenticate():
+            return {str(t): {"status": "AUTH_FAILED", "data_status": "AUTH_FAILED"}
+                    for toks in (tokens_by_exchange or {}).values() for t in toks}
+        h = {"Content-Type": "application/json", "X-PrivateKey": os.getenv("ANGEL_API_KEY"),
+             "Authorization": "Bearer " + self.jwt, "X-UserType": "USER", "X-SourceID": "WEB"}
+        for exch, toks in (tokens_by_exchange or {}).items():
+            toks = [str(t) for t in toks if t]
+            for i in range(0, len(toks), 50):
+                chunk = toks[i:i + 50]
+                try:
+                    d = requests.post(QUOTE, json={"mode": mode, "exchangeTokens": {exch: chunk}},
+                                      headers=h, timeout=self.timeout).json()
+                except Exception:
+                    for t in chunk:
+                        out[t] = {"status": "API_ERROR", "data_status": "API_ERROR"}
+                    continue
+                data = (d.get("data") or {}) if isinstance(d, dict) else {}
+                fetched = data.get("fetched") or []
+                unfetched = {str((u or {}).get("symbolToken") or (u or {}).get("symboltoken"))
+                             for u in (data.get("unfetched") or [])}
+                by_tok = {str(r.get("symbolToken") or r.get("symboltoken")): r
+                          for r in fetched if isinstance(r, dict)}
+                srv = datetime.now(timezone.utc).isoformat()
+                for t in chunk:
+                    row = by_tok.get(t)
+                    if row is not None:
+                        out[t] = {**row, "status": "OK", "data_status": "OK",
+                                  "exchange": exch, "symboltoken": t, "server_timestamp": srv}
+                    else:
+                        out[t] = {"status": "DATA_UNAVAILABLE", "data_status": "DATA_UNAVAILABLE",
+                                  "exchange": exch, "symboltoken": t,
+                                  "reason": "unfetched" if t in unfetched else "not in response"}
+        return out
+
     def get_candles(self, exchange, token, interval="ONE_MINUTE", from_date=None, to_date=None):
         """Read-only historical candles; broker timestamps are preserved."""
         if not self.authenticate():
