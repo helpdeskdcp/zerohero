@@ -195,3 +195,45 @@ v1b (added with A3):
 - Per-strike IV smile (v2).
 - lot_size / absolute GEX magnitude (irrelevant to flip/pin/sign; add only if a
   dashboard "real GEX number" is wanted).
+
+---
+
+## 11. v1a live sanity — 2026-09-02 session
+
+Full 2026-09-02 session with GEX v1a diagnostic columns persisted. Open rows
+(`regime != 'MARKET_CLOSED'`):
+
+| symbol | n | flip populated | pin populated | avg σ (min–max) | regime_sign values |
+|---|---|---|---|---|---|
+| NIFTY | 594 | 449 (75.6 %) | 451 (75.9 %) | **0.163** (0.11–0.19) | −1 / 0 / 1 |
+| NATURALGAS | 1675 | 1333 (79.6 %) | 1333 (79.6 %) | 1.055 (1.00–1.24) | −1 / 0 / 1 |
+| CRUDEOIL | 1675 | 975 (58.2 %) | 1226 (73.2 %) | 0.996 (0.89–1.15) | −1 / 0 / 1 |
+| BANKNIFTY | 430 | 16 (3.7 %) | 137 (31.8 %) | 0.408 (0.24–0.43) | −1 / 0 / 1 |
+
+flip / pin distance to spot (avg):
+
+| symbol | flip %  / ×ATR | pin %  / ×ATR |
+|---|---|---|
+| NIFTY | 0.18 % / 3.0× | 0.30 % / **5.3×** |
+| CRUDEOIL | 0.46 % / 2.1× | 0.87 % / 3.9× |
+| NATURALGAS | 1.19 % / **7.6×** | 3.25 % / **18.3×** |
+| BANKNIFTY | 0.21 % / 3.0× | 0.13 % / 1.8× |
+
+**Verdict: PASS.** `gex_flip` / `gex_pin` populate on a solid majority of open
+NIFTY rows (~76 %) and NATURALGAS rows (~80 %); since the engine only writes
+flip/pin when `_gex_profile` returns `status='ok'`, that population rate *is* the
+in-hours `sr_diag.gex.status='ok'` evidence. NIFTY σ ≈ 0.16 sits inside the
+0.05–0.8 expectation. S/R output remains byte-identical (v1a is diagnostic only —
+GEX is not passed to `_candidates` / `_strength`).
+
+**FLAGS (recorded, NOT corrected — per spec §9):**
+- **A — MCX σ > ~0.8:** CRUDEOIL avg σ 0.996, NATURALGAS avg σ 1.055, both
+  persistently ≈ 1.0 across the session. Consistent with genuine high MCX
+  commodity-option IV, not a solver artefact (range is tight, 0.89–1.24).
+- **B — flip/pin > 4×ATR from spot at `strike_window=2`:** NIFTY pin 5.3×ATR;
+  NATURALGAS flip 7.6×ATR and pin 18.3×ATR (pin ≈ 290 vs spot ≈ 278, ATR ≈ 0.9).
+  Expected: the OI-weighted γ magnet sits outside the ±2-strike band, especially
+  for NG's wide strike ladder. Widening the window is an evidence-gated A3 item,
+  not a v1a change.
+- **Minor — BANKNIFTY flip populated only 3.7 %:** secondary symbol, thin
+  captured chain; not a v1a target and not gating anything.

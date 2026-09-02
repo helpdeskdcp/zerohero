@@ -138,3 +138,40 @@ The architecture would have to track NIFTY via the **front-month NIFTY future** 
 volume) instead of the cash index. That changes what "NIFTY price / ATR / S/R" mean throughout the
 engine and could shift strategy behaviour, so it is **not** a safe drop-in — it needs a deliberate
 design decision and PAPER validation. Not done here.
+
+---
+
+## Live confirmation — 2026-09-02 session (front-month index-future VWAP)
+
+Ran with `index_vwap_from_future=True` for the full 2026-09-02 NSE session.
+On open rows (`symbol='NIFTY'`, `regime != 'MARKET_CLOSED'`):
+
+| metric | value |
+|---|---|
+| total open NIFTY rows | 594 |
+| `vwap IS NOT NULL` AND `vwap_status='available'` | **424 (71.4 %)** |
+| `vwap_status='invalid_volume'` | 170 (28.6 %) |
+| avg `vwap − index_ltp` (basis) on available rows | **+126.3 pts** (range +88 … +172) |
+| NG / CRUDE regression guard | 1675/1675 `available` each — no regression |
+
+**Verdict: PASS.**
+- Pre-fix baseline: NIFTY VWAP was **0 %** `available` (cash index token, volume 0
+  → always `invalid_volume`). Post-fix **71.4 %** `available`.
+- The **+126 pt** average premium of VWAP over the cash `index_ltp` confirms the
+  VWAP is sourced from the **front-month NIFTY future** (which carries a basis),
+  not the cash index (a cash-index VWAP would sit ≈ spot and read `invalid_volume`).
+- The `vwap` value the strategy consumes is unchanged in meaning — this only
+  *fills* a field that was permanently `None`; it is display/context only and is
+  **not** fed into `compute_sr` (S/R still uses the cash-index series).
+
+**Caveats (not regressions):**
+1. NIFTF snapshots on 2026-09-02 did not begin until ~10:20 IST — the morning
+   `oi-dashboard` restart re-triggered the NIFTY trading-aggregator re-seed
+   (REMEDIATION_PLAN P0-2). No NIFTY eval rows exist for 09:15–10:20 IST.
+2. Intraday `invalid_volume` fraction falls through the session (≈42 % → ≈19 %)
+   as the front-month-future 1 m candle cache warms and occasional REST
+   `insufficient_data` responses recover on the next cycle — it degrades
+   gracefully to `invalid_volume`, never to a wrong number.
+3. The reason string *"from front-month index future (cash index has no volume)"*
+   is set on the in-memory signal dict but not persisted to a column; sourcing is
+   evidenced here by the +126 pt basis and the 0 % → 71 % availability flip.

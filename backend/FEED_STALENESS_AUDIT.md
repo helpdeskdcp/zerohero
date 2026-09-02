@@ -107,3 +107,36 @@ two `db.list_trades` reads in `_evaluate` (lock-guarded, ms).
 - Deploy: bundled with the 2026-09-01 post-MCX-close restart (alongside
   FIX-2/FIX-3 + NIFTY-future VWAP).
 - Live confirmation: **pending the 2026-09-02 session** (step D).
+
+---
+
+## F. Verification results — 2026-09-02 session (post greeks-engine deploy)
+
+Deploy: `oi-dashboard` restarted 2026-09-02 ~23:42 IST at commit `5555952` (after
+NSE + MCX close, both daily reports fired). `data/feed_staleness_probe.sh`
+restarted post-deploy.
+
+**Split (2026-09-02 open rows, `regime != 'MARKET_CLOSED'`), `feed_age_sec` by group:**
+
+| group | n | avg age | % > 12 s |
+|---|---|---|---|
+| chain fetched (`length(chain_json)>50`) | 3348 | **0.1 s** | **0.0 %** |
+| no chain | 1026 | 0.1 s | 0.0 % |
+
+Per symbol × chain-fetched — **all** groups avg 0.0–0.1 s, 0.0 % over 12 s:
+
+| symbol | chain avg / %>12 | Sep-1 baseline (chain) |
+|---|---|---|
+| CRUDEOIL | **0.1 s / 0.0 %** | 15.8 s / 99 % |
+| NATURALGAS | **0.1 s / 0.0 %** | 9.2 s / 28 % |
+| NIFTY | 0.0 s / 0.0 % | — |
+| BANKNIFTY | 0.0 s / 0.0 % | — |
+
+`BLOCKED[stale feed …]` on 2026-09-02: **0** (Sep-1 baseline: **49**).
+
+**Verdict: PASS.** The chain-fetched avg feed age collapsed from 11.8 s (54 %
+stale) to 0.1 s (0 % stale); the worst case CRUDEOIL/chain went 15.8 s/99 % →
+0.1 s/0 %; artificial stale-feed blocks went 49 → 0. No genuine stale data was
+suppressed — the WS loop simply stops being starved once the chain fetch /
+`decide_from_context` / persist run in `asyncio.to_thread`. Trade character
+unchanged (still gated by regime / EV / type filters).
