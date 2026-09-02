@@ -196,6 +196,13 @@ except Exception as _e:  # never let capture wiring break the app
     histcap_worker = None
     print(f"[histcap] disabled: {type(_e).__name__}: {_e}")
 
+# ---- Option Greeks Engine (derived exposure over captured broker Greeks; read-only) ----
+try:
+    from .greeks_engine import api as _greeks_api
+    app.include_router(_greeks_api.router)
+except Exception as _e:
+    print(f"[greeks_engine] router disabled: {type(_e).__name__}: {_e}")
+
 
 @app.on_event("startup")
 async def _start_scalp_runner():

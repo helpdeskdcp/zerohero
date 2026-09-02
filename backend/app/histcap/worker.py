@@ -176,6 +176,15 @@ class CaptureWorker:
         self.last_run = {"run_id": rid, "auth_ok": True, "instruments": n_instr, **counts,
                          "flagged": integ.get("flagged", 0), "rejected": len(integ.get("rejected", [])),
                          "errors": len(errors)}
+
+        # derive Greek exposure from what this cycle just captured (read-only,
+        # append-only, own tables). A failure here never affects the capture.
+        if counts.get("greeks", 0) > 0 and "NIFTY" in self.cfg["symbols"]:
+            try:
+                from ..greeks_engine.engine import greeks_engine
+                greeks_engine().run_once("NIFTY", mode="CYCLE")
+            except Exception as e:
+                self.last_error = f"greeks_engine: {type(e).__name__}: {e}"
         return self.last_run
 
     # ---------------------------------------------------------------- resolution
