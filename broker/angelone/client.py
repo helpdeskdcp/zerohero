@@ -1,11 +1,15 @@
 """Angel One SmartAPI market-data client; deliberately no order methods."""
-import hashlib, json, os, time
+import hashlib, json, os, threading, time
 from datetime import datetime, timezone
 import requests, pyotp
 
+from .greeks import normalize_greek_row, index_greek_rows, match_greek, merge_leg_greeks
+
 LOGIN = "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword"
 QUOTE = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/"
-GREEKS = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/optionGreek"
+# NOTE: the Option-Greek API lives under `marketData/v1`, NOT `market/v1`
+# (ref: SmartAPI forum topic 4254 "Announcing Option Greeks API").
+GREEKS = "https://apiconnect.angelone.in/rest/secure/angelbroking/marketData/v1/optionGreek"
 MASTER = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
 CANDLES = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getCandleData"
 
@@ -14,6 +18,16 @@ class AngelOneClient:
         self.timeout = timeout; self.cache_path = cache_path or os.getenv("ANGEL_MASTER_CACHE", "/tmp/angelone_instrument_master.json")
         self.jwt = None; self.feed_token = None; self.login_ts = 0; self._master = []
         self.last_auth = {"status": "NOT_ATTEMPTED"}
+        # option-greek cache: (UNDERLYING, EXPIRY) -> (expires_at, result-dict).
+        # One request per underlying+expiry; a per-key lock collapses concurrent
+        # duplicates; OK results live GREEK_TTL_SEC, errors a short negative-cache.
+        try:
+            self._greek_ttl = max(2.0, float(os.getenv("ANGEL_GREEK_TTL_SEC", "15")))
+        except (TypeError, ValueError):
+            self._greek_ttl = 15.0
+        self._greek_cache: dict[tuple, tuple] = {}
+        self._greek_locks: dict[tuple, threading.Lock] = {}
+        self._greek_locks_guard = threading.Lock()
 
     def authenticate(self):
         if self.jwt and time.time() - self.login_ts < 3600: return True
@@ -152,37 +166,171 @@ class AngelOneClient:
             if chosen is None: return {"status":"CONTRACT_NOT_FOUND", "reason":"expiry unavailable"}
         return {"status":"OK","exchange":"MCX","symbol":chosen.get("symbol"),"token":str(chosen.get("token")),"underlying":str(symbol).upper(),"expiry":chosen.get("expiry"),"lot_size":chosen.get("lotsize"),"expiry_selection_mode":mode}
 
-    def get_option_chain(self, underlying, expiry="AUTO", window=5):
+    @staticmethod
+    def _quote_field(data, *keys):
+        for k in keys:
+            if isinstance(data, dict) and data.get(k) is not None:
+                return data[k]
+        return None
+
+    @classmethod
+    def _quote_leg(cls, token, q):
+        """Per-leg fields sourced ONLY from the AngelOne FULL quote. Greeks are
+        added later by merge_leg_greeks(); everything here is quote-origin."""
+        depth = q.get("depth") if isinstance(q, dict) else None
+        bid = ask = None
+        if isinstance(depth, dict):
+            buy, sell = depth.get("buy") or [], depth.get("sell") or []
+            if buy and isinstance(buy[0], dict):
+                bid = cls._quote_field(buy[0], "price")
+            if sell and isinstance(sell[0], dict):
+                ask = cls._quote_field(sell[0], "price")
+        return {
+            "token": str(token),
+            "ltp": cls._quote_field(q, "ltp", "lastTradedPrice"),
+            "oi": cls._quote_field(q, "opnInterest", "openInterest"),
+            "oi_change": cls._quote_field(q, "changeinOpenInterest", "changeInOpenInterest"),
+            "volume": cls._quote_field(q, "tradeVolume", "volume"),
+            "bid": bid, "ask": ask, "depth": depth if isinstance(depth, dict) else None,
+            "open": cls._quote_field(q, "open"), "high": cls._quote_field(q, "high"),
+            "low": cls._quote_field(q, "low"), "close": cls._quote_field(q, "close"),
+            "net_change": cls._quote_field(q, "netChange"),
+            "pct_change": cls._quote_field(q, "percentChange"),
+            "lower_circuit": cls._quote_field(q, "lowerCircuit", "lowerCircuitLimit"),
+            "upper_circuit": cls._quote_field(q, "upperCircuit", "upperCircuitLimit"),
+            "timestamp": cls._quote_field(q, "exchangeTimestamp", "exchange_timestamp"),
+            "quote_status": (q or {}).get("status") if isinstance(q, dict) else "DATA_UNAVAILABLE",
+        }
+
+    def get_option_chain(self, underlying, expiry="AUTO", window=5, *, with_greeks=True):
         uni = self._option_universe(underlying); spot = uni.get("spot")
         if spot is None: return {"status":"DATA_UNAVAILABLE", "reason":"spot unavailable"}
         probe = self.resolve_option_contract(underlying, expiry, "ATM", "CE", spot=float(spot))
         if probe.get("status") != "OK": return probe
         selected = probe["expiry"]; rows = [r for r in self.search_instruments(symbol=str(underlying).upper(), exchange=uni["exchange"]) if r.get("expiry") == selected and r.get("instrumenttype") in uni["types"]]
         strikes = sorted({round(float(r.get("strike"))/100, 6) for r in rows if r.get("strike") is not None})
+        if not strikes:
+            return {"status": "DATA_UNAVAILABLE", "reason": "no strikes in instrument master",
+                    "underlying": str(underlying).upper(), "expiry": selected}
         atm_i = min(range(len(strikes)), key=lambda i: abs(strikes[i]-float(spot)))
         strikes = strikes[max(0, atm_i-window):atm_i+window+1]
-        out_rows=[]
-        def field(data, *keys):
-            for key in keys:
-                if data.get(key) is not None:
-                    return data[key]
-            return None
+
+        # ONE greek request for the whole underlying+expiry (cached, deduped).
+        greeks = {"status": "SKIPPED", "source": "ANGELONE_OPTION_GREEK",
+                  "expiry": selected, "matched": 0, "requested": 0}
+        gidx = {}
+        if with_greeks:
+            g = self.get_option_greeks(str(underlying).upper(), selected)
+            gidx = index_greek_rows(g.get("rows") or [])
+            greeks = {"status": g.get("status"), "source": g.get("source"),
+                      "expiry": selected, "errorcode": g.get("errorcode"),
+                      "message": g.get("message"), "cache": g.get("cache"),
+                      "rows_returned": len(g.get("rows") or []), "indexed": len(gidx),
+                      "matched": 0, "requested": 0}
+
+        out_rows = []
         for strike in strikes:
-            legs={}
-            for typ in ("CE","PE"):
-                c=next((r for r in rows if str(r.get("symbol","")).upper().endswith(typ) and abs(float(r.get("strike"))/100-strike)<1e-6), None)
-                if not c: continue
-                q=self.get_quote(uni["quote_ex"], c.get("token")); legs[typ]={"token":str(c.get("token")),"ltp":field(q, "ltp", "lastTradedPrice"),"oi":field(q, "opnInterest", "openInterest"),"oi_change":field(q, "changeinOpenInterest", "changeInOpenInterest"),"volume":field(q, "tradeVolume", "volume"),"timestamp":field(q, "exchangeTimestamp", "exchange_timestamp")}
-            out_rows.append({"strike":strike,"ce":legs.get("CE"),"pe":legs.get("PE")})
-        return {"status":"OK" if out_rows else "DATA_UNAVAILABLE","symbol":str(underlying).upper(),"underlying":str(underlying).upper(),"spot":spot,"expiry":selected,"exchange":uni["exchange"],"rows":out_rows,"timestamp":datetime.now(timezone.utc).isoformat()}
+            legs = {}
+            for typ in ("CE", "PE"):
+                c = next((r for r in rows if str(r.get("symbol", "")).upper().endswith(typ)
+                          and abs(float(r.get("strike"))/100 - strike) < 1e-6), None)
+                if not c:
+                    continue
+                q = self.get_quote(uni["quote_ex"], c.get("token"))
+                leg = self._quote_leg(c.get("token"), q)
+                leg["strike"] = strike
+                leg["option_type"] = typ
+                leg["expiry"] = selected
+                greeks["requested"] += 1
+                grow = match_greek(gidx, strike, typ) if gidx else None
+                if grow is not None:
+                    greeks["matched"] += 1
+                legs[typ] = merge_leg_greeks(leg, grow)
+            out_rows.append({"strike": strike, "ce": legs.get("CE"), "pe": legs.get("PE")})
+
+        return {"status": "OK" if out_rows else "DATA_UNAVAILABLE",
+                "symbol": str(underlying).upper(), "underlying": str(underlying).upper(),
+                "spot": spot, "expiry": selected, "exchange": uni["exchange"],
+                "rows": out_rows, "greeks": greeks,
+                "timestamp": datetime.now(timezone.utc).isoformat()}
+
+    # ------------------------------------------------------------- option greeks
+    def get_option_greeks(self, underlying, expiry):
+        """Delta / Gamma / Theta / Vega / IV for every live strike of one
+        underlying+expiry, via AngelOne `marketData/v1/optionGreek`.
+
+        ONE broker request per (underlying, expiry); result cached
+        `ANGEL_GREEK_TTL_SEC` (default 15s); concurrent duplicate callers share
+        the single in-flight request via a per-key lock. Never raises, never
+        fabricates — an unavailable field is ``None`` with explicit status.
+
+        Returns (canonical):
+          status: OK | NO_DATA | AUTH_FAILED | RATE_LIMITED | TIMEOUT
+                  | MALFORMED | API_ERROR
+          source: "ANGELONE_OPTION_GREEK" | endpoint | underlying | expiry
+          http_status | errorcode | message | fetched_at | cache: HIT|MISS
+          rows: [normalize_greek_row(...)]  (empty unless status == OK)
+        """
+        key = (str(underlying or "").upper(), str(expiry or "").upper())
+        now = time.time()
+        hit = self._greek_cache.get(key)
+        if hit and now < hit[0]:
+            return {**hit[1], "cache": "HIT"}
+        with self._greek_locks_guard:
+            lock = self._greek_locks.setdefault(key, threading.Lock())
+        with lock:
+            hit = self._greek_cache.get(key)
+            if hit and time.time() < hit[0]:
+                return {**hit[1], "cache": "HIT"}
+            res = self._fetch_option_greeks_uncached(*key)
+            ttl = self._greek_ttl if res.get("status") == "OK" else min(5.0, self._greek_ttl)
+            self._greek_cache[key] = (time.time() + ttl, res)
+            return {**res, "cache": "MISS"}
+
+    def _fetch_option_greeks_uncached(self, name, expirydate):
+        base = {"source": "ANGELONE_OPTION_GREEK", "endpoint": GREEKS,
+                "underlying": name, "expiry": expirydate,
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "http_status": None, "errorcode": "", "message": "", "rows": []}
+        if not self.authenticate():
+            return {**base, "status": "AUTH_FAILED",
+                    "errorcode": (self.last_auth or {}).get("status", "AUTH_FAILED"),
+                    "message": "SDK not authenticated"}
+        h = {"Content-Type": "application/json", "X-PrivateKey": os.getenv("ANGEL_API_KEY"),
+             "Authorization": "Bearer " + self.jwt, "X-UserType": "USER", "X-SourceID": "WEB"}
+        try:
+            r = requests.post(GREEKS, json={"name": name, "expirydate": expirydate},
+                              headers=h, timeout=self.timeout)
+        except requests.Timeout:
+            return {**base, "status": "TIMEOUT", "errorcode": "TIMEOUT", "message": "request timed out"}
+        except Exception as e:
+            return {**base, "status": "API_ERROR", "errorcode": type(e).__name__, "message": str(e)[:160]}
+        base["http_status"] = r.status_code
+        if r.status_code == 429:
+            return {**base, "status": "RATE_LIMITED", "errorcode": "RATE_LIMIT", "message": "rate limited"}
+        try:
+            d = r.json() if r.content else {}
+        except Exception:
+            return {**base, "status": "MALFORMED", "errorcode": "BAD_JSON", "message": "non-JSON response"}
+        errcode = str(d.get("errorcode") or "").strip()
+        msg = str(d.get("message") or "").strip()
+        data = d.get("data")
+        if d.get("status") is True and isinstance(data, list) and data:
+            return {**base, "status": "OK", "errorcode": errcode, "message": msg or "SUCCESS",
+                    "rows": [normalize_greek_row(x) for x in data]}
+        no_data = (errcode.upper() == "AB9019" or "no data" in msg.lower()
+                   or (isinstance(data, list) and not data))
+        return {**base,
+                "status": "NO_DATA" if no_data else "API_ERROR",
+                "errorcode": errcode or ("AB9019" if no_data else ""),
+                "message": msg or ("no data available" if no_data else "unexpected greek response")}
 
     def get_greeks(self, symbol, expiry):
-        if not self.authenticate(): return {"status":"AUTH_FAILED"}
-        h={"Content-Type":"application/json","X-PrivateKey":os.getenv("ANGEL_API_KEY"),"Authorization":"Bearer "+self.jwt,"X-UserType":"USER","X-SourceID":"WEB"}
-        try:
-            d=requests.post(GREEKS,json={"name":str(symbol).upper(),"expirydate":expiry},headers=h,timeout=self.timeout).json()
-            return {"status":"OK" if d.get("status") and d.get("data") else "DATA_UNAVAILABLE","rows":d.get("data") or []}
-        except Exception: return {"status":"API_ERROR","rows":[]}
+        """Deprecated. Kept so old callers keep working; delegates to
+        ``get_option_greeks`` and exposes the legacy ``{status, rows}`` shape."""
+        res = self.get_option_greeks(symbol, expiry)
+        return {"status": "OK" if res.get("status") == "OK" else res.get("status", "API_ERROR"),
+                "rows": res.get("rows") or [], "detail": res}
 
     def get_quote(self, exchange, token):
         if not self.authenticate(): return {"status":"AUTH_FAILED", "data_status":"AUTH_FAILED"}

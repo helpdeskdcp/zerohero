@@ -79,11 +79,15 @@ def test_read_only_quote_adapter_normalizes_oi_without_orders(monkeypatch):
 
 
 def test_dynamic_expiry_and_atm_resolver_uses_master(monkeypatch):
+    from datetime import datetime, timedelta, timezone
     from app import instruments
+    # relative future expiries so AUTO does not roll past a hard-coded past date
+    e1 = (datetime.now(timezone.utc) + timedelta(days=6)).strftime("%d%b%Y").upper()
+    e2 = (datetime.now(timezone.utc) + timedelta(days=13)).strftime("%d%b%Y").upper()
     monkeypatch.setattr(instruments, "master_rows", lambda **_k: [
-        {"exch_seg": "NFO", "symbol": "NIFTY01SEP2026CE22000", "token": "1", "name": "NIFTY", "expiry": "01SEP2026", "strike": "2200000"},
-        {"exch_seg": "NFO", "symbol": "NIFTY08SEP2026CE22000", "token": "2", "name": "NIFTY", "expiry": "08SEP2026", "strike": "2200000"},
+        {"exch_seg": "NFO", "symbol": f"NIFTY{e1}CE22000", "token": "1", "name": "NIFTY", "expiry": e1, "strike": "2200000"},
+        {"exch_seg": "NFO", "symbol": f"NIFTY{e2}CE22000", "token": "2", "name": "NIFTY", "expiry": e2, "strike": "2200000"},
     ])
     c = instruments.resolve_nse_option("NIFTY", "AUTO", "ATM", "CE", spot=22000)
-    assert c["status"] == "OK" and c["expiry"] == "01SEP2026" and c["symboltoken"] == "1"
-    assert c["next_expiry"] == "08SEP2026"
+    assert c["status"] == "OK" and c["expiry"] == e1 and c["symboltoken"] == "1"
+    assert c["next_expiry"] == e2
