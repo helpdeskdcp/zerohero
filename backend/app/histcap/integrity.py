@@ -47,9 +47,9 @@ def quote_check(ltp, bid, ask, oi, oi_change) -> list[str]:
         flags.append("oi<0")
     if _n(oi_change) is not None and oi is not None and oi == 0 and _n(oi_change) != 0:
         flags.append("oi0_but_change")
-    if ltp is not None and None not in (bid, ask) and (ltp < bid - abs(bid) * 0.5
-                                                       or ltp > ask + abs(ask) * 0.5):
-        flags.append("ltp_far_from_book")
+    if (ltp is not None and None not in (bid, ask) and bid > 0 and ask > 0
+            and (ltp < bid - abs(bid) * 0.5 or ltp > ask + abs(ask) * 0.5)):
+        flags.append("ltp_far_from_book")           # only when a real 2-sided book exists
     return flags
 
 

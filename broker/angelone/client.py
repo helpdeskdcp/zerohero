@@ -287,6 +287,18 @@ class AngelOneClient:
             self._greek_cache[key] = (time.time() + ttl, res)
             return {**res, "cache": "MISS"}
 
+    def _auth_headers(self) -> dict:
+        """Standard AngelOne authenticated headers. The optionGreek endpoint
+        rejects a request without X-MACAddress / client-IP headers (AB1012)."""
+        return {
+            "Content-Type": "application/json", "Accept": "application/json",
+            "X-PrivateKey": os.getenv("ANGEL_API_KEY"),
+            "Authorization": "Bearer " + (self.jwt or ""),
+            "X-UserType": "USER", "X-SourceID": "WEB",
+            "X-ClientLocalIP": "127.0.0.1", "X-ClientPublicIP": "127.0.0.1",
+            "X-MACAddress": "00:00:00:00:00:00",
+        }
+
     def _fetch_option_greeks_uncached(self, name, expirydate):
         base = {"source": "ANGELONE_OPTION_GREEK", "endpoint": GREEKS,
                 "underlying": name, "expiry": expirydate,
@@ -296,8 +308,7 @@ class AngelOneClient:
             return {**base, "status": "AUTH_FAILED",
                     "errorcode": (self.last_auth or {}).get("status", "AUTH_FAILED"),
                     "message": "SDK not authenticated"}
-        h = {"Content-Type": "application/json", "X-PrivateKey": os.getenv("ANGEL_API_KEY"),
-             "Authorization": "Bearer " + self.jwt, "X-UserType": "USER", "X-SourceID": "WEB"}
+        h = self._auth_headers()
         try:
             r = requests.post(GREEKS, json={"name": name, "expirydate": expirydate},
                               headers=h, timeout=self.timeout)
@@ -334,7 +345,7 @@ class AngelOneClient:
 
     def get_quote(self, exchange, token):
         if not self.authenticate(): return {"status":"AUTH_FAILED", "data_status":"AUTH_FAILED"}
-        key = os.getenv("ANGEL_API_KEY"); h={"Content-Type":"application/json","X-PrivateKey":key,"Authorization":"Bearer "+self.jwt,"X-UserType":"USER","X-SourceID":"WEB"}
+        h = self._auth_headers()
         try:
             d=requests.post(QUOTE,json={"mode":"FULL","exchangeTokens":{exchange:[str(token)]}},headers=h,timeout=self.timeout).json(); rows=(d.get("data") or {}).get("fetched") or []
             return {**(rows[0] if rows else {}),"status":"OK" if rows else "DATA_UNAVAILABLE","data_status":"OK" if rows else "DATA_UNAVAILABLE","server_timestamp":datetime.now(timezone.utc).isoformat()}
@@ -353,8 +364,7 @@ class AngelOneClient:
         if not self.authenticate():
             return {str(t): {"status": "AUTH_FAILED", "data_status": "AUTH_FAILED"}
                     for toks in (tokens_by_exchange or {}).values() for t in toks}
-        h = {"Content-Type": "application/json", "X-PrivateKey": os.getenv("ANGEL_API_KEY"),
-             "Authorization": "Bearer " + self.jwt, "X-UserType": "USER", "X-SourceID": "WEB"}
+        h = self._auth_headers()
         for exch, toks in (tokens_by_exchange or {}).items():
             toks = [str(t) for t in toks if t]
             for i in range(0, len(toks), 50):
@@ -390,8 +400,7 @@ class AngelOneClient:
             return {"status": "AUTH_FAILED", "data_status": "AUTH_FAILED", "candles": []}
         if not from_date or not to_date:
             return {"status": "INVALID_REQUEST", "data_status": "DATA_UNAVAILABLE", "candles": []}
-        h = {"Content-Type":"application/json", "X-PrivateKey":os.getenv("ANGEL_API_KEY"),
-             "Authorization":"Bearer "+self.jwt, "X-UserType":"USER", "X-SourceID":"WEB"}
+        h = self._auth_headers()
         body = {"exchange": str(exchange), "symboltoken": str(token), "interval": str(interval),
                 "fromdate": str(from_date), "todate": str(to_date)}
         try:

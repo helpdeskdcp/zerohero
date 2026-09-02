@@ -38,12 +38,11 @@ provided by AngelOne · **D** must be derived by a separate engine (never the ad
    as a deprecated delegating shim so nothing breaks.
 3. `get_option_chain()` cherry-picked 5 quote fields and dropped depth/OHLC/greeks.
 
-### Operational finding (out of adapter scope — flagged for the operator)
-`ANGEL_API_KEY / ANGEL_CLIENT_ID / ANGEL_PASSWORD / ANGEL_TOTP_SECRET` are **blank** in
-`/root/zerohero/backend/.env` and in the running service's environment. SDK REST auth
-currently returns `CONFIG_REQUIRED`; the WS feed is running on a cached feed-token. **Live
-verification of the greek endpoint (step 13) is blocked until the credentials are
-restored.** This upgrade is built and unit-tested against the official documented contract.
+### Operational note — credentials
+`ANGEL_*` are populated in the **running service's** environment (systemd `EnvironmentFile`
+= `backend/.env`) — a bare-shell `python` does NOT load them, which is why an offline
+`./venv/bin/python` call reports `CONFIG_REQUIRED`. The service authenticates fine; live
+greek capture is confirmed working via the histcap worker (see `HISTCAP_IMPLEMENTATION.md`).
 
 ---
 

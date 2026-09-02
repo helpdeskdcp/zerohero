@@ -111,10 +111,28 @@ adds nothing** (dedup); **no-auth cycle** writes 0 market rows + a logged run;
 **greek `NO_DATA`** writes 0 greeks + logs `AB9019`; `as_of` retrieval excludes bars/quotes
 after the cutoff.
 
-**Live CLI one-shot** (`python -m app.histcap --once`, current env): DB + all 5 tables
-created, WAL, schema idempotent. Cycle ran → `auth_ok=0`, **0 market rows** (honest — see
-below), `capture_runs` row logged with the exact reason
-(`CONFIG_REQUIRED`, api_key/client_id/password/totp_secret all missing).
+**Live CLI one-shot against real AngelOne** (`python -m app.histcap --once`, `.env` loaded,
+markets closed 2026-09-02 ~08:40 IST):
+
+```
+auth_ok=1  instruments=82  quotes_written=82  candles_written=306  greeks_written=0  raw=18
+integrity: {issues:[], rejected:[], flagged:0}
+errors: 3 x {stage:"greeks", status:"NO_DATA", message:"AB9019"}   <- correct: no greeks outside market hours
+```
+- Real data captured: NIFTY future `basis` +34.5, OI 16,051,815; per-strike CE/PE with
+  real LTP/OHLC/OI/bid/ask/5-level depth; NG/CRUDE future candles with real volume.
+- **Second identical cycle → 0 new candles, ~0 new quotes** (UNIQUE natural keys + INSERT
+  OR IGNORE working).
+- 0 rows with `h<l`, 0 negative OI, 0 hard-rejected.
+- Greeks return `AB9019` only because the market is closed; the `optionGreek` request now
+  carries the `X-MACAddress` / client-IP headers it requires (was `AB1012` before the fix),
+  so greeks will populate on the first in-hours cycle.
+
+Fixes applied during verification (all data-layer): (1) `optionGreek`/quote/candle requests
+now send the full AngelOne auth headers via `client._auth_headers()`; (2) candle window is
+session-aware (`instruments.lookback_window`) so an off-hours poll still returns the last
+session; (3) `ltp_far_from_book` only flags when a real 2-sided book exists (no false
+positive on a cash index); (4) bogus epoch-0 (`1970-01-01`) timestamps normalise to `NULL`.
 
 ---
 
@@ -122,11 +140,11 @@ below), `capture_runs` row logged with the exact reason
 
 | item | why | resolution |
 |---|---|---|
-| **Live market rows** | `ANGEL_API_KEY / CLIENT_ID / PASSWORD / TOTP_SECRET` are **blank** in `backend/.env` and the running process (documented in `broker/angelone/ADAPTER_UPGRADE.md`). The worker writes **NULL / nothing**, never a fabricated value. | restore the 4 env vars → the worker captures on its next cycle automatically |
-| **`/api/histcap/*` live** | the running service predates this code | restart `oi-dashboard` (safe in a market-closed window) |
-| **Option per-strike OHLCV candles** | off by default (`CHANAKYA_HIST_OPTION_CANDLES=0`) — one `getCandleData` call per option token is expensive at chain width | set the flag if wanted; quote_snapshots already give per-strike OHLC point-in-time |
+| **Live *greek* rows** | market was closed during verification → `AB9019` | confirmed working (header fix); populates on the first in-hours capture cycle |
+| **Option per-strike OHLCV candles** | off by default (`CHANAKYA_HIST_OPTION_CANDLES=0`) — one `getCandleData` call per option token is expensive at chain width | set the flag if wanted; `quote_snapshots` already give per-strike OHLC point-in-time |
 | **`oi_change` on options via FULL quote** | AngelOne often omits `changeinOpenInterest` in the FULL quote (documented in the audit) | stored as `NULL` when absent; a WS mode-3 worker (future) is the reliable source |
 | **rho / 2nd-order greeks** | AngelOne `optionGreek` returns Δ/Γ/Θ/V/IV only | not provided by the broker — no substitute computed |
+| **Spot-index candle volume** | an NSE cash index has no traded volume | `v` stored `NULL` (never 0); the NIFTY **FUTIDX** candle carries real volume |
 
 ## Safety
 

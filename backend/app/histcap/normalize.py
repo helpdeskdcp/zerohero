@@ -44,15 +44,21 @@ def to_utc_iso(v) -> str | None:
             ts = float(v)
             if ts > 1e12:            # ms
                 ts /= 1000.0
+            if ts < 9.466e8:         # before 2000-01-01 -> a bogus 0 / near-0 stamp
+                return None
             return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
         except (OverflowError, OSError, ValueError):
             return None
     s = str(v).strip()
+    if s in ("0", "0.0", "1970-01-01T00:00:00", "1970-01-01 00:00:00"):
+        return None
     for fmt in (None, "%d-%b-%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%d%b%Y %H:%M:%S"):
         try:
             dt = datetime.fromisoformat(s) if fmt is None else datetime.strptime(s, fmt)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=_IST)      # AngelOne local times are IST
+            if dt.year < 2000:                    # bogus epoch-0 stamp -> unavailable
+                return None
             return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
         except ValueError:
             continue

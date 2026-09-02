@@ -301,12 +301,10 @@ class CaptureWorker:
         metas = [m for m in (refs.get("spot_meta"), refs.get("fut_meta")) if m]
         if self.cfg["option_candles"]:
             metas += refs.get("opt_metas", [])
-        now_ist = datetime.now(_IST)
         for m in metas:
             for tf in self.cfg["tfs"]:
-                tf_min = N._TF_MIN.get(tf, 1)
-                frm = (now_ist - timedelta(minutes=tf_min * 10 + 5)).strftime("%Y-%m-%d %H:%M")
-                to = now_ist.strftime("%Y-%m-%d %H:%M")
+                # session-aware window: recent bars during hours, last close off-hours
+                frm, to = instruments.lookback_window(tf, bars=int(self.cfg.get("candle_bars", 20)))
                 try:
                     d = sdk.get_candles(m["exchange"], m["token"], _INTERVAL[tf], frm, to)
                 except Exception as e:
