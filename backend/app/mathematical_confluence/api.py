@@ -18,54 +18,7 @@ router = APIRouter(prefix="/api/mathematics", tags=["mathematical-confluence"])
 _engine = MathematicalConfluenceEngine()
 
 
-def _context(symbol: str) -> dict:
-    """Best-effort live context from the existing pipeline. Anything missing is
-    left None — the engine reports DATA_INSUFFICIENT with the exact fields."""
-    ctx = {"instrument": symbol.upper(), "prev_day": {}, "bars": [], "chain": []}
-    try:
-        from ..connectors.angelone import _market_sdk
-        from .. import market_data
-        sdk = _market_sdk(require_auth=False)
-        if not sdk:
-            return ctx
-        mkt = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}.get(symbol.upper(), "NSE")
-        snap = market_data.selection_snapshot(sdk, mkt, symbol.upper(), expiry="AUTO",
-                                              option_type="BOTH", window=6,
-                                              instrument="OPTION" if mkt in ("MCX", "BSE") else None)
-        ctx["spot"] = snap.get("spot") or snap.get("atm")
-        ctx["chain"] = [
-            {"strike": r.get("strike"),
-             "ce_ltp": r.get("ce_ltp"), "ce_oi": r.get("ce_oi"), "ce_oi_change": r.get("ce_oi_change"),
-             "pe_ltp": r.get("pe_ltp"), "pe_oi": r.get("pe_oi"), "pe_oi_change": r.get("pe_oi_change")}
-            for r in (snap.get("chain") or [])
-        ]
-        # prev-day OHLC via daily candles
-        und = snap.get("underlying_contract") or {}
-        tok, exch = und.get("token"), und.get("exchange")
-        if tok:
-            from datetime import datetime, timedelta, timezone
-            ist = timezone(timedelta(hours=5, minutes=30))
-            now = datetime.now(ist)
-            d = sdk.get_candles(exch, tok, "ONE_DAY",
-                                (now - timedelta(days=8)).strftime("%Y-%m-%d %H:%M"),
-                                now.strftime("%Y-%m-%d %H:%M"))
-            cs = d.get("candles") or []
-            if len(cs) >= 2:
-                p = cs[-2]
-                ctx["prev_day"] = {"high": p["high"], "low": p["low"], "close": p["close"]}
-            if cs:
-                t = cs[-1]
-                ctx["today_open"] = t["open"]
-            i5 = sdk.get_candles(exch, tok, "FIVE_MINUTE",
-                                 now.strftime("%Y-%m-%d 09:00"), now.strftime("%Y-%m-%d %H:%M"))
-            ctx["bars"] = [{"high": c["high"], "low": c["low"], "close": c["close"], "volume": c.get("volume")}
-                           for c in (i5.get("candles") or [])]
-            if ctx["bars"]:
-                ctx["day_high"] = max(b["high"] for b in ctx["bars"])
-                ctx["day_low"] = min(b["low"] for b in ctx["bars"])
-    except Exception as e:                                      # pragma: no cover
-        ctx["context_error"] = f"{type(e).__name__}: {e}"
-    return ctx
+from .context import market_context as _context
 
 
 @router.get("/levels")
@@ -76,7 +29,7 @@ def api_levels(symbol: str = "NIFTY"):
             "pivots": classical_pivots(pd.get("high"), pd.get("low"), pd.get("close")),
             "gann": gann_levels(pd.get("high"), pd.get("low")),
             "prev_day": pd, "today_open": c.get("today_open"),
-            "day_high": c.get("day_low"), "day_low": c.get("day_low")}
+            "day_high": c.get("day_high"), "day_low": c.get("day_low")}
 
 
 @router.get("/confluence")

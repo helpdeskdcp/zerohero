@@ -162,3 +162,36 @@ The math core + engine + API + validation are done. These are follow-on slices:
   research, needs a short cache before dashboard polling.
 - OI `oi_change` is only as good as the source: the live chain path provides
   absolute OI; ΔOI is derived by the caller (see `expiry_zero_to_hero.oi_change`).
+
+---
+
+## 8. SLICE 2 — SMART_INDEX_SCALPER (built)
+
+`app/smart_index_scalper/` — the orchestration layer (spec sections 16, 17, 34).
+RESEARCH ONLY. **Does NOT open a paper position** (that is slice 3).
+
+| file | role |
+|---|---|
+| `universe.py` | configurable index list (`SMART_SCALPER_UNIVERSE` env, default NIFTY/BANKNIFTY/FINNIFTY/SENSEX/MIDCPNIFTY); `index_meta` reuses `autoscalp._sym_meta` |
+| `eligibility.py` | the 8 section-16 filters — valid_option_chain, liquidity (ATM OI), reasonable_spread, sufficient_volume, clear_mathematical_levels, clear_oi_structure, acceptable_confidence, acceptable_risk_reward. Each returns (passed, reason); missing data = FAIL, never silent pass |
+| `selection_score.py` | `INDEX_SELECTION_SCORE` (section 17): 25% signal quality / 20% OI confluence / 15% math confluence / 15% liquidity / 10% volume / 10% momentum / 5% RR. Configurable, UNCALIBRATED. `explain_winner()` = why #1 beat #2 |
+| `scanner.py` | `SmartIndexScalper.scan(symbols)` — per index: shared `market_context` (20 s TTL cache) → `MathematicalConfluenceEngine.evaluate()` → `oi_matrix` → eligibility → component scores → rank eligible, pick #1/#2/#3, explain |
+| `api.py` | `GET /api/smart-scalper/{ranking,signal}` — read-only |
+
+Shared: `mathematical_confluence/context.py` (`market_context`) — extracted so
+both engines fetch live prev-day OHLC + 5m bars + chain once, cached.
+
+Verified live (markets closed, ~21:00 IST): `/api/smart-scalper/ranking` → 200,
+`ranked: []`, every index correctly **not_eligible** on `acceptable_confidence`
++ `acceptable_risk_reward` with the failed-filter list shown, `why #1 = "no
+eligible index"`. The scalper declines rather than forcing a pick (section 33).
+
+Tests +6 (`test_smart_index_scalper.py`): configurable universe, all-8 filters
+pass/fail with named reasons, weighted+configurable selection score, full scan
+ranks NIFTY > BANKNIFTY and marks a data-missing SENSEX not-eligible, and a
+static check that the package contains no `open_trade`/`place_order`/`OrderManager`.
+Full suite 412 pass.
+
+Remaining slices: 3 option selection (reuse `option_engine.select_option`) ·
+4 DB tables · 5 backtest/replay (required before any profitability claim) ·
+6 frontend.

@@ -258,6 +258,13 @@ try:
 except Exception as _e:
     print(f"[mathematical_confluence] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Smart Index Scalper (ranks the index universe over the confluence engine; read-only) ----
+try:
+    from .smart_index_scalper import api as _smartscalp_api
+    app.include_router(_smartscalp_api.router)
+except Exception as _e:
+    print(f"[smart_index_scalper] router disabled: {type(_e).__name__}: {_e}")
+
 
 @app.on_event("startup")
 async def _start_scalp_runner():
