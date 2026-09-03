@@ -233,6 +233,51 @@ CREATE TABLE IF NOT EXISTS live_market_snapshots (
     feed_age_sec REAL, chain_json TEXT
 );
 
+-- PHASE 8 — immutable entry-feature snapshot, one row per paper trade, written
+-- ONCE at open from the live decision context. Never reconstructed from later
+-- data. A field with no real value is NULL and its reason is in missing_reasons.
+CREATE TABLE IF NOT EXISTS trade_entry_features (
+    trade_id TEXT PRIMARY KEY,
+    signal_id TEXT,
+    captured_ts TEXT NOT NULL,
+    session_date_ist TEXT,
+    market TEXT, underlying TEXT, expiry TEXT, strike REAL, option_type TEXT,
+    tradingsymbol TEXT, symboltoken TEXT,
+    underlying_ltp REAL, option_ltp REAL, entry_price REAL,
+    vwap REAL, vwap_status TEXT, atr REAL, atr_pct REAL,
+    momentum REAL, state_score REAL, signal_score REAL,
+    probability REAL, confidence TEXT, regime TEXT, signal_type TEXT,
+    support REAL, resistance REAL, support_strength REAL, resistance_strength REAL,
+    mtf_alignment REAL, false_risk TEXT,
+    gex_flip REAL, gex_pin REAL, gex_regime_sign INTEGER, gex_sigma REAL,
+    ema TEXT, sma TEXT, rsi TEXT, macd TEXT, adx TEXT, bollinger TEXT, price_action TEXT,
+    oi REAL, oi_change REAL, pcr REAL, max_pain REAL,
+    oi_status TEXT, pcr_quality TEXT, oi_coverage REAL,
+    iv REAL, delta REAL, gamma REAL, theta REAL, vega REAL, greeks_source TEXT,
+    volume REAL,
+    planned_sl REAL, planned_t1 REAL, planned_t2 REAL, planned_t3 TEXT,
+    planned_rr REAL, planned_ev REAL, trailing_stop REAL, max_hold_sec REAL,
+    data_quality TEXT, data_quality_score REAL, calibration_id TEXT,
+    component_scores TEXT, missing_reasons TEXT, model_version TEXT
+);
+
+-- PHASE 9 — ground-truth outcome, one row per closed paper trade.
+CREATE TABLE IF NOT EXISTS trade_exit_outcomes (
+    trade_id TEXT PRIMARY KEY,
+    signal_id TEXT,
+    closed_ts TEXT NOT NULL,
+    opened_ts TEXT,
+    underlying TEXT, option_type TEXT, strategy TEXT,
+    entry_price REAL, exit_price REAL, exit_reason TEXT,
+    mfe REAL, mae REAL, mae_before_mfe REAL,
+    time_to_mfe_peak_sec REAL, time_to_exit_sec REAL,
+    time_to_t1_sec REAL, time_to_t2_sec REAL, time_to_sl_sec REAL,
+    realized_points REAL, realized_pnl REAL, r_multiple REAL,
+    outcome TEXT,
+    t1_before_sl INTEGER, t2_before_sl INTEGER, sl_before_target INTEGER,
+    reversal_after_entry INTEGER, time_expiry INTEGER
+);
+
 """
 
 # Indexes are created AFTER _migrate() runs, because some of them
@@ -662,6 +707,86 @@ def insert_live_snapshot(row: dict) -> int:
         cur = conn.execute(
             f"INSERT INTO live_market_snapshots ({','.join(_LIVE_SNAP_COLS)}) VALUES ({ph})", vals)
         return int(cur.lastrowid)
+
+
+_ENTRY_FEATURE_COLS = (
+    "trade_id", "signal_id", "captured_ts", "session_date_ist",
+    "market", "underlying", "expiry", "strike", "option_type", "tradingsymbol", "symboltoken",
+    "underlying_ltp", "option_ltp", "entry_price",
+    "vwap", "vwap_status", "atr", "atr_pct",
+    "momentum", "state_score", "signal_score",
+    "probability", "confidence", "regime", "signal_type",
+    "support", "resistance", "support_strength", "resistance_strength",
+    "mtf_alignment", "false_risk",
+    "gex_flip", "gex_pin", "gex_regime_sign", "gex_sigma",
+    "ema", "sma", "rsi", "macd", "adx", "bollinger", "price_action",
+    "oi", "oi_change", "pcr", "max_pain", "oi_status", "pcr_quality", "oi_coverage",
+    "iv", "delta", "gamma", "theta", "vega", "greeks_source", "volume",
+    "planned_sl", "planned_t1", "planned_t2", "planned_t3",
+    "planned_rr", "planned_ev", "trailing_stop", "max_hold_sec",
+    "data_quality", "data_quality_score", "calibration_id",
+    "component_scores", "missing_reasons", "model_version",
+)
+
+_EXIT_OUTCOME_COLS = (
+    "trade_id", "signal_id", "closed_ts", "opened_ts",
+    "underlying", "option_type", "strategy",
+    "entry_price", "exit_price", "exit_reason",
+    "mfe", "mae", "mae_before_mfe",
+    "time_to_mfe_peak_sec", "time_to_exit_sec",
+    "time_to_t1_sec", "time_to_t2_sec", "time_to_sl_sec",
+    "realized_points", "realized_pnl", "r_multiple", "outcome",
+    "t1_before_sl", "t2_before_sl", "sl_before_target",
+    "reversal_after_entry", "time_expiry",
+)
+
+
+def insert_trade_entry_features(row: dict) -> bool:
+    """PHASE 8 — write-once. Returns True if a row was inserted, False if one
+    already existed for this trade_id (immutability guard)."""
+    if not row.get("trade_id"):
+        return False
+    vals = [row.get(c) for c in _ENTRY_FEATURE_COLS]
+    ph = ",".join(["?"] * len(_ENTRY_FEATURE_COLS))
+    with db() as conn:
+        cur = conn.execute(
+            f"INSERT OR IGNORE INTO trade_entry_features ({','.join(_ENTRY_FEATURE_COLS)}) "
+            f"VALUES ({ph})", vals)
+        return bool(cur.rowcount)
+
+
+def get_trade_entry_features(trade_id: str) -> dict | None:
+    with db() as conn:
+        r = conn.execute("SELECT * FROM trade_entry_features WHERE trade_id=?", (trade_id,)).fetchone()
+        return dict(r) if r else None
+
+
+def insert_trade_exit_outcome(row: dict) -> bool:
+    if not row.get("trade_id"):
+        return False
+    vals = [row.get(c) for c in _EXIT_OUTCOME_COLS]
+    ph = ",".join(["?"] * len(_EXIT_OUTCOME_COLS))
+    with db() as conn:
+        cur = conn.execute(
+            f"INSERT OR IGNORE INTO trade_exit_outcomes ({','.join(_EXIT_OUTCOME_COLS)}) "
+            f"VALUES ({ph})", vals)
+        return bool(cur.rowcount)
+
+
+def list_clean_training_rows(limit: int = 5000) -> list[dict]:
+    """PHASE 13 — chronologically-ordered join of entry features + outcome for
+    trades that have BOTH a complete-enough entry snapshot and a resolved
+    outcome. No future info leaks: ordered by entry captured_ts."""
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT f.*, o.outcome AS y_outcome, o.r_multiple AS y_r_multiple, "
+            "o.realized_pnl AS y_pnl, o.exit_reason AS y_exit_reason, "
+            "o.t1_before_sl AS y_t1_before_sl, o.time_to_exit_sec AS y_time_to_exit_sec, "
+            "o.mfe AS y_mfe, o.mae AS y_mae "
+            "FROM trade_entry_features f JOIN trade_exit_outcomes o USING (trade_id) "
+            "WHERE o.outcome IN ('WIN','LOSS','FLAT') "
+            "ORDER BY f.captured_ts ASC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
 
 
 def update_live_snapshot(snap_id: int, fields: dict):

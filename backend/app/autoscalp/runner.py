@@ -768,6 +768,30 @@ class AutoScalpRunner:
             "atr_pct": None, "max_hold_sec": sig.get("max_hold_sec"),
             "symboltoken": str(sig.get("token") or ""),
         })
+
+        # PHASE 8 — immutable entry-feature snapshot, written ONCE, straight from
+        # the live decision context. Guarded: a failure here never blocks the trade.
+        try:
+            from . import trade_features as _tf, data_quality as _dq
+            _u_ltp = self._aggs[sym.upper()].last_price
+            _oiq = _chain_oi_quality(chain)
+            _cap = None
+            try:
+                from ..connectors.angelone import _market_sdk
+                _s = _market_sdk(require_auth=False)
+                _cap = (_s.greek_capabilities() or {}).get(sym.upper(), {}).get("status") if _s else None
+            except Exception:
+                pass
+            _dqv = _dq.snapshot_data_quality({**sig, "index_ltp": _u_ltp}, chain, _oiq,
+                                             None, greeks_capability=_cap)
+            _feat = _tf.build_entry_features(
+                sig=sig, chain=chain, sym=sym, market=_sym_meta(sym)["exchange"],
+                trade_id=row.get("trade_id"), signal_id=signal_id, underlying_ltp=_u_ltp,
+                oi_quality=_oiq, data_quality=_dqv)
+            db.insert_trade_entry_features(_feat)
+        except Exception as e:
+            self.last_error = f"entry_features: {type(e).__name__}: {e}"
+
         _pcr, _max_pain = _chain_pcr_maxpain(chain)
         db.insert_scalp_signal({
             "signal_id": signal_id, "source": "LIVE",
@@ -867,6 +891,15 @@ class AutoScalpRunner:
             "r_multiple": round(_pts / _risk, 3) if _risk > 0 else None,
             "outcome": updated.get("result"), "resolved": 1,
             "holding_sec": _held, "mfe": updated.get("mfe"), "mae": updated.get("mae")})
+
+        # PHASE 9 — ground-truth outcome row (pairs with the PHASE 8 entry snapshot).
+        try:
+            from . import trade_features as _tf
+            ef = db.get_trade_entry_features(updated.get("trade_id") or "")
+            db.insert_trade_exit_outcome(_tf.build_exit_outcome(updated=updated, entry_feat=ef))
+        except Exception as e:
+            self.last_error = f"exit_outcome: {type(e).__name__}: {e}"
+
         asyncio.create_task(self._emit("autoscalp_close", {"trade": updated}))
         self._tg_send("exit:" + str(updated.get("trade_id")), notify.lifecycle(
             updated.get("exit_reason") or "EXIT", updated,

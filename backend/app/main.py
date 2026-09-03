@@ -1133,6 +1133,45 @@ def api_diag():
                         histcap_worker=histcap_worker)
 
 
+@app.get("/api/autoscalp/trade-features")
+def api_trade_features(trade_id: Optional[str] = None, limit: int = Query(50, le=500)):
+    """PHASE 8/9 — the immutable entry snapshot for one trade, or the most
+    recent N (joined with outcome when resolved)."""
+    with db.db() as conn:
+        if trade_id:
+            r = conn.execute("SELECT * FROM trade_entry_features WHERE trade_id=?", (trade_id,)).fetchone()
+            return dict(r) if r else {"status": "NOT_FOUND"}
+        rows = conn.execute(
+            "SELECT f.trade_id, f.captured_ts, f.underlying, f.option_type, f.strike, "
+            "f.entry_price, f.probability, f.confidence, f.greeks_source, f.data_quality_score, "
+            "f.pcr_quality, f.oi_coverage, o.outcome, o.r_multiple, o.exit_reason "
+            "FROM trade_entry_features f LEFT JOIN trade_exit_outcomes o USING (trade_id) "
+            "ORDER BY f.captured_ts DESC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+@app.get("/api/autoscalp/training-status")
+def api_training_status():
+    """PHASE 13/16 — how close the clean labelled dataset is to a size where
+    XGBoost vs the logistic baseline can be compared. Nothing is trained here."""
+    with db.db() as conn:
+        n_entry = conn.execute("SELECT COUNT(*) FROM trade_entry_features").fetchone()[0]
+        n_out = conn.execute("SELECT COUNT(*) FROM trade_exit_outcomes").fetchone()[0]
+        clean = conn.execute(
+            "SELECT COUNT(*) FROM trade_entry_features f JOIN trade_exit_outcomes o "
+            "USING (trade_id) WHERE o.outcome IN ('WIN','LOSS','FLAT')").fetchone()[0]
+        by_sym = {r[0]: r[1] for r in conn.execute(
+            "SELECT f.underlying, COUNT(*) FROM trade_entry_features f JOIN trade_exit_outcomes o "
+            "USING (trade_id) WHERE o.outcome IN ('WIN','LOSS','FLAT') GROUP BY f.underlying").fetchall()}
+    target = 500
+    return {"entry_snapshots": n_entry, "outcome_rows": n_out,
+            "clean_labelled": clean, "by_underlying": by_sym,
+            "target_for_ml_comparison": target,
+            "ready_for_xgboost_eval": clean >= target,
+            "note": "XGBoost training is deferred until clean_labelled >= target "
+                    "with a chronological holdout; the logistic baseline stays primary."}
+
+
 @app.get("/api/market/calendar")
 def api_market_calendar():
     """NSE / MCX / BSE segment status + whether a restart is currently allowed."""
