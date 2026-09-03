@@ -227,13 +227,16 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         s *= float(flt["signal_type_score_mult"].get(st["state"], 1.0))
         if tod_bucket:
             s *= float(flt["tod_score_mult"].get(tod_bucket, 1.0))
+        s_raw = s
         s = max(0.0, min(100.0, s))
         p = _score_to_prob(s, calib, regime=reg["regime"], signal_type=st["state"])
         return out_none(reason, {**ctx, "filtered": filtered, "advisory": True,
                                  "direction": st["direction"],
-                                 "signal_score": round(s, 1), "probability": round(p, 4),
+                                 "signal_score": round(s, 1), "raw_score": round(s_raw, 1),
+                                 "probability": round(p, 4),
                                  "confidence": _confidence(p, st["false_risk"]["verdict"],
                                                            mtf["conflict"]),
+                                 **_calib_meta(calib, regime=reg["regime"], signal_type=st["state"]),
                                  **(extra or {})})
 
     if reg["regime"] in flt["block_regimes"]:
