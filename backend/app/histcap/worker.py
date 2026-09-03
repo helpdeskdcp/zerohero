@@ -19,11 +19,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from .. import instruments, market_calendar
+from .. import db, instruments, market_calendar
 from . import normalize as N
 from .store import HistStore, hist_store
 
 _IST = timezone(timedelta(hours=5, minutes=30))
+
+# Cross-process singleton lease. With `uvicorn --workers N` every worker builds a
+# CaptureWorker; only the lease holder polls the broker (the rest idle-loop and
+# take over within _LEASE_TTL_SEC if the holder dies). Coordination metadata only
+# in app_settings — no trading data is written here.
+_LEASE_KEY = "histcap_lease"
+_LEASE_TTL_SEC = 45          # ~2 missed 20s poll cycles before a stale lease is stealable
 _INTERVAL = {"1m": "ONE_MINUTE", "3m": "THREE_MINUTE", "5m": "FIVE_MINUTE",
              "15m": "FIFTEEN_MINUTE", "30m": "THIRTY_MINUTE", "1h": "ONE_HOUR", "1d": "ONE_DAY"}
 _EXCH_OF = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "FINNIFTY": "NSE",
@@ -66,6 +73,8 @@ class CaptureWorker:
         self.last_run: dict | None = None
         self.last_error: str | None = None
         self.started_at: str | None = None
+        self._owner = f"{os.uname().nodename}:{os.getpid()}"
+        self.is_leader = False
 
     @staticmethod
     def _default_sdk():
@@ -93,12 +102,22 @@ class CaptureWorker:
                 await asyncio.wait_for(self._task, timeout=6)
             except Exception:
                 pass
+        try:
+            db.lease_release(_LEASE_KEY, self._owner)
+        except Exception:
+            pass
+        self.is_leader = False
 
     async def _loop(self):
         last_candle = 0.0
         last_hb = 0.0
         while not self._stop.is_set():
             try:
+                self.is_leader = bool(await asyncio.to_thread(
+                    db.lease_acquire, _LEASE_KEY, self._owner, _LEASE_TTL_SEC))
+                if not self.is_leader:
+                    await self._sleep(15)
+                    continue
                 state = market_calendar.status_all()
                 open_now = any(v == "OPEN" for v in (state.get("segments") or {}).values())
                 if open_now:
@@ -337,6 +356,7 @@ class CaptureWorker:
     def status(self) -> dict:
         return {
             "enabled": self.cfg["enabled"], "running": bool(self._task and not self._task.done()),
+            "is_leader": self.is_leader, "lease_owner": db.lease_owner(_LEASE_KEY),
             "started_at": self.started_at, "last_error": self.last_error,
             "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "tfs",
                                                 "quote_sec", "candle_sec", "option_candles")},
