@@ -222,7 +222,7 @@ def test_error_is_negative_cached(monkeypatch):
     monkeypatch.setattr(cli.requests, "post", post)
     a = c.get_option_greeks("TCS", "25JAN2024")
     b = c.get_option_greeks("TCS", "25JAN2024")
-    assert a["status"] == "NO_DATA" and b["cache"] == "HIT" and len(post.calls) == 1
+    assert a["status"] == "NO_DATA" and b["cache"] in ("HIT", "CAPABILITY") and len(post.calls) == 1
 
 
 def test_expiry_is_passed_through_verbatim(monkeypatch):
@@ -350,3 +350,46 @@ def test_capability_probe_reports_exact_error_when_unauth(monkeypatch):
     g = {r["field"]: r for r in rows}
     assert g["delta"]["status"].startswith("AUTH_FAILED")
     assert g["ltp"]["status"] == "AUTH_FAILED"
+
+
+# ------------------------------------------------------------- PHASE 1 capability cache
+def test_greek_capability_short_circuits_after_no_data(monkeypatch):
+    """After the broker says AB9019 once, the underlying is cached UNAVAILABLE
+    and further calls do NOT hit the network (no fake greeks, explicit status)."""
+    c = _client(monkeypatch)
+    post = _post_returning({"status": False, "errorcode": "AB9019",
+                            "message": "No Data Available", "data": None})
+    monkeypatch.setattr(cli.requests, "post", post)
+
+    r1 = c.get_option_greeks("NATURALGAS", _FUT_EXP)
+    assert r1["status"] == "NO_DATA" and r1["capability"] == "UNAVAILABLE"
+    n_after_first = len(post.calls)
+
+    # second call, cache TTL for the negative result is short (<=5s) but the
+    # capability cache is long -> must short-circuit with NO network call
+    c._greek_cache.clear()                       # force past the 5s negative cache
+    r2 = c.get_option_greeks("NATURALGAS", _FUT_EXP)
+    assert r2["status"] == "NO_DATA" and r2["capability"] == "UNAVAILABLE" and r2["cache"] == "CAPABILITY"
+    assert r2["rows"] == [] and "delta" not in r2      # no fabricated fields
+    assert len(post.calls) == n_after_first            # no extra broker request
+
+    caps = c.greek_capabilities()
+    assert caps["NATURALGAS"]["status"] == "UNAVAILABLE"
+    assert caps["NATURALGAS"]["reason"] == "AB9019"
+
+
+def test_greek_capability_available_on_ok_and_not_downgraded_by_timeout(monkeypatch):
+    c = _client(monkeypatch)
+    monkeypatch.setattr(cli.requests, "post",
+                        _post_returning({"status": True, "data": [_CE, _PE]}))
+    ok = c.get_option_greeks("TCS", _FUT_EXP)
+    assert ok["status"] == "OK" and ok["capability"] == "AVAILABLE"
+
+    # a subsequent transient failure must NOT flip a known-good capability
+    def _boom(*a, **k):
+        raise requests.Timeout("slow")
+    monkeypatch.setattr(cli.requests, "post", _boom)
+    c._greek_cache.clear()
+    t = c.get_option_greeks("TCS", _FUT_EXP)
+    assert t["status"] == "TIMEOUT"
+    assert c.greek_capabilities()["TCS"]["status"] == "AVAILABLE"

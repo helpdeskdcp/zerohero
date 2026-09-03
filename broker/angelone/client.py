@@ -28,6 +28,16 @@ class AngelOneClient:
         self._greek_cache: dict[tuple, tuple] = {}
         self._greek_locks: dict[tuple, threading.Lock] = {}
         self._greek_locks_guard = threading.Lock()
+        # PHASE 1 — capability cache. underlying -> {"status": AVAILABLE|UNAVAILABLE|
+        # UNKNOWN, "reason": str, "checked_at": iso, "retry_after": epoch}. When the
+        # broker says NO_DATA (AB9019 for MCX commodity options) we mark the
+        # underlying UNAVAILABLE and stop hitting the endpoint until retry_after,
+        # instead of one wasted request + one error log every poll cycle.
+        try:
+            self._greek_cap_ttl = max(60.0, float(os.getenv("ANGEL_GREEK_CAP_TTL_SEC", "21600")))
+        except (TypeError, ValueError):
+            self._greek_cap_ttl = 21600.0            # 6h — re-probe roughly once a session
+        self._greek_capability: dict[str, dict] = {}
 
     def authenticate(self):
         if self.jwt and time.time() - self.login_ts < 3600: return True
@@ -272,7 +282,22 @@ class AngelOneClient:
           rows: [normalize_greek_row(...)]  (empty unless status == OK)
         """
         key = (str(underlying or "").upper(), str(expiry or "").upper())
+        und = key[0]
         now = time.time()
+
+        # PHASE 1 — capability short-circuit: broker has already told us this
+        # underlying has no greeks; don't call again until retry_after.
+        cap = self._greek_capability.get(und)
+        if cap and cap.get("status") == "UNAVAILABLE" and now < cap.get("retry_after", 0):
+            # keep the broker-canonical status (NO_DATA) for existing callers;
+            # `capability` is the added, explicit signal. No network call, no rows,
+            # no fabricated fields.
+            return {"status": "NO_DATA", "capability": "UNAVAILABLE",
+                    "source": "ANGELONE_OPTION_GREEK", "underlying": key[0], "expiry": key[1],
+                    "errorcode": cap.get("reason", ""), "message": "greeks unavailable for this instrument (capability-cached)",
+                    "checked_at": cap.get("checked_at"), "retry_after": cap.get("retry_after"),
+                    "rows": [], "cache": "CAPABILITY"}
+
         hit = self._greek_cache.get(key)
         if hit and now < hit[0]:
             return {**hit[1], "cache": "HIT"}
@@ -283,9 +308,41 @@ class AngelOneClient:
             if hit and time.time() < hit[0]:
                 return {**hit[1], "cache": "HIT"}
             res = self._fetch_option_greeks_uncached(*key)
+            self._update_greek_capability(und, res)
+            res["capability"] = (self._greek_capability.get(und) or {}).get("status", "UNKNOWN")
             ttl = self._greek_ttl if res.get("status") == "OK" else min(5.0, self._greek_ttl)
             self._greek_cache[key] = (time.time() + ttl, res)
             return {**res, "cache": "MISS"}
+
+    def _update_greek_capability(self, underlying: str, res: dict) -> None:
+        """Fold one fetch result into the per-underlying capability cache and log
+        ONE structured line on a state transition (never per short-circuited call).
+        Transient failures (TIMEOUT/RATE/AUTH) leave capability UNKNOWN."""
+        st = res.get("status")
+        prev = (self._greek_capability.get(underlying) or {}).get("status", "UNKNOWN")
+        now = time.time()
+        checked = datetime.now(timezone.utc).isoformat()
+        if st == "OK":
+            new = {"status": "AVAILABLE", "reason": "", "checked_at": checked, "retry_after": 0}
+        elif st == "NO_DATA":
+            new = {"status": "UNAVAILABLE", "reason": res.get("errorcode") or "NO_DATA",
+                   "checked_at": checked, "retry_after": now + self._greek_cap_ttl}
+        else:
+            # transient — don't downgrade a known capability on a blip
+            return
+        self._greek_capability[underlying] = new
+        if new["status"] != prev:
+            try:
+                print(f'{{"evt":"greeks_capability","instrument":"{underlying}",'
+                      f'"greeks_status":"{new["status"]}","source":"BROKER",'
+                      f'"reason":"{new["reason"]}","last_checked":"{checked}",'
+                      f'"retry_after":{int(new["retry_after"])}}}', flush=True)
+            except Exception:
+                pass
+
+    def greek_capabilities(self) -> dict:
+        """Read-only snapshot of the per-underlying greeks capability cache."""
+        return {k: dict(v) for k, v in self._greek_capability.items()}
 
     def _auth_headers(self) -> dict:
         """Standard AngelOne authenticated headers. The optionGreek endpoint

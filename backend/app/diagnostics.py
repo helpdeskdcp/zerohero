@@ -200,6 +200,14 @@ def runtime_diag(scalp_runner=None, autoscalp=None, histcap_worker=None) -> dict
     except Exception as e:
         diag["histcap"] = {"error": f"{type(e).__name__}: {e}"}
 
+    # PHASE 1 — broker greeks capability per underlying (AVAILABLE/UNAVAILABLE/UNKNOWN)
+    try:
+        from .connectors.angelone import _market_sdk
+        sdk = _market_sdk(require_auth=False)
+        diag["greeks_capability"] = sdk.greek_capabilities() if sdk else {}
+    except Exception as e:
+        diag["greeks_capability"] = {"error": f"{type(e).__name__}: {e}"}
+
     # top-level health rollup
     diag["ok"] = bool(
         diag["worker_count"]["configured"] == 1

@@ -310,6 +310,13 @@ class CaptureWorker:
         except Exception as e:
             errors.append({"symbol": sym, "stage": "greeks", "status": type(e).__name__, "message": str(e)[:160]})
             return
+        # PHASE 1 — capability short-circuit: the client returned from cache
+        # without a network call because the broker has no greeks for this
+        # instrument. Record it once as capability info, not a per-cycle error,
+        # and do NOT write a raw row (there is no broker response to store).
+        if g.get("cache") == "CAPABILITY" or g.get("capability") == "UNAVAILABLE":
+            counts["greeks_unavailable"] = counts.get("greeks_unavailable", 0) + 1
+            return
         raw_id = self.store.put_raw(conn, endpoint="marketData/v1/optionGreek",
                                     request={"name": sym.upper(), "expirydate": expiry},
                                     http_status=g.get("http_status"), status=g.get("status"),
