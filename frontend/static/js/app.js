@@ -1718,7 +1718,13 @@
     const inp = $("#msFocus");
     if (inp) {
       inp.value = selectedFocusIndex;
-      inp.addEventListener("focus", () => msRenderMenu(inp.value));
+      // opening (focus / click) shows the WHOLE list; typing filters it
+      const openAll = () => { try { inp.select(); } catch (e) {} msRenderMenu(""); };
+      inp.addEventListener("focus", openAll);
+      inp.addEventListener("click", () => {
+        const menu = $("#msFocusMenu");
+        if (menu && menu.hidden) msRenderMenu(inp.value); // reopen after an outside-click close
+      });
       inp.addEventListener("input", () => { msSetFocusMsg(""); msRenderMenu(inp.value); });
       inp.addEventListener("keydown", (e) => {
         const menu = $("#msFocusMenu");
@@ -1726,21 +1732,26 @@
           e.preventDefault();
           if (!menu || menu.hidden) msRenderMenu(inp.value); else msHighlight(1);
         } else if (e.key === "ArrowUp") {
-          e.preventDefault(); msHighlight(-1);
+          e.preventDefault();
+          if (!menu || menu.hidden) msRenderMenu(inp.value); else msHighlight(-1);
         } else if (e.key === "Enter") {
           e.preventDefault();
           const items = msMenuItems();
           const pick = (_msMenuIdx >= 0 && items[_msMenuIdx] && items[_msMenuIdx].dataset)
             ? items[_msMenuIdx].dataset.idx : inp.value;
-          msCommitFocus(pick);
+          msCommitFocus(pick);                 // explicit commit: shows a msg on bad input
         } else if (e.key === "Escape") {
           msCloseMenu(); inp.value = selectedFocusIndex; msSetFocusMsg("");
         }
       });
+      // leaving the field without an explicit pick: silently snap back to the
+      // current valid selection (no scary validation message).
       inp.addEventListener("blur", () => setTimeout(() => {
         const menu = $("#msFocusMenu");
         if (menu && !menu.hidden) return;      // a menu click is handling the commit
-        msCommitFocus(inp.value);
+        const v = (inp.value || "").toUpperCase().trim();
+        if (v && v !== selectedFocusIndex && _msUni.has(v)) { msCommitFocus(v); return; }
+        inp.value = selectedFocusIndex; msSetFocusMsg("");
       }, 150));
     }
     const menu = $("#msFocusMenu");

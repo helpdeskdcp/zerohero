@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -1215,10 +1215,27 @@ def api_env_check():
 # ---------------------------------------------------------------- Frontend (static SPA)
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
 
+_SPA_ASSETS = ("js/app.js", "css/style.css")
+
+
+def _spa_html() -> HTMLResponse:
+    """Serve index.html with the JS/CSS refs cache-busted by their file mtime.
+    Without this a browser that cached an older bundle keeps running stale JS
+    against a freshly-served index.html (the SPA has no build step / hashing)."""
+    html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    for rel in _SPA_ASSETS:
+        p = FRONTEND_DIR / "static" / rel
+        try:
+            v = int(p.stat().st_mtime)
+        except OSError:
+            continue
+        html = html.replace(f"/static/{rel}\"", f"/static/{rel}?v={v}\"")
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+
 
 @app.get("/")
 def index():
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    return _spa_html()
 
 
 @app.get("/{full_path:path}")
@@ -1226,4 +1243,4 @@ def spa_catchall(full_path: str):
     # Let real API/static paths 404 normally; everything else serves the SPA
     if full_path.startswith("api/") or full_path.startswith("static/") or full_path == "ws":
         raise HTTPException(404)
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    return _spa_html()

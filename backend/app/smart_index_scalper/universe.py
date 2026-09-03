@@ -12,7 +12,7 @@ import os
 from ..autoscalp.runner import _sym_meta
 
 DEFAULT_UNIVERSE = [s.strip().upper() for s in os.environ.get(
-    "SMART_SCALPER_UNIVERSE", "NIFTY,BANKNIFTY,FINNIFTY,SENSEX,MIDCPNIFTY").split(",") if s.strip()]
+    "SMART_SCALPER_UNIVERSE", "NIFTY,BANKNIFTY,FINNIFTY,SENSEX,MIDCPNIFTY,BANKEX").split(",") if s.strip()]
 
 # index -> (option exchange for the chain call, is a weekly index)
 _INDEX_MARKET = {
