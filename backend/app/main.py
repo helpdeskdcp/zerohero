@@ -154,9 +154,45 @@ def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
                        "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
                        "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "PE"), "expiry": expiry},
             })
+        # PHASE 2 — merge REAL broker option greeks onto the ATM+/-window legs.
+        # One cached call per (underlying, expiry). Capability-aware: skipped for
+        # instruments the broker has no greeks for (MCX commodities) -> those legs
+        # keep delta/gamma/theta/vega = None with greeks_source = "UNAVAILABLE".
+        # Never fabricates: merge_leg_greeks only fills fields that are None.
+        _merge_broker_greeks(sdk, symbol, expiry, out)
         return out
     except Exception:
         return []
+
+
+def _merge_broker_greeks(sdk, symbol, expiry, chain_rows):
+    from broker.angelone import greeks as _gk
+    und = str(symbol).upper()
+    try:
+        cap = (sdk.greek_capabilities() or {}).get(und, {}).get("status")
+    except Exception:
+        cap = None
+    if cap == "UNAVAILABLE":
+        for row in chain_rows:
+            for side in ("ce", "pe"):
+                row[side].setdefault("greeks_source", "UNAVAILABLE")
+        return
+    try:
+        g = sdk.get_option_greeks(und, expiry)
+    except Exception:
+        return
+    if g.get("status") != "OK" or not g.get("rows"):
+        src = "UNAVAILABLE" if g.get("capability") == "UNAVAILABLE" else "UNKNOWN"
+        for row in chain_rows:
+            for side in ("ce", "pe"):
+                row[side].setdefault("greeks_source", src)
+        return
+    gi = _gk.index_greek_rows(g["rows"])
+    for row in chain_rows:
+        k = row.get("strike")
+        for side, ot in (("ce", "CE"), ("pe", "PE")):
+            merged = _gk.merge_leg_greeks(row[side], _gk.match_greek(gi, k, ot))
+            row[side] = merged
 
 
 def _opt_tradingsymbol(symbol, expiry, strike, opt_type):
