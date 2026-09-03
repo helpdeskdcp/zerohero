@@ -143,23 +143,35 @@ def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
         out = []
         for r in snap.get("chain") or []:
             strike = r.get("strike")
+            # PHASE 2/4 — greeks + OI provenance now flow through the normalized
+            # snapshot (get_option_chain already merged broker greeks and did a
+            # batched OI fetch). Carry them onto the strategy leg verbatim; a
+            # missing value stays None (never 0), tagged by *_source / oi_status.
             out.append({
                 "strike": strike,
                 "ce": {"ltp": r.get("ce_ltp"), "oi": r.get("ce_oi"), "oi_chg": r.get("ce_oi_change"),
                        "vol_delta": r.get("ce_volume"), "token": r.get("ce_token"), "exchange_type": et,
-                       "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
+                       "iv": r.get("ce_iv"), "delta": r.get("ce_delta"), "gamma": r.get("ce_gamma"),
+                       "theta": r.get("ce_theta"), "vega": r.get("ce_vega"),
+                       "greeks_source": r.get("ce_greeks_source"),
+                       "oi_status": r.get("ce_oi_status"), "oi_source": r.get("ce_oi_source"),
+                       "oi_timestamp": r.get("ce_oi_timestamp"),
                        "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "CE"), "expiry": expiry},
                 "pe": {"ltp": r.get("pe_ltp"), "oi": r.get("pe_oi"), "oi_chg": r.get("pe_oi_change"),
                        "vol_delta": r.get("pe_volume"), "token": r.get("pe_token"), "exchange_type": et,
-                       "iv": None, "delta": None, "gamma": None, "theta": None, "vega": None,
+                       "iv": r.get("pe_iv"), "delta": r.get("pe_delta"), "gamma": r.get("pe_gamma"),
+                       "theta": r.get("pe_theta"), "vega": r.get("pe_vega"),
+                       "greeks_source": r.get("pe_greeks_source"),
+                       "oi_status": r.get("pe_oi_status"), "oi_source": r.get("pe_oi_source"),
+                       "oi_timestamp": r.get("pe_oi_timestamp"),
                        "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "PE"), "expiry": expiry},
             })
-        # PHASE 2 — merge REAL broker option greeks onto the ATM+/-window legs.
-        # One cached call per (underlying, expiry). Capability-aware: skipped for
-        # instruments the broker has no greeks for (MCX commodities) -> those legs
-        # keep delta/gamma/theta/vega = None with greeks_source = "UNAVAILABLE".
-        # Never fabricates: merge_leg_greeks only fills fields that are None.
-        _merge_broker_greeks(sdk, symbol, expiry, out)
+        # Fallback: if the snapshot path did not carry greeks (older SDK route,
+        # with_greeks disabled), fill any still-None leg from one cached
+        # get_option_greeks call. Idempotent; capability-aware; no fabrication.
+        if out and any(row["ce"].get("delta") is None and row["ce"].get("greeks_source") in (None, "")
+                       for row in out):
+            _merge_broker_greeks(sdk, symbol, expiry, out)
         return out
     except Exception:
         return []

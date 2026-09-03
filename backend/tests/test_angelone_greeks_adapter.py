@@ -262,10 +262,19 @@ def _quote_stub(exchange, token):
     return {**_LEG_QUOTE, "symboltoken": str(token)}          # option leg
 
 
+def _quotes_batch_stub(tokens_by_exchange, mode="FULL"):
+    out = {}
+    for _ex, toks in (tokens_by_exchange or {}).items():
+        for t in toks:
+            out[str(t)] = {**_LEG_QUOTE, "symboltoken": str(t)}
+    return out
+
+
 def _chain_client(monkeypatch, greek_payload):
     c = _client(monkeypatch)
     c._master = list(_MASTER)
     monkeypatch.setattr(c, "get_quote", _quote_stub)
+    monkeypatch.setattr(c, "get_quotes_batch", _quotes_batch_stub)
     if isinstance(greek_payload, Exception):
         def _boom(*a, **k):
             raise greek_payload
@@ -393,3 +402,45 @@ def test_greek_capability_available_on_ok_and_not_downgraded_by_timeout(monkeypa
     t = c.get_option_greeks("TCS", _FUT_EXP)
     assert t["status"] == "TIMEOUT"
     assert c.greek_capabilities()["TCS"]["status"] == "AVAILABLE"
+
+
+# ------------------------------------------------------------- PHASE 4 batched OI
+def test_option_chain_batches_quotes_and_tags_oi_provenance(monkeypatch):
+    c = _chain_client(monkeypatch, {"status": True, "data": []})
+    batch_calls = []
+    real = _quotes_batch_stub
+
+    def _spy(tbe, mode="FULL"):
+        batch_calls.append(tbe)
+        return real(tbe, mode)
+    monkeypatch.setattr(c, "get_quotes_batch", _spy)
+
+    chain = c.get_option_chain("NIFTY", "AUTO", window=2)
+    # ONE batched quote call for the whole chain, not one-per-leg
+    assert len(batch_calls) == 1
+    assert chain["oi_coverage"]["ratio"] == 1.0
+    ce = next(r for r in chain["rows"] if r["strike"] == _ATM)["ce"]
+    assert ce["oi"] == 120000 and ce["oi_status"] == "AVAILABLE"
+    assert ce["oi_source"] == "ANGELONE_QUOTE_FULL" and ce["oi_timestamp"]
+
+
+def test_option_chain_unfetched_leg_keeps_oi_null_not_zero(monkeypatch):
+    c = _chain_client(monkeypatch, {"status": True, "data": []})
+
+    def _partial(tbe, mode="FULL"):
+        out = {}
+        for _ex, toks in tbe.items():
+            for i, t in enumerate(toks):
+                if i == 0:
+                    out[str(t)] = {"status": "DATA_UNAVAILABLE", "reason": "unfetched"}
+                else:
+                    out[str(t)] = {**_LEG_QUOTE, "symboltoken": str(t)}
+        return out
+    monkeypatch.setattr(c, "get_quotes_batch", _partial)
+
+    chain = c.get_option_chain("NIFTY", "AUTO", window=2)
+    legs = [l for r in chain["rows"] for l in (r["ce"], r["pe"]) if l]
+    missing = [l for l in legs if l["oi"] is None]
+    assert missing and all(l["oi_status"] == "UNAVAILABLE" for l in missing)
+    assert all(l["oi"] is None for l in missing)      # never 0
+    assert chain["oi_coverage"]["ratio"] < 1.0

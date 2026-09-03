@@ -146,12 +146,24 @@ def _option_snapshot(sdk, market, symbol, spot, expiry, option_type, window, *, 
                                  "ce_oi": ce_leg.get("oi"), "pe_oi": pe_leg.get("oi"),
                                  "ce_oi_change": ce_leg.get("oi_change"), "pe_oi_change": pe_leg.get("oi_change"),
                                  "ce_volume": ce_leg.get("volume"), "pe_volume": pe_leg.get("volume"),
-                                 "ce_token": ce_leg.get("token"), "pe_token": pe_leg.get("token")})
+                                 "ce_token": ce_leg.get("token"), "pe_token": pe_leg.get("token"),
+                                 # PHASE 4 — per-leg OI provenance
+                                 "ce_oi_status": ce_leg.get("oi_status"), "pe_oi_status": pe_leg.get("oi_status"),
+                                 "ce_oi_source": ce_leg.get("oi_source"), "pe_oi_source": pe_leg.get("oi_source"),
+                                 "ce_oi_timestamp": ce_leg.get("oi_timestamp"), "pe_oi_timestamp": pe_leg.get("oi_timestamp"),
+                                 # PHASE 2 — per-leg greeks provenance (broker / unavailable)
+                                 "ce_greeks_source": ce_leg.get("greeks_source"), "pe_greeks_source": pe_leg.get("greeks_source"),
+                                 "ce_delta": ce_leg.get("delta"), "pe_delta": pe_leg.get("delta"),
+                                 "ce_gamma": ce_leg.get("gamma"), "pe_gamma": pe_leg.get("gamma"),
+                                 "ce_theta": ce_leg.get("theta"), "pe_theta": pe_leg.get("theta"),
+                                 "ce_vega": ce_leg.get("vega"), "pe_vega": pe_leg.get("vega"),
+                                 "ce_iv": ce_leg.get("iv"), "pe_iv": pe_leg.get("iv")})
     chain_status = "OK" if chain.get("status") == "OK" else "DATA_UNAVAILABLE"
     return {"status": chain_status, "data_status": chain_status, "market": market, "symbol": symbol,
             "instrument": "OPTION", "underlying": symbol, "underlying_contract": underlying_contract,
             "spot": spot, "expiry": selected.get("expiry"), "atm": selected.get("strike"),
             "available_expiries": selected.get("available_expiries") or [],
             "option_type": str(option_type or "BOTH").upper(), "contracts": {"CE": ce, "PE": pe},
-            "chain": normalized_chain, "timestamp": chain.get("timestamp") or datetime.now(timezone.utc).isoformat(),
+            "chain": normalized_chain, "oi_coverage": chain.get("oi_coverage"),
+            "timestamp": chain.get("timestamp") or datetime.now(timezone.utc).isoformat(),
             "source": "ANGELONE_SDK"}

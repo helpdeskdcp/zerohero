@@ -238,30 +238,55 @@ class AngelOneClient:
                       "rows_returned": len(g.get("rows") or []), "indexed": len(gidx),
                       "matched": 0, "requested": 0}
 
-        out_rows = []
+        # PHASE 4 — resolve every (strike, side) contract first, then fetch ALL
+        # quotes in one batched call (<=50/POST). The old per-leg get_quote()
+        # loop fired ~60 sequential requests per chain build; AngelOne
+        # rate-limited a large fraction -> ~30-50% of legs returned empty
+        # (missing OI). Batch = ~2 POSTs, near-full coverage. Nothing is faked:
+        # a token AngelOne does not return still yields oi=None + a status.
+        want = []
         for strike in strikes:
-            legs = {}
             for typ in ("CE", "PE"):
                 c = next((r for r in rows if str(r.get("symbol", "")).upper().endswith(typ)
-                          and abs(float(r.get("strike"))/100 - strike) < 1e-6), None)
-                if not c:
-                    continue
-                q = self.get_quote(uni["quote_ex"], c.get("token"))
-                leg = self._quote_leg(c.get("token"), q)
-                leg["strike"] = strike
-                leg["option_type"] = typ
-                leg["expiry"] = selected
-                greeks["requested"] += 1
-                grow = match_greek(gidx, strike, typ) if gidx else None
-                if grow is not None:
-                    greeks["matched"] += 1
-                legs[typ] = merge_leg_greeks(leg, grow)
-            out_rows.append({"strike": strike, "ce": legs.get("CE"), "pe": legs.get("PE")})
+                          and abs(float(r.get("strike")) / 100 - strike) < 1e-6), None)
+                if c:
+                    want.append((strike, typ, c))
+        toks = [str(c.get("token")) for _, _, c in want if c.get("token")]
+        qmap = self.get_quotes_batch({uni["quote_ex"]: toks}) if toks else {}
+
+        by_strike: dict = {}
+        oi_have = oi_total = 0
+        for strike, typ, c in want:
+            tok = str(c.get("token"))
+            q = qmap.get(tok) or {"status": "DATA_UNAVAILABLE", "reason": "no token"}
+            leg = self._quote_leg(tok, q)
+            leg["strike"] = strike
+            leg["option_type"] = typ
+            leg["expiry"] = selected
+            ok = q.get("status") == "OK"
+            has_oi = leg.get("oi") is not None
+            leg["oi_status"] = "AVAILABLE" if has_oi else ("MISSING" if ok else "UNAVAILABLE")
+            leg["oi_source"] = "ANGELONE_QUOTE_FULL" if has_oi else None
+            leg["oi_timestamp"] = leg.get("timestamp") or q.get("server_timestamp")
+            if not ok and not leg.get("oi_reason"):
+                leg["oi_reason"] = q.get("reason") or q.get("status")
+            oi_total += 1
+            oi_have += 1 if has_oi else 0
+            greeks["requested"] += 1
+            grow = match_greek(gidx, strike, typ) if gidx else None
+            if grow is not None:
+                greeks["matched"] += 1
+            by_strike.setdefault(strike, {})[typ] = merge_leg_greeks(leg, grow)
+
+        out_rows = [{"strike": s, "ce": by_strike.get(s, {}).get("CE"),
+                     "pe": by_strike.get(s, {}).get("PE")} for s in strikes]
 
         return {"status": "OK" if out_rows else "DATA_UNAVAILABLE",
                 "symbol": str(underlying).upper(), "underlying": str(underlying).upper(),
                 "spot": spot, "expiry": selected, "exchange": uni["exchange"],
                 "rows": out_rows, "greeks": greeks,
+                "oi_coverage": {"legs": oi_total, "with_oi": oi_have,
+                                "ratio": round(oi_have / oi_total, 3) if oi_total else None},
                 "timestamp": datetime.now(timezone.utc).isoformat()}
 
     # ------------------------------------------------------------- option greeks
