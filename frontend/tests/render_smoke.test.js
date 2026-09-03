@@ -217,6 +217,10 @@ try {
   assert.ok(/NIFTY/.test(msMap), "math-scalper market-map table should render");
   const msWhy = elFor("#msWhy").innerHTML;
   assert.ok(/&lt;img src=x/.test(msWhy) && !/<img\s/i.test(msWhy), "math-scalper reason codes must be entity-escaped: " + msWhy.slice(0, 160));
+  const msFocus = elFor("#msFocus").value;
+  assert.ok(msFocus && msFocus.length > 0, "math-scalper Focus field must be pre-filled with the on-screen index, got: " + JSON.stringify(msFocus));
+  const msDl = (elFor("#msUniverseList").innerHTML.match(/value="/g) || []).length;
+  assert.ok(msDl >= 5, "math-scalper Focus datalist must carry the fallback universe (>=5), got: " + msDl);
 
   console.log("render smoke: 10 view loaders + feed renderer OK against real payloads, no runtime errors, output escaped");
   process.exit(0);

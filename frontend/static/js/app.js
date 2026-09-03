@@ -1341,6 +1341,16 @@
     : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + "L"
     : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n));
   let MS_PROFILES = null, _msReplayBusy = false, _msBusy = false, _msRankBusy = false;
+  // Focus-field autocomplete: seed from a static list so the dropdown works even
+  // before /api/mathematics/market-map returns (it only lists indices that have
+  // a live chain right now — often 3 of 5), then merge in whatever the APIs give.
+  const MS_FALLBACK_UNIVERSE = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "BANKEX"];
+  const _msUni = new Set(MS_FALLBACK_UNIVERSE);
+  function msSetUniverse(list) {
+    (list || []).forEach(s => { if (s) _msUni.add(String(s).toUpperCase()); });
+    const dl = $("#msUniverseList");
+    if (dl) dl.innerHTML = [..._msUni].map(s => `<option value="${esc(s)}"></option>`).join("");
+  }
 
   // The ranking scan does a live broker fetch per index — fast when the feed is
   // warm, but ~20s cold (markets closed). Load it on its own so the rest of the
@@ -1519,6 +1529,7 @@
     if (_msBusy) return;
     _msBusy = true;
     const prof = ($("#msProfile") && $("#msProfile").value) || "BALANCED";
+    msSetUniverse();   // seed the Focus dropdown immediately (before any await)
     try {
       let profiles, map, journal;
       try {
@@ -1536,8 +1547,7 @@
       $("#msClock").textContent = "updated " + timeStr(new Date().toISOString());
 
       const mm = (map && map.market_map) || [];
-      const dl = $("#msUniverseList");
-      if (dl) dl.innerHTML = mm.map(r => `<option value="${esc(r.instrument)}"></option>`).join("");
+      msSetUniverse(mm.map(r => r.instrument));
 
       $("#msMapTable tbody").innerHTML = mm.map(r => `<tr>
         <td><b>${text(r.instrument)}</b></td><td>${fmt(r.spot, 1)}</td><td>${fmt(r.pivot, 1)}</td>
@@ -1548,8 +1558,12 @@
         || `<tr><td colspan="11" class="hint">—</td></tr>`;
       if (journal) renderMsJournal(journal);
 
-      let focus = (($("#msFocus") && $("#msFocus").value) || "").toUpperCase().trim();
-      if (!focus) focus = (mm[0] && mm[0].instrument) || "NIFTY";
+      const fEl = $("#msFocus");
+      let focus = ((fEl && fEl.value) || "").toUpperCase().trim();
+      if (!focus) {
+        focus = (mm[0] && mm[0].instrument) || "NIFTY";
+        if (fEl) fEl.value = focus;   // show which index is on screen; keep it editable
+      }
 
       let sig = null, oi = null, lv = null;
       try {
@@ -1567,6 +1581,7 @@
       // ranking scan runs on its own (slow when the feed is cold); enrich the
       // Best-Opportunity card with the option leg if a primary comes back.
       loadMsRanking(prof).then(ranking => {
+        if (ranking && ranking.universe) msSetUniverse(ranking.universe);
         const primary = (ranking && ranking.selection && ranking.selection.primary) || null;
         if (primary && primary.index === focus) renderMsBest(focus, sig, primary);
       });
@@ -1574,9 +1589,14 @@
   }
 
   (function bindMathScalp() {
-    const p = $("#msProfile"); if (p) p.addEventListener("change", loadMathScalp);
-    const f = $("#msFocus"); if (f) f.addEventListener("change", loadMathScalp);
-    const rb = $("#msRefresh"); if (rb) rb.addEventListener("click", loadMathScalp);
+    // user-initiated reloads bypass the anti-overlap poll guard
+    const kick = () => { _msBusy = false; loadMathScalp(); };
+    const p = $("#msProfile"); if (p) p.addEventListener("change", kick);
+    const f = $("#msFocus"); if (f) { f.addEventListener("change", kick); f.addEventListener("input", () => {
+      const v = (f.value || "").toUpperCase();
+      if (_msUni.has(v)) kick();   // fires when a datalist option is picked
+    }); }
+    const rb = $("#msRefresh"); if (rb) rb.addEventListener("click", kick);
     const rp = $("#msReplayBtn"); if (rp) rp.addEventListener("click", runMsReplay);
   })();
 

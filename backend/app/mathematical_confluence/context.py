@@ -17,9 +17,13 @@ from datetime import datetime, timedelta, timezone
 IST = timezone(timedelta(hours=5, minutes=30))
 _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
 
-# tiny TTL cache so a ranking scan over 5 indices doesn't hammer the broker
+# tiny TTL cache so a ranking scan over 5 indices doesn't hammer the broker.
+# The cold scan makes ~3 broker calls x 5 symbols (~21s); a keep-warm background
+# scan can only bridge the gap if the TTL outlasts one scan + its poll interval,
+# hence the 45s default (research/analysis surface — NOT the execution path).
+import os as _os
 _CACHE: dict[str, tuple[float, dict]] = {}
-_TTL_SEC = 20.0
+_TTL_SEC = max(5.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "45")))
 
 
 def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> dict:
