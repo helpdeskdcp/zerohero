@@ -77,7 +77,7 @@ def _unavailable(market, symbol, reason):
 def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH", window=5, instrument=None):
     """Resolve only real master contracts and normalize quote data for the UI."""
     market, symbol = str(market or "NSE").upper(), str(symbol or "").upper()
-    if market not in ("NSE", "MCX") or not symbol:
+    if market not in ("NSE", "BSE", "MCX") or not symbol:   # BSE = SENSEX/BANKEX (options on BFO)
         return _unavailable(market, symbol, "market and symbol are required")
     if market == "MCX":
         contract = sdk.resolve_future_contract(
@@ -109,12 +109,15 @@ def selection_snapshot(sdk, market, symbol, *, expiry="AUTO", option_type="BOTH"
         return _unavailable(market, symbol, "underlying not found in instrument master")
     spot_quote = sdk.get_quote(underlying["exchange"], underlying["token"])
     spot = _quote_fields(spot_quote).get("ltp")
-    is_index = underlying.get("exchange") == "NSE" and str(underlying.get("symbol") or "").upper() == symbol
+    # SENSEX / BANKEX resolve on BSE with options on BFO — treat as an index too.
+    is_index = (underlying.get("exchange") in ("NSE", "BSE")
+                and str(underlying.get("symbol") or "").upper() == symbol)
     # An NSE equity with listed NFO options is scalped the same way an index is
     # (the SDK's resolve_option_contract / get_option_chain are already
     # OPTSTK-aware via _option_universe). Only fall back to the bare SPOT view
     # for an explicit instrument="SPOT" request or a cash-only name.
-    has_fno = is_index or bool(sdk.search_instruments(symbol=symbol, exchange="NFO"))
+    has_fno = (is_index or bool(sdk.search_instruments(symbol=symbol, exchange="NFO"))
+               or bool(sdk.search_instruments(symbol=symbol, exchange="BFO")))
     if str(instrument or "").upper() == "SPOT" or not has_fno:
         return {"status": "OK" if spot_quote.get("status") == "OK" else "DATA_UNAVAILABLE",
                 "data_status": "OK" if spot_quote.get("status") == "OK" else "DATA_UNAVAILABLE",

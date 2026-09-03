@@ -113,6 +113,12 @@ class AngelOneClient:
             return {"exchange": "MCX", "types": ("OPTFUT",), "quote_ex": "MCX", "spot": spot,
                     "fut_expiry": fut.get("expiry") if fut.get("status") == "OK" else None}
         idx = self.resolve_index(u)
+        if idx.get("status") == "OK" and idx.get("exchange") == "BSE":
+            # SENSEX / BANKEX — options on BFO, spot from the BSE index quote.
+            q = self.get_quote("BSE", idx.get("token")) or {}
+            spot = (q or {}).get("ltp") or (q or {}).get("lastTradedPrice")
+            return {"exchange": "BFO", "types": ("OPTIDX",), "quote_ex": "BFO",
+                    "spot": spot, "fut_expiry": None}
         if idx.get("status") == "OK":
             q = self.get_quote("NSE", idx.get("token")) or {}
         else:
@@ -146,9 +152,19 @@ class AngelOneClient:
         if not chosen: return {"status":"CONTRACT_INVALID", "reason":"strike unavailable or spot missing"}
         return {"status":"OK", "exchange":uni["exchange"], "symbol":chosen.get("symbol"), "token":str(chosen.get("token")), "underlying":u, "expiry":selected, "strike":st(chosen), "option_type":typ, "lot_size":chosen.get("lotsize"), "expiry_selection_mode":mode, "available_expiries":exps}
 
+    # BSE index tokens (SENSEX / BANKEX options live on BFO, spot quotes on BSE).
+    _BSE_INDEX = {"SENSEX": "99919000", "BANKEX": "99919012"}
+
     def resolve_index(self, symbol):
-        rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE") if r.get("instrumenttype") == "AMXIDX"]
-        return {"status":"OK", "symbol":str(symbol).upper(), "token":str(rows[0].get("token")), "exchange":"NSE", "underlying":str(symbol).upper()} if rows else {"status":"INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
+        u = str(symbol).upper()
+        rows = [r for r in self.search_instruments(symbol=u, exchange="NSE") if r.get("instrumenttype") == "AMXIDX"]
+        if rows:
+            return {"status": "OK", "symbol": u, "token": str(rows[0].get("token")),
+                    "exchange": "NSE", "underlying": u}
+        if u in self._BSE_INDEX:
+            return {"status": "OK", "symbol": u, "token": self._BSE_INDEX[u],
+                    "exchange": "BSE", "underlying": u}
+        return {"status": "INSTRUMENT_MASTER_CONTRACT_NOT_FOUND"}
 
     def resolve_equity(self, symbol):
         rows = [r for r in self.search_instruments(symbol=str(symbol).upper(), exchange="NSE")

@@ -34,6 +34,7 @@ _LEASE_TTL_SEC = 45          # ~2 missed 20s poll cycles before a stale lease is
 _INTERVAL = {"1m": "ONE_MINUTE", "3m": "THREE_MINUTE", "5m": "FIVE_MINUTE",
              "15m": "FIFTEEN_MINUTE", "30m": "THIRTY_MINUTE", "1h": "ONE_HOUR", "1d": "ONE_DAY"}
 _EXCH_OF = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "FINNIFTY": "NSE",
+            "SENSEX": "BSE", "BANKEX": "BSE",          # options on BFO, spot on BSE
             "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "CRUDEOILM": "MCX", "GOLD": "MCX", "SILVER": "MCX"}
 
 
