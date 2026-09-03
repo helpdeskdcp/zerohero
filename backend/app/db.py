@@ -298,6 +298,13 @@ _MIGRATIONS = {
         "gex_pin": "REAL",          # gamma-weighted OI magnet strike
         "gex_regime_sign": "INTEGER",  # -1 | 0 | 1
         "gex_sigma": "REAL",        # flat IV used for the GEX gamma
+        # PHASE 3/4/5/7 — data-quality provenance
+        "oi_coverage": "REAL",          # fraction of chain legs that carried real OI (0..1)
+        "pcr_quality": "TEXT",          # GOOD | PARTIAL | INSUFFICIENT_OI | NO_CHAIN
+        "greeks_source": "TEXT",        # BROKER | UNAVAILABLE | PARTIAL | NONE
+        "data_quality": "TEXT",         # JSON: {group: AVAILABLE|MISSING|STALE|UNSUPPORTED|INVALID}
+        "data_quality_score": "REAL",   # 0..1 rollup of the groups above
+        "no_trade_reason_class": "TEXT",  # DATA_UNAVAILABLE|MARKET_NEUTRAL|NO_SIGNAL|CONFLICTING_SIGNAL|FILTER|GATE|OK
     },
 }
 
@@ -643,6 +650,8 @@ _LIVE_SNAP_COLS = (
     "resistance", "support_strength", "resistance_strength", "signal_type",
     "direction", "signal_score", "probability", "confidence", "decision",
     "reason", "ev", "rr", "feed_age_sec", "chain_json",
+    "oi_coverage", "pcr_quality", "greeks_source", "data_quality",
+    "data_quality_score", "no_trade_reason_class",
 )
 
 

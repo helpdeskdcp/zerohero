@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import traceback
 from datetime import date, datetime, timedelta, timezone
@@ -283,39 +284,67 @@ def _chain_is_expiry_day(chain):
     return d is not None and d == _ist_now().date()
 
 
-def _chain_pcr_maxpain(chain):
-    """Read-only OI context from the canonical nested chain
-    ``[{strike, ce:{oi,..}, pe:{oi,..}}]``: put/call OI ratio and the classic
-    max-pain strike. NOT consumed by any gate — persisted only so a later audit
-    of ``live_market_snapshots`` has the OI picture without re-parsing the blob.
-    Returns ``(pcr, max_pain)`` with ``None`` where the chain is too thin
-    (< 3 strikes) or carries no OI."""
-    def _f(v):
-        try:
-            return float(v)
-        except (TypeError, ValueError):
-            return 0.0
+_PCR_MIN_COVERAGE = float(os.environ.get("CHANAKYA_PCR_MIN_COVERAGE", "0.6"))
+_PCR_GOOD_COVERAGE = float(os.environ.get("CHANAKYA_PCR_GOOD_COVERAGE", "0.8"))
 
-    rows = []
-    for r in chain or []:
+
+def _chain_oi_quality(chain):
+    """PHASE 5 — PCR / max-pain WITH an explicit reliability verdict tied to how
+    much of the chain actually carried real OI. Never manufactures values:
+    below `_PCR_MIN_COVERAGE` the metrics are None and quality is INSUFFICIENT_OI.
+
+    Returns a dict: {chain_rows, rows_with_oi, coverage_ratio, pcr, max_pain,
+    quality_status}. quality_status in GOOD | PARTIAL | INSUFFICIENT_OI | NO_CHAIN.
+    """
+    def _num(v):
         try:
-            k = float(r.get("strike"))
+            f = float(v)
+            return f if f == f else None
         except (TypeError, ValueError):
+            return None
+
+    rows, legs, legs_with_oi = [], 0, 0
+    for r in chain or []:
+        k = _num(r.get("strike"))
+        if k is None:
             continue
-        rows.append((k, _f((r.get("ce") or {}).get("oi")), _f((r.get("pe") or {}).get("oi"))))
+        ce_oi = _num((r.get("ce") or {}).get("oi"))
+        pe_oi = _num((r.get("pe") or {}).get("oi"))
+        legs += 2
+        legs_with_oi += (ce_oi is not None) + (pe_oi is not None)
+        rows.append((k, ce_oi or 0.0, pe_oi or 0.0, ce_oi is not None or pe_oi is not None))
+    cov = round(legs_with_oi / legs, 3) if legs else 0.0
+    n_oi_strikes = sum(1 for *_x, has in rows if has)
+
+    out = {"chain_rows": len(rows), "rows_with_oi": n_oi_strikes,
+           "coverage_ratio": cov, "pcr": None, "max_pain": None,
+           "quality_status": "NO_CHAIN"}
     if len(rows) < 3:
-        return None, None
-    tot_ce = sum(ce for _, ce, _ in rows)
-    tot_pe = sum(pe for _, _, pe in rows)
+        return out
+    if cov < _PCR_MIN_COVERAGE or n_oi_strikes < 3:
+        out["quality_status"] = "INSUFFICIENT_OI"
+        return out
+
+    tot_ce = sum(ce for _, ce, _, _ in rows)
+    tot_pe = sum(pe for _, _, pe, _ in rows)
     if tot_ce <= 0 and tot_pe <= 0:
-        return None, None
-    pcr = round(tot_pe / tot_ce, 3) if tot_ce > 0 else None
-    best_val, max_pain = float("inf"), None
-    for k, _, _ in rows:
-        pain = sum(max(0.0, k - ki) * ce + max(0.0, ki - k) * pe for ki, ce, pe in rows)
-        if pain < best_val:
-            best_val, max_pain = pain, k
-    return pcr, max_pain
+        out["quality_status"] = "INSUFFICIENT_OI"
+        return out
+    out["pcr"] = round(tot_pe / tot_ce, 3) if tot_ce > 0 else None
+    best = float("inf")
+    for k, _, _, _ in rows:
+        pain = sum(max(0.0, k - ki) * ce + max(0.0, ki - k) * pe for ki, ce, pe, _ in rows)
+        if pain < best:
+            best, out["max_pain"] = pain, k
+    out["quality_status"] = "GOOD" if cov >= _PCR_GOOD_COVERAGE else "PARTIAL"
+    return out
+
+
+def _chain_pcr_maxpain(chain):
+    """Back-compat tuple wrapper over _chain_oi_quality(). Returns
+    (pcr, max_pain) — None where OI coverage is insufficient."""
+    q = _chain_oi_quality(chain)
+    return q["pcr"], q["max_pain"]
 
 
 class AutoScalpRunner:
@@ -847,7 +876,17 @@ class AutoScalpRunner:
     # ---------------- persistence + calibration ----------------
     def _persist_snapshot(self, sym, agg, atm, chain, sig, feed_age):
         try:
-            pcr, max_pain = _chain_pcr_maxpain(chain)
+            from . import data_quality as _dq
+            oiq = _chain_oi_quality(chain)
+            cap = None
+            try:
+                from ..connectors.angelone import _market_sdk
+                _sdk = _market_sdk(require_auth=False)
+                cap = (_sdk.greek_capabilities() or {}).get(sym.upper(), {}).get("status") if _sdk else None
+            except Exception:
+                pass
+            dq = _dq.snapshot_data_quality({**sig, "index_ltp": agg.last_price}, chain, oiq,
+                                           feed_age, greeks_capability=cap)
             return db.insert_live_snapshot({
                 "ts": _now_iso(), "session_date": _now_iso()[:10], "symbol": sym.upper(),
                 "source": "LIVE", "provenance": json.dumps({"feed": "angel_ws", "owner": self.owner}),
@@ -857,7 +896,7 @@ class AutoScalpRunner:
                 "momentum": sig.get("momentum"), "state_score": sig.get("state_score"),
                 "gex_flip": sig.get("gex_flip"), "gex_pin": sig.get("gex_pin"),
                 "gex_regime_sign": sig.get("gex_regime_sign"), "gex_sigma": sig.get("gex_sigma"),
-                "pcr": pcr, "max_pain": max_pain,
+                "pcr": oiq["pcr"], "max_pain": oiq["max_pain"],
                 "regime": sig.get("regime"), "mtf_alignment": sig.get("mtf_alignment"),
                 "support": sig.get("support"), "resistance": sig.get("resistance"),
                 "support_strength": sig.get("support_strength"),
@@ -868,6 +907,13 @@ class AutoScalpRunner:
                 "reason": sig.get("reason"), "ev": sig.get("ev"), "rr": sig.get("rr"),
                 "feed_age_sec": feed_age,
                 "chain_json": json.dumps(chain, default=str)[:20000],
+                # PHASE 3/4/5/7 provenance
+                "oi_coverage": oiq["coverage_ratio"],
+                "pcr_quality": oiq["quality_status"],
+                "greeks_source": dq["greeks_source"],
+                "data_quality": _dq.dumps(dq["groups"]),
+                "data_quality_score": dq["score"],
+                "no_trade_reason_class": _dq.classify_no_trade_reason(sig),
             })
         except Exception as e:
             self.last_error = f"persist: {type(e).__name__}: {e}"
