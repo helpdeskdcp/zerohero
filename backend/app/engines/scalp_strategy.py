@@ -86,6 +86,62 @@ def _confidence(prob, false_verdict, mtf_conflict):
     return "LOW"
 
 
+def _calib_meta(calib, *, regime, signal_type):
+    """PHASE 10 — which calibration curve backed this probability, and its n."""
+    if not isinstance(calib, dict):
+        return {"calibration_status": "prior", "prob_source": "prior",
+                "calibration_samples": 0, "calibration_version": None}
+    curves = calib.get("curves") or {}
+    for key in (f"{regime}|{signal_type}", f"*|{signal_type}"):
+        c = curves.get(key)
+        if c:
+            return {"calibration_status": "fitted", "prob_source": f"curve:{key}",
+                    "calibration_samples": int(c.get("n") or 0),
+                    "calibration_version": calib.get("version")}
+    g = calib.get("global")
+    if g and not (g.get("k", 0.0) == 0.0 and g.get("b", 0.0) == 0.0):
+        return {"calibration_status": "fitted", "prob_source": "curve:global",
+                "calibration_samples": int(g.get("n") or 0),
+                "calibration_version": calib.get("version")}
+    return {"calibration_status": "prior", "prob_source": "prior",
+            "calibration_samples": int(calib.get("n_samples") or 0),
+            "calibration_version": calib.get("version")}
+
+
+# confidence downgrade ladder used by the runner once data-quality is known
+_CONF_ORDER = ("LOW", "MEDIUM", "HIGH")
+
+
+def effective_confidence(model_confidence, *, data_quality_score, calibration_status,
+                         calibration_samples, min_samples_for_fitted=40):
+    """PHASE 10 — the confidence a consumer should act on. Can only LOWER the
+    model's label, never raise it. Thin data, a non-fitted calibration, or a
+    small sample all cap it.
+    """
+    mc = str(model_confidence or "LOW").upper()
+    if mc not in _CONF_ORDER:
+        mc = "LOW"
+    idx = _CONF_ORDER.index(mc)
+    caps = []
+    dq = data_quality_score if data_quality_score is not None else 1.0
+    if dq < 0.6:
+        caps.append(0)                       # -> LOW
+    elif dq < 0.8:
+        caps.append(1)                       # -> at most MEDIUM
+    if calibration_status != "fitted" or (calibration_samples or 0) < min_samples_for_fitted:
+        caps.append(1)                       # uncalibrated / thin -> at most MEDIUM
+    if caps:
+        idx = min(idx, min(caps))
+    reason = []
+    if dq < 0.8:
+        reason.append(f"data_quality {round(dq, 2)}")
+    if calibration_status != "fitted":
+        reason.append("calibration=prior")
+    elif (calibration_samples or 0) < min_samples_for_fitted:
+        reason.append(f"calib n={calibration_samples}")
+    return _CONF_ORDER[idx], (", ".join(reason) or "ok")
+
+
 def _plan_from_leg(sel, direction, cfg):
     """Entry / SL / T1 / T2 / trail from the selected option leg's own S/R+ATR."""
     entry = _num(sel.get("ltp")) or 0.0
@@ -263,6 +319,10 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         blended *= float(flt["tod_score_mult"].get(tod_bucket, 1.0))
     blended = max(0.0, min(100.0, blended))
     prob = _score_to_prob(blended, calib, regime=reg["regime"], signal_type=st["state"])
+    # PHASE 10 — expose HOW the probability was produced (curve vs conservative
+    # prior) and how many resolved samples back it, so the UI/consumer never
+    # reads a bare probability as calibrated fact.
+    _cal_meta = _calib_meta(calib, regime=reg["regime"], signal_type=st["state"])
     # cost haircut: a round-trip on a wide MCX option spread eats real EV.
     # `est_cost_r` (fraction of 1R) is 0 for NIFTY (tight weeklies) and set on
     # the MCX profiles. Fed to ev_gate as an absolute `cost` in price terms.
@@ -272,17 +332,18 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                    avg_win=avg_win, avg_loss=avg_loss, cost=_cost, config=cfg.get("ev") or {})
     if not gate["pass"]:
         return out_none(f"EV gate: {gate['reason']}",
-                        {**ctx, "signal_score": round(blended, 1),
+                        {**ctx, "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
                          "probability": round(prob, 4), "ev": gate["ev"], "rr": gate["rr"],
-                         "option_quality": sel["final_quality"]})
+                         "option_quality": sel["final_quality"], **_cal_meta})
 
     confidence = _confidence(prob, st["false_risk"]["verdict"], mtf["conflict"])
     if confidence == "LOW" and cfg.get("require_min_confidence", "LOW") != "LOW":
         return {**ctx, "decision": "WATCH", "direction": direction,
                 "reason": "confidence LOW -> watch only",
-                "signal_score": round(blended, 1), "probability": round(prob, 4),
+                "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
+                "probability": round(prob, 4),
                 "confidence": confidence, "ev": gate["ev"], "rr": gate["rr"],
-                "model_version": MODEL_VERSION}
+                **_cal_meta, "model_version": MODEL_VERSION}
 
     return {
         "decision": "BUY_CE" if want == "CE" else "BUY_PE",
@@ -292,8 +353,10 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         "entry": plan["entry"], "stop_loss": plan["stop_loss"],
         "target_1": plan["target_1"], "target_2": plan["target_2"],
         "trailing_stop": plan["trailing_stop"], "max_hold_sec": plan["max_hold_sec"],
-        "signal_score": round(blended, 1), "probability": round(prob, 4),
+        "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
+        "probability": round(prob, 4),
         "confidence": confidence, "ev": gate["ev"], "rr": gate["rr"],
+        **_cal_meta,
         "regime": reg["regime"], "mtf_alignment": mtf["alignment"],
         "support": (sr.get("support") or {}).get("level"),
         "resistance": (sr.get("resistance") or {}).get("level"),

@@ -350,6 +350,12 @@ _MIGRATIONS = {
         "data_quality": "TEXT",         # JSON: {group: AVAILABLE|MISSING|STALE|UNSUPPORTED|INVALID}
         "data_quality_score": "REAL",   # 0..1 rollup of the groups above
         "no_trade_reason_class": "TEXT",  # DATA_UNAVAILABLE|MARKET_NEUTRAL|NO_SIGNAL|CONFLICTING_SIGNAL|FILTER|GATE|OK
+        # PHASE 10 — probability transparency
+        "raw_score": "REAL",              # blended score BEFORE the P6.1 down-weights
+        "calibration_status": "TEXT",     # fitted | prior
+        "calibration_samples": "INTEGER", # resolved outcomes backing the curve
+        "confidence_effective": "TEXT",   # model confidence capped by data-quality + calibration
+        "confidence_reason": "TEXT",
     },
 }
 
@@ -697,6 +703,8 @@ _LIVE_SNAP_COLS = (
     "reason", "ev", "rr", "feed_age_sec", "chain_json",
     "oi_coverage", "pcr_quality", "greeks_source", "data_quality",
     "data_quality_score", "no_trade_reason_class",
+    "raw_score", "calibration_status", "calibration_samples",
+    "confidence_effective", "confidence_reason",
 )
 
 

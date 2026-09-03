@@ -920,6 +920,13 @@ class AutoScalpRunner:
                 pass
             dq = _dq.snapshot_data_quality({**sig, "index_ltp": agg.last_price}, chain, oiq,
                                            feed_age, greeks_capability=cap)
+            # PHASE 10 — confidence a consumer should act on (model label capped
+            # by data completeness + calibration maturity; never raised).
+            from ..engines.scalp_strategy import effective_confidence as _eff_conf
+            eff_conf, eff_reason = _eff_conf(
+                sig.get("confidence"), data_quality_score=dq["score"],
+                calibration_status=sig.get("calibration_status"),
+                calibration_samples=sig.get("calibration_samples"))
             return db.insert_live_snapshot({
                 "ts": _now_iso(), "session_date": _now_iso()[:10], "symbol": sym.upper(),
                 "source": "LIVE", "provenance": json.dumps({"feed": "angel_ws", "owner": self.owner}),
@@ -947,6 +954,11 @@ class AutoScalpRunner:
                 "data_quality": _dq.dumps(dq["groups"]),
                 "data_quality_score": dq["score"],
                 "no_trade_reason_class": _dq.classify_no_trade_reason(sig),
+                "raw_score": sig.get("raw_score"),
+                "calibration_status": sig.get("calibration_status"),
+                "calibration_samples": sig.get("calibration_samples"),
+                "confidence_effective": eff_conf,
+                "confidence_reason": eff_reason,
             })
         except Exception as e:
             self.last_error = f"persist: {type(e).__name__}: {e}"

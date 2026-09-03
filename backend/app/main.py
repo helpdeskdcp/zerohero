@@ -1150,6 +1150,15 @@ def api_trade_features(trade_id: Optional[str] = None, limit: int = Query(50, le
         return [dict(r) for r in rows]
 
 
+@app.get("/api/autoscalp/calibration-report")
+def api_calibration_report(limit: int = Query(5000, le=20000)):
+    """PHASE 14 — Brier / log-loss / ECE / reliability table / win-rate / PF /
+    expectancy / max-drawdown / false-signal-rate from RESOLVED paper trades.
+    Read-only; nothing is trained."""
+    from .autoscalp.calibration_report import calibration_report
+    return calibration_report(limit)
+
+
 @app.get("/api/autoscalp/training-status")
 def api_training_status():
     """PHASE 13/16 — how close the clean labelled dataset is to a size where
