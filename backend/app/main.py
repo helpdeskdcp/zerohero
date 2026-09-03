@@ -251,6 +251,13 @@ try:
 except Exception as _e:
     print(f"[greeks_engine] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Mathematical Confluence Engine V1 (pivots + Gann + OI confluence; read-only) ----
+try:
+    from .mathematical_confluence import api as _mathconf_api
+    app.include_router(_mathconf_api.router)
+except Exception as _e:
+    print(f"[mathematical_confluence] router disabled: {type(_e).__name__}: {_e}")
+
 
 @app.on_event("startup")
 async def _start_scalp_runner():
