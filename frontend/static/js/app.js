@@ -1340,7 +1340,36 @@
   const fmtK = n => (n === null || n === undefined || isNaN(Number(n))) ? "—"
     : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + "L"
     : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n));
-  let MS_PROFILES = null, _msReplayBusy = false;
+  let MS_PROFILES = null, _msReplayBusy = false, _msBusy = false, _msRankBusy = false;
+
+  // The ranking scan does a live broker fetch per index — fast when the feed is
+  // warm, but ~20s cold (markets closed). Load it on its own so the rest of the
+  // Math Scalper view paints immediately, and never stack overlapping scans.
+  async function loadMsRanking(prof) {
+    if (_msRankBusy) return;
+    _msRankBusy = true;
+    const tb = $("#msRankTable tbody");
+    if (tb && !tb.innerHTML.trim()) tb.innerHTML = `<tr><td colspan="10" class="hint">scanning the index universe… (slow while markets are closed)</td></tr>`;
+    try {
+      const ranking = await api(`/api/smart-scalper/ranking?profile=${encodeURIComponent(prof)}`);
+      if (ranking && ranking.calibration) $("#msCalib").textContent = ranking.calibration;
+      const ranked = (ranking && ranking.ranked) || [];
+      const notElig = (ranking && ranking.not_eligible) || [];
+      const rankRows = ranked.map((r, i) => `<tr>
+        <td>${i + 1}</td><td><b>${text(r.index)}</b></td><td>${fmt(r.score, 1)}</td>
+        <td><span class="badge ${esc(r.signal_type)}">${text(r.signal_type)}</span></td>
+        <td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
+        <td>${text(r.confidence)}</td><td>${fmt(r.confluence_score, 1)}</td><td>${text(r.market_regime)}</td>
+        <td>${fmt((r.risk_reward || [])[0], 2)}</td><td class="feed-dir BUY">eligible</td></tr>`).join("");
+      const neRows = notElig.map(r => `<tr class="hint">
+        <td>·</td><td>${text(r.index)}</td><td>${fmt(r.score, 1)}</td><td colspan="6">—</td>
+        <td>${(r.failed || []).map(f => `<span class="ms-tag res">${esc(f)}</span>`).join(" ") || text(r.status)}</td></tr>`).join("");
+      if (tb) tb.innerHTML = (rankRows + neRows) || `<tr><td colspan="10" class="hint">No scan result.</td></tr>`;
+      return ranking;
+    } catch (e) {
+      if (tb) tb.innerHTML = `<tr><td colspan="10" class="hint">ranking scan failed: ${esc(e.message)}</td></tr>`;
+    } finally { _msRankBusy = false; }
+  }
 
   function msBucketRows(mtx) {
     const out = [];
@@ -1487,66 +1516,61 @@
   }
 
   async function loadMathScalp() {
+    if (_msBusy) return;
+    _msBusy = true;
     const prof = ($("#msProfile") && $("#msProfile").value) || "BALANCED";
-    let profiles, ranking, map, journal;
     try {
-      [profiles, ranking, map, journal] = await Promise.all([
-        MS_PROFILES ? Promise.resolve(MS_PROFILES) : api("/api/smart-scalper/profiles"),
-        api(`/api/smart-scalper/ranking?profile=${encodeURIComponent(prof)}`),
-        api("/api/mathematics/market-map"),
-        api("/api/smart-scalper/paper/journal").catch(() => null),
-      ]);
-    } catch (e) {
-      const el = $("#msErr"); if (el) { el.hidden = false; el.textContent = "math scalper: " + e.message; }
-      return;
-    }
-    MS_PROFILES = profiles;
-    $("#msErr").hidden = true;
-    $("#msClock").textContent = "updated " + timeStr(new Date().toISOString());
-    if (ranking && ranking.calibration) $("#msCalib").textContent = ranking.calibration;
+      let profiles, map, journal;
+      try {
+        [profiles, map, journal] = await Promise.all([
+          MS_PROFILES ? Promise.resolve(MS_PROFILES) : api("/api/smart-scalper/profiles"),
+          api("/api/mathematics/market-map"),
+          api("/api/smart-scalper/paper/journal").catch(() => null),
+        ]);
+      } catch (e) {
+        const el = $("#msErr"); if (el) { el.hidden = false; el.textContent = "math scalper: " + e.message; }
+        return;
+      }
+      MS_PROFILES = profiles;
+      $("#msErr").hidden = true;
+      $("#msClock").textContent = "updated " + timeStr(new Date().toISOString());
 
-    const mm = (map && map.market_map) || [];
-    const dl = $("#msUniverseList");
-    if (dl) dl.innerHTML = mm.map(r => `<option value="${esc(r.instrument)}"></option>`).join("");
+      const mm = (map && map.market_map) || [];
+      const dl = $("#msUniverseList");
+      if (dl) dl.innerHTML = mm.map(r => `<option value="${esc(r.instrument)}"></option>`).join("");
 
-    const ranked = (ranking && ranking.ranked) || [];
-    const notElig = (ranking && ranking.not_eligible) || [];
-    const rankRows = ranked.map((r, i) => `<tr>
-      <td>${i + 1}</td><td><b>${text(r.index)}</b></td><td>${fmt(r.score, 1)}</td>
-      <td><span class="badge ${esc(r.signal_type)}">${text(r.signal_type)}</span></td>
-      <td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
-      <td>${text(r.confidence)}</td><td>${fmt(r.confluence_score, 1)}</td><td>${text(r.market_regime)}</td>
-      <td>${fmt((r.risk_reward || [])[0], 2)}</td><td class="feed-dir BUY">eligible</td></tr>`).join("");
-    const neRows = notElig.map(r => `<tr class="hint">
-      <td>·</td><td>${text(r.index)}</td><td>${fmt(r.score, 1)}</td><td colspan="6">—</td>
-      <td>${(r.failed || []).map(f => `<span class="ms-tag res">${esc(f)}</span>`).join(" ") || text(r.status)}</td></tr>`).join("");
-    $("#msRankTable tbody").innerHTML = (rankRows + neRows) || `<tr><td colspan="10" class="hint">No scan result.</td></tr>`;
+      $("#msMapTable tbody").innerHTML = mm.map(r => `<tr>
+        <td><b>${text(r.instrument)}</b></td><td>${fmt(r.spot, 1)}</td><td>${fmt(r.pivot, 1)}</td>
+        <td>${fmt(r.gann_balance, 1)}</td><td>${fmt(r.nearest_support, 1)}</td><td>${fmt(r.nearest_resistance, 1)}</td>
+        <td>${text(r.market_regime)}</td><td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
+        <td>${fmt(r.confluence_score, 1)}</td><td>${text(r.confidence)}</td>
+        <td><span class="badge ${esc(r.signal)}">${text(r.signal)}</span></td></tr>`).join("")
+        || `<tr><td colspan="11" class="hint">—</td></tr>`;
+      if (journal) renderMsJournal(journal);
 
-    $("#msMapTable tbody").innerHTML = mm.map(r => `<tr>
-      <td><b>${text(r.instrument)}</b></td><td>${fmt(r.spot, 1)}</td><td>${fmt(r.pivot, 1)}</td>
-      <td>${fmt(r.gann_balance, 1)}</td><td>${fmt(r.nearest_support, 1)}</td><td>${fmt(r.nearest_resistance, 1)}</td>
-      <td>${text(r.market_regime)}</td><td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
-      <td>${fmt(r.confluence_score, 1)}</td><td>${text(r.confidence)}</td>
-      <td><span class="badge ${esc(r.signal)}">${text(r.signal)}</span></td></tr>`).join("")
-      || `<tr><td colspan="11" class="hint">—</td></tr>`;
+      let focus = (($("#msFocus") && $("#msFocus").value) || "").toUpperCase().trim();
+      if (!focus) focus = (mm[0] && mm[0].instrument) || "NIFTY";
 
-    const primary = (ranking && ranking.selection && ranking.selection.primary) || null;
-    let focus = (($("#msFocus") && $("#msFocus").value) || "").toUpperCase().trim();
-    if (!focus) focus = (primary && primary.index) || (mm[0] && mm[0].instrument) || "NIFTY";
+      let sig = null, oi = null, lv = null;
+      try {
+        [sig, oi, lv] = await Promise.all([
+          api(`/api/mathematics/signal?symbol=${encodeURIComponent(focus)}`),
+          api(`/api/mathematics/oi?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+          api(`/api/mathematics/levels?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+        ]);
+      } catch (e) { /* focus panels degrade to "no data" */ }
 
-    let sig = null, oi = null, lv = null;
-    try {
-      [sig, oi, lv] = await Promise.all([
-        api(`/api/mathematics/signal?symbol=${encodeURIComponent(focus)}`),
-        api(`/api/mathematics/oi?symbol=${encodeURIComponent(focus)}`).catch(() => null),
-        api(`/api/mathematics/levels?symbol=${encodeURIComponent(focus)}`).catch(() => null),
-      ]);
-    } catch (e) { /* focus panels degrade to "no data" */ }
+      renderMsBest(focus, sig, null);
+      renderMsLadder(focus, sig, oi, lv);
+      renderMsOi(oi);
 
-    renderMsBest(focus, sig, primary);
-    renderMsLadder(focus, sig, oi, lv);
-    renderMsOi(oi);
-    if (journal) renderMsJournal(journal);
+      // ranking scan runs on its own (slow when the feed is cold); enrich the
+      // Best-Opportunity card with the option leg if a primary comes back.
+      loadMsRanking(prof).then(ranking => {
+        const primary = (ranking && ranking.selection && ranking.selection.primary) || null;
+        if (primary && primary.index === focus) renderMsBest(focus, sig, primary);
+      });
+    } finally { _msBusy = false; }
   }
 
   (function bindMathScalp() {
@@ -1573,7 +1597,7 @@
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
-  setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 8000);
+  setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 20000);
   // refresh the health panel while it is on screen (selfcheck is cheap)
   setInterval(() => { if (state.view === "system") loadSystem(); }, 10000);
 })();
