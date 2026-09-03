@@ -119,11 +119,15 @@ def test_scan_ranks_and_explains_winner(monkeypatch):
     assert "no paper position" in out["calibration"].lower()
 
 
-def test_scan_never_opens_a_position():
+def test_scan_and_selector_are_pure_no_order_path():
+    # scanner + option_selector are analysis-only. paper_engine.py (slice 4) is
+    # allowed to open PAPER trades via engines.paper_trading; the LIVE-order ban
+    # is enforced in test_smart_scalper_paper.test_paper_engine_never_places_a_real_order.
     src = Path(__file__).parents[1] / "app" / "smart_index_scalper"
-    joined = "\n".join(p.read_text() for p in src.glob("*.py"))
+    analysis = "\n".join((src / f).read_text() for f in ("scanner.py", "option_selector.py",
+                                                          "eligibility.py", "selection_score.py"))
     for banned in ("open_trade(", "place_order", "placeOrder", "close_trade(", "OrderManager"):
-        assert banned not in joined
+        assert banned not in analysis
 
 
 # ------------------------------------------------------------------ slice 3: option selection

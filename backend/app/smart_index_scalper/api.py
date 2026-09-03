@@ -58,3 +58,47 @@ def api_profiles():
             "default": get_profile()["name"],
             "note": "UNCALIBRATED defaults (spec section 25/26). Risk controls still route "
                     "through autoscalp.safeguards on any paper entry."}
+
+
+# --------------------------------------------------------------- SLICE 4: paper trade state machine
+@router.get("/signals")
+def api_signals(instrument: Optional[str] = None, limit: int = 100):
+    from .. import db
+    return {"signals": db.list_smart_scalper_signals(limit=min(limit, 500), instrument=instrument)}
+
+
+@router.get("/paper/state")
+def api_paper_state(signal_id: Optional[str] = None, trade_id: Optional[str] = None, limit: int = 100):
+    from .. import db
+    return {"transitions": db.list_smart_scalper_states(signal_id=signal_id, trade_id=trade_id,
+                                                       limit=min(limit, 500))}
+
+
+@router.get("/paper/positions")
+def api_paper_positions():
+    from .. import db
+    return {"open": db.list_trades(status="OPEN", strategy="SMART_SCALPER", limit=50),
+            "recent_closed": db.list_trades(status="CLOSED", strategy="SMART_SCALPER", limit=25),
+            "live_trading": False}
+
+
+@router.get("/paper/journal")
+def api_paper_journal(limit: int = 5000):
+    from .journal import journal
+    return journal(limit)
+
+
+@router.post("/paper/evaluate")
+def api_paper_evaluate(symbols: Optional[str] = None, profile: Optional[str] = None,
+                       dry_run: bool = True):
+    """Scan -> pre-entry state machine. With dry_run=false (and safeguards
+    passing) opens ONE paper position for the top-ranked index. Never a real order."""
+    from .paper_engine import SmartScalperPaperEngine
+    return SmartScalperPaperEngine(profile=profile).evaluate(symbols, dry_run=dry_run, use_cache=False)
+
+
+@router.post("/paper/manage")
+def api_paper_manage(profile: Optional[str] = None):
+    """Mark every open SMART_SCALPER paper trade + run the in-trade state machine."""
+    from .paper_engine import SmartScalperPaperEngine
+    return SmartScalperPaperEngine(profile=profile).manage(use_cache=False)

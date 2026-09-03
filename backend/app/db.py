@@ -278,6 +278,35 @@ CREATE TABLE IF NOT EXISTS trade_exit_outcomes (
     reversal_after_entry INTEGER, time_expiry INTEGER
 );
 
+-- SLICE 4 — SMART_INDEX_SCALPER signals + paper-trade state machine.
+-- Positions themselves live in ai_paper_trades WHERE strategy='SMART_SCALPER'
+-- (reuse of the existing paper engine). These two are the evidence + state audit.
+CREATE TABLE IF NOT EXISTS smart_scalper_signals (
+    signal_id TEXT PRIMARY KEY,
+    created_ts TEXT NOT NULL,
+    session_date TEXT,
+    instrument TEXT, profile TEXT,
+    spot REAL, direction TEXT, signal_type TEXT,
+    confidence REAL, confluence_score REAL, index_selection_score REAL,
+    market_regime TEXT,
+    entry_zone TEXT, stop_loss REAL, target_1 REAL, target_2 REAL, target_3 REAL,
+    risk_reward TEXT,
+    selected_strike REAL, option_type TEXT, option_ltp REAL, selection_score REAL,
+    nearest_support REAL, nearest_resistance REAL, oi_battle_zone REAL,
+    reason_codes TEXT, no_trade_reason TEXT,
+    eligibility_json TEXT, evidence_json TEXT, invalidation TEXT,
+    state TEXT,                       -- terminal state reached for this signal
+    trade_id TEXT,                    -- ai_paper_trades.trade_id if it opened
+    calibration TEXT
+);
+CREATE TABLE IF NOT EXISTS smart_scalper_states (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    signal_id TEXT, trade_id TEXT, instrument TEXT, profile TEXT,
+    from_state TEXT, to_state TEXT, action TEXT, reason TEXT,
+    spot REAL, option_mark REAL, pnl REAL, mfe REAL, mae REAL
+);
+
 """
 
 # Indexes are created AFTER _migrate() runs, because some of them
@@ -442,6 +471,75 @@ def list_trades(status=None, limit=200, strategy=None):
     with db() as conn:
         cur = conn.execute(f"SELECT * FROM ai_paper_trades{where} ORDER BY id DESC LIMIT ?", params)
         return [dict(r) for r in cur.fetchall()]
+
+
+_SS_SIGNAL_COLS = (
+    "signal_id", "created_ts", "session_date", "instrument", "profile",
+    "spot", "direction", "signal_type", "confidence", "confluence_score",
+    "index_selection_score", "market_regime", "entry_zone", "stop_loss",
+    "target_1", "target_2", "target_3", "risk_reward", "selected_strike",
+    "option_type", "option_ltp", "selection_score", "nearest_support",
+    "nearest_resistance", "oi_battle_zone", "reason_codes", "no_trade_reason",
+    "eligibility_json", "evidence_json", "invalidation", "state", "trade_id",
+    "calibration",
+)
+
+
+def insert_smart_scalper_signal(row: dict) -> bool:
+    if not row.get("signal_id"):
+        return False
+    vals = [row.get(c) for c in _SS_SIGNAL_COLS]
+    ph = ",".join(["?"] * len(_SS_SIGNAL_COLS))
+    with db() as conn:
+        cur = conn.execute(
+            f"INSERT OR IGNORE INTO smart_scalper_signals ({','.join(_SS_SIGNAL_COLS)}) "
+            f"VALUES ({ph})", vals)
+        return bool(cur.rowcount)
+
+
+def update_smart_scalper_signal(signal_id: str, fields: dict):
+    if not fields or not signal_id:
+        return
+    sets = ",".join(f"{k}=?" for k in fields)
+    with db() as conn:
+        conn.execute(f"UPDATE smart_scalper_signals SET {sets} WHERE signal_id=?",
+                     list(fields.values()) + [signal_id])
+
+
+def log_smart_scalper_state(row: dict) -> int:
+    cols = ("ts", "signal_id", "trade_id", "instrument", "profile", "from_state",
+            "to_state", "action", "reason", "spot", "option_mark", "pnl", "mfe", "mae")
+    with db() as conn:
+        cur = conn.execute(
+            f"INSERT INTO smart_scalper_states ({','.join(cols)}) "
+            f"VALUES ({','.join('?' * len(cols))})", [row.get(c) for c in cols])
+        return int(cur.lastrowid)
+
+
+def list_smart_scalper_signals(limit: int = 200, instrument: str | None = None):
+    clauses, params = [], []
+    if instrument:
+        clauses.append("instrument=?")
+        params.append(instrument.upper())
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        return [dict(r) for r in conn.execute(
+            f"SELECT * FROM smart_scalper_signals{where} ORDER BY created_ts DESC LIMIT ?", params)]
+
+
+def list_smart_scalper_states(signal_id: str | None = None, trade_id: str | None = None,
+                              limit: int = 500):
+    clauses, params = [], []
+    if signal_id:
+        clauses.append("signal_id=?"); params.append(signal_id)
+    if trade_id:
+        clauses.append("trade_id=?"); params.append(trade_id)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        return [dict(r) for r in conn.execute(
+            f"SELECT * FROM smart_scalper_states{where} ORDER BY id DESC LIMIT ?", params)]
 
 
 def list_open_managed():

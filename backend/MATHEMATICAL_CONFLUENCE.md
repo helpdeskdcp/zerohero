@@ -247,3 +247,76 @@ NO_SELECTION / DATA_INSUFFICIENT gates; static no-order-path check. Full suite
 Remaining: slice 4 (DB tables + profile-driven paper-trade state machine over
 `paper_trading` + `safeguards`) · slice 5 (historical replay/backtest — required
 before any profitability claim) · slice 6 (frontend).
+
+---
+
+## 10. SLICE 4 — DB TABLES + PAPER-TRADE STATE MACHINE (built)
+
+RESEARCH / PAPER ONLY. `live_trading` stays false, NO live-order path (static-tested).
+Reuses `engines.paper_trading.{open_trade,update_trade_price,close_trade}` (the
+same paper engine the autoscalp runner uses) and `autoscalp.safeguards.Safeguards.
+check_entry` — **risk controls are never bypassed**.
+
+### DB (via `db._MIGRATIONS`, additive, no data loss)
+- **`smart_scalper_signals`** (PK signal_id, write-once) — full signal + evidence
+  audit: spot/direction/signal_type/confidence/confluence_score/index_selection_score/
+  regime, entry_zone/SL/T1-3/RR, selected_strike/option_ltp/selection_score,
+  nearest S/R, reason_codes, no_trade_reason, eligibility_json, evidence_json,
+  invalidation, terminal `state`, `trade_id`.
+- **`smart_scalper_states`** — every transition: from/to state, action, reason,
+  spot, option_mark, pnl, mfe, mae.
+- Positions themselves = `ai_paper_trades WHERE strategy='SMART_SCALPER'` (reuse).
+- `db` helpers: `insert/update/list_smart_scalper_signal(s)`, `log/list_smart_scalper_states`.
+
+### State machine — `state_machine.py` (spec §19 & §26)
+`NO_TRADE / WATCHING / SETUP_FORMING / ENTRY_READY / ENTRY_CONFIRMED / PAPER_OPEN /
+TARGET_RUNNING / EXIT_WARNING / EXITED / STOPPED / INVALIDATED`.
+- `pre_entry_state(scan_row, profile)` — `ENTRY_CONFIRMED` only when EVERY gate
+  passes: eligible + directional BUY_CE/BUY_PE + confidence >= profile.min_confidence
+  + index_selection_score >= profile.min_selection_score + RR1 >= profile.min_rr1
+  + option selection OK + all `required_confirmations` present in reason_codes
+  (level / oi / volume / price_action). One confirmation short -> `ENTRY_READY`.
+  Conflicts / not eligible / NO_TRADE signal -> `NO_TRADE` with the reason.
+- `in_trade_state(position, mark, engine_out, profile)` — profit-protection (§30):
+  after MFE >= 0.6R, if >45% of the peak is given back AND the engine no longer
+  supports the side -> `EXIT_WARNING` (PROTECT ratchets SL to entry+0.3R; >70%
+  give-back -> CLOSE). Engine flips to the opposite side at conf >= 55 ->
+  `INVALIDATED` CLOSE. Mark <= SL -> `STOPPED` CLOSE.
+
+### Paper engine — `paper_engine.py`
+`SmartScalperPaperEngine(profile)`:
+- `evaluate(symbols, dry_run=True)` — scan -> `pre_entry_state` for every ranked
+  index (audit) -> on the primary, persist the signal + state; if
+  `ENTRY_CONFIRMED` and `dry_run=False` and `safeguards.check_entry` passes ->
+  `open_trade(strategy='SMART_SCALPER')`. Underlying SL/T are translated to the
+  option leg via the observed translation ratio (expected premium move / expected
+  index move).
+- `manage()` — mark every open SMART_SCALPER trade to the current option LTP,
+  `update_trade_price` (hard exits), then `in_trade_state` for PROTECT / CLOSE.
+- **Not auto-started** in the app lifespan (spec §48 RuntimeScheduler wiring is
+  a follow-on). Callable via endpoints.
+
+### Journal — `journal.py` (spec §43)
+`journal()` — from closed `ai_paper_trades WHERE strategy='SMART_SCALPER'` joined
+with `smart_scalper_signals`: win rate, PF, expectancy, avg win/loss, avg
+R-multiple, max drawdown, avg MFE/MAE, false-signal rate, exit-reason mix —
+overall + **by profile / by instrument / by market regime**. No profitability claim.
+
+### API
+`GET /api/smart-scalper/{signals, paper/state, paper/positions, paper/journal}` ·
+`POST /api/smart-scalper/paper/{evaluate,manage}` (evaluate defaults dry_run=true).
+
+### Tests +6 (`test_smart_scalper_paper.py`)
+pre-entry confirms only on all gates; gates block with named reasons;
+profit-protection + invalidation + hard-stop transitions; DB helper round-trip +
+write-once; journal metrics (win rate / PF / by-profile / by-instrument /
+by-regime) from real closed paper trades; static check of no live-order path.
+Full suite **423 pass**.
+
+### Verified live (markets closed)
+`/paper/journal`, `/paper/positions`, `/signals` -> 200. `POST /paper/evaluate?
+dry_run=true&symbols=NIFTY,BANKNIFTY` -> 200, every index `NO_TRADE` (nothing
+eligible off-hours), `primary: None`, `live_trading: False`.
+
+Remaining: slice 5 (historical replay/backtest — required before any
+profitability claim) · slice 6 (frontend).
