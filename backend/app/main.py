@@ -1076,6 +1076,15 @@ def api_health():
     return {"status": "ok", "live_trading": False, "paper_mode": True}
 
 
+@app.get("/api/diag")
+def api_diag():
+    """Read-only runtime diagnostic (PHASE 0): worker_count, leader_state,
+    feed_state, last_tick/snapshot/candle/persist times. No side effects."""
+    from .diagnostics import runtime_diag
+    return runtime_diag(scalp_runner=scalp_runner, autoscalp=autoscalp,
+                        histcap_worker=histcap_worker)
+
+
 @app.get("/api/market/calendar")
 def api_market_calendar():
     """NSE / MCX / BSE segment status + whether a restart is currently allowed."""
