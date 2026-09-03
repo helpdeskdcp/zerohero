@@ -48,7 +48,11 @@ def _cfg() -> dict:
         win = max(1, min(40, int(_env("CHANAKYA_HIST_CHAIN_WINDOW", "15"))))
     except ValueError:
         win = 15
-    tfs = [t.strip() for t in _env("CHANAKYA_HIST_TFS", "1m,5m,15m").split(",") if t.strip() in _INTERVAL]
+    # PHASE 6 — capture every broker-supported intraday interval. 2m is NOT an
+    # AngelOne getCandleData interval; if a 2m series is needed it must be
+    # resampled from 1m at read time and tagged source=DERIVED (never captured).
+    tfs = [t.strip() for t in _env("CHANAKYA_HIST_TFS", "1m,3m,5m,15m,30m,1h").split(",")
+           if t.strip() in _INTERVAL]
     return {
         "enabled": _env("CHANAKYA_HIST_ENABLED", "1") not in ("0", "false", "no"),
         "symbols": syms, "chain_window": win, "tfs": tfs or ["1m", "5m", "15m"],

@@ -161,7 +161,23 @@ def norm_candles(raw_candles: list, meta: dict, tf: str, received_ts: str, *,
         except ValueError:
             continue
         if bs_dt + timedelta(minutes=tf_min) > cutoff:
-            continue                                     # bar not closed yet -> skip
+            continue                                     # bar not closed yet -> skip (also drops future ts)
+        o = _f(row.get("open") or row.get("o"))
+        h = _f(row.get("high") or row.get("h"))
+        l = _f(row.get("low") or row.get("l"))
+        c = _f(row.get("close") or row.get("c"))
+        v = _f(row.get("volume") if row.get("volume") is not None else row.get("v"))
+        # PHASE 6 — OHLC sanity. A broker row that violates high>=max(o,c)>=min(o,c)>=low
+        # (small tolerance) or carries a non-positive price is flagged, not silently kept.
+        flags = []
+        px = [x for x in (o, h, l, c) if x is not None]
+        if len(px) == 4:
+            hi, lo = max(o, c), min(o, c)
+            tol = max(1e-6, h * 1e-4)
+            if h + tol < hi or l - tol > lo or h + tol < l:
+                flags.append("ohlc_inconsistent")
+        if any(x is not None and x <= 0 for x in (o, h, l, c)):
+            flags.append("nonpositive_price")
         out.append({
             "received_ts": received_ts,
             "instrument_key": meta["instrument_key"], "symbol": meta["symbol"],
@@ -169,12 +185,9 @@ def norm_candles(raw_candles: list, meta: dict, tf: str, received_ts: str, *,
             "expiry": meta.get("expiry"), "strike": meta.get("strike"),
             "option_type": meta.get("option_type"),
             "tf": tf, "bar_start": bar_start, "session_date_ist": ist_date(bar_start),
-            "o": _f(row.get("open") or row.get("o")),
-            "h": _f(row.get("high") or row.get("h")),
-            "l": _f(row.get("low") or row.get("l")),
-            "c": _f(row.get("close") or row.get("c")),
-            "v": _f(row.get("volume") if row.get("volume") is not None else row.get("v")),
+            "o": o, "h": h, "l": l, "c": c, "v": v,
             "oi": None, "oi_change": None,                # getCandleData does not return OI
+            "flags": ",".join(flags) or None,
             "source": "ANGELONE_CANDLES",
         })
     return out
