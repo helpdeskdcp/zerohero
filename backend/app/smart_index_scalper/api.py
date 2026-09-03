@@ -102,3 +102,27 @@ def api_paper_manage(profile: Optional[str] = None):
     """Mark every open SMART_SCALPER paper trade + run the in-trade state machine."""
     from .paper_engine import SmartScalperPaperEngine
     return SmartScalperPaperEngine(profile=profile).manage(use_cache=False)
+
+
+# --------------------------------------------------------------- SLICE 5: historical replay / backtest
+@router.get("/replay/sessions")
+def api_replay_sessions(symbols: Optional[str] = None):
+    """The (instrument, session) pairs in market_history.db that the strict-causal
+    replay can run — needs both intraday candles and a real option chain."""
+    from .replay import SmartScalperReplay
+    return {"sessions": SmartScalperReplay().available_sessions(symbols),
+            "data_source": "market_history.db (captured, ACTUAL)"}
+
+
+@router.get("/replay")
+def api_replay(symbols: Optional[str] = None, profile: Optional[str] = None,
+               step_min: int = 3, max_hold_min: int = 25):
+    """Strict-causal historical replay over the captured sessions -> simulated
+    trades + metrics per profile / instrument / market-regime + calibration
+    reliability. Below the sample gate the aggregate is `descriptive_only` and
+    the calibration table is withheld (spec section 26). No order path; nothing
+    is written to ai_paper_trades."""
+    from .replay import SmartScalperReplay
+    return SmartScalperReplay().run(symbols, step_min=max(1, step_min),
+                                    profiles=[profile] if profile else None,
+                                    max_hold_min=max(1, max_hold_min))

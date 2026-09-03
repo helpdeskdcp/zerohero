@@ -318,5 +318,55 @@ Full suite **423 pass**.
 dry_run=true&symbols=NIFTY,BANKNIFTY` -> 200, every index `NO_TRADE` (nothing
 eligible off-hours), `primary: None`, `live_trading: False`.
 
-Remaining: slice 5 (historical replay/backtest — required before any
-profitability claim) · slice 6 (frontend).
+---
+
+## 11. SLICE 5 — HISTORICAL REPLAY / BACKTEST (built)
+
+`app/smart_index_scalper/` — strict-causal replay over the **real captured**
+`data/market_history.db` (histcap). REQUIRED before any profitability statement
+(spec §26). RESEARCH ONLY, no order path, `live_trading` stays false.
+
+| file | role |
+|---|---|
+| `historical_context.py` | `SessionData(symbol, session, expiry)` loads one captured session once; `.context_at(T)` slices it **causally** with bisect — a candle counts only once `bar_start + timeframe <= T`, a quote only once `received_ts <= T`; ΔOI is DERIVED by differencing vs the snapshot ~5 min earlier (AngelOne never stored `oi_change`). Greeks were never captured → every `*_greeks_source = "UNAVAILABLE"`, no on-the-fly BS. `available_sessions()` = sessions with BOTH candles and a real OI chain. |
+| `replay_price_action.py` | causal deriver for `breakout_state / retest_state / reversal_candidate / candle_signals` (the engine takes these as caller inputs — see §7). Pure function of the already-truncated `bars`; HEURISTIC + UNCALIBRATED, exists to exercise the pipeline. |
+| `replay.py` | `SmartScalperReplay.run(symbols, step_min, profiles, max_hold_min, profile_overrides)` — walks each session, at each step: `SessionData.context_at` → `MathematicalConfluenceEngine.evaluate` (same engine as live) → `oi_matrix` / `eligibility` / `selection_score` → `option_selector.select` (per profile) → `state_machine.pre_entry_state`. On `ENTRY_CONFIRMED` opens a **simulated** position (in-memory only), marks it bar-by-bar against the REAL historical option LTP, runs `state_machine.in_trade_state`; exits on STOP / TARGET_2 / SM CLOSE / MAX_HOLD / SESSION_END. `profile_overrides` is a labelled calibration knob (spec §26: sweep thresholds) — off by default; when set, `params.gate_mode = "DIAGNOSTIC_SWEEP"`. |
+| `replay_metrics.py` | `trade_metrics` (same defs as `journal._metrics`), `reliability` (confidence-bucket → realised win-rate + ECE), `summarize` — overall + by profile / instrument / market-regime. **Sample gate:** below `MIN_SESSIONS=8` OR `MIN_TRADES=20` the aggregate is stamped `descriptive_only` and the calibration table is withheld. |
+| `__main__.py` | `python -m app.smart_index_scalper replay-sessions` / `replay [--symbols --step --profile --max-hold]`. |
+
+### Anti-look-ahead
+Only closed candles + `received_ts <= T` quotes enter the context; the engine's
+swing detector needs `n` bars each side so the last bars are never confirmed
+pivots; option fills use the mark at T or later, never an earlier/median price.
+Unit-tested (`test_historical_context_is_strictly_causal`,
+`test_price_action_is_causal_and_safe_on_short_input`).
+
+### API
+`GET /api/smart-scalper/replay/sessions` · `GET /api/smart-scalper/replay`
+(`symbols`, `profile`, `step_min`, `max_hold_min`). No write path.
+
+### Tests +7 (`test_smart_scalper_replay.py`)
+strict causality of the context slicer; `available_sessions` needs candles+chain;
+sim trade open→mark→close lifecycle + metrics + regime grouping + sample gate
+(stub engine); replay writes **nothing** to `ai_paper_trades`; no order-path
+strings in the replay modules; metrics math (PF / win-rate / max-drawdown /
+reliability ECE); causal price-action deriver. Full suite **430 pass**.
+
+### What the replay actually produces today (honest result)
+Captured history is **~2–3 partial sessions** (NIFTY / NATURALGAS / CRUDEOIL,
+2026-09-02..03; SENSEX has no 1m/5m candles). Run with the **stock profiles** it
+opens **0 trades** — the `MathematicalConfluenceEngine` confidence ceiling on
+this quiet sample is ~59 and its structural RR-to-T1 (nearest confluence zone)
+usually sits below 1.2, so `eligibility` / the profile gates are never all
+satisfied. This is a genuine finding, not a harness failure: the pipeline runs
+causally over real data and **declines to manufacture trades**. A
+`profile_overrides` diagnostic sweep confirms the full open/mark/exit/metrics
+path works on the real option LTP series (`descriptive_only`, gate not met).
+Meaningful metrics require the forward histcap capture to accumulate sessions.
+
+### Verified
+`python -m app.smart_index_scalper replay` → `status: INSUFFICIENT_SAMPLE`,
+`sample: {sessions: 3, trades: 0}`, `calibration: INSUFFICIENT_SAMPLE`,
+`live_trading: false`, `note` carries "no profitability claim (spec section 26)".
+
+Remaining: slice 6 (frontend — "ADVANCED MATHEMATICAL SCALPER" section).

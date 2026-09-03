@@ -9,11 +9,14 @@ existing autoscalp.safeguards + paper_trading).
 """
 from .scanner import ENGINE_NAME, SmartIndexScalper
 from .universe import DEFAULT_UNIVERSE, index_meta, resolve_universe
-from . import eligibility, selection_score, option_selector, profiles, state_machine, journal
+from . import (eligibility, selection_score, option_selector, profiles,
+               state_machine, journal, historical_context, replay_metrics)
 from .paper_engine import SmartScalperPaperEngine
+from .replay import SmartScalperReplay
 
 __all__ = [
     "SmartIndexScalper", "ENGINE_NAME", "DEFAULT_UNIVERSE",
     "index_meta", "resolve_universe", "eligibility", "selection_score",
     "option_selector", "profiles", "state_machine", "journal", "SmartScalperPaperEngine",
+    "historical_context", "replay_metrics", "SmartScalperReplay",
 ]
