@@ -34,6 +34,7 @@
       <button class="nav-item" data-view="trades">Paper Trades</button>
       <button class="nav-item" data-view="scalp">Scalping</button>
       <button class="nav-item" data-view="autoscalp">Auto-Scalp</button>
+      <button class="nav-item" data-view="mathscalp">Math Scalper</button>
       <button class="nav-item" data-view="runner">Run Pipeline</button>
       <button class="nav-item" data-view="research">Research</button>
       <button class="nav-item" data-view="system">System &amp; Health</button>
@@ -496,6 +497,140 @@
         </div>
       </section>
 
+      <!-- ===== ADVANCED MATHEMATICAL SCALPER (slice 6/6) ===== -->
+      <section class="view" id="view-mathscalp">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Advanced Mathematical Scalper <span class="pill pill--paper">RESEARCH · PAPER</span></h2>
+            <div class="mon-exec-bar">
+              <label class="as-sym">Profile
+                <select id="msProfile"><option>CONSERVATIVE</option><option selected>BALANCED</option><option>AGGRESSIVE</option></select>
+              </label>
+              <label class="as-sym">Focus
+                <input id="msFocus" list="msUniverseList" autocomplete="off" spellcheck="false" placeholder="NIFTY" />
+                <datalist id="msUniverseList"></datalist>
+              </label>
+              <button class="btn btn-ghost" id="msRefresh" type="button">Refresh</button>
+              <span class="hint" id="msClock">—</span>
+            </div>
+          </div>
+          <p class="disclaimer" id="msCalib">UNCALIBRATED — sub-score weights and profile thresholds are hand-set defaults. The confluence score is NOT a probability. No profitability claim until the replay accumulates a real sample.</p>
+          <p class="scalp-err" id="msErr" hidden></p>
+        </div>
+
+        <!-- Best Opportunity Now -->
+        <div class="panel">
+          <div class="panel-head"><h2>Best Opportunity Now</h2><span class="hint" id="msBestMeta">—</span></div>
+          <div class="ms-best" id="msBest"><span class="hint">Waiting for a scan…</span></div>
+          <div class="ms-why">
+            <div class="ms-why-col">
+              <h3>Why this trade?</h3>
+              <ul class="ms-reasons" id="msWhy"><li class="hint">—</li></ul>
+            </div>
+            <div class="ms-why-col">
+              <h3>What invalidates it?</h3>
+              <ul class="ms-reasons ms-invalid" id="msInvalidate"><li class="hint">—</li></ul>
+            </div>
+          </div>
+          <div class="ms-subscores" id="msSubscores"></div>
+        </div>
+
+        <!-- Smart Index Ranking -->
+        <div class="panel">
+          <div class="panel-head"><h2>Smart Index Ranking</h2><span class="hint">INDEX_SELECTION_SCORE · eligible first, then why the rest are filtered out</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="msRankTable">
+              <thead><tr>
+                <th scope="col">#</th><th scope="col">Index</th><th scope="col">Score</th><th scope="col">Signal</th>
+                <th scope="col">Dir</th><th scope="col">Conf</th><th scope="col">Confluence</th><th scope="col">Regime</th>
+                <th scope="col">RR1</th><th scope="col">Eligible / failed filters</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Mathematical Market Map -->
+        <div class="panel">
+          <div class="panel-head"><h2>Mathematical Market Map</h2><span class="hint">pivot · Gann balance · nearest S/R · regime — per index</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="msMapTable">
+              <thead><tr>
+                <th scope="col">Index</th><th scope="col">Spot</th><th scope="col">Pivot</th><th scope="col">Gann bal</th>
+                <th scope="col">Support</th><th scope="col">Resistance</th><th scope="col">Regime</th><th scope="col">Dir</th>
+                <th scope="col">Confluence</th><th scope="col">Conf</th><th scope="col">Signal</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Live Market Map ladder + OI matrix -->
+        <div class="ms-two">
+          <div class="panel">
+            <div class="panel-head"><h2>Live Market Map</h2><span class="hint" id="msLadderSym">—</span></div>
+            <div class="ms-ladder" id="msLadder"><span class="hint">—</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>OI Confluence Matrix</h2><span class="hint" id="msOiMeta">—</span></div>
+            <div class="table-wrap">
+              <table class="ledger" id="msOiTable">
+                <thead><tr>
+                  <th scope="col">Strike</th><th scope="col">CE OI</th><th scope="col">CE LTP</th><th scope="col">PE OI</th><th scope="col">PE LTP</th>
+                  <th scope="col">Support</th><th scope="col">Resist</th><th scope="col">Battle</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historical Replay / Backtest (slice 5) -->
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Historical Replay / Backtest</h2>
+            <div class="mon-exec-bar">
+              <span class="hint">strict-causal over captured market_history.db</span>
+              <button class="btn btn-primary" id="msReplayBtn" type="button">Run backtest</button>
+            </div>
+          </div>
+          <p class="disclaimer" id="msReplayNote">Not run yet. Below the sample gate (8 sessions / 20 trades) results are descriptive only and the calibration table is withheld — never an estimate of forward performance.</p>
+          <div class="mon-strip" id="msReplayStrip" hidden>
+            <div class="mon-cell"><span>Status</span><b id="msRpStatus">—</b></div>
+            <div class="mon-cell"><span>Sessions</span><b id="msRpSessions">—</b></div>
+            <div class="mon-cell"><span>Sim trades</span><b id="msRpTrades">—</b></div>
+            <div class="mon-cell"><span>Win rate</span><b id="msRpWin">—</b></div>
+            <div class="mon-cell"><span>Profit factor</span><b id="msRpPF">—</b></div>
+            <div class="mon-cell"><span>Expectancy</span><b id="msRpExp">—</b></div>
+            <div class="mon-cell"><span>Max DD</span><b id="msRpDD">—</b></div>
+            <div class="mon-cell"><span>Calibration</span><b id="msRpCalib">—</b></div>
+          </div>
+          <div class="table-wrap" id="msReplayByWrap" hidden>
+            <table class="ledger" id="msReplayByTable">
+              <thead><tr>
+                <th scope="col">Bucket</th><th scope="col">Group</th><th scope="col">n</th><th scope="col">Win rate</th>
+                <th scope="col">PF</th><th scope="col">Expectancy</th><th scope="col">Avg R</th><th scope="col">Max DD</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Paper Journal -->
+        <div class="panel">
+          <div class="panel-head"><h2>Paper Journal</h2><span class="hint" id="msJournalNote">—</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="msJournalTable">
+              <thead><tr>
+                <th scope="col">Bucket</th><th scope="col">Group</th><th scope="col">n</th><th scope="col">Win rate</th>
+                <th scope="col">PF</th><th scope="col">Expectancy</th><th scope="col">Avg R</th><th scope="col">Max DD</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== RESEARCH ===== -->
       <section class="view" id="view-research">
         <div class="panel">
@@ -554,6 +689,7 @@
       <button class="tab-item" data-view="monitor"><span class="tab-ic">◉</span>Monitor</button>
       <button class="tab-item" data-view="scalp"><span class="tab-ic">⚡</span>Scalp</button>
       <button class="tab-item" data-view="autoscalp"><span class="tab-ic">🤖</span>Auto</button>
+      <button class="tab-item" data-view="mathscalp"><span class="tab-ic">∮</span>Math</button>
       <button class="tab-item" data-view="research"><span class="tab-ic">∑</span>Research</button>
       <button class="tab-item" data-view="system"><span class="tab-ic">✚</span>Health</button>
     </nav>

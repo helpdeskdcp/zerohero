@@ -95,6 +95,46 @@ const P = {
   "/api/market/calendar": load("calendar", { segments: {} }),
   "/api/instruments": { instruments: [] },
   "/api/market-instruments": { instruments: [], data_status: "DATA_UNAVAILABLE" },
+  "/api/smart-scalper/profiles": load("ss_profiles", { profiles: { BALANCED: { name: "BALANCED" } }, default: "BALANCED" }),
+  "/api/smart-scalper/ranking": load("ss_ranking", {
+    engine: "SMART_INDEX_SCALPER", ranked: [],
+    not_eligible: [{ index: "NIFTY", failed: ["acceptable_confidence"], status: "OK", score: 33 }],
+    selection: { primary: null }, calibration: "UNCALIBRATED — selection weights are defaults",
+  }),
+  "/api/smart-scalper/paper/journal": load("ss_journal", {
+    overall: { n: 0, status: "NO_TRADES" }, by_profile: {}, by_instrument: {}, by_market_regime: {},
+    note: "UNCALIBRATED research journal — no profitability claim.",
+  }),
+  "/api/smart-scalper/replay": load("ss_replay", {
+    status: "INSUFFICIENT_SAMPLE", sample: { sessions: 3, trades: 0, min_sessions: 8, min_trades: 20 },
+    metrics: { overall: { n: 0, status: "NO_TRADES" }, by_profile: {}, by_instrument: {}, by_market_regime: {} },
+    calibration: { status: "INSUFFICIENT_SAMPLE" }, note: "no profitability claim (spec section 26)",
+  }),
+  "/api/mathematics/market-map": load("math_map", {
+    market_map: [{
+      instrument: "NIFTY", spot: 23870, status: "OK", pivot: 23871, gann_balance: 23850,
+      nearest_support: 23786, nearest_resistance: 23921, market_regime: "NEUTRAL",
+      direction: "PE", confluence_score: 35.8, confidence: 32, signal: "NO_TRADE",
+    }], note: "",
+  }),
+  "/api/mathematics/signal": load("math_signal", {
+    engine: "X", status: "OK", spot: 23870, direction: "PE", signal_type: "NO_TRADE",
+    confidence: 32, confluence_score: 35.8,
+    score_breakdown: { mathematical: { raw: 20, out_of: 20 }, oi: { raw: 1.3, out_of: 20 } },
+    market_regime: "NEUTRAL", nearest_support: { center: 23786 }, nearest_resistance: { center: 23921 },
+    confluence_zones: [{ center: 23853, evidence_count: 5 }],
+    oi_matrix: { walls: {}, battle_zone: false }, risk_reward: null,
+    reason_codes: ["<img src=x onerror=alert(1)>"], no_trade_reason: "confluence score below threshold",
+    mathematical_levels: { pivots: { pivot: 23871, r1: 23957, s1: 23829 }, gann: { gann_balance: 23850, gann_up_1: 23882, gann_down_1: 23818 } },
+    support_level: 23786, resistance_level: 23921,
+  }),
+  "/api/mathematics/oi": load("math_oi", {
+    status: "OK", rows: [{ strike: 23800, ce_oi: 60645, ce_ltp: 354, pe_oi: 2159430, pe_ltp: 17, support_score: 1.7, resistance_score: 0, battle_score: 0 }],
+    walls: {}, battle_zone: false, pcr: 1.2,
+  }),
+  "/api/mathematics/levels": load("math_levels", {
+    instrument: "NIFTY", pivots: { pivot: 23871, r1: 23957, s1: 23829 }, gann: { gann_balance: 23850, gann_up_1: 23882 },
+  }),
 };
 function matchPayload(url) {
   const base = url.split("?")[0];
@@ -142,7 +182,7 @@ try {
   // drive every view loader against the REAL captured payloads
   for (const name of ["loadOverview", "loadSignals", "loadTrades", "loadScalp",
                       "loadResearch", "loadSystem", "loadReport", "loadAutoscalp",
-                      "loadMonitor"]) {
+                      "loadMonitor", "loadMathScalp"]) {
     try { await chk[name](); await flush(); await flush(); }
     catch (e) { errors.push(name + " threw: " + e.message); }
   }
@@ -170,6 +210,14 @@ try {
   assert.ok(/&lt;img src=x/.test(feedHtml), "hostile markup should be entity-escaped");
   assert.ok(!/<img\s|<script|<b>x<\/b>/i.test(feedHtml), "no live tag from feed data: " + feedHtml.slice(0, 240));
 
-  console.log("render smoke: 9 view loaders + feed renderer OK against real payloads, no runtime errors, output escaped");
+  // math-scalper view rendered its tables + escaped hostile reason codes
+  const msRank = elFor("#msRankTable tbody").innerHTML;
+  assert.ok(/NIFTY/.test(msRank), "math-scalper ranking table should render, got: " + msRank.slice(0, 160));
+  const msMap = elFor("#msMapTable tbody").innerHTML;
+  assert.ok(/NIFTY/.test(msMap), "math-scalper market-map table should render");
+  const msWhy = elFor("#msWhy").innerHTML;
+  assert.ok(/&lt;img src=x/.test(msWhy) && !/<img\s/i.test(msWhy), "math-scalper reason codes must be entity-escaped: " + msWhy.slice(0, 160));
+
+  console.log("render smoke: 10 view loaders + feed renderer OK against real payloads, no runtime errors, output escaped");
   process.exit(0);
 })().catch(e => { console.error("render smoke FAILED:", e && e.stack || e); process.exit(1); });

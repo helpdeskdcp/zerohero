@@ -16,6 +16,7 @@
     if (view === "research") loadResearch();
     if (view === "system") loadSystem();
     if (view === "autoscalp") loadAutoscalp();
+    if (view === "mathscalp") loadMathScalp();
     if (view === "runner") { try { refreshRunSelection(); } catch (e) {} }
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
@@ -1331,12 +1332,236 @@
     if (day) day.addEventListener("change", loadReport);
   })();
 
+  // ================= Advanced Mathematical Scalper (slice 6/6) =================
+  // RESEARCH / PAPER. Renders the mathematical-confluence + smart-index-scalper
+  // engines + the strict-causal replay. Never claims a probability from the
+  // confluence score; always shows the sub-score breakdown + reasons + risks.
+  const msDir = d => d === "CE" ? "BUY" : d === "PE" ? "SELL" : "UNKNOWN";
+  const fmtK = n => (n === null || n === undefined || isNaN(Number(n))) ? "—"
+    : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + "L"
+    : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n));
+  let MS_PROFILES = null, _msReplayBusy = false;
+
+  function msBucketRows(mtx) {
+    const out = [];
+    const push = (bucket, group, m) => {
+      if (!m || !m.n) return;
+      out.push(`<tr><td>${esc(bucket)}</td><td>${esc(group)}</td><td>${m.n}</td>
+        <td>${m.win_rate != null ? (m.win_rate * 100).toFixed(0) + "%" : "—"}</td>
+        <td>${fmt(m.profit_factor, 2)}</td><td>${fmtSigned(m.expectancy, 2)}</td>
+        <td>${fmt(m.avg_r_multiple, 2)}</td><td>${fmtSigned(m.max_drawdown, 1)}</td></tr>`);
+    };
+    push("OVERALL", "all", mtx.overall);
+    Object.entries(mtx.by_profile || {}).forEach(([k, v]) => push("profile", k, v));
+    Object.entries(mtx.by_instrument || {}).forEach(([k, v]) => push("instrument", k, v));
+    Object.entries(mtx.by_market_regime || {}).forEach(([k, v]) => push("regime", k, v));
+    return out.join("");
+  }
+
+  function renderMsBest(focus, sig, primary) {
+    const box = $("#msBest"), why = $("#msWhy"), inval = $("#msInvalidate"), subs = $("#msSubscores");
+    $("#msBestMeta").textContent = focus + " · the confluence score is NOT a probability";
+    if (!sig || sig.status !== "OK") {
+      box.innerHTML = `<span class="hint">${esc(focus)}: ${text(sig && sig.status, "no data")} — ${esc(((sig && sig.missing) || []).join(", "))}</span>`;
+      why.innerHTML = inval.innerHTML = `<li class="hint">—</li>`; subs.innerHTML = "";
+      return;
+    }
+    const dir = sig.direction || "NONE", st = sig.signal_type || "NO_TRADE", rr = sig.risk_reward || [];
+    const so = (primary && primary.index === focus && primary.selected_option) || null;
+    box.innerHTML = `
+      <span class="ms-dir ${esc(dir)}">${text(st)}</span>
+      <span class="kv"><span>Direction</span><b>${text(dir)}</b></span>
+      <span class="kv"><span>Confidence</span><b>${text(sig.confidence)}</b></span>
+      <span class="kv"><span>Confluence</span><b>${fmt(sig.confluence_score, 1)} / 100</b></span>
+      <span class="kv"><span>Spot</span><b>${fmt(sig.spot, 1)}</b></span>
+      <span class="kv"><span>Entry zone</span><b>${(sig.entry_zone || []).map(x => fmt(x, 1)).join(" – ") || "—"}</b></span>
+      <span class="kv"><span>Stop</span><b class="neg">${fmt(sig.stop_loss, 1)}</b></span>
+      <span class="kv"><span>T1 / T2 / T3</span><b class="pos">${[sig.target_1, sig.target_2, sig.target_3].map(x => fmt(x, 1)).join(" / ")}</b></span>
+      <span class="kv"><span>RR 1/2/3</span><b>${rr.map(x => fmt(x, 2)).join(" / ") || "—"}</b></span>
+      ${so ? `<span class="kv"><span>Option leg</span><b>${text(so.selected_strike)} ${text(so.option_type)} @ ${fmt(so.option_ltp, 2)} · sel ${fmt(so.selection_score, 0)}</b></span>` : ``}`;
+    const rc = sig.reason_codes || [];
+    why.innerHTML = rc.length ? rc.map(x => `<li>${esc(x)}</li>`).join("") : `<li class="hint">no confirming evidence yet</li>`;
+    const invs = [];
+    if (sig.no_trade_reason) invs.push("NOT a trade now — " + sig.no_trade_reason);
+    if (sig.support_level && dir === "CE") invs.push(`a decisive close below ${fmt(sig.support_level, 1)} (nearest support zone) breaks the long-CE thesis`);
+    if (sig.resistance_level && dir === "PE") invs.push(`a decisive close above ${fmt(sig.resistance_level, 1)} (nearest resistance zone) breaks the short-PE thesis`);
+    const w = (sig.oi_matrix && sig.oi_matrix.walls) || {};
+    if (w.CALL_RESISTANCE_WALL) invs.push(`heavy CALL wall @ ${text(w.CALL_RESISTANCE_WALL.strike)} caps upside`);
+    if (w.PUT_SUPPORT_WALL) invs.push(`heavy PUT wall @ ${text(w.PUT_SUPPORT_WALL.strike)} caps downside`);
+    if ((sig.oi_matrix || {}).battle_zone) invs.push("BATTLE ZONE — CE & PE both building; direction unresolved");
+    invs.push("UNCALIBRATED thresholds — treat this as a hypothesis, not an established edge");
+    inval.innerHTML = invs.map(x => `<li>${esc(x)}</li>`).join("");
+    const bd = sig.score_breakdown || {};
+    subs.innerHTML = Object.entries(bd).map(([k, v]) => {
+      const fillPct = v.out_of ? Math.max(0, Math.min(100, 100 * v.raw / v.out_of)) : 0;
+      return `<div class="ms-sub"><div class="ms-sub-head"><span>${esc(k)}</span><span>${fmt(v.raw, 1)}/${text(v.out_of)}</span></div>
+        <div class="ms-track"><div class="ms-fill" style="width:${fillPct.toFixed(0)}%"></div></div></div>`;
+    }).join("") || `<span class="hint">no sub-score breakdown</span>`;
+  }
+
+  function renderMsLadder(focus, sig, oi, lv) {
+    const el = $("#msLadder");
+    $("#msLadderSym").textContent = focus;
+    if (!sig || sig.status !== "OK" || sig.spot == null) { el.innerHTML = `<span class="hint">no data</span>`; return; }
+    const spot = Number(sig.spot), rungs = {};
+    const add = (price, tag, cls) => {
+      if (price == null || isNaN(Number(price))) return;
+      const k = Number(price).toFixed(1);
+      (rungs[k] = rungs[k] || []).push({ tag, cls: cls || "" });
+    };
+    const piv = (lv && lv.pivots) || (sig.mathematical_levels && sig.mathematical_levels.pivots) || {};
+    add(piv.pivot, "PIVOT", ""); add(piv.r1, "R1", "res"); add(piv.r2, "R2", "res"); add(piv.r3, "R3", "res");
+    add(piv.s1, "S1", "sup"); add(piv.s2, "S2", "sup"); add(piv.s3, "S3", "sup");
+    const g = (lv && lv.gann) || (sig.mathematical_levels && sig.mathematical_levels.gann) || {};
+    add(g.gann_balance, "GANN bal", "");
+    [1, 2, 3, 4].forEach(k => { add(g["gann_up_" + k], "GANN+" + k, "res"); add(g["gann_down_" + k], "GANN-" + k, "sup"); });
+    (sig.confluence_zones || []).forEach(z => add(z.center, `ZONE×${z.evidence_count}`, "zone"));
+    const w = (oi && oi.walls) || {};
+    if (w.CALL_RESISTANCE_WALL) add(w.CALL_RESISTANCE_WALL.strike, "CALL WALL", "wall");
+    if (w.PUT_SUPPORT_WALL) add(w.PUT_SUPPORT_WALL.strike, "PUT WALL", "wall");
+    (w.top3_strikes || []).forEach(s => add(s && (s.strike ?? s), "OI", "wall"));
+    const spotKey = spot.toFixed(1);
+    let keys = Object.keys(rungs).map(Number);
+    const near = keys.filter(k => Math.abs(k - spot) <= spot * 0.012);
+    keys = (near.length ? near : keys).sort((a, b) => b - a).slice(0, 32);
+    if (!keys.includes(spot)) keys.push(spot);
+    keys = Array.from(new Set(keys.map(k => Number(k.toFixed(1))))).sort((a, b) => b - a);
+    el.innerHTML = keys.map(k => {
+      const kk = k.toFixed(1), isSpot = kk === spotKey;
+      const tags = (rungs[kk] || []).map(t => `<span class="ms-tag ${t.cls}">${esc(t.tag)}</span>`).join("");
+      return `<div class="ms-rung${isSpot ? " is-spot" : ""}"><span class="ms-price">${kk}</span>
+        <span class="ms-tags">${isSpot ? '<span class="ms-tag">▶ SPOT</span>' : ""}${tags}</span></div>`;
+    }).join("") || `<span class="hint">no levels</span>`;
+  }
+
+  function renderMsOi(oi) {
+    const meta = $("#msOiMeta"), tb = $("#msOiTable tbody");
+    if (!oi || oi.status !== "OK") { meta.textContent = text(oi && oi.status, "no data"); tb.innerHTML = `<tr><td colspan="8" class="hint">—</td></tr>`; return; }
+    const w = oi.walls || {};
+    meta.textContent = `PCR ${fmt(oi.pcr, 2)} · ${oi.battle_zone ? "BATTLE ZONE" : "no battle zone"} · `
+      + `CALL wall ${text((w.CALL_RESISTANCE_WALL || {}).strike, "—")} · PUT wall ${text((w.PUT_SUPPORT_WALL || {}).strike, "—")}`;
+    const rows = (oi.rows || []).slice().sort((a, b) =>
+      (b.support_score + b.resistance_score + b.battle_score) - (a.support_score + a.resistance_score + a.battle_score)).slice(0, 14);
+    tb.innerHTML = rows.map(r => `<tr>
+      <td><b>${fmt(r.strike, 0)}</b></td>
+      <td>${fmtK(r.ce_oi)}</td><td>${fmt(r.ce_ltp, 2)}</td>
+      <td>${fmtK(r.pe_oi)}</td><td>${fmt(r.pe_ltp, 2)}</td>
+      <td class="${r.support_score > 1 ? "feed-dir BUY" : ""}">${fmt(r.support_score, 1)}</td>
+      <td class="${r.resistance_score > 1 ? "feed-dir SELL" : ""}">${fmt(r.resistance_score, 1)}</td>
+      <td>${fmt(r.battle_score, 1)}</td></tr>`).join("") || `<tr><td colspan="8" class="hint">—</td></tr>`;
+  }
+
+  function renderMsJournal(j) {
+    if (!j) return;
+    $("#msJournalNote").textContent = j.note || "";
+    $("#msJournalTable tbody").innerHTML = msBucketRows({
+      overall: j.overall, by_profile: j.by_profile,
+      by_instrument: j.by_instrument, by_market_regime: j.by_market_regime,
+    }) || `<tr><td colspan="8" class="hint">No closed paper trades yet.</td></tr>`;
+  }
+
+  async function runMsReplay() {
+    if (_msReplayBusy) return;
+    _msReplayBusy = true;
+    const btn = $("#msReplayBtn"); if (btn) { btn.disabled = true; btn.textContent = "Running…"; }
+    const prof = ($("#msProfile") || {}).value || "BALANCED";
+    try {
+      const r = await api(`/api/smart-scalper/replay?profile=${encodeURIComponent(prof)}&step_min=3`);
+      $("#msReplayStrip").hidden = false;
+      const m = (r.metrics && r.metrics.overall) || {};
+      const set = (id, v) => { const e = $("#" + id); if (e) e.textContent = v; };
+      set("msRpStatus", r.status); const se = $("#msRpStatus"); if (se) se.className = "badge " + esc(r.status);
+      set("msRpSessions", `${(r.sample || {}).sessions} / ${(r.sample || {}).min_sessions}`);
+      set("msRpTrades", `${(r.sample || {}).trades} / ${(r.sample || {}).min_trades}`);
+      set("msRpWin", m.win_rate != null ? (m.win_rate * 100).toFixed(0) + "%" : "—");
+      set("msRpPF", fmt(m.profit_factor, 2));
+      set("msRpExp", fmtSigned(m.expectancy, 2));
+      set("msRpDD", fmtSigned(m.max_drawdown, 1));
+      set("msRpCalib", (r.calibration && (r.calibration.verdict || r.calibration.status)) || "—");
+      $("#msReplayNote").textContent = r.note || "";
+      $("#msReplayByWrap").hidden = false;
+      $("#msReplayByTable tbody").innerHTML = msBucketRows(r.metrics || {})
+        || `<tr><td colspan="8" class="hint">0 simulated trades on the captured sample — the engine did not confirm an entry with stock-profile gates (see note).</td></tr>`;
+    } catch (e) { showError("replay", e); }
+    finally { _msReplayBusy = false; if (btn) { btn.disabled = false; btn.textContent = "Run backtest"; } }
+  }
+
+  async function loadMathScalp() {
+    const prof = ($("#msProfile") && $("#msProfile").value) || "BALANCED";
+    let profiles, ranking, map, journal;
+    try {
+      [profiles, ranking, map, journal] = await Promise.all([
+        MS_PROFILES ? Promise.resolve(MS_PROFILES) : api("/api/smart-scalper/profiles"),
+        api(`/api/smart-scalper/ranking?profile=${encodeURIComponent(prof)}`),
+        api("/api/mathematics/market-map"),
+        api("/api/smart-scalper/paper/journal").catch(() => null),
+      ]);
+    } catch (e) {
+      const el = $("#msErr"); if (el) { el.hidden = false; el.textContent = "math scalper: " + e.message; }
+      return;
+    }
+    MS_PROFILES = profiles;
+    $("#msErr").hidden = true;
+    $("#msClock").textContent = "updated " + timeStr(new Date().toISOString());
+    if (ranking && ranking.calibration) $("#msCalib").textContent = ranking.calibration;
+
+    const mm = (map && map.market_map) || [];
+    const dl = $("#msUniverseList");
+    if (dl) dl.innerHTML = mm.map(r => `<option value="${esc(r.instrument)}"></option>`).join("");
+
+    const ranked = (ranking && ranking.ranked) || [];
+    const notElig = (ranking && ranking.not_eligible) || [];
+    const rankRows = ranked.map((r, i) => `<tr>
+      <td>${i + 1}</td><td><b>${text(r.index)}</b></td><td>${fmt(r.score, 1)}</td>
+      <td><span class="badge ${esc(r.signal_type)}">${text(r.signal_type)}</span></td>
+      <td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
+      <td>${text(r.confidence)}</td><td>${fmt(r.confluence_score, 1)}</td><td>${text(r.market_regime)}</td>
+      <td>${fmt((r.risk_reward || [])[0], 2)}</td><td class="feed-dir BUY">eligible</td></tr>`).join("");
+    const neRows = notElig.map(r => `<tr class="hint">
+      <td>·</td><td>${text(r.index)}</td><td>${fmt(r.score, 1)}</td><td colspan="6">—</td>
+      <td>${(r.failed || []).map(f => `<span class="ms-tag res">${esc(f)}</span>`).join(" ") || text(r.status)}</td></tr>`).join("");
+    $("#msRankTable tbody").innerHTML = (rankRows + neRows) || `<tr><td colspan="10" class="hint">No scan result.</td></tr>`;
+
+    $("#msMapTable tbody").innerHTML = mm.map(r => `<tr>
+      <td><b>${text(r.instrument)}</b></td><td>${fmt(r.spot, 1)}</td><td>${fmt(r.pivot, 1)}</td>
+      <td>${fmt(r.gann_balance, 1)}</td><td>${fmt(r.nearest_support, 1)}</td><td>${fmt(r.nearest_resistance, 1)}</td>
+      <td>${text(r.market_regime)}</td><td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
+      <td>${fmt(r.confluence_score, 1)}</td><td>${text(r.confidence)}</td>
+      <td><span class="badge ${esc(r.signal)}">${text(r.signal)}</span></td></tr>`).join("")
+      || `<tr><td colspan="11" class="hint">—</td></tr>`;
+
+    const primary = (ranking && ranking.selection && ranking.selection.primary) || null;
+    let focus = (($("#msFocus") && $("#msFocus").value) || "").toUpperCase().trim();
+    if (!focus) focus = (primary && primary.index) || (mm[0] && mm[0].instrument) || "NIFTY";
+
+    let sig = null, oi = null, lv = null;
+    try {
+      [sig, oi, lv] = await Promise.all([
+        api(`/api/mathematics/signal?symbol=${encodeURIComponent(focus)}`),
+        api(`/api/mathematics/oi?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+        api(`/api/mathematics/levels?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+      ]);
+    } catch (e) { /* focus panels degrade to "no data" */ }
+
+    renderMsBest(focus, sig, primary);
+    renderMsLadder(focus, sig, oi, lv);
+    renderMsOi(oi);
+    if (journal) renderMsJournal(journal);
+  }
+
+  (function bindMathScalp() {
+    const p = $("#msProfile"); if (p) p.addEventListener("change", loadMathScalp);
+    const f = $("#msFocus"); if (f) f.addEventListener("change", loadMathScalp);
+    const rb = $("#msRefresh"); if (rb) rb.addEventListener("click", loadMathScalp);
+    const rp = $("#msReplayBtn"); if (rp) rp.addEventListener("click", runMsReplay);
+  })();
+
   // Test seam — inert in production (window.__CHK_TEST__ is never set there).
   // Lets the dependency-free render smoke test drive view loaders without a DOM
   // framework or a build step.
   if (typeof window !== "undefined" && window.__CHK_TEST__) {
     window.__chk = { setView, loadOverview, loadSignals, loadTrades, loadScalp,
-      loadResearch, loadSystem, loadReport, loadAutoscalp, loadMonitor,
+      loadResearch, loadSystem, loadReport, loadAutoscalp, loadMonitor, loadMathScalp,
       prependFeed, renderHealthLine };
   }
 
@@ -1348,6 +1573,7 @@
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
+  setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 8000);
   // refresh the health panel while it is on screen (selfcheck is cheap)
   setInterval(() => { if (state.view === "system") loadSystem(); }, 10000);
 })();

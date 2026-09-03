@@ -369,4 +369,48 @@ Meaningful metrics require the forward histcap capture to accumulate sessions.
 `sample: {sessions: 3, trades: 0}`, `calibration: INSUFFICIENT_SAMPLE`,
 `live_trading: false`, `note` carries "no profitability claim (spec section 26)".
 
-Remaining: slice 6 (frontend — "ADVANCED MATHEMATICAL SCALPER" section).
+---
+
+## 12. SLICE 6 — FRONTEND: "ADVANCED MATHEMATICAL SCALPER" (built)
+
+New SPA view `#view-mathscalp` (nav + mobile tab "Math Scalper"), rendered by
+`loadMathScalp()` in `frontend/static/js/app.js` (vanilla, no build step). Polls
+every 8 s while on screen. RESEARCH / PAPER — never a "BUY CE 90%" headline;
+every card carries the sub-score breakdown + reasons + what-invalidates + an
+UNCALIBRATED disclaimer.
+
+| panel | source | shows |
+|---|---|---|
+| header | — | profile selector (CONSERVATIVE/BALANCED/AGGRESSIVE), focus-symbol input, UNCALIBRATED disclaimer ("the confluence score is NOT a probability") |
+| **Best Opportunity Now** | `GET /api/mathematics/signal` + `ranking.selection.primary` | signal type, direction, confidence, confluence /100, spot, entry zone, stop, T1/T2/T3, RR, option leg (when eligible) |
+| **Why this trade? / What invalidates it?** | signal `reason_codes` / `no_trade_reason` + OI walls + battle zone + support/resistance levels | two columns; every reason entity-escaped |
+| **sub-score bars** | signal `score_breakdown` | 7 sub-scores as `raw/out_of` mini-bars |
+| **Smart Index Ranking** | `GET /api/smart-scalper/ranking?profile=` | eligible #1..n by INDEX_SELECTION_SCORE, then the not-eligible list with the exact failed filters as chips |
+| **Mathematical Market Map** | `GET /api/mathematics/market-map` | per index: spot, pivot, Gann balance, nearest S/R, regime, direction, confluence, confidence, signal |
+| **Live Market Map** ladder | `GET /api/mathematics/{signal,levels,oi}` | price rungs around spot — PIVOT/R1-3/S1-3, GANN±k, confluence ZONE×n, CALL/PUT walls; SPOT rung highlighted |
+| **OI Confluence Matrix** | `GET /api/mathematics/oi` | top strikes by support+resistance+battle score; CE/PE OI (compact) + LTP; PCR + walls + BATTLE ZONE in the header |
+| **Historical Replay / Backtest** | `GET /api/smart-scalper/replay?profile=` (on the "Run backtest" button) | status badge (INSUFFICIENT_SAMPLE), sessions/trades vs the gate, win-rate/PF/expectancy/maxDD/calibration, and the by-profile / by-instrument / by-regime table; the "no profitability claim" note is shown verbatim |
+| **Paper Journal** | `GET /api/smart-scalper/paper/journal` | overall + by profile / instrument / regime, with the journal's own note |
+
+### Tests
+`frontend/tests/render_smoke.test.js` — `loadMathScalp` added to the loader
+sweep (now **10 view loaders**); fixtures for the 8 new endpoints incl. a
+hostile `reason_codes` payload; asserts the ranking + market-map tables render
+and the reason codes are entity-escaped (no live `<img>`). Both FE tests +
+backend **430 pass**.
+
+### Auth note
+The SPA (and `/static/*`) sits behind the app's basic-auth gate
+(`CHANAKYA_ADMIN_USERNAME` / `CHANAKYA_ADMIN_PASSWORD`); only `/api/health` is
+exempt. Unchanged by this slice.
+
+---
+
+## 13. Project status — all 6 slices built
+
+math core + engine + API + validation · slice 1 SMART_INDEX_SCALPER ·
+slice 2 context/scan · slice 3 option selection · slice 4 DB + paper-trade
+state machine + journal · slice 5 strict-causal replay/backtest ·
+**slice 6 frontend**. Still RESEARCH / PAPER, `live_trading=false`, no order
+path. UNCALIBRATED until the forward histcap capture accumulates a real sample
+and the replay clears its 8-session / 20-trade gate.
