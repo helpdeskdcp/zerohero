@@ -47,13 +47,19 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
         ctx["atm"] = snap.get("atm")
         ctx["expiry"] = snap.get("expiry")
         ctx["chain"] = [
-            {"strike": r.get("strike"),
+            {"strike": r.get("strike"), "expiry": snap.get("expiry"),
              "ce_ltp": r.get("ce_ltp"), "ce_oi": r.get("ce_oi"),
              "ce_oi_change": r.get("ce_oi_change"), "ce_volume": r.get("ce_volume"),
-             "ce_oi_status": r.get("ce_oi_status"),
+             "ce_oi_status": r.get("ce_oi_status"), "ce_token": r.get("ce_token"),
+             "ce_delta": r.get("ce_delta"), "ce_gamma": r.get("ce_gamma"),
+             "ce_theta": r.get("ce_theta"), "ce_vega": r.get("ce_vega"), "ce_iv": r.get("ce_iv"),
+             "ce_greeks_source": r.get("ce_greeks_source"),
              "pe_ltp": r.get("pe_ltp"), "pe_oi": r.get("pe_oi"),
              "pe_oi_change": r.get("pe_oi_change"), "pe_volume": r.get("pe_volume"),
-             "pe_oi_status": r.get("pe_oi_status")}
+             "pe_oi_status": r.get("pe_oi_status"), "pe_token": r.get("pe_token"),
+             "pe_delta": r.get("pe_delta"), "pe_gamma": r.get("pe_gamma"),
+             "pe_theta": r.get("pe_theta"), "pe_vega": r.get("pe_vega"), "pe_iv": r.get("pe_iv"),
+             "pe_greeks_source": r.get("pe_greeks_source")}
             for r in (snap.get("chain") or [])
         ]
         ctx["oi_coverage"] = snap.get("oi_coverage")

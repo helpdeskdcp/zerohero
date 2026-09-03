@@ -19,7 +19,9 @@ from ..mathematical_confluence import MathematicalConfluenceEngine
 from ..mathematical_confluence.context import market_context
 from ..mathematical_confluence.oi_confluence import oi_matrix as _oi_matrix
 from . import eligibility as _elig
+from . import option_selector as _optsel
 from . import selection_score as _ss
+from .profiles import get_profile
 from .universe import index_meta, resolve_universe
 
 ENGINE_NAME = "SMART_INDEX_SCALPER"
@@ -27,10 +29,12 @@ ENGINE_NAME = "SMART_INDEX_SCALPER"
 
 class SmartIndexScalper:
     def __init__(self, *, engine: MathematicalConfluenceEngine | None = None,
-                 filters: dict | None = None, selection_weights: dict | None = None):
+                 filters: dict | None = None, selection_weights: dict | None = None,
+                 profile: str | None = None):
         self.engine = engine or MathematicalConfluenceEngine()
         self.filters = filters
         self.selection_weights = selection_weights
+        self.profile = get_profile(profile)
 
     # ------------------------------------------------------------------ scan
     def scan(self, symbols=None, *, use_cache: bool = True) -> dict:
@@ -71,6 +75,22 @@ class SmartIndexScalper:
                                         liquidity_norm=(r["_atm_oi"] - lo) / rng)
             sel = _ss.index_selection_score(comp, self.selection_weights)
             out = r["engine"]
+
+            # SLICE 3 — pick the CE/PE contract for a directional, eligible setup
+            selected_option = None
+            if r["eligibility"]["eligible"] and out.get("direction") in ("CE", "PE") \
+                    and out.get("signal_type") in ("BUY_CE", "BUY_PE"):
+                tgt = out.get("target_1")
+                spot = r["ctx"].get("spot")
+                move = abs(tgt - spot) if (tgt is not None and spot is not None) else None
+                selected_option = _optsel.select(
+                    direction=out["direction"], spot=spot,
+                    chain=r["ctx"].get("chain") or [],
+                    atm=r["ctx"].get("atm"),
+                    strike_step=float(r["meta"].get("strike_step", 50.0)),
+                    expected_move_pts=move,
+                    allowed_option_distance=int(self.profile.get("allowed_option_distance", 2)))
+
             results.append({
                 "index": r["sym"],
                 "status": out.get("status"),
@@ -92,6 +112,7 @@ class SmartIndexScalper:
                 "no_trade_reason": out.get("no_trade_reason"),
                 "data_quality": r["ctx"].get("data_quality"),
                 "missing": out.get("missing"),
+                "selected_option": selected_option,
             })
 
         eligible = sorted([x for x in results if x["eligible"]],
@@ -113,6 +134,7 @@ class SmartIndexScalper:
                 "alternative_3": top[2] if len(top) >= 3 else None,
                 "why_primary": _ss.explain_winner(eligible),
             },
+            "profile": self.profile,
             "calibration": "UNCALIBRATED — selection weights are defaults, no backtest (section 26). "
                            "RESEARCH ONLY; no paper position opened by this layer.",
         }

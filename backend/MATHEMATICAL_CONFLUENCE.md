@@ -195,3 +195,55 @@ Full suite 412 pass.
 Remaining slices: 3 option selection (reuse `option_engine.select_option`) ·
 4 DB tables · 5 backtest/replay (required before any profitability claim) ·
 6 frontend.
+
+---
+
+## 9. SLICE 3 — SMART CE/PE OPTION SELECTION (built)
+
+`app/smart_index_scalper/{option_selector,profiles}.py` (spec section 24, old §15).
+RESEARCH ONLY. Reuses `engines.option_engine.analyse_leg` + `select_option`
+(spec §47/§52 — no duplicate scoring).
+
+**`option_selector.select(direction, spot, chain, atm, strike_step,
+expected_move_pts, allowed_option_distance, premium_min/max, weights)`** —
+- candidate strikes = wanted side, within `allowed_option_distance` strikes of ATM,
+  premium in `[min, max]`;
+- `analyse_leg({}, leg, opt_type, index_move_pts=expected_move, light=True)` per
+  candidate → quality / translation / delta_fit / theta_drag / iv_context / liquidity;
+- deterministic `selection_score` (0–100) = leg_quality 30 · liquidity 20 ·
+  translation 15 · premium_momentum 10 · atm_distance 10 · spread 10 · theta 5
+  (configurable, UNCALIBRATED);
+- returns `selected_strike / option_type / option_ltp / delta / oi / oi_change /
+  volume / spread / iv / iv_context / selection_score / candidates[] / reasons[] /
+  expected_index_move_pts`. Same inputs → same pick.
+
+**`profiles.get_profile(name)`** — CONSERVATIVE / BALANCED / AGGRESSIVE config
+dicts (§25): `min_confidence`, `min_selection_score`, `min_rr1`,
+`max_trades_per_day`, `risk_per_trade_pct`, `max_daily_loss`, `cooldown_sec`,
+`allowed_option_distance` (1 / 2 / 3), SL/target ATR mults, `required_confirmations`.
+Env-overridable. UNCALIBRATED defaults; **paper entry still routes through
+`autoscalp.safeguards` on top of these** (slice 4).
+
+`scanner.scan()` now attaches `selected_option` to any eligible directional
+(BUY_CE/BUY_PE) index result, using the profile's `allowed_option_distance` and
+`|target_1 − spot|` as the expected move. New endpoints:
+`GET /api/smart-scalper/{option, profiles}`; `/ranking` and `/signal` take a
+`profile=` param.
+
+`mathematical_confluence/context.py` chain rows now carry per-leg broker greeks
+(Δ/Γ/Θ/V/IV + `greeks_source`) so the selector's premium-move estimate is real
+for NIFTY/BANKNIFTY (MCX/SENSEX stay `greeks_source=UNAVAILABLE`, selector
+degrades to OI+premium+ATM-distance and says so).
+
+Verified live: `/api/smart-scalper/option?symbol=NIFTY&direction=CE` → 23900 CE
+@ ₹102.45, selection_score 76.4, delta 0.497, expected premium move ≈ ₹26.7 on
+a ~60-pt index move, 5 ranked candidates + reasons.
+
+Tests +5 (`test_smart_index_scalper.py`): configurable profiles with ATM-distance
+band; deterministic + explainable selection; profile band respected;
+NO_SELECTION / DATA_INSUFFICIENT gates; static no-order-path check. Full suite
+417 pass.
+
+Remaining: slice 4 (DB tables + profile-driven paper-trade state machine over
+`paper_trading` + `safeguards`) · slice 5 (historical replay/backtest — required
+before any profitability claim) · slice 6 (frontend).

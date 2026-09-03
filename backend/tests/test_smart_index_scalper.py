@@ -124,3 +124,82 @@ def test_scan_never_opens_a_position():
     joined = "\n".join(p.read_text() for p in src.glob("*.py"))
     for banned in ("open_trade(", "place_order", "placeOrder", "close_trade(", "OrderManager"):
         assert banned not in joined
+
+
+# ------------------------------------------------------------------ slice 3: option selection
+from app.smart_index_scalper import option_selector, profiles
+
+
+def _chain(spot=24000.0, step=50.0):
+    out = []
+    for i in range(-4, 5):
+        k = spot + i * step
+        # OTM CE premium falls as strike rises; OTM PE premium falls as strike drops
+        ce = max(4.0, 120 - i * 22)
+        pe = max(4.0, 120 + i * 22)
+        out.append({"strike": k,
+                    "ce_ltp": ce, "ce_oi": 400000 - abs(i) * 40000, "ce_oi_change": 5000 - i * 200,
+                    "ce_volume": 15000 - abs(i) * 1500, "ce_delta": max(0.05, 0.5 - i * 0.12),
+                    "ce_gamma": 0.0011, "ce_theta": -6.0, "ce_iv": 0.12,
+                    "pe_ltp": pe, "pe_oi": 400000 - abs(i) * 40000, "pe_oi_change": 4000 + i * 200,
+                    "pe_volume": 14000 - abs(i) * 1500, "pe_delta": min(-0.05, -0.5 - i * 0.12),
+                    "pe_gamma": 0.0011, "pe_theta": -6.0, "pe_iv": 0.12,
+                    "expiry": "09SEP2026"})
+    return out
+
+
+def test_profiles_are_configurable_with_atm_distance():
+    for name in ("CONSERVATIVE", "BALANCED", "AGGRESSIVE"):
+        p = profiles.get_profile(name)
+        assert p["name"] == name and p["allowed_option_distance"] >= 1
+        assert "UNCALIBRATED" in p["calibration"]
+    assert profiles.get_profile("CONSERVATIVE")["allowed_option_distance"] < \
+        profiles.get_profile("AGGRESSIVE")["allowed_option_distance"]
+    # override
+    p = profiles.get_profile("BALANCED", overrides={"allowed_option_distance": 5})
+    assert p["allowed_option_distance"] == 5
+
+
+def test_option_selector_is_deterministic_and_explains():
+    ch = _chain()
+    a = option_selector.select(direction="CE", spot=24000.0, chain=ch, atm=24000.0,
+                               strike_step=50.0, expected_move_pts=60.0,
+                               allowed_option_distance=2)
+    b = option_selector.select(direction="CE", spot=24000.0, chain=ch, atm=24000.0,
+                               strike_step=50.0, expected_move_pts=60.0,
+                               allowed_option_distance=2)
+    assert a["status"] == "OK" and a == b                      # deterministic
+    assert a["option_type"] == "CE"
+    assert abs(a["selected_strike"] - 24000.0) <= 2 * 50.0     # within the profile band
+    assert 0 <= a["selection_score"] <= 100
+    assert a["reasons"] and a["deterministic"] is True
+    # every candidate scored + ranked
+    assert a["candidates"] == sorted(a["candidates"], key=lambda c: (-c["selection_score"], c["atm_distance_strikes"]))
+    assert all(c["option_type"] == "CE" for c in a["candidates"])
+
+
+def test_option_selector_respects_profile_atm_distance():
+    ch = _chain()
+    narrow = option_selector.select(direction="PE", spot=24000.0, chain=ch, atm=24000.0,
+                                    strike_step=50.0, allowed_option_distance=1)
+    wide = option_selector.select(direction="PE", spot=24000.0, chain=ch, atm=24000.0,
+                                  strike_step=50.0, allowed_option_distance=3)
+    assert len(narrow["candidates"]) <= len(wide["candidates"])
+    assert all(c["atm_distance_strikes"] <= 1.0001 for c in narrow["candidates"])
+
+
+def test_option_selector_no_selection_and_data_gates():
+    assert option_selector.select(direction="NONE", spot=1, chain=[{}])["status"] == "NO_SELECTION"
+    assert option_selector.select(direction="CE", spot=None, chain=[])["status"] == "DATA_INSUFFICIENT"
+    # all premiums below the floor -> NO_SELECTION with a reason
+    thin = [{"strike": 24000, "ce_ltp": 0.5, "ce_oi": 1, "pe_ltp": 0.5, "pe_oi": 1}]
+    r = option_selector.select(direction="CE", spot=24000.0, chain=thin, atm=24000.0,
+                               strike_step=50.0, premium_min=3.0)
+    assert r["status"] == "NO_SELECTION" and "no liquid" in r["reason"]
+
+
+def test_option_selector_does_not_import_order_path():
+    import app.smart_index_scalper.option_selector as m
+    src = Path(m.__file__).read_text()
+    for banned in ("open_trade", "place_order", "placeOrder", "OrderManager", "close_trade"):
+        assert banned not in src
