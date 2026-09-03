@@ -506,10 +506,16 @@
               <label class="as-sym">Profile
                 <select id="msProfile"><option>CONSERVATIVE</option><option selected>BALANCED</option><option>AGGRESSIVE</option></select>
               </label>
-              <label class="as-sym">Focus
-                <input id="msFocus" list="msUniverseList" autocomplete="off" spellcheck="false" placeholder="NIFTY" />
-                <datalist id="msUniverseList"></datalist>
-              </label>
+              <span class="as-sym" id="msFocusLabel">Focus</span>
+              <div class="ms-combo" id="msFocusCombo">
+                <input id="msFocus" type="text" role="combobox" aria-expanded="false"
+                       aria-controls="msFocusMenu" aria-autocomplete="list" aria-labelledby="msFocusLabel"
+                       autocomplete="off" autocapitalize="characters" autocorrect="off"
+                       spellcheck="false" placeholder="Search index…" />
+                <span class="ms-combo-ic" aria-hidden="true">⌕</span>
+                <ul id="msFocusMenu" class="ms-combo-menu" role="listbox" aria-label="Supported indices" hidden></ul>
+              </div>
+              <span class="ms-combo-msg" id="msFocusMsg" role="status" aria-live="polite" hidden></span>
               <button class="btn btn-ghost" id="msRefresh" type="button">Refresh</button>
               <span class="hint" id="msClock">—</span>
             </div>

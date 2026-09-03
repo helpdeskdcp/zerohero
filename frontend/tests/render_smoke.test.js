@@ -82,7 +82,14 @@ const P = {
   "/api/autoscalp/selfcheck": load("as_selfcheck", { ok: true, market_open: false, segments: {}, checks: {}, bars_ready: {}, config_warnings: [], entry_blocks: {} }),
   "/api/autoscalp/report": load("as_report", { day_ist: "2026-09-01", totals: { trades: 0 }, per_symbol: {}, zero_to_hero: [], note: "PAPER" }),
   "/api/autoscalp/status": load("as_status", { paper_mode: true, safeguards: {}, config: {} }),
-  "/api/autoscalp/universe": load("as_universe", { watchlist: [], groups: {} }),
+  "/api/autoscalp/universe": load("as_universe", {
+    watchlist: ["NIFTY"],
+    groups: {
+      "NSE Index": ["BANKEX", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTY", "SENSEX"],
+      "MCX": ["CRUDEOIL", "GOLD", "NATURALGAS", "SILVER"],
+      "Equity (F&O)": ["RELIANCE", "TCS"],
+    },
+  }),
   "/api/autoscalp/signals": load("as_signals", []),
   "/api/autoscalp/snapshots": load("as_snapshots", []),
   "/api/research": load("research", { signals: { by_decision: {}, by_market_regime: {} }, paper_trades: {}, by_strategy: {} }),
@@ -145,10 +152,11 @@ function matchPayload(url) {
   return P[base] ?? {};
 }
 const errors = [];
-global.fetch = async (url) => ({
-  ok: true, status: 200, json: async () => matchPayload(String(url)),
-  text: async () => "",
-});
+global.__urls = [];
+global.fetch = async (url) => {
+  global.__urls.push(String(url));
+  return { ok: true, status: 200, json: async () => matchPayload(String(url)), text: async () => "" };
+};
 global.WebSocket = function () { this.readyState = 0; this.close = () => {}; };
 global.WebSocket.prototype = {};
 global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
@@ -217,11 +225,58 @@ try {
   assert.ok(/NIFTY/.test(msMap), "math-scalper market-map table should render");
   const msWhy = elFor("#msWhy").innerHTML;
   assert.ok(/&lt;img src=x/.test(msWhy) && !/<img\s/i.test(msWhy), "math-scalper reason codes must be entity-escaped: " + msWhy.slice(0, 160));
-  const msFocus = elFor("#msFocus").value;
-  assert.ok(msFocus && msFocus.length > 0, "math-scalper Focus field must be pre-filled with the on-screen index, got: " + JSON.stringify(msFocus));
-  const msDl = (elFor("#msUniverseList").innerHTML.match(/value="/g) || []).length;
-  assert.ok(msDl >= 5, "math-scalper Focus datalist must carry the fallback universe (>=5), got: " + msDl);
+  // ---- Focus index combobox (custom; replaced the flaky native <datalist>) ----
+  // 1. defaults to NIFTY, input reflects it
+  assert.equal(chk.msSelectedFocus(), "NIFTY", "Focus defaults to NIFTY");
+  assert.equal(elFor("#msFocus").value, "NIFTY", "Focus input shows the selected index");
+  // 2/3/4. local case-insensitive partial-match filtering
+  assert.deepEqual(chk.msFilterUniverse("bank").sort(), ["BANKEX", "BANKNIFTY"], "'bank' -> BANKNIFTY + BANKEX");
+  assert.deepEqual(chk.msFilterUniverse("fin"), ["FINNIFTY"], "'fin' -> FINNIFTY");
+  assert.deepEqual(chk.msFilterUniverse("  MiD "), ["MIDCPNIFTY"], "trimmed + case-insensitive -> MIDCPNIFTY");
+  // NSE / BSE / MCX all represented (like Auto-Scalp)
+  assert.equal(chk.msExchOf("SENSEX"), "BSE"); assert.equal(chk.msExchOf("NATURALGAS"), "MCX"); assert.equal(chk.msExchOf("NIFTY"), "NSE");
+  assert.ok(chk.msFilterUniverse("nat").includes("NATURALGAS"), "MCX index searchable");
+  assert.ok(chk.msFilterUniverse("gold").includes("GOLD"), "MCX universe merged from /api/autoscalp/universe");
+  assert.ok(chk.msFilterUniverse("sense").includes("SENSEX"), "BSE index searchable");
+  assert.ok(!chk.msFilterUniverse("reli").includes("RELIANCE"), "single stocks are NOT pulled into the index selector");
+  // 5. selecting an index updates the one canonical state + refreshes the input + triggers a scan
+  const nBefore = global.__urls.length;
+  assert.equal(chk.msCommitFocus("BANKNIFTY"), true, "commit of a supported index succeeds");
+  assert.equal(chk.msSelectedFocus(), "BANKNIFTY", "selecting BANKNIFTY changes selectedFocusIndex");
+  assert.equal(elFor("#msFocus").value, "BANKNIFTY", "input reflects the new selection");
+  await flush(); await flush(); await flush();
+  assert.ok(global.__urls.slice(nBefore).some(u => /symbol=BANKNIFTY/.test(u)),
+    "selection triggers a fresh scan for BANKNIFTY: " + global.__urls.slice(nBefore).join(", "));
+  // 6. stale-response guard: an older request token is superseded by a newer selection
+  const tok = chk.msReqToken();
+  chk.msCommitFocus("NIFTY");
+  assert.ok(chk.msIsStale(tok), "a captured request token is stale after a newer Focus change");
+  await flush(); await flush();
+  // 7. unsupported typed value is rejected, selection unchanged, message shown
+  chk.msCommitFocus("NIFTY");                         // known baseline
+  assert.equal(chk.msCommitFocus("NOTANINDEX"), false, "unsupported index rejected");
+  assert.equal(chk.msSelectedFocus(), "NIFTY", "rejected input does not change the selection");
+  assert.match(chk.msFocusMsg(), /supported index/i, "validation message for unsupported index");
+  assert.equal(elFor("#msFocus").value, "NIFTY", "input reverts to the last valid selection");
+  // 8. empty Focus does not call the ranking API
+  const nEmpty = global.__urls.length;
+  assert.equal(chk.msCommitFocus(""), false, "empty Focus rejected");
+  assert.match(chk.msFocusMsg(), /select an index/i, "validation message for empty Focus");
+  await flush();
+  assert.equal(global.__urls.length, nEmpty, "empty Focus makes no API calls");
+  // 9. Refresh preserves the selected Focus
+  chk.msCommitFocus("BANKNIFTY"); await flush(); await flush();
+  elFor("#msRefresh").click(); await flush(); await flush();
+  assert.equal(chk.msSelectedFocus(), "BANKNIFTY", "Refresh preserves Focus");
+  // 10. Profile change preserves the selected Focus
+  const pf = elFor("#msProfile"); pf.value = "AGGRESSIVE";
+  (pf._handlers.change || []).forEach(fn => fn.call(pf, { target: pf }));
+  await flush(); await flush();
+  assert.equal(chk.msSelectedFocus(), "BANKNIFTY", "Profile change preserves Focus");
+  // 11/12. universe is never shrunk; static seed works with the APIs unavailable
+  assert.ok(chk.msUniverseList().length >= 8, "Focus universe only ever grows, got: " + chk.msUniverseList().length);
+  assert.ok(chk.msFilterUniverse("nifty").length >= 1, "static seed universe is searchable regardless of API state");
 
-  console.log("render smoke: 10 view loaders + feed renderer OK against real payloads, no runtime errors, output escaped");
+  console.log("render smoke: 10 view loaders + feed renderer OK, Focus combobox (12 checks) OK, no runtime errors, output escaped");
   process.exit(0);
 })().catch(e => { console.error("render smoke FAILED:", e && e.stack || e); process.exit(1); });

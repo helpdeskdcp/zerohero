@@ -1341,27 +1341,122 @@
     : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + "L"
     : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n));
   let MS_PROFILES = null, _msReplayBusy = false, _msBusy = false, _msRankBusy = false;
-  // Focus-field autocomplete: seed from a static list so the dropdown works even
-  // before /api/mathematics/market-map returns (it only lists indices that have
-  // a live chain right now — often 3 of 5), then merge in whatever the APIs give.
-  const MS_FALLBACK_UNIVERSE = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY", "BANKEX"];
-  const _msUni = new Set(MS_FALLBACK_UNIVERSE);
-  function msSetUniverse(list) {
-    (list || []).forEach(s => { if (s) _msUni.add(String(s).toUpperCase()); });
-    const dl = $("#msUniverseList");
-    if (dl) dl.innerHTML = [..._msUni].map(s => `<option value="${esc(s)}"></option>`).join("");
+
+  // ---------------- Focus index selector (custom combobox) ----------------
+  // The native <datalist> was unreliable as a searchable selector (esp. Android
+  // Chrome): no visible dropdown, inconsistent partial-match, no styling. This
+  // is a small self-contained combobox over a data-driven universe spanning
+  // NSE / BSE / MCX indices — the same span Auto-Scalp offers. Filtering is
+  // local; the ranking API is only hit on an actual valid selection change.
+  const MS_EXCH = {
+    SENSEX: "BSE", BANKEX: "BSE",
+    NATURALGAS: "MCX", CRUDEOIL: "MCX", GOLD: "MCX", SILVER: "MCX",
+    CRUDEOILMINI: "MCX", NATGASMINI: "MCX", GOLDMINI: "MCX", SILVERMINI: "MCX",
+  };
+  const msExchOf = s => MS_EXCH[String(s || "").toUpperCase()] || "NSE";
+  // static seed so the selector is searchable before any API responds
+  const MS_SEED_UNIVERSE = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY",
+                            "SENSEX", "BANKEX", "NATURALGAS", "CRUDEOIL"];
+  const _msUni = new Map();                       // sym -> exchange, insertion-ordered
+  MS_SEED_UNIVERSE.forEach(s => _msUni.set(s, msExchOf(s)));
+  let selectedFocusIndex = "NIFTY";               // the one canonical selection
+  let _msReqSeq = 0;                              // request-identity guard (stale-response protection)
+  let _msMenuIdx = -1;                            // keyboard highlight position
+
+  function msAddToUniverse(list) {
+    (list || []).forEach(s => {
+      const k = String(s || "").toUpperCase().trim();
+      if (k && !_msUni.has(k)) _msUni.set(k, msExchOf(k));
+    });
+  }
+  function msUniverseList() { return [..._msUni.keys()]; }
+  function msFilterUniverse(q) {
+    const t = String(q || "").trim().toLowerCase();
+    const all = msUniverseList();
+    return t ? all.filter(s => s.toLowerCase().includes(t)) : all;
+  }
+  function msSetFocusMsg(txt) {
+    const el = $("#msFocusMsg"); if (!el) return;
+    if (txt) { el.textContent = txt; el.hidden = false; }
+    else { el.textContent = ""; el.hidden = true; }
+  }
+  function msCloseMenu() {
+    const m = $("#msFocusMenu"); if (m) m.hidden = true;
+    const i = $("#msFocus"); if (i) i.setAttribute("aria-expanded", "false");
+    _msMenuIdx = -1;
+  }
+  function msRenderMenu(q) {
+    const menu = $("#msFocusMenu"); if (!menu) return;
+    _msMenuIdx = -1;
+    const matches = msFilterUniverse(q);
+    if (!matches.length) {
+      menu.innerHTML = `<li class="ms-combo-empty" role="presentation">no matching index — pick from the list</li>`;
+    } else {
+      const byEx = { NSE: [], BSE: [], MCX: [] };
+      matches.forEach(s => { (byEx[msExchOf(s)] || (byEx[msExchOf(s)] = [])).push(s); });
+      let html = "", i = 0;
+      ["NSE", "BSE", "MCX"].forEach(ex => {
+        (byEx[ex] || []).forEach((s, k) => {
+          if (k === 0) html += `<li class="ms-combo-grp" role="presentation">${ex}</li>`;
+          html += `<li class="ms-combo-item" role="option" id="msOpt-${i}" data-idx="${esc(s)}"` +
+                  ` aria-selected="${s === selectedFocusIndex ? "true" : "false"}">${esc(s)}</li>`;
+          i++;
+        });
+      });
+      menu.innerHTML = html;
+    }
+    menu.hidden = false;
+    const inp = $("#msFocus"); if (inp) inp.setAttribute("aria-expanded", "true");
+  }
+  function msMenuItems() {
+    const menu = $("#msFocusMenu");
+    return menu && menu.querySelectorAll ? Array.from(menu.querySelectorAll(".ms-combo-item")) : [];
+  }
+  function msHighlight(delta) {
+    const items = msMenuItems(); if (!items.length) return;
+    _msMenuIdx = (_msMenuIdx + delta + items.length) % items.length;
+    items.forEach((el, i) => el.classList.toggle("is-active", i === _msMenuIdx));
+    const cur = items[_msMenuIdx];
+    if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
+    const inp = $("#msFocus"); if (inp && cur) inp.setAttribute("aria-activedescendant", cur.id || "");
+  }
+  // Canonical selection commit. Validates against the supported universe, updates
+  // the one selectedFocusIndex, refreshes the input, and triggers exactly one
+  // ranking scan for the new index (never for an unsupported or empty value).
+  function msCommitFocus(raw) {
+    const idx = String(raw == null ? "" : raw).toUpperCase().trim();
+    const inp = $("#msFocus");
+    msCloseMenu();
+    if (!idx) {
+      msSetFocusMsg("Select an index to scan.");
+      if (inp) inp.value = selectedFocusIndex;
+      return false;
+    }
+    if (!_msUni.has(idx)) {
+      msSetFocusMsg("Select a supported index from the list.");
+      if (inp) inp.value = selectedFocusIndex;
+      return false;
+    }
+    msSetFocusMsg("");
+    if (inp) inp.value = idx;
+    if (idx === selectedFocusIndex) return true;   // no duplicate scan
+    selectedFocusIndex = idx;
+    loadMathScalp({ force: true, focusChanged: true });
+    return true;
   }
 
   // The ranking scan does a live broker fetch per index — fast when the feed is
   // warm, but ~20s cold (markets closed). Load it on its own so the rest of the
   // Math Scalper view paints immediately, and never stack overlapping scans.
-  async function loadMsRanking(prof) {
+  async function loadMsRanking(prof, reqToken) {
     if (_msRankBusy) return;
     _msRankBusy = true;
     const tb = $("#msRankTable tbody");
     if (tb && !tb.innerHTML.trim()) tb.innerHTML = `<tr><td colspan="10" class="hint">scanning the index universe… (slow while markets are closed)</td></tr>`;
     try {
       const ranking = await api(`/api/smart-scalper/ranking?profile=${encodeURIComponent(prof)}`);
+      // a newer Focus/Profile selection has superseded this scan — drop its result
+      if (reqToken != null && reqToken !== _msReqSeq) return ranking;
       if (ranking && ranking.calibration) $("#msCalib").textContent = ranking.calibration;
       const ranked = (ranking && ranking.ranked) || [];
       const notElig = (ranking && ranking.not_eligible) || [];
@@ -1525,29 +1620,56 @@
     finally { _msReplayBusy = false; if (btn) { btn.disabled = false; btn.textContent = "Run backtest"; } }
   }
 
-  async function loadMathScalp() {
-    if (_msBusy) return;
+  async function loadMathScalp(opts) {
+    const { force = false, focusChanged = false } = opts || {};
+    if (_msBusy && !force) return;
+    const myReq = ++_msReqSeq;               // this call's identity; a newer call invalidates it
+    const stale = () => myReq !== _msReqSeq;
     _msBusy = true;
     const prof = ($("#msProfile") && $("#msProfile").value) || "BALANCED";
-    msSetUniverse();   // seed the Focus dropdown immediately (before any await)
+    const focus = selectedFocusIndex || "NIFTY";
+
+    // keep the visible input in sync with the canonical selection (unless the
+    // user is mid-type in it)
+    const fEl = $("#msFocus");
+    if (fEl && fEl.value !== focus &&
+        !(typeof document !== "undefined" && document.activeElement === fEl)) fEl.value = focus;
+
+    if (focusChanged) {
+      // never leave a previous index's result on screen while the new one loads
+      $("#msBest").innerHTML = `<span class="hint">scanning ${esc(focus)}…</span>`;
+      $("#msWhy").innerHTML = $("#msInvalidate").innerHTML = `<li class="hint">—</li>`;
+      $("#msSubscores").innerHTML = "";
+      $("#msLadder").innerHTML = `<span class="hint">scanning ${esc(focus)}…</span>`;
+      $("#msOiTable tbody").innerHTML = `<tr><td colspan="8" class="hint">scanning ${esc(focus)}…</td></tr>`;
+      $("#msRankTable tbody").innerHTML = `<tr><td colspan="10" class="hint">scanning ${esc(focus)} + the index universe…</td></tr>`;
+    }
+
     try {
-      let profiles, map, journal;
+      let profiles, map, journal, auni;
       try {
-        [profiles, map, journal] = await Promise.all([
+        [profiles, map, journal, auni] = await Promise.all([
           MS_PROFILES ? Promise.resolve(MS_PROFILES) : api("/api/smart-scalper/profiles"),
-          api("/api/mathematics/market-map"),
+          api("/api/mathematics/market-map").catch(() => null),
           api("/api/smart-scalper/paper/journal").catch(() => null),
+          api("/api/autoscalp/universe").catch(() => null),
         ]);
       } catch (e) {
         const el = $("#msErr"); if (el) { el.hidden = false; el.textContent = "math scalper: " + e.message; }
         return;
       }
-      MS_PROFILES = profiles;
+      if (stale()) return;
+      MS_PROFILES = profiles || MS_PROFILES;
       $("#msErr").hidden = true;
       $("#msClock").textContent = "updated " + timeStr(new Date().toISOString());
 
+      // grow the Focus universe from every source — never shrink it
       const mm = (map && map.market_map) || [];
-      msSetUniverse(mm.map(r => r.instrument));
+      msAddToUniverse(mm.map(r => r.instrument));
+      if (auni && auni.groups) {
+        msAddToUniverse(auni.groups["NSE Index"]);
+        msAddToUniverse(auni.groups["MCX"]);
+      }
 
       $("#msMapTable tbody").innerHTML = mm.map(r => `<tr>
         <td><b>${text(r.instrument)}</b></td><td>${fmt(r.spot, 1)}</td><td>${fmt(r.pivot, 1)}</td>
@@ -1558,13 +1680,6 @@
         || `<tr><td colspan="11" class="hint">—</td></tr>`;
       if (journal) renderMsJournal(journal);
 
-      const fEl = $("#msFocus");
-      let focus = ((fEl && fEl.value) || "").toUpperCase().trim();
-      if (!focus) {
-        focus = (mm[0] && mm[0].instrument) || "NIFTY";
-        if (fEl) fEl.value = focus;   // show which index is on screen; keep it editable
-      }
-
       let sig = null, oi = null, lv = null;
       try {
         [sig, oi, lv] = await Promise.all([
@@ -1573,31 +1688,76 @@
           api(`/api/mathematics/levels?symbol=${encodeURIComponent(focus)}`).catch(() => null),
         ]);
       } catch (e) { /* focus panels degrade to "no data" */ }
+      if (stale()) return;                   // a newer Focus/Profile won — do not paint
 
       renderMsBest(focus, sig, null);
       renderMsLadder(focus, sig, oi, lv);
       renderMsOi(oi);
 
-      // ranking scan runs on its own (slow when the feed is cold); enrich the
-      // Best-Opportunity card with the option leg if a primary comes back.
-      loadMsRanking(prof).then(ranking => {
-        if (ranking && ranking.universe) msSetUniverse(ranking.universe);
+      // ranking scan runs on its own (slow when the feed is cold); its result is
+      // dropped if a newer selection has superseded this request.
+      loadMsRanking(prof, myReq).then(ranking => {
+        if (myReq !== _msReqSeq) return;
+        if (ranking && ranking.universe) msAddToUniverse(ranking.universe);
         const primary = (ranking && ranking.selection && ranking.selection.primary) || null;
         if (primary && primary.index === focus) renderMsBest(focus, sig, primary);
       });
-    } finally { _msBusy = false; }
+    } finally { if (myReq === _msReqSeq) _msBusy = false; }
   }
 
   (function bindMathScalp() {
-    // user-initiated reloads bypass the anti-overlap poll guard
-    const kick = () => { _msBusy = false; loadMathScalp(); };
-    const p = $("#msProfile"); if (p) p.addEventListener("change", kick);
-    const f = $("#msFocus"); if (f) { f.addEventListener("change", kick); f.addEventListener("input", () => {
-      const v = (f.value || "").toUpperCase();
-      if (_msUni.has(v)) kick();   // fires when a datalist option is picked
-    }); }
-    const rb = $("#msRefresh"); if (rb) rb.addEventListener("click", kick);
-    const rp = $("#msReplayBtn"); if (rp) rp.addEventListener("click", runMsReplay);
+    // Profile and Refresh reload the data but MUST NOT touch selectedFocusIndex.
+    const p = $("#msProfile");
+    if (p) p.addEventListener("change", () => loadMathScalp({ force: true }));
+    const rb = $("#msRefresh");
+    if (rb) rb.addEventListener("click", () => loadMathScalp({ force: true }));
+    const rp = $("#msReplayBtn");
+    if (rp) rp.addEventListener("click", runMsReplay);
+
+    // --- Focus combobox ---
+    const inp = $("#msFocus");
+    if (inp) {
+      inp.value = selectedFocusIndex;
+      inp.addEventListener("focus", () => msRenderMenu(inp.value));
+      inp.addEventListener("input", () => { msSetFocusMsg(""); msRenderMenu(inp.value); });
+      inp.addEventListener("keydown", (e) => {
+        const menu = $("#msFocusMenu");
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          if (!menu || menu.hidden) msRenderMenu(inp.value); else msHighlight(1);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault(); msHighlight(-1);
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          const items = msMenuItems();
+          const pick = (_msMenuIdx >= 0 && items[_msMenuIdx] && items[_msMenuIdx].dataset)
+            ? items[_msMenuIdx].dataset.idx : inp.value;
+          msCommitFocus(pick);
+        } else if (e.key === "Escape") {
+          msCloseMenu(); inp.value = selectedFocusIndex; msSetFocusMsg("");
+        }
+      });
+      inp.addEventListener("blur", () => setTimeout(() => {
+        const menu = $("#msFocusMenu");
+        if (menu && !menu.hidden) return;      // a menu click is handling the commit
+        msCommitFocus(inp.value);
+      }, 150));
+    }
+    const menu = $("#msFocusMenu");
+    if (menu) {
+      // keep input focus so blur doesn't fire before the click
+      menu.addEventListener("mousedown", (e) => e.preventDefault());
+      menu.addEventListener("click", (e) => {
+        const li = e.target && e.target.closest ? e.target.closest(".ms-combo-item") : null;
+        if (li && li.dataset && li.dataset.idx) msCommitFocus(li.dataset.idx);
+      });
+    }
+    if (typeof document !== "undefined" && document.addEventListener) {
+      document.addEventListener("click", (e) => {
+        const combo = $("#msFocusCombo");
+        if (combo && combo.contains && e.target && !combo.contains(e.target)) msCloseMenu();
+      });
+    }
   })();
 
   // Test seam — inert in production (window.__CHK_TEST__ is never set there).
@@ -1606,7 +1766,13 @@
   if (typeof window !== "undefined" && window.__CHK_TEST__) {
     window.__chk = { setView, loadOverview, loadSignals, loadTrades, loadScalp,
       loadResearch, loadSystem, loadReport, loadAutoscalp, loadMonitor, loadMathScalp,
-      prependFeed, renderHealthLine };
+      prependFeed, renderHealthLine,
+      // Focus combobox seam
+      msFilterUniverse, msUniverseList, msCommitFocus, msRenderMenu, msExchOf,
+      msSelectedFocus: () => selectedFocusIndex,
+      msReqToken: () => _msReqSeq,
+      msIsStale: (t) => t !== _msReqSeq,
+      msFocusMsg: () => (($("#msFocusMsg") || {}).textContent) || "" };
   }
 
   // ---------------- Boot ----------------

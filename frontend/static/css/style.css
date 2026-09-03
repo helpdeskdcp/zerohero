@@ -475,3 +475,38 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
   .ms-two { grid-template-columns: 1fr 1fr; }
   .ms-subscores { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ---- Focus index combobox (custom; replaces the flaky native <datalist>) ---- */
+.ms-combo { position: relative; display: inline-flex; align-items: center; }
+.ms-combo input {
+  width: 150px; padding: 6px 24px 6px 9px; font-size: 13px;
+  border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg); color: var(--ink);
+  text-transform: uppercase; letter-spacing: 0.02em; font-family: var(--font-mono);
+}
+.ms-combo .ms-combo-ic {
+  position: absolute; right: 8px; color: var(--ink-faint); font-size: 13px; pointer-events: none;
+}
+.ms-combo-menu {
+  position: absolute; top: calc(100% + 3px); left: 0; z-index: 30;
+  min-width: 170px; max-width: 240px; max-height: 264px; overflow-y: auto;
+  margin: 0; padding: 4px 0; list-style: none;
+  background: var(--bg-panel); border: 1px solid var(--line);
+  border-radius: 6px; box-shadow: var(--shadow);
+}
+.ms-combo-grp {
+  padding: 6px 10px 3px; font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--gold-soft);
+}
+.ms-combo-item {
+  padding: 8px 12px; min-height: 34px; display: flex; align-items: center;
+  font-family: var(--font-mono); font-size: 12px; color: var(--ink); cursor: pointer;
+}
+.ms-combo-item:hover, .ms-combo-item.is-active { background: var(--bg-raised); }
+.ms-combo-item[aria-selected="true"] { color: var(--gold-soft); }
+.ms-combo-empty { padding: 8px 12px; font-size: 11px; color: var(--ink-faint); }
+.ms-combo-msg { font-size: 10px; color: var(--ember); max-width: 180px; }
+@media (max-width: 560px) {
+  .ms-combo input { width: 128px; }
+  .ms-combo-menu { min-width: 150px; }
+}
