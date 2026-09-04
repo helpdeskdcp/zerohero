@@ -1,0 +1,50 @@
+name: backend tests
+
+# 135+ commits shipped straight to main by manual rsync+restart with no
+# automated gate. This is the first one: run the full offline pytest suite
+# (no live broker/Telegram creds needed -- tests/conftest.py hard-guards
+# against both) on every push/PR touching the backend, and fail loudly if
+# anything regresses.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/tests.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/tests.yml"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+      - name: Safety check -- live_trading must default to false
+        run: |
+          python -c "
+          import ast, sys
+          src = open('app/main.py').read()
+          assert '\"live_trading\": False' in src, 'health endpoint must hardcode live_trading:false'
+          print('OK: live_trading defaults to false in app/main.py')
+          "
