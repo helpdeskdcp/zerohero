@@ -270,6 +270,14 @@ try:
 except Exception as _e:
     print(f"[smart_index_scalper] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
+# by default — wiring it in does not start opening positions on its own.
+try:
+    from .smart_index_scalper.scheduler import SCHEDULER as smart_scalper_scheduler
+except Exception as _e:
+    smart_scalper_scheduler = None
+    print(f"[smart_index_scalper] scheduler disabled: {type(_e).__name__}: {_e}")
+
 
 @app.on_event("startup")
 async def _start_scalp_runner():
@@ -280,6 +288,11 @@ async def _start_scalp_runner():
             histcap_worker.start()
         except Exception as e:
             print(f"[histcap] start failed: {type(e).__name__}: {e}")
+    if smart_scalper_scheduler is not None:
+        try:
+            smart_scalper_scheduler.start()
+        except Exception as e:
+            print(f"[smart_scalper_scheduler] start failed: {type(e).__name__}: {e}")
 
 
 @app.on_event("shutdown")
@@ -289,6 +302,11 @@ async def _stop_scalp_runner():
     if histcap_worker is not None:
         try:
             await histcap_worker.stop()
+        except Exception:
+            pass
+    if smart_scalper_scheduler is not None:
+        try:
+            await smart_scalper_scheduler.stop()
         except Exception:
             pass
 

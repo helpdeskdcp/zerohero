@@ -104,6 +104,35 @@ def api_paper_manage(profile: Optional[str] = None):
     return SmartScalperPaperEngine(profile=profile).manage(use_cache=False)
 
 
+# --------------------------------------------------------------- live scheduler (spec section 48)
+@router.get("/scheduler")
+def api_scheduler_status():
+    """Status of the live paper-trade scheduler: armed / leader / last tick /
+    last result. PAPER ONLY — armed only means it may open a paper position;
+    live_trading is always False."""
+    from .scheduler import SCHEDULER
+    return SCHEDULER.status()
+
+
+@router.post("/arm")
+def api_scheduler_arm():
+    """Arm the live scheduler: the next leader tick may open a PAPER position
+    (still gated by autoscalp.safeguards.Safeguards.check_entry). manage() of
+    already-open positions runs every tick regardless of armed state."""
+    from .scheduler import SCHEDULER
+    SCHEDULER.arm()
+    return SCHEDULER.status()
+
+
+@router.post("/disarm")
+def api_scheduler_disarm():
+    """Disarm: the scheduler keeps managing (marking/exiting) open positions
+    but stops opening new ones."""
+    from .scheduler import SCHEDULER
+    SCHEDULER.disarm()
+    return SCHEDULER.status()
+
+
 # --------------------------------------------------------------- SLICE 5: historical replay / backtest
 @router.get("/replay/sessions")
 def api_replay_sessions(symbols: Optional[str] = None):

@@ -13,10 +13,11 @@ from . import (eligibility, selection_score, option_selector, profiles,
                state_machine, journal, historical_context, replay_metrics)
 from .paper_engine import SmartScalperPaperEngine
 from .replay import SmartScalperReplay
+from .scheduler import SmartScalperScheduler
 
 __all__ = [
     "SmartIndexScalper", "ENGINE_NAME", "DEFAULT_UNIVERSE",
     "index_meta", "resolve_universe", "eligibility", "selection_score",
     "option_selector", "profiles", "state_machine", "journal", "SmartScalperPaperEngine",
-    "historical_context", "replay_metrics", "SmartScalperReplay",
+    "historical_context", "replay_metrics", "SmartScalperReplay", "SmartScalperScheduler",
 ]
