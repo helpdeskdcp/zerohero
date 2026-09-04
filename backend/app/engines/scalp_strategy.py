@@ -336,7 +336,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
     if not gate["pass"]:
         return out_none(f"EV gate: {gate['reason']}",
                         {**ctx, "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
-                         "probability": round(prob, 4), "ev": gate["ev"], "rr": gate["rr"],
+                         "probability": round(prob, 4), "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],
                          "option_quality": sel["final_quality"], **_cal_meta})
 
     confidence = _confidence(prob, st["false_risk"]["verdict"], mtf["conflict"])
@@ -345,7 +345,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                 "reason": "confidence LOW -> watch only",
                 "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
                 "probability": round(prob, 4),
-                "confidence": confidence, "ev": gate["ev"], "rr": gate["rr"],
+                "confidence": confidence, "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],
                 **_cal_meta, "model_version": MODEL_VERSION}
 
     return {
@@ -358,7 +358,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         "trailing_stop": plan["trailing_stop"], "max_hold_sec": plan["max_hold_sec"],
         "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
         "probability": round(prob, 4),
-        "confidence": confidence, "ev": gate["ev"], "rr": gate["rr"],
+        "confidence": confidence, "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],
         **_cal_meta,
         "regime": reg["regime"], "mtf_alignment": mtf["alignment"],
         "support": (sr.get("support") or {}).get("level"),

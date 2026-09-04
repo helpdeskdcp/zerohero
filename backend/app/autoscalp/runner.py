@@ -820,7 +820,7 @@ class AutoScalpRunner:
             "pcr": _pcr, "max_pain": _max_pain,
             "component_scores": json.dumps(sig.get("component_scores") or {}),
             "signal_score": sig.get("signal_score"), "probability": sig.get("probability"),
-            "confidence": sig.get("confidence"), "ev": sig.get("ev"), "rr": sig.get("rr"),
+            "confidence": sig.get("confidence"), "ev": sig.get("ev"), "ev_r": sig.get("ev_r"), "rr": sig.get("rr"),
             "decision": sig["decision"], "reason": sig.get("reason"),
             "support": sig.get("support"), "resistance": sig.get("resistance"),
             "support_strength": sig.get("support_strength"),
@@ -959,7 +959,7 @@ class AutoScalpRunner:
                 "signal_type": sig.get("signal_type"), "direction": sig.get("direction"),
                 "signal_score": sig.get("signal_score"), "probability": sig.get("probability"),
                 "confidence": sig.get("confidence"), "decision": sig.get("decision"),
-                "reason": sig.get("reason"), "ev": sig.get("ev"), "rr": sig.get("rr"),
+                "reason": sig.get("reason"), "ev": sig.get("ev"), "ev_r": sig.get("ev_r"), "rr": sig.get("rr"),
                 "feed_age_sec": feed_age,
                 "chain_json": json.dumps(chain, default=str)[:20000],
                 # PHASE 3/4/5/7 provenance

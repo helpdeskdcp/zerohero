@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS scalp_signals (
     signal_score REAL,              -- 0-100
     probability REAL,               -- calibrated 0-1
     confidence TEXT,                -- LOW | MEDIUM | HIGH
-    ev REAL, rr REAL,
+    ev REAL, ev_r REAL, rr REAL,
     decision TEXT,                  -- BUY_CE|BUY_PE|NO_TRADE|WATCH|WAIT_FOR_CONFIRMATION
     reason TEXT,
     calib_version TEXT,
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS live_market_snapshots (
     support REAL, resistance REAL, support_strength REAL, resistance_strength REAL,
     signal_type TEXT, direction TEXT, signal_score REAL, probability REAL,
     confidence TEXT, decision TEXT, reason TEXT,
-    ev REAL, rr REAL,
+    ev REAL, ev_r REAL, rr REAL,
     feed_age_sec REAL, chain_json TEXT
 );
 
@@ -362,8 +362,16 @@ _MIGRATIONS = {
         "symboltoken": "TEXT",
         "risk_ref": "REAL",          # |entry - initial stop| captured at open (1R)
     },
+    "scalp_signals": {
+        # ev_r = ev / risk (the R-normalised value the EV gate actually decides
+        # on) was only ever embedded in the free-text `reason` string; raw `ev`
+        # (absolute premium points) isn't comparable across symbols with very
+        # different premium scales (e.g. NIFTY ~15-35 vs NATURALGAS ~0.7-1.3).
+        "ev_r": "REAL",
+    },
     "live_market_snapshots": {
         "ev": "REAL",
+        "ev_r": "REAL",
         "rr": "REAL",
         "vwap_status": "TEXT",   # available | invalid_volume | insufficient_data
         "momentum": "REAL",      # state-classifier roc_pct at decision time
@@ -739,7 +747,7 @@ _SCALP_SIGNAL_COLS = (
     "symbol", "index_ltp", "vwap", "atr", "pcr", "max_pain", "regime", "momentum",
     "support", "resistance", "support_strength", "resistance_strength", "sr_level",
     "sr_side", "signal_type", "direction", "mtf_alignment", "component_scores",
-    "signal_score", "probability", "confidence", "ev", "rr", "decision", "reason",
+    "signal_score", "probability", "confidence", "ev", "ev_r", "rr", "decision", "reason",
     "calib_version", "opt_underlying", "opt_strike", "opt_expiry", "opt_type",
     "opt_token", "opt_tradingsymbol", "entry", "stop_loss", "target_1", "target_2",
     "trailing_stop", "max_hold_sec", "entry_ts", "status", "exit_price", "exit_ts",
