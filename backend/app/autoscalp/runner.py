@@ -196,11 +196,26 @@ DEFAULT_CONFIG = {
     # absent -> it runs on the P6-validated defaults and must stay that way
     # (best live win-rate). MCX commodities move slower and trend longer, so
     # they get more hold time + a slightly stricter EV bar.
+    # CALIBRATION 2026-09-04 (74 closed AUTOSCALP paper trades, 2026-08-31..09-04):
+    # avg win +3.44 pts vs avg loss -5.0 pts despite ~50% win rate, because
+    # winners' own MFE (ATR-normalised) ran to a median 3.1x ATR (NATURALGAS)
+    # / 4.2x ATR (CRUDEOIL) while trail_atr=0.9 was giving the trade back on
+    # ordinary chop long before it got there: TRAIL exits realised only ~1.3
+    # pts avg vs that available move, and TARGET (1.7x ATR, well within reach)
+    # fired on only 6/74 trades. loss-side MAE matched the configured SL almost
+    # exactly (no evidence the stop distance itself is wrong). Loosened
+    # trail_atr 0.9 -> 1.6 for these two symbols only — still under the median
+    # MFE (keeps real protection), but stops choking a trade mid-run.
+    # NIFTY / BANKNIFTY / SENSEX untouched: NIFTY is the P6-validated default
+    # (see the comment above — must stay that way); BANKNIFTY (n=6) / SENSEX
+    # (n=2) are too thin a sample to calibrate individually yet.
     "symbol_profiles": {
         "NATURALGAS": {"max_hold_sec": 1800, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
-                       "est_cost_r": 0.10},        # ~0.1R round-trip on the NG option spread
+                       "est_cost_r": 0.10,          # ~0.1R round-trip on the NG option spread
+                       "trail_atr": 1.6},
         "CRUDEOIL":   {"max_hold_sec": 2400, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
-                       "sl_atr": 1.2, "t1_atr": 1.9, "est_cost_r": 0.10},
+                       "sl_atr": 1.2, "t1_atr": 1.9, "est_cost_r": 0.10,
+                       "trail_atr": 1.6},
     },
     "safeguards": {},
     "auto_arm": False,
