@@ -43,9 +43,20 @@ _log = logging.getLogger("chanakya.api")
 
 app = FastAPI(title="Chanakya AI", version="1.0.0")
 
+# The frontend is served by this same app (StaticFiles mount below), so
+# same-origin browser calls never need CORS headers at all. This is only
+# for a genuine cross-origin caller (e.g. a separate admin tool / local
+# frontend dev server on another port). Wildcard "*" would let ANY website's
+# JS probe every /api/* endpoint from a visitor's browser -- pin it to real
+# origins instead. Comma-separated; defaults to the one production host.
+_CORS_ORIGINS = [o.strip() for o in
+                 os.environ.get("CHANAKYA_CORS_ORIGINS",
+                                "https://chanakya.datacarepoint.com").split(",")
+                 if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

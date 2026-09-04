@@ -52,13 +52,17 @@ class CircuitBreaker:
         self.fail_threshold = max(1, int(fail_threshold))
         self.reset_after = float(reset_after)
         self._fails = 0
-        self._open_since = 0.0
+        # None means "not open". A float 0.0 is a valid time.monotonic() reading
+        # (early process uptime, or any clock stubbed for tests) and must never
+        # be mistaken for "unset" -- that collision previously made the breaker
+        # look permanently closed whenever it opened at t==0.0.
+        self._open_since = None
         self._lock = threading.Lock()
 
     @property
     def state(self) -> str:
         with self._lock:
-            if self._open_since == 0.0:
+            if self._open_since is None:
                 return "closed"
             return "half-open" if (time.monotonic() - self._open_since) >= self.reset_after else "open"
 
@@ -68,12 +72,12 @@ class CircuitBreaker:
     def record_success(self):
         with self._lock:
             self._fails = 0
-            self._open_since = 0.0
+            self._open_since = None
 
     def record_failure(self):
         with self._lock:
             self._fails += 1
-            if self._fails >= self.fail_threshold and self._open_since == 0.0:
+            if self._fails >= self.fail_threshold and self._open_since is None:
                 self._open_since = time.monotonic()
 
 
