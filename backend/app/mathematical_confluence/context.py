@@ -23,7 +23,7 @@ _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"
 # hence the 45s default (research/analysis surface — NOT the execution path).
 import os as _os
 _CACHE: dict[str, tuple[float, dict]] = {}
-_TTL_SEC = max(5.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "45")))
+_TTL_SEC = max(2.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "4")))
 _STALE_MAX_SEC = 300.0   # how long a last-good context may be served if a live fetch fails
 # previous-day OHLC does not change intraday: once fetched for an IST date, keep
 # it all session so a flaky getCandleData call can't drop the whole context to
@@ -128,118 +128,26 @@ def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
 
 
 def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> dict:
+    """Assemble the live-market context for `symbol`.
+
+    Since the architecture audit (phase 2) this is a thin coalescing cache over
+    `market_hub.snapshot()` — the hub reads spot from the shared WS feed and
+    OI/bars from histcap's capture DB, with only a throttled REST fallback. This
+    function keeps the same name/shape/cache for every existing caller
+    (/api/mathematics/*, the ranking scanner).
+    """
     sym = symbol.upper()
     if use_cache:
         hit = _CACHE.get(sym)
         if hit and time.time() - hit[0] < _TTL_SEC:
             return hit[1]
 
-    ctx: dict = {"instrument": sym, "prev_day": {}, "bars": [], "chain": [],
-                 "data_quality": {}}
     try:
-        from ..connectors.angelone import _market_sdk
-        from .. import market_data
-        # require_auth=True so a stale daily REST token is refreshed here (the
-        # login is serialised behind _sdk_lock — no stampede). With require_auth
-        # =False this path could never self-heal and every /api/mathematics/* +
-        # /api/smart-scalper/* call returned DATA_INSUFFICIENT until a restart.
-        sdk = _market_sdk(require_auth=True)
-        if not sdk:
-            ctx["data_quality"]["sdk"] = "MISSING (broker auth unavailable)"
-            return ctx
-        mkt = _MKT.get(sym, "NSE")
-        snap = market_data.selection_snapshot(
-            sdk, mkt, sym, expiry="AUTO", option_type="BOTH", window=window,
-            instrument="OPTION" if mkt in ("MCX", "BSE") else None)
-        ctx["market"] = mkt
-        ctx["atm"] = snap.get("atm")
-        ctx["expiry"] = snap.get("expiry")
-        # SPOT: live WS feed first (0 REST, always fresh) -> selection_snapshot's
-        # own quote -> histcap's last captured quote. The REST get_quote used to
-        # be the #1 rate-limit failure that dropped the card to DATA_INSUFFICIENT.
-        fs = _feed_spot(sym, sdk)
-        ctx["spot"] = fs or snap.get("spot") or snap.get("atm")
-        if fs is not None:
-            ctx["data_quality"]["spot"] = "ACTUAL (WS feed)"
-        if ctx["spot"] is None:
-            hq = _spot_from_histcap(sym)
-            if hq and hq.get("ltp") is not None:
-                ctx["spot"] = hq["ltp"]
-                ctx["data_quality"]["spot"] = "ACTUAL (histcap fallback)"
-                if hq.get("open") is not None:
-                    ctx.setdefault("today_open", hq["open"])
-                if hq.get("high") is not None and hq.get("low") is not None:
-                    ctx.setdefault("day_high", hq["high"])
-                    ctx.setdefault("day_low", hq["low"])
-        ctx["chain"] = [
-            {"strike": r.get("strike"), "expiry": snap.get("expiry"),
-             "ce_ltp": r.get("ce_ltp"), "ce_oi": r.get("ce_oi"),
-             "ce_oi_change": r.get("ce_oi_change"), "ce_volume": r.get("ce_volume"),
-             "ce_oi_status": r.get("ce_oi_status"), "ce_token": r.get("ce_token"),
-             "ce_delta": r.get("ce_delta"), "ce_gamma": r.get("ce_gamma"),
-             "ce_theta": r.get("ce_theta"), "ce_vega": r.get("ce_vega"), "ce_iv": r.get("ce_iv"),
-             "ce_greeks_source": r.get("ce_greeks_source"),
-             "pe_ltp": r.get("pe_ltp"), "pe_oi": r.get("pe_oi"),
-             "pe_oi_change": r.get("pe_oi_change"), "pe_volume": r.get("pe_volume"),
-             "pe_oi_status": r.get("pe_oi_status"), "pe_token": r.get("pe_token"),
-             "pe_delta": r.get("pe_delta"), "pe_gamma": r.get("pe_gamma"),
-             "pe_theta": r.get("pe_theta"), "pe_vega": r.get("pe_vega"), "pe_iv": r.get("pe_iv"),
-             "pe_greeks_source": r.get("pe_greeks_source")}
-            for r in (snap.get("chain") or [])
-        ]
-        ctx["oi_coverage"] = snap.get("oi_coverage")
-        ctx["data_quality"]["option_chain"] = ("ACTUAL" if ctx["chain"] else "MISSING")
-
-        now = datetime.now(IST)
-        today = now.strftime("%Y-%m-%d")
-        und = snap.get("underlying_contract") or {}
-        tok, exch = und.get("token"), und.get("exchange")
-
-        # ---- previous-day OHLC: day-cache -> live daily candle -> histcap ----
-        pd_cached = _PREVDAY.get(sym)
-        if pd_cached and pd_cached[0] == today:
-            ctx["prev_day"] = dict(pd_cached[1])
-            ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (day-cached)"
-        if tok:
-            if not ctx.get("prev_day"):
-                d = sdk.get_candles(exch, tok, "ONE_DAY",
-                                    (now - timedelta(days=10)).strftime("%Y-%m-%d %H:%M"),
-                                    now.strftime("%Y-%m-%d %H:%M"))
-                cs = d.get("candles") or []
-                if len(cs) >= 2:
-                    p = cs[-2]
-                    ctx["prev_day"] = {"high": p["high"], "low": p["low"], "close": p["close"]}
-                    ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL"
-                    ctx["today_open"] = cs[-1]["open"]
-                    _PREVDAY[sym] = (today, dict(ctx["prev_day"]))
-        if not ctx.get("prev_day"):
-            hc = _prevday_from_histcap(sym, today)
-            if hc:
-                ctx["prev_day"] = hc
-                ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (histcap fallback)"
-                _PREVDAY[sym] = (today, dict(hc))
-            else:
-                ctx["data_quality"]["prev_day_ohlc"] = "MISSING (daily candle + histcap both empty)"
-        if tok:
-            i5 = sdk.get_candles(exch, tok, "FIVE_MINUTE",
-                                 now.strftime("%Y-%m-%d 09:00"), now.strftime("%Y-%m-%d %H:%M"))
-            bars = [{"high": c["high"], "low": c["low"], "close": c["close"],
-                     "volume": c.get("volume")} for c in (i5.get("candles") or [])]
-            ctx["bars"] = bars
-            ctx["data_quality"]["intraday_bars"] = ("ACTUAL" if bars else "MISSING")
-            if bars:
-                ctx["day_high"] = max(b["high"] for b in bars)
-                ctx["day_low"] = min(b["low"] for b in bars)
-                closes = [b["close"] for b in bars]
-                ctx["mom_3m"] = round(closes[-1] - closes[-4], 4) if len(closes) >= 4 else 0.0
-                vols = [b["volume"] for b in bars if b.get("volume")]
-                if len(vols) >= 6:
-                    ctx["current_volume"] = vols[-1]
-                    ctx["avg_volume"] = sum(vols[-20:-1]) / max(1, len(vols[-20:-1]))
-        else:
-            ctx["data_quality"]["underlying_token"] = "MISSING"
+        from .. import market_hub
+        ctx = market_hub.snapshot(sym, window=window)
     except Exception as e:                                      # pragma: no cover
-        ctx["data_quality"]["context_error"] = f"{type(e).__name__}: {e}"
+        ctx = {"instrument": sym, "prev_day": {}, "bars": [], "chain": [],
+               "data_quality": {"context_error": f"{type(e).__name__}: {e}"}}
 
     if use_cache:
         if ctx.get("spot") is not None:
