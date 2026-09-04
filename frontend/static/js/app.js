@@ -1354,6 +1354,18 @@
       new Promise((_, rej) => setTimeout(() => rej(new Error("timeout: " + path)), ms || 12000)),
     ]);
   }
+  // In-place data refresh: the 20s poll re-renders every panel, but only touch
+  // the DOM when the HTML actually changed — an unchanged poll is then a no-op
+  // (no flash, no scroll jump, no lost hover/selection). "Data refreshes, the
+  // page doesn't."
+  function _msSet(sel, html) {
+    const el = typeof sel === "string" ? $(sel) : sel;
+    if (el && el.innerHTML !== html) el.innerHTML = html;
+  }
+  function _msText(sel, txt) {
+    const el = typeof sel === "string" ? $(sel) : sel;
+    if (el && el.textContent !== txt) el.textContent = txt;
+  }
 
   // ---------------- Focus index selector (custom combobox) ----------------
   // The native <datalist> was unreliable as a searchable selector (esp. Android
@@ -1482,7 +1494,7 @@
       const neRows = notElig.map(r => `<tr class="hint">
         <td>·</td><td>${text(r.index)}</td><td>${fmt(r.score, 1)}</td><td colspan="6">—</td>
         <td>${(r.failed || []).map(f => `<span class="ms-tag res">${esc(f)}</span>`).join(" ") || text(r.status)}</td></tr>`).join("");
-      if (tb) tb.innerHTML = (rankRows + neRows) || `<tr><td colspan="10" class="hint">No scan result.</td></tr>`;
+      _msSet(tb, (rankRows + neRows) || `<tr><td colspan="10" class="hint">No scan result.</td></tr>`);
       return ranking;
     } catch (e) {
       if (tb) tb.innerHTML = `<tr><td colspan="10" class="hint">ranking scan failed: ${esc(e.message)}</td></tr>`;
@@ -1507,19 +1519,19 @@
 
   function renderMsBest(focus, sig, primary) {
     const box = $("#msBest"), why = $("#msWhy"), inval = $("#msInvalidate"), subs = $("#msSubscores");
-    $("#msBestMeta").textContent = focus + " · the confluence score is NOT a probability";
+    _msText("#msBestMeta", focus + " · the confluence score is NOT a probability");
     if (!sig || sig.status !== "OK") {
       const s = sig && sig.status;
       const msg = (!s || s === "DATA_INSUFFICIENT")
         ? `${esc(focus)} — waiting for live market data (broker feed warming up). Retrying automatically…`
         : `${esc(focus)}: ${text(s, "no data")}${(sig && sig.missing || []).length ? " — needs " + esc(sig.missing.join(", ")) : ""}`;
-      box.innerHTML = `<span class="hint">${msg}</span>`;
-      why.innerHTML = inval.innerHTML = `<li class="hint">—</li>`; subs.innerHTML = "";
+      _msSet(box, `<span class="hint">${msg}</span>`);
+      _msSet(why, `<li class="hint">—</li>`); _msSet(inval, `<li class="hint">—</li>`); _msSet(subs, "");
       return;
     }
     const dir = sig.direction || "NONE", st = sig.signal_type || "NO_TRADE", rr = sig.risk_reward || [];
     const so = (primary && primary.index === focus && primary.selected_option) || null;
-    box.innerHTML = `
+    _msSet(box, `
       <span class="ms-dir ${esc(dir)}">${text(st)}</span>
       <span class="kv"><span>Direction</span><b>${text(dir)}</b></span>
       <span class="kv"><span>Confidence</span><b>${text(sig.confidence)}</b></span>
@@ -1529,9 +1541,9 @@
       <span class="kv"><span>Stop</span><b class="neg">${fmt(sig.stop_loss, 1)}</b></span>
       <span class="kv"><span>T1 / T2 / T3</span><b class="pos">${[sig.target_1, sig.target_2, sig.target_3].map(x => fmt(x, 1)).join(" / ")}</b></span>
       <span class="kv"><span>RR 1/2/3</span><b>${rr.map(x => fmt(x, 2)).join(" / ") || "—"}</b></span>
-      ${so ? `<span class="kv"><span>Option leg</span><b>${text(so.selected_strike)} ${text(so.option_type)} @ ${fmt(so.option_ltp, 2)} · sel ${fmt(so.selection_score, 0)}</b></span>` : ``}`;
+      ${so ? `<span class="kv"><span>Option leg</span><b>${text(so.selected_strike)} ${text(so.option_type)} @ ${fmt(so.option_ltp, 2)} · sel ${fmt(so.selection_score, 0)}</b></span>` : ``}`);
     const rc = sig.reason_codes || [];
-    why.innerHTML = rc.length ? rc.map(x => `<li>${esc(x)}</li>`).join("") : `<li class="hint">no confirming evidence yet</li>`;
+    _msSet(why, rc.length ? rc.map(x => `<li>${esc(x)}</li>`).join("") : `<li class="hint">no confirming evidence yet</li>`);
     const invs = [];
     if (sig.no_trade_reason) invs.push("NOT a trade now — " + sig.no_trade_reason);
     if (sig.support_level && dir === "CE") invs.push(`a decisive close below ${fmt(sig.support_level, 1)} (nearest support zone) breaks the long-CE thesis`);
@@ -1541,19 +1553,19 @@
     if (w.PUT_SUPPORT_WALL) invs.push(`heavy PUT wall @ ${text(w.PUT_SUPPORT_WALL.strike)} caps downside`);
     if ((sig.oi_matrix || {}).battle_zone) invs.push("BATTLE ZONE — CE & PE both building; direction unresolved");
     invs.push("UNCALIBRATED thresholds — treat this as a hypothesis, not an established edge");
-    inval.innerHTML = invs.map(x => `<li>${esc(x)}</li>`).join("");
+    _msSet(inval, invs.map(x => `<li>${esc(x)}</li>`).join(""));
     const bd = sig.score_breakdown || {};
-    subs.innerHTML = Object.entries(bd).map(([k, v]) => {
+    _msSet(subs, Object.entries(bd).map(([k, v]) => {
       const fillPct = v.out_of ? Math.max(0, Math.min(100, 100 * v.raw / v.out_of)) : 0;
       return `<div class="ms-sub"><div class="ms-sub-head"><span>${esc(k)}</span><span>${fmt(v.raw, 1)}/${text(v.out_of)}</span></div>
         <div class="ms-track"><div class="ms-fill" style="width:${fillPct.toFixed(0)}%"></div></div></div>`;
-    }).join("") || `<span class="hint">no sub-score breakdown</span>`;
+    }).join("") || `<span class="hint">no sub-score breakdown</span>`);
   }
 
   function renderMsLadder(focus, sig, oi, lv) {
     const el = $("#msLadder");
-    $("#msLadderSym").textContent = focus;
-    if (!sig || sig.status !== "OK" || sig.spot == null) { el.innerHTML = `<span class="hint">no data</span>`; return; }
+    _msText("#msLadderSym", focus);
+    if (!sig || sig.status !== "OK" || sig.spot == null) { _msSet(el, `<span class="hint">no data</span>`); return; }
     const spot = Number(sig.spot), rungs = {};
     const add = (price, tag, cls) => {
       if (price == null || isNaN(Number(price))) return;
@@ -1577,38 +1589,38 @@
     keys = (near.length ? near : keys).sort((a, b) => b - a).slice(0, 32);
     if (!keys.includes(spot)) keys.push(spot);
     keys = Array.from(new Set(keys.map(k => Number(k.toFixed(1))))).sort((a, b) => b - a);
-    el.innerHTML = keys.map(k => {
+    _msSet(el, keys.map(k => {
       const kk = k.toFixed(1), isSpot = kk === spotKey;
       const tags = (rungs[kk] || []).map(t => `<span class="ms-tag ${t.cls}">${esc(t.tag)}</span>`).join("");
       return `<div class="ms-rung${isSpot ? " is-spot" : ""}"><span class="ms-price">${kk}</span>
         <span class="ms-tags">${isSpot ? '<span class="ms-tag">▶ SPOT</span>' : ""}${tags}</span></div>`;
-    }).join("") || `<span class="hint">no levels</span>`;
+    }).join("") || `<span class="hint">no levels</span>`);
   }
 
   function renderMsOi(oi) {
     const meta = $("#msOiMeta"), tb = $("#msOiTable tbody");
-    if (!oi || oi.status !== "OK") { meta.textContent = text(oi && oi.status, "no data"); tb.innerHTML = `<tr><td colspan="8" class="hint">—</td></tr>`; return; }
+    if (!oi || oi.status !== "OK") { _msText(meta, text(oi && oi.status, "no data")); _msSet(tb, `<tr><td colspan="8" class="hint">—</td></tr>`); return; }
     const w = oi.walls || {};
-    meta.textContent = `PCR ${fmt(oi.pcr, 2)} · ${oi.battle_zone ? "BATTLE ZONE" : "no battle zone"} · `
-      + `CALL wall ${text((w.CALL_RESISTANCE_WALL || {}).strike, "—")} · PUT wall ${text((w.PUT_SUPPORT_WALL || {}).strike, "—")}`;
+    _msText(meta, `PCR ${fmt(oi.pcr, 2)} · ${oi.battle_zone ? "BATTLE ZONE" : "no battle zone"} · `
+      + `CALL wall ${text((w.CALL_RESISTANCE_WALL || {}).strike, "—")} · PUT wall ${text((w.PUT_SUPPORT_WALL || {}).strike, "—")}`);
     const rows = (oi.rows || []).slice().sort((a, b) =>
       (b.support_score + b.resistance_score + b.battle_score) - (a.support_score + a.resistance_score + a.battle_score)).slice(0, 14);
-    tb.innerHTML = rows.map(r => `<tr>
+    _msSet(tb, rows.map(r => `<tr>
       <td><b>${fmt(r.strike, 0)}</b></td>
       <td>${fmtK(r.ce_oi)}</td><td>${fmt(r.ce_ltp, 2)}</td>
       <td>${fmtK(r.pe_oi)}</td><td>${fmt(r.pe_ltp, 2)}</td>
       <td class="${r.support_score > 1 ? "feed-dir BUY" : ""}">${fmt(r.support_score, 1)}</td>
       <td class="${r.resistance_score > 1 ? "feed-dir SELL" : ""}">${fmt(r.resistance_score, 1)}</td>
-      <td>${fmt(r.battle_score, 1)}</td></tr>`).join("") || `<tr><td colspan="8" class="hint">—</td></tr>`;
+      <td>${fmt(r.battle_score, 1)}</td></tr>`).join("") || `<tr><td colspan="8" class="hint">—</td></tr>`);
   }
 
   function renderMsJournal(j) {
     if (!j) return;
-    $("#msJournalNote").textContent = j.note || "";
-    $("#msJournalTable tbody").innerHTML = msBucketRows({
+    _msText("#msJournalNote", j.note || "");
+    _msSet("#msJournalTable tbody", msBucketRows({
       overall: j.overall, by_profile: j.by_profile,
       by_instrument: j.by_instrument, by_market_regime: j.by_market_regime,
-    }) || `<tr><td colspan="8" class="hint">No closed paper trades yet.</td></tr>`;
+    }) || `<tr><td colspan="8" class="hint">No closed paper trades yet.</td></tr>`);
   }
 
   async function runMsReplay() {
@@ -1693,13 +1705,13 @@
         msAddToUniverse(auni.groups["MCX"]);
       }
 
-      $("#msMapTable tbody").innerHTML = mm.map(r => `<tr>
+      _msSet("#msMapTable tbody", mm.map(r => `<tr>
         <td><b>${text(r.instrument)}</b></td><td>${fmt(r.spot, 1)}</td><td>${fmt(r.pivot, 1)}</td>
         <td>${fmt(r.gann_balance, 1)}</td><td>${fmt(r.nearest_support, 1)}</td><td>${fmt(r.nearest_resistance, 1)}</td>
         <td>${text(r.market_regime)}</td><td class="feed-dir ${msDir(r.direction)}">${text(r.direction)}</td>
         <td>${fmt(r.confluence_score, 1)}</td><td>${text(r.confidence)}</td>
         <td><span class="badge ${esc(r.signal)}">${text(r.signal)}</span></td></tr>`).join("")
-        || `<tr><td colspan="11" class="hint">—</td></tr>`;
+        || `<tr><td colspan="11" class="hint">—</td></tr>`);
       if (journal) renderMsJournal(journal);
 
       const [sig, oi, lv] = await Promise.all([

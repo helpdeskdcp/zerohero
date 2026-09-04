@@ -31,6 +31,29 @@ _STALE_MAX_SEC = 300.0   # how long a last-good context may be served if a live 
 _PREVDAY: dict[str, tuple[str, dict]] = {}
 
 
+def _spot_from_histcap(symbol: str, max_age_sec: float = 180.0) -> dict | None:
+    """Latest captured index/future quote from market_history.db — a broker-free
+    spot when the live get_quote is being rate-limited. Returns
+    {ltp, open, high, low} or None if nothing recent enough."""
+    try:
+        import sqlite3
+        from ..histcap.store import DB_PATH as _HDB
+        with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
+            c.row_factory = sqlite3.Row
+            r = c.execute(
+                "SELECT ltp, open, high, low, received_ts FROM quote_snapshots "
+                "WHERE symbol=? AND kind IN ('INDEX','FUTURE') AND ltp IS NOT NULL "
+                "ORDER BY received_ts DESC LIMIT 1", (symbol,)).fetchone()
+        if not r:
+            return None
+        ts = datetime.fromisoformat(str(r["received_ts"]).replace("Z", "+00:00"))
+        if (datetime.now(timezone.utc) - ts).total_seconds() > max_age_sec:
+            return None
+        return {"ltp": r["ltp"], "open": r["open"], "high": r["high"], "low": r["low"]}
+    except Exception:
+        return None
+
+
 def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
     """Aggregate the previous captured session's OHLC from market_history.db —
     a broker-free fallback when the live daily-candle call fails."""
@@ -85,6 +108,18 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
         ctx["spot"] = snap.get("spot") or snap.get("atm")
         ctx["atm"] = snap.get("atm")
         ctx["expiry"] = snap.get("expiry")
+        # live get_quote gets rate-limited under the app's call volume — fall
+        # back to histcap's latest captured index/future quote for the spot
+        if ctx["spot"] is None:
+            hq = _spot_from_histcap(sym)
+            if hq and hq.get("ltp") is not None:
+                ctx["spot"] = hq["ltp"]
+                ctx["data_quality"]["spot"] = "ACTUAL (histcap fallback)"
+                if hq.get("open") is not None:
+                    ctx.setdefault("today_open", hq["open"])
+                if hq.get("high") is not None and hq.get("low") is not None:
+                    ctx.setdefault("day_high", hq["high"])
+                    ctx.setdefault("day_low", hq["low"])
         ctx["chain"] = [
             {"strike": r.get("strike"), "expiry": snap.get("expiry"),
              "ce_ltp": r.get("ce_ltp"), "ce_oi": r.get("ce_oi"),
