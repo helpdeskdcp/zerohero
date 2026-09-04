@@ -87,8 +87,14 @@ def api_market_map(symbols: str = Query("NIFTY,BANKNIFTY,SENSEX")):
 def api_signal(symbol: str = "NIFTY", weights: Optional[str] = None):
     c = _context(symbol)
     pd = c.get("prev_day") or {}
-    return _engine.evaluate(
+    out = _engine.evaluate(
         instrument=symbol.upper(), timestamp="", prev_day=pd,
         today_open=c.get("today_open"), current_price=c.get("spot"),
         day_high=c.get("day_high"), day_low=c.get("day_low"),
         bars=c.get("bars"), chain=c.get("chain"))
+    dq = c.get("data_quality") or {}
+    out["data_source"] = c.get("source", "?")
+    out["spot_source"] = dq.get("spot")
+    out["chain_source"] = dq.get("option_chain")
+    out["stale"] = bool(c.get("stale"))
+    return out

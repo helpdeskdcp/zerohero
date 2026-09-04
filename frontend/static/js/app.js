@@ -1519,7 +1519,9 @@
 
   function renderMsBest(focus, sig, primary) {
     const box = $("#msBest"), why = $("#msWhy"), inval = $("#msInvalidate"), subs = $("#msSubscores");
-    _msText("#msBestMeta", focus + " · the confluence score is NOT a probability");
+    const src = sig && (sig.spot_source || "").replace("ACTUAL ", "").replace(/[()]/g, "");
+    const feedChip = src ? ` · feed: ${esc(src)}${sig && sig.stale ? " · STALE" : ""}` : "";
+    _msText("#msBestMeta", focus + " · score is NOT a probability" + feedChip);
     if (!sig || sig.status !== "OK") {
       const s = sig && sig.status;
       const msg = (!s || s === "DATA_INSUFFICIENT")
@@ -1832,7 +1834,7 @@
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
-  setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 20000);
+  setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 12000);
   // refresh the health panel while it is on screen (selfcheck is cheap)
   setInterval(() => { if (state.view === "system") loadSystem(); }, 10000);
 })();
