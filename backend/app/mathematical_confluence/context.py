@@ -31,6 +31,53 @@ _STALE_MAX_SEC = 300.0   # how long a last-good context may be served if a live 
 _PREVDAY: dict[str, tuple[str, dict]] = {}
 
 
+# ---- Phase 1: live spot from the shared WS feed (0 REST) --------------------
+_IDX_TOK: dict[str, tuple[str, int]] = {}   # sym -> (token, exchange_type)
+_SUBBED = False
+_UNIVERSE = [s.strip().upper() for s in _os.environ.get(
+    "SMART_SCALPER_UNIVERSE", "NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX,BANKEX").split(",") if s.strip()]
+
+
+def _resolve_idx_token(sdk, sym: str):
+    if sym in _IDX_TOK:
+        return _IDX_TOK[sym]
+    try:
+        from ..connectors.angel_ws import EXCHANGE_TYPE
+        idx = sdk.resolve_index(sym)
+        if idx.get("status") == "OK" and idx.get("token"):
+            et = EXCHANGE_TYPE.get(str(idx.get("exchange") or "NSE").upper(), 1)
+            _IDX_TOK[sym] = (str(idx["token"]), et)
+            return _IDX_TOK[sym]
+    except Exception:
+        pass
+    return None
+
+
+def _feed_spot(sym: str, sdk) -> float | None:
+    """Live index LTP from the shared WS feed — no broker REST call. Subscribes
+    the whole configured universe once so it doesn't depend on what autoscalp
+    happens to be watching."""
+    global _SUBBED
+    try:
+        from ..feed_registry import get_feed
+        feed = get_feed()
+        if not feed:
+            return None
+        if not _SUBBED:
+            want = []
+            for u in _UNIVERSE:
+                tk = _resolve_idx_token(sdk, u)
+                if tk:
+                    want.append({"token": tk[0], "exchange_type": tk[1]})
+            if want:
+                feed.subscribe(want, owner="mathhub")
+                _SUBBED = True
+        tk = _resolve_idx_token(sdk, sym)
+        return feed.get_ltp(tk[0]) if tk else None
+    except Exception:
+        return None
+
+
 def _spot_from_histcap(symbol: str, max_age_sec: float = 180.0) -> dict | None:
     """Latest captured index/future quote from market_history.db — a broker-free
     spot when the live get_quote is being rate-limited. Returns
@@ -105,11 +152,15 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
             sdk, mkt, sym, expiry="AUTO", option_type="BOTH", window=window,
             instrument="OPTION" if mkt in ("MCX", "BSE") else None)
         ctx["market"] = mkt
-        ctx["spot"] = snap.get("spot") or snap.get("atm")
         ctx["atm"] = snap.get("atm")
         ctx["expiry"] = snap.get("expiry")
-        # live get_quote gets rate-limited under the app's call volume — fall
-        # back to histcap's latest captured index/future quote for the spot
+        # SPOT: live WS feed first (0 REST, always fresh) -> selection_snapshot's
+        # own quote -> histcap's last captured quote. The REST get_quote used to
+        # be the #1 rate-limit failure that dropped the card to DATA_INSUFFICIENT.
+        fs = _feed_spot(sym, sdk)
+        ctx["spot"] = fs or snap.get("spot") or snap.get("atm")
+        if fs is not None:
+            ctx["data_quality"]["spot"] = "ACTUAL (WS feed)"
         if ctx["spot"] is None:
             hq = _spot_from_histcap(sym)
             if hq and hq.get("ltp") is not None:
