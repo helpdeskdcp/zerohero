@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Post-close summary of the day's market-map latency samples -> Telegram.
-# Cron (root), weekdays 15:45 IST = 10:15 UTC:
-#   15 10 * * 1-5  /root/zerohero/backend/scripts/market_map_daily_summary.sh
+# Cron (root), weekdays 16 10 * * 1-5 (15:46 IST). Self-verifying: the send
+# result (ok / failure reason) is appended to data/market_map_summary_sent.log
+# and this script's stdout is captured to data/market_map_summary_cron.log, so
+# whether Monday's summary landed is checkable without anyone watching.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 set -a; . ./.env 2>/dev/null; set +a
 LOG="data/market_map_monitor.log"
+exec >> data/market_map_summary_cron.log 2>&1
+echo "=== run $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
 [ -f "$LOG" ] || { echo "no monitor log yet"; exit 0; }
 
 ./venv/bin/python - "$LOG" <<'PY'
@@ -46,14 +50,26 @@ for w in warns[-8:]:
 
 msg = "\n".join(lines)
 print(msg)
-import os as _os
+
+import os as _os, time as _t
 cid = _os.environ.get("TELEGRAM_CHAT_ID")
+now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+sent_log = "data/market_map_summary_sent.log"
+result = None
 if cid and _os.environ.get("TELEGRAM_BOT_TOKEN"):
-    try:
-        telegram._send(msg, cid)
-        print("[sent to Telegram]")
-    except Exception as e:
-        print("[telegram send failed]", e)
+    for attempt in (1, 2):
+        try:
+            r = telegram._send(msg, cid)
+        except Exception as e:
+            r = {"ok": False, "reason": repr(e)}
+        if r.get("ok"):
+            result = f"{now}  {today}  SENT ok  (attempt {attempt})"
+            break
+        result = f"{now}  {today}  FAILED  {r}  (attempt {attempt})"
+        _t.sleep(5)
 else:
-    print("[no Telegram creds — logged only]")
+    result = f"{now}  {today}  SKIPPED  no Telegram creds"
+with open(sent_log, "a") as f:
+    f.write(result + "\n")
+print(result)
 PY

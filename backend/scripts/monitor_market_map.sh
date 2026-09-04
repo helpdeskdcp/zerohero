@@ -40,3 +40,21 @@ except Exception as e:
 
 sample "market-map" "market-map"
 sample "signal?symbol=NIFTY" "signal:NIFTY"
+
+# --- watchdog: after 10:25 UTC (post-close), verify today's Telegram summary
+#     actually landed; alert once if it didn't.
+HH=$(date -u +%H); MM=$(date -u +%M)
+if [ "$HH" = "10" ] && [ "$MM" -ge 25 ]; then
+  IST_DAY=$(TZ=Asia/Kolkata date +%Y-%m-%d)
+  SENT="data/market_map_summary_sent.log"
+  MARK="data/.mm_summary_alerted_${IST_DAY}"
+  if ! { [ -f "$SENT" ] && grep -q "  ${IST_DAY}  SENT ok" "$SENT"; } && [ ! -f "$MARK" ]; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)  WARN  daily market-map summary NOT confirmed sent for ${IST_DAY}" >> "$LOG"
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+      curl -s -m 8 -o /dev/null "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=⚠ market-map daily latency summary did NOT send for ${IST_DAY} — check data/market_map_summary_sent.log"
+    fi
+    : > "$MARK"
+  fi
+fi
