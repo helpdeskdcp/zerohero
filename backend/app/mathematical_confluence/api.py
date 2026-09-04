@@ -58,27 +58,31 @@ def api_oi(symbol: str = "NIFTY"):
 def api_market_map(symbols: str = Query("NIFTY,BANKNIFTY,SENSEX")):
     rows = []
     for sym in [s.strip().upper() for s in symbols.split(",") if s.strip()]:
-        c = _context(sym)
-        pd = c.get("prev_day") or {}
-        out = _engine.evaluate(
-            instrument=sym, timestamp="", prev_day=pd,
-            today_open=c.get("today_open"), current_price=c.get("spot"),
-            day_high=c.get("day_high"), day_low=c.get("day_low"),
-            bars=c.get("bars"), chain=c.get("chain"))
-        rows.append({
-            "instrument": sym, "spot": c.get("spot"),
-            "status": out.get("status"),
-            "pivot": (out.get("mathematical_levels") or {}).get("pivots", {}).get("pivot") if out.get("status") == "OK" else None,
-            "gann_balance": (out.get("mathematical_levels") or {}).get("gann", {}).get("gann_balance") if out.get("status") == "OK" else None,
-            "nearest_support": (out.get("nearest_support") or {}).get("center"),
-            "nearest_resistance": (out.get("nearest_resistance") or {}).get("center"),
-            "market_regime": out.get("market_regime"),
-            "direction": out.get("direction"),
-            "confluence_score": out.get("confluence_score"),
-            "confidence": out.get("confidence"),
-            "signal": out.get("signal_type"),
-            "missing": out.get("missing"),
-        })
+        try:
+            c = _context(sym)
+            pd = c.get("prev_day") or {}
+            out = _engine.evaluate(
+                instrument=sym, timestamp="", prev_day=pd,
+                today_open=c.get("today_open"), current_price=c.get("spot"),
+                day_high=c.get("day_high"), day_low=c.get("day_low"),
+                bars=c.get("bars"), chain=c.get("chain"))
+            ml = out.get("mathematical_levels") or {}
+            rows.append({
+                "instrument": sym, "spot": c.get("spot"),
+                "status": out.get("status"),
+                "pivot": (ml.get("pivots") or {}).get("pivot"),
+                "gann_balance": (ml.get("gann") or {}).get("gann_balance"),
+                "nearest_support": (out.get("nearest_support") or {}).get("center"),
+                "nearest_resistance": (out.get("nearest_resistance") or {}).get("center"),
+                "market_regime": out.get("market_regime"),
+                "direction": out.get("direction"),
+                "confluence_score": out.get("confluence_score"),
+                "confidence": out.get("confidence"),
+                "signal": out.get("signal_type"),
+                "missing": out.get("missing"),
+            })
+        except Exception as e:                                  # one bad symbol must not 500 the map
+            rows.append({"instrument": sym, "status": "ERROR", "error": f"{type(e).__name__}: {e}"})
     return {"market_map": rows,
             "note": "confluence_score is UNCALIBRATED (default weights, no backtest)"}
 
