@@ -12,16 +12,19 @@ broker_orders rows for a trade_id.
 from __future__ import annotations
 
 import json
+import logging
 
 from .. import db
+
+_log = logging.getLogger(__name__)
 
 
 def event(trade_id: str, client_tag: str, kind: str, detail: dict | None = None) -> None:
     try:
         db.insert_order_event(trade_id, client_tag, kind,
                               json.dumps(detail or {}, default=str))
-    except Exception:
-        pass
+    except Exception as e:
+        _log.warning("audit.event(%s, %s): failed to write order_events row: %r", trade_id, kind, e)
 
 
 def snapshot(trade_id: str) -> dict:

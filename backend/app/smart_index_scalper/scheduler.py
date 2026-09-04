@@ -24,12 +24,15 @@ SAFETY
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 import traceback
 
 from .. import db
 from .paper_engine import SmartScalperPaperEngine
+
+_log = logging.getLogger(__name__)
 
 LEASE_KEY = "smart_scalper_lease"
 LEASE_TTL_SEC = 30
@@ -64,12 +67,12 @@ class SmartScalperScheduler:
         if self._task:
             try:
                 await asyncio.wait_for(self._task, timeout=5)
-            except Exception:
-                pass
+            except Exception as e:
+                _log.warning("scheduler stop(): loop task did not finish cleanly: %r", e)
         try:
             db.lease_release(LEASE_KEY, self.owner)
-        except Exception:
-            pass
+        except Exception as e:
+            _log.warning("scheduler stop(): lease_release failed, another owner may wait out the TTL: %r", e)
 
     # ------------------------------------------------------------------ arm/disarm
     def arm(self):
@@ -93,7 +96,8 @@ class SmartScalperScheduler:
     def _lease_owner(self):
         try:
             return db.lease_owner(LEASE_KEY)
-        except Exception:
+        except Exception as e:
+            _log.debug("_lease_owner failed: %r", e)
             return None
 
     # ------------------------------------------------------------------ tick
@@ -102,7 +106,8 @@ class SmartScalperScheduler:
             from .. import market_calendar
             return bool(market_calendar.is_trading("NSE") or market_calendar.is_trading("MCX")
                        or market_calendar.is_trading("BSE"))
-        except Exception:
+        except Exception as e:
+            _log.debug("_market_open: calendar check failed, failing open: %r", e)
             return True    # fail open — the engine's own data-quality gates still protect
 
     async def tick_once(self):

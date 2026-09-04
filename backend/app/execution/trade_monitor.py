@@ -17,6 +17,7 @@ what SHOULD happen; the OrderManager decides whether that means "alert only"
 """
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -24,6 +25,8 @@ from typing import Optional
 
 from .broker_base import Side, OStatus
 from .trade_state import TradeState
+
+_log = logging.getLogger(__name__)
 
 
 def _f(x):
@@ -155,8 +158,12 @@ class TradeMonitor:
                     opened = opened.replace(tzinfo=timezone.utc)
                 if (now - opened).total_seconds() >= float(s.max_hold_sec):
                     return self._fire("TIME", px, qty, provisional, "max hold elapsed")
-            except Exception:
-                pass
+            except Exception as e:
+                # A malformed opened_ts means the time-stop silently never
+                # fires for this trade -- worth knowing about, not just
+                # swallowing, since it's the one thing standing between a
+                # stuck position and an unbounded hold time.
+                _log.warning("time-stop check failed for opened_ts=%r: %r", s.opened_ts, e)
 
         # --- breakeven move: once 1R favourable, stop can't be worse than entry ---
         if s.breakeven_trigger and s.mfe >= float(s.breakeven_trigger):

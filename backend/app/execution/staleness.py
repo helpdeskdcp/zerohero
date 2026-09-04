@@ -10,9 +10,12 @@ new entries entirely.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
+
+_log = logging.getLogger(__name__)
 
 
 def _parse(ts) -> Optional[datetime]:
@@ -21,12 +24,14 @@ def _parse(ts) -> Optional[datetime]:
     if isinstance(ts, (int, float)):
         try:
             return datetime.fromtimestamp(ts / 1000 if ts > 1e11 else ts, tz=timezone.utc)
-        except Exception:
+        except Exception as e:
+            _log.debug("_parse: bad numeric timestamp %r: %r", ts, e)
             return None
     try:
         d = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
         return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
-    except Exception:
+    except Exception as e:
+        _log.debug("_parse: unparseable timestamp %r: %r", ts, e)
         return None
 
 

@@ -23,11 +23,14 @@ thin wrapper over `snapshot()`.
 """
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+
+_log = logging.getLogger(__name__)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
@@ -86,7 +89,8 @@ def _hist_chain(sym: str, session_date: str) -> dict | None:
                 "FROM quote_snapshots WHERE symbol=? AND kind='OPTION' "
                 "AND session_date_ist=? AND strike IS NOT NULL "
                 "ORDER BY received_ts", (sym, session_date)).fetchall()
-    except Exception:
+    except Exception as e:
+        _log.debug("_hist_chain(%s) read failed: %r", sym, e)
         return None
     if not rows:
         return None
@@ -140,7 +144,8 @@ def _hist_bars(sym: str, session_date: str) -> list | None:
                 if (datetime.now(timezone.utc) - last).total_seconds() > _HIST_BARS_MAX_AGE + 300:
                     return None
                 return [{"high": r["h"], "low": r["l"], "close": r["c"], "volume": r["v"]} for r in rows]
-    except Exception:
+    except Exception as e:
+        _log.debug("_hist_bars(%s) read failed: %r", sym, e)
         return None
     return None
 
@@ -166,8 +171,8 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
     try:
         from .connectors.angelone import _market_sdk
         sdk = _market_sdk(require_auth=True)
-    except Exception:
-        pass
+    except Exception as e:
+        _log.debug("snapshot(%s): broker SDK unavailable, feed/histcap-only: %r", sym, e)
 
     # 1. SPOT — WS feed -> histcap quote -> throttled REST
     spot = _ctx._feed_spot(sym, sdk) if sdk else None
@@ -216,8 +221,8 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
                 ctx["bars"] = [{"high": c["high"], "low": c["low"], "close": c["close"],
                                 "volume": c.get("volume")} for c in (d.get("candles") or [])]
                 ctx["data_quality"]["intraday_bars"] = f"ACTUAL (REST x{len(ctx['bars'])})"
-        except Exception:
-            pass
+        except Exception as e:
+            _log.debug("snapshot(%s): REST bars fallback failed: %r", sym, e)
     if ctx["bars"]:
         b = ctx["bars"]
         ctx.setdefault("day_high", max(x["high"] for x in b))

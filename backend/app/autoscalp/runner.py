@@ -14,12 +14,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import time
 import traceback
 from datetime import date, datetime, timedelta, timezone
 
 from .. import db
+
+_log = logging.getLogger(__name__)
 from .aggregator import CandleAggregator
 from .safeguards import Safeguards
 from ..engines.scalp_strategy import decide_from_context
@@ -69,8 +72,8 @@ def _sym_meta(sym):
         gaps = sorted(round(b - a, 4) for a, b in zip(strikes, strikes[1:]) if b > a)
         if gaps:
             meta = {"exchange": "NSE", "strike_step": gaps[len(gaps) // 2]}  # modal-ish gap
-    except Exception:
-        pass
+    except Exception as e:
+        _log.debug("_sym_meta(%s): strike-step inference failed, defaulting: %r", key, e)
     _META_CACHE[key] = meta
     return meta
 
@@ -102,8 +105,8 @@ def _underlying_ref(sym):
             eq = sdk.resolve_equity(key) if sdk else {}
             if eq.get("status") == "OK":
                 ref = {"token": str(eq.get("token") or ""), "exchange": "NSE", "expiry": None}
-        except Exception:
-            pass
+        except Exception as e:
+            _log.debug("_underlying_ref(%s): equity resolve failed: %r", key, e)
         _UND_CACHE[key] = (time.time() + 86400, ref)
         return ref
     hit = _UND_CACHE.get(key)
@@ -116,8 +119,10 @@ def _underlying_ref(sym):
         fut = sdk.resolve_future_contract(key, "AUTO") if sdk else {}
         if fut.get("status") == "OK":
             ref = {"token": str(fut.get("token") or ""), "exchange": "MCX", "expiry": fut.get("expiry")}
-    except Exception:
-        pass
+    except Exception as e:
+        # This is the underlying token MCX trading resolves against -- a
+        # persistent failure here silently disables entries for this symbol.
+        _log.warning("_underlying_ref(%s): MCX future contract resolve failed: %r", key, e)
     _UND_CACHE[key] = (time.time() + 3600, ref)
     return ref
 
@@ -144,7 +149,8 @@ def _index_future_token(sym):
         fut = instruments.resolve_index_future(str(sym or "").upper(), "AUTO") or {}
         if fut.get("status") == "OK":
             tok = str(fut.get("symboltoken") or "")
-    except Exception:
+    except Exception as e:
+        _log.debug("_index_future_token(%s) failed (VWAP-only, cosmetic): %r", sym, e)
         tok = ""
     _UND_CACHE[key] = (time.time() + _IDXFUT_TOK_TTL, tok)
     return tok
@@ -175,7 +181,8 @@ def _index_future_vwap(sym):
                 vwap = _vwap([float(r["h"]) for r in rows], [float(r["l"]) for r in rows],
                              [float(r["c"]) for r in rows], V, n)
                 status = "available" if vwap is not None else "invalid_volume"
-        except Exception:
+        except Exception as e:
+            _log.debug("_index_future_vwap(%s) failed (VWAP-only, cosmetic): %r", key, e)
             vwap, status = None, "unavailable"
     _IDXFUT_VWAP_CACHE[key] = (time.time() + _IDXFUT_VWAP_TTL, vwap, status)
     return vwap, status
@@ -395,7 +402,11 @@ class AutoScalpRunner:
         if raw:
             try:
                 stored = json.loads(raw)
-            except Exception:
+            except Exception as e:
+                # A corrupted config blob silently falling back to pure code
+                # defaults changes live trading behavior (symbol_profiles,
+                # SL/target ATR multiples, ...) with no visible signal.
+                _log.warning("get_config: corrupt autoscalp_config value, using code defaults: %r", e)
                 stored = {}
         return {**DEFAULT_CONFIG, **stored}
 
@@ -415,7 +426,8 @@ class AutoScalpRunner:
             return None
         try:
             return json.loads(raw)
-        except Exception:
+        except Exception as e:
+            _log.warning("calibration: corrupt autoscalp_calibration value: %r", e)
             return None
 
     # ---------------- lifecycle ----------------
@@ -435,8 +447,8 @@ class AutoScalpRunner:
         if self._task:
             try:
                 await asyncio.wait_for(self._task, timeout=5)
-            except Exception:
-                pass
+            except Exception as e:
+                _log.warning("AutoScalpRunner.stop(): loop task did not finish cleanly: %r", e)
 
     def arm(self):
         db.set_setting(ARMED_KEY, "1")
@@ -795,8 +807,8 @@ class AutoScalpRunner:
                 from ..connectors.angelone import _market_sdk
                 _s = _market_sdk(require_auth=False)
                 _cap = (_s.greek_capabilities() or {}).get(sym.upper(), {}).get("status") if _s else None
-            except Exception:
-                pass
+            except Exception as e:
+                _log.debug("greek_capabilities check failed for %s (cosmetic data-quality flag): %r", sym, e)
             _dqv = _dq.snapshot_data_quality({**sig, "index_ltp": _u_ltp}, chain, _oiq,
                                              None, greeks_capability=_cap)
             _feat = _tf.build_entry_features(
@@ -931,8 +943,8 @@ class AutoScalpRunner:
                 from ..connectors.angelone import _market_sdk
                 _sdk = _market_sdk(require_auth=False)
                 cap = (_sdk.greek_capabilities() or {}).get(sym.upper(), {}).get("status") if _sdk else None
-            except Exception:
-                pass
+            except Exception as e:
+                _log.debug("greek_capabilities check failed for %s (cosmetic data-quality flag): %r", sym, e)
             dq = _dq.snapshot_data_quality({**sig, "index_ltp": agg.last_price}, chain, oiq,
                                            feed_age, greeks_capability=cap)
             # PHASE 10 — confidence a consumer should act on (model label capped
@@ -1024,8 +1036,8 @@ class AutoScalpRunner:
         if self._broadcast:
             try:
                 await self._broadcast({"type": kind, "data": data})
-            except Exception:
-                pass
+            except Exception as e:
+                _log.warning("_emit(%s): broadcast to dashboard clients failed: %r", kind, e)
 
     # ---------------- status ----------------
     def status(self) -> dict:

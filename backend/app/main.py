@@ -39,6 +39,20 @@ from .connectors.angel_ws import LTP_MAX_AGE_SEC, is_ltp_fresh
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = APP_ROOT / "frontend"
 
+# Every business-logic module below (execution/, autoscalp/, market_hub, the
+# broker connector, ...) has historically caught its own exceptions and fallen
+# back to a safe default with NO log line at all -- convenient for "never let
+# one bad symbol 500 the whole request" fail-open behaviour, but it also hid
+# the root cause of real incidents this app has already had (a stale broker
+# session silently returning DATA_INSUFFICIENT, a latent None.get() bug that
+# only ever hit the except branch). uvicorn configures its OWN loggers
+# separately (uvicorn.error/uvicorn.access) and this basicConfig only touches
+# the root logger, so it does not fight that -- it just makes every module's
+# `logging.getLogger(__name__)` call actually go somewhere (stderr -> journal,
+# since the systemd unit sets StandardError=journal).
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
 _log = logging.getLogger("chanakya.api")
 
 app = FastAPI(title="Chanakya AI", version="1.0.0")

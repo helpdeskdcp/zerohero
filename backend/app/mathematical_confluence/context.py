@@ -11,8 +11,11 @@ Reused by:
 """
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime, timedelta, timezone
+
+_log = logging.getLogger(__name__)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
@@ -48,8 +51,8 @@ def _resolve_idx_token(sdk, sym: str):
             et = EXCHANGE_TYPE.get(str(idx.get("exchange") or "NSE").upper(), 1)
             _IDX_TOK[sym] = (str(idx["token"]), et)
             return _IDX_TOK[sym]
-    except Exception:
-        pass
+    except Exception as e:
+        _log.debug("_resolve_idx_token(%s) failed: %r", sym, e)
     return None
 
 
@@ -74,7 +77,8 @@ def _feed_spot(sym: str, sdk) -> float | None:
                 _SUBBED = True
         tk = _resolve_idx_token(sdk, sym)
         return feed.get_ltp(tk[0]) if tk else None
-    except Exception:
+    except Exception as e:
+        _log.debug("_feed_spot(%s) failed: %r", sym, e)
         return None
 
 
@@ -97,7 +101,8 @@ def _spot_from_histcap(symbol: str, max_age_sec: float = 180.0) -> dict | None:
         if (datetime.now(timezone.utc) - ts).total_seconds() > max_age_sec:
             return None
         return {"ltp": r["ltp"], "open": r["open"], "high": r["high"], "low": r["low"]}
-    except Exception:
+    except Exception as e:
+        _log.debug("_spot_from_histcap(%s) failed: %r", symbol, e)
         return None
 
 
@@ -122,7 +127,8 @@ def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
                     "  AND session_date_ist < ?) ORDER BY bar_start DESC LIMIT 1",
                     (symbol, kind, symbol, kind, before_date)).fetchone()
                 return {"high": r["hi"], "low": r["lo"], "close": lc["c"] if lc else r["hi"]}
-    except Exception:
+    except Exception as e:
+        _log.debug("_prevday_from_histcap(%s) failed: %r", symbol, e)
         return None
     return None
 

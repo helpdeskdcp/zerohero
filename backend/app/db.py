@@ -5,7 +5,10 @@ Tables mirror the n8n Data Tables: ai_signals_log, ai_paper_trades.
 import sqlite3
 import os
 import threading
+import logging
 from contextlib import contextmanager
+
+_log = logging.getLogger(__name__)
 
 DB_PATH = os.environ.get("CHANAKYA_DB_PATH", os.path.join(os.path.dirname(__file__), "..", "data", "chanakya.db"))
 DB_PATH = os.path.abspath(DB_PATH)
@@ -610,7 +613,7 @@ def lease_acquire(key: str, owner: str, ttl_sec: int = 30) -> bool:
                     d = _json.loads(r["value"])
                     cur_owner, hb = d.get("owner"), float(d.get("hb") or 0)
                 except Exception:
-                    pass
+                    _log.warning("lease_acquire(%s): corrupt app_settings value, treating as unowned", key)
             if (not cur_owner) or cur_owner == owner or (now - hb) > ttl_sec:
                 conn.execute(
                     "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
@@ -619,11 +622,12 @@ def lease_acquire(key: str, owner: str, ttl_sec: int = 30) -> bool:
                 return True
             conn.commit()
             return False
-        except Exception:
+        except Exception as e:
+            _log.warning("lease_acquire(%s) failed: %r", key, e)
             try:
                 conn.rollback()
-            except Exception:
-                pass
+            except Exception as e2:
+                _log.debug("lease_acquire(%s) rollback also failed: %r", key, e2)
             return False
         finally:
             conn.close()
@@ -639,8 +643,8 @@ def lease_release(key: str, owner: str):
                     if _json.loads(r["value"]).get("owner") == owner:
                         conn.execute("DELETE FROM app_settings WHERE key=?", (key,))
                         conn.commit()
-                except Exception:
-                    pass
+                except Exception as e:
+                    _log.warning("lease_release(%s, %s) failed: %r", key, owner, e)
         finally:
             conn.close()
 
@@ -651,7 +655,8 @@ def lease_owner(key: str):
         return None
     try:
         return _json.loads(raw).get("owner")
-    except Exception:
+    except Exception as e:
+        _log.warning("lease_owner(%s): corrupt value: %r", key, e)
         return None
 
 

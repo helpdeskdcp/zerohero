@@ -3,6 +3,7 @@ AngelOne SmartAPI connector — login (TOTP) + historical candle fetch.
 Ported from AI-ANGELONE-CONNECTOR.json. Never logs or returns the JWT.
 Credentials are read from environment variables only (see .env).
 """
+import logging
 import os
 import time
 import math
@@ -14,6 +15,10 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from .. import instruments
+
+# Never log credential values (api_key/client_id/password/totp_secret/jwt) --
+# only status codes, error strings, and exception reprs below.
+_log = logging.getLogger(__name__)
 
 LOGIN_URL = "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword"
 POSITION_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getPosition"
@@ -83,7 +88,8 @@ def _freshness_meta(last_t, market):
             tms = datetime.fromisoformat(str(last_t).replace("Z", "+00:00")).timestamp() * 1000
         if math.isfinite(tms):
             stale_sec = round((time.time() * 1000 - tms) / 1000)
-    except Exception:
+    except Exception as e:
+        _log.debug("staleness calc failed for last_t=%r: %r", last_t, e)
         stale_sec = None
 
     from .. import market_calendar
@@ -130,7 +136,8 @@ def _login():
         return "CONFIG_REQUIRED", None, ""
     try:
         totp = pyotp.TOTP(creds["totp_secret"]).now()
-    except Exception:
+    except Exception as e:
+        _log.warning("_login: TOTP generation failed (bad secret format?): %s", type(e).__name__)
         return "CONFIG_REQUIRED", None, "bad_totp_secret"
 
     headers = dict(_HEADERS_BASE)
@@ -143,7 +150,8 @@ def _login():
     try:
         resp = _http("POST", LOGIN_URL, json=body, headers=headers)
         data = resp.json() if resp.content else {}
-    except Exception:
+    except Exception as e:
+        _log.warning("_login: network error contacting broker: %r", e)
         return "AUTH_FAILED", None, "network_error"
 
     if data.get("status") is True and data.get("data", {}).get("jwtToken"):
@@ -229,10 +237,10 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
                             "fetched_at": now_iso, "server_timestamp": now_iso,
                             "snapshot_id": f"{(market or 'UNKNOWN').upper()}-{str(symbol or '').upper()}-{int(time.time()*1000)}",
                             "market_status": market_status, "market_open": market_open}
-    except Exception:
+    except Exception as e:
         # Fall through to the existing guarded connector path; no strategy or
         # execution behavior is changed by an SDK read failure.
-        pass
+        _log.debug("fetch_candles(%s): SDK read failed, falling back to REST: %r", symbol, e)
 
     def out(data_status, extra=None):
         base = {
@@ -275,7 +283,8 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
     try:
         resp = _http("POST", CANDLE_URL, json=body, headers=headers)
         res = resp.json() if resp.content else {}
-    except Exception:
+    except Exception as e:
+        _log.warning("fetch_candles(%s): network error contacting broker: %r", symbol, e)
         return out("DATA_UNAVAILABLE", {"reason": "FACT: network error contacting broker"})
 
     if not isinstance(res, dict):
@@ -397,8 +406,9 @@ def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> d
         if sdk:
             return {**sdk.get_quote(exchange, token), "exchange": exchange, "symboltoken": token,
                     "source": "ANGELONE_SDK"}
-    except Exception:
-        pass
+    except Exception as e:
+        _log.debug("fetch_market_quote(%s:%s): SDK read failed, falling back to REST: %r",
+                  exchange, token, e)
     status, jwt, err = _get_jwt()
     if status != "OK":
         return {"status": status, "data_status": status, "reason": err or "authentication required"}
@@ -407,7 +417,8 @@ def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> d
     try:
         resp = _http("POST", QUOTE_URL, json={"mode": mode, "exchangeTokens": {exchange: [token]}}, headers=headers)
         body = resp.json() if resp.content else {}
-    except Exception:
+    except Exception as e:
+        _log.warning("fetch_market_quote(%s:%s): network error contacting broker: %r", exchange, token, e)
         return {"status": "API_ERROR", "data_status": "API_ERROR"}
     if not isinstance(body, dict) or body.get("status") is False:
         return {"status": "API_ERROR", "data_status": "API_ERROR"}

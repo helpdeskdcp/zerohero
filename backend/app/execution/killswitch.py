@@ -17,9 +17,12 @@ pipeline is rejected at the sizing stage too.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 
 from .. import db
+
+_log = logging.getLogger(__name__)
 
 _KEY = "execution_kill_switch"     # {"active": bool, "reason": str, "policy": str, "ts": str}
 _POLICIES = ("MONITOR", "FLATTEN")
@@ -28,7 +31,11 @@ _POLICIES = ("MONITOR", "FLATTEN")
 def _load() -> dict:
     try:
         d = json.loads(db.get_setting(_KEY) or "{}")
-    except Exception:
+    except Exception as e:
+        # A corrupted kill-switch value silently reading as "inactive" is a
+        # real safety concern (this gates every new order submission) --
+        # always surface it, even though _load() is on a hot path.
+        _log.warning("killswitch._load: corrupt app_settings value, defaulting to INACTIVE/MONITOR: %r", e)
         d = {}
     return {"active": bool(d.get("active")),
             "reason": d.get("reason") or "",
@@ -79,5 +86,5 @@ def set_policy(pol: str):
 def _event(kind, reason, pol):
     try:
         db.insert_order_event(None, None, kind, json.dumps({"reason": reason, "policy": pol}))
-    except Exception:
-        pass
+    except Exception as e:
+        _log.warning("killswitch._event(%s): failed to write audit event: %r", kind, e)

@@ -19,11 +19,14 @@ Safety invariants enforced here:
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
 from .broker_base import BrokerBase, LiveDisabled, OrderType, Leg, Side, OStatus
+
+_log = logging.getLogger(__name__)
 from .trade_state import TradeState
 from .trade_monitor import TradeMonitor, ExitDecision
 from .reconciler import Reconciler
@@ -424,8 +427,8 @@ class OrderManager:
         if self._on_alert:
             try:
                 self._on_alert(kind, payload)
-            except Exception:
-                pass
+            except Exception as e:
+                _log.warning("OrderManager._alert(%s): alert callback raised: %r", kind, e)
 
     def status(self) -> dict:
         ks = killswitch.state()
