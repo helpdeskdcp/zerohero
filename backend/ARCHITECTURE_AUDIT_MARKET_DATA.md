@@ -117,7 +117,26 @@ load instead of spikes that trip the rate limiter.
 
 ---
 
-## 4. Phased plan (each phase independently shippable, no `live_trading` change)
+## 4. Phased plan — STATUS: all shipped 2026-09-04
+
+| phase | commit | what shipped |
+|---|---|---|
+| **P1** | `6a69ca2` | index spot from the shared WS feed (`feed_registry` + `context._feed_spot`); the whole universe subscribed once as feed owner `mathhub`. REST `get_quote` for spot removed from the read path. |
+| **P2** | `2a00e92` | `market_hub.py` — `snapshot()` assembles from WS feed + `market_history.db` (histcap) chain/bars + a per-IST-day prev-day cache. `context.market_context()` is a thin ~4 s coalescing cache over it (TTL 45 s → 4 s). |
+| **P3** | `2a00e92` | mathematics/ranking now ride histcap's single capture stream. `warm_math_ranking.sh` cron **retired**. `BANKEX` added to `CHANAKYA_HIST_SYMBOLS`. |
+| **P4** | `2a00e92` | fair-share limiter folded into `market_hub._throttle`: per `(symbol, slice)` min-interval (chain 25 s / bars 60 s) + a global 0.4 s min-gap → hub REST fallback ≤ ~2.5 req/s. (The `_sdk_lock` split was dropped — unproven need; the win is not making the calls.) |
+| **P5** | `05493e9` | `/api/mathematics/signal` returns `data_source` / `spot_source` / `chain_source` / `stale`; FE shows a `feed: WS feed` chip; Math Scalper poll 20 s → 12 s. |
+
+### Measured result (2026-09-04, market open)
+- `/api/mathematics/signal`: **44–490 ms** (was multi-second, miss-heavy); NIFTY/
+  BANKNIFTY/FINNIFTY/MIDCPNIFTY/SENSEX all `status=OK`, stable, `spot_source =
+  ACTUAL (WS feed)`, live-updating.
+- `/api/smart-scalper/ranking`: **3.9 s cold → 0.08 s warm** (was ~21 s cold).
+- No more per-request `selection_snapshot` + `get_candles` + `get_quote` fan-out;
+  broker REST from this surface is now ~0 in the common case (histcap + feed
+  serve everything), with a rate-capped fallback.
+
+### Original phase notes (superseded by the table above)
 
 ### Phase 1 — spot via the WS feed (biggest single win, low risk)
 - Add `MarketHub` (thin) or extend `market_context`: resolve each universe
