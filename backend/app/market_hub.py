@@ -40,10 +40,10 @@ except Exception:                                            # pragma: no cover
 
 # ---- fallback rate control -------------------------------------------------
 _CHAIN_TTL = float(os.environ.get("HUB_CHAIN_FALLBACK_SEC", "25"))
-_BARS_TTL = float(os.environ.get("HUB_BARS_FALLBACK_SEC", "60"))
+_BARS_TTL = float(os.environ.get("HUB_BARS_FALLBACK_SEC", "240"))
 _GLOBAL_MIN_GAP = float(os.environ.get("HUB_REST_MIN_GAP_SEC", "0.4"))
-_HIST_CHAIN_MAX_AGE = 120.0
-_HIST_BARS_MAX_AGE = 300.0
+_HIST_CHAIN_MAX_AGE = float(os.environ.get("HUB_CHAIN_MAX_AGE_SEC", "300"))
+_HIST_BARS_MAX_AGE = float(os.environ.get("HUB_BARS_MAX_AGE_SEC", "600"))
 
 _last_call: dict = {}          # (sym, slice) -> ts of last live REST fallback
 _last_any = [0.0]             # ts of the last hub REST call, any symbol/slice
@@ -191,12 +191,16 @@ def snapshot(sym: str, *, window: int = 6) -> dict:
             ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (histcap)"
             _ctx._PREVDAY[sym] = (sess, dict(hp))
 
-    # 3. 5m BARS — histcap -> throttled REST
+    # 3. 5m BARS — histcap only; the REST fallback is SKIPPED when we already
+    # have day_high/day_low from the spot row (bars are optional for the engine:
+    # pdh/pdl/pdc + spot are the only hard requirements). This is what kept
+    # market-map latency spiky — a slow FIVE_MINUTE fetch for symbols histcap
+    # hasn't back-filled yet.
     hb = _hist_bars(sym, sess)
     if hb:
         ctx["bars"] = hb
         ctx["data_quality"]["intraday_bars"] = f"ACTUAL (histcap x{len(hb)})"
-    elif sdk and _throttle((sym, "bars")):
+    elif sdk and ctx.get("day_high") is None and _throttle((sym, "bars")):
         try:
             tk = _ctx._resolve_idx_token(sdk, sym)
             if tk:

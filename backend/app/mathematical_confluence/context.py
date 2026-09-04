@@ -23,7 +23,7 @@ _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"
 # hence the 45s default (research/analysis surface — NOT the execution path).
 import os as _os
 _CACHE: dict[str, tuple[float, dict]] = {}
-_TTL_SEC = max(2.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "4")))
+_TTL_SEC = max(2.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "12")))
 _STALE_MAX_SEC = 300.0   # how long a last-good context may be served if a live fetch fails
 # previous-day OHLC does not change intraday: once fetched for an IST date, keep
 # it all session so a flaky getCandleData call can't drop the whole context to
