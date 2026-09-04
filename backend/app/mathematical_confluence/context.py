@@ -127,7 +127,8 @@ def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
     return None
 
 
-def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> dict:
+def market_context(symbol: str, *, window: int = 6, use_cache: bool = True,
+                   allow_rest_fallback: bool = True) -> dict:
     """Assemble the live-market context for `symbol`.
 
     Since the architecture audit (phase 2) this is a thin coalescing cache over
@@ -144,7 +145,7 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
 
     try:
         from .. import market_hub
-        ctx = market_hub.snapshot(sym, window=window)
+        ctx = market_hub.snapshot(sym, window=window, allow_rest_fallback=allow_rest_fallback)
     except Exception as e:                                      # pragma: no cover
         ctx = {"instrument": sym, "prev_day": {}, "bars": [], "chain": [],
                "data_quality": {"context_error": f"{type(e).__name__}: {e}"}}

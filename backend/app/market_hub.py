@@ -146,9 +146,14 @@ def _hist_bars(sym: str, session_date: str) -> list | None:
 
 
 # ---- assembly -----------------------------------------------------------------
-def snapshot(sym: str, *, window: int = 6) -> dict:
-    """market_context-shaped dict assembled from the WS feed + histcap, with a
-    throttled live-REST fallback per slice."""
+def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> dict:
+    """market_context-shaped dict assembled from the WS feed + histcap.
+
+    `allow_rest_fallback=False` (used by the bulk market-map endpoint) serves
+    purely from cache/histcap/feed — no live selection_snapshot / get_candles —
+    so a bulk 3-5 symbol read is always ~50ms regardless of market hours or how
+    fresh histcap's capture is. The focused single-symbol endpoints
+    (/signal, /oi, /levels) keep the throttled fallback for accuracy."""
     from .mathematical_confluence import context as _ctx     # reuse the primitives
 
     sym = sym.upper()
@@ -200,7 +205,7 @@ def snapshot(sym: str, *, window: int = 6) -> dict:
     if hb:
         ctx["bars"] = hb
         ctx["data_quality"]["intraday_bars"] = f"ACTUAL (histcap x{len(hb)})"
-    elif sdk and ctx.get("day_high") is None and _throttle((sym, "bars")):
+    elif allow_rest_fallback and sdk and ctx.get("day_high") is None and _throttle((sym, "bars")):
         try:
             tk = _ctx._resolve_idx_token(sdk, sym)
             if tk:
@@ -234,7 +239,7 @@ def snapshot(sym: str, *, window: int = 6) -> dict:
         ctx["data_quality"]["option_chain"] = f"ACTUAL (histcap, {hc['age_sec']}s)"
         if ctx.get("spot") and hc["chain"]:
             ctx["atm"] = min((r["strike"] for r in hc["chain"]), key=lambda k: abs(k - ctx["spot"]))
-    elif sdk and _throttle((sym, "chain")):
+    elif allow_rest_fallback and sdk and _throttle((sym, "chain")):
         try:
             from . import market_data
             snap = market_data.selection_snapshot(

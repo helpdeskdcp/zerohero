@@ -59,7 +59,7 @@ def api_market_map(symbols: str = Query("NIFTY,BANKNIFTY,SENSEX")):
     rows = []
     for sym in [s.strip().upper() for s in symbols.split(",") if s.strip()]:
         try:
-            c = _context(sym)
+            c = _context(sym, allow_rest_fallback=False)   # bulk view: cache/histcap/feed only, always fast
             pd = c.get("prev_day") or {}
             out = _engine.evaluate(
                 instrument=sym, timestamp="", prev_day=pd,
