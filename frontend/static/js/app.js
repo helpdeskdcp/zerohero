@@ -1509,7 +1509,11 @@
     const box = $("#msBest"), why = $("#msWhy"), inval = $("#msInvalidate"), subs = $("#msSubscores");
     $("#msBestMeta").textContent = focus + " · the confluence score is NOT a probability";
     if (!sig || sig.status !== "OK") {
-      box.innerHTML = `<span class="hint">${esc(focus)}: ${text(sig && sig.status, "no data")} — ${esc(((sig && sig.missing) || []).join(", "))}</span>`;
+      const s = sig && sig.status;
+      const msg = (!s || s === "DATA_INSUFFICIENT")
+        ? `${esc(focus)} — waiting for live market data (broker feed warming up). Retrying automatically…`
+        : `${esc(focus)}: ${text(s, "no data")}${(sig && sig.missing || []).length ? " — needs " + esc(sig.missing.join(", ")) : ""}`;
+      box.innerHTML = `<span class="hint">${msg}</span>`;
       why.innerHTML = inval.innerHTML = `<li class="hint">—</li>`; subs.innerHTML = "";
       return;
     }

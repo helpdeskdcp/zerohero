@@ -24,6 +24,37 @@ _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"
 import os as _os
 _CACHE: dict[str, tuple[float, dict]] = {}
 _TTL_SEC = max(5.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "45")))
+_STALE_MAX_SEC = 300.0   # how long a last-good context may be served if a live fetch fails
+# previous-day OHLC does not change intraday: once fetched for an IST date, keep
+# it all session so a flaky getCandleData call can't drop the whole context to
+# DATA_INSUFFICIENT. {symbol: (ist_date, {high, low, close})}
+_PREVDAY: dict[str, tuple[str, dict]] = {}
+
+
+def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
+    """Aggregate the previous captured session's OHLC from market_history.db —
+    a broker-free fallback when the live daily-candle call fails."""
+    try:
+        import sqlite3
+        from ..histcap.store import DB_PATH as _HDB
+        with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
+            c.row_factory = sqlite3.Row
+            for kind in ("INDEX", "FUTURE"):
+                r = c.execute(
+                    "SELECT MAX(h) hi, MIN(l) lo FROM market_candles WHERE symbol=? AND kind=? "
+                    "AND session_date_ist < ? GROUP BY session_date_ist "
+                    "ORDER BY session_date_ist DESC LIMIT 1", (symbol, kind, before_date)).fetchone()
+                if not r or r["hi"] is None:
+                    continue
+                lc = c.execute(
+                    "SELECT c FROM market_candles WHERE symbol=? AND kind=? AND session_date_ist=("
+                    "  SELECT MAX(session_date_ist) FROM market_candles WHERE symbol=? AND kind=? "
+                    "  AND session_date_ist < ?) ORDER BY bar_start DESC LIMIT 1",
+                    (symbol, kind, symbol, kind, before_date)).fetchone()
+                return {"high": r["hi"], "low": r["lo"], "close": lc["c"] if lc else r["hi"]}
+    except Exception:
+        return None
+    return None
 
 
 def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> dict:
@@ -38,9 +69,13 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
     try:
         from ..connectors.angelone import _market_sdk
         from .. import market_data
-        sdk = _market_sdk(require_auth=False)
+        # require_auth=True so a stale daily REST token is refreshed here (the
+        # login is serialised behind _sdk_lock — no stampede). With require_auth
+        # =False this path could never self-heal and every /api/mathematics/* +
+        # /api/smart-scalper/* call returned DATA_INSUFFICIENT until a restart.
+        sdk = _market_sdk(require_auth=True)
         if not sdk:
-            ctx["data_quality"]["sdk"] = "MISSING (not authenticated)"
+            ctx["data_quality"]["sdk"] = "MISSING (broker auth unavailable)"
             return ctx
         mkt = _MKT.get(sym, "NSE")
         snap = market_data.selection_snapshot(
@@ -69,22 +104,37 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
         ctx["oi_coverage"] = snap.get("oi_coverage")
         ctx["data_quality"]["option_chain"] = ("ACTUAL" if ctx["chain"] else "MISSING")
 
+        now = datetime.now(IST)
+        today = now.strftime("%Y-%m-%d")
         und = snap.get("underlying_contract") or {}
         tok, exch = und.get("token"), und.get("exchange")
+
+        # ---- previous-day OHLC: day-cache -> live daily candle -> histcap ----
+        pd_cached = _PREVDAY.get(sym)
+        if pd_cached and pd_cached[0] == today:
+            ctx["prev_day"] = dict(pd_cached[1])
+            ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (day-cached)"
         if tok:
-            now = datetime.now(IST)
-            d = sdk.get_candles(exch, tok, "ONE_DAY",
-                                (now - timedelta(days=10)).strftime("%Y-%m-%d %H:%M"),
-                                now.strftime("%Y-%m-%d %H:%M"))
-            cs = d.get("candles") or []
-            if len(cs) >= 2:
-                p = cs[-2]
-                ctx["prev_day"] = {"high": p["high"], "low": p["low"], "close": p["close"]}
-                ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL"
+            if not ctx.get("prev_day"):
+                d = sdk.get_candles(exch, tok, "ONE_DAY",
+                                    (now - timedelta(days=10)).strftime("%Y-%m-%d %H:%M"),
+                                    now.strftime("%Y-%m-%d %H:%M"))
+                cs = d.get("candles") or []
+                if len(cs) >= 2:
+                    p = cs[-2]
+                    ctx["prev_day"] = {"high": p["high"], "low": p["low"], "close": p["close"]}
+                    ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL"
+                    ctx["today_open"] = cs[-1]["open"]
+                    _PREVDAY[sym] = (today, dict(ctx["prev_day"]))
+        if not ctx.get("prev_day"):
+            hc = _prevday_from_histcap(sym, today)
+            if hc:
+                ctx["prev_day"] = hc
+                ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (histcap fallback)"
+                _PREVDAY[sym] = (today, dict(hc))
             else:
-                ctx["data_quality"]["prev_day_ohlc"] = "MISSING (<2 daily candles)"
-            if cs:
-                ctx["today_open"] = cs[-1]["open"]
+                ctx["data_quality"]["prev_day_ohlc"] = "MISSING (daily candle + histcap both empty)"
+        if tok:
             i5 = sdk.get_candles(exch, tok, "FIVE_MINUTE",
                                  now.strftime("%Y-%m-%d 09:00"), now.strftime("%Y-%m-%d %H:%M"))
             bars = [{"high": c["high"], "low": c["low"], "close": c["close"],
@@ -106,5 +156,14 @@ def market_context(symbol: str, *, window: int = 6, use_cache: bool = True) -> d
         ctx["data_quality"]["context_error"] = f"{type(e).__name__}: {e}"
 
     if use_cache:
-        _CACHE[sym] = (time.time(), ctx)
+        if ctx.get("spot") is not None:
+            _CACHE[sym] = (time.time(), ctx)                    # cache only a context with live data
+        else:
+            prev = _CACHE.get(sym)                              # transient failure -> last good, marked stale
+            if prev and time.time() - prev[0] < _STALE_MAX_SEC:
+                stale = dict(prev[1])
+                stale["stale"] = True
+                stale["data_quality"] = {**stale.get("data_quality", {}),
+                                         "freshness": "STALE (last good; live fetch failed)"}
+                return stale
     return ctx
