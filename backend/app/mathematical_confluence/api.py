@@ -55,7 +55,8 @@ def api_oi(symbol: str = "NIFTY"):
 
 
 @router.get("/market-map")
-def api_market_map(symbols: str = Query("NIFTY,BANKNIFTY,SENSEX")):
+def api_market_map(symbols: str = Query(
+        "NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX,NATURALGAS,CRUDEOIL")):
     rows = []
     for sym in [s.strip().upper() for s in symbols.split(",") if s.strip()]:
         try:
