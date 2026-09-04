@@ -165,9 +165,13 @@ const FIX = {
   "/api/instruments": { instruments: [] }, "/api/health": { status: "ok", live_trading: false, paper_mode: true },
 };
 global.__urls = [];
+let FAIL_PATHS = new Set();   // exact base paths whose fetch rejects
+let HANG_PATHS = new Set();   // exact base paths whose fetch never settles
 global.fetch = async (url) => {
   const u = String(url); global.__urls.push(u);
   const base = u.split("?")[0];
+  if (HANG_PATHS.has(base)) return new Promise(() => {});
+  if (FAIL_PATHS.has(base)) throw new Error("network");
   if (base === "/api/mathematics/market-map") {
     if (MARKET_MAP_MODE === "fail") throw new Error("network");
     if (MARKET_MAP_MODE === "slow") { await new Promise(r => setTimeout(r, 400)); }
@@ -314,7 +318,29 @@ function press(el, key) { el._dispatch("keydown", { key }); }
   }
   MARKET_MAP_MODE = "full";
 
+  // --- STALL GUARD: an auto-refresh poll that hits failing/hanging endpoints
+  //     must NOT wedge the busy flag — the next poll still issues fresh requests
+  chk.msCommitFocus("NIFTY"); await flush(); await flush();
+  FAIL_PATHS = new Set(["/api/mathematics/signal", "/api/mathematics/market-map"]);
+  await chk.loadMathScalp();                   // poll while endpoints reject
+  await flush(); await flush();
+  const afterFail = global.__urls.length;
+  FAIL_PATHS = new Set();
+  await chk.loadMathScalp();                   // the NEXT auto-refresh poll
+  await flush(); await flush();
+  assert.ok(global.__urls.length > afterFail,
+    "after a failed-endpoint poll the next poll still runs — busy flag released, no stall");
+  // and a forced reload (Refresh) always runs even mid-hang
+  HANG_PATHS = new Set(["/api/mathematics/signal"]);
+  const p = chk.loadMathScalp({ force: true }); // returns after the 12s _msFetch race — don't await
+  await flush(); await wait(50);
+  const afterHang = global.__urls.length;
+  HANG_PATHS = new Set();
+  await chk.loadMathScalp({ force: true });     // force bypasses the guard regardless
+  await flush(); await flush();
+  assert.ok(global.__urls.length > afterHang, "a forced reload runs even while a previous request is hung");
+
   assert.equal(ERRORS.length, 0, "no runtime errors:\n  " + ERRORS.join("\n  "));
-  console.log("focus combobox: full acceptance flow (b..m) + keyboard + Escape + outside-click + validation + market-map A..E — all OK, no runtime errors");
+  console.log("focus combobox: acceptance flow (b..m) + keyboard + Escape + outside-click + validation + market-map A..E + stall-guard — all OK, no runtime errors");
   process.exit(0);
 })().catch(e => { console.error("focus combobox FAILED:", e && e.stack || e); process.exit(1); });

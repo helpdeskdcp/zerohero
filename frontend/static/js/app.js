@@ -1341,6 +1341,19 @@
     : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + "L"
     : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n));
   let MS_PROFILES = null, _msReplayBusy = false, _msBusy = false, _msRankBusy = false;
+  let _msBusyAt = 0, _msRankBusyAt = 0;          // watchdog timestamps
+
+  // Every Math Scalper fetch goes through this: a hung request (common right
+  // after a backend restart / dropped connection — i.e. an "auto-refresh"
+  // moment) would otherwise never settle, wedging the busy guard and stalling
+  // the whole page until a manual reload. Promise.race rejects after `ms` so
+  // the view degrades gracefully instead.
+  function _msFetch(path, ms) {
+    return Promise.race([
+      api(path),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("timeout: " + path)), ms || 12000)),
+    ]);
+  }
 
   // ---------------- Focus index selector (custom combobox) ----------------
   // The native <datalist> was unreliable as a searchable selector (esp. Android
@@ -1449,12 +1462,12 @@
   // warm, but ~20s cold (markets closed). Load it on its own so the rest of the
   // Math Scalper view paints immediately, and never stack overlapping scans.
   async function loadMsRanking(prof, reqToken) {
-    if (_msRankBusy) return;
-    _msRankBusy = true;
+    if (_msRankBusy && Date.now() - _msRankBusyAt < 45000) return;  // watchdog: take over a wedged scan
+    _msRankBusy = true; _msRankBusyAt = Date.now();
     const tb = $("#msRankTable tbody");
     if (tb && !tb.innerHTML.trim()) tb.innerHTML = `<tr><td colspan="10" class="hint">scanning the index universe… (slow while markets are closed)</td></tr>`;
     try {
-      const ranking = await api(`/api/smart-scalper/ranking?profile=${encodeURIComponent(prof)}`);
+      const ranking = await _msFetch(`/api/smart-scalper/ranking?profile=${encodeURIComponent(prof)}`, 30000);
       // a newer Focus/Profile selection has superseded this scan — drop its result
       if (reqToken != null && reqToken !== _msReqSeq) return ranking;
       if (ranking && ranking.calibration) $("#msCalib").textContent = ranking.calibration;
@@ -1622,10 +1635,13 @@
 
   async function loadMathScalp(opts) {
     const { force = false, focusChanged = false } = opts || {};
-    if (_msBusy && !force) return;
+    // watchdog: a poll normally yields while another load is in flight, but if a
+    // previous run wedged (a hung request that never settled — typical right
+    // after a backend restart) take over instead of stalling forever.
+    if (_msBusy && !force && Date.now() - _msBusyAt < 40000) return;
     const myReq = ++_msReqSeq;               // this call's identity; a newer call invalidates it
     const stale = () => myReq !== _msReqSeq;
-    _msBusy = true;
+    _msBusy = true; _msBusyAt = Date.now();
     const prof = ($("#msProfile") && $("#msProfile").value) || "BALANCED";
     const focus = selectedFocusIndex || "NIFTY";
 
@@ -1646,19 +1662,21 @@
     }
 
     try {
-      let profiles, map, journal, auni;
-      try {
-        [profiles, map, journal, auni] = await Promise.all([
-          MS_PROFILES ? Promise.resolve(MS_PROFILES) : api("/api/smart-scalper/profiles"),
-          api("/api/mathematics/market-map").catch(() => null),
-          api("/api/smart-scalper/paper/journal").catch(() => null),
-          api("/api/autoscalp/universe").catch(() => null),
-        ]);
-      } catch (e) {
-        const el = $("#msErr"); if (el) { el.hidden = false; el.textContent = "math scalper: " + e.message; }
+      // every leg is individually guarded + timed out, so one slow/hung/failed
+      // endpoint degrades its own panel instead of stalling the whole view
+      const [profiles, map, journal, auni] = await Promise.all([
+        MS_PROFILES ? Promise.resolve(MS_PROFILES)
+          : _msFetch("/api/smart-scalper/profiles").catch(() => null),
+        _msFetch("/api/mathematics/market-map").catch(() => null),
+        _msFetch("/api/smart-scalper/paper/journal").catch(() => null),
+        _msFetch("/api/autoscalp/universe").catch(() => null),
+      ]);
+      if (stale()) return;
+      if (!profiles && !map && !journal && !auni) {
+        const el = $("#msErr");
+        if (el) { el.hidden = false; el.textContent = "math scalper: data unavailable — retrying on the next refresh"; }
         return;
       }
-      if (stale()) return;
       MS_PROFILES = profiles || MS_PROFILES;
       $("#msErr").hidden = true;
       $("#msClock").textContent = "updated " + timeStr(new Date().toISOString());
@@ -1680,14 +1698,11 @@
         || `<tr><td colspan="11" class="hint">—</td></tr>`;
       if (journal) renderMsJournal(journal);
 
-      let sig = null, oi = null, lv = null;
-      try {
-        [sig, oi, lv] = await Promise.all([
-          api(`/api/mathematics/signal?symbol=${encodeURIComponent(focus)}`),
-          api(`/api/mathematics/oi?symbol=${encodeURIComponent(focus)}`).catch(() => null),
-          api(`/api/mathematics/levels?symbol=${encodeURIComponent(focus)}`).catch(() => null),
-        ]);
-      } catch (e) { /* focus panels degrade to "no data" */ }
+      const [sig, oi, lv] = await Promise.all([
+        _msFetch(`/api/mathematics/signal?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+        _msFetch(`/api/mathematics/oi?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+        _msFetch(`/api/mathematics/levels?symbol=${encodeURIComponent(focus)}`).catch(() => null),
+      ]);
       if (stale()) return;                   // a newer Focus/Profile won — do not paint
 
       renderMsBest(focus, sig, null);
@@ -1701,8 +1716,15 @@
         if (ranking && ranking.universe) msAddToUniverse(ranking.universe);
         const primary = (ranking && ranking.selection && ranking.selection.primary) || null;
         if (primary && primary.index === focus) renderMsBest(focus, sig, primary);
-      });
-    } finally { if (myReq === _msReqSeq) _msBusy = false; }
+      }).catch(() => {});
+    } catch (e) {
+      console.error("loadMathScalp", e);      // never let a poll reject unhandled
+    } finally {
+      // ALWAYS release the guard — a conditional release plus a hung request was
+      // the "page stalls after auto-refresh" bug. stale() already stops an old
+      // call from painting, so an unconditional release is safe.
+      _msBusy = false;
+    }
   }
 
   (function bindMathScalp() {
