@@ -27,6 +27,7 @@ from .aggregator import CandleAggregator
 from .safeguards import Safeguards
 from ..engines.scalp_strategy import decide_from_context
 from ..engines.paper_trading import open_trade, update_trade_price, close_trade
+from ..engines.oi_math import max_pain_strike
 from ..backtest import calibration as _cal
 from ..backtest.replay import _mod, _tod_bucket
 from . import notify
@@ -353,11 +354,7 @@ def _chain_oi_quality(chain):
         out["quality_status"] = "INSUFFICIENT_OI"
         return out
     out["pcr"] = round(tot_pe / tot_ce, 3) if tot_ce > 0 else None
-    best = float("inf")
-    for k, _, _, _ in rows:
-        pain = sum(max(0.0, k - ki) * ce + max(0.0, ki - k) * pe for ki, ce, pe, _ in rows)
-        if pain < best:
-            best, out["max_pain"] = pain, k
+    out["max_pain"] = max_pain_strike((k, ce, pe) for k, ce, pe, _ in rows)
     out["quality_status"] = "GOOD" if cov >= _PCR_GOOD_COVERAGE else "PARTIAL"
     return out
 

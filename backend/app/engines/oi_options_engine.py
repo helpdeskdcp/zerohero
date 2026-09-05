@@ -5,6 +5,8 @@ Ported 1:1 from the n8n Code node logic.
 import math
 from datetime import datetime, timezone
 
+from .oi_math import max_pain_strike
+
 MODEL_VERSION = "oi-options-rule-based-v1"
 
 
@@ -92,18 +94,7 @@ def run_oi_options_engine(inp: dict) -> dict:
     oi_support = max_put_row["strike"]
     oi_resistance = max_call_row["strike"]
 
-    def max_pain():
-        best_k, best_val = None, float("inf")
-        for k in rows:
-            pain = 0.0
-            for r in rows:
-                pain += max(0, k["strike"] - r["strike"]) * r["ce_oi"]
-                pain += max(0, r["strike"] - k["strike"]) * r["pe_oi"]
-            if pain < best_val:
-                best_val, best_k = pain, k["strike"]
-        return best_k
-
-    mp = max_pain()
+    mp = max_pain_strike((r["strike"], r["ce_oi"], r["pe_oi"]) for r in rows)
 
     dir_ = inp.get("directional_bias") if inp.get("directional_bias") in ("BUY", "SELL") else "NONE"
     reasons = []

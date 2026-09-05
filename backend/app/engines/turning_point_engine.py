@@ -24,6 +24,7 @@ import math
 from datetime import datetime, timezone
 
 from .signal_engine import _num, _round, _sma, _ema_series, _rsi, _atr, _macd, _adx, _vwap
+from .oi_math import max_pain_strike
 
 MODEL_VERSION = "turning-point-rule-based-v1"
 
@@ -121,11 +122,7 @@ def _oi_metrics(chain, spot):
     pcr = tot_pe / tot_ce
     oi_support = max(rows, key=lambda x: x[2])[0]
     oi_resistance = max(rows, key=lambda x: x[1])[0]
-    best_k, best = None, float("inf")
-    for k0, _, _ in rows:
-        pain = sum(max(0, k0 - k) * ce + max(0, k - k0) * pe for k, ce, pe in rows)
-        if pain < best:
-            best, best_k = pain, k0
+    best_k = max_pain_strike(rows)
     return {"pcr": pcr, "oi_support": oi_support, "oi_resistance": oi_resistance, "max_pain": best_k}
 
 
