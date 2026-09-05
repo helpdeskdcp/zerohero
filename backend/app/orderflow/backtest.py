@@ -91,7 +91,7 @@ def _trade_from_leg(session: str, spike: dict, side: str) -> dict | None:
 
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
-             sessions: int | list | None = None) -> dict:
+             stop_frac: float = 1.0, sessions: int | list | None = None) -> dict:
     """`sessions`: None -> all captured; an int -> that many most-recent; a list
     -> exactly those IST dates."""
     sym = symbol.upper()
@@ -110,7 +110,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         if not bars:
             continue
         scanned += 1
-        sm = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr)
+        sm = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac)
         if sm.get("status") != "OK":
             continue
         s_trades = []
@@ -125,7 +125,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
 
     if not trades:
         return {"status": "NO_SIGNALS", "symbol": sym, "sessions_scanned": scanned,
-                "sessions": dates, "volume_mult": volume_mult, "rr": rr,
+                "sessions": dates, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
                 "note": "no volume-spike breakout hit target or stop in the captured sessions"}
 
     trades.sort(key=lambda t: (t["session"], t["candle_ts"], t["side"]))
@@ -154,7 +154,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
                  "granularity; a bar spanning both -> STOP_HIT (pessimistic). "
                  f"Needs >= {MIN_SAMPLE} resolved trades across >= {MIN_SESSIONS} "
                  "sessions before any edge claim; intra-day signals are correlated."),
-        "symbol": sym, "tf": tf, "volume_mult": volume_mult, "rr": rr,
+        "symbol": sym, "tf": tf, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
         "sessions_scanned": scanned, "traded_sessions": n_traded_sessions,
         "sessions": dates,
         "overall": overall,

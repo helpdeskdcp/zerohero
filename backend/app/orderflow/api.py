@@ -54,17 +54,22 @@ def api_smart_money(symbol: str = Query(...), date: str = Query(..., description
                     tf: str = Query("5m"),
                     volume_mult: float = Query(2.0, gt=1.0, le=20.0,
                                                description="spike = bar volume >= this x session avg"),
-                    rr: float = Query(3.0, gt=0.0, le=10.0)):
+                    rr: float = Query(3.0, gt=0.0, le=10.0),
+                    stop_frac: float = Query(1.0, gt=0.0, le=1.0,
+                                             description="stop distance as a fraction of the spike candle range; <1 = tighter stop")):
     """Volume-spike breakout setups: BUY above the spike candle's high / SELL
-    below its low, stop at the opposite extreme, target at `rr` x risk, with a
-    same-session forward-walked outcome. Read-only; ~5m bar granularity."""
-    return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr)
+    below its low, stop `stop_frac` x the candle range away from entry, target
+    at `rr` x that stop distance, with a same-session forward-walked outcome.
+    Read-only; ~5m bar granularity."""
+    return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac)
 
 
 @router.get("/backtest")
 def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
                  volume_mult: float = Query(2.0, gt=1.0, le=20.0),
                  rr: float = Query(3.0, gt=0.0, le=10.0),
+                 stop_frac: float = Query(1.0, gt=0.0, le=1.0,
+                                          description="stop distance as a fraction of the spike candle range; <1 = tighter stop (target follows at rr x that distance)"),
                  sessions: Optional[int] = Query(None, ge=1, le=400,
                                                  description="most-recent N captured sessions; omit = all")):
     """Runs the smart-money engine over every captured session and aggregates:
@@ -73,4 +78,5 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
     session -- plus the full per-trade list (entry / stop / target / result /
     points / the exact winning-target or SL-hit price). `reliable` is False
     below 20 resolved trades."""
-    return service.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, sessions=sessions)
+    return service.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr,
+                            stop_frac=stop_frac, sessions=sessions)

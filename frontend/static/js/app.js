@@ -2041,13 +2041,16 @@
     }
 
     const mult = Number(($("#ofMult") || {}).value || 2);
+    const stopFrac = Number(($("#ofStop") || {}).value || 1);
+    const rr = Number(($("#ofRr") || {}).value || 3);
+    const smQ = `symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}&rr=${rr}&stop_frac=${stopFrac}`;
 
     // 2. profile + smart-money, in parallel
     try {
       const [prof, sm, bt] = await Promise.all([
         api(`/api/orderflow/profile?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}`),
-        api(`/api/orderflow/smart-money?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}&volume_mult=${mult}`),
-        api(`/api/orderflow/backtest?symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}`),
+        api(`/api/orderflow/smart-money?${smQ}&date=${encodeURIComponent(ofDate)}`),
+        api(`/api/orderflow/backtest?${smQ}`),
       ]);
       if (stale()) return;
 
@@ -2115,8 +2118,9 @@
     }
     const dsel = $("#ofDate");
     if (dsel) dsel.addEventListener("change", () => { ofDate = dsel.value; loadOrderflow(); });
-    const msel = $("#ofMult");
-    if (msel) msel.addEventListener("change", () => loadOrderflow());
+    ["#ofMult", "#ofStop", "#ofRr"].forEach(id => {
+      const s = $(id); if (s) s.addEventListener("change", () => loadOrderflow());
+    });
     const rb = $("#ofRefresh");
     if (rb) rb.addEventListener("click", () => loadOrderflow({ force: true }));
   })();

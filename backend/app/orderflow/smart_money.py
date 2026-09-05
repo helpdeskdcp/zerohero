@@ -76,15 +76,24 @@ def _first_breakout_idx(bars_after: list, level: float, side: str) -> Optional[i
     return None
 
 
-def _setup(spike: dict, bars_after: list, side: str, rr: float) -> dict:
+def _setup(spike: dict, bars_after: list, side: str, rr: float,
+           stop_frac: float = 1.0) -> dict:
+    """`stop_frac`: the stop distance as a fraction of the spike candle's
+    high-low range. 1.0 (default) = stop at the opposite extreme (the original
+    spec). 0.5 = stop halfway between entry and that extreme -- a TIGHTER stop.
+    `target` is always rr x the ACTUAL (possibly tighter) stop distance, so a
+    tighter stop also pulls the target in."""
     h, l = spike["h"], spike["l"]
     rng = h - l
+    sd = max(0.0, stop_frac) * rng            # stop distance in points
     if side == "BUY":
-        entry, stop = h, l
-        target = entry + rr * rng
+        entry = h
+        stop = entry - sd
+        target = entry + rr * sd
     else:
-        entry, stop = l, h
-        target = entry - rr * rng
+        entry = l
+        stop = entry + sd
+        target = entry - rr * sd
     risk = abs(entry - stop)
     reward = abs(target - entry)
     d = {"side": side, "entry": round(entry, 4), "stop_loss": round(stop, 4),
@@ -101,9 +110,12 @@ def _setup(spike: dict, bars_after: list, side: str, rr: float) -> dict:
     return d
 
 
-def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0) -> dict:
+def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
+                       stop_frac: float = 1.0) -> dict:
     """Detect volume-spike candles and build BUY+SELL breakout setups for each,
-    with a same-session forward-walked outcome."""
+    with a same-session forward-walked outcome. `stop_frac` < 1.0 = a tighter
+    stop (fraction of the spike candle's range); the target follows at rr x
+    that tighter distance."""
     clean = _clean(bars)
     vols = [b["v"] for b in clean if b["v"] > 0]
     if len(clean) < 3 or len(vols) < 3:
@@ -123,8 +135,8 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0)
                        "l": b["l"], "c": b["c"], "v": b["v"]},
             "volume_x_avg": round(b["v"] / avg_v, 2),
             "range_points": round(b["h"] - b["l"], 4),
-            "buy": _setup(b, after, "BUY", rr),
-            "sell": _setup(b, after, "SELL", rr),
+            "buy": _setup(b, after, "BUY", rr, stop_frac),
+            "sell": _setup(b, after, "SELL", rr, stop_frac),
         })
     return {
         "status": "OK",
@@ -133,7 +145,7 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0)
                  "breakout / target / stop evaluated at ~5m bar granularity, not "
                  "tick -- a bar spanning both target and stop is scored STOP_HIT"),
         "session_avg_volume": round(avg_v, 2),
-        "volume_mult": volume_mult, "rr": rr,
+        "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
         "spike_count": len(setups),
         "setups": setups,
     }

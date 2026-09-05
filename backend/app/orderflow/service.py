@@ -56,11 +56,11 @@ def available_sessions(symbol: str, tf: str = "5m", limit: int = 30) -> list:
 
 
 def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
-                volume_mult: float = 2.0, rr: float = 3.0) -> dict:
+                volume_mult: float = 2.0, rr: float = 3.0, stop_frac: float = 1.0) -> dict:
     """Volume-spike breakout setups for one IST session (or comma-list for a
     multi-session scan). Read-only over captured bars."""
     dates = [d.strip() for d in str(session_date or "").split(",") if d.strip()]
-    key = ("SM", symbol.upper(), tuple(dates), tf, volume_mult, rr)
+    key = ("SM", symbol.upper(), tuple(dates), tf, volume_mult, rr, stop_frac)
     cached = _cache_get(key)
     if cached is not None:
         return cached
@@ -68,7 +68,7 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
     for d in dates:
         bars.extend(market_hub.session_bars(symbol, d, tf=tf))
     bars.sort(key=lambda b: str(b.get("bar_start") or ""))
-    out = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr)
+    out = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac)
     out["symbol"] = symbol.upper()
     out["sessions"] = dates
     out["tf"] = tf
@@ -78,14 +78,14 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
 
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
-             sessions: int | None = None) -> dict:
+             stop_frac: float = 1.0, sessions: int | None = None) -> dict:
     """Aggregate the smart-money engine's outcomes over the captured history.
     Read-only; a 30s cache (a completed session's backtest is immutable)."""
-    key = ("BT", symbol.upper(), tf, volume_mult, rr, sessions)
+    key = ("BT", symbol.upper(), tf, volume_mult, rr, stop_frac, sessions)
     cached = _cache_get(key)
     if cached is not None:
         return cached
-    out = _bt.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, sessions=sessions)
+    out = _bt.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac, sessions=sessions)
     _cache_put(key, out)
     return out
 

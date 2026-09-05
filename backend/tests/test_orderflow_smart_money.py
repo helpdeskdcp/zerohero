@@ -137,6 +137,28 @@ def test_no_data_below_three_bars():
                                 volume_mult=2.0)["status"] == "NO_DATA"
 
 
+def test_stop_frac_tightens_stop_and_pulls_target_in():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),   # spike H110 L100, range 10
+        _bar("t3", 108, 109, 107, 108, 100),
+        _bar("t4", 108, 109, 107, 108, 100),
+    ]
+    # full stop (default): BUY entry 110, stop 100 (dist 10), target 110+3*10=140
+    full = SM.smart_money_setups(bars, volume_mult=2.0)["setups"][0]["buy"]
+    assert full["stop_loss"] == 100.0 and full["target"] == 140.0 and full["risk_points"] == 10.0
+    # tighter stop (0.4 of range): dist 4 -> stop 106, target 110 + 3*4 = 122
+    tight = SM.smart_money_setups(bars, volume_mult=2.0, stop_frac=0.4)["setups"][0]["buy"]
+    assert tight["stop_loss"] == 106.0
+    assert tight["target"] == 122.0
+    assert tight["risk_points"] == 4.0
+    assert tight["rr"] == 3.0                 # RR preserved
+    # SELL side mirrors: entry 100, stop 100 + 4 = 104, target 100 - 12 = 88
+    tsell = SM.smart_money_setups(bars, volume_mult=2.0, stop_frac=0.4)["setups"][0]["sell"]
+    assert tsell["stop_loss"] == 104.0 and tsell["target"] == 88.0
+
+
 def test_higher_volume_mult_filters_out_marginal_spikes():
     bars = [
         _bar("t0", 100, 101, 99, 100, 100),
