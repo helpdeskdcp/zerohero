@@ -153,6 +153,7 @@ what-if caps 600s..3000s: net = +20.95 for ALL (proxy holds TIME-exit pnl consta
 | K5 | NG/Crude edge | `analyze_holdtime.py` per symbol at n≥20 | ~2 weeks |
 | K6 | Expiry-day engine + ZTH first live exercise | NIFTY expiry session (Tue) — trades tagged `AUTOSCALP` (480s profile) / `AUTOSCALP-ZTH` | next Tue |
 | K7 | Premature-exit / missed-profit trend | analyzer `premature` + `missed_profit` columns over n≥20 | ~2 weeks |
+| K8 | Probability overconfidence (2026-09-05, see `CALIBRATION_OVERCONFIDENCE_AUDIT.md`) — global calibration curve erases a real per-(symbol,regime) difference; sharpest leads (TRENDING_UP regime +33.4pp gap, two NATURALGAS triples at 30% win despite top-of-range scores) are all at or under this report's own 20-sample floor | re-run the same attribution once each flagged subgroup reaches n≥20 | ~2-3 weeks PAPER |
 
 ## L. Is the system ready for extended PAPER trading?
 
