@@ -22,6 +22,7 @@ from fastapi import WebSocket
 
 from . import instruments
 from . import market_data
+from . import market_hub
 from .scalper import ScalpRunner
 
 _log = logging.getLogger(__name__)
@@ -112,20 +113,27 @@ def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
     """Canonical ATM+/-window chain from the read-only quote SDK (best effort).
     `market` is NSE for index options, MCX for NATURALGAS/CRUDEOIL options-on-
     futures — selection_snapshot + the SDK are exchange-aware. `expiry_mode`
-    is AUTO or AUTO_ROLL (skip the 0-DTE contract on expiry day)."""
+    is AUTO or AUTO_ROLL (skip the 0-DTE contract on expiry day).
+
+    Sourced from market_hub.get_chain() (histcap first, throttled REST
+    fallback) rather than a second, independent selection_snapshot() call —
+    unifying autoscalp onto the same broker-facing chain read the
+    mathematics/ranking surface already uses, instead of two parallel paths
+    hitting the broker separately. Output shape is unchanged: still a list of
+    {"strike", "ce": {...}, "pe": {...}} dicts, so decide_from_context and
+    everything downstream sees byte-identical input regardless of which of
+    histcap/REST actually answered."""
     try:
-        from .connectors.angelone import _market_sdk
-        sdk = _market_sdk(require_auth=False)
-        if not sdk:
-            return []
         mkt = str(market or "NSE").upper()
         et = 5 if mkt == "MCX" else 2                       # WS exchange type for the legs
-        snap = market_data.selection_snapshot(sdk, mkt, symbol, expiry=str(expiry_mode or "AUTO"),
-                                              option_type="BOTH", window=window,
-                                              instrument="OPTION" if mkt == "MCX" else None)
-        expiry = snap.get("expiry")
+        gc = market_hub.get_chain(symbol, window=window, allow_rest_fallback=True,
+                                  expiry_mode=str(expiry_mode or "AUTO"))
+        rows = gc.get("chain") or []
+        if not rows:
+            return []
+        expiry = gc.get("expiry")
         out = []
-        for r in snap.get("chain") or []:
+        for r in rows:
             strike = r.get("strike")
             # PHASE 2/4 — greeks + OI provenance now flow through the normalized
             # snapshot (get_option_chain already merged broker greeks and did a
@@ -150,12 +158,20 @@ def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
                        "oi_timestamp": r.get("pe_oi_timestamp"),
                        "tradingsymbol": _opt_tradingsymbol(symbol, expiry, strike, "PE"), "expiry": expiry},
             })
-        # Fallback: if the snapshot path did not carry greeks (older SDK route,
-        # with_greeks disabled), fill any still-None leg from one cached
-        # get_option_greeks call. Idempotent; capability-aware; no fabrication.
-        if out and any(row["ce"].get("delta") is None and row["ce"].get("greeks_source") in (None, "")
+        # Fallback: if the chain path did not carry greeks (histcap never
+        # captures them; REST with_greeks disabled), fill any still-None leg
+        # from one cached get_option_greeks call. Idempotent; capability-aware;
+        # no fabrication. Needs a real SDK handle regardless of which path
+        # answered the chain itself.
+        if out and any(row["ce"].get("delta") is None and row["ce"].get("greeks_source") in (None, "", "UNAVAILABLE")
                        for row in out):
-            _merge_broker_greeks(sdk, symbol, expiry, out)
+            try:
+                from .connectors.angelone import _market_sdk
+                sdk = _market_sdk(require_auth=False)
+                if sdk:
+                    _merge_broker_greeks(sdk, symbol, expiry, out)
+            except Exception:
+                pass
         return out
     except Exception:
         return []

@@ -81,11 +81,18 @@ def _now_ist_date() -> str:
 def _hist_chain(sym: str, session_date: str) -> dict | None:
     """Latest captured option snapshot per (strike, side) -> chain rows in the
     shape market_context produces. ΔOI is derived by differencing vs the
-    snapshot ~5 min earlier (histcap does not store oi_change)."""
+    snapshot ~5 min earlier (histcap does not store oi_change).
+
+    `token`/`exchange` are carried through (histcap captures both, see
+    histcap/schema.py's quote_snapshots) so a caller that needs to actually
+    trade the leg -- not just read its OI -- has what it needs without a
+    second, separate broker call. This has no effect on read-only consumers
+    that never look at those keys."""
     try:
         with _ro() as c:
             rows = c.execute(
-                "SELECT received_ts, strike, option_type, ltp, oi, volume, expiry "
+                "SELECT received_ts, strike, option_type, ltp, oi, volume, expiry, "
+                "token, exchange "
                 "FROM quote_snapshots WHERE symbol=? AND kind='OPTION' "
                 "AND session_date_ist=? AND strike IS NOT NULL "
                 "ORDER BY received_ts", (sym, session_date)).fetchall()
@@ -116,6 +123,10 @@ def _hist_chain(sym: str, session_date: str) -> dict | None:
         d[f"{pfx}_oi_change"] = (oi - base) if (oi is not None and base is not None) else None
         d[f"{pfx}_volume"] = float(r["volume"]) if r["volume"] is not None else None
         d[f"{pfx}_oi_status"] = "AVAILABLE" if oi is not None else "MISSING"
+        d[f"{pfx}_oi_source"] = "HISTCAP" if oi is not None else None
+        d[f"{pfx}_oi_timestamp"] = r["received_ts"] if oi is not None else None
+        d[f"{pfx}_token"] = r["token"]
+        d[f"{pfx}_exchange"] = r["exchange"]
         for g in ("delta", "gamma", "theta", "vega", "iv"):
             d[f"{pfx}_{g}"] = None
         d[f"{pfx}_greeks_source"] = "UNAVAILABLE"
@@ -236,32 +247,77 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
             ctx["avg_volume"] = sum(vols[-20:-1]) / max(1, len(vols[-20:-1]))
 
     # 4. OPTION CHAIN / OI — histcap -> throttled REST (selection_snapshot)
-    hc = _hist_chain(sym, sess)
-    if hc:
-        ctx["chain"] = hc["chain"]
-        ctx["expiry"] = hc.get("expiry")
-        ctx["oi_coverage"] = hc["oi_coverage"]
-        ctx["data_quality"]["option_chain"] = f"ACTUAL (histcap, {hc['age_sec']}s)"
-        if ctx.get("spot") and hc["chain"]:
-            ctx["atm"] = min((r["strike"] for r in hc["chain"]), key=lambda k: abs(k - ctx["spot"]))
-    elif allow_rest_fallback and sdk and _throttle((sym, "chain")):
-        try:
-            from . import market_data
-            snap = market_data.selection_snapshot(
-                sdk, mkt, sym, expiry="AUTO", option_type="BOTH", window=window,
-                instrument="OPTION" if mkt in ("MCX", "BSE") else None)
-            ctx["expiry"] = snap.get("expiry")
-            ctx["atm"] = ctx.get("atm") or snap.get("atm")
-            ctx["spot"] = ctx.get("spot") or snap.get("spot") or snap.get("atm")
-            ctx["chain"] = _rows_from_snap(snap)
-            ctx["oi_coverage"] = snap.get("oi_coverage")
-            ctx["data_quality"]["option_chain"] = "ACTUAL (REST)" if ctx["chain"] else "MISSING"
-        except Exception as e:
-            ctx["data_quality"]["chain_error"] = f"{type(e).__name__}: {e}"
+    gc = get_chain(sym, window=window, allow_rest_fallback=allow_rest_fallback, sdk=sdk)
+    if gc["chain"]:
+        ctx["chain"] = gc["chain"]
+        ctx["expiry"] = gc.get("expiry")
+        ctx["oi_coverage"] = gc.get("oi_coverage")
+        ctx["data_quality"]["option_chain"] = gc["data_quality_note"]
+        if gc.get("atm") is not None:
+            ctx["atm"] = gc["atm"]
+        elif ctx.get("spot") and gc["chain"]:
+            ctx["atm"] = min((r["strike"] for r in gc["chain"]), key=lambda k: abs(k - ctx["spot"]))
+        if gc.get("spot") is not None:
+            ctx["spot"] = ctx.get("spot") or gc["spot"]
+    elif gc.get("error"):
+        ctx["data_quality"]["chain_error"] = gc["error"]
     if not ctx["chain"]:
         ctx["data_quality"].setdefault("option_chain", "MISSING")
     ctx["data_quality"].setdefault("greeks", "UNAVAILABLE (not on this surface)")
     return ctx
+
+
+def get_chain(sym: str, *, window: int = 6, allow_rest_fallback: bool = True,
+             expiry_mode: str = "AUTO", sdk=None) -> dict:
+    """The option-chain-only slice of `snapshot()`, factored out so a caller
+    that needs JUST the chain (autoscalp's per-tick decision loop) does not
+    pay for spot/bars/prev-day work it already tracks itself via its own
+    CandleAggregator. This is the ONE broker-facing chain read both the
+    read-only mathematics surface (via `snapshot()`) and the autoscalp
+    trading loop (via `_autoscalp_chain` in app/runtime.py) go through.
+
+    `expiry_mode="AUTO_ROLL"` (skip the 0-DTE contract on an NSE/BSE index's
+    own expiry day) has no histcap equivalent -- the capture worker doesn't
+    distinguish roll intent, it just captures whatever expiry is currently
+    configured -- so that mode always bypasses the histcap shortcut and goes
+    straight to the throttled REST fallback, which does honour it.
+    """
+    sym = sym.upper()
+    mkt = _MKT.get(sym, "NSE")
+    sess = _now_ist_date()
+    out = {"chain": [], "expiry": None, "atm": None, "spot": None,
+          "oi_coverage": None, "data_quality_note": "MISSING", "error": None}
+
+    if sdk is None and allow_rest_fallback:
+        try:
+            from .connectors.angelone import _market_sdk
+            sdk = _market_sdk(require_auth=True)
+        except Exception as e:
+            _log.debug("get_chain(%s): broker SDK unavailable: %r", sym, e)
+
+    hc = None if expiry_mode == "AUTO_ROLL" else _hist_chain(sym, sess)
+    if hc:
+        out["chain"] = hc["chain"]
+        out["expiry"] = hc.get("expiry")
+        out["oi_coverage"] = hc["oi_coverage"]
+        out["data_quality_note"] = f"ACTUAL (histcap, {hc['age_sec']}s)"
+        return out
+
+    if allow_rest_fallback and sdk and _throttle((sym, "chain")):
+        try:
+            from . import market_data
+            snap = market_data.selection_snapshot(
+                sdk, mkt, sym, expiry=expiry_mode, option_type="BOTH", window=window,
+                instrument="OPTION" if mkt in ("MCX", "BSE") else None)
+            out["expiry"] = snap.get("expiry")
+            out["atm"] = snap.get("atm")
+            out["spot"] = snap.get("spot") or snap.get("atm")
+            out["chain"] = _rows_from_snap(snap)
+            out["oi_coverage"] = snap.get("oi_coverage")
+            out["data_quality_note"] = "ACTUAL (REST)" if out["chain"] else "MISSING"
+        except Exception as e:
+            out["error"] = f"{type(e).__name__}: {e}"
+    return out
 
 
 def _rows_from_snap(snap: dict) -> list:
@@ -274,6 +330,9 @@ def _rows_from_snap(snap: dict) -> list:
             row[f"{pfx}_oi_change"] = r.get(f"{pfx}_oi_change")
             row[f"{pfx}_volume"] = r.get(f"{pfx}_volume")
             row[f"{pfx}_oi_status"] = r.get(f"{pfx}_oi_status")
+            row[f"{pfx}_token"] = r.get(f"{pfx}_token")
+            row[f"{pfx}_oi_source"] = r.get(f"{pfx}_oi_source")
+            row[f"{pfx}_oi_timestamp"] = r.get(f"{pfx}_oi_timestamp")
             for g in ("delta", "gamma", "theta", "vega", "iv"):
                 row[f"{pfx}_{g}"] = r.get(f"{pfx}_{g}")
             row[f"{pfx}_greeks_source"] = r.get(f"{pfx}_greeks_source")
