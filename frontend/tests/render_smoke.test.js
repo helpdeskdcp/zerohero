@@ -108,6 +108,30 @@ const P = {
       bins: [{ price: 24047.5, tpo: 1, letters: "A" }, { price: 24052.5, tpo: 2, letters: "AB" }],
     },
   }),
+  "/api/orderflow/backtest": load("of_bt", {
+    status: "OK", method: "OHLCV_BARS", symbol: "NIFTY", tf: "5m", volume_mult: 2, rr: 3,
+    sessions_scanned: 4, traded_sessions: 4, sessions: ["2026-09-01", "2026-09-04"],
+    overall: {
+      signals: 6, wins: 1, losses: 4, open: 1, win_rate: 0.2, resolved: 5,
+      gross_win_points: 60, gross_loss_points: 80, net_points: -20,
+      avg_win_points: 60, avg_loss_points: 20, expectancy_points: -4, profit_factor: 0.75,
+      max_drawdown_points: -80, reliable: false,
+      reliability_reason: "INSUFFICIENT SAMPLE: 5/20 resolved trades, 4/10 distinct sessions -- descriptive only, no edge claim",
+      breakeven_win_rate: 0.25, min_sample: 20,
+    },
+    by_side: {
+      BUY: { wins: 1, losses: 2, open: 0, win_rate: 0.333 },
+      SELL: { wins: 0, losses: 2, open: 1, win_rate: 0 },
+    },
+    by_session: {}, trades: [
+      { session: "2026-09-04", candle_ts: "2026-09-04T04:00:00Z", side: "BUY", entry: 24060, stop_loss: 24040,
+        target: 24120, risk_points: 20, reward_points: 60, rr: 3, breakout_bar: "x", resolved_bar: "y",
+        result: "WIN", points: 60, exit_price: 24120, volume_x_avg: 3.3 },
+      { session: "2026-09-04", candle_ts: "2026-09-04T04:00:00Z", side: "SELL", entry: 24040, stop_loss: 24060,
+        target: 23980, risk_points: 20, reward_points: 60, rr: 3, breakout_bar: "x", resolved_bar: "y",
+        result: "LOSS", points: -20, exit_price: 24060, volume_x_avg: 3.3 },
+    ],
+  }),
   "/api/orderflow/smart-money": load("of_sm", {
     symbol: "NIFTY", sessions: ["2026-09-04"], tf: "5m", status: "OK", method: "OHLCV_BARS",
     session_avg_volume: 300, volume_mult: 2, rr: 3, spike_count: 1,
@@ -313,6 +337,11 @@ try {
   assert.ok(/of-letters/.test(ofMp), "TPO letters rendered in the market profile");
   const ofSm = elFor("#ofSmTable tbody").innerHTML;
   assert.ok(/TARGET_HIT/.test(ofSm) && /of-oc/.test(ofSm), "smart-money signals table rendered with outcome: " + ofSm.slice(0, 200));
+  const ofBtSum = elFor("#ofBtSummary").innerHTML;
+  assert.ok(/winning points/i.test(ofBtSum) && /SL-hit points/i.test(ofBtSum), "backtest summary shows winning + SL-hit points: " + ofBtSum.slice(0, 200));
+  assert.ok(/INSUFFICIENT/.test(elFor("#ofBtBadge").textContent + elFor("#ofBtBadge").innerHTML), "backtest badge flags an insufficient sample");
+  const ofBt = elFor("#ofBtTable tbody").innerHTML;
+  assert.ok(/WIN/.test(ofBt) && /LOSS/.test(ofBt), "backtest per-trade table renders wins and losses: " + ofBt.slice(0, 200));
   // order-flow index picker: independent of Math Scalper's, covers NSE/BSE/MCX
   assert.equal(chk.ofSelected(), "NIFTY", "Order Flow index defaults to NIFTY");
   assert.deepEqual(chk.ofFilter("bank").sort(), ["BANKEX", "BANKNIFTY"], "OF picker: 'bank' -> BANKNIFTY + BANKEX");

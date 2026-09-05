@@ -17,6 +17,7 @@ from .. import market_hub
 from ..engines.signal_engine import _vwap
 from . import profile as _p
 from . import smart_money as _sm
+from . import backtest as _bt
 
 _CACHE: dict = {}
 _TTL = 30.0          # a completed session is immutable; today's grows slowly
@@ -72,6 +73,19 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
     out["sessions"] = dates
     out["tf"] = tf
     out["bar_count"] = len(bars)
+    _cache_put(key, out)
+    return out
+
+
+def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
+             sessions: int | None = None) -> dict:
+    """Aggregate the smart-money engine's outcomes over the captured history.
+    Read-only; a 30s cache (a completed session's backtest is immutable)."""
+    key = ("BT", symbol.upper(), tf, volume_mult, rr, sessions)
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    out = _bt.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, sessions=sessions)
     _cache_put(key, out)
     return out
 

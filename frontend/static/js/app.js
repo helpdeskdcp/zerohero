@@ -1930,6 +1930,57 @@
     }).join("");
     el.innerHTML = rows;
   }
+  function ofRenderBacktest(bt) {
+    const badge = $("#ofBtBadge"), warn = $("#ofBtWarn"), sumEl = $("#ofBtSummary");
+    const tb = $("#ofBtTable tbody"), meta = $("#ofBtMeta");
+    if (!bt || bt.status !== "OK") {
+      if (badge) { badge.textContent = (bt && bt.status) || "—"; badge.className = "pill pill--paper"; }
+      if (sumEl) sumEl.innerHTML = `<span class="hint">${esc((bt && (bt.note || bt.status)) || "no backtest")}</span>`;
+      if (tb) tb.innerHTML = "";
+      if (warn) warn.hidden = true;
+      return;
+    }
+    const o = bt.overall;
+    if (meta) meta.textContent = `${bt.symbol} · ${bt.sessions_scanned} sessions · spike ×${bt.volume_mult} · ${o.signals} signals`;
+    if (badge) {
+      badge.textContent = o.reliable ? "SAMPLE OK" : "INSUFFICIENT";
+      badge.className = "pill " + (o.reliable ? "pill--paper" : "pill--warn");
+    }
+    if (warn) {
+      if (o.reliability_reason) { warn.textContent = o.reliability_reason; warn.hidden = false; }
+      else warn.hidden = true;
+    }
+    const kv = (label, val, cls) => `<div class="of-kv ${cls || ""}"><b>${esc(val)}</b><span>${esc(label)}</span></div>`;
+    const netCls = o.net_points > 0 ? "pos" : o.net_points < 0 ? "neg" : "";
+    if (sumEl) sumEl.innerHTML = [
+      kv("wins / losses / open", `${o.wins} / ${o.losses} / ${o.open}`),
+      kv(`win rate (breakeven ${(o.breakeven_win_rate * 100).toFixed(0)}%)`,
+        o.win_rate == null ? "—" : (o.win_rate * 100).toFixed(1) + "%",
+        o.win_rate != null && o.win_rate >= o.breakeven_win_rate ? "pos" : "neg"),
+      kv("winning points", "+" + ofNum(o.gross_win_points, 1), "pos"),
+      kv("SL-hit points", "−" + ofNum(o.gross_loss_points, 1), "neg"),
+      kv("net points", ofNum(o.net_points, 1), netCls),
+      kv("expectancy / trade", o.expectancy_points == null ? "—" : ofNum(o.expectancy_points, 2), o.expectancy_points > 0 ? "pos" : "neg"),
+      kv("profit factor", o.profit_factor == null ? "—" : ofNum(o.profit_factor, 2), o.profit_factor != null && o.profit_factor >= 1 ? "pos" : "neg"),
+      kv("max drawdown", ofNum(o.max_drawdown_points, 1), "neg"),
+      kv("BUY  W/L", `${bt.by_side.BUY.wins} / ${bt.by_side.BUY.losses}`),
+      kv("SELL W/L", `${bt.by_side.SELL.wins} / ${bt.by_side.SELL.losses}`),
+    ].join("");
+    if (tb) {
+      const rows = (bt.trades || []).map(t => {
+        const time = (() => { const d = new Date(t.candle_ts); return isNaN(d) ? esc(t.candle_ts) : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); })();
+        const pcls = t.points > 0 ? "pos" : t.points < 0 ? "neg" : "";
+        const psign = t.points > 0 ? "+" : "";
+        return `<tr><td>${esc(t.session)}</td><td>${time}</td><td class="${esc(t.side)}">${esc(t.side)}</td>` +
+          `<td>${ofNum(t.entry)}</td><td>${ofNum(t.stop_loss)}</td><td>${ofNum(t.target)}</td>` +
+          `<td><span class="of-oc ${t.result === "WIN" ? "TARGET_HIT" : t.result === "LOSS" ? "STOP_HIT" : "TRIGGERED"}">${esc(t.result)}</span></td>` +
+          `<td>${t.exit_price == null ? "—" : ofNum(t.exit_price)}</td>` +
+          `<td class="${pcls}">${t.result === "OPEN" ? "—" : psign + ofNum(t.points, 1)}</td></tr>`;
+      });
+      tb.innerHTML = rows.join("") || `<tr><td colspan="9" class="hint">no resolved trades</td></tr>`;
+    }
+  }
+
   function ofRenderSignals(sm) {
     const tb = $("#ofSmTable tbody"); if (!tb) return;
     if (!sm || sm.status !== "OK" || !Array.isArray(sm.setups) || !sm.setups.length) {
@@ -1993,9 +2044,10 @@
 
     // 2. profile + smart-money, in parallel
     try {
-      const [prof, sm] = await Promise.all([
+      const [prof, sm, bt] = await Promise.all([
         api(`/api/orderflow/profile?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}`),
         api(`/api/orderflow/smart-money?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}&volume_mult=${mult}`),
+        api(`/api/orderflow/backtest?symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}`),
       ]);
       if (stale()) return;
 
@@ -2016,6 +2068,8 @@
       const smm = $("#ofSmMeta");
       if (smm) smm.textContent = sm && sm.status === "OK"
         ? `${sm.spike_count} spike candle(s) · avg vol ${ofNum(sm.session_avg_volume, 0)} · ×${mult} threshold` : (sm && sm.reason) || "—";
+
+      ofRenderBacktest(bt);
     } catch (e) { if (!stale()) { setErr((e && e.message) || String(e)); showError("orderflow", e); } }
   }
 

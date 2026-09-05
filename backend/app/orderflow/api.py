@@ -59,3 +59,18 @@ def api_smart_money(symbol: str = Query(...), date: str = Query(..., description
     below its low, stop at the opposite extreme, target at `rr` x risk, with a
     same-session forward-walked outcome. Read-only; ~5m bar granularity."""
     return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr)
+
+
+@router.get("/backtest")
+def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
+                 volume_mult: float = Query(2.0, gt=1.0, le=20.0),
+                 rr: float = Query(3.0, gt=0.0, le=10.0),
+                 sessions: Optional[int] = Query(None, ge=1, le=400,
+                                                 description="most-recent N captured sessions; omit = all")):
+    """Runs the smart-money engine over every captured session and aggregates:
+    win/loss counts, win rate, gross win points, gross loss (SL-hit) points,
+    net, expectancy, profit factor, max drawdown -- overall, per side, per
+    session -- plus the full per-trade list (entry / stop / target / result /
+    points / the exact winning-target or SL-hit price). `reliable` is False
+    below 20 resolved trades."""
+    return service.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, sessions=sessions)

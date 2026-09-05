@@ -541,3 +541,14 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
 .of-oc.PENDING { color: var(--ink-faint); }
 #ofSmTable td.BUY { color: var(--teal); }
 #ofSmTable td.SELL { color: var(--ember); }
+.of-bt-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 8px 0 14px; font-size: 12px; }
+.of-bt-summary .of-kv { display: flex; flex-direction: column; }
+.of-bt-summary .of-kv b { font-family: var(--font-mono); font-size: 14px; color: var(--ink); }
+.of-bt-summary .of-kv span { color: var(--ink-faint); font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+.of-bt-summary .of-kv.pos b { color: var(--teal); }
+.of-bt-summary .of-kv.neg b { color: var(--ember); }
+#ofBtTable td.pos { color: var(--teal); font-family: var(--font-mono); }
+#ofBtTable td.neg { color: var(--ember); font-family: var(--font-mono); }
+#ofBtTable td.BUY { color: var(--teal); }
+#ofBtTable td.SELL { color: var(--ember); }
+.pill--warn { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.06); }

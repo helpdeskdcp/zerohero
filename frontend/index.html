@@ -693,6 +693,25 @@
             </table>
           </div>
         </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Backtest — all captured sessions <span class="pill pill--paper" id="ofBtBadge">—</span></h2>
+            <span class="hint" id="ofBtMeta">every volume-spike breakout, outcome walked forward, aggregated</span>
+          </div>
+          <p class="disclaimer" id="ofBtWarn" hidden></p>
+          <div class="of-bt-summary" id="ofBtSummary"><span class="hint">—</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="ofBtTable">
+              <thead><tr>
+                <th scope="col">Session</th><th scope="col">Time</th><th scope="col">Side</th>
+                <th scope="col">Entry</th><th scope="col">Stop</th><th scope="col">Target</th>
+                <th scope="col">Result</th><th scope="col">Exit @</th><th scope="col">Points</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- ===== RESEARCH ===== -->
