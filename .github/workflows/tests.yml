@@ -43,8 +43,12 @@ jobs:
       - name: Safety check -- live_trading must default to false
         run: |
           python -c "
-          import ast, sys
-          src = open('app/main.py').read()
-          assert '\"live_trading\": False' in src, 'health endpoint must hardcode live_trading:false'
-          print('OK: live_trading defaults to false in app/main.py')
+          # Calls the actual /api/health handler rather than grepping a
+          # specific file's source text -- survives the handler moving
+          # between files (it lives in app/api/system_routes.py as of the
+          # main.py router split, not app/main.py).
+          from app.api.system_routes import api_health
+          health = api_health()
+          assert health['live_trading'] is False, f'expected live_trading=False, got {health!r}'
+          print('OK: /api/health reports live_trading=False:', health)
           "
