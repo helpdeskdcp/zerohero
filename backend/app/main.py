@@ -180,6 +180,15 @@ try:
 except Exception as _e:
     print(f"[smart_index_scalper] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Order-flow module, Phase 1: Volume Profile + Market Profile / TPO
+# (read-only over captured OHLCV bars; OHLCV-range approximation, clearly
+# labelled; no tick data, no broker calls, no trading path) ----
+try:
+    from .orderflow import api as _orderflow_api
+    app.include_router(_orderflow_api.router)
+except Exception as _e:
+    print(f"[orderflow] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:

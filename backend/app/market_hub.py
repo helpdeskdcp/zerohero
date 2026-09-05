@@ -141,6 +141,48 @@ def _hist_chain(sym: str, session_date: str) -> dict | None:
                             "ratio": round(have / len(chain), 3) if chain else 0.0}}
 
 
+def session_bars(sym: str, session_date: str, *, tf: str = "5m") -> list:
+    """ALL captured bars for one IST session date, oldest-first, for historical
+    analysis (volume/market profile). Unlike `_hist_bars` this has NO freshness
+    gate -- a completed past session is exactly what a profile wants. Prefers
+    the FUTURE contract (real traded volume) over the cash INDEX (which carries
+    no volume on NSE). Read-only; empty list when nothing captured.
+
+    Rows: {"bar_start", "o", "h", "l", "c", "v"}. This is the one place
+    order-flow profiling reads market_history.db from -- it does not open its
+    own connection (keeps market_hub the single owner of that DB path)."""
+    sym = sym.upper()
+    try:
+        with _ro() as c:
+            for kind in ("FUTURE", "INDEX"):
+                rows = c.execute(
+                    "SELECT bar_start, o, h, l, c, v FROM market_candles "
+                    "WHERE symbol=? AND kind=? AND tf=? AND session_date_ist=? "
+                    "ORDER BY bar_start ASC", (sym, kind, tf, session_date)).fetchall()
+                if rows:
+                    return [{"bar_start": r["bar_start"], "o": r["o"], "h": r["h"],
+                             "l": r["l"], "c": r["c"], "v": r["v"]} for r in rows]
+    except Exception as e:
+        _log.debug("session_bars(%s, %s) read failed: %r", sym, session_date, e)
+    return []
+
+
+def session_dates(sym: str, *, tf: str = "5m", limit: int = 30) -> list:
+    """Distinct IST session dates that have captured bars for `sym`, newest
+    first — for a dashboard date picker. Read-only."""
+    sym = sym.upper()
+    try:
+        with _ro() as c:
+            rows = c.execute(
+                "SELECT DISTINCT session_date_ist d FROM market_candles "
+                "WHERE symbol=? AND tf=? AND kind IN ('FUTURE','INDEX') "
+                "ORDER BY d DESC LIMIT ?", (sym, tf, limit)).fetchall()
+        return [r["d"] for r in rows]
+    except Exception as e:
+        _log.debug("session_dates(%s) read failed: %r", sym, e)
+        return []
+
+
 def _hist_bars(sym: str, session_date: str) -> list | None:
     try:
         with _ro() as c:
