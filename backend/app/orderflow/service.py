@@ -82,16 +82,17 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
              stop_frac: float = 1.0, trail: bool = False, sig_filter: str = "none",
-             sessions: int | None = None) -> dict:
+             basis: str = "index", sessions: int | None = None) -> dict:
     """Aggregate the smart-money engine's outcomes over the captured history.
+    `basis` in {index, premium} -- premium re-prices on the captured ATM option.
     Read-only; a 30s cache (a completed session's backtest is immutable)."""
     key = ("BT", symbol.upper(), tf, volume_mult, rr, stop_frac,
-           bool(trail), sig_filter, sessions)
+           bool(trail), sig_filter, basis, sessions)
     cached = _cache_get(key)
     if cached is not None:
         return cached
     out = _bt.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
-                       trail=trail, sig_filter=sig_filter, sessions=sessions)
+                       trail=trail, sig_filter=sig_filter, basis=basis, sessions=sessions)
     _cache_put(key, out)
     return out
 

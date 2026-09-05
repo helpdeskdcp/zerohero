@@ -183,6 +183,36 @@ def session_dates(sym: str, *, tf: str = "5m", limit: int = 30) -> list:
         return []
 
 
+def session_option_quotes(sym: str, session_date: str) -> dict:
+    """All captured OPTION LTP ticks for one IST session, grouped by leg:
+
+        {(strike_float, "CE"|"PE"): [(received_ts_iso, ltp_float), ...], ...}
+
+    each list oldest-first. For the order-flow backtest's premium-basis
+    re-walk (re-price an index-triggered setup on the option actually
+    traded). Read-only, market_history.db only, empty dict when nothing
+    captured. market_hub stays the single owner of that DB path."""
+    sym = sym.upper()
+    out: dict = {}
+    try:
+        with _ro() as c:
+            rows = c.execute(
+                "SELECT received_ts, strike, option_type, ltp FROM quote_snapshots "
+                "WHERE symbol=? AND kind='OPTION' AND session_date_ist=? "
+                "AND strike IS NOT NULL AND ltp IS NOT NULL "
+                "ORDER BY received_ts ASC", (sym, session_date)).fetchall()
+    except Exception as e:
+        _log.debug("session_option_quotes(%s, %s) read failed: %r", sym, session_date, e)
+        return {}
+    for r in rows:
+        try:
+            k = (float(r["strike"]), str(r["option_type"]).upper())
+        except (TypeError, ValueError):
+            continue
+        out.setdefault(k, []).append((r["received_ts"], float(r["ltp"])))
+    return out
+
+
 def _hist_bars(sym: str, session_date: str) -> list | None:
     try:
         with _ro() as c:

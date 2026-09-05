@@ -110,6 +110,9 @@ const P = {
   }),
   "/api/orderflow/backtest": load("of_bt", {
     status: "OK", method: "OHLCV_BARS", symbol: "NIFTY", tf: "5m", volume_mult: 2, rr: 3,
+    basis: "premium",
+    basis_coverage: { basis: "premium", resolved_priced: 5, premium_repriced: 4,
+      premium_thin_quotes: 1, index_fallback: 1, index_only: 0, premium_coverage: 0.8 },
     sessions_scanned: 4, traded_sessions: 4, sessions: ["2026-09-01", "2026-09-04"],
     overall: {
       signals: 6, wins: 1, losses: 4, open: 1, win_rate: 0.2, resolved: 5,
@@ -339,6 +342,7 @@ try {
   assert.ok(/TARGET_HIT/.test(ofSm) && /of-oc/.test(ofSm), "smart-money signals table rendered with outcome: " + ofSm.slice(0, 200));
   const ofBtSum = elFor("#ofBtSummary").innerHTML;
   assert.ok(/winning points/i.test(ofBtSum) && /SL-hit points/i.test(ofBtSum), "backtest summary shows winning + SL-hit points: " + ofBtSum.slice(0, 200));
+  assert.ok(/option premium/i.test(ofBtSum) && /thin/i.test(ofBtSum), "backtest summary shows premium basis + coverage: " + ofBtSum.slice(0, 200));
   assert.ok(/INSUFFICIENT/.test(elFor("#ofBtBadge").textContent + elFor("#ofBtBadge").innerHTML), "backtest badge flags an insufficient sample");
   const ofBt = elFor("#ofBtTable tbody").innerHTML;
   assert.ok(/WIN/.test(ofBt) && /LOSS/.test(ofBt), "backtest per-trade table renders wins and losses: " + ofBt.slice(0, 200));

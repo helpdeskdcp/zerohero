@@ -1952,7 +1952,14 @@
     }
     const kv = (label, val, cls) => `<div class="of-kv ${cls || ""}"><b>${esc(val)}</b><span>${esc(label)}</span></div>`;
     const netCls = o.net_points > 0 ? "pos" : o.net_points < 0 ? "neg" : "";
+    const isPrem = bt.basis === "premium";
+    const bcov = bt.basis_coverage || {};
     if (sumEl) sumEl.innerHTML = [
+      isPrem ? kv("basis (premium coverage)",
+        `option premium · ${bcov.premium_repriced || 0}/${bcov.resolved_priced || 0}` +
+        (bcov.premium_thin_quotes ? ` · ${bcov.premium_thin_quotes} thin` : "") +
+        (bcov.index_fallback ? ` · ${bcov.index_fallback} idx-fallback` : ""),
+        "warn") : kv("basis", "index points"),
       kv("wins / losses / open", `${o.wins} / ${o.losses} / ${o.open}`),
       kv(`win rate (breakeven ${(o.breakeven_win_rate * 100).toFixed(0)}%)`,
         o.win_rate == null ? "—" : (o.win_rate * 100).toFixed(1) + "%",
@@ -2045,15 +2052,17 @@
     const rr = Number(($("#ofRr") || {}).value || 3);
     const sigFilter = (($("#ofFilterSig") || {}).value || "none");
     const trail = !!(($("#ofTrail") || {}).checked);
+    const basis = (($("#ofBasis") || {}).value || "index");
     const smQ = `symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}&rr=${rr}&stop_frac=${stopFrac}`
               + `&sig_filter=${encodeURIComponent(sigFilter)}&trail=${trail}`;
+    const btQ = `${smQ}&basis=${encodeURIComponent(basis)}`;
 
     // 2. profile + smart-money, in parallel
     try {
       const [prof, sm, bt] = await Promise.all([
         api(`/api/orderflow/profile?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}`),
         api(`/api/orderflow/smart-money?${smQ}&date=${encodeURIComponent(ofDate)}`),
-        api(`/api/orderflow/backtest?${smQ}`),
+        api(`/api/orderflow/backtest?${btQ}`),
       ]);
       if (stale()) return;
 
@@ -2121,7 +2130,7 @@
     }
     const dsel = $("#ofDate");
     if (dsel) dsel.addEventListener("change", () => { ofDate = dsel.value; loadOrderflow(); });
-    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofTrail"].forEach(id => {
+    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofTrail", "#ofBasis"].forEach(id => {
       const s = $(id); if (s) s.addEventListener("change", () => loadOrderflow());
     });
     const rb = $("#ofRefresh");

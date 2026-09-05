@@ -684,6 +684,13 @@
               <label class="as-sym" title="trail the stop that same distance behind the best price after entry">
                 <input type="checkbox" id="ofTrail" /> Trail stop
               </label>
+              <label class="as-sym" title="backtest P&L basis: index points, or re-priced on the captured ATM option (BUY→CE / SELL→PE)">
+                Basis
+                <select id="ofBasis">
+                  <option value="index" selected>index pts</option>
+                  <option value="premium">option premium</option>
+                </select>
+              </label>
               <button class="btn btn-ghost" id="ofRefresh" type="button">Refresh</button>
               <span class="hint" id="ofMeta">—</span>
             </div>

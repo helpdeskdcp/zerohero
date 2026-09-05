@@ -103,3 +103,62 @@ python scripts/orderflow_premium_vs_index.py --symbol NIFTY
 python scripts/orderflow_premium_vs_index.py --symbol CRUDEOIL --rth-start 540 --rth-end 1410 --min-move 3
 python scripts/orderflow_premium_vs_index.py --symbol NIFTY --json   # machine-readable
 ```
+
+---
+
+## 6. Option B IMPLEMENTED (2026-09-05, commit follows this doc)
+
+Per operator: *"option B implement kara — captured premium series var re-walk."*
+
+**What was built** (read-only, PAPER only, no order path, NIFTY AutoScalp untouched):
+
+- `market_hub.session_option_quotes(sym, date)` → `{(strike, "CE"/"PE"): [(ts, ltp), …]}`
+  from `quote_snapshots` (market_hub stays the single DB owner).
+- `app/orderflow/premium_walk.py` — `rewalk_leg()`: pick the ATM strike nearest
+  the **index** entry, take `premium_entry` as-of the breakout bar and
+  `premium_exit` as-of the bar the **index** resolved on, `premium_points =
+  exit − entry` (long option). `premium_mfe/mae` from the tick path;
+  `premium_thin` when ≤2 captured ticks in the window (stale-quote guard).
+- `backtest(..., basis="index"|"premium")`. `basis="premium"` keeps the index
+  entry/stop/target as the **exit trigger** and only re-prices P&L; WIN/LOSS is
+  by premium-P&L sign, so an index target the option didn't follow shows as a
+  loss. Per-trade fallback to index basis when no series covers the window,
+  reported in `basis_coverage` (`premium_repriced`, `premium_thin_quotes`,
+  `index_fallback`, `premium_coverage`).
+- API `?basis=`, service cache-keyed on it, dashboard "Basis" selector +
+  coverage line. Tests: `test_orderflow_premium_walk.py` (8). Suite 556 pass.
+
+**Results over the 3–4 captured sessions (2026-09-01..04):**
+
+| symbol | index-basis net | premium-basis net | W/L/F (premium) | coverage |
+|--------|----------------:|------------------:|:---------------:|:--------:|
+| NIFTY      | −450 pts | **−51 pts** | 6 / 15 / 5 | 23/26 repriced, 3 fallback, 5 thin |
+| NATURALGAS | −49 pts  | **+10 pts** | 39 / 45 / 19 | 100/103, 17 thin |
+| CRUDEOIL   | −406 pts | **+697 pts** | 36 / 39 / 20 | 93/95, 20 thin |
+
+**Read this carefully — the positive MCX numbers are NOT an edge:**
+
+1. **Mechanism is real:** a long option has capped downside (≈ premium paid) and
+   uncapped upside; on a winner delta expands, so premium-basis softens every
+   index loss (NIFTY −450 → −51 is the clean read).
+2. **CRUDEOIL +697 is artifact-laden.** The net is carried by ~8 winners of
+   +50…+85 premium pts on 3 **trending** sessions, with **long holds** (up to
+   2.5 h — the trade only exits when the *index* hits its level, there is no
+   premium stop), some **exact-duplicate** trades (two adjacent spike candles →
+   same ATM strike, same entry/exit ticks → the win counted twice), and MCX
+   **illiquidity** (median 28 ticks/window, 20 of 95 trades ≤2 ticks → `thin`).
+   The `median` premium P&L is **0.0**.
+3. **3 sessions, one regime, no MCX greeks.** `reliable=False` everywhere.
+   DESCRIPTIVE ONLY. **No edge claim. No config change. Not armed for live.**
+
+**Known limitations of the current B implementation (future work):**
+- entry/exit premium sampled *as-of the 5m bar* (same bar-granularity caveat as
+  the whole backtest); no bid/ask, no explicit theta line item beyond what the
+  LTP path already contains.
+- no premium-side stop — exit is purely index-triggered. A real long-option
+  trader would likely cut the premium sooner; adding an optional premium stop is
+  the obvious next lever.
+- exact-duplicate correlated setups are not de-duplicated (pre-existing, affects
+  index basis too).
+- run it as `backtest(..., basis="premium")` or `GET /api/orderflow/backtest?
+  …&basis=premium`; always check `basis_coverage` before reading the numbers.
