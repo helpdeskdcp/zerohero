@@ -17,6 +17,7 @@
     if (view === "system") loadSystem();
     if (view === "autoscalp") loadAutoscalp();
     if (view === "mathscalp") loadMathScalp();
+    if (view === "orderflow") loadOrderflow();
     if (view === "runner") { try { refreshRunSelection(); } catch (e) {} }
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
@@ -1811,12 +1812,268 @@
     }
   })();
 
+  // ================= ORDER FLOW =================
+  // Volume Profile + Market Profile (TPO) + smart-money (volume-spike breakout)
+  // signals, read from /api/orderflow/* over captured OHLCV bars. Its own small
+  // NSE/BSE/MCX index picker (reuses msExchOf for exchange grouping but keeps a
+  // separate selection so it never fights the Math Scalper's focus).
+  const OF_SEED = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BANKEX",
+                   "NATURALGAS", "CRUDEOIL"];
+  const _ofUni = new Map();
+  OF_SEED.forEach(s => _ofUni.set(s, msExchOf(s)));
+  let ofSymbol = "NIFTY";
+  let ofDate = "";                 // selected session; "" -> newest available
+  let _ofMenuIdx = -1;
+  let _ofReq = 0;
+
+  function ofAddUni(list) {
+    (list || []).forEach(s => {
+      const k = String(s || "").toUpperCase().trim();
+      if (k && !_ofUni.has(k)) _ofUni.set(k, msExchOf(k));
+    });
+  }
+  function ofFilter(q) {
+    const t = String(q || "").trim().toLowerCase();
+    const all = [..._ofUni.keys()];
+    return t ? all.filter(s => s.toLowerCase().includes(t)) : all;
+  }
+  function ofSymMsg(txt) {
+    const el = $("#ofSymMsg"); if (!el) return;
+    if (txt) { el.textContent = txt; el.hidden = false; } else { el.textContent = ""; el.hidden = true; }
+  }
+  function ofCloseMenu() {
+    const m = $("#ofSymMenu"); if (m) m.hidden = true;
+    const i = $("#ofSym"); if (i) i.setAttribute("aria-expanded", "false");
+    _ofMenuIdx = -1;
+  }
+  function ofRenderMenu(q) {
+    const menu = $("#ofSymMenu"); if (!menu) return;
+    _ofMenuIdx = -1;
+    const matches = ofFilter(q);
+    if (!matches.length) {
+      menu.innerHTML = `<li class="ms-combo-empty" role="presentation">no match — pick from the list</li>`;
+    } else {
+      const byEx = { NSE: [], BSE: [], MCX: [] };
+      matches.forEach(s => { (byEx[msExchOf(s)] || (byEx[msExchOf(s)] = [])).push(s); });
+      let html = "";
+      ["NSE", "BSE", "MCX"].forEach(ex => {
+        (byEx[ex] || []).forEach((s, k) => {
+          if (k === 0) html += `<li class="ms-combo-grp" role="presentation">${ex}</li>`;
+          html += `<li class="ms-combo-item" role="option" data-idx="${esc(s)}"` +
+                  ` aria-selected="${s === ofSymbol ? "true" : "false"}">${esc(s)}</li>`;
+        });
+      });
+      menu.innerHTML = html;
+    }
+    menu.hidden = false;
+    const inp = $("#ofSym"); if (inp) inp.setAttribute("aria-expanded", "true");
+  }
+  function ofMenuItems() {
+    const m = $("#ofSymMenu");
+    return m && m.querySelectorAll ? Array.from(m.querySelectorAll(".ms-combo-item")) : [];
+  }
+  function ofHighlight(delta) {
+    const items = ofMenuItems(); if (!items.length) return;
+    _ofMenuIdx = (_ofMenuIdx + delta + items.length) % items.length;
+    items.forEach((el, i) => el.classList.toggle("is-active", i === _ofMenuIdx));
+    const cur = items[_ofMenuIdx];
+    if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
+  }
+  function ofCommitSymbol(raw) {
+    const idx = String(raw == null ? "" : raw).toUpperCase().trim();
+    const inp = $("#ofSym");
+    ofCloseMenu();
+    if (!idx || !_ofUni.has(idx)) {
+      ofSymMsg("Pick a supported index from the list.");
+      if (inp) inp.value = ofSymbol;
+      return false;
+    }
+    ofSymMsg("");
+    if (inp) inp.value = idx;
+    if (idx === ofSymbol) return true;
+    ofSymbol = idx;
+    ofDate = "";                              // reset session to newest for the new symbol
+    loadOrderflow({ symbolChanged: true });
+    return true;
+  }
+
+  function ofNum(n, d = 2) {
+    return (n === null || n === undefined || n === "" || isNaN(Number(n))) ? "—" : Number(n).toFixed(d);
+  }
+  function ofRenderProfile(elId, prof, kind, extra) {
+    const el = $("#" + elId); if (!el) return;
+    if (!prof || prof.status !== "OK" || !Array.isArray(prof.bins) || !prof.bins.length) {
+      el.innerHTML = `<span class="hint">${esc((prof && prof.status) || "no data")}</span>`;
+      return;
+    }
+    const valKey = kind === "volume" ? "volume" : "tpo";
+    const max = Math.max(1, ...prof.bins.map(b => Number(b[valKey]) || 0));
+    const poc = prof.poc, vah = prof.vah, val = prof.val;
+    const vwap = extra && extra.vwap;
+    const lo = Math.min(val, vah), hi = Math.max(val, vah);
+    // price descending (high at top)
+    const rows = prof.bins.slice().sort((a, b) => b.price - a.price).map(b => {
+      const v = Number(b[valKey]) || 0;
+      const pct = Math.round(v / max * 100);
+      const cls = ["of-row"];
+      if (b.price === poc) cls.push("is-poc");
+      if (b.price >= lo && b.price <= hi) cls.push("in-va");
+      if (vwap != null && Math.abs(b.price - vwap) <= (prof.tick_size || 0) / 2) cls.push("is-vwap");
+      if (kind === "tpo" && b.tpo === 1) cls.push("is-single");
+      if (kind === "volume") {
+        return `<div class="${cls.join(" ")}"><span class="of-px">${ofNum(b.price, 2)}</span>` +
+               `<span class="of-bar-wrap"><span class="of-bar" style="width:${pct}%"></span>` +
+               `<span class="of-bar-val">${Math.round(v)}</span></span></div>`;
+      }
+      return `<div class="${cls.join(" ")}"><span class="of-px">${ofNum(b.price, 2)}</span>` +
+             `<span class="of-letters" title="${esc(b.letters || "")}">${esc(b.letters || "·")}</span></div>`;
+    }).join("");
+    el.innerHTML = rows;
+  }
+  function ofRenderSignals(sm) {
+    const tb = $("#ofSmTable tbody"); if (!tb) return;
+    if (!sm || sm.status !== "OK" || !Array.isArray(sm.setups) || !sm.setups.length) {
+      tb.innerHTML = `<tr><td colspan="10" class="hint">${esc((sm && (sm.reason || sm.status)) || "no spike setups")}</td></tr>`;
+      return;
+    }
+    const rows = [];
+    sm.setups.forEach(s => {
+      ["buy", "sell"].forEach(side => {
+        const L = s[side] || {};
+        const oc = (L.outcome || {}).status || "—";
+        const t = new Date(s.candle.bar_start);
+        const tstr = isNaN(t) ? esc(s.candle.bar_start) : t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const bkt = L.breakout_bar ? new Date(L.breakout_bar) : null;
+        const bstr = bkt && !isNaN(bkt) ? bkt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+        rows.push(
+          `<tr><td>${side === "buy" ? tstr : ""}</td><td>${side === "buy" ? esc(s.volume_x_avg) + "×" : ""}</td>` +
+          `<td>${side === "buy" ? ofNum(s.range_points, 2) : ""}</td>` +
+          `<td class="${esc(L.side)}">${esc(L.side)}</td>` +
+          `<td>${ofNum(L.entry)}</td><td>${ofNum(L.stop_loss)}</td><td>${ofNum(L.target)}</td>` +
+          `<td>1:${esc(L.rr)}</td><td>${bstr}</td>` +
+          `<td><span class="of-oc ${esc(oc)}">${esc(oc)}</span></td></tr>`
+        );
+      });
+    });
+    tb.innerHTML = rows.join("");
+  }
+
+  async function loadOrderflow(opts) {
+    opts = opts || {};
+    const myReq = ++_ofReq;
+    const stale = () => myReq !== _ofReq;
+    const inp = $("#ofSym"); if (inp && document.activeElement !== inp) inp.value = ofSymbol;
+    const errEl = $("#ofErr");
+    const setErr = (m) => { if (errEl) { if (m) { errEl.textContent = m; errEl.hidden = false; } else errEl.hidden = true; } };
+    setErr("");
+
+    // 1. session dates for this symbol -> populate the picker
+    try {
+      const sess = await api(`/api/orderflow/sessions?symbol=${encodeURIComponent(ofSymbol)}`);
+      if (stale()) return;
+      const sel = $("#ofDate");
+      const dates = (sess && sess.sessions) || [];
+      if (sel) {
+        const keep = ofDate && dates.includes(ofDate) ? ofDate : (dates[0] || "");
+        ofDate = keep;
+        sel.innerHTML = dates.length
+          ? dates.map(d => `<option value="${esc(d)}"${d === keep ? " selected" : ""}>${esc(d)}</option>`).join("")
+          : `<option value="">no captured sessions</option>`;
+      }
+    } catch (e) { if (!stale()) showError("orderflow/sessions", e); }
+
+    if (!ofDate) {
+      ofRenderProfile("ofVp", null, "volume"); ofRenderProfile("ofMp", null, "tpo");
+      ofRenderSignals(null);
+      const m = $("#ofMeta"); if (m) m.textContent = "no captured session data for " + ofSymbol;
+      return;
+    }
+
+    const mult = Number(($("#ofMult") || {}).value || 2);
+
+    // 2. profile + smart-money, in parallel
+    try {
+      const [prof, sm] = await Promise.all([
+        api(`/api/orderflow/profile?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}`),
+        api(`/api/orderflow/smart-money?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}&volume_mult=${mult}`),
+      ]);
+      if (stale()) return;
+
+      const meta = $("#ofMeta");
+      if (meta) meta.textContent = `${ofSymbol} · ${ofDate} · ${prof.bar_count || 0} bars · VWAP ${ofNum(prof.vwap, 2)}`;
+
+      const vp = prof.volume_profile, mp = prof.market_profile;
+      ofRenderProfile("ofVp", vp, "volume", { vwap: prof.vwap });
+      ofRenderProfile("ofMp", mp, "tpo", { vwap: prof.vwap });
+      const vpm = $("#ofVpMeta");
+      if (vpm) vpm.textContent = vp && vp.status === "OK"
+        ? `POC ${ofNum(vp.poc, 2)} · VA ${ofNum(vp.val, 2)}–${ofNum(vp.vah, 2)} · ${vp.method}` : "—";
+      const mpm = $("#ofMpMeta");
+      if (mpm) mpm.textContent = mp && mp.status === "OK"
+        ? `POC ${ofNum(mp.poc, 2)} · VA ${ofNum(mp.val, 2)}–${ofNum(mp.vah, 2)} · ${mp.n_brackets} brackets · ${(mp.single_prints || []).length} single prints` : "—";
+
+      ofRenderSignals(sm);
+      const smm = $("#ofSmMeta");
+      if (smm) smm.textContent = sm && sm.status === "OK"
+        ? `${sm.spike_count} spike candle(s) · avg vol ${ofNum(sm.session_avg_volume, 0)} · ×${mult} threshold` : (sm && sm.reason) || "—";
+    } catch (e) { if (!stale()) { setErr((e && e.message) || String(e)); showError("orderflow", e); } }
+  }
+
+  (function wireOrderflow() {
+    const inp = $("#ofSym");
+    if (inp) {
+      inp.value = ofSymbol;
+      const openAll = () => { try { inp.select(); } catch (e) {} ofRenderMenu(""); };
+      inp.addEventListener("focus", openAll);
+      inp.addEventListener("click", () => { const m = $("#ofSymMenu"); if (m && m.hidden) ofRenderMenu(inp.value); });
+      inp.addEventListener("input", () => { ofSymMsg(""); ofRenderMenu(inp.value); });
+      inp.addEventListener("keydown", (e) => {
+        const m = $("#ofSymMenu");
+        if (e.key === "ArrowDown") { e.preventDefault(); (!m || m.hidden) ? ofRenderMenu(inp.value) : ofHighlight(1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); (!m || m.hidden) ? ofRenderMenu(inp.value) : ofHighlight(-1); }
+        else if (e.key === "Enter") {
+          e.preventDefault();
+          const items = ofMenuItems();
+          const pick = (_ofMenuIdx >= 0 && items[_ofMenuIdx]) ? items[_ofMenuIdx].dataset.idx : inp.value;
+          ofCommitSymbol(pick);
+        } else if (e.key === "Escape") { ofCloseMenu(); inp.value = ofSymbol; ofSymMsg(""); }
+      });
+      inp.addEventListener("blur", () => setTimeout(() => {
+        const m = $("#ofSymMenu"); if (m && !m.hidden) return;
+        const v = (inp.value || "").toUpperCase().trim();
+        if (v && v !== ofSymbol && _ofUni.has(v)) { ofCommitSymbol(v); return; }
+        inp.value = ofSymbol; ofSymMsg("");
+      }, 150));
+    }
+    const menu = $("#ofSymMenu");
+    if (menu) {
+      menu.addEventListener("mousedown", (e) => e.preventDefault());
+      menu.addEventListener("click", (e) => {
+        const li = e.target && e.target.closest ? e.target.closest(".ms-combo-item") : null;
+        if (li && li.dataset && li.dataset.idx) ofCommitSymbol(li.dataset.idx);
+      });
+    }
+    if (typeof document !== "undefined" && document.addEventListener) {
+      document.addEventListener("click", (e) => {
+        const c = $("#ofSymCombo");
+        if (c && c.contains && e.target && !c.contains(e.target)) ofCloseMenu();
+      });
+    }
+    const dsel = $("#ofDate");
+    if (dsel) dsel.addEventListener("change", () => { ofDate = dsel.value; loadOrderflow(); });
+    const msel = $("#ofMult");
+    if (msel) msel.addEventListener("change", () => loadOrderflow());
+    const rb = $("#ofRefresh");
+    if (rb) rb.addEventListener("click", () => loadOrderflow({ force: true }));
+  })();
+
   // Test seam — inert in production (window.__CHK_TEST__ is never set there).
   // Lets the dependency-free render smoke test drive view loaders without a DOM
   // framework or a build step.
   if (typeof window !== "undefined" && window.__CHK_TEST__) {
     window.__chk = { setView, loadOverview, loadSignals, loadTrades, loadScalp,
       loadResearch, loadSystem, loadReport, loadAutoscalp, loadMonitor, loadMathScalp,
+      loadOrderflow, ofFilter, ofCommitSymbol, ofRenderMenu, ofSelected: () => ofSymbol,
       prependFeed, renderHealthLine,
       // Focus combobox seam
       msFilterUniverse, msUniverseList, msCommitFocus, msRenderMenu, msExchOf,
@@ -1835,6 +2092,7 @@
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
   setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 12000);
+  setInterval(() => { if (state.view === "orderflow") loadOrderflow(); }, 20000);
   // refresh the health panel while it is on screen (selfcheck is cheap)
   setInterval(() => { if (state.view === "system") loadSystem(); }, 10000);
 })();

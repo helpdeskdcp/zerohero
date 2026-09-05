@@ -92,6 +92,34 @@ const P = {
   }),
   "/api/autoscalp/signals": load("as_signals", []),
   "/api/autoscalp/snapshots": load("as_snapshots", []),
+  "/api/orderflow/sessions": load("of_sessions", { symbol: "NIFTY", tf: "5m", sessions: ["2026-09-04", "2026-09-03"] }),
+  "/api/orderflow/profile": load("of_profile", {
+    symbol: "NIFTY", sessions: ["2026-09-04"], tf: "5m", bar_count: 3, status: "OK", vwap: 24050.1,
+    volume_profile: {
+      status: "OK", method: "OHLCV_RANGE_DISTRIBUTION", tick_size: 5, n_bins: 2,
+      session_high: 24060, session_low: 24040, total_volume: 900,
+      poc: 24052.5, vah: 24057.5, val: 24047.5, value_pct: 0.7,
+      bins: [{ price: 24047.5, volume: 400 }, { price: 24052.5, volume: 500 }],
+    },
+    market_profile: {
+      status: "OK", tick_size: 5, n_bins: 2, tpo_minutes: 30, n_brackets: 2,
+      session_high: 24060, session_low: 24040, poc: 24052.5, vah: 24057.5, val: 24047.5,
+      value_pct: 0.7, single_prints: [24047.5],
+      bins: [{ price: 24047.5, tpo: 1, letters: "A" }, { price: 24052.5, tpo: 2, letters: "AB" }],
+    },
+  }),
+  "/api/orderflow/smart-money": load("of_sm", {
+    symbol: "NIFTY", sessions: ["2026-09-04"], tf: "5m", status: "OK", method: "OHLCV_BARS",
+    session_avg_volume: 300, volume_mult: 2, rr: 3, spike_count: 1,
+    setups: [{
+      candle: { bar_start: "2026-09-04T04:00:00Z", o: 24040, h: 24060, l: 24040, c: 24055, v: 1000 },
+      volume_x_avg: 3.33, range_points: 20,
+      buy: { side: "BUY", entry: 24060, stop_loss: 24040, target: 24120, risk_points: 20, reward_points: 60, rr: 3,
+             breakout_bar: "2026-09-04T04:05:00Z", outcome: { status: "TARGET_HIT", resolved_bar: "2026-09-04T04:20:00Z" } },
+      sell: { side: "SELL", entry: 24040, stop_loss: 24060, target: 23980, risk_points: 20, reward_points: 60, rr: 3,
+              breakout_bar: null, outcome: { status: "PENDING", resolved_bar: null } },
+    }],
+  }),
   "/api/research": load("research", { signals: { by_decision: {}, by_market_regime: {} }, paper_trades: {}, by_strategy: {} }),
   "/api/monitor": load("monitor", { ts: Date.now(), runner: {}, feed: {}, positions: [], scalps: [], combos: [], reversals: [], turning_points: [], execution: {}, recent_signals: [] }),
   "/api/scalp/status": load("scalp_status", { feed: {}, config: {} }),
@@ -190,7 +218,7 @@ try {
   // drive every view loader against the REAL captured payloads
   for (const name of ["loadOverview", "loadSignals", "loadTrades", "loadScalp",
                       "loadResearch", "loadSystem", "loadReport", "loadAutoscalp",
-                      "loadMonitor", "loadMathScalp"]) {
+                      "loadMonitor", "loadMathScalp", "loadOrderflow"]) {
     try { await chk[name](); await flush(); await flush(); }
     catch (e) { errors.push(name + " threw: " + e.message); }
   }
@@ -277,6 +305,22 @@ try {
   assert.ok(chk.msUniverseList().length >= 8, "Focus universe only ever grows, got: " + chk.msUniverseList().length);
   assert.ok(chk.msFilterUniverse("nifty").length >= 1, "static seed universe is searchable regardless of API state");
 
-  console.log("render smoke: 10 view loaders + feed renderer OK, Focus combobox (12 checks) OK, no runtime errors, output escaped");
+  // ---- Order Flow view ----
+  const ofVp = elFor("#ofVp").innerHTML;
+  assert.ok(/of-row/.test(ofVp) && /24052\.5/.test(ofVp), "volume profile rows rendered: " + ofVp.slice(0, 200));
+  assert.ok(/is-poc/.test(ofVp), "POC row is marked in the volume profile");
+  const ofMp = elFor("#ofMp").innerHTML;
+  assert.ok(/of-letters/.test(ofMp), "TPO letters rendered in the market profile");
+  const ofSm = elFor("#ofSmTable tbody").innerHTML;
+  assert.ok(/TARGET_HIT/.test(ofSm) && /of-oc/.test(ofSm), "smart-money signals table rendered with outcome: " + ofSm.slice(0, 200));
+  // order-flow index picker: independent of Math Scalper's, covers NSE/BSE/MCX
+  assert.equal(chk.ofSelected(), "NIFTY", "Order Flow index defaults to NIFTY");
+  assert.deepEqual(chk.ofFilter("bank").sort(), ["BANKEX", "BANKNIFTY"], "OF picker: 'bank' -> BANKNIFTY + BANKEX");
+  assert.ok(chk.ofFilter("nat").includes("NATURALGAS"), "OF picker: MCX index searchable");
+  assert.ok(chk.ofFilter("sense").includes("SENSEX"), "OF picker: BSE index searchable");
+  assert.equal(chk.ofCommitSymbol("NOTANINDEX"), false, "OF picker rejects unsupported symbol");
+  assert.equal(chk.ofSelected(), "NIFTY", "OF picker selection unchanged after a bad commit");
+
+  console.log("render smoke: 11 view loaders + feed renderer OK, Focus combobox (12 checks) + Order Flow view OK, no runtime errors, output escaped");
   process.exit(0);
 })().catch(e => { console.error("render smoke FAILED:", e && e.stack || e); process.exit(1); });

@@ -35,6 +35,7 @@
       <button class="nav-item" data-view="scalp">Scalping</button>
       <button class="nav-item" data-view="autoscalp">Auto-Scalp</button>
       <button class="nav-item" data-view="mathscalp">Math Scalper</button>
+      <button class="nav-item" data-view="orderflow">Order Flow</button>
       <button class="nav-item" data-view="runner">Run Pipeline</button>
       <button class="nav-item" data-view="research">Research</button>
       <button class="nav-item" data-view="system">System &amp; Health</button>
@@ -637,6 +638,63 @@
         </div>
       </section>
 
+      <!-- ===== ORDER FLOW ===== -->
+      <section class="view" id="view-orderflow">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Order Flow <span class="pill pill--paper">READ-ONLY · OHLCV-DERIVED</span></h2>
+            <div class="mon-exec-bar">
+              <span class="as-sym" id="ofSymLabel">Index</span>
+              <div class="ms-combo" id="ofSymCombo">
+                <input id="ofSym" type="text" role="combobox" aria-expanded="false"
+                       aria-controls="ofSymMenu" aria-autocomplete="list" aria-labelledby="ofSymLabel"
+                       autocomplete="off" autocapitalize="characters" autocorrect="off"
+                       spellcheck="false" placeholder="Search NSE / BSE / MCX…" />
+                <span class="ms-combo-ic" aria-hidden="true">⌕</span>
+                <ul id="ofSymMenu" class="ms-combo-menu" role="listbox" aria-label="Indices" hidden></ul>
+              </div>
+              <span class="ms-combo-msg" id="ofSymMsg" role="status" aria-live="polite" hidden></span>
+              <label class="as-sym">Session <select id="ofDate"></select></label>
+              <label class="as-sym">Spike ×
+                <select id="ofMult">
+                  <option value="1.5">1.5</option><option value="2" selected>2.0</option>
+                  <option value="2.5">2.5</option><option value="3">3.0</option>
+                </select>
+              </label>
+              <button class="btn btn-ghost" id="ofRefresh" type="button">Refresh</button>
+              <span class="hint" id="ofMeta">—</span>
+            </div>
+          </div>
+          <p class="disclaimer" id="ofDisclaimer">Volume Profile spreads each ~5m bar's volume across its high-low range — an OHLCV approximation, NOT trade-level volume-at-price. Market Profile (TPO) is exact from bars. Smart-money = volume-spike breakout; entry/target/stop judged at 5m-bar granularity.</p>
+          <p class="scalp-err" id="ofErr" hidden></p>
+        </div>
+
+        <div class="of-grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Volume Profile</h2><span class="hint" id="ofVpMeta">—</span></div>
+            <div class="of-profile" id="ofVp"><span class="hint">—</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Market Profile · TPO</h2><span class="hint" id="ofMpMeta">—</span></div>
+            <div class="of-profile of-tpo" id="ofMp"><span class="hint">—</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Smart-Money Signals</h2><span class="hint" id="ofSmMeta">volume-spike breakouts · 1:3 RR · outcome walked forward through the session</span></div>
+          <div class="table-wrap">
+            <table class="ledger" id="ofSmTable">
+              <thead><tr>
+                <th scope="col">Spike candle</th><th scope="col">× avg vol</th><th scope="col">Range</th>
+                <th scope="col">Side</th><th scope="col">Entry</th><th scope="col">Stop</th><th scope="col">Target</th>
+                <th scope="col">RR</th><th scope="col">Breakout</th><th scope="col">Outcome</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== RESEARCH ===== -->
       <section class="view" id="view-research">
         <div class="panel">
@@ -696,6 +754,7 @@
       <button class="tab-item" data-view="scalp"><span class="tab-ic">⚡</span>Scalp</button>
       <button class="tab-item" data-view="autoscalp"><span class="tab-ic">🤖</span>Auto</button>
       <button class="tab-item" data-view="mathscalp"><span class="tab-ic">∮</span>Math</button>
+      <button class="tab-item" data-view="orderflow"><span class="tab-ic">▤</span>Flow</button>
       <button class="tab-item" data-view="research"><span class="tab-ic">∑</span>Research</button>
       <button class="tab-item" data-view="system"><span class="tab-ic">✚</span>Health</button>
     </nav>

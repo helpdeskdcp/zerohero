@@ -510,3 +510,34 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
   .ms-combo input { width: 128px; }
   .ms-combo-menu { min-width: 150px; }
 }
+
+/* ---------------- Order Flow ---------------- */
+.of-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .of-grid { grid-template-columns: 1fr; } }
+.of-profile { display: flex; flex-direction: column; gap: 1px; font-family: var(--font-mono);
+  font-size: 10px; max-height: 460px; overflow-y: auto; }
+.of-row { display: grid; grid-template-columns: 62px 1fr; align-items: center; gap: 6px;
+  padding: 1px 0; }
+.of-row .of-px { color: var(--ink-dim); text-align: right; white-space: nowrap; }
+.of-row .of-bar-wrap { position: relative; height: 13px; background: var(--line-soft); border-radius: 2px; }
+.of-row .of-bar { position: absolute; inset: 0 auto 0 0; background: var(--gold);
+  opacity: 0.55; border-radius: 2px; }
+.of-row .of-bar-val { position: absolute; right: 4px; top: 0; line-height: 13px; color: var(--ink-faint);
+  font-size: 9px; }
+.of-row.is-poc .of-bar { background: var(--gold-soft); opacity: 0.9; }
+.of-row.is-poc .of-px { color: var(--gold-soft); font-weight: 600; }
+.of-row.in-va .of-bar-wrap { box-shadow: inset 0 0 0 1px rgba(232,200,90,0.28); }
+.of-row.is-vwap .of-px::after { content: " ◄VWAP"; color: var(--teal); font-size: 8px; }
+.of-tpo .of-row { grid-template-columns: 62px 1fr; }
+.of-tpo .of-letters { letter-spacing: 1px; color: var(--ink-dim); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.of-tpo .of-row.is-poc .of-letters { color: var(--gold-soft); }
+.of-tpo .of-row.is-single .of-letters { color: var(--violet); }
+.of-oc { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px;
+  border: 1px solid var(--line); font-family: var(--font-mono); }
+.of-oc.TARGET_HIT { color: var(--teal); border-color: rgba(79,184,163,0.4); background: rgba(79,184,163,0.08); }
+.of-oc.STOP_HIT { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.08); }
+.of-oc.TRIGGERED { color: var(--gold-soft); border-color: rgba(201,162,39,0.4); }
+.of-oc.PENDING { color: var(--ink-faint); }
+#ofSmTable td.BUY { color: var(--teal); }
+#ofSmTable td.SELL { color: var(--ember); }
