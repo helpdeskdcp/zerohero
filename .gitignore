@@ -22,3 +22,5 @@ backend/data/*.sh
 backend/data/*.jsonl
 backend/data/autoscalp_session_*.md
 backend/data/ngcrude_session_report.md
+# cron watcher runtime state (per-subgroup alert-once tracking)
+backend/data/calibration_subgroups_state.json
