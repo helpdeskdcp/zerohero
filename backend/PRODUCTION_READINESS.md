@@ -237,3 +237,149 @@ RUNTIME EVIDENCE CONTINUES       ⏳   D (NIFTY hold-time, n=4/20) + E (CRUDEOIL
 
 **Not "100% complete."** Two items depend on future runtime evidence and are correctly left open.
 Ready for **extended PAPER trading with monitoring**. **Not** ready for LIVE.
+
+---
+
+## P. Final close-out (2026-09-05) — D and E resolved from real runtime evidence
+
+**Deployed HEAD:** `9698063`. Since §A-O (2026-09-01), a separate full-app architecture
+review shipped and deployed (CORS lockdown, `app/execution/` 0→53 tests, a CI test-on-push
+gate, observability logging on 41 previously-silent safety-critical paths, the `main.py`
+1269→270-line router split, and consolidating the one genuine duplicated-math case,
+`max_pain`). None of it touched autoscalp strategy logic, `symbol_profiles`, or
+`max_hold_sec` — this section only closes the two evidence gaps §D/§E left open.
+
+The ad-hoc bash evidence collectors (`data/{nifty_holdtime_forward_test,session_evidence,
+crudeoil_block_evidence}.sh`) died some time after 2026-09-02 15:46 IST (sandboxed
+background bash jobs do not survive indefinitely — a known constraint, not a service
+issue) and were **not** relied on for this close-out; every number below is a fresh,
+independent read of the live `ai_paper_trades` / `scalp_signals` tables and the live
+`/api/autoscalp/selfcheck` endpoint, taken today.
+
+### D. NIFTY time-exit evidence — still ⏳ INSUFFICIENT (correctly unresolved, config untouched)
+
+```
+./venv/bin/python analyze_holdtime.py NIFTY   (run against the live DB, 2026-09-05)
+
+# hold-time evidence — NIFTY   (12 closed AUTOSCALP trades)
+*** SAMPLE TOO SMALL (12 < 20) — report descriptive stats only, DO NOT tune max_hold_sec. ***
+  ALL: n=12  W/L=6/6  win%=50.0  net=-30.25pts  exp=-0.351R  TIMEexits=9  premature=1  missed_profit≈6.95pts
+  == verdict ==
+  INSUFFICIENT EVIDENCE (12/20). Keep max_hold_sec as-is. Collect more sessions.
+```
+
+n grew 4→12 since the original 2026-08-31 session (`ai_paper_trades` by day: 08-31→4,
+09-02→1, 09-03→4, 09-04→3 — 3 further trading sessions), still under the analyzer's own
+pre-committed `MIN_SAMPLE = 20` floor. **No config change made.** `symbol_profiles` in
+the live config (`GET /api/autoscalp/config`, verified today) confirms NIFTY has **no**
+override — it runs on the base P6-validated defaults, matching the code's own comment in
+`autoscalp/runner.py`: *"NIFTY is DELIBERATELY absent -> it runs on the P6-validated
+defaults and must stay that way (best live win-rate)."* The §D-era `max_hold_sec: 2400`
+forward-test was applied live via `POST /api/autoscalp/config` (per §D's own "config-only,
+... reversible" wording) — a DB-persisted runtime change, never a commit — so it is not
+traceable in git history; `git log -S'"NIFTY": {"max_hold_sec"' -- app/autoscalp/runner.py`
+returns nothing, confirming it never touched source. It is gone from today's live config
+(`GET /api/autoscalp/config` returns no NIFTY entry in `symbol_profiles`), i.e. reverted
+at some point via the same live-config mechanism. `analyze_holdtime`'s "current effective
+cap on these trades: [1500.0, 2400.0]" reflects trades that straddle both eras.
+**This close-out took no action on it**, consistent with "do not modify any frozen NIFTY
+AutoScalp configuration."
+
+**Verdict: unchanged from §D — still INSUFFICIENT EVIDENCE, correctly left open.** K1
+stays open; re-run `analyze_holdtime.py NIFTY` again once n≥20.
+
+### E. CRUDEOIL block-reason evidence — ✅ RESOLVED: root cause found, fixed, and verified
+
+**Correction while writing this close-out:** an earlier draft of this section speculated
+that no runner code had changed since 2026-08-31. That was checked against `git log`
+before publishing and was **wrong** — a concrete, already-evidenced root-cause fix landed
+the very next day. The corrected finding:
+
+**Root cause (`FEED_STALENESS_AUDIT.md`, commit `91e5e77`, 2026-09-01 15:29 IST):** the
+AngelOne WS feed reader and the autoscalp decision loop shared one asyncio event loop.
+`_evaluate` ran the broker option-chain REST fetch (`_autoscalp_chain` →
+`selection_snapshot`, ~10 quotes), the CPU-bound `decide_from_context`, and the SQLite
+snapshot write **synchronously on that loop**, once per symbol every 30s. While any of
+these ran, `ws.recv()` could not be scheduled, so feed age climbed past the 12s
+stale-feed cutoff and the freshness safeguard correctly (per its own logic) blocked
+entries — but the *underlying* staleness was an artifact of the loop being starved, not
+the broker feed actually being behind.
+
+**2026-09-01 evidence that triggered the fix:** ~57% of all evaluation cycles were stale;
+CRUDEOIL was worst-hit (chain-fetched cycles averaged 19.0s feed age, 98% over the 12s
+cutoff) because `selection_snapshot` for MCX options-on-futures is the heaviest chain
+fetch of the three symbols. ~49 `BLOCKED[stale feed]` events that day, some on strong
+setups (e.g. one scored 73.9 / p=0.58 / EV=0.4R, killed purely by feed age).
+
+**Fix:** wrapped the four blocking calls (chain fetch, `decide_from_context`,
+`_index_future_vwap`, `_persist_snapshot`) in `await asyncio.to_thread(...)` — the same
+pattern already used elsewhere in this file. Explicitly verified byte-identical decision
+inputs/outputs; only *where* the work runs changed. No threshold, safeguard, broker-order,
+or NIFTY-profile change. 296 tests passed at the time.
+
+**Verified live the very next session (2026-09-02, §F of the audit doc):** chain-fetched
+CRUDEOIL feed age collapsed from 19.0s/98% stale to **0.1s/0.0% stale**; `BLOCKED[stale
+feed]` went from 49/day to **0**. This is not new evidence produced by this close-out —
+it was already measured and recorded before this task started; this close-out is
+re-confirming it from the live trading outcomes that followed.
+
+**This close-out's own confirmation, from live DB queries run today (2026-09-05):**
+
+```
+CRUDEOIL AUTOSCALP trades: 11 closed (7 WIN / 4 LOSS), opened 2026-09-02 through 2026-09-04
+  across 3 separate MCX sessions -- the fix held across every session since, not a one-off.
+CRUDEOIL scalp_signals (LIVE): 11 total, 10x BUY_PE + 1x BUY_CE -- every signal that
+  reached decision stage converted to a trade (100% signal->trade rate once past entry
+  gates), confirming the order-intent pipeline has no separate defect.
+
+entry_blocks.CRUDEOIL, mined from every snapshot captured 2026-09-01 11:31 -> 2026-09-02
+15:46 IST (spanning the fix's deploy and its first live session):
+  n=45  "stale feed (>12s)"                   -- pre-fix + early post-fix stragglers
+  n=28  "duplicate: CRUDEOIL PE already open" -- single-open-position discipline;
+                                                  PROVES positions were opening successfully
+  n= 4  "past MCX cutoff 23:00"               -- market-hours gate, working as designed
+```
+
+The residual "duplicate" and "cutoff" blocks are legitimate, documented safeguards (§I),
+not defects. Per the pre-committed decision rule: *"If the gate is the market-hours check
+→ document, do not weaken"* — done.
+
+**On the original 2026-08-31 session specifically** (141 refused signals, 0 trades,
+unstamped, predates both the `BLOCKED[...]` stamp and this fix): it cannot be stamped
+retroactively, but it is now the **most evidence-consistent** explanation by a wide margin
+— 2026-09-01's measured 98%-stale/19s-avg CRUDEOIL condition is the same class of failure,
+one day earlier, before anyone had looked at feed timing at all. This report states that
+as the likely explanation, not a certainty, since the specific day cannot be re-stamped.
+
+**No new code change made in this close-out — none was warranted.** The defect was
+already found and fixed on 2026-09-01, before this task's evidence-gathering began; this
+close-out's job was to confirm it held, which it did across 3 further sessions and 11 real
+trades.
+
+**Verdict: RESOLVED.** K2 closes: CRUDEOIL's entry pipeline is confirmed healthy and
+trading; the original blocking cause was a real, now-fixed, already-verified bug
+(event-loop starvation), not a hypothesis.
+
+### Updated readiness verdict
+
+```
+CODE COMPLETE                     ✅   unchanged, plus a full architecture-review pass since §A-O
+DEPENDENCIES READY                ✅   unchanged
+TESTS GREEN                       ✅   498 passed (was 277 at §B; +221 across the interim work)
+SAFE RESTART VERIFIED             ✅   multiple further restarts since §O, all clean (see interim commits)
+RUNTIME EVIDENCE                  ⏳/✅  D: still insufficient (12/20), config correctly untouched.
+                                        E: RESOLVED -- CRUDEOIL confirmed healthy, no defect.
+STRATEGY PERFORMANCE ESTABLISHED  ❌   still not established -- unchanged conclusion, more sessions needed
+```
+
+**Posture unchanged: ready for extended PAPER trading with monitoring. Not ready for
+LIVE.** One of two open evidence gaps (E) is now closed with a clean bill of health; the
+other (D) remains open exactly because the evidence says it should — 12 trades is not
+enough to change a live trading parameter, and none was changed.
+
+**Remaining risk carried forward:** §J items 1, 3-8 are unchanged and still apply
+(no established edge; calibration now shows `n=67` resolved LIVE samples in
+`self_check` — at or past the ≥40 auto-fit threshold mentioned in §J.3/K4, worth a
+dedicated look at the calibration report itself, but that is a new investigation outside
+this close-out's scope and not claimed as verified here). §J.2 (CRUDEOIL silently not
+trading) is retired — superseded by this section.
