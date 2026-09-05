@@ -2043,7 +2043,10 @@
     const mult = Number(($("#ofMult") || {}).value || 2);
     const stopFrac = Number(($("#ofStop") || {}).value || 1);
     const rr = Number(($("#ofRr") || {}).value || 3);
-    const smQ = `symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}&rr=${rr}&stop_frac=${stopFrac}`;
+    const sigFilter = (($("#ofFilterSig") || {}).value || "none");
+    const trail = !!(($("#ofTrail") || {}).checked);
+    const smQ = `symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}&rr=${rr}&stop_frac=${stopFrac}`
+              + `&sig_filter=${encodeURIComponent(sigFilter)}&trail=${trail}`;
 
     // 2. profile + smart-money, in parallel
     try {
@@ -2118,7 +2121,7 @@
     }
     const dsel = $("#ofDate");
     if (dsel) dsel.addEventListener("change", () => { ofDate = dsel.value; loadOrderflow(); });
-    ["#ofMult", "#ofStop", "#ofRr"].forEach(id => {
+    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofTrail"].forEach(id => {
       const s = $(id); if (s) s.addEventListener("change", () => loadOrderflow());
     });
     const rb = $("#ofRefresh");

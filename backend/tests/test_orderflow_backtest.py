@@ -17,11 +17,20 @@ import app.orderflow.backtest as BT   # noqa: E402
 def _leg(side, entry, stop, target, status):
     risk = abs(entry - stop)
     reward = abs(target - entry)
+    # mirror _walk_outcome's realized-points model (non-trailed):
+    #   TARGET_HIT -> +reward at the target price; STOP_HIT -> -risk at the stop
+    if status == "TARGET_HIT":
+        pts, xp = round(reward, 4), target
+    elif status == "STOP_HIT":
+        pts, xp = round(-risk, 4), stop
+    else:
+        pts, xp = 0.0, None
     return {"side": side, "entry": entry, "stop_loss": stop, "target": target,
             "risk_points": risk, "reward_points": reward,
             "rr": round(reward / risk, 2) if risk else None,
             "breakout_bar": None if status == "PENDING" else f"{side}-bo",
-            "outcome": {"status": status, "resolved_bar": None if status in ("PENDING", "TRIGGERED") else f"{side}-res"}}
+            "outcome": {"status": status, "points": pts, "exit_price": xp,
+                        "resolved_bar": None if status in ("PENDING", "TRIGGERED") else f"{side}-res"}}
 
 
 def _spike(bs, buy_status, sell_status, *, h=110, l=100):
@@ -123,6 +132,35 @@ def test_no_signals(monkeypatch):
         _spike("t0", "PENDING", "PENDING")]}})
     bt = BT.backtest("NIFTY")
     assert bt["status"] == "NO_SIGNALS"
+
+
+def test_backtest_echoes_trail_and_sig_filter(monkeypatch):
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "TARGET_HIT", "STOP_HIT")]}})
+    bt = BT.backtest("NIFTY", trail=True, sig_filter="candle_dir")
+    assert bt["status"] == "OK"
+    assert bt["trail"] is True and bt["sig_filter"] == "candle_dir"
+
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "PENDING", "PENDING")]}})
+    ns = BT.backtest("NIFTY", trail=True, sig_filter="strong_body")
+    assert ns["status"] == "NO_SIGNALS"
+    assert ns["trail"] is True and ns["sig_filter"] == "strong_body"
+
+
+def test_flat_trailed_exit_is_its_own_bucket(monkeypatch):
+    # a trailed exit exactly at entry -> points 0 -> FLAT, not WIN/LOSS
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "STOP_HIT", "PENDING")]}})
+    # force the buy leg's realized points to 0 (breakeven trail)
+    smap = {"2026-09-04": {"status": "OK", "setups": [_spike("t0", "STOP_HIT", "PENDING")]}}
+    smap["2026-09-04"]["setups"][0]["buy"]["outcome"]["points"] = 0.0
+    smap["2026-09-04"]["setups"][0]["buy"]["outcome"]["exit_price"] = 110
+    _wire(monkeypatch, smap)
+    bt = BT.backtest("NIFTY")
+    o = bt["overall"]
+    assert o["flat"] == 1 and o["wins"] == 0 and o["losses"] == 0
+    assert bt["trades"][0]["result"] == "FLAT"
 
 
 def test_trade_row_carries_exit_price(monkeypatch):

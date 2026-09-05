@@ -674,6 +674,16 @@
                   <option value="3" selected>1:3</option><option value="2">1:2</option><option value="1.5">1:1.5</option>
                 </select>
               </label>
+              <label class="as-sym">Filter
+                <select id="ofFilterSig" title="restrict which side is taken per spike candle">
+                  <option value="none" selected>both sides</option>
+                  <option value="candle_dir">candle dir</option>
+                  <option value="strong_body">strong body</option>
+                </select>
+              </label>
+              <label class="as-sym" title="trail the stop that same distance behind the best price after entry">
+                <input type="checkbox" id="ofTrail" /> Trail stop
+              </label>
               <button class="btn btn-ghost" id="ofRefresh" type="button">Refresh</button>
               <span class="hint" id="ofMeta">—</span>
             </div>

@@ -39,15 +39,16 @@ def _equity_max_drawdown(points_seq: list) -> float:
 def _agg(trades: list) -> dict:
     wins = [t for t in trades if t["result"] == "WIN"]
     losses = [t for t in trades if t["result"] == "LOSS"]
+    flats = [t for t in trades if t["result"] == "FLAT"]
     opens = [t for t in trades if t["result"] == "OPEN"]
-    resolved = wins + losses
+    resolved = wins + losses + flats
     gross_win = round(sum(t["points"] for t in wins), 4)
     gross_loss = round(sum(-t["points"] for t in losses), 4)   # positive magnitude
     net = round(gross_win - gross_loss, 4)
     n_res = len(resolved)
     return {
         "signals": len(trades),
-        "wins": len(wins), "losses": len(losses), "open": len(opens),
+        "wins": len(wins), "losses": len(losses), "flat": len(flats), "open": len(opens),
         "win_rate": round(len(wins) / n_res, 4) if n_res else None,
         "gross_win_points": gross_win,
         "gross_loss_points": gross_loss,
@@ -64,16 +65,33 @@ def _agg(trades: list) -> dict:
 
 
 def _trade_from_leg(session: str, spike: dict, side: str) -> dict | None:
-    leg = spike.get(side) or {}
-    status = (leg.get("outcome") or {}).get("status")
-    if status in (None, "PENDING"):
+    leg = spike.get(side)
+    if not leg:                             # this side was filtered out for this spike
         return None
-    if status == "TARGET_HIT":
-        result, points, exit_price = "WIN", leg["reward_points"], leg["target"]
-    elif status == "STOP_HIT":
-        result, points, exit_price = "LOSS", -leg["risk_points"], leg["stop_loss"]
-    else:                                   # TRIGGERED
-        result, points, exit_price = "OPEN", 0.0, None
+    oc = leg.get("outcome") or {}
+    status = oc.get("status")
+    if status in (None, "PENDING", "TRIGGERED"):
+        return None if status in (None, "PENDING") else {
+            **_base_row(session, spike, leg),
+            "result": "OPEN", "points": 0.0, "exit_price": None,
+        }
+    # realized-points model: a plain stop = -risk, a plain target = +reward,
+    # but a TRAILED stop's points come straight from the walk (can be >= 0).
+    points = round(float(oc.get("points", 0.0)), 4)
+    exit_price = oc.get("exit_price")
+    if points > 0:
+        result = "WIN"
+    elif points < 0:
+        result = "LOSS"
+    else:
+        result = "FLAT"
+    return {
+        **_base_row(session, spike, leg),
+        "result": result, "points": points, "exit_price": exit_price,
+    }
+
+
+def _base_row(session: str, spike: dict, leg: dict) -> dict:
     return {
         "session": session,
         "candle_ts": spike["candle"]["bar_start"],
@@ -83,15 +101,13 @@ def _trade_from_leg(session: str, spike: dict, side: str) -> dict | None:
         "rr": leg["rr"],
         "breakout_bar": leg.get("breakout_bar"),
         "resolved_bar": (leg.get("outcome") or {}).get("resolved_bar"),
-        "result": result,
-        "points": round(points, 4),
-        "exit_price": exit_price,          # the winning target price, or the SL-hit price
         "volume_x_avg": spike.get("volume_x_avg"),
     }
 
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
-             stop_frac: float = 1.0, sessions: int | list | None = None) -> dict:
+             stop_frac: float = 1.0, trail: bool = False, sig_filter: str = "none",
+             sessions: int | list | None = None) -> dict:
     """`sessions`: None -> all captured; an int -> that many most-recent; a list
     -> exactly those IST dates."""
     sym = symbol.upper()
@@ -110,7 +126,8 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         if not bars:
             continue
         scanned += 1
-        sm = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac)
+        sm = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
+                                    trail=trail, sig_filter=sig_filter)
         if sm.get("status") != "OK":
             continue
         s_trades = []
@@ -126,6 +143,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     if not trades:
         return {"status": "NO_SIGNALS", "symbol": sym, "sessions_scanned": scanned,
                 "sessions": dates, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
+                "trail": bool(trail), "sig_filter": sig_filter,
                 "note": "no volume-spike breakout hit target or stop in the captured sessions"}
 
     trades.sort(key=lambda t: (t["session"], t["candle_ts"], t["side"]))
@@ -155,6 +173,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
                  f"Needs >= {MIN_SAMPLE} resolved trades across >= {MIN_SESSIONS} "
                  "sessions before any edge claim; intra-day signals are correlated."),
         "symbol": sym, "tf": tf, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
+        "trail": bool(trail), "sig_filter": sig_filter,
         "sessions_scanned": scanned, "traded_sessions": n_traded_sessions,
         "sessions": dates,
         "overall": overall,

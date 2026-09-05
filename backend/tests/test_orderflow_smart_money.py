@@ -159,6 +159,58 @@ def test_stop_frac_tightens_stop_and_pulls_target_in():
     assert tsell["stop_loss"] == 104.0 and tsell["target"] == 88.0
 
 
+def test_trail_books_profit_where_plain_stop_would_still_be_open():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),   # spike -> BUY entry 110, stop 100, tgt 140
+        _bar("t3", 110, 113, 109, 112, 100),    # breaks out; trail stop -> 103
+        _bar("t4", 112, 125, 116, 124, 100),    # runs to 125; trail stop -> 115
+        _bar("t5", 124, 124, 112, 114, 100),    # dips to 112 <= 115 -> trailed exit
+    ]
+    plain = SM.smart_money_setups(bars, volume_mult=2.0)["setups"][0]["buy"]
+    assert plain["trail"] is False
+    assert plain["outcome"]["status"] == "TRIGGERED"      # never hit 100 or 140
+    assert plain["outcome"]["points"] == 0.0
+
+    trailed = SM.smart_money_setups(bars, volume_mult=2.0, trail=True)["setups"][0]["buy"]
+    assert trailed["trail"] is True
+    assert trailed["outcome"]["status"] == "STOP_HIT"     # label is STOP, but...
+    assert trailed["outcome"]["exit_price"] == 115.0
+    assert trailed["outcome"]["points"] == 5.0            # ...+5 realized -> a WIN by sign
+
+
+def test_sig_filter_candle_dir_and_strong_body():
+    bull = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 108, 1000),   # bullish spike, body 8 of range 10
+        _bar("t3", 108, 109, 107, 108, 100),
+        _bar("t4", 108, 109, 107, 108, 100),
+    ]
+    cd = SM.smart_money_setups(bull, volume_mult=2.0, sig_filter="candle_dir")
+    assert cd["sig_filter"] == "candle_dir" and cd["spike_count"] == 1
+    row = cd["setups"][0]
+    assert "buy" in row and "sell" not in row
+
+    sb = SM.smart_money_setups(bull, volume_mult=2.0, sig_filter="strong_body")["setups"][0]
+    assert "buy" in sb and "sell" not in sb
+
+    weak = list(bull)
+    weak[2] = _bar("t2", 104, 110, 100, 106, 1000)          # body 2 of range 10
+    assert SM.smart_money_setups(weak, volume_mult=2.0, sig_filter="strong_body")["spike_count"] == 0
+    assert SM.smart_money_setups(weak, volume_mult=2.0, sig_filter="candle_dir")["spike_count"] == 1
+
+    bear = list(bull)
+    bear[2] = _bar("t2", 110, 110, 100, 101, 1000)          # bearish spike
+    br = SM.smart_money_setups(bear, volume_mult=2.0, sig_filter="candle_dir")["setups"][0]
+    assert "sell" in br and "buy" not in br
+
+    # default (none) keeps both sides
+    both = SM.smart_money_setups(bull, volume_mult=2.0)["setups"][0]
+    assert "buy" in both and "sell" in both
+
+
 def test_higher_volume_mult_filters_out_marginal_spikes():
     bars = [
         _bar("t0", 100, 101, 99, 100, 100),

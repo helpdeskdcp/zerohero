@@ -56,12 +56,16 @@ def api_smart_money(symbol: str = Query(...), date: str = Query(..., description
                                                description="spike = bar volume >= this x session avg"),
                     rr: float = Query(3.0, gt=0.0, le=10.0),
                     stop_frac: float = Query(1.0, gt=0.0, le=1.0,
-                                             description="stop distance as a fraction of the spike candle range; <1 = tighter stop")):
+                                             description="stop distance as a fraction of the spike candle range; <1 = tighter stop"),
+                    trail: bool = Query(False, description="trail the stop that same distance behind the best price after entry"),
+                    sig_filter: str = Query("none", pattern="^(none|candle_dir|strong_body)$",
+                                            description="none=both sides; candle_dir=only the spike candle's direction; strong_body=candle_dir + body>=0.5*range")):
     """Volume-spike breakout setups: BUY above the spike candle's high / SELL
     below its low, stop `stop_frac` x the candle range away from entry, target
     at `rr` x that stop distance, with a same-session forward-walked outcome.
     Read-only; ~5m bar granularity."""
-    return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac)
+    return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr,
+                               stop_frac=stop_frac, trail=trail, sig_filter=sig_filter)
 
 
 @router.get("/backtest")
@@ -70,6 +74,9 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
                  rr: float = Query(3.0, gt=0.0, le=10.0),
                  stop_frac: float = Query(1.0, gt=0.0, le=1.0,
                                           description="stop distance as a fraction of the spike candle range; <1 = tighter stop (target follows at rr x that distance)"),
+                 trail: bool = Query(False, description="trail the stop that same distance behind the best price after entry"),
+                 sig_filter: str = Query("none", pattern="^(none|candle_dir|strong_body)$",
+                                         description="none=both sides; candle_dir=only the spike candle's direction; strong_body=candle_dir + body>=0.5*range"),
                  sessions: Optional[int] = Query(None, ge=1, le=400,
                                                  description="most-recent N captured sessions; omit = all")):
     """Runs the smart-money engine over every captured session and aggregates:
@@ -79,4 +86,5 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
     points / the exact winning-target or SL-hit price). `reliable` is False
     below 20 resolved trades."""
     return service.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr,
-                            stop_frac=stop_frac, sessions=sessions)
+                            stop_frac=stop_frac, trail=trail, sig_filter=sig_filter,
+                            sessions=sessions)
