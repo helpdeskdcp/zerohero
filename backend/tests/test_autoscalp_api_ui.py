@@ -105,8 +105,9 @@ def test_symbol_profiles_leave_nifty_frozen(fresh_db):
 
 def test_no_endpoint_enables_live():
     """Grep guard: nothing under /api/autoscalp/* flips a LIVE flag."""
-    src = (Path(__file__).parents[1] / "app" / "main.py").read_text()
-    seg = src[src.index("Autonomous scalper (P7"):src.index("External position tracker")]
+    # autoscalp's routes live in app/api/autoscalp_routes.py (split out of the
+    # old main.py "Autonomous scalper (P7)" section) -- scan that file whole.
+    seg = (Path(__file__).parents[1] / "app" / "api" / "autoscalp_routes.py").read_text()
     for bad in ("execution_mode", "CHANAKYA_ALLOW_LIVE", "live_enabled", "market_entry",
                 "AngelOneBroker", "execution_enabled", "limit_entry"):
         assert bad not in seg, f"autoscalp endpoints must not reference {bad}"

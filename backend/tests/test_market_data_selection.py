@@ -93,7 +93,11 @@ def test_missing_quote_is_controlled_data_unavailable():
 def test_run_pipeline_boundary_converts_market_exception_to_data_unavailable(monkeypatch):
     import asyncio
     from app import main
-    monkeypatch.setattr(main, "run_pipeline", lambda _payload: (_ for _ in ()).throw(RuntimeError("broker down")))
+    from app.api import engines_routes
+    # api_run_pipeline lives in app.api.engines_routes and calls its own
+    # module-local `run_pipeline` name -- patch it there, not on app.main
+    # (which only re-exports the handler itself for backward-compat).
+    monkeypatch.setattr(engines_routes, "run_pipeline", lambda _payload: (_ for _ in ()).throw(RuntimeError("broker down")))
     response = asyncio.run(main.api_run_pipeline(main.SignalRequest(market="NSE", symbol="NIFTY")))
     assert response["error"] == "DATA_UNAVAILABLE"
     assert response["contract"]["data_status"] == "DATA_UNAVAILABLE"

@@ -164,6 +164,7 @@ def test_tp_calibration_does_not_resolve_against_stale_forward_candles(fresh_db)
 # ---------------------------------------------------------------- Test 6
 def test_api_run_offloads_pipeline_off_the_event_loop(monkeypatch):
     from app import main
+    from app.api import engines_routes
     main_thread = threading.get_ident()
     seen = {}
 
@@ -171,7 +172,9 @@ def test_api_run_offloads_pipeline_off_the_event_loop(monkeypatch):
         seen["thread"] = threading.get_ident()
         return {"contract": {"decision": "NO_TRADE"}, "trade": None}
 
-    monkeypatch.setattr(main, "run_pipeline", fake_pipeline)
+    # api_run_pipeline lives in app.api.engines_routes and calls its own
+    # module-local `run_pipeline` name -- patch it there, not on app.main.
+    monkeypatch.setattr(engines_routes, "run_pipeline", fake_pipeline)
     resp = asyncio.run(main.api_run_pipeline(main.SignalRequest(market="NSE", symbol="NIFTY")))
     assert "thread" in seen and seen["thread"] != main_thread
     assert resp["contract"]["decision"] == "NO_TRADE"
@@ -180,12 +183,13 @@ def test_api_run_offloads_pipeline_off_the_event_loop(monkeypatch):
 # ---------------------------------------------------------------- Test 7
 def test_api_run_unexpected_exception_is_logged_and_sanitised(monkeypatch, caplog):
     from app import main
+    from app.api import engines_routes
     secret = "BrokerJWT-eyJhbGciOi-SUPERSECRET"
 
     def boom(payload):
         raise RuntimeError(f"connection to broker failed token={secret}")
 
-    monkeypatch.setattr(main, "run_pipeline", boom)
+    monkeypatch.setattr(engines_routes, "run_pipeline", boom)
     with caplog.at_level(logging.ERROR, logger="chanakya.api"):
         resp = asyncio.run(main.api_run_pipeline(main.SignalRequest(market="NSE", symbol="NIFTY")))
 
