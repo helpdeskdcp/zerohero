@@ -691,6 +691,16 @@
                   <option value="premium">option premium</option>
                 </select>
               </label>
+              <label class="as-sym" title="basis=premium only: optional hard stop on the option premium (% below entry premium)">
+                Prem stop
+                <select id="ofPremStop">
+                  <option value="0" selected>off</option>
+                  <option value="0.08">−8%</option>
+                  <option value="0.12">−12%</option>
+                  <option value="0.20">−20%</option>
+                  <option value="0.35">−35%</option>
+                </select>
+              </label>
               <button class="btn btn-ghost" id="ofRefresh" type="button">Refresh</button>
               <span class="hint" id="ofMeta">—</span>
             </div>

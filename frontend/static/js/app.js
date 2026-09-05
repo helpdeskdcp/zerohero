@@ -1958,7 +1958,8 @@
       isPrem ? kv("basis (premium coverage)",
         `option premium · ${bcov.premium_repriced || 0}/${bcov.resolved_priced || 0}` +
         (bcov.premium_thin_quotes ? ` · ${bcov.premium_thin_quotes} thin` : "") +
-        (bcov.index_fallback ? ` · ${bcov.index_fallback} idx-fallback` : ""),
+        (bcov.index_fallback ? ` · ${bcov.index_fallback} idx-fallback` : "") +
+        (bt.premium_stop_pct ? ` · stop −${Math.round(bt.premium_stop_pct * 100)}% (${bcov.premium_stop_hits || 0} hit)` : ""),
         "warn") : kv("basis", "index points"),
       kv("wins / losses / open", `${o.wins} / ${o.losses} / ${o.open}`),
       kv(`win rate (breakeven ${(o.breakeven_win_rate * 100).toFixed(0)}%)`,
@@ -2053,9 +2054,10 @@
     const sigFilter = (($("#ofFilterSig") || {}).value || "none");
     const trail = !!(($("#ofTrail") || {}).checked);
     const basis = (($("#ofBasis") || {}).value || "index");
+    const premStop = Number(($("#ofPremStop") || {}).value || 0);
     const smQ = `symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}&rr=${rr}&stop_frac=${stopFrac}`
               + `&sig_filter=${encodeURIComponent(sigFilter)}&trail=${trail}`;
-    const btQ = `${smQ}&basis=${encodeURIComponent(basis)}`;
+    const btQ = `${smQ}&basis=${encodeURIComponent(basis)}&premium_stop_pct=${premStop}`;
 
     // 2. profile + smart-money, in parallel
     try {
@@ -2130,7 +2132,7 @@
     }
     const dsel = $("#ofDate");
     if (dsel) dsel.addEventListener("change", () => { ofDate = dsel.value; loadOrderflow(); });
-    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofTrail", "#ofBasis"].forEach(id => {
+    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofTrail", "#ofBasis", "#ofPremStop"].forEach(id => {
       const s = $(id); if (s) s.addEventListener("change", () => loadOrderflow());
     });
     const rb = $("#ofRefresh");

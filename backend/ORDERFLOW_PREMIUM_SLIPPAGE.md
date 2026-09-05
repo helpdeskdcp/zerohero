@@ -155,10 +155,38 @@ Per operator: *"option B implement kara — captured premium series var re-walk.
 - entry/exit premium sampled *as-of the 5m bar* (same bar-granularity caveat as
   the whole backtest); no bid/ask, no explicit theta line item beyond what the
   LTP path already contains.
-- no premium-side stop — exit is purely index-triggered. A real long-option
-  trader would likely cut the premium sooner; adding an optional premium stop is
-  the obvious next lever.
 - exact-duplicate correlated setups are not de-duplicated (pre-existing, affects
   index basis too).
 - run it as `backtest(..., basis="premium")` or `GET /api/orderflow/backtest?
   …&basis=premium`; always check `basis_coverage` before reading the numbers.
+
+### 6a. Optional premium-side stop (added 2026-09-05)
+
+`premium_walk.rewalk_leg(..., premium_stop_pct=)` and
+`backtest(..., basis="premium", premium_stop_pct=)` — a hard stop on the
+**option**: `0.30` = exit the moment a captured tick is ≥30% below the entry
+premium, *if* that comes before the index-triggered exit. It only ever
+*shortens* the hold. `basis_coverage.premium_stop_hits` counts how often it
+bound; API `?premium_stop_pct=`, dashboard "Prem stop" selector.
+
+**Re-run result: at the current RR / `stop_frac` the premium stop barely
+binds.** Sweep over the captured sessions:
+
+| pstop | NIFTY net (hits) | NATURALGAS net (hits) | CRUDEOIL net (hits) |
+|------:|:---------------:|:---------------------:|:-------------------:|
+| off   | −51.2 (0) | +9.7 (0) | +696.5 (0) |
+| −8%   | −49.2 (8) | +9.2 (2) | +705.9 (3) |
+| −10%  | −47.6 (3) | +9.7 (0) | +696.6 (1) |
+| −12%  | −49.0 (2) | +9.7 (0) | +696.5 (0) |
+| −20%  | −53.0 (1) | +9.7 (0) | +696.5 (0) |
+| −35%+ | −51.2 (0) | +9.7 (0) | +696.5 (0) |
+
+Why: the ATM option's **adverse excursion inside these short index-defined
+windows is tiny** — CRUDEOIL premium-trade MAE distribution is p10 −5%,
+median −0.4%, worst −11.3%. The *index* stop (≈10–40 pts) always resolves the
+trade before a ≥12% premium drawdown occurs, so any premium stop looser than
+~8% is a no-op, and an ~8–10% stop moves NIFTY by only ~+3 pts on n=26 —
+noise. A premium stop would only matter with a much wider index target/stop
+(longer holds, bigger premium swings) or if expressed in absolute premium
+points rather than %. **No edge, no config change; the lever exists for when
+there is more data and wider-target variants to test.**

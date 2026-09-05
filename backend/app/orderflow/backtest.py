@@ -70,7 +70,8 @@ def _result_of(points: float) -> str:
 
 
 def _trade_from_leg(session: str, spike: dict, side: str, *,
-                    opt_map: dict | None = None) -> dict | None:
+                    opt_map: dict | None = None,
+                    premium_stop_pct: float = 0.0) -> dict | None:
     leg = spike.get(side)
     if not leg:                             # this side was filtered out for this spike
         return None
@@ -96,7 +97,8 @@ def _trade_from_leg(session: str, spike: dict, side: str, *,
     # ATM option the setup would actually have traded (BUY -> CE, SELL -> PE).
     rw = _pw.rewalk_leg(opt_map, entry_price=leg["entry"], side=leg["side"],
                         entry_ts=leg.get("breakout_bar"),
-                        exit_ts=oc.get("resolved_bar"))
+                        exit_ts=oc.get("resolved_bar"),
+                        premium_stop_pct=premium_stop_pct)
     if not rw:
         row["basis"] = "INDEX_FALLBACK"     # no captured option series for this window
         return row
@@ -125,7 +127,8 @@ def _base_row(session: str, spike: dict, leg: dict) -> dict:
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
              stop_frac: float = 1.0, trail: bool = False, sig_filter: str = "none",
-             basis: str = "index", sessions: int | list | None = None) -> dict:
+             basis: str = "index", premium_stop_pct: float = 0.0,
+             sessions: int | list | None = None) -> dict:
     """`sessions`: None -> all captured; an int -> that many most-recent; a list
     -> exactly those IST dates.
 
@@ -133,9 +136,17 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     keeps the index entry/stop/target as the trigger but re-prices realised
     P&L on the captured ATM option the setup would have traded (BUY->CE,
     SELL->PE), falling back to index basis per-trade when no option series
-    covers the window. See ORDERFLOW_PREMIUM_SLIPPAGE.md."""
+    covers the window. See ORDERFLOW_PREMIUM_SLIPPAGE.md.
+
+    `premium_stop_pct` (basis="premium" only): optional hard stop on the
+    OPTION -- 0 = none; 0.30 = cut the trade the moment a captured tick is
+    >=30% below the entry premium, if that comes before the index exit."""
     sym = symbol.upper()
     basis = basis if basis in ("index", "premium") else "index"
+    try:
+        premium_stop_pct = max(0.0, min(float(premium_stop_pct), 0.99))
+    except (TypeError, ValueError):
+        premium_stop_pct = 0.0
     if isinstance(sessions, list):
         dates = [str(d).strip() for d in sessions if str(d).strip()]
     else:
@@ -159,7 +170,8 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         s_trades = []
         for spike in sm.get("setups", []):
             for side in ("buy", "sell"):
-                t = _trade_from_leg(d, spike, side, opt_map=opt_map)
+                t = _trade_from_leg(d, spike, side, opt_map=opt_map,
+                                    premium_stop_pct=premium_stop_pct)
                 if t:
                     s_trades.append(t)
         trades.extend(s_trades)
@@ -170,6 +182,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         return {"status": "NO_SIGNALS", "symbol": sym, "sessions_scanned": scanned,
                 "sessions": dates, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
                 "trail": bool(trail), "sig_filter": sig_filter, "basis": basis,
+                "premium_stop_pct": premium_stop_pct,
                 "note": "no volume-spike breakout hit target or stop in the captured sessions"}
 
     trades.sort(key=lambda t: (t["session"], t["candle_ts"], t["side"]))
@@ -195,18 +208,23 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
 
     bc = {"PREMIUM": 0, "INDEX_FALLBACK": 0, "INDEX": 0}
     thin = 0
+    prem_stopped = 0
     for t in trades:
         if t["result"] == "OPEN":
             continue
         bc[t.get("basis", "INDEX")] = bc.get(t.get("basis", "INDEX"), 0) + 1
         if t.get("premium_thin"):
             thin += 1
+        if t.get("premium_exit_reason") == "PREMIUM_STOP":
+            prem_stopped += 1
     n_priced = sum(bc.values())
     basis_coverage = {
         "basis": basis,
+        "premium_stop_pct": premium_stop_pct,
         "resolved_priced": n_priced,
         "premium_repriced": bc["PREMIUM"],
         "premium_thin_quotes": thin,     # repriced but <=2 captured ticks -> low-confidence
+        "premium_stop_hits": prem_stopped,
         "index_fallback": bc["INDEX_FALLBACK"],
         "index_only": bc["INDEX"],
         "premium_coverage": round(bc["PREMIUM"] / n_priced, 3) if n_priced else None,
@@ -229,6 +247,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         "note": note,
         "symbol": sym, "tf": tf, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
         "trail": bool(trail), "sig_filter": sig_filter, "basis": basis,
+        "premium_stop_pct": premium_stop_pct,
         "basis_coverage": basis_coverage,
         "sessions_scanned": scanned, "traded_sessions": n_traded_sessions,
         "sessions": dates,

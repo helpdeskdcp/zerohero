@@ -79,6 +79,8 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
                                          description="none=both sides; candle_dir=only the spike candle's direction; strong_body=candle_dir + body>=0.5*range"),
                  basis: str = Query("index", pattern="^(index|premium)$",
                                     description="index=score in index points; premium=re-price P&L on the captured ATM option (BUY->CE, SELL->PE), index levels stay the trigger"),
+                 premium_stop_pct: float = Query(0.0, ge=0.0, le=0.99,
+                                                 description="basis=premium only: optional hard stop on the option premium, e.g. 0.30 exits at -30% of entry premium if it comes before the index exit"),
                  sessions: Optional[int] = Query(None, ge=1, le=400,
                                                  description="most-recent N captured sessions; omit = all")):
     """Runs the smart-money engine over every captured session and aggregates:
@@ -89,4 +91,4 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
     below 20 resolved trades."""
     return service.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr,
                             stop_frac=stop_frac, trail=trail, sig_filter=sig_filter,
-                            basis=basis, sessions=sessions)
+                            basis=basis, premium_stop_pct=premium_stop_pct, sessions=sessions)

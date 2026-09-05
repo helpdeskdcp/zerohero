@@ -71,6 +71,39 @@ def test_rewalk_thin_flag_when_two_or_fewer_ticks():
     assert rw["premium_points"] == 4.0
 
 
+def test_premium_stop_cuts_the_trade_before_the_index_exit():
+    # entry 100; a tick at 68 is -32% -> a 30% stop fires there, not at the +5 index exit
+    opt = {(100.0, "CE"): _series(
+        ("t0", 100.0), ("t1", 90.0), ("t2", 68.0), ("t3", 82.0), ("t4", 105.0))}
+    rw = PW.rewalk_leg(opt, entry_price=100, side="BUY",
+                       entry_ts="t0", exit_ts="t4", premium_stop_pct=0.30)
+    assert rw["premium_exit_reason"] == "PREMIUM_STOP"
+    assert rw["premium_stop_level"] == 70.0
+    assert rw["premium_exit"] == 68.0 and rw["premium_points"] == -32.0
+    assert rw["premium_ticks"] == 3          # path truncated at the stop tick (t0, t1, t2)
+
+
+def test_premium_stop_inactive_when_drawdown_never_reaches_it():
+    opt = {(100.0, "CE"): _series(
+        ("t0", 100.0), ("t1", 92.0), ("t2", 96.0), ("t3", 110.0))}
+    rw = PW.rewalk_leg(opt, entry_price=100, side="BUY",
+                       entry_ts="t0", exit_ts="t3", premium_stop_pct=0.30)
+    assert rw["premium_exit_reason"] == "INDEX_TRIGGER"
+    assert rw["premium_exit"] == 110.0 and rw["premium_points"] == 10.0
+
+
+def test_premium_stop_never_extends_the_hold():
+    # index exit at t2=105 (a win); an earlier -35% dip still takes precedence
+    opt = {(100.0, "CE"): _series(("t0", 100.0), ("t1", 65.0), ("t2", 105.0))}
+    rw = PW.rewalk_leg(opt, entry_price=100, side="BUY",
+                       entry_ts="t0", exit_ts="t2", premium_stop_pct=0.30)
+    assert rw["premium_exit_reason"] == "PREMIUM_STOP" and rw["premium_points"] == -35.0
+    # zero / disabled -> the index exit stands
+    rw0 = PW.rewalk_leg(opt, entry_price=100, side="BUY",
+                        entry_ts="t0", exit_ts="t2", premium_stop_pct=0.0)
+    assert rw0["premium_exit_reason"] == "INDEX_TRIGGER" and rw0["premium_points"] == 5.0
+
+
 # ---------------------------------------------------------------- backtest basis
 def _leg(side, entry, stop, target, status):
     risk = abs(entry - stop)
@@ -135,6 +168,26 @@ def test_backtest_premium_falls_back_to_index_when_no_option_series(monkeypatch)
     assert bt["overall"]["net_points"] == 20.0        # +30 -10
     assert bt["basis_coverage"]["index_fallback"] == 2
     assert bt["basis_coverage"]["premium_repriced"] == 0
+
+
+def test_backtest_premium_stop_pct_threads_and_counts_hits(monkeypatch):
+    # BUY CE dips -40% mid-window before the index TARGET_HIT -> a 30% stop fires
+    opt = {
+        (110.0, "CE"): [("BUY-bo", 50.0), ("BUY-c1", 29.0), ("BUY-res", 80.0)],
+        (100.0, "PE"): [("SELL-bo", 30.0), ("SELL-c1", 33.0), ("SELL-res", 40.0)],
+    }
+    _wire_premium(monkeypatch, [_spike("2026-09-04T04:00:00Z", "TARGET_HIT", "STOP_HIT")], opt)
+    bt = BT.backtest("NIFTY", basis="premium", premium_stop_pct=0.30)
+    assert bt["premium_stop_pct"] == 0.30
+    by = {t["side"]: t for t in bt["trades"]}
+    assert by["BUY"]["premium_exit_reason"] == "PREMIUM_STOP"
+    assert by["BUY"]["points"] == -21.0 and by["BUY"]["result"] == "LOSS"   # 29 - 50
+    assert by["SELL"]["premium_exit_reason"] == "INDEX_TRIGGER"
+    assert bt["basis_coverage"]["premium_stop_hits"] == 1
+    # disabled -> BUY rides to the index exit
+    bt0 = BT.backtest("NIFTY", basis="premium", premium_stop_pct=0.0)
+    assert bt0["basis_coverage"]["premium_stop_hits"] == 0
+    assert {t["side"]: t for t in bt0["trades"]}["BUY"]["points"] == 30.0   # 80 - 50
 
 
 def test_backtest_index_basis_unchanged_and_default(monkeypatch):
