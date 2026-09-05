@@ -16,6 +16,7 @@ import time
 from .. import market_hub
 from ..engines.signal_engine import _vwap
 from . import profile as _p
+from . import smart_money as _sm
 
 _CACHE: dict = {}
 _TTL = 30.0          # a completed session is immutable; today's grows slowly
@@ -51,6 +52,28 @@ def _session_vwap(bars: list):
 
 def available_sessions(symbol: str, tf: str = "5m", limit: int = 30) -> list:
     return market_hub.session_dates(symbol, tf=tf, limit=limit)
+
+
+def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
+                volume_mult: float = 2.0, rr: float = 3.0) -> dict:
+    """Volume-spike breakout setups for one IST session (or comma-list for a
+    multi-session scan). Read-only over captured bars."""
+    dates = [d.strip() for d in str(session_date or "").split(",") if d.strip()]
+    key = ("SM", symbol.upper(), tuple(dates), tf, volume_mult, rr)
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    bars: list = []
+    for d in dates:
+        bars.extend(market_hub.session_bars(symbol, d, tf=tf))
+    bars.sort(key=lambda b: str(b.get("bar_start") or ""))
+    out = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr)
+    out["symbol"] = symbol.upper()
+    out["sessions"] = dates
+    out["tf"] = tf
+    out["bar_count"] = len(bars)
+    _cache_put(key, out)
+    return out
 
 
 def profile(symbol: str, session_date: str, *, tf: str = "5m",

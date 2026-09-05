@@ -47,3 +47,15 @@ def api_profile(symbol: str = Query(...), date: str = Query(..., description="YY
     """Volume Profile + Market Profile + session VWAP in one call (dashboard)."""
     return service.profile(symbol, date, tf=tf, tick_size=tick_size,
                            tpo_minutes=tpo_minutes, value_pct=value_pct, which="both")
+
+
+@router.get("/smart-money")
+def api_smart_money(symbol: str = Query(...), date: str = Query(..., description="YYYY-MM-DD (IST); comma-list to scan several"),
+                    tf: str = Query("5m"),
+                    volume_mult: float = Query(2.0, gt=1.0, le=20.0,
+                                               description="spike = bar volume >= this x session avg"),
+                    rr: float = Query(3.0, gt=0.0, le=10.0)):
+    """Volume-spike breakout setups: BUY above the spike candle's high / SELL
+    below its low, stop at the opposite extreme, target at `rr` x risk, with a
+    same-session forward-walked outcome. Read-only; ~5m bar granularity."""
+    return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr)
