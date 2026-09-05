@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Expiry Zero-to-Hero — daily forward-capture of the current SENSEX weekly.
 # Runs on the trading server (needs .env + the authenticated AngelOne session).
-# Cron: 15 10 * * 1-5   (10:15 UTC = 15:45 IST, ~15 min after BSE close)
+# Cron: 45 15 * * 1-5   (15:45 IST, ~15 min after BSE close -- this server's
+# cron runs in the system's local Asia/Kolkata TZ, not UTC; confirmed via a
+# live test 2026-09-05 after this field was originally set assuming UTC and
+# fired 5.5h early with zero data. Use the IST wall-clock time directly here.)
 #
 # Captures the 14:50-15:40 IST window of TODAY for the nearest SENSEX weekly
 # option expiry into data/expiry_z2h.db (write-once per index+expiry+date), so

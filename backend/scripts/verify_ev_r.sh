@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # One-time post-deploy check: confirm the ev_r column (commit f92eb6e,
 # 2026-09-04) is actually being populated by live signals once the market
-# reopens. Cron, weekdays 16:15 IST (after NSE+MCX have both generated
-# signals for the day). Self-disabling: once it finds >=1 row created after
+# reopens. Cron, weekdays 15 16 * * 1-5 (16:15 IST directly -- this server's
+# cron runs in the local Asia/Kolkata TZ, not UTC; confirmed 2026-09-05 after
+# this field was originally set assuming UTC and fired 5.5h early), after
+# NSE+MCX have both generated signals for the day. Self-disabling: once it
+# finds >=1 row created after
 # the deploy timestamp, it reports pass/fail via Telegram and removes its
 # own crontab line so it doesn't run forever. If no new rows yet (holiday,
 # or engine idle that day) it stays silent and armed for the next weekday.

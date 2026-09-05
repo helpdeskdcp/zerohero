@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Post-close summary of the day's market-map latency samples -> Telegram.
-# Cron (root), weekdays 16 10 * * 1-5 (15:46 IST). Self-verifying: the send
+# Cron (root), weekdays 46 15 * * 1-5 (15:46 IST -- this server's cron runs in
+# the local Asia/Kolkata TZ, not UTC; confirmed 2026-09-05). Self-verifying: the send
 # result (ok / failure reason) is appended to data/market_map_summary_sent.log
 # and this script's stdout is captured to data/market_map_summary_cron.log, so
 # whether Monday's summary landed is checkable without anyone watching.

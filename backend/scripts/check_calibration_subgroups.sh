@@ -5,8 +5,11 @@
 # log line when a subgroup FIRST crosses 20 -- it does not re-run the full
 # attribution, change any config, or touch calibration/trading logic.
 #
-# Cron, weekdays 16:20 IST (after both NSE+MCX have generated the day's
-# signals). Self-tracking per-subgroup via data/calibration_subgroups_state.json
+# Cron, weekdays 20 16 * * 1-5 (16:20 IST directly -- this server's cron runs
+# in the local Asia/Kolkata TZ, not UTC; confirmed 2026-09-05 after this field
+# was originally set assuming UTC and fired 5.5h early), after both NSE+MCX
+# have generated the day's signals. Self-tracking per-subgroup via
+# data/calibration_subgroups_state.json
 # so each subgroup alerts exactly once, the first day it clears 20.
 set -u
 cd "$(dirname "$0")/.." || exit 1

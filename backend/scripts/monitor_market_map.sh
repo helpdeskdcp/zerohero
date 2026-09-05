@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Sample /api/mathematics/market-map + /signal latency and append to a log.
-# Cron (root), every 5 min during market hours IST (03:45-10:00 UTC), Mon-Fri:
-#   */5 3-10 * * 1-5  /root/zerohero/backend/scripts/monitor_market_map.sh
+# Cron (root), every 5 min during market hours, Mon-Fri. This server's cron
+# runs in the system's local Asia/Kolkata TZ, not UTC (confirmed via a live
+# test 2026-09-05) -- the field below is IST directly, not converted from UTC:
+#   */5 8-15 * * 1-5  /root/zerohero/backend/scripts/monitor_market_map.sh
 #
 # Read-only GET, no order path. Flags a WARN line when any call is >3s or !=200.
 set -u
