@@ -115,7 +115,44 @@ def _f(x):
         return None
 
 
-def run(instruments, dfrom, dto, interval, dry, out):
+def _resample_5m(candles):
+    """Aggregate real 1-minute candles -> 5-minute OHLCV+OI on IST 5-min
+    boundaries. This is aggregation of genuine bars, NOT fabrication.
+    candles: Upstox rows [ts, o, h, l, c, v, oi] (any order). Returns rows
+    newest-first-agnostic list of (ts_iso, o, h, l, c, v, oi)."""
+    buckets = {}
+    for row in candles:
+        ts = row[0] if row else None
+        if not ts or len(row) < 5:
+            continue
+        # ts like '2026-04-01T09:17:00+05:30' -> bucket key = date + HH + (MM//5)
+        dpart, tpart = ts[:10], ts[11:19]
+        hh, mm = int(tpart[:2]), int(tpart[3:5])
+        key = (dpart, hh, (mm // 5) * 5)
+        o, h, l, c = _f(row[1]), _f(row[2]), _f(row[3]), _f(row[4])
+        v = _f(row[5]) if len(row) > 5 else None
+        oi = _f(row[6]) if len(row) > 6 else None
+        b = buckets.get(key)
+        if b is None:
+            buckets[key] = [ts, o, h, l, c, (v or 0.0), oi, ts]   # +last_ts for close pick
+        else:
+            b[2] = h if b[2] is None else (h if (h is not None and h > b[2]) else b[2])
+            b[3] = l if b[3] is None else (l if (l is not None and l < b[3]) else b[3])
+            if ts < b[0]:
+                b[0], b[1] = ts, o          # earliest -> open
+            if ts > b[7]:
+                b[7], b[4] = ts, c          # latest -> close, oi
+                b[6] = oi
+            b[5] = (b[5] or 0.0) + (v or 0.0)
+    out = []
+    for (dpart, hh, mm5) in sorted(buckets):
+        b = buckets[(dpart, hh, mm5)]
+        bar_ts = f"{dpart}T{hh:02d}:{mm5:02d}:00+05:30"
+        out.append([bar_ts, b[1], b[2], b[3], b[4], b[5], b[6]])
+    return out
+
+
+def run(instruments, dfrom, dto, interval, dry, out, resample=None):
     p = lambda *a: print(*a, file=out)
     h = U.auth_health()
     p(f"[auth] token_kind={h['token_kind']} valid={h['access_token_valid']} "
@@ -127,8 +164,13 @@ def run(instruments, dfrom, dto, interval, dry, out):
         p(f"[STOP] Historical Data API not available: {h['historical_data_api']}")
         return 2
 
-    wdays = WINDOW_DAYS[interval]
-    tf = IV_TF[interval]
+    # Upstox v2 historical-candle supports only 1minute / 30minute / day.
+    # For 5m we fetch 1minute and resample locally (real aggregation).
+    fetch_iv = "1minute" if resample == "5m" else interval
+    tf = "5m" if resample == "5m" else IV_TF[interval]
+    ds = ("upstox_1m_resampled_5m" if resample == "5m"
+          else f"upstox_historical_candle_v2:{interval}")
+    wdays = WINDOW_DAYS[fetch_iv]
     OUT.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB)
     con.executescript(SCHEMA)
@@ -138,8 +180,8 @@ def run(instruments, dfrom, dto, interval, dry, out):
     for name in instruments:
         ik, exch, itype = PRESETS.get(name, (name, "NSE", "INDEX"))
         sym = name if name in PRESETS else ik
-        ds = f"upstox_historical_candle_v2:{interval}"
-        p(f"\n=== {sym}  ({ik})  {interval}  {dfrom}..{dto} ===")
+        p(f"\n=== {sym}  ({ik})  {tf}  {dfrom}..{dto}"
+          f"{'  (fetch 1m -> resample 5m)' if resample == '5m' else ''} ===")
         latest = None
         for w_from, w_to in _windows(dfrom, dto, wdays):
             tot["windows"] += 1
@@ -147,11 +189,13 @@ def run(instruments, dfrom, dto, interval, dry, out):
                 p(f"  [dry] window {w_from}..{w_to}")
                 continue
             time.sleep(PER_CALL_SLEEP)
-            r = U.get_historical_candles(ik, interval, w_to, w_from)
+            r = U.get_historical_candles(ik, fetch_iv, w_to, w_from)
             _preserve(con, r)
             if r["http_status"] != 200 or not r.get("json"):
                 p(f"  {w_from}..{w_to}: HTTP {r['http_status']}"); tot["http_err"] += 1; continue
             candles = (r["json"].get("data") or {}).get("candles") or []
+            if resample == "5m":
+                candles = _resample_5m(candles)
             tot["candles"] += len(candles)
             rows = []
             for row in candles:
@@ -197,7 +241,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--instrument", action="append",
                     help="repeatable: NIFTY | BANKNIFTY | a raw Upstox instrument_key. Default NIFTY+BANKNIFTY.")
-    ap.add_argument("--interval", default="1minute", choices=list(WINDOW_DAYS))
+    ap.add_argument("--interval", default="1minute", choices=list(WINDOW_DAYS),
+                    help="Upstox v2 historical supports 1minute / 30minute / day only")
+    ap.add_argument("--resample", choices=("5m",), default=None,
+                    help="fetch 1minute and aggregate locally to this timeframe (real bars, not fabricated)")
     ap.add_argument("--from", dest="dfrom", default=None, help="YYYY-MM-DD (default: --to minus --days)")
     ap.add_argument("--to", dest="dto", default=None, help="YYYY-MM-DD (default: today)")
     ap.add_argument("--days", type=int, default=30, help="lookback when --from omitted (default 30)")
@@ -206,7 +253,7 @@ def main():
     dto = date.fromisoformat(a.dto) if a.dto else date.today()
     dfrom = date.fromisoformat(a.dfrom) if a.dfrom else (dto - timedelta(days=a.days))
     insts = a.instrument or ["NIFTY", "BANKNIFTY"]
-    sys.exit(run(insts, dfrom, dto, a.interval, a.dry_run, sys.stdout))
+    sys.exit(run(insts, dfrom, dto, a.interval, a.dry_run, sys.stdout, resample=a.resample))
 
 
 if __name__ == "__main__":
