@@ -246,3 +246,67 @@ Results (all 3–4 captured sessions, `reliable=False` throughout):
 the conclusion. No edge, no config change, nothing armed. The detectors and
 stops are in place as tunable levers for when ≥10 clean sessions across
 regimes exist.**
+
+---
+
+## 7. Composite-setup ablation A–G (2026-09-06) — RESEARCH ONLY
+
+`backend/scripts/orderflow_composite_ablation.py` — standalone, no production
+path (imports only pure helpers + the read-only `market_hub` / `premium_walk`).
+Tests whether **sideways compression + abnormal range/volume spike + rejection
+candle + breakout confirmation (+ index-profile value-area break)** has an edge
+vs the isolated triggers.
+
+Strict methodology, per operator: completed candles only; every look-back is
+causal (`bars[:idx]`), including the **developing** volume profile used by gate
+G; thresholds swept (spike 2 / 2.5 / 3×, comp_lb 5 / 8, comp_x 1.5 / 2.0 / 2.5,
+volume filter on/off) as sensitivity analysis, **not** loosened to raise the
+signal count; compression kept strict. Premium basis (P&L re-priced on the
+captured ATM option; thin-quote windows dropped). Edge bar: **≥10 independent
+sessions AND ≥50 trades, across regimes, walk-forward stable.**
+
+Ablation: A spike-only · B hammer-only · C sideways+spike · D sideways+hammer ·
+E sideways+spike+hammer · F = E + breakout confirmation · G = F + index-profile
+value-area break.
+
+### Result — the composite essentially does not occur in the captured data
+
+| variant | NIFTY trades | NATGAS trades | CRUDE trades |
+|---------|:-----------:|:-------------:|:------------:|
+| A spike-only  | 1 | 48–192 | 16–90 |
+| B hammer-only | 44 | 27–114 | 15–96 |
+| C sideways+spike        | **0** (all 36 combos) | 1–9  | 1–14 |
+| D sideways+hammer       | 1–2 | 1–4  | 1–5  |
+| E +rejection            | **0** | 1    | **0** |
+| F +confirmation         | **0** | 1    | **0** |
+| G +index-profile gate   | **0** (all 36 combos) | **0** (all) | **0** (all) |
+
+- The **profile gate itself works** (fires 2–24×/session in isolation) — G is
+  0 because requiring compression AND ≥2× expansion AND wick-rejection AND a
+  later-bar confirmation AND a developing-VA break on the *same* trigger candle
+  never co-occurs in 4 sessions. Every component is sound; the conjunction is
+  simply too selective to sample here.
+- The only variants with a real trade count are the **isolated** A and B. Their
+  best positive-expectancy configs do **not** hold up:
+  - CRUDE A (spike 3×): n=16, exp +11.5 — but session 09-02 was −96.6 (0 % win);
+    nominal walk-forward train exp −32 vs test exp +22 (opposite signs).
+  - NIFTY B (hammer): n=44, exp +2.3 — but 09-04 net −32 (exp −2.0), maxDD −45.
+  - NATGAS B: n=27, PF 6.5 but exp only +0.34 (tiny absolute); PF inflated by a
+    single session (09-03 PF 15, asym 14 — small-sample noise).
+
+### Verdict
+
+| target | classification | why |
+|--------|----------------|-----|
+| **Composite (C–G, the thing asked)** | **(4) data / artifact — insufficient occurrences** | 0–4 trades in 4 sessions; cannot distinguish "no edge" from "rare but real". |
+| **Isolated A / B** | **(3) no established edge** (charitably (2) for B) | positive-looking configs fail across sessions and the nominal train/test split; < 10 sessions, mostly < 50 trades, ≤ 2 regimes. |
+
+**No setup reaches a statistically or operationally meaningful edge.** Per the
+operator's instruction, **production behaviour is left unchanged** and **no
+pattern is enabled for live trading.** Re-run the ablation when ≥ 10
+independent sessions across regimes have been captured:
+
+```
+cd backend && python scripts/orderflow_composite_ablation.py
+python scripts/orderflow_composite_ablation.py --symbols NIFTY --comp-x 1.5,2,2.5,3
+```
