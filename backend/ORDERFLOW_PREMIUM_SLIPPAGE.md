@@ -409,3 +409,51 @@ pattern is enabled; no live orders armed.** The concrete leads to re-test once
 cd backend && python scripts/orderflow_sequence_research.py
 python scripts/orderflow_sequence_research.py --symbols CRUDEOIL
 ```
+
+---
+
+## 9. Per-spike event ledger (2026-09-06) — DESCRIPTIVE ONLY
+
+`backend/scripts/orderflow_spike_ledger.py` walks the operator's per-spike
+diagnostic chain and emits one CSV row per abnormal-spike event
+(`backend/data/orderflow_spike_ledger.csv`, 930 rows over the 4 captured
+sessions). Columns: price level (close/high/low), nearest option strike +
+its LTP + OI + 5-min OI delta, developing-profile location + distances to
+POC/VAH/VAL, `vol_x` / `range_x` / range percentile, whether a prior level
+was broken (which, by how many pts), post-break acceptance vs rejection,
+next-candle direction/body/continuation, whether structure formed within
+3 bars, the hypothetical entry (S0 spike-close / S2 rejection-close) with a
+structural SL each, MFE in R **capped at that SL**, SL-hit bar offset, and
+the distance to the next major S/R in R.
+
+**No expectancy, no PF, no verdict, no threshold tuning** — permissive
+capture (`rel_range >= 1.8` OR `vol_x >= 1.8`), all metrics in the CSV so any
+stricter definition can be applied afterwards. Honours the "wait for more
+sessions" hold.
+
+Descriptive picture over the 4 sessions (structural / tight SL):
+
+| | NIFTY | NATGAS | CRUDE |
+|--|------:|-------:|------:|
+| spike bar-events | 14 | 167 | 153 |
+| broke a prior level | 54 % | 57 % | 51 % |
+|  ...of which acceptance / rejection | 38 % / 33 % | 47 % / 27 % | 46 % / 21 % |
+| structure formed ≤ 3 bars | 13 % | 9 % | 9 % |
+| logical-SL hit ≤ 2 bars | 51 % | 52 % | 53 % |
+| SL hit before +1R | 26 % | 39 % | 40 % |
+| **MFE in R (capped at SL): median** | **1.51** | **1.17** | **1.29** |
+|  ...≥ 3R | 36 % | 27 % | 32 % |
+| next major S/R distance: median R | 1.87 | 2.0 | 3.14 |
+| OI 5m-delta (median, where captured) | ~0 | +38,750 | +1,000 |
+
+Consistent with §8: median reachable excursion ≈ 1.2–1.5R, ≈ 30–40 % of
+events stopped out before +1R, ≈ 27–36 % reach 3R, and there is typically
+~2R of room to the next level — so a ~1.5–2R target remains the indicated
+direction. Spikes break levels slightly more than half the time and are
+accepted more often than rejected (mild continuation bias). NATGAS spikes
+coincide with large OI additions; NIFTY OI is effectively flat on the 5-min
+window. Profile-location vs MFE shows no strong edge at this n.
+
+```
+cd backend && python scripts/orderflow_spike_ledger.py            # rebuild the CSV + summary
+```
