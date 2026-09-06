@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS normalized_option_bars (
   open REAL, high REAL, low REAL, close REAL,
   volume           REAL,             -- NULL if the API omitted it (never fabricated)
   open_interest    REAL,             -- NULL if the API omitted it (never fabricated)
-  source           TEXT NOT NULL,    -- 'upstox_expired_instruments_v2'
+  source           TEXT NOT NULL,    -- 'upstox_expired_options'
   download_timestamp TEXT NOT NULL,
   source_timestamp TEXT,             -- raw candle timestamp string
   quality_flag     TEXT NOT NULL,    -- OK | NULL_VOL | NULL_OI | NULL_VOL_OI | BAD_OHLC | NULL_PRICE
@@ -212,7 +212,7 @@ def run(underlyings, dfrom, dto, interval, max_exp, max_ct, dry, big_ok, out):
                     if fl == "BAD_OHLC":
                         totals["bad_ohlc"] += 1
                     rows.append((ts, u, exch, eik, expiry, _safe_float(strike), otype, interval,
-                                 o, h, l, c, v, oi, "upstox_expired_instruments_v2", _now(), ts, fl))
+                                 o, h, l, c, v, oi, "upstox_expired_options", _now(), ts, fl))
                 con.executemany(
                     "INSERT OR IGNORE INTO normalized_option_bars(timestamp,underlying,exchange,instrument_key,"
                     "expiry,strike,option_type,interval,open,high,low,close,volume,open_interest,source,"
