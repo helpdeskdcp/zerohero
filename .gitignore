@@ -39,6 +39,7 @@ backend/data/orderflow_h1h7_perf_cron_report.txt
 # H1/H7 + spike research on option premium -- per-event CSV artifacts (regenerated on demand)
 backend/data/orderflow_h1h7_spike_options.csv
 backend/data/orderflow_spike_options_legs.csv
+backend/data/orderflow_l2_imbalance_probe.csv
 
 # Upstox expired-instruments research store (raw API responses + normalized DB): local only
 backend/data/historical/upstox/

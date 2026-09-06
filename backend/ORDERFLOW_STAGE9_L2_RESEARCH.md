@@ -189,6 +189,23 @@ conclusion, and the shadow-mode `H1H7StateEngine` integration plan (A–E,
 presented separately, not yet built) is the correct next *application* step —
 independent of Stage-9.
 
+### 6a. Follow-up — "200 % L2 imbalance confirmation gate" (2026-09-07)
+
+A research-first probe of the specific gate `buy-pressure / sell-pressure ≥ 2.0`
+was run (`scripts/orderflow_l2_imbalance_probe.py`, read-only; report
+`ORDERFLOW_L2_IMBALANCE_GATE.md`). Outcome, consistent with this audit:
+
+- **Gate as specified = CANNOT IMPLEMENT.** It needs *aggressive-buy /
+  aggressive-sell* classified flow — `UNOBSERVABLE`, never synthesised.
+- **Passive-book variant** (`bid_qty/ask_qty`, `Σ₅ depth`, `tot_buy/tot_sell` —
+  genuine fields) was built as a read-only component with a persistence
+  requirement (≥ P consecutive ~30 s snapshots) and the full metric set
+  (ratio, direction, persistence, MFE, MAE, target/SL hit, time-to-target/SL).
+  On the 3 usable same-week futures sessions it shows a small, threshold-flat,
+  MAE-neutral lift that **cannot be walk-forward validated** → **REJECTED at the
+  feasibility gate** (untestable, not disproven). 200 % is not a special value
+  (threshold sweep flat); more persistence does not help.
+
 ### 7. PRODUCTION TRADING BEHAVIOUR — CONFIRMATION
 **Unchanged.** This stage added exactly one file — this Markdown report. No
 change to any engine, adapter, service, router, schema, config, or frozen
