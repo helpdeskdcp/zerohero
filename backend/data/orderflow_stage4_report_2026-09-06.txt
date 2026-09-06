@@ -1,0 +1,355 @@
+wrote 1222 rows -> data/orderflow_stage4_events.csv
+wrote report -> data/orderflow_stage4_report_2026-09-06.txt
+orderflow STAGE-4 -- option-premium re-walk + public concept mapping. RESEARCH ONLY, no production change, no score, no orders.
+
+========================================================================================================================
+[§2/§16] PUBLIC CONCEPT -> OBSERVABLE DATA MAPPING  (public descriptions only; no course material)
+========================================================================================================================
+
+  A Market Profile (POC/VAH/VAL)
+    observable : developing time-price value area
+    source     : 5m bars (no volume) -> TPO
+    definition : equal-weight-per-bar range histogram, 70% value area, bars[:idx]
+    causal ts  : completed bar
+    hypothesis : spike location vs value predicts continuation/trap
+    proxy level: L2 good proxy
+
+  B Market structure / day types
+    observable : objective session classification
+    source     : 5m bars
+    definition : net move vs range, first-hour range, rotation count, hi/lo reclaim
+    causal ts  : completed bars[:idx]
+    hypothesis : the same spike behaves differently by day type
+    proxy level: L2 good proxy
+
+  C Order flow (aggressor)
+    observable : aggressive buy/sell classified volume
+    source     : NOT AVAILABLE
+    definition : -
+    causal ts  : -
+    hypothesis : -
+    proxy level: L4 UNOBSERVABLE
+
+  D Buyer vs seller pressure
+    observable : option CE vs PE traded-volume + OI change
+    source     : strikes.ce_vol/pe_vol (cumulative), ce_oi/pe_oi
+    definition : diff consecutive cycles -> interval vol; ratio CE/PE; OI delta
+    causal ts  : cycle ts <= bar
+    hypothesis : rising same-side option volume/OI after the spike predicts continuation
+    proxy level: L3 weak proxy
+
+  E Market vs limit orders
+    observable : book pending vs executed
+    source     : zerohero quote_snapshots tot_buy_qty/tot_sell_qty (Sep only, 4 sess)
+    definition : resting-qty skew
+    causal ts  : quote ts
+    hypothesis : book skew adds info
+    proxy level: L3 weak proxy
+
+  F Lifting offer / hitting bid
+    observable : aggressor side of each trade
+    source     : NOT AVAILABLE
+    definition : -
+    causal ts  : -
+    hypothesis : -
+    proxy level: L4 UNOBSERVABLE
+
+  G Balance vs imbalance
+    observable : range/VA/POC contraction then expansion
+    source     : 5m bars + developing VA
+    definition : prior-k range span / (k*ATR); VA-width contraction; POC std; rotations
+    causal ts  : bars[:idx]
+    hypothesis : a balance->imbalance transition precedes continuation
+    proxy level: L1 direct
+
+  H Footprint / price-level distribution
+    observable : volume traded at each price of the underlying
+    source     : NOT AVAILABLE (underlying feed has zero volume)
+    definition : -
+    causal ts  : -
+    hypothesis : -
+    proxy level: L4 UNOBSERVABLE
+
+  I Delta (buy vol - sell vol)
+    observable : signed aggressor volume
+    source     : NOT AVAILABLE for the underlying
+    definition : -
+    causal ts  : -
+    hypothesis : -
+    proxy level: L4 UNOBSERVABLE
+
+  J Diagonal imbalance
+    observable : buy@higher-level vs sell@lower-level (footprint)
+    source     : NOT AVAILABLE
+    definition : -
+    causal ts  : -
+    hypothesis : -
+    proxy level: L4 UNOBSERVABLE
+
+  K Momentum (raw)
+    observable : displacement / range expansion / consecutive closes
+    source     : 5m bars
+    definition : |close-open|/ATR; range/median; run of same-sign closes; POC migration
+    causal ts  : bars[:idx]
+    hypothesis : raw momentum components carry independent info vs the spike
+    proxy level: L1 direct
+
+  L Liquidity / acceptance / rejection
+    observable : close beyond level held vs reclaimed
+    source     : 5m bars + structural levels
+    definition : close vs broken level over the next 1-3 completed bars
+    causal ts  : bars[:idx+w]
+    hypothesis : acceptance vs reclaim splits continuation vs trap (Stage-2/3 core)
+    proxy level: L1 direct
+
+  M Price rotation
+    observable : direction-change count in a window
+    source     : 5m bars
+    definition : sign changes of consecutive close-to-close moves over prior k
+    causal ts  : bars[:idx]
+    hypothesis : high rotation before the spike -> lower continuation
+    proxy level: L1 direct
+
+  N Value area / POC / profile location
+    observable : spike close vs developing VA
+    source     : 5m bars -> TPO
+    definition : loc in {inside_value, near_POC, above_value, below_value}
+    causal ts  : bars[:idx]
+    hypothesis : spike outside value (with acceptance) continues; at POC/edges it fades
+    proxy level: L2 good proxy
+
+  '200% imbalance' (public note)
+    observable : 2:1 relative quantity
+    source     : option CE/PE interval traded volume (proxy, not footprint)
+    definition : CE_vol/PE_vol (dir-adjusted) >= {2.0, 2.5, 3.0} or percentile
+    causal ts  : cycle ts <= bar
+    hypothesis : a >=2x same-side option-volume imbalance around the spike adds predictive value
+    proxy level: L3 weak proxy
+
+######################################################################################################################
+# NIFTY  --  83 CORE trades over 33 sessions (abnormal spike + early-acceptance + reaction stop)
+#   premium re-priced: 83 usable, 0 thin-quote dropped, 0 no ATM series
+######################################################################################################################
+
+[§1 OPTION-PREMIUM RE-WALK + slippage]  (spread 2% round-trip, adverse-continuation fill on stops)
+   MODEL A = Stage-3 CORE, scored on the captured ATM option premium:
+    A [train]                      n=  45 ses=18 cont= 76% trap= 18% | idx E[R]= 0.353 P3R= 33% | PREM E=  -4.27pts win= 20% E_ret= -5.6% capture=-0.699 DD=-192.0
+    A [val]                        n=  22 ses= 8 cont= 82% trap= 14% | idx E[R]= 0.636 P3R= 41% | PREM E=  -3.57pts win= 23% E_ret=  1.4% capture=-0.746 DD=-98.7
+    A [oos]                        n=  16 ses= 7 cont= 81% trap=  6% | idx E[R]=  1.25 P3R= 56% | PREM E=   8.68pts win= 44% E_ret= 15.5% capture=-0.229 DD=-20.3
+    A [POOLED]                     n=  83 ses=33 cont= 78% trap= 14% | idx E[R]= 0.601 P3R= 40% | PREM E=  -1.59pts win= 25% E_ret=  0.3% capture=-0.599 DD=-290.7
+   -> premium capture (median premium pts per index-R pt) = -0.599  (Stage-1 unconditional was ~0.40; the CORE selection does not beat it)
+
+[§14 MODEL B = A + MARKET PROFILE CONTEXT]
+    B [train]                      n=  33 ses=17 cont= 76% trap= 15% | idx E[R]= 0.357 P3R= 33% | PREM E=  -5.05pts win= 15% E_ret= -4.6% capture=-0.868 DD=-166.8
+    B [val]                        n=  18 ses= 8 cont= 83% trap= 11% | idx E[R]= 0.778 P3R= 44% | PREM E=  -3.45pts win= 22% E_ret=  6.2% capture=-0.946 DD=-79.9
+    B [oos]                        n=  14 ses= 6 cont= 79% trap=  7% | idx E[R]= 1.286 P3R= 57% | PREM E=  10.12pts win= 43% E_ret= 18.0% capture=-0.355 DD=-20.3
+    B [POOLED]                     n=  65 ses=31 cont= 78% trap= 12% | idx E[R]= 0.674 P3R= 42% | PREM E=  -1.34pts win= 23% E_ret=  3.3% capture=-0.699 DD=-246.6
+   -> incremental vs A (pooled): dPREM_E = 0.25pts, dP3R = 2pp, n 83->65
+
+[§14 MODEL C = B + ORDER-FLOW PROXY]  (option CE/PE interval-volume imbalance >= 2x in the break direction; L3 proxy)
+    C [train]                      n=   8 ses= 5 cont= 88% trap= 12% | idx E[R]=   1.5 P3R= 62% | PREM E=  -6.69pts win=  0% E_ret= -6.1% capture=-1.129 DD=-53.5
+    C [val]                        n=   2 ses= 2 cont=100% trap=  0% | idx E[R]=   1.0 P3R= 50% | PREM E=   5.13pts win= 50% E_ret= 78.4% capture=21.689 DD=-18.2
+    C [oos]                        n=   9 ses= 4 cont= 67% trap= 11% | idx E[R]= 1.222 P3R= 56% | PREM E=  16.21pts win= 44% E_ret= 28.5% capture=-0.265 DD=-17.2
+    C [POOLED]                     n=  19 ses=11 cont= 79% trap= 10% | idx E[R]= 1.316 P3R= 58% | PREM E=    5.4pts win= 26% E_ret= 19.2% capture=-0.507 DD=-71.7
+   -> incremental vs B (pooled): dPREM_E = 6.74pts, dP3R = 16pp, n 65->19
+
+[§5 IMBALANCE threshold sweep]  option CE/PE interval-volume ratio in the break direction
+   (80/83 trades have an option-volume imbalance reading)
+    imb_dir >= 2.0                 n=  25 ses=15 cont= 76% trap= 16% | idx E[R]= 0.763 P3R= 44% | PREM E=    4.6pts win= 24% E_ret= 14.7% capture=-0.507 DD=-55.0
+    imb_dir >= 2.5                 n=  12 ses=10 cont= 92% trap=  8% | idx E[R]= 1.007 P3R= 50% | PREM E=  10.71pts win= 25% E_ret= 20.5% capture=-0.501 DD=-49.0
+    imb_dir >= 3.0                 n=   2 ses= 2 cont=100% trap=  0% | idx E[R]=  -1.0 P3R=  0% | PREM E=  -2.53pts win=  0% E_ret= -3.2% capture=-0.276 DD=-5.1
+    imb_dir 0.0-1.0                n=  13 ses=13 cont= 85% trap= 15% | idx E[R]= 0.231 P3R= 31% | PREM E=  -1.53pts win= 38% E_ret= -0.5% capture=-0.428 DD=-37.3
+    imb_dir 1.0-1.5                n=  24 ses=17 cont= 83% trap= 12% | idx E[R]= 0.667 P3R= 42% | PREM E=  -4.19pts win= 21% E_ret= -3.0% capture=-0.648 DD=-100.6
+    imb_dir 1.5-2.0                n=  18 ses=12 cont= 67% trap= 17% | idx E[R]= 0.155 P3R= 28% | PREM E=  -7.14pts win= 17% E_ret=-14.6% capture=-1.773 DD=-128.5
+    imb_dir 2.0-+                  n=  25 ses=15 cont= 76% trap= 16% | idx E[R]= 0.763 P3R= 44% | PREM E=    4.6pts win= 24% E_ret= 14.7% capture=-0.507 DD=-55.0
+
+[§9 by MARKET-PROFILE DAY REGIME]  (regime derived from bars[:spike], then the CORE setup tested inside it)
+    FAILED_BREAKDOWN               n=   3 ses= 2 cont=100% trap=  0% | idx E[R]= 0.333 P3R= 33% | PREM E=  -3.88pts win= 33% E_ret= -3.9% capture=-0.985 DD=-18.2
+    FAILED_BREAKOUT                n=  10 ses= 8 cont= 90% trap= 10% | idx E[R]= 0.667 P3R= 40% | PREM E=  -6.31pts win= 10% E_ret= -3.0% capture=-1.021 DD=-63.1
+    OPENING_DRIVE                  n=  38 ses=20 cont= 74% trap= 16% | idx E[R]= 0.582 P3R= 40% | PREM E=   -1.7pts win= 21% E_ret= -0.6% capture=-0.525 DD=-173.4
+    TRENDING                       n=  32 ses=18 cont= 78% trap= 16% | idx E[R]= 0.627 P3R= 41% | PREM E=   0.25pts win= 34% E_ret=  2.9% capture=-0.437 DD=-51.6
+
+[§8 BALANCE -> IMBALANCE]  prior-8-bar range contraction quartiles (lower = more coiled; NOT a gate)
+    coiled <=Q1(0.33)              n=  21 ses=20 cont= 76% trap= 10% | idx E[R]= 0.333 P3R= 33% | PREM E=  -4.45pts win= 14% E_ret= -7.7% capture=-0.482 DD=-94.8
+    Q1-Q2                          n=  21 ses=14 cont= 86% trap= 14% | idx E[R]= 0.905 P3R= 48% | PREM E=  -5.56pts win= 29% E_ret= -5.1% capture=-0.892 DD=-123.6
+    Q2-Q3                          n=  21 ses=15 cont= 81% trap= 19% | idx E[R]= 0.565 P3R= 38% | PREM E=   3.73pts win= 24% E_ret= 12.6% capture=-0.599 DD=-67.4
+    loose >Q3(0.57)                n=  20 ses=13 cont= 70% trap= 15% | idx E[R]=   0.6 P3R= 40% | PREM E=   0.01pts win= 35% E_ret=  1.6% capture=-0.635 DD=-43.3
+
+[§11 LIQUIDITY / TRAP]  reclaim of the broken level within 3 candles (feature, not entry gate)
+    reclaim within 3               n=  14 ses=12 cont=  0% trap= 86% | idx E[R]=-0.429 P3R= 14% | PREM E=  -7.13pts win= 14% E_ret= -5.9% capture=-1.386 DD=-99.8
+    no reclaim within 3            n=  69 ses=31 cont= 94% trap=  0% | idx E[R]=  0.81 P3R= 45% | PREM E=  -0.46pts win= 28% E_ret=  1.6% capture=-0.507 DD=-197.0
+    n1 agrees                      n=  45 ses=28 cont= 87% trap= 11% | idx E[R]= 0.427 P3R= 36% | PREM E=   1.61pts win= 29% E_ret=  3.3% capture=-0.287 DD=-90.7
+    n1 disagrees                   n=  38 ses=24 cont= 68% trap= 18% | idx E[R]= 0.807 P3R= 45% | PREM E=  -5.37pts win= 21% E_ret= -3.2% capture=-1.891 DD=-212.2
+
+[§7/§13 INCREMENTAL-INFORMATION SUMMARY]
+    MODEL A  (spike + early-acceptance + reaction stop): n=83 prem_E=-1.59pts win=25% E_ret=0.3% P3R=40% DD=-290.7pts capture=-0.599
+    MODEL B  (+ market-profile location): n=65 prem_E=-1.34pts win=23% E_ret=3.3% P3R=42% DD=-246.6pts capture=-0.699
+    MODEL C  (+ option-volume imbalance >=2x): n=19 prem_E=5.4pts win=26% E_ret=19.2% P3R=58% DD=-71.7pts capture=-0.507
+    -> smallest model that is not beaten out-of-sample: MODEL B  (more layers only justified if OOS improves without materially worse drawdown)
+
+######################################################################################################################
+# NATURALGAS  --  544 CORE trades over 35 sessions (abnormal spike + early-acceptance + reaction stop)
+#   premium re-priced: 541 usable, 2 thin-quote dropped, 1 no ATM series
+######################################################################################################################
+
+[§1 OPTION-PREMIUM RE-WALK + slippage]  (spread 2% round-trip, adverse-continuation fill on stops)
+   MODEL A = Stage-3 CORE, scored on the captured ATM option premium:
+    A [train]                      n= 288 ses=19 cont= 68% trap= 16% | idx E[R]= 0.531 P3R= 38% | PREM E=   -0.2pts win= 18% E_ret= -1.1% capture=-1.059 DD=-57.4
+    A [val]                        n= 115 ses= 8 cont= 66% trap= 16% | idx E[R]= 0.712 P3R= 43% | PREM E=   -0.1pts win= 26% E_ret= -1.0% capture=-0.845 DD=-12.5
+    A [oos]                        n= 138 ses= 8 cont= 62% trap= 20% | idx E[R]= 0.502 P3R= 37% | PREM E=  -0.22pts win= 20% E_ret= -2.7% capture=-1.181 DD=-31.5
+    A [POOLED]                     n= 541 ses=35 cont= 66% trap= 17% | idx E[R]= 0.562 P3R= 39% | PREM E=  -0.18pts win= 20% E_ret= -1.5% capture=-1.059 DD=-99.0
+   -> premium capture (median premium pts per index-R pt) = -1.059  (Stage-1 unconditional was ~0.40; the CORE selection does not beat it)
+
+[§14 MODEL B = A + MARKET PROFILE CONTEXT]
+    B [train]                      n= 217 ses=19 cont= 68% trap= 15% | idx E[R]= 0.423 P3R= 35% | PREM E=   -0.2pts win= 18% E_ret= -0.7% capture=-1.059 DD=-43.8
+    B [val]                        n=  78 ses= 8 cont= 65% trap= 13% | idx E[R]= 0.692 P3R= 42% | PREM E=  -0.12pts win= 24% E_ret= -1.2% capture=-0.834 DD=-10.7
+    B [oos]                        n=  99 ses= 8 cont= 62% trap= 20% | idx E[R]= 0.627 P3R= 40% | PREM E=  -0.22pts win= 20% E_ret= -2.7% capture=-1.3 DD=-22.7
+    B [POOLED]                     n= 394 ses=35 cont= 66% trap= 16% | idx E[R]= 0.528 P3R= 38% | PREM E=  -0.19pts win= 20% E_ret= -1.3% capture=-1.059 DD=-74.7
+   -> incremental vs A (pooled): dPREM_E = -0.01pts, dP3R = -1pp, n 541->394
+
+[§14 MODEL C = B + ORDER-FLOW PROXY]  (option CE/PE interval-volume imbalance >= 2x in the break direction; L3 proxy)
+    C [train]                      n=  35 ses=13 cont= 71% trap= 11% | idx E[R]= 0.143 P3R= 29% | PREM E=  -0.42pts win= 14% E_ret= -4.6% capture=-1.347 DD=-14.6
+    C [val]                        n=  15 ses= 4 cont= 53% trap= 20% | idx E[R]= 0.333 P3R= 33% | PREM E=  -0.25pts win= 13% E_ret= -3.4% capture=-1.871 DD=-3.8
+    C [oos]                        n=  21 ses= 5 cont= 71% trap= 10% | idx E[R]= 0.524 P3R= 38% | PREM E=  -0.26pts win= 14% E_ret= -7.4% capture=-0.744 DD=-5.7
+    C [POOLED]                     n=  71 ses=22 cont= 68% trap= 13% | idx E[R]= 0.296 P3R= 32% | PREM E=  -0.34pts win= 14% E_ret= -5.1% capture=-1.347 DD=-23.9
+   -> incremental vs B (pooled): dPREM_E = -0.15pts, dP3R = -5pp, n 394->71
+
+[§5 IMBALANCE threshold sweep]  option CE/PE interval-volume ratio in the break direction
+   (500/544 trades have an option-volume imbalance reading)
+    imb_dir >= 2.0                 n=  85 ses=26 cont= 71% trap= 13% | idx E[R]= 0.271 P3R= 32% | PREM E=  -0.31pts win= 14% E_ret= -5.0% capture=-1.225 DD=-26.7
+    imb_dir >= 2.5                 n=  45 ses=25 cont= 76% trap=  7% | idx E[R]= 0.067 P3R= 27% | PREM E=  -0.35pts win= 13% E_ret= -7.6% capture=-1.225 DD=-15.6
+    imb_dir >= 3.0                 n=  22 ses=14 cont= 73% trap=  4% | idx E[R]= 0.091 P3R= 27% | PREM E=  -0.33pts win=  4% E_ret= -7.4% capture=-1.594 DD=-7.2
+    imb_dir 0.0-1.0                n= 203 ses=31 cont= 66% trap= 15% | idx E[R]= 0.793 P3R= 44% | PREM E=  -0.14pts win= 23% E_ret= -1.0% capture=-1.157 DD=-28.5
+    imb_dir 1.0-1.5                n= 134 ses=30 cont= 63% trap= 19% | idx E[R]= 0.631 P3R= 40% | PREM E=  -0.12pts win= 22% E_ret=  1.2% capture=-0.74 DD=-16.5
+    imb_dir 1.5-2.0                n=  78 ses=31 cont= 60% trap= 20% | idx E[R]= 0.296 P3R= 32% | PREM E=  -0.22pts win= 17% E_ret= -3.2% capture=-1.17 DD=-17.5
+    imb_dir 2.0-+                  n=  85 ses=26 cont= 71% trap= 13% | idx E[R]= 0.271 P3R= 32% | PREM E=  -0.31pts win= 14% E_ret= -5.0% capture=-1.225 DD=-26.7
+
+[§9 by MARKET-PROFILE DAY REGIME]  (regime derived from bars[:spike], then the CORE setup tested inside it)
+    CHOP                           n=   1 ses= 1 cont=100% trap=  0% | idx E[R]=   0.0 P3R=  0% | PREM E=   1.65pts win=100% E_ret= 17.5% capture=0.997 DD=0.0
+    FAILED_BREAKDOWN               n=  62 ses=19 cont= 61% trap= 16% | idx E[R]= 0.548 P3R= 39% | PREM E=  -0.23pts win= 14% E_ret= -4.4% capture=-1.217 DD=-14.9
+    FAILED_BREAKOUT                n= 178 ses=30 cont= 66% trap= 20% | idx E[R]= 0.388 P3R= 34% | PREM E=  -0.14pts win= 22% E_ret=  0.4% capture=-0.906 DD=-26.3
+    OPENING_DRIVE                  n=  33 ses=17 cont= 67% trap= 12% | idx E[R]= 0.697 P3R= 42% | PREM E=  -0.22pts win= 15% E_ret= -2.2% capture=-1.13 DD=-7.4
+    TRENDING                       n= 267 ses=34 cont= 67% trap= 15% | idx E[R]= 0.667 P3R= 41% | PREM E=  -0.21pts win= 21% E_ret= -2.1% capture=-1.088 DD=-54.8
+
+[§8 BALANCE -> IMBALANCE]  prior-8-bar range contraction quartiles (lower = more coiled; NOT a gate)
+    coiled <=Q1(0.50)              n= 161 ses=34 cont= 66% trap= 13% | idx E[R]= 0.743 P3R= 44% | PREM E=   -0.2pts win= 22% E_ret= -2.3% capture=-1.16 DD=-31.6
+    Q1-Q2                          n= 111 ses=34 cont= 57% trap= 22% | idx E[R]= 0.307 P3R= 32% | PREM E=  -0.24pts win= 14% E_ret=  0.9% capture=-1.261 DD=-26.4
+    Q2-Q3                          n= 136 ses=32 cont= 68% trap= 16% | idx E[R]= 0.493 P3R= 37% | PREM E=  -0.17pts win= 18% E_ret= -2.9% capture=-1.064 DD=-26.2
+    loose >Q3(0.94)                n= 133 ses=33 cont= 72% trap= 17% | idx E[R]= 0.626 P3R= 40% | PREM E=  -0.13pts win= 26% E_ret= -1.0% capture=-0.771 DD=-17.9
+
+[§11 LIQUIDITY / TRAP]  reclaim of the broken level within 3 candles (feature, not entry gate)
+    reclaim within 3               n= 112 ses=34 cont=  0% trap= 81% | idx E[R]=-0.208 P3R= 20% | PREM E=  -0.42pts win=  7% E_ret= -1.1% capture=-2.297 DD=-46.6
+    no reclaim within 3            n= 429 ses=35 cont= 83% trap=  0% | idx E[R]= 0.763 P3R= 44% | PREM E=  -0.12pts win= 24% E_ret= -1.6% capture=-0.766 DD=-53.1
+    n1 agrees                      n= 313 ses=34 cont= 75% trap= 12% | idx E[R]= 0.186 P3R= 29% | PREM E=  -0.11pts win= 28% E_ret= -1.5% capture=-0.543 DD=-33.7
+    n1 disagrees                   n= 228 ses=34 cont= 54% trap= 24% | idx E[R]= 1.078 P3R= 52% | PREM E=  -0.29pts win= 11% E_ret= -1.5% capture=-2.376 DD=-65.2
+
+[§7/§13 INCREMENTAL-INFORMATION SUMMARY]
+    MODEL A  (spike + early-acceptance + reaction stop): n=541 prem_E=-0.18pts win=20% E_ret=-1.5% P3R=39% DD=-99.0pts capture=-1.059
+    MODEL B  (+ market-profile location): n=394 prem_E=-0.19pts win=20% E_ret=-1.3% P3R=38% DD=-74.7pts capture=-1.059
+    MODEL C  (+ option-volume imbalance >=2x): n=71 prem_E=-0.34pts win=14% E_ret=-5.1% P3R=32% DD=-23.9pts capture=-1.347
+    -> smallest model that is not beaten out-of-sample: MODEL A  (more layers only justified if OOS improves without materially worse drawdown)
+
+######################################################################################################################
+# CRUDEOIL  --  595 CORE trades over 38 sessions (abnormal spike + early-acceptance + reaction stop)
+#   premium re-priced: 583 usable, 11 thin-quote dropped, 1 no ATM series
+######################################################################################################################
+
+[§1 OPTION-PREMIUM RE-WALK + slippage]  (spread 2% round-trip, adverse-continuation fill on stops)
+   MODEL A = Stage-3 CORE, scored on the captured ATM option premium:
+    A [train]                      n= 351 ses=21 cont= 65% trap= 19% | idx E[R]= 0.589 P3R= 40% | PREM E=  -8.13pts win= 20% E_ret= -2.1% capture=-1.075 DD=-3073.6
+    A [val]                        n= 129 ses= 9 cont= 64% trap= 19% | idx E[R]= 0.318 P3R= 33% | PREM E=  -7.09pts win= 16% E_ret= -1.3% capture=-1.193 DD=-923.7
+    A [oos]                        n= 103 ses= 8 cont= 70% trap= 16% | idx E[R]= 0.433 P3R= 35% | PREM E=  -7.42pts win= 16% E_ret= -2.1% capture=-1.077 DD=-764.1
+    A [POOLED]                     n= 583 ses=38 cont= 66% trap= 18% | idx E[R]= 0.501 P3R= 37% | PREM E=  -7.78pts win= 19% E_ret= -1.9% capture=-1.103 DD=-4747.5
+   -> premium capture (median premium pts per index-R pt) = -1.103  (Stage-1 unconditional was ~0.40; the CORE selection does not beat it)
+
+[§14 MODEL B = A + MARKET PROFILE CONTEXT]
+    B [train]                      n= 244 ses=21 cont= 65% trap= 17% | idx E[R]= 0.578 P3R= 39% | PREM E=  -7.38pts win= 22% E_ret= -1.9% capture=-1.052 DD=-1959.6
+    B [val]                        n=  94 ses= 9 cont= 67% trap= 16% | idx E[R]=  0.17 P3R= 29% | PREM E=   -6.6pts win= 15% E_ret=  0.0% capture=-1.186 DD=-621.2
+    B [oos]                        n=  78 ses= 8 cont= 73% trap= 12% | idx E[R]= 0.469 P3R= 36% | PREM E=  -7.28pts win= 17% E_ret= -2.0% capture=-1.092 DD=-568.1
+    B [POOLED]                     n= 416 ses=38 cont= 67% trap= 16% | idx E[R]= 0.465 P3R= 36% | PREM E=  -7.19pts win= 19% E_ret= -1.5% capture=-1.074 DD=-3142.7
+   -> incremental vs A (pooled): dPREM_E = 0.59pts, dP3R = -1pp, n 583->416
+
+[§14 MODEL C = B + ORDER-FLOW PROXY]  (option CE/PE interval-volume imbalance >= 2x in the break direction; L3 proxy)
+    C [train]                      n=  72 ses=21 cont= 64% trap= 15% | idx E[R]= 0.681 P3R= 42% | PREM E=  -7.74pts win= 22% E_ret= -1.4% capture=-0.959 DD=-658.7
+    C [val]                        n=  16 ses= 7 cont= 81% trap=  6% | idx E[R]= 0.812 P3R= 44% | PREM E=  -5.02pts win= 19% E_ret= -1.4% capture=-2.219 DD=-80.4
+    C [oos]                        n=  11 ses= 2 cont= 82% trap=  0% | idx E[R]=-0.091 P3R= 18% | PREM E=  -7.74pts win=  9% E_ret= -2.1% capture=-1.37 DD=-89.9
+    C [POOLED]                     n=  99 ses=30 cont= 69% trap= 12% | idx E[R]= 0.617 P3R= 39% | PREM E=   -7.3pts win= 20% E_ret= -1.4% capture=-1.106 DD=-829.0
+   -> incremental vs B (pooled): dPREM_E = -0.11pts, dP3R = 3pp, n 416->99
+
+[§5 IMBALANCE threshold sweep]  option CE/PE interval-volume ratio in the break direction
+   (541/595 trades have an option-volume imbalance reading)
+    imb_dir >= 2.0                 n= 114 ses=31 cont= 69% trap= 14% | idx E[R]= 0.614 P3R= 40% | PREM E=  -8.41pts win= 18% E_ret= -1.7% capture=-1.181 DD=-1053.1
+    imb_dir >= 2.5                 n=  68 ses=22 cont= 71% trap= 13% | idx E[R]= 0.574 P3R= 38% | PREM E= -10.07pts win= 16% E_ret= -2.0% capture=-2.024 DD=-699.3
+    imb_dir >= 3.0                 n=  48 ses=19 cont= 67% trap= 17% | idx E[R]= 0.712 P3R= 42% | PREM E=  -10.3pts win= 15% E_ret= -2.1% capture=-2.506 DD=-501.1
+    imb_dir 0.0-1.0                n= 159 ses=33 cont= 60% trap= 20% | idx E[R]= 0.372 P3R= 34% | PREM E=  -6.45pts win= 21% E_ret= -2.1% capture=-0.852 DD=-1093.6
+    imb_dir 1.0-1.5                n= 180 ses=34 cont= 68% trap= 17% | idx E[R]= 0.517 P3R= 38% | PREM E=  -7.77pts win= 14% E_ret= -1.2% capture=-1.238 DD=-1458.7
+    imb_dir 1.5-2.0                n=  87 ses=30 cont= 66% trap= 23% | idx E[R]= 0.701 P3R= 42% | PREM E=  -8.42pts win= 22% E_ret= -2.8% capture=-1.309 DD=-805.2
+    imb_dir 2.0-+                  n= 114 ses=31 cont= 69% trap= 14% | idx E[R]= 0.614 P3R= 40% | PREM E=  -8.41pts win= 18% E_ret= -1.7% capture=-1.181 DD=-1053.1
+
+[§9 by MARKET-PROFILE DAY REGIME]  (regime derived from bars[:spike], then the CORE setup tested inside it)
+    FAILED_BREAKDOWN               n=  66 ses=22 cont= 58% trap= 23% | idx E[R]= 0.964 P3R= 48% | PREM E=  -5.14pts win= 21% E_ret= -1.0% capture=-1.035 DD=-394.3
+    FAILED_BREAKOUT                n= 170 ses=32 cont= 65% trap= 19% | idx E[R]= 0.576 P3R= 39% | PREM E=  -7.65pts win= 16% E_ret= -2.8% capture=-1.083 DD=-1480.0
+    OPENING_DRIVE                  n=  56 ses=26 cont= 68% trap= 16% | idx E[R]= 0.429 P3R= 36% | PREM E=  -5.79pts win= 21% E_ret= -2.0% capture=-0.907 DD=-326.3
+    TRENDING                       n= 291 ses=37 cont= 68% trap= 17% | idx E[R]= 0.366 P3R= 34% | PREM E=  -8.83pts win= 19% E_ret= -1.6% capture=-1.201 DD=-2630.5
+
+[§8 BALANCE -> IMBALANCE]  prior-8-bar range contraction quartiles (lower = more coiled; NOT a gate)
+    coiled <=Q1(0.47)              n= 144 ses=37 cont= 65% trap= 17% | idx E[R]= 0.476 P3R= 37% | PREM E=  -6.66pts win= 21% E_ret= -2.5% capture=-1.007 DD=-963.7
+    Q1-Q2                          n= 153 ses=37 cont= 65% trap= 22% | idx E[R]= 0.442 P3R= 36% | PREM E=  -8.89pts win= 17% E_ret= -2.0% capture=-1.415 DD=-1452.8
+    Q2-Q3                          n= 138 ses=36 cont= 64% trap= 15% | idx E[R]= 0.391 P3R= 35% | PREM E=  -8.29pts win= 17% E_ret= -2.3% capture=-1.128 DD=-1247.7
+    loose >Q3(0.85)                n= 148 ses=33 cont= 70% trap= 18% | idx E[R]= 0.689 P3R= 41% | PREM E=  -7.23pts win= 20% E_ret= -0.9% capture=-1.141 DD=-1135.9
+
+[§11 LIQUIDITY / TRAP]  reclaim of the broken level within 3 candles (feature, not entry gate)
+    reclaim within 3               n= 144 ses=37 cont=  0% trap= 74% | idx E[R]=-0.267 P3R= 18% | PREM E=  -13.3pts win= 10% E_ret= -4.6% capture=-2.493 DD=-1941.1
+    no reclaim within 3            n= 439 ses=38 cont= 88% trap=  0% | idx E[R]= 0.753 P3R= 44% | PREM E=  -5.96pts win= 22% E_ret= -1.0% capture=-0.918 DD=-2818.2
+    n1 agrees                      n= 322 ses=38 cont= 77% trap= 11% | idx E[R]=-0.001 P3R= 24% | PREM E=  -4.25pts win= 28% E_ret= -0.4% capture=-0.578 DD=-1592.5
+    n1 disagrees                   n= 261 ses=37 cont= 52% trap= 27% | idx E[R]= 1.121 P3R= 53% | PREM E= -12.12pts win=  7% E_ret= -3.8% capture=-4.013 DD=-3186.4
+
+[§7/§13 INCREMENTAL-INFORMATION SUMMARY]
+    MODEL A  (spike + early-acceptance + reaction stop): n=583 prem_E=-7.78pts win=19% E_ret=-1.9% P3R=37% DD=-4747.5pts capture=-1.103
+    MODEL B  (+ market-profile location): n=416 prem_E=-7.19pts win=19% E_ret=-1.5% P3R=36% DD=-3142.7pts capture=-1.074
+    MODEL C  (+ option-volume imbalance >=2x): n=99 prem_E=-7.3pts win=20% E_ret=-1.4% P3R=39% DD=-829.0pts capture=-1.106
+    -> smallest model that is not beaten out-of-sample: MODEL A  (more layers only justified if OOS improves without materially worse drawdown)
+
+========================================================================================================================
+[§16 FINAL CLASSIFICATION PER CONCEPT]  (SUPPORTED / PROMISING / REJECTED / INSUFFICIENT DATA / UNOBSERVABLE)
+========================================================================================================================
+  A/N Market Profile location (spike outside value vs at POC/edge) n=803   d(prem E_ret) = +0.02pp   REJECTED (no incremental premium-return edge)
+  B Day-type regime (TRENDING/OPENING_DRIVE vs ROTATION/CHOP)    n=717   d(prem E_ret) = +0.01pp   REJECTED (no incremental premium-return edge)
+  D Buyer/seller pressure proxy (same-side OI rising)            n=665   d(prem E_ret) = -1.09pp   REJECTED (negative)
+  G Balance->imbalance (prior-8-bar range contraction < 1.0)     n=987   d(prem E_ret) = -0.97pp   REJECTED (negative)
+  K Momentum: n1 agrees with the spike                           n=680   d(prem E_ret) = +2.14pp   SUPPORTED
+  L Acceptance vs reclaim (no reclaim within 3 candles)          n=937   d(prem E_ret) = +2.15pp   SUPPORTED
+  M Price rotation: >=4 rotations in the prior 8 bars            n=335   d(prem E_ret) = +0.54pp   PROMISING
+  '200% imbalance': option CE/PE interval-vol ratio >= 2x (dir)  n=224   d(prem E_ret) = +0.51pp   PROMISING
+  Order-flow vol acceleration >= 1.5x prior windows              n=448   d(prem E_ret) = -2.25pp   REJECTED (negative)
+
+  UNOBSERVABLE with current data (LEVEL 4):
+    - C aggressor order flow
+    - F lifting-offer/hitting-bid
+    - H footprint / price-level distribution
+    - I true delta (signed aggressor volume)
+    - J diagonal price-level imbalance
+
+  Notes: 'order-flow' rows above are a LEVEL-3 PROXY built from option CE/PE traded
+  volume + OI change. They are NOT exchange order flow and must not be described as
+  institutional / smart-money activity.
+
+[DATA-AVAILABILITY MATRIX]
+  5m OHLC underlying ............ YES (no bar volume)
+  option CE/PE LTP per strike ... YES (~35 sess/symbol, Jul13-Aug28 + Sep1-4)
+  option CE/PE OI + OI change ... YES
+  option CE/PE traded volume .... YES (cumulative; differenced for interval vol)
+  option greeks (delta/gamma..) . YES (oi_dashboard strikes table)
+  underlying tick / footprint ... NO
+  aggressor-classified volume ... NO
+  bid/ask book on underlying .... NO
+  option bid/ask book .......... only zerohero Sep (4 sess) tot_buy/sell_qty
+
+[WHAT REMAINS UNPROVEN / TO COLLECT FOR STAGE-5]
+  * true delta / footprint on the underlying (needs tick data with aggressor side)
+  * a never-touched final holdout period (this work used Jul-Sep in full)
+  * option fills at real bid/ask (used LTP +/- a 2% round-trip estimate)
+  * >100 independent sessions across a full volatility cycle
+
+[FINAL] Research only. No production pattern, no signal enabled, no live change, no orders, no weighted score. No claim of 'institutional', 'smart money', 'holy grail' or 'profitable' is made -- see the per-concept classification.
+

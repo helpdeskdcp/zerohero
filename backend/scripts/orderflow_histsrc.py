@@ -98,7 +98,7 @@ def _od_oi_series(sym, date):
     with _ro(OI_DB) as c:
         rows = c.execute(
             "SELECT c.ts, s.strike, s.ce_ltp, s.pe_ltp, s.ce_oi, s.pe_oi, "
-            "       s.ce_delta, s.pe_delta "
+            "       s.ce_delta, s.pe_delta, s.ce_vol, s.pe_vol "
             "FROM cycles c JOIN strikes s ON s.cycle_id=c.id "
             "WHERE c.symbol=? AND c.date=? ORDER BY c.ts", (sym, date)).fetchall()
     out: dict = {}
@@ -107,10 +107,13 @@ def _od_oi_series(sym, date):
             k = float(r["strike"])
         except (TypeError, ValueError):
             continue
+        # tuple: (ts, ltp, oi, delta, cum_vol)  -- ce_vol/pe_vol are cumulative
+        # session traded volume for that strike; difference consecutive rows for
+        # per-interval option transaction volume (Level-2 proxy, not aggressor delta).
         if r["ce_ltp"] is not None:
-            out.setdefault((k, "CE"), []).append((r["ts"], r["ce_ltp"], r["ce_oi"], r["ce_delta"]))
+            out.setdefault((k, "CE"), []).append((r["ts"], r["ce_ltp"], r["ce_oi"], r["ce_delta"], r["ce_vol"]))
         if r["pe_ltp"] is not None:
-            out.setdefault((k, "PE"), []).append((r["ts"], r["pe_ltp"], r["pe_oi"], r["pe_delta"]))
+            out.setdefault((k, "PE"), []).append((r["ts"], r["pe_ltp"], r["pe_oi"], r["pe_delta"], r["pe_vol"]))
     return out
 
 
@@ -154,7 +157,7 @@ def session_oi_series(sym: str, date: str, src: str = None):
     if src == "zerohero":
         from app import market_hub
         raw = market_hub.session_option_quotes(sym, date)  # {(strike,side): [(ts,ltp)]}
-        return {k: [(t, v, None, None) for t, v in ser] for k, ser in raw.items()}
+        return {k: [(t, v, None, None, None) for t, v in ser] for k, ser in raw.items()}
     return _od_oi_series(sym, date)
 
 

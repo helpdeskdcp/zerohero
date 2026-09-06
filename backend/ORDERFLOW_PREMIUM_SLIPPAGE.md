@@ -837,3 +837,105 @@ out final period never touched during this work.
 ```
 cd backend && python scripts/orderflow_stage3_validation.py     # needs /root/oi_dashboard/oi_history.db (read-only)
 ```
+
+---
+
+## 14. Stage-4 — option-premium re-walk + public-concept mapping (2026-09-06)
+
+Two jobs: (1) re-price the Stage-3 CORE trades on the **captured ATM option
+premium** with a realistic slippage model; (2) map the publicly-described
+Market-Profile + Order-Flow concepts to our observable data and test each for
+**incremental** information. `backend/scripts/orderflow_stage4.py` →
+`data/orderflow_stage4_report_2026-09-06.txt` + `..._events.csv`. Research
+only; no score, no weights, nothing wired to live.
+
+### Proxy-quality matrix
+
+| level | concepts | in our data |
+|-------|----------|-------------|
+| **L1 direct** | balance (range/VA/POC contraction), price rotation, raw momentum, acceptance/reclaim, value-area location | 5m bars + developing TPO profile |
+| **L2 good proxy** | Market Profile POC/VAH/VAL, day-type regime, POC migration | 5m bars (no volume) → time-price profile |
+| **L3 weak proxy** | "buyer/seller pressure", "200 % imbalance", vol acceleration | option CE/PE **traded volume** (cumulative, differenced) + OI change — **NOT** aggressor flow |
+| **L4 UNOBSERVABLE** | true order flow, delta, footprint, diagonal imbalance, lifting-offer/hitting-bid | no underlying tick / no aggressor-classified volume |
+
+### (1) The index-structural edge does NOT survive the premium re-walk
+
+Stage-3 CORE trades re-priced on the ATM option premium (2 % round-trip
+spread; stop-outs filled at the next captured tick — adverse continuation):
+
+| symbol | n | prem E (pts/trade) | premium win % | prem E-return / trade | premium max DD (pts) | capture¹ |
+|--------|--:|-------------------:|:------------:|:---------------------:|--------------------:|:--------:|
+| NIFTY  | 83  | **−1.6** | 25 % | **+0.3 %** | −291 | −0.60 |
+| NATGAS | 541 | **−0.2** | 20 % | **−1.5 %** | −99  | −1.06 |
+| CRUDE  | 583 | **−7.8** | 19 % | **−1.9 %** | −4748 | −1.10 |
+
+¹ median premium points per index-R point. Stage-1's *unconditional* capture
+was ~+0.40; the CORE selection's is **negative**.
+
+**Why:** the tight reaction-candle stop that makes the index-R math look good
+(Stage-3 E ≈ +0.5R) is exactly what kills it in premium terms — most trades
+stop out at a *small index* loss but the *option premium* has already given
+up more (theta + the 2 % spread), and the ~19–25 % winners don't cover the
+spread drag on the ~75–81 % losers. NIFTY is ~breakeven; **NATGAS and CRUDE
+are net-negative per trade in tradable option-premium terms.**
+
+Chronological split: the pattern is not stable across it either — NIFTY's
+pooled +0.3 % E-return is carried entirely by the 16-trade OOS window
+(+15.5 %); train is −5.6 %.
+
+### (2) Do Market Profile / Order-Flow-proxy layers add incremental value?
+
+| model | NIFTY prem E-ret | NATGAS | CRUDE | smallest-model verdict |
+|-------|:---------------:|:------:|:-----:|:----------------------:|
+| **A** spike + early-acceptance + reaction stop | +0.3 % | −1.5 % | −1.9 % | — |
+| **B** A + Market-Profile location (spike outside value) | +3.3 % (n 83→65) | −1.3 % (n 541→394) | −1.5 % (n 583→416) | no OOS gain → **remove** |
+| **C** B + option-volume imbalance ≥ 2× | +19.2 % (n→19) | −5.1 % (n→71) | −1.4 % (n→99) | NIFTY-only, tiny n → **not general** |
+
+**Adding layers does not improve out-of-sample premium performance** (§13:
+"if it adds no information, remove it"). Smallest effective model = **A** for
+NATGAS/CRUDE; B marginally for NIFTY but n = 65.
+
+### Per-concept classification (pooled, ~680–990 samples per test)
+
+| concept | Δ(premium E-return) | status |
+|---------|:------------------:|--------|
+| **L** acceptance vs reclaim (no reclaim in 3 candles) | +2.15 pp | **SUPPORTED** (but it is the base setup's own definition) |
+| **K** momentum — n1 agrees with the spike | +2.14 pp | **SUPPORTED** |
+| **M** price rotation ≥ 4 in the prior 8 bars | +0.54 pp | **PROMISING** |
+| **"200 % imbalance"** — option CE/PE interval-vol ratio ≥ 2× | +0.51 pp | **PROMISING** (NIFTY-specific +20 pp is small-sample; washes out pooled) |
+| **A/N** Market Profile location (outside value vs POC/edge) | +0.02 pp | **REJECTED** — no incremental premium edge |
+| **B** day-type regime (TRENDING/OPENING_DRIVE vs rotation/chop) | +0.01 pp | **REJECTED** |
+| **D** buyer/seller pressure proxy — same-side OI rising | −1.09 pp | **REJECTED (negative)** |
+| **G** balance→imbalance — prior-8-bar range contraction < 1.0 | −0.97 pp | **REJECTED (negative)** — confirms Stage-3: compression hurts |
+| order-flow vol acceleration ≥ 1.5× | −2.25 pp | **REJECTED (negative)** |
+| **C / F / H / I / J** aggressor flow, lift/hit, footprint, true delta, diagonal imbalance | — | **UNOBSERVABLE** (Level 4) |
+
+### Minimum viable model & what's left
+
+The smallest model with any signal is **abnormal spike (range ≥ P90) →
+early-acceptance (first close beyond the level, no same-bar reclaim) →
+reaction-candle stop → skip if the level is reclaimed within 3 candles →
+prefer n1 agreeing.** Variables: bar OHLC + one developing structural level.
+Market Profile, OI, the option-volume "order-flow" proxy, compression, day
+regime — **none add reliable incremental premium value in this data.**
+
+**Overall Stage-4 verdict per symbol (tradable option-premium basis):**
+
+| | |
+|--|--|
+| **NIFTY PREMIUM** | **PROMISING — MORE DATA REQUIRED** (≈ breakeven; a small OOS-only positive tilt on n = 16; the ≥ 2.5× option-volume-imbalance subset, n = 12, is the one lead worth Stage-5) |
+| **NATGAS PREMIUM** | **REJECTED** as a tradable option-premium edge (−1.5 %/trade; R too small; spread dominates) |
+| **CRUDE PREMIUM** | **REJECTED** as a tradable option-premium edge (−1.9 %/trade, −4748-pt drawdown) |
+
+The *market-behaviour sequence* (spike → acceptance → continuation, trap in
+the reclaim cohort) is real and reproducible (Stage-3) — but expressed
+through **ATM option premium with realistic costs it is not an edge.** A
+tradable version would need: a lower-cost instrument (futures, or ITM options
+with less theta/spread drag), true tick/footprint data (unobservable now),
+and a never-touched final holdout. **No production pattern implemented or
+enabled; no live change; no orders; no weighted score. No "institutional" /
+"smart money" / "holy grail" / "profitable" claim is made.**
+
+```
+cd backend && python scripts/orderflow_stage4.py   # needs /root/oi_dashboard/oi_history.db (read-only)
+```
