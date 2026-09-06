@@ -137,6 +137,44 @@ def _setup(spike: dict, bars_after: list, side: str, rr: float,
 
 
 _FILTERS = ("none", "candle_dir", "strong_body")
+_PATTERNS = ("spike", "sideways_spike", "hammer")
+
+
+def _is_hammer(b: dict, *, wick_body_mult: float = 2.0,
+               opp_wick_frac: float = 0.30, min_body_frac: float = 0.05) -> str:
+    """Classify a candle as a hammer / shooting-star reversal.
+
+    "BUY"  -> bullish hammer: long LOWER wick (>= wick_body_mult x body),
+              little/no upper wick, body near the top.
+    "SELL" -> shooting star: long UPPER wick, little/no lower wick.
+    ""     -> neither / ambiguous / doji.
+    """
+    o, c, h, l = b.get("o"), b.get("c"), b["h"], b["l"]
+    rng = h - l
+    if o is None or c is None or rng <= 0:
+        return ""
+    body = abs(c - o)
+    if body < min_body_frac * rng:            # a doji is not a hammer
+        return ""
+    upper = h - max(o, c)
+    lower = min(o, c) - l
+    if lower >= wick_body_mult * body and upper <= opp_wick_frac * rng:
+        return "BUY"
+    if upper >= wick_body_mult * body and lower <= opp_wick_frac * rng:
+        return "SELL"
+    return ""
+
+
+def _is_post_consolidation(clean: list, idx: int, avg_range: float, *,
+                           lookback: int = 5, span_x: float = 1.5) -> bool:
+    """True when the `lookback` bars immediately before `idx` were coiled in a
+    tight range -- total high-low span <= span_x x the session's average bar
+    range -- i.e. the trigger candle is breaking OUT of a sideways stretch."""
+    if idx < lookback or avg_range <= 0:
+        return False
+    window = clean[idx - lookback:idx]
+    span = max(x["h"] for x in window) - min(x["l"] for x in window)
+    return span <= span_x * avg_range
 
 
 def _sides_for(b: dict, sig_filter: str) -> tuple:
@@ -158,34 +196,60 @@ def _sides_for(b: dict, sig_filter: str) -> tuple:
 
 def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
                        stop_frac: float = 1.0, trail: bool = False,
-                       sig_filter: str = "none") -> dict:
-    """Detect volume-spike candles and build breakout setups for each, with a
-    same-session forward-walked outcome. `stop_frac` < 1.0 = a tighter stop;
-    `trail=True` trails the stop that same distance behind the best price;
-    `sig_filter` in {none, candle_dir, strong_body} restricts which side is
-    taken per spike."""
+                       sig_filter: str = "none", pattern: str = "spike",
+                       consol_lookback: int = 5, consol_span_x: float = 1.5) -> dict:
+    """Detect trigger candles and build breakout setups for each, with a
+    same-session forward-walked outcome.
+
+    `pattern`:
+      "spike"          -- bar volume >= volume_mult x session avg (original).
+      "sideways_spike" -- a volume spike whose prior `consol_lookback` bars were
+                          coiled within `consol_span_x` x the avg bar range
+                          (breakout OUT of a sideways stretch).
+      "hammer"         -- a hammer / shooting-star reversal candle; the wick
+                          sets the side (long lower wick -> BUY above its high,
+                          long upper wick -> SELL below its low). No volume
+                          filter -- the candle shape IS the trigger.
+
+    `stop_frac` < 1.0 = a tighter stop; `trail=True` trails the stop that same
+    distance behind the best price; `sig_filter` in {none, candle_dir,
+    strong_body} further restricts the side (ignored for "hammer", whose side
+    is already fixed by the wick)."""
+    if pattern not in _PATTERNS:
+        pattern = "spike"
     clean = _clean(bars)
     vols = [b["v"] for b in clean if b["v"] > 0]
-    if len(clean) < 3 or len(vols) < 3:
+    if len(clean) < 3 or (pattern != "hammer" and len(vols) < 3):
         return {"status": "NO_DATA", "reason": "need >=3 bars with volume",
                 "setups": []}
-    avg_v = mean(vols)
-    if avg_v <= 0:
+    avg_v = mean(vols) if vols else 0.0
+    if pattern != "hammer" and avg_v <= 0:
         return {"status": "NO_DATA", "reason": "zero average volume", "setups": []}
+    avg_range = mean(b["h"] - b["l"] for b in clean) if clean else 0.0
 
     setups = []
     for idx, b in enumerate(clean):
-        if b["v"] < volume_mult * avg_v:
-            continue
-        sides = _sides_for(b, sig_filter)
-        if not sides:
-            continue
+        if pattern == "hammer":
+            hs = _is_hammer(b)
+            if not hs:
+                continue
+            sides = (hs,)
+        else:
+            if b["v"] < volume_mult * avg_v:
+                continue
+            if pattern == "sideways_spike" and not _is_post_consolidation(
+                    clean, idx, avg_range, lookback=consol_lookback, span_x=consol_span_x):
+                continue
+            sides = _sides_for(b, sig_filter)
+            if not sides:
+                continue
         after = clean[idx + 1:]
         row = {
             "candle": {"bar_start": b["bar_start"], "o": b["o"], "h": b["h"],
                        "l": b["l"], "c": b["c"], "v": b["v"]},
-            "volume_x_avg": round(b["v"] / avg_v, 2),
+            "volume_x_avg": round(b["v"] / avg_v, 2) if avg_v > 0 else None,
             "range_points": round(b["h"] - b["l"], 4),
+            "pattern": pattern,
         }
         if "BUY" in sides:
             row["buy"] = _setup(b, after, "BUY", rr, stop_frac, trail)
@@ -195,12 +259,13 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
     return {
         "status": "OK",
         "method": "OHLCV_BARS",
-        "note": ("spike = bar volume >= volume_mult x session average bar volume; "
-                 "breakout / target / stop evaluated at ~5m bar granularity, not "
-                 "tick -- a bar spanning both target and stop is scored STOP_HIT"),
+        "note": ("trigger candle per `pattern`; breakout / target / stop "
+                 "evaluated at ~5m bar granularity, not tick -- a bar spanning "
+                 "both target and stop is scored STOP_HIT"),
         "session_avg_volume": round(avg_v, 2),
+        "session_avg_range": round(avg_range, 4),
         "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
-        "trail": bool(trail), "sig_filter": sig_filter,
+        "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern,
         "spike_count": len(setups),
         "setups": setups,
     }

@@ -59,13 +59,16 @@ def api_smart_money(symbol: str = Query(...), date: str = Query(..., description
                                              description="stop distance as a fraction of the spike candle range; <1 = tighter stop"),
                     trail: bool = Query(False, description="trail the stop that same distance behind the best price after entry"),
                     sig_filter: str = Query("none", pattern="^(none|candle_dir|strong_body)$",
-                                            description="none=both sides; candle_dir=only the spike candle's direction; strong_body=candle_dir + body>=0.5*range")):
-    """Volume-spike breakout setups: BUY above the spike candle's high / SELL
-    below its low, stop `stop_frac` x the candle range away from entry, target
-    at `rr` x that stop distance, with a same-session forward-walked outcome.
+                                            description="none=both sides; candle_dir=only the spike candle's direction; strong_body=candle_dir + body>=0.5*range"),
+                    pattern: str = Query("spike", pattern="^(spike|sideways_spike|hammer)$",
+                                         description="trigger candle: spike=volume spike; sideways_spike=spike breaking out of a prior tight range; hammer=hammer/shooting-star (wick sets the side)")):
+    """Trigger-candle breakout setups: BUY above the candle's high / SELL below
+    its low, stop `stop_frac` x the candle range away from entry, target at
+    `rr` x that stop distance, with a same-session forward-walked outcome.
     Read-only; ~5m bar granularity."""
     return service.smart_money(symbol, date, tf=tf, volume_mult=volume_mult, rr=rr,
-                               stop_frac=stop_frac, trail=trail, sig_filter=sig_filter)
+                               stop_frac=stop_frac, trail=trail, sig_filter=sig_filter,
+                               pattern=pattern)
 
 
 @router.get("/backtest")
@@ -77,10 +80,14 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
                  trail: bool = Query(False, description="trail the stop that same distance behind the best price after entry"),
                  sig_filter: str = Query("none", pattern="^(none|candle_dir|strong_body)$",
                                          description="none=both sides; candle_dir=only the spike candle's direction; strong_body=candle_dir + body>=0.5*range"),
+                 pattern: str = Query("spike", pattern="^(spike|sideways_spike|hammer)$",
+                                      description="trigger candle: spike; sideways_spike (spike out of a tight range); hammer (hammer/shooting-star, wick sets the side)"),
                  basis: str = Query("index", pattern="^(index|premium)$",
                                     description="index=score in index points; premium=re-price P&L on the captured ATM option (BUY->CE, SELL->PE), index levels stay the trigger"),
                  premium_stop_pct: float = Query(0.0, ge=0.0, le=0.99,
-                                                 description="basis=premium only: optional hard stop on the option premium, e.g. 0.30 exits at -30% of entry premium if it comes before the index exit"),
+                                                 description="basis=premium only: hard stop on the option premium as a fraction of entry premium (0.30 = -30%)"),
+                 premium_stop_pts: float = Query(0.0, ge=0.0, le=100000.0,
+                                                 description="basis=premium only: hard stop on the option premium in absolute premium points; whichever of pct/pts hits first wins"),
                  sessions: Optional[int] = Query(None, ge=1, le=400,
                                                  description="most-recent N captured sessions; omit = all")):
     """Runs the smart-money engine over every captured session and aggregates:
@@ -91,4 +98,5 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
     below 20 resolved trades."""
     return service.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr,
                             stop_frac=stop_frac, trail=trail, sig_filter=sig_filter,
-                            basis=basis, premium_stop_pct=premium_stop_pct, sessions=sessions)
+                            pattern=pattern, basis=basis, premium_stop_pct=premium_stop_pct,
+                            premium_stop_pts=premium_stop_pts, sessions=sessions)

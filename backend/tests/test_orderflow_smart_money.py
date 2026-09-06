@@ -211,6 +211,61 @@ def test_sig_filter_candle_dir_and_strong_body():
     assert "buy" in both and "sell" in both
 
 
+def test_pattern_hammer_detects_wick_and_sets_side():
+    # t2 is a bullish hammer: body 2, lower wick 10, tiny upper wick
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 105, 108, 95, 107, 100),     # o105 c107 h108 l95 -> hammer, BUY
+        _bar("t3", 107, 112, 106, 111, 100),    # breaks above 108
+        _bar("t4", 111, 145, 110, 140, 100),    # runs up
+    ]
+    out = SM.smart_money_setups(bars, pattern="hammer")
+    assert out["pattern"] == "hammer" and out["spike_count"] == 1
+    row = out["setups"][0]
+    assert "buy" in row and "sell" not in row      # wick fixes the side
+    assert row["buy"]["entry"] == 108.0 and row["buy"]["stop_loss"] == 95.0
+    assert row["buy"]["outcome"]["status"] in ("TARGET_HIT", "TRIGGERED", "STOP_HIT")
+
+    # a shooting star -> SELL  (o96 c98 body 2, upper wick 10, lower wick 1)
+    star = list(bars)
+    star[2] = _bar("t2", 96, 108, 95, 98, 100)
+    s = SM.smart_money_setups(star, pattern="hammer")["setups"][0]
+    assert "sell" in s and "buy" not in s
+
+    # a plain candle (no long wick) -> no hammer setup
+    flat = [_bar(f"t{i}", 100, 101, 99, 100, 100) for i in range(5)]
+    assert SM.smart_money_setups(flat, pattern="hammer")["spike_count"] == 0
+
+
+def test_pattern_sideways_spike_requires_prior_consolidation():
+    tight = [
+        _bar("t0", 100, 100.5, 99.5, 100, 100),
+        _bar("t1", 100, 100.5, 99.5, 100, 100),
+        _bar("t2", 100, 100.5, 99.5, 100, 100),
+        _bar("t3", 100, 100.5, 99.5, 100, 100),
+        _bar("t4", 100, 100.5, 99.5, 100, 100),
+        _bar("t5", 100, 112, 100, 108, 1000),   # spike out of the coil
+        _bar("t6", 108, 109, 107, 108, 100),
+    ]
+    out = SM.smart_money_setups(tight, volume_mult=2.0, pattern="sideways_spike")
+    assert out["spike_count"] == 1 and out["setups"][0]["pattern"] == "sideways_spike"
+
+    # same spike but the preceding bars are wide -> not a breakout from a range
+    wide = [
+        _bar("t0", 100, 120, 90, 110, 100),
+        _bar("t1", 110, 130, 95, 100, 100),
+        _bar("t2", 100, 125, 92, 118, 100),
+        _bar("t3", 118, 128, 90, 100, 100),
+        _bar("t4", 100, 122, 91, 112, 100),
+        _bar("t5", 112, 124, 112, 120, 1000),   # still a volume spike
+        _bar("t6", 120, 121, 119, 120, 100),
+    ]
+    assert SM.smart_money_setups(wide, volume_mult=2.0, pattern="sideways_spike")["spike_count"] == 0
+    # plain "spike" still takes it
+    assert SM.smart_money_setups(wide, volume_mult=2.0, pattern="spike")["spike_count"] == 1
+
+
 def test_higher_volume_mult_filters_out_marginal_spikes():
     bars = [
         _bar("t0", 100, 101, 99, 100, 100),

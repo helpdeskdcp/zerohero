@@ -48,7 +48,8 @@ def _pick_atm(opt_map: dict, ref_price: float, option_type: str) -> Optional[flo
 
 def rewalk_leg(opt_map: dict, *, entry_price: float, side: str,
                entry_ts: Optional[str], exit_ts: Optional[str],
-               premium_stop_pct: float = 0.0) -> Optional[dict]:
+               premium_stop_pct: float = 0.0,
+               premium_stop_pts: float = 0.0) -> Optional[dict]:
     """Re-price one resolved leg on the captured option premium.
 
     opt_map     : market_hub.session_option_quotes() output for the session
@@ -56,10 +57,13 @@ def rewalk_leg(opt_map: dict, *, entry_price: float, side: str,
     side        : "BUY" -> long CE, "SELL" -> long PE
     entry_ts    : leg["breakout_bar"]   (index bar the breakout fired on)
     exit_ts     : outcome["resolved_bar"] (index bar target/stop hit on)
-    premium_stop_pct : optional hard stop on the OPTION. 0 (default) = none;
-        0.30 = exit the moment a captured tick shows the premium down >=30%
-        from entry, if that happens before the index-triggered exit. It never
-        extends the hold -- only cuts it short.
+    premium_stop_pct : optional hard stop on the OPTION as a FRACTION of the
+        entry premium. 0 (default) = none; 0.30 = exit the moment a captured
+        tick shows the premium down >=30% from entry.
+    premium_stop_pts : optional hard stop on the OPTION in ABSOLUTE premium
+        points. 0 (default) = none; 25 = exit when premium is >=25 pts below
+        entry. When both are set, whichever is hit FIRST along the path wins.
+        A premium stop only ever CUTS the hold short, never extends it.
 
     Returns a premium-space dict, or None when no option series covers the
     window (caller keeps the index-basis result and flags the fallback).
@@ -81,10 +85,16 @@ def rewalk_leg(opt_map: dict, *, entry_price: float, side: str,
     hi = bisect_right(series, (exit_ts, float("inf")))
     pairs = series[lo:hi]
 
-    exit_reason = "INDEX_TRIGGER"
-    stop_level = None
+    # the binding stop level is the TIGHTER (higher) of the % and the abs-pts
+    # stops that are actually set
+    levels = []
     if premium_stop_pct and premium_stop_pct > 0:
-        stop_level = round(p_entry * (1.0 - min(premium_stop_pct, 0.99)), 4)
+        levels.append(p_entry * (1.0 - min(premium_stop_pct, 0.99)))
+    if premium_stop_pts and premium_stop_pts > 0:
+        levels.append(p_entry - float(premium_stop_pts))
+    exit_reason = "INDEX_TRIGGER"
+    stop_level = round(max(levels), 4) if levels else None
+    if stop_level is not None:
         for ts, v in pairs:
             if ts > entry_ts and v <= stop_level:
                 p_exit = v

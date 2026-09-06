@@ -57,12 +57,14 @@ def available_sessions(symbol: str, tf: str = "5m", limit: int = 30) -> list:
 
 def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
                 volume_mult: float = 2.0, rr: float = 3.0, stop_frac: float = 1.0,
-                trail: bool = False, sig_filter: str = "none") -> dict:
-    """Volume-spike breakout setups for one IST session (or comma-list for a
-    multi-session scan). Read-only over captured bars."""
+                trail: bool = False, sig_filter: str = "none",
+                pattern: str = "spike") -> dict:
+    """Trigger-candle breakout setups for one IST session (or comma-list for a
+    multi-session scan). `pattern` in {spike, sideways_spike, hammer}.
+    Read-only over captured bars."""
     dates = [d.strip() for d in str(session_date or "").split(",") if d.strip()]
     key = ("SM", symbol.upper(), tuple(dates), tf, volume_mult, rr, stop_frac,
-           bool(trail), sig_filter)
+           bool(trail), sig_filter, pattern)
     cached = _cache_get(key)
     if cached is not None:
         return cached
@@ -71,7 +73,7 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
         bars.extend(market_hub.session_bars(symbol, d, tf=tf))
     bars.sort(key=lambda b: str(b.get("bar_start") or ""))
     out = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
-                                 trail=trail, sig_filter=sig_filter)
+                                 trail=trail, sig_filter=sig_filter, pattern=pattern)
     out["symbol"] = symbol.upper()
     out["sessions"] = dates
     out["tf"] = tf
@@ -82,20 +84,25 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
              stop_frac: float = 1.0, trail: bool = False, sig_filter: str = "none",
-             basis: str = "index", premium_stop_pct: float = 0.0,
+             pattern: str = "spike", basis: str = "index",
+             premium_stop_pct: float = 0.0, premium_stop_pts: float = 0.0,
              sessions: int | None = None) -> dict:
     """Aggregate the smart-money engine's outcomes over the captured history.
-    `basis` in {index, premium} -- premium re-prices on the captured ATM option;
-    `premium_stop_pct` adds an optional hard stop on the option premium.
+    `pattern` in {spike, sideways_spike, hammer}; `basis` in {index, premium}
+    -- premium re-prices on the captured ATM option; `premium_stop_pct` /
+    `premium_stop_pts` add an optional hard stop on the option premium.
     Read-only; a 30s cache (a completed session's backtest is immutable)."""
     key = ("BT", symbol.upper(), tf, volume_mult, rr, stop_frac,
-           bool(trail), sig_filter, basis, round(float(premium_stop_pct or 0.0), 4), sessions)
+           bool(trail), sig_filter, pattern, basis,
+           round(float(premium_stop_pct or 0.0), 4), round(float(premium_stop_pts or 0.0), 4),
+           sessions)
     cached = _cache_get(key)
     if cached is not None:
         return cached
     out = _bt.backtest(symbol, tf=tf, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
-                       trail=trail, sig_filter=sig_filter, basis=basis,
-                       premium_stop_pct=premium_stop_pct, sessions=sessions)
+                       trail=trail, sig_filter=sig_filter, pattern=pattern, basis=basis,
+                       premium_stop_pct=premium_stop_pct, premium_stop_pts=premium_stop_pts,
+                       sessions=sessions)
     _cache_put(key, out)
     return out
 

@@ -71,7 +71,8 @@ def _result_of(points: float) -> str:
 
 def _trade_from_leg(session: str, spike: dict, side: str, *,
                     opt_map: dict | None = None,
-                    premium_stop_pct: float = 0.0) -> dict | None:
+                    premium_stop_pct: float = 0.0,
+                    premium_stop_pts: float = 0.0) -> dict | None:
     leg = spike.get(side)
     if not leg:                             # this side was filtered out for this spike
         return None
@@ -98,7 +99,8 @@ def _trade_from_leg(session: str, spike: dict, side: str, *,
     rw = _pw.rewalk_leg(opt_map, entry_price=leg["entry"], side=leg["side"],
                         entry_ts=leg.get("breakout_bar"),
                         exit_ts=oc.get("resolved_bar"),
-                        premium_stop_pct=premium_stop_pct)
+                        premium_stop_pct=premium_stop_pct,
+                        premium_stop_pts=premium_stop_pts)
     if not rw:
         row["basis"] = "INDEX_FALLBACK"     # no captured option series for this window
         return row
@@ -127,10 +129,17 @@ def _base_row(session: str, spike: dict, leg: dict) -> dict:
 
 def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float = 3.0,
              stop_frac: float = 1.0, trail: bool = False, sig_filter: str = "none",
-             basis: str = "index", premium_stop_pct: float = 0.0,
+             pattern: str = "spike", consol_lookback: int = 5, consol_span_x: float = 1.5,
+             basis: str = "index",
+             premium_stop_pct: float = 0.0, premium_stop_pts: float = 0.0,
              sessions: int | list | None = None) -> dict:
     """`sessions`: None -> all captured; an int -> that many most-recent; a list
     -> exactly those IST dates.
+
+    `pattern`: which trigger candle to trade -- "spike" (volume spike, default),
+    "sideways_spike" (a volume spike that breaks OUT of a prior tight range),
+    or "hammer" (hammer / shooting-star reversal candle; direction is set by
+    the wick). See smart_money.smart_money_setups.
 
     `basis`: "index" (default) scores every setup in index points; "premium"
     keeps the index entry/stop/target as the trigger but re-prices realised
@@ -138,15 +147,21 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     SELL->PE), falling back to index basis per-trade when no option series
     covers the window. See ORDERFLOW_PREMIUM_SLIPPAGE.md.
 
-    `premium_stop_pct` (basis="premium" only): optional hard stop on the
-    OPTION -- 0 = none; 0.30 = cut the trade the moment a captured tick is
-    >=30% below the entry premium, if that comes before the index exit."""
+    `premium_stop_pct` / `premium_stop_pts` (basis="premium" only): optional
+    hard stop on the OPTION, as a fraction of the entry premium and/or in
+    absolute premium points; whichever is hit first cuts the trade short."""
     sym = symbol.upper()
     basis = basis if basis in ("index", "premium") else "index"
+    if pattern not in ("spike", "sideways_spike", "hammer"):
+        pattern = "spike"
     try:
         premium_stop_pct = max(0.0, min(float(premium_stop_pct), 0.99))
     except (TypeError, ValueError):
         premium_stop_pct = 0.0
+    try:
+        premium_stop_pts = max(0.0, float(premium_stop_pts))
+    except (TypeError, ValueError):
+        premium_stop_pts = 0.0
     if isinstance(sessions, list):
         dates = [str(d).strip() for d in sessions if str(d).strip()]
     else:
@@ -163,7 +178,8 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
             continue
         scanned += 1
         sm = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
-                                    trail=trail, sig_filter=sig_filter)
+                                    trail=trail, sig_filter=sig_filter, pattern=pattern,
+                                    consol_lookback=consol_lookback, consol_span_x=consol_span_x)
         if sm.get("status") != "OK":
             continue
         opt_map = market_hub.session_option_quotes(sym, d) if basis == "premium" else None
@@ -171,7 +187,8 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         for spike in sm.get("setups", []):
             for side in ("buy", "sell"):
                 t = _trade_from_leg(d, spike, side, opt_map=opt_map,
-                                    premium_stop_pct=premium_stop_pct)
+                                    premium_stop_pct=premium_stop_pct,
+                                    premium_stop_pts=premium_stop_pts)
                 if t:
                     s_trades.append(t)
         trades.extend(s_trades)
@@ -181,9 +198,9 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     if not trades:
         return {"status": "NO_SIGNALS", "symbol": sym, "sessions_scanned": scanned,
                 "sessions": dates, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
-                "trail": bool(trail), "sig_filter": sig_filter, "basis": basis,
-                "premium_stop_pct": premium_stop_pct,
-                "note": "no volume-spike breakout hit target or stop in the captured sessions"}
+                "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern, "basis": basis,
+                "premium_stop_pct": premium_stop_pct, "premium_stop_pts": premium_stop_pts,
+                "note": f"no {pattern} setup hit target or stop in the captured sessions"}
 
     trades.sort(key=lambda t: (t["session"], t["candle_ts"], t["side"]))
     overall = _agg(trades)
@@ -221,6 +238,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     basis_coverage = {
         "basis": basis,
         "premium_stop_pct": premium_stop_pct,
+        "premium_stop_pts": premium_stop_pts,
         "resolved_priced": n_priced,
         "premium_repriced": bc["PREMIUM"],
         "premium_thin_quotes": thin,     # repriced but <=2 captured ticks -> low-confidence
@@ -246,8 +264,8 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         "method": "OHLCV_BARS",
         "note": note,
         "symbol": sym, "tf": tf, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
-        "trail": bool(trail), "sig_filter": sig_filter, "basis": basis,
-        "premium_stop_pct": premium_stop_pct,
+        "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern, "basis": basis,
+        "premium_stop_pct": premium_stop_pct, "premium_stop_pts": premium_stop_pts,
         "basis_coverage": basis_coverage,
         "sessions_scanned": scanned, "traded_sessions": n_traded_sessions,
         "sessions": dates,

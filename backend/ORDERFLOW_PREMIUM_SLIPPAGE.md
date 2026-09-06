@@ -186,7 +186,63 @@ windows is tiny** — CRUDEOIL premium-trade MAE distribution is p10 −5%,
 median −0.4%, worst −11.3%. The *index* stop (≈10–40 pts) always resolves the
 trade before a ≥12% premium drawdown occurs, so any premium stop looser than
 ~8% is a no-op, and an ~8–10% stop moves NIFTY by only ~+3 pts on n=26 —
-noise. A premium stop would only matter with a much wider index target/stop
-(longer holds, bigger premium swings) or if expressed in absolute premium
-points rather than %. **No edge, no config change; the lever exists for when
-there is more data and wider-target variants to test.**
+noise.
+
+### 6b. Absolute-points premium stop + pattern variants (added 2026-09-06)
+
+**Absolute-points premium stop** — `premium_stop_pts=` (alongside
+`premium_stop_pct`; whichever level is tighter binds first). API
+`?premium_stop_pts=`, `basis_coverage.premium_stop_pts`.
+
+Sweep (basis=premium, pattern=spike):
+
+| pstop_pts | NIFTY net (hits) | NATURALGAS net (hits) | CRUDEOIL net (hits) |
+|----------:|:---------------:|:---------------------:|:-------------------:|
+| off  | −51.2 (0)  | +9.7 (0) | +696.5 (0) |
+| 10   | −45.1 (4)  | +9.7 (0) | +618.4 (24) |
+| 15   | −57.0 (2)  | +9.7 (0) | +673.6 (11) |
+| 20   | −51.2 (0)  | +9.7 (0) | +719.2 (5)  |
+| 30+  | ~unchanged | +9.7 (0) | ~unchanged  |
+
+Same verdict as the % stop: **no consistent improvement.** A tight abs stop
+(10 pts) *cuts CRUDEOIL winners early* (+618 vs +696, 24 hits); 20 pts is
+marginally better (+719) but well within noise on n≤95 / 3–4 sessions.
+NATURALGAS never triggers (premiums are small, drawdowns tiny). **The premium
+stop — % or points — does not change the picture at these RR / stop_frac
+settings. Keep it off; revisit only with wider targets or more data.**
+
+**Pattern variants** — `smart_money_setups(..., pattern=)` /
+`backtest(..., pattern=)`, dashboard "Pattern" selector:
+- `spike` (default) — volume spike, unchanged.
+- `sideways_spike` — a volume spike whose prior `consol_lookback` (5) bars
+  were coiled within `consol_span_x` (1.5) × the avg bar range.
+- `hammer` — hammer / shooting-star candle; the wick fixes the side (long
+  lower wick → BUY above the high, long upper wick → SELL below the low). No
+  volume filter — the shape is the trigger.
+
+Results (all 3–4 captured sessions, `reliable=False` throughout):
+
+| symbol · basis | spike net (n) | sideways_spike net (n) | hammer net (n) |
+|----------------|--------------:|-----------------------:|---------------:|
+| NIFTY · index    | −450 (26) | −46 (**4**)  | −460 (38) |
+| NIFTY · premium  | −51 (26)  | +3 (**4**)   | −81 (38)  |
+| NATGAS · index   | −49 (103) | −1 (**1**)   | +1 (59)   |
+| NATGAS · premium | +10 (103) | −0.2 (**1**) | +11 (59)  |
+| CRUDE · index    | −406 (95) | +92 (**2**)  | −209 (93) |
+| CRUDE · premium  | +696 (95) | +74 (**2**)  | +226 (93) |
+
+- **`sideways_spike` produces almost no signals** (1–4 per symbol) at the
+  default filter — these 3–4 trending/choppy sessions rarely coil first.
+  Loosening `consol_span_x` to 2.5–3.5 just recovers signals that behave like
+  plain `spike` (still net-negative on index basis). **Nothing to conclude
+  from n≤4.**
+- **`hammer` produces a comparable signal count to `spike`** (38–96) and is a
+  genuine alternative detector. On this sample it does **not** beat spike:
+  NIFTY worse, CRUDE worse on premium basis (+226 vs +696), NATGAS about the
+  same (+11). NATGAS hammer-premium PF looks high (6.1) but is a
+  FLAT-heavy/small-points artifact.
+
+**Overall: neither the absolute premium stop nor the two new patterns changes
+the conclusion. No edge, no config change, nothing armed. The detectors and
+stops are in place as tunable levers for when ≥10 clean sessions across
+regimes exist.**

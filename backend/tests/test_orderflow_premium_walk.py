@@ -92,6 +92,31 @@ def test_premium_stop_inactive_when_drawdown_never_reaches_it():
     assert rw["premium_exit"] == 110.0 and rw["premium_points"] == 10.0
 
 
+def test_premium_stop_absolute_points():
+    opt = {(100.0, "CE"): _series(
+        ("t0", 50.0), ("t1", 42.0), ("t2", 33.0), ("t3", 60.0))}
+    # -25 abs-pts stop -> fires at t2 (33 is -17? no; 50-33=17 < 25) ... use a deeper dip
+    opt2 = {(100.0, "CE"): _series(
+        ("t0", 50.0), ("t1", 40.0), ("t2", 22.0), ("t3", 60.0))}
+    rw = PW.rewalk_leg(opt2, entry_price=100, side="BUY",
+                       entry_ts="t0", exit_ts="t3", premium_stop_pts=25.0)
+    assert rw["premium_exit_reason"] == "PREMIUM_STOP"
+    assert rw["premium_stop_level"] == 25.0        # 50 - 25
+    assert rw["premium_exit"] == 22.0 and rw["premium_points"] == -28.0
+    # a 25-pt stop does NOT fire on the shallower path
+    rw_ok = PW.rewalk_leg(opt, entry_price=100, side="BUY",
+                          entry_ts="t0", exit_ts="t3", premium_stop_pts=25.0)
+    assert rw_ok["premium_exit_reason"] == "INDEX_TRIGGER" and rw_ok["premium_points"] == 10.0
+
+
+def test_premium_stop_pct_and_pts_take_the_tighter_one():
+    opt = {(100.0, "CE"): _series(("t0", 50.0), ("t1", 43.0), ("t2", 60.0))}
+    # pct 0.20 -> level 40 ; pts 5 -> level 45 ; tighter (higher) = 45 -> fires at 43
+    rw = PW.rewalk_leg(opt, entry_price=100, side="BUY", entry_ts="t0", exit_ts="t2",
+                       premium_stop_pct=0.20, premium_stop_pts=5.0)
+    assert rw["premium_stop_level"] == 45.0 and rw["premium_exit"] == 43.0
+
+
 def test_premium_stop_never_extends_the_hold():
     # index exit at t2=105 (a win); an earlier -35% dip still takes precedence
     opt = {(100.0, "CE"): _series(("t0", 100.0), ("t1", 65.0), ("t2", 105.0))}

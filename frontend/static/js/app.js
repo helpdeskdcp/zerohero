@@ -2052,11 +2052,12 @@
     const stopFrac = Number(($("#ofStop") || {}).value || 1);
     const rr = Number(($("#ofRr") || {}).value || 3);
     const sigFilter = (($("#ofFilterSig") || {}).value || "none");
+    const pattern = (($("#ofPattern") || {}).value || "spike");
     const trail = !!(($("#ofTrail") || {}).checked);
     const basis = (($("#ofBasis") || {}).value || "index");
     const premStop = Number(($("#ofPremStop") || {}).value || 0);
     const smQ = `symbol=${encodeURIComponent(ofSymbol)}&volume_mult=${mult}&rr=${rr}&stop_frac=${stopFrac}`
-              + `&sig_filter=${encodeURIComponent(sigFilter)}&trail=${trail}`;
+              + `&sig_filter=${encodeURIComponent(sigFilter)}&trail=${trail}&pattern=${encodeURIComponent(pattern)}`;
     const btQ = `${smQ}&basis=${encodeURIComponent(basis)}&premium_stop_pct=${premStop}`;
 
     // 2. profile + smart-money, in parallel
@@ -2132,7 +2133,7 @@
     }
     const dsel = $("#ofDate");
     if (dsel) dsel.addEventListener("change", () => { ofDate = dsel.value; loadOrderflow(); });
-    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofTrail", "#ofBasis", "#ofPremStop"].forEach(id => {
+    ["#ofMult", "#ofStop", "#ofRr", "#ofFilterSig", "#ofPattern", "#ofTrail", "#ofBasis", "#ofPremStop"].forEach(id => {
       const s = $(id); if (s) s.addEventListener("change", () => loadOrderflow());
     });
     const rb = $("#ofRefresh");
