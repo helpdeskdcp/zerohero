@@ -1,0 +1,299 @@
+wrote 5940 rows -> data/orderflow_stage5_events.csv
+wrote report -> data/orderflow_stage5_report_2026-09-06.txt
+orderflow STAGE-5 -- underlying-basis market-behaviour maths. RESEARCH ONLY; no production change, no signal, no orders, no weighted score.
+
+======================================================================================================================
+[§1] PUBLIC ORDER-FLOW CONCEPT -> TESTABLE MATHEMATICAL HYPOTHESIS  (public terms only, no course material)
+======================================================================================================================
+
+  Buyer/seller aggression
+    observable : signed aggressor volume
+    formula    : delta = buy_vol - sell_vol
+    causal ts  : per completed bar
+    status     : UNOBSERVABLE (no aggressor-classified volume)
+
+  Lift-offer / hit-bid
+    observable : trade printed at ask vs bid
+    formula    : count(px>=ask) - count(px<=bid)
+    causal ts  : per trade
+    status     : UNOBSERVABLE (no tick/quote stream on the underlying)
+
+  Liquidity structure / resting size
+    observable : book depth per level
+    formula    : sum(bid_qty), sum(ask_qty) by level
+    causal ts  : per quote
+    status     : UNOBSERVABLE for the underlying (option book only, Sep, 4 sess)
+
+  Abnormal price expansion
+    observable : bar range vs its own recent distribution
+    formula    : range percentile among prior-session bars; range / rolling median; range / ATR
+    causal ts  : completed bar T0
+    status     : OBSERVED
+
+  Price rotation
+    observable : direction changes per window
+    formula    : count sign flips of consecutive close deltas over prior k bars
+    causal ts  : bars[:T0]
+    status     : OBSERVED
+
+  Imbalance (2:1 / '200%')
+    observable : relative one-sided quantity
+    formula    : PROXY: option CE/PE interval traded-volume ratio (dir-adjusted)
+    causal ts  : cycle ts <= bar
+    status     : PROXY (L3)
+
+  Liquidity absorption
+    observable : large range, small body, two-way trade, then continuation
+    formula    : body/range < 0.35 AND range/ATR >= 1.5 AND next-bar agrees AND MFE_R >= 2
+    causal ts  : T0 + n1
+    status     : OBSERVED (shape proxy; no true absorption without footprint)
+
+  Liquidity vacuum
+    observable : expansion out of contraction with weak follow-through
+    formula    : range(T0) >= 2*mean(range T-3..T-1) AND mean(range T-3..T-1) <= 0.6*ATR AND MFE_R < 2
+    causal ts  : T0..T+3
+    status     : OBSERVED (proxy)
+
+  Stop-loss / liquidity sweep
+    observable : break a prior swing then close back through it
+    formula    : high(T0) > prior_swing_hi AND close(T0) <= prior_swing_hi  (mirror for shorts)
+    causal ts  : T0
+    status     : OBSERVED
+
+  Trapped participants
+    observable : level break, no acceptance, reclaim, opposite move
+    formula    : broke L; no close held beyond L in T+1..T+3; close back through L; MAE_R <= -1
+    causal ts  : T0..T+3
+    status     : OBSERVED
+
+  Exhaustion
+    observable : abnormal bar extends a long directional run then stalls
+    formula    : run of >=5 same-direction closes ending at T0 AND MFE_R < 2 after entry
+    causal ts  : bars[:T0] + walk
+    status     : OBSERVED (proxy)
+
+  Acceptance vs rejection
+    observable : close beyond broken level held / reclaimed
+    formula    : close vs L over the next 1-3 completed bars
+    causal ts  : bars[:T0+w]
+    status     : OBSERVED
+
+  Smart-money / large-participant accumulation
+    observable : sustained one-sided pressure not visible in price
+    formula    : would need order-book delta persistence / iceberg detection
+    causal ts  : -
+    status     : UNOBSERVABLE -- NOT claimed
+
+######################################################################################################################
+# NIFTY  --  144 abnormal events over 35 sessions  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']  (UNDERLYING basis, realistic stop)
+#   split: train 21 / val 9 / oos 9 sessions
+######################################################################################################################
+
+[§5 EARLIEST-ENTRY comparison]  best expectancy per unit structural risk (NOT highest accuracy)
+    A_spikeclose               n= 144 ses=35 cont= 56% trap= 33% E[3R]=-0.363 win= 33% medMFE_R= 1.01 medMAE_R=-1.066 P3R= 17% P5R=  2% P8R=  0% R=21.661 availR=0.72 DD=-71.7
+    B_n1agree                  n=  65 ses=29 cont= 75% trap= 15% E[3R]=-0.863 win= 29% medMFE_R=1.166 medMAE_R=-1.165 P3R= 31% P5R= 11% P8R=  3% R=10.17 availR=1.21 DD=-66.8
+    C_earlyaccept              n=  80 ses=32 cont= 79% trap= 14% E[3R]=-1.762 win= 32% medMFE_R=2.046 medMAE_R=-1.195 P3R= 40% P5R= 21% P8R= 10% R=5.736 availR=3.32 DD=-152.0
+    D_hold2                    n=  78 ses=31 cont= 91% trap=  0% E[3R]=  -4.6 win= 27% medMFE_R=0.964 medMAE_R=-1.069 P3R= 22% P5R=  5% P8R=  3% R=12.696 availR=1.75 DD=-367.6
+   chronological OOS only:
+    A_spikeclose [oos]         n=  25 ses= 8 cont= 56% trap= 28% E[3R]= 0.646 win= 52% medMFE_R=1.733 medMAE_R=-0.923 P3R= 40% P5R=  8% P8R=  0% R=20.909 availR=0.58 DD=-6.5
+    B_n1agree [oos]            n=  14 ses= 7 cont= 71% trap=  7% E[3R]= 0.737 win= 57% medMFE_R=3.668 medMAE_R=-0.777 P3R= 57% P5R= 21% P8R=  7% R=11.61 availR=1.19 DD=-9.8
+    C_earlyaccept [oos]        n=  16 ses= 7 cont= 81% trap=  6% E[3R]=-1.116 win= 50% medMFE_R=3.668 medMAE_R=-0.777 P3R= 56% P5R= 25% P8R= 12% R=5.196 availR=8.06 DD=-32.8
+    D_hold2 [oos]              n=  17 ses= 7 cont= 82% trap=  0% E[3R]=  0.48 win= 41% medMFE_R=1.675 medMAE_R=-0.946 P3R= 35% P5R=  6% P8R=  0% R=13.161 availR=1.82 DD=-6.9
+
+   -> best expectancy/R entry (pooled, n>=30): A_spikeclose  E[3R]=-0.363
+
+[§6 SMALL-SL / LARGE-R distribution]  entry = A_spikeclose, realistic stop, MFE measured BEFORE invalidation
+    train     n=  82 medMFE_R=0.827 p95MFE_R=3.393 medMAE_R=-1.077 p95MAE_R=-2.647 | P1R=44% P2R=26% P3R=12% P4R=2% P5R=1% P6R=1% P8R=0% | t1=4.0bars t_inv=4.5bars E[3R]=-0.549 DD=-47.5R
+    val       n=  37 medMFE_R=0.905 p95MFE_R=3.736 medMAE_R=-1.064 p95MAE_R=-4.142 | P1R=49% P2R=24% P3R=11% P4R=3% P5R=0% P6R=0% P8R=0% | t1=3.0bars t_inv=8bars E[3R]=-0.633 DD=-25.3R
+    oos       n=  25 medMFE_R=1.733 p95MFE_R=5.384 medMAE_R=-0.923 p95MAE_R=-1.832 | P1R=72% P2R=44% P3R=40% P4R=16% P5R=8% P6R=0% P8R=0% | t1=4.0bars t_inv=7.0bars E[3R]=0.646 DD=-6.5R
+    POOLED    n= 144 medMFE_R=1.01 p95MFE_R=3.736 medMAE_R=-1.066 p95MAE_R=-2.647 | P1R=50% P2R=28% P3R=17% P4R=5% P5R=2% P6R=1% P8R=0% | t1=3.5bars t_inv=6bars E[3R]=-0.363 DD=-71.7R
+
+[§4 COMPETING-EXPLANATION classifier H0..H7]  (entry = A_spikeclose)
+    H0_ambiguous               n=  44 ses=25 cont= 70% trap=  9% E[3R]= 0.149 win= 41% medMFE_R=1.199 medMAE_R=-1.031 P3R= 23% P5R=  2% P8R=  0% R=24.05 availR=0.86 DD=-9.8
+    H1_genuine_participation   n=  40 ses=25 cont= 95% trap=  0% E[3R]= 0.268 win= 50% medMFE_R=2.089 medMAE_R=-0.912 P3R= 28% P5R=  2% P8R=  0% R=21.27 availR=0.54 DD=-20.4
+    H2_liquidity_vacuum        n=   3 ses= 3 cont=100% trap=  0% E[3R]=  0.21 win= 33% medMFE_R=0.616 medMAE_R= -1.07 P3R= 33% P5R=  0% P8R=  0% R=27.861 availR=0.05 DD=-2.4
+    H3_sweep                   n=   3 ses= 3 cont=  0% trap= 33% E[3R]= 0.669 win=100% medMFE_R=0.839 medMAE_R=-0.866 P3R=  0% P5R=  0% P8R=  0% R=27.994 availR=0.33 DD=0.0
+    H4_absorption_continuation n=   2 ses= 2 cont=100% trap=  0% E[3R]= 1.956 win=100% medMFE_R=7.135 medMAE_R=-0.057 P3R= 50% P5R= 50% P8R=  0% R=18.404 availR=2.22 DD=0.0
+    H5_absorption_reversal     n=   7 ses= 6 cont= 86% trap= 14% E[3R]=-0.838 win= 14% medMFE_R=1.436 medMAE_R=-1.046 P3R=  0% P5R=  0% P8R=  0% R=18.546 availR=1.03 DD=-5.9
+    H6_exhaustion              n=   1 ses= 1 cont=  0% trap=100% E[3R]= 0.941 win=100% medMFE_R=0.941 medMAE_R=-0.879 P3R=  0% P5R=  0% P8R=  0% R=34.235 availR=None DD=0.0
+    H7_trapped_reversal        n=  44 ses=26 cont=  0% trap= 91% E[3R]=-1.618 win=  4% medMFE_R=0.211 medMAE_R= -1.21 P3R=  2% P5R=  0% P8R=  0% R=20.289 availR=0.78 DD=-71.2
+
+[§5/§7 CONTINUATION vs TRAP matrix]  (entry = A_spikeclose)
+    ALL                        n= 144 ses=35 cont= 56% trap= 33% E[3R]=-0.363 win= 33% medMFE_R= 1.01 medMAE_R=-1.066 P3R= 17% P5R=  2% P8R=  0% R=21.661 availR=0.72 DD=-71.7
+    no reclaim within 3        n=  90 ses=31 cont= 89% trap=  3% E[3R]= 0.044 win= 40% medMFE_R=1.581 medMAE_R= -1.01 P3R= 23% P5R=  3% P8R=  0% R=21.661 availR=0.86 DD=-30.4
+    reclaim within 3           n=  54 ses=30 cont=  0% trap= 82% E[3R]=-1.042 win= 22% medMFE_R=0.333 medMAE_R=-1.168 P3R=  6% P5R=  0% P8R=  0% R=22.264 availR=0.65 DD=-58.1
+    n1 agrees                  n=  65 ses=29 cont= 75% trap= 15% E[3R]= 0.073 win= 43% medMFE_R=1.763 medMAE_R=-1.002 P3R= 25% P5R=  3% P8R=  0% R=20.497 availR=0.71 DD=-29.6
+    n1 disagrees               n=  79 ses=32 cont= 39% trap= 47% E[3R]=-0.722 win= 25% medMFE_R= 0.52 medMAE_R=-1.124 P3R= 10% P5R=  1% P8R=  0% R=23.152 availR=0.73 DD=-57.1
+    no reclaim & n1 agrees     n=  53 ses=28 cont= 92% trap=  2% E[3R]= 0.284 win= 47% medMFE_R=1.939 medMAE_R=-0.912 P3R= 28% P5R=  4% P8R=  0% R=20.909 availR=0.86 DD=-22.8
+    day TRENDING/OPEN_DRIVE    n= 113 ses=33 cont= 56% trap= 33% E[3R]=-0.277 win= 35% medMFE_R=0.951 medMAE_R=-1.064 P3R= 20% P5R=  3% P8R=  0% R=22.015 availR=0.65 DD=-55.2
+    day ROTATION/CHOP/BALANCED n=0
+    spike outside value        n=  72 ses=28 cont= 57% trap= 31% E[3R]=-0.395 win= 32% medMFE_R=0.951 medMAE_R=-1.092 P3R= 18% P5R=  4% P8R=  0% R=23.896 availR=0.85 DD=-47.7
+    range_x >= 3               n=  20 ses=13 cont= 70% trap= 20% E[3R]= 0.406 win= 50% medMFE_R=1.081 medMAE_R=-0.871 P3R= 25% P5R=  5% P8R=  0% R=34.235 availR=0.49 DD=-5.5
+
+[§9 FEATURE INCREMENTAL-VALUE]  baseline vs conditioned (entry = A_spikeclose); dE = E[3R] delta, on OOS
+    n1_agree                         n=65    dE(all)=+0.436 dE(oos)=0.832 dTrap=-17.2pp  -> SUPPORTED
+    no reclaim within 3              n=90    dE(all)=+0.407 dE(oos)=0.373 dTrap=-29.3pp  -> SUPPORTED
+    range_x >= 3                     n=20    INSUFFICIENT
+    spike outside value              n=72    dE(all)=-0.032 dE(oos)=0.189 dTrap=-2.0pp  -> REJECTED
+    vwap_dist same side              n=101   dE(all)=+0.101 dE(oos)=0.38 dTrap=-5.9pp  -> SUPPORTED
+    prior-8 range contraction < 1    n=138   dE(all)=+0.034 dE(oos)=0.013 dTrap=-0.7pp  -> SUPPORTED
+    prior-8 rotations >= 4           n=55    dE(all)=-0.305 dE(oos)=-0.144 dTrap=+0.1pp  -> REJECTED
+    day TRENDING/OPEN_DRIVE          n=113   dE(all)=+0.086 dE(oos)=0.043 dTrap=+0.1pp  -> SUPPORTED
+
+######################################################################################################################
+# NATURALGAS  --  1261 abnormal events over 35 sessions  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']  (UNDERLYING basis, realistic stop)
+#   split: train 19 / val 8 / oos 9 sessions
+######################################################################################################################
+
+[§5 EARLIEST-ENTRY comparison]  best expectancy per unit structural risk (NOT highest accuracy)
+    A_spikeclose               n=1261 ses=35 cont= 38% trap= 42% E[3R]=-0.583 win= 26% medMFE_R=0.962 medMAE_R=-1.205 P3R= 22% P5R=  1% P8R=  0% R=0.621 availR=0.94 DD=-739.0
+    B_n1agree                  n= 604 ses=34 cont= 54% trap= 24% E[3R]=-1.498 win= 26% medMFE_R=1.145 medMAE_R=-1.399 P3R= 26% P5R=  6% P8R=  2% R=0.415 availR=1.92 DD=-905.1
+    C_earlyaccept              n= 540 ses=35 cont= 66% trap= 17% E[3R]=-3.926 win= 26% medMFE_R=1.739 medMAE_R=-1.509 P3R= 39% P5R= 17% P8R= 12% R=0.227 availR=3.79 DD=-2120.1
+    D_hold2                    n= 516 ses=35 cont= 83% trap=  0% E[3R]=-1.621 win= 25% medMFE_R=0.919 medMAE_R=-1.183 P3R= 22% P5R=  6% P8R=  4% R=0.521 availR=1.8 DD=-837.7
+   chronological OOS only:
+    A_spikeclose [oos]         n= 312 ses= 8 cont= 37% trap= 41% E[3R]=-0.509 win= 26% medMFE_R=0.971 medMAE_R=-1.205 P3R= 23% P5R=  1% P8R=  0% R=0.63 availR=0.95 DD=-170.1
+    B_n1agree [oos]            n= 146 ses= 8 cont= 50% trap= 23% E[3R]=-1.101 win= 26% medMFE_R=1.223 medMAE_R=-1.359 P3R= 26% P5R=  5% P8R=  1% R=0.43 availR=2.36 DD=-165.6
+    C_earlyaccept [oos]        n= 138 ses= 8 cont= 61% trap= 20% E[3R]=-5.031 win= 23% medMFE_R=1.538 medMAE_R=-1.558 P3R= 37% P5R= 17% P8R= 11% R=0.23 availR=4.61 DD=-697.2
+    D_hold2 [oos]              n= 129 ses= 8 cont= 79% trap=  0% E[3R]=-1.678 win= 26% medMFE_R=1.135 medMAE_R=-1.179 P3R= 23% P5R=  8% P8R=  4% R=0.527 availR=1.91 DD=-219.2
+
+   -> best expectancy/R entry (pooled, n>=30): A_spikeclose  E[3R]=-0.583
+
+[§6 SMALL-SL / LARGE-R distribution]  entry = A_spikeclose, realistic stop, MFE measured BEFORE invalidation
+    train     n= 687 medMFE_R=0.971 p95MFE_R=3.745 medMAE_R=-1.2 p95MAE_R=-2.358 | P1R=49% P2R=31% P3R=21% P4R=3% P5R=1% P6R=0% P8R=0% | t1=2bars t_inv=3bars E[3R]=-0.573 DD=-402.1R
+    val       n= 262 medMFE_R=0.693 p95MFE_R=3.883 medMAE_R=-1.214 p95MAE_R=-2.358 | P1R=39% P2R=28% P3R=20% P4R=5% P5R=1% P6R=0% P8R=0% | t1=2.0bars t_inv=3bars E[3R]=-0.699 DD=-187.1R
+    oos       n= 312 medMFE_R=0.971 p95MFE_R=3.641 medMAE_R=-1.205 p95MAE_R=-2.169 | P1R=48% P2R=33% P3R=23% P4R=3% P5R=1% P6R=1% P8R=0% | t1=2bars t_inv=3.0bars E[3R]=-0.509 DD=-170.1R
+    POOLED    n=1261 medMFE_R=0.962 p95MFE_R=3.762 medMAE_R=-1.205 p95MAE_R=-2.29 | P1R=47% P2R=31% P3R=22% P4R=3% P5R=1% P6R=0% P8R=0% | t1=2.0bars t_inv=3.0bars E[3R]=-0.583 DD=-739.0R
+
+[§4 COMPETING-EXPLANATION classifier H0..H7]  (entry = A_spikeclose)
+    H0_ambiguous               n= 307 ses=35 cont= 51% trap= 19% E[3R]= 0.097 win= 42% medMFE_R=1.763 medMAE_R=-1.079 P3R= 33% P5R=  1% P8R=  0% R=0.63 availR=0.96 DD=-24.1
+    H1_genuine_participation   n= 304 ses=34 cont= 80% trap=  2% E[3R]= 0.255 win= 45% medMFE_R=2.056 medMAE_R=-1.084 P3R= 36% P5R=  1% P8R=  0% R=0.721 availR=0.95 DD=-29.9
+    H2_liquidity_vacuum        n=   8 ses= 7 cont= 75% trap=  0% E[3R]=-0.107 win= 38% medMFE_R=0.965 medMAE_R=-0.957 P3R= 25% P5R=  0% P8R=  0% R=0.518 availR=3.03 DD=-6.4
+    H3_sweep                   n=   2 ses= 2 cont=  0% trap= 50% E[3R]=  0.82 win=100% medMFE_R=1.238 medMAE_R=-0.077 P3R=  0% P5R=  0% P8R=  0% R=6.507 availR=0.14 DD=0.0
+    H4_absorption_continuation n=  36 ses=21 cont= 56% trap=  3% E[3R]=  2.66 win= 97% medMFE_R=3.349 medMAE_R=-0.088 P3R= 97% P5R=  8% P8R=  0% R=0.524 availR=1.2 DD=-1.9
+    H5_absorption_reversal     n=  66 ses=27 cont= 35% trap= 48% E[3R]=-1.266 win= 14% medMFE_R=0.801 medMAE_R=-1.435 P3R= 11% P5R=  2% P8R=  0% R=0.524 availR=1.64 DD=-84.2
+    H6_exhaustion              n=  34 ses=23 cont= 85% trap=  0% E[3R]=-0.387 win= 29% medMFE_R=1.446 medMAE_R=-1.133 P3R= 24% P5R=  0% P8R=  0% R=0.721 availR=0.81 DD=-17.9
+    H7_trapped_reversal        n= 504 ses=34 cont=  0% trap= 86% E[3R]=-1.671 win=  2% medMFE_R=0.321 medMAE_R=-1.359 P3R=  1% P5R=  0% P8R=  0% R=0.621 availR=0.8 DD=-842.3
+
+[§5/§7 CONTINUATION vs TRAP matrix]  (entry = A_spikeclose)
+    ALL                        n=1261 ses=35 cont= 38% trap= 42% E[3R]=-0.583 win= 26% medMFE_R=0.962 medMAE_R=-1.205 P3R= 22% P5R=  1% P8R=  0% R=0.621 availR=0.94 DD=-739.0
+    no reclaim within 3        n= 708 ses=35 cont= 67% trap= 10% E[3R]= 0.028 win= 40% medMFE_R=1.763 medMAE_R=-1.111 P3R= 33% P5R=  1% P8R=  0% R=0.624 availR=0.97 DD=-48.4
+    reclaim within 3           n= 553 ses=34 cont=  0% trap= 83% E[3R]=-1.366 win=  9% medMFE_R=0.384 medMAE_R=-1.335 P3R=  7% P5R=  0% P8R=  0% R=0.621 availR=0.8 DD=-759.5
+    n1 agrees                  n= 604 ses=34 cont= 54% trap= 24% E[3R]=-0.147 win= 37% medMFE_R=1.618 medMAE_R=-1.152 P3R= 31% P5R=  2% P8R=  0% R=0.618 availR=0.94 DD=-114.3
+    n1 disagrees               n= 657 ses=35 cont= 23% trap= 59% E[3R]=-0.984 win= 17% medMFE_R=0.416 medMAE_R= -1.27 P3R= 13% P5R=  0% P8R=  0% R=0.624 availR=0.94 DD=-653.4
+    no reclaim & n1 agrees     n= 441 ses=34 cont= 74% trap=  4% E[3R]= 0.295 win= 46% medMFE_R=2.136 medMAE_R=-1.079 P3R= 40% P5R=  2% P8R=  0% R=0.618 availR=0.97 DD=-28.1
+    day TRENDING/OPEN_DRIVE    n= 653 ses=35 cont= 39% trap= 40% E[3R]=-0.544 win= 27% medMFE_R=0.964 medMAE_R=  -1.2 P3R= 23% P5R=  1% P8R=  0% R=0.618 availR=0.97 DD=-362.3
+    day ROTATION/CHOP/BALANCED n=   1 ses= 1 cont=100% trap=  0% E[3R]=  1.77 win=100% medMFE_R=2.684 medMAE_R=-0.171 P3R=  0% P5R=  0% P8R=  0% R=1.751 availR=0.06 DD=0.0
+    spike outside value        n= 814 ses=35 cont= 40% trap= 41% E[3R]=-0.581 win= 26% medMFE_R=0.949 medMAE_R=-1.205 P3R= 21% P5R=  1% P8R=  0% R=0.624 availR=1.06 DD=-475.8
+    range_x >= 3               n= 452 ses=34 cont= 44% trap= 37% E[3R]=-0.527 win= 25% medMFE_R=0.965 medMAE_R=-1.158 P3R= 18% P5R=  0% P8R=  0% R=0.927 availR=0.69 DD=-239.9
+
+[§9 FEATURE INCREMENTAL-VALUE]  baseline vs conditioned (entry = A_spikeclose); dE = E[3R] delta, on OOS
+    n1_agree                         n=604   dE(all)=+0.436 dE(oos)=0.491 dTrap=-18.3pp  -> SUPPORTED
+    no reclaim within 3              n=708   dE(all)=+0.611 dE(oos)=0.545 dTrap=-32.1pp  -> SUPPORTED
+    range_x >= 3                     n=452   dE(all)=+0.056 dE(oos)=0.115 dTrap=-5.3pp  -> SUPPORTED
+    spike outside value              n=814   dE(all)=+0.002 dE(oos)=0.042 dTrap=-0.7pp  -> REJECTED
+    vwap_dist same side              n=787   dE(all)=-0.139 dE(oos)=-0.226 dTrap=-2.4pp  -> REJECTED
+    prior-8 range contraction < 1    n=974   dE(all)=+0.038 dE(oos)=0.072 dTrap=-1.2pp  -> SUPPORTED
+    prior-8 rotations >= 4           n=262   dE(all)=+0.086 dE(oos)=-0.113 dTrap=+0.4pp  -> PROMISING
+    day TRENDING/OPEN_DRIVE          n=653   dE(all)=+0.039 dE(oos)=-0.044 dTrap=-1.6pp  -> PROMISING
+
+######################################################################################################################
+# CRUDEOIL  --  1078 abnormal events over 38 sessions  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']  (UNDERLYING basis, realistic stop)
+#   split: train 21 / val 9 / oos 9 sessions
+######################################################################################################################
+
+[§5 EARLIEST-ENTRY comparison]  best expectancy per unit structural risk (NOT highest accuracy)
+    A_spikeclose               n=1078 ses=38 cont= 45% trap= 39% E[3R]=-0.197 win= 30% medMFE_R=  1.0 medMAE_R=-1.124 P3R= 25% P5R=  1% P8R=  0% R=24.72 availR=0.86 DD=-226.5
+    B_n1agree                  n= 485 ses=38 cont= 64% trap= 18% E[3R]=-0.896 win= 27% medMFE_R= 0.93 medMAE_R=-1.295 P3R= 27% P5R=  5% P8R=  1% R=13.11 availR=1.97 DD=-440.0
+    C_earlyaccept              n= 588 ses=38 cont= 66% trap= 18% E[3R]=-2.665 win= 28% medMFE_R=1.377 medMAE_R=-1.376 P3R= 37% P5R= 18% P8R= 12% R=8.57 availR=5.12 DD=-1567.2
+    D_hold2                    n= 501 ses=38 cont= 86% trap=  0% E[3R]=-1.043 win= 32% medMFE_R= 1.22 medMAE_R=-1.158 P3R= 32% P5R=  7% P8R=  3% R=16.57 availR=2.75 DD=-535.8
+   chronological OOS only:
+    A_spikeclose [oos]         n= 237 ses= 8 cont= 42% trap= 40% E[3R]=-0.232 win= 29% medMFE_R= 0.86 medMAE_R=-1.138 P3R= 24% P5R=  0% P8R=  0% R=22.87 availR=0.61 DD=-63.0
+    B_n1agree [oos]            n=  98 ses= 8 cont= 60% trap= 18% E[3R]=-0.875 win= 20% medMFE_R=0.879 medMAE_R=-1.284 P3R= 24% P5R=  3% P8R=  0% R=13.56 availR=1.11 DD=-87.3
+    C_earlyaccept [oos]        n= 113 ses= 8 cont= 70% trap= 17% E[3R]=-1.421 win= 27% medMFE_R=1.565 medMAE_R=-1.294 P3R= 36% P5R= 15% P8R=  9% R=8.5 availR=4.36 DD=-162.1
+    D_hold2 [oos]              n=  98 ses= 8 cont= 89% trap=  0% E[3R]=-1.479 win= 29% medMFE_R=1.392 medMAE_R=-1.171 P3R= 33% P5R=  6% P8R=  2% R=12.93 availR=4.1 DD=-145.0
+
+   -> best expectancy/R entry (pooled, n>=30): A_spikeclose  E[3R]=-0.197
+
+[§6 SMALL-SL / LARGE-R distribution]  entry = A_spikeclose, realistic stop, MFE measured BEFORE invalidation
+    train     n= 596 medMFE_R=1.036 p95MFE_R=3.913 medMAE_R=-1.105 p95MAE_R=-2.213 | P1R=52% P2R=36% P3R=27% P4R=4% P5R=0% P6R=0% P8R=0% | t1=2.0bars t_inv=3bars E[3R]=-0.128 DD=-111.0R
+    val       n= 245 medMFE_R=0.963 p95MFE_R=3.912 medMAE_R=-1.141 p95MAE_R=-2.217 | P1R=49% P2R=29% P3R=22% P4R=4% P5R=2% P6R=1% P8R=0% | t1=3bars t_inv=4bars E[3R]=-0.33 DD=-99.4R
+    oos       n= 237 medMFE_R=0.86 p95MFE_R=3.701 medMAE_R=-1.138 p95MAE_R=-2.195 | P1R=46% P2R=32% P3R=24% P4R=4% P5R=0% P6R=0% P8R=0% | t1=3.0bars t_inv=4.0bars E[3R]=-0.232 DD=-63.0R
+    POOLED    n=1078 medMFE_R=1.0 p95MFE_R=3.889 medMAE_R=-1.124 p95MAE_R=-2.213 | P1R=50% P2R=34% P3R=25% P4R=4% P5R=1% P6R=0% P8R=0% | t1=3bars t_inv=4.0bars E[3R]=-0.197 DD=-226.5R
+
+[§4 COMPETING-EXPLANATION classifier H0..H7]  (entry = A_spikeclose)
+    H0_ambiguous               n= 311 ses=37 cont= 56% trap= 20% E[3R]= 0.307 win= 42% medMFE_R=1.578 medMAE_R=-1.046 P3R= 35% P5R=  1% P8R=  0% R=26.78 availR=0.94 DD=-20.9
+    H1_genuine_participation   n= 298 ses=38 cont= 86% trap=  3% E[3R]= 0.593 win= 50% medMFE_R=2.299 medMAE_R=-0.934 P3R= 42% P5R=  1% P8R=  0% R=25.75 availR=0.76 DD=-12.5
+    H2_liquidity_vacuum        n=   2 ses= 2 cont= 50% trap= 50% E[3R]= 2.335 win=100% medMFE_R=3.579 medMAE_R=-0.863 P3R= 50% P5R=  0% P8R=  0% R=52.53 availR=0.32 DD=0.0
+    H4_absorption_continuation n=  14 ses=11 cont= 64% trap=  7% E[3R]= 2.526 win= 93% medMFE_R=3.912 medMAE_R=-0.042 P3R= 86% P5R=  7% P8R=  0% R=16.66 availR=1.32 DD=-1.4
+    H5_absorption_reversal     n=  44 ses=31 cont= 41% trap= 43% E[3R]= -0.26 win= 30% medMFE_R=1.034 medMAE_R=-1.147 P3R= 27% P5R=  0% P8R=  0% R=19.9 availR=1.46 DD=-16.7
+    H6_exhaustion              n=  24 ses=18 cont= 96% trap=  0% E[3R]= 0.124 win= 38% medMFE_R= 1.64 medMAE_R=-1.163 P3R= 33% P5R=  0% P8R=  0% R=28.02 availR=1.46 DD=-11.2
+    H7_trapped_reversal        n= 385 ses=37 cont=  0% trap= 85% E[3R]= -1.34 win=  3% medMFE_R=0.234 medMAE_R=-1.248 P3R=  2% P5R=  0% P8R=  0% R=22.81 availR=0.85 DD=-516.1
+
+[§5/§7 CONTINUATION vs TRAP matrix]  (entry = A_spikeclose)
+    ALL                        n=1078 ses=38 cont= 45% trap= 39% E[3R]=-0.197 win= 30% medMFE_R=  1.0 medMAE_R=-1.124 P3R= 25% P5R=  1% P8R=  0% R=24.72 availR=0.86 DD=-226.5
+    no reclaim within 3        n= 630 ses=38 cont= 76% trap= 10% E[3R]= 0.295 win= 42% medMFE_R=1.812 medMAE_R= -1.04 P3R= 36% P5R=  1% P8R=  0% R=25.75 availR=0.91 DD=-24.0
+    reclaim within 3           n= 448 ses=37 cont=  0% trap= 80% E[3R]=-0.888 win= 13% medMFE_R=0.341 medMAE_R=-1.214 P3R= 11% P5R=  0% P8R=  0% R=23.69 availR=0.84 DD=-398.0
+    n1 agrees                  n= 485 ses=38 cont= 64% trap= 18% E[3R]= 0.296 win= 42% medMFE_R=1.817 medMAE_R=-1.052 P3R= 36% P5R=  1% P8R=  0% R=24.72 availR=0.78 DD=-24.7
+    n1 disagrees               n= 593 ses=37 cont= 28% trap= 56% E[3R]=  -0.6 win= 20% medMFE_R=0.387 medMAE_R=-1.175 P3R= 16% P5R=  1% P8R=  0% R=24.9 availR=0.97 DD=-356.1
+    no reclaim & n1 agrees     n= 374 ses=38 cont= 84% trap=  4% E[3R]= 0.589 win= 50% medMFE_R=2.327 medMAE_R=-0.971 P3R= 43% P5R=  1% P8R=  0% R=24.72 availR=0.8 DD=-16.9
+    day TRENDING/OPEN_DRIVE    n= 595 ses=38 cont= 49% trap= 36% E[3R]=-0.094 win= 33% medMFE_R=1.041 medMAE_R= -1.11 P3R= 28% P5R=  1% P8R=  0% R=24.72 availR=0.95 DD=-65.0
+    day ROTATION/CHOP/BALANCED n=   1 ses= 1 cont=  0% trap=  0% E[3R]=-1.147 win=  0% medMFE_R=2.383 medMAE_R=-1.103 P3R=  0% P5R=  0% P8R=  0% R=22.66 availR=1.15 DD=-1.1
+    spike outside value        n= 714 ses=37 cont= 45% trap= 40% E[3R]=-0.155 win= 30% medMFE_R=1.002 medMAE_R=-1.114 P3R= 26% P5R=  1% P8R=  0% R=24.81 availR=0.97 DD=-128.3
+    range_x >= 3               n= 246 ses=37 cont= 49% trap= 28% E[3R]=-0.121 win= 30% medMFE_R=1.023 medMAE_R=-1.073 P3R= 22% P5R=  0% P8R=  0% R=36.05 availR=0.77 DD=-46.0
+
+[§9 FEATURE INCREMENTAL-VALUE]  baseline vs conditioned (entry = A_spikeclose); dE = E[3R] delta, on OOS
+    n1_agree                         n=485   dE(all)=+0.493 dE(oos)=0.436 dTrap=-20.8pp  -> SUPPORTED
+    no reclaim within 3              n=630   dE(all)=+0.492 dE(oos)=0.433 dTrap=-29.1pp  -> SUPPORTED
+    range_x >= 3                     n=246   dE(all)=+0.076 dE(oos)=-0.245 dTrap=-10.4pp  -> PROMISING
+    spike outside value              n=714   dE(all)=+0.042 dE(oos)=0.015 dTrap=+0.6pp  -> SUPPORTED
+    vwap_dist same side              n=673   dE(all)=+0.048 dE(oos)=0.054 dTrap=-3.4pp  -> SUPPORTED
+    prior-8 range contraction < 1    n=936   dE(all)=-0.021 dE(oos)=-0.055 dTrap=+0.5pp  -> REJECTED
+    prior-8 rotations >= 4           n=342   dE(all)=-0.123 dE(oos)=-0.171 dTrap=+0.9pp  -> REJECTED
+    day TRENDING/OPEN_DRIVE          n=595   dE(all)=+0.103 dE(oos)=0.094 dTrap=-2.4pp  -> SUPPORTED
+
+==============================================================================================================
+[§8] INDEX / STOCK STRUCTURAL RELATIONSHIP
+==============================================================================================================
+  TRUE constituent-stock -> index causation is UNOBSERVABLE (no single-stock feed).
+  Proxy test: cross-INDEX lead/lag of 5m returns (does an abnormal move in one
+  index lead another). Resampled from cycles.underlying_ltp, RTH only.
+   BANKNIFTY vs NIFTY      n=2588  corr(0)=+0.80  corr(a leads b by 1)=-0.05  corr(b leads a by 1)=-0.07  -> contemporaneous
+       NIFTY vs BANKNIFTY  n=2588  corr(0)=+0.80  corr(a leads b by 1)=-0.07  corr(b leads a by 1)=-0.05  -> contemporaneous
+    FINNIFTY vs NIFTY      n=2588  corr(0)=+0.81  corr(a leads b by 1)=-0.06  corr(b leads a by 1)=-0.04  -> contemporaneous
+  MIDCPNIFTY vs NIFTY      n=2588  corr(0)=+0.63  corr(a leads b by 1)=-0.05  corr(b leads a by 1)=-0.01  -> b leads
+
+======================================================================================================================
+[FINAL — §13-16]  underlying (futures) basis, realistic stop, chronological split
+======================================================================================================================
+  SYMBOL    ENTRY           medR_pt   P3R   P5R   P8R  TRAP%  E[3R]tr  E[3R]va  E[3R]oos    DD_R     N  SESS STATUS                    
+  NIFTY     A_spikeclose     21.661   17%    2%    0%    33%   -0.549   -0.633     0.646   -71.7   144    35 UNSTABLE across splits    
+  NATURALGAS A_spikeclose      0.621   22%    1%    0%    42%   -0.573   -0.699    -0.509  -739.0  1261    35 REJECTED (fails OOS)      
+  CRUDEOIL  A_spikeclose      24.72   25%    1%    0%    39%   -0.128    -0.33    -0.232  -226.5  1078    38 REJECTED (fails OOS)      
+
+  FILTERED SUBSET  (no reclaim within 3  AND  n1 agrees) -- drops the H7 trap cohort:
+    NIFTY     n=  53 ses=28 cont=92% trap=2% E[3R] tr/va/oos = 0.045 / -0.444 / 1.711  P3R=28% P5R=4% DD=-22.8R  -> PROMISING
+    NATURALGAS n= 441 ses=34 cont=74% trap=4% E[3R] tr/va/oos = 0.257 / 0.315 / 0.36  P3R=40% P5R=2% DD=-28.1R  -> SUPPORTED (small edge)
+    CRUDEOIL  n= 374 ses=38 cont=84% trap=4% E[3R] tr/va/oos = 0.628 / 0.469 / 0.61  P3R=43% P5R=1% DD=-16.9R  -> SUPPORTED (small edge)
+
+  SUPPORTED   : abnormal-range percentile as the spike definition (stable, symbol-adaptive);
+               acceptance-vs-reclaim as the continuation/trap separator; n1 agreement as an
+               early continuation tell -- all reproduced on the underlying over 35-38 sessions.
+               The H1 'genuine participation' vs H7 'trapped reversal' split (section 4) is clean
+               and consistent across all three symbols (H7 ~= -1.5R, ~86-91% trap, ~30-40% of events).
+  PROMISING   : the FILTERED subset above -- dropping the H7/reclaim cohort flips E[3R] positive
+               (~+0.3 to +0.6R) on train+val+oos, but the per-trade edge is small, P5R ~1-4%,
+               and the effective independent N is the session count.
+  REJECTED    : the UNCONDITIONAL abnormal-spike entry on the underlying (negative pooled E[3R],
+               fails the chronological OOS split on NATGAS/CRUDE, unstable on NIFTY);
+               the 'small SL + LARGE R' thesis -- with a realistic stop, medMFE_R ~= 1.0,
+               P5R ~1-2%, P8R ~0%; the large-R right tail is NOT there (section 6);
+               and, as incremental features: Market-Profile day-regime (classifier degenerate),
+               VWAP-proxy distance (symbol-dependent), prior-bar compression (dE ~ 0),
+               price rotation, the option-volume 'imbalance' proxy -- none add stable
+               incremental OOS expectancy (section 9). Compression HURTS (confirms Stage-3/4).
+  UNOBSERVABLE : true delta, footprint, bid/ask imbalance, absorption, iceberg/large-participant
+               detection, constituent-stock -> index causation. Exact data needed: underlying
+               tick stream with aggressor side + full depth-of-book; single-stock 1m/tick feed.
+
+[FINAL] Research only. No production pattern, no signal enabled, no live change, no orders, no weighted score. Where the maths does not support a claim it is marked REJECTED or UNOBSERVABLE above -- not softened.
+

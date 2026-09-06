@@ -939,3 +939,125 @@ enabled; no live change; no orders; no weighted score. No "institutional" /
 ```
 cd backend && python scripts/orderflow_stage4.py   # needs /root/oi_dashboard/oi_history.db (read-only)
 ```
+
+---
+
+## 15. Stage-5 — underlying-basis market-behaviour maths + concept reconstruction (2026-09-06)
+
+Stage-4 showed the sequence dies in ATM option premium. Stage-5 goes back to
+the **underlying** and asks the clean question: does it have a positive
+expectancy-per-unit-structural-risk on the underlying itself, with a
+**realistic stop** (exit at the breaching bar's extreme + 1 futures tick, not
+at the stop price), on a chronological train/validation/OOS split?
+`backend/scripts/orderflow_stage5.py` → report + 5,940-row event CSV.
+~1,200 abnormal events/symbol over 35–38 sessions, 3 regimes. Research only;
+no score, no pattern, no orders.
+
+### §1 concept → testable-hypothesis / observability
+
+| concept | status |
+|---------|--------|
+| abnormal price expansion, price rotation, acceptance/rejection, stop-loss sweep, trapped participants, exhaustion (shape) | **OBSERVED** (bar OHLC) |
+| Market Profile POC/VAH/VAL, day-type, POC migration | **OBSERVED** (time-price profile; no volume) |
+| "2:1 / 200 % imbalance", buyer/seller pressure, absorption | **PROXY (L3)** — option CE/PE traded-volume ratio + OI change; **not** order flow |
+| aggressor delta, lift-offer/hit-bid, bid/ask imbalance, footprint, diagonal imbalance, iceberg / large-participant detection, constituent-stock → index causation | **UNOBSERVABLE (L4)** — needs an underlying tick stream with aggressor side + full depth-of-book, and a single-stock tick feed |
+
+### §5/§6 the "small SL + large R" thesis is REJECTED with a realistic stop
+
+Unconditional abnormal-spike entry, underlying basis, exit at breaching-bar
+extreme + 1 tick:
+
+| symbol | n | pooled E[fix3R] | E[3R] train / val / **OOS** | P3R | P5R | P8R | status |
+|--------|--:|---------------:|:---------------------------:|----:|----:|----:|--------|
+| NIFTY  | 144 | **−0.36R** | −0.55 / −0.63 / +0.65 | 17 % | 2 % | 0 % | UNSTABLE across splits |
+| NATGAS | 1261 | **−0.58R** | −0.57 / −0.70 / **−0.51** | 22 % | 1 % | 0 % | **REJECTED (fails OOS)** |
+| CRUDE  | 1078 | **−0.20R** | −0.13 / −0.33 / **−0.23** | 25 % | 1 % | 0 % | **REJECTED (fails OOS)** |
+
+median MFE-before-invalidation ≈ **1.0R**, p95 ≈ 3.7R; **P5R ≈ 1–2 %, P8R ≈
+0 %.** The large-R right tail that manual chart observation suggested **is not
+in the distribution.** The Stage-3 "+0.5R" was an artifact of exiting *at* the
+stop price; the ~0.7R of stop overshoot (median MAE_R ≈ −1.1, p95 ≈ −2.2 to
+−4.1) turns it negative.
+
+### §4 BUT the H1 / H7 decomposition is a clean, reproducible separation
+
+Objective, causal competing-explanation labels (H1 genuine participation …
+H7 trapped→reversal):
+
+| class | share of events | continuation % | trap % | E[fix3R] |
+|-------|:--------------:|:-------------:|:------:|:--------:|
+| **H1 genuine participation** (strong body + n1 agrees + no reclaim) | ~25–28 % | **80–95 %** | 0–3 % | **+0.26 to +0.59R** |
+| **H7 trapped → reversal** (break + no acceptance + reclaim + opposite) | **~30–40 %** | **0 %** | **85–91 %** | **−1.34 to −1.67R** |
+| H0 ambiguous + H2–H6 | rest | 70 % | ~9 % | ≈ 0 |
+
+Consistent across all three symbols. **~1 in 3 abnormal spikes is a
+near-certain loser (H7), cleanly identifiable from completed candles.**
+
+### §7 the filtered subset — drop the trap cohort
+
+`no reclaim within 3` **AND** `n1 agrees` (removes H7), underlying, realistic
+stop, chronological split:
+
+| symbol | n | sessions | cont % | trap % | E[fix3R] train / val / **OOS** | status |
+|--------|--:|--------:|:------:|:------:|:-----------------------------:|--------|
+| NIFTY  | 53  | 28 | 92 % | 2 % | +0.05 / −0.44 / +1.71 | PROMISING (val negative → unstable) |
+| NATGAS | 441 | 34 | 74 % | 4 % | +0.26 / +0.32 / **+0.36** | **SUPPORTED (small edge)** |
+| CRUDE  | 374 | 38 | 84 % | 4 % | +0.63 / +0.47 / **+0.61** | **SUPPORTED (small edge)** |
+
+**Filtering out H7 flips the underlying expectancy positive and it holds on
+the OOS split for NATGAS (+0.36R) and CRUDE (+0.61R)** — ~400 trades each over
+34–38 sessions. The edge is **small** (~+0.3 to +0.6R at fixed-3R), P5R ≈
+1–2 %, effective independent N ≈ the session count. NIFTY's subset (n = 53) is
+positive pooled but negative in validation → not stable.
+
+### §9 feature incremental value (chronological OOS)
+
+| feature | verdict (all 3 symbols) |
+|---------|-------------------------|
+| **n1 agrees with the spike** | **SUPPORTED** — ΔE +0.44 to +0.83 OOS, Δtrap −17 to −21 pp |
+| **no reclaim of the level within 3 candles** | **SUPPORTED** — ΔE +0.37 to +0.55 OOS, Δtrap −29 to −32 pp |
+| abnormal-range percentile (≥ P90) as the spike def | **SUPPORTED** — stable, symbol-adaptive |
+| range_x ≥ 3× | PROMISING / mixed OOS |
+| VWAP-proxy distance same side | PROMISING — helps NIFTY/CRUDE, hurts NATGAS OOS |
+| spike outside developing value | **REJECTED** — ΔE ≈ 0 |
+| prior-8-bar range contraction | **REJECTED** — ΔE ≈ 0 (compression adds nothing; confirms Stage-3/4) |
+| prior-8-bar rotations ≥ 4 | **REJECTED** — negative OOS |
+| Market-Profile day-regime | **REJECTED** — the classifier is degenerate (rotation/chop bucket empty); untestable as built |
+| option-volume "imbalance" proxy | **REJECTED** — Stage-4 result stands |
+
+### §8 index / stock lead-lag
+
+Constituent-stock → index causation is **UNOBSERVABLE** (no single-stock
+feed). Proxy: cross-index 5m return lead/lag from resampled
+`cycles.underlying_ltp`. BANKNIFTY ↔ NIFTY, FINNIFTY ↔ NIFTY:
+**contemporaneous** — corr(0) ≈ 0.80, lead/lag corr ≈ −0.05 either way. **No
+exploitable 5m index-index lead.**
+
+### FINAL — what is SUPPORTED / PROMISING / REJECTED / UNOBSERVABLE
+
+- **SUPPORTED:** the *market-behaviour separation* — abnormal spike splits into
+  H1 (genuine, ~continuation) and H7 (trapped, ~reversal); acceptance-vs-reclaim
+  and n1-agreement are the causal discriminators; the range-percentile spike
+  definition is stable and symbol-adaptive.
+- **PROMISING:** a **small positive underlying edge** from the H7-filtered
+  subset (`no reclaim + n1 agrees`), holding on the chronological OOS split for
+  NATGAS/CRUDE (~+0.3 to +0.6R / trade). Needs a never-touched final holdout
+  and more sessions before it is more than PROMISING.
+- **REJECTED:** the unconditional abnormal-spike entry (negative E, fails OOS);
+  the "small SL + LARGE R" thesis (no P5R/P8R tail with a realistic stop);
+  Market Profile location / day-regime, VWAP-proxy distance, compression, price
+  rotation, the option-volume imbalance proxy — no stable incremental value.
+- **UNOBSERVABLE:** true delta / footprint / bid-ask imbalance / absorption /
+  large-participant detection / constituent-stock causation.
+
+**No production pattern implemented or enabled. No live change. No orders. No
+weighted score. No "institutional" / "smart money" / "holy grail" /
+"profitable" claim.** The minimum viable model that has any OOS-stable signal:
+*abnormal spike (range ≥ P90) → first close beyond the broken level with no
+reclaim in 3 candles → require n1 to agree → skip everything classified H7.*
+Variables: bar OHLC + one structural level. Everything else was tested and
+did not add stable information.
+
+```
+cd backend && python scripts/orderflow_stage5.py   # needs /root/oi_dashboard/oi_history.db (read-only)
+```
