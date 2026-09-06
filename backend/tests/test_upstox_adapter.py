@@ -48,21 +48,44 @@ def test_health_no_token(monkeypatch):
 
 def test_health_valid_token(monkeypatch):
     monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "daily-token-xyz")
-    monkeypatch.setattr(U, "_http", lambda method, url, **k: _Resp(200, {"data": {"user_id": "x"}}))
+    monkeypatch.setattr(U, "_http", lambda method, url, **k: _Resp(200, {"data": ["2024-08-29"]}))
     h = U.auth_health()
     assert h["access_token_present"] is True
     assert h["access_token_valid"] is True
     assert h["api_reachable"] is True
+    assert h.get("expired_instruments_api") == "OK"
     assert "daily-token-xyz" not in str(h)
 
 
 def test_health_expired_token(monkeypatch):
     monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "stale")
-    monkeypatch.setattr(U, "_http", lambda method, url, **k: _Resp(401, {"errors": [{"message": "x"}]}))
+    monkeypatch.setattr(U, "_http", lambda method, url, **k:
+                        _Resp(401, {"status": "error", "errors": [{"errorCode": "UDAPI100050",
+                                                                   "message": "Invalid token"}]}))
     h = U.auth_health()
     assert h["access_token_present"] is True
     assert h["access_token_valid"] is False
-    assert "re-run OAuth" in h["note"]
+    assert "UDAPI100050" in h["note"] and "fresh token" in h["note"]
+
+
+def test_health_plus_plan_gate(monkeypatch):
+    """Valid token, but the Expired Instruments API needs an Upstox Plus plan."""
+    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "analytics-token")
+    monkeypatch.setattr(U, "_http", lambda method, url, **k:
+                        _Resp(401, {"status": "error", "errors": [{"errorCode": "UDAPI1149",
+                                                                   "message": "Plus plan required"}]}))
+    h = U.auth_health()
+    assert h["access_token_valid"] is True                 # the token is fine
+    assert "Plus" in h["expired_instruments_api"] and "UDAPI1149" in h["expired_instruments_api"]
+
+
+def test_health_static_ip_gate(monkeypatch):
+    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "tok")
+    monkeypatch.setattr(U, "_http", lambda method, url, **k:
+                        _Resp(401, {"errors": [{"errorCode": "UDAPI1221", "message": "static IP"}]}))
+    h = U.auth_health()
+    assert h["access_token_valid"] is True
+    assert "static-IP" in h["expired_instruments_api"]
 
 
 def test_health_not_configured(monkeypatch):

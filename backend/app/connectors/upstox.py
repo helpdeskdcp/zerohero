@@ -195,12 +195,36 @@ def auth_health() -> dict:
         out["note"] = ("No access token. Open login_url() in a browser, sign in, copy ?code= from the "
                        "redirect, run exchange_code(code), and put the token in .env:UPSTOX_ACCESS_TOKEN.")
         return out
-    # validity probe -- authed GET /v2/user/profile
+    # validity probe: hit the ACTUAL target (expired-instruments) so plan / IP
+    # gates are surfaced distinctly, not as a generic "invalid".
     try:
-        r = _authed_get("/v2/user/profile")
+        r = _authed_get("/v2/expired-instruments/expiries",
+                        {"instrument_key": UNDERLYING_KEYS["NIFTY"]})
         out["api_reachable"] = True
-        out["access_token_valid"] = (r.status_code == 200)
-        out["note"] = "OK" if r.status_code == 200 else f"token rejected (HTTP {r.status_code}); it likely expired -- re-run OAuth."
+        j = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        code = ((j.get("errors") or [{}])[0].get("errorCode") or "") if isinstance(j, dict) else ""
+        if r.status_code == 200:
+            out["access_token_valid"] = True
+            out["expired_instruments_api"] = "OK"
+            out["note"] = "OK"
+        elif code == "UDAPI100050":
+            out["access_token_valid"] = False
+            out["note"] = "token rejected as invalid (UDAPI100050) -- superseded/revoked; generate a fresh token via OAuth."
+        elif code == "UDAPI1149":
+            out["access_token_valid"] = True            # token is fine; the plan isn't
+            out["expired_instruments_api"] = "BLOCKED: requires Upstox Plus plan (UDAPI1149)"
+            out["note"] = "Token valid but the Expired Instruments API needs an Upstox Plus subscription (UDAPI1149)."
+        elif code == "UDAPI1221":
+            out["access_token_valid"] = True
+            out["expired_instruments_api"] = "BLOCKED: static-IP allowlist (UDAPI1221)"
+            out["note"] = "Token valid but this server's IP must be added to the account's static-IP allowlist (UDAPI1221)."
+        elif code == "UDAPI100067":
+            out["access_token_valid"] = True
+            out["expired_instruments_api"] = "BLOCKED: read-only token not permitted (UDAPI100067)"
+            out["note"] = "Read-only token cannot call this endpoint (UDAPI100067)."
+        else:
+            out["access_token_valid"] = (r.status_code == 200)
+            out["note"] = f"unexpected HTTP {r.status_code} / code {code or 'n/a'}."
     except requests.RequestException:
         out["api_reachable"] = False
         out["note"] = "API unreachable during token validation."
