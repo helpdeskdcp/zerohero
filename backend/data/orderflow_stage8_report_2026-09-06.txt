@@ -1,0 +1,154 @@
+wrote 1369 rows -> data/orderflow_stage8_events.csv
+wrote report -> data/orderflow_stage8_report_2026-09-06.txt
+orderflow STAGE-8 -- H7 FADE-CANDIDATE detector + backtest. RESEARCH ONLY; no production change, no signal, no orders, no weighted score. UNDERLYING basis only (no option-premium claim). No web research done -- concept map is generic + our Stage-1..7 findings.
+
+######################################################################################################################
+# NIFTY  --  93 spike+level+acc1 events / 33 sessions | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+######################################################################################################################
+
+[§8] RECLAIM-BOUNDARY SWEEP  X = reclaim_dist / spike_range  (fade = OPPOSITE the spike;
+     entry = detect-bar close (T+1..T+3); stop = beyond the spike extreme; realistic fill)
+     [holdout shown for reference only -- NOT used to choose X]
+        X> | TRAIN E1/E2/E3 (n)             VAL E2 (n)       OOS E2 (n)       HOLDOUT E2 (n)  
+      0.20 | 0.578/0.578/0.578 (n2)        -0.227 (n5)     0.428 (n2)      None (n0)       
+      0.25 | 0.578/0.578/0.578 (n2)        0.028 (n4)      -1.139 (n1)     None (n0)       
+      0.30 | 0.459/0.459/0.459 (n2)        -0.098 (n3)     -1.115 (n1)     None (n0)       
+      0.35 | 0.459/0.459/0.459 (n2)        -0.098 (n3)     -1.115 (n1)     None (n0)       
+      0.40 | 0.427/0.427/0.427 (n1)        -0.098 (n3)     -1.115 (n1)     None (n0)       
+      0.45 | 0.427/0.427/0.427 (n1)        -0.098 (n3)     -1.115 (n1)     None (n0)       
+      0.50 | 0.427/0.427/0.427 (n1)        0.371 (n2)      -1.115 (n1)     None (n0)       
+      0.55 | 0.427/0.427/0.427 (n1)        0.371 (n2)      None (n0)       None (n0)       
+      0.60 | None/None/None (n0)           0.371 (n2)      None (n0)       None (n0)       
+      0.65 | None/None/None (n0)           0.371 (n2)      None (n0)       None (n0)       
+      0.70 | None/None/None (n0)           0.371 (n2)      None (n0)       None (n0)       
+      0.80 | None/None/None (n0)           0.371 (n2)      None (n0)       None (n0)       
+      1.00 | None/None/None (n0)           None (n0)       None (n0)       None (n0)       
+      1.10 | None/None/None (n0)           None (n0)       None (n0)       None (n0)       
+     -> boundary chosen on TRAIN (stability, E2R>0 on train+val+oos): NO STABLE X on train+val+oos -> default 0.60 (report only)
+
+[§9] H7 FADE at X > 0.6  --  entry timing x stop definition
+    entry=detect-bar close (earliest) | stop=spike n=   2 E1R=-0.129 E2R= 0.371 E3R=-1.567 win2R= 50% mMFE_R=2.024 mMAE_R=-1.255 P2R= 50% P3R=  0% P5R=  0% DD2R=-1.3
+    entry=detect-bar close (earliest) | stop=reaction n=   2 E1R=-0.092 E2R= 0.408 E3R= 0.907 win2R= 50% mMFE_R=3.007 mMAE_R=-0.261 P2R= 50% P3R= 50% P5R=  0% DD2R=-1.2
+    entry=next bar close | stop=spike n=   2 E1R=-0.132 E2R= 0.369 E3R=-1.617 win2R= 50% mMFE_R=2.357 mMAE_R= -1.26 P2R= 50% P3R=  0% P5R=  0% DD2R=-1.3
+    entry=next bar close | stop=reaction n=   2 E1R=-0.094 E2R= 0.406 E3R= 0.906 win2R= 50% mMFE_R=3.873 mMAE_R=-0.016 P2R= 50% P3R= 50% P5R=  0% DD2R=-1.2
+
+[§F] TRAIN/VAL/OOS/HOLDOUT  (X>0.6, entry=detect-bar close, stop=beyond spike extreme)
+    train                        n=0
+    val                          n=   2 E1R=-0.129 E2R= 0.371 E3R=-1.567 win2R= 50% mMFE_R=2.024 mMAE_R=-1.255 P2R= 50% P3R=  0% P5R=  0% DD2R=-1.3
+    oos                          n=0
+    HOLDOUT                      n=0
+
+[§9 targets] MFE_R distribution & fixed-target expectancy  (X>0.6, entry earliest, stop=spike, POOLED non-holdout)
+    n=2  med_MFE_R=2.024  med_MAE_R=-1.255  p95_MAE_R=-1.875
+    P(MFE>=kR): 1R=50%  2R=50%  3R=0%  5R=0%  8R=0%
+    E[fixed target]: 1R=-0.129  2R=0.371  3R=-1.567
+
+######################################################################################################################
+# NATURALGAS  --  645 spike+level+acc1 events / 35 sessions | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+######################################################################################################################
+
+[§8] RECLAIM-BOUNDARY SWEEP  X = reclaim_dist / spike_range  (fade = OPPOSITE the spike;
+     entry = detect-bar close (T+1..T+3); stop = beyond the spike extreme; realistic fill)
+     [holdout shown for reference only -- NOT used to choose X]
+        X> | TRAIN E1/E2/E3 (n)             VAL E2 (n)       OOS E2 (n)       HOLDOUT E2 (n)  
+      0.20 | -0.416/-0.426/-0.327 (n44)    -1.123 (n18)    -0.304 (n24)    -0.611 (n26)    
+      0.25 | -0.345/-0.409/-0.348 (n38)    -1.123 (n18)    -0.412 (n20)    -0.629 (n23)    
+      0.30 | -0.383/-0.457/-0.473 (n36)    -1.047 (n15)    -0.41 (n20)     -0.589 (n20)    
+      0.35 | -0.324/-0.372/-0.424 (n30)    -0.917 (n12)    -0.565 (n17)    -0.526 (n19)    
+      0.40 | -0.309/-0.403/-0.515 (n26)    -0.675 (n10)    -0.432 (n15)    -0.781 (n16)    
+      0.45 | -0.356/-0.364/-0.48 (n25)     -0.675 (n10)    -0.885 (n14)    -0.718 (n15)    
+      0.50 | -0.368/-0.606/-0.514 (n23)    -0.675 (n10)    -1.108 (n14)    -0.668 (n14)    
+      0.55 | -0.102/-0.351/-0.254 (n22)    -1.306 (n8)     -1.029 (n11)    -0.686 (n12)    
+      0.60 | -0.099/-0.266/-0.159 (n20)    -1.298 (n7)     -1.029 (n11)    -0.818 (n9)     
+      0.65 | -0.024/-0.2/-0.088 (n19)      -1.313 (n6)     -0.934 (n9)     -0.491 (n7)     
+      0.70 | -0.138/-0.191/-0.079 (n19)    -1.313 (n6)     -1.12 (n8)      -0.75 (n5)      
+      0.80 | -0.06/-0.126/-0.04 (n18)      -1.313 (n6)     -1.094 (n7)     -0.75 (n5)      
+      1.00 | 0.129/0.05/0.14 (n11)         -1.275 (n4)     -0.964 (n5)     -1.226 (n2)     
+      1.10 | 0.051/-0.136/-0.136 (n10)     -1.213 (n3)     -1.359 (n4)     -1.316 (n1)     
+     -> boundary chosen on TRAIN (stability, E2R>0 on train+val+oos): NO STABLE X on train+val+oos -> default 0.60 (report only)
+
+[§9] H7 FADE at X > 0.6  --  entry timing x stop definition
+    entry=detect-bar close (earliest) | stop=spike n=  47 E1R=-0.299 E2R=-0.704 E3R=-0.704 win2R= 26% mMFE_R=0.975 mMAE_R= -1.16 P2R= 15% P3R=  6% P5R=  0% DD2R=-36.2
+    entry=detect-bar close (earliest) | stop=reaction n=  47 E1R=-0.859 E2R=-0.918 E3R=-0.797 win2R= 30% mMFE_R=0.839 mMAE_R=-1.124 P2R= 28% P3R= 23% P5R=  2% DD2R=-44.3
+    entry=next bar close | stop=spike n=  47 E1R=-0.429 E2R=-0.581 E3R=-0.828 win2R= 32% mMFE_R=1.028 mMAE_R=-1.148 P2R= 21% P3R=  8% P5R=  2% DD2R=-28.5
+    entry=next bar close | stop=reaction n=  47 E1R=-0.378 E2R=-0.513 E3R=-0.771 win2R= 36% mMFE_R=1.266 mMAE_R=-1.145 P2R= 28% P3R= 13% P5R=  0% DD2R=-24.1
+
+[§F] TRAIN/VAL/OOS/HOLDOUT  (X>0.6, entry=detect-bar close, stop=beyond spike extreme)
+    train                        n=  20 E1R=-0.099 E2R=-0.266 E3R=-0.159 win2R= 40% mMFE_R=1.086 mMAE_R=-1.027 P2R= 25% P3R= 10% P5R=  0% DD2R=-8.5
+    val                          n=   7 E1R=-0.953 E2R=-1.298 E3R=-1.298 win2R=  0% mMFE_R=0.432 mMAE_R= -1.16 P2R=  0% P3R=  0% P5R=  0% DD2R=-9.1
+    oos                          n=  11 E1R=-0.354 E2R=-1.029 E3R=-1.029 win2R= 18% mMFE_R=0.978 mMAE_R=-1.214 P2R=  0% P3R=  0% P5R=  0% DD2R=-11.3
+    HOLDOUT                      n=   9 E1R=-0.166 E2R=-0.818 E3R=-1.053 win2R= 22% mMFE_R=1.079 mMAE_R=-1.206 P2R= 22% P3R= 11% P5R=  0% DD2R=-9.2
+
+[§9 targets] MFE_R distribution & fixed-target expectancy  (X>0.6, entry earliest, stop=spike, POOLED non-holdout)
+    n=38  med_MFE_R=0.963  med_MAE_R=-1.16  p95_MAE_R=-1.878
+    P(MFE>=kR): 1R=13%  2R=13%  3R=5%  5R=0%  8R=0%
+    E[fixed target]: 1R=-0.33  2R=-0.677  3R=-0.621
+
+######################################################################################################################
+# CRUDEOIL  --  631 spike+level+acc1 events / 38 sessions | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+######################################################################################################################
+
+[§8] RECLAIM-BOUNDARY SWEEP  X = reclaim_dist / spike_range  (fade = OPPOSITE the spike;
+     entry = detect-bar close (T+1..T+3); stop = beyond the spike extreme; realistic fill)
+     [holdout shown for reference only -- NOT used to choose X]
+        X> | TRAIN E1/E2/E3 (n)             VAL E2 (n)       OOS E2 (n)       HOLDOUT E2 (n)  
+      0.20 | -0.502/-0.537/-0.472 (n56)    -0.607 (n15)    -0.235 (n19)    -0.291 (n17)    
+      0.25 | -0.392/-0.473/-0.452 (n49)    -0.572 (n14)    -0.117 (n17)    -0.261 (n15)    
+      0.30 | -0.246/-0.385/-0.31 (n43)     -0.491 (n13)    0.115 (n15)     -0.275 (n15)    
+      0.35 | -0.266/-0.358/-0.281 (n42)    -0.316 (n11)    0.115 (n15)     -0.171 (n14)    
+      0.40 | -0.154/-0.289/-0.227 (n36)    -0.331 (n9)     0.368 (n13)     -0.078 (n13)    
+      0.45 | 0.056/-0.101/-0.028 (n31)     -0.331 (n9)     0.37 (n13)      0.012 (n12)     
+      0.50 | 0.088/0.022/0.072 (n25)       -0.331 (n9)     0.101 (n12)     0.012 (n12)     
+      0.55 | 0.206/0.135/0.19 (n23)        -0.438 (n6)     0.002 (n11)     0.234 (n10)     
+      0.60 | -0.07/-0.2/-0.024 (n20)       -0.438 (n6)     0.002 (n11)     0.395 (n9)      
+      0.65 | -0.069/-0.269/-0.143 (n18)    -0.438 (n6)     0.537 (n8)      0.282 (n7)      
+      0.70 | -0.19/-0.135/0.006 (n16)      -0.916 (n5)     0.538 (n8)      0.282 (n7)      
+      0.80 | -0.357/-0.254/-0.111 (n14)    -0.451 (n3)     0.333 (n7)      0.536 (n6)      
+      1.00 | -0.29/-0.217/-0.117 (n10)     -0.451 (n3)     0.708 (n4)      0.155 (n3)      
+      1.10 | -0.207/-0.126/-0.015 (n9)     -0.451 (n3)     0.708 (n4)      0.751 (n2)      
+     -> boundary chosen on TRAIN (stability, E2R>0 on train+val+oos): NO STABLE X on train+val+oos -> default 0.60 (report only)
+
+[§9] H7 FADE at X > 0.6  --  entry timing x stop definition
+    entry=detect-bar close (earliest) | stop=spike n=  46 E1R=-0.181 E2R=-0.066 E3R=  0.07 win2R= 39% mMFE_R=0.968 mMAE_R=-1.022 P2R= 30% P3R= 22% P5R=  0% DD2R=-11.7
+    entry=detect-bar close (earliest) | stop=reaction n=  46 E1R=-0.281 E2R=-0.424 E3R=-0.354 win2R= 30% mMFE_R=0.783 mMAE_R= -1.08 P2R= 26% P3R= 22% P5R=  0% DD2R=-23.5
+    entry=next bar close | stop=spike n=  46 E1R=-0.282 E2R=-0.061 E3R= 0.181 win2R= 39% mMFE_R= 0.67 mMAE_R=-1.019 P2R= 37% P3R= 26% P5R=  2% DD2R=-14.8
+    entry=next bar close | stop=reaction n=  46 E1R=-2.169 E2R=-2.177 E3R=-1.916 win2R= 28% mMFE_R=0.647 mMAE_R=-1.062 P2R= 33% P3R= 33% P5R=  9% DD2R=-101.8
+
+[§F] TRAIN/VAL/OOS/HOLDOUT  (X>0.6, entry=detect-bar close, stop=beyond spike extreme)
+    train                        n=  20 E1R= -0.07 E2R=  -0.2 E3R=-0.024 win2R= 35% mMFE_R=1.048 mMAE_R=-1.022 P2R= 20% P3R= 15% P5R=  0% DD2R=-6.3
+    val                          n=   6 E1R=-0.771 E2R=-0.438 E3R=-0.104 win2R= 33% mMFE_R=0.952 mMAE_R=-1.333 P2R= 33% P3R= 33% P5R=  0% DD2R=-3.7
+    oos                          n=  11 E1R=-0.169 E2R= 0.002 E3R=-0.231 win2R= 46% mMFE_R=0.677 mMAE_R=-1.106 P2R= 36% P3R= 18% P5R=  0% DD2R=-4.8
+    HOLDOUT                      n=   9 E1R= -0.05 E2R= 0.395 E3R= 0.763 win2R= 44% mMFE_R=0.998 mMAE_R=-0.465 P2R= 44% P3R= 33% P5R=  0% DD2R=-2.4
+
+[§9 targets] MFE_R distribution & fixed-target expectancy  (X>0.6, entry earliest, stop=spike, POOLED non-holdout)
+    n=37  med_MFE_R=0.924  med_MAE_R=-1.075  p95_MAE_R=-1.791
+    P(MFE>=kR): 1R=27%  2R=27%  3R=19%  5R=0%  8R=0%
+    E[fixed target]: 1R=-0.213  2R=-0.179  3R=-0.099
+
+======================================================================================================================
+[CROSS-SYMBOL]  H7 fade -- E2R by split (X per-symbol from TRAIN stability; HOLDOUT scored once)
+======================================================================================================================
+  SYM            X  stable? | train E2R(n)  val E2R(n)  oos E2R(n)  HOLDOUT E2R(n)
+  NIFTY       0.60    False | n0(n0)  0.371(n2)  n0(n0)  n0(n0)  
+  NATURALGAS   0.60    False | -0.266(n20)  -1.298(n7)  -1.029(n11)  -0.818(n9)  
+  CRUDEOIL    0.60    False | -0.2(n20)  -0.438(n6)  0.002(n11)  0.395(n9)  
+
+======================================================================================================================
+[STATUS]  conservative: REJECTED / UNOBSERVABLE / PROMISING / SUPPORTED / PROVEN
+======================================================================================================================
+  Symbols with a TRAIN-stable fade boundary (E2R>0 on train+val+oos): 0/3
+  * The reclaim-distance boundary (P(continuation) collapse) is SUPPORTED as a
+    CLASSIFIER (Stage-6/7) -- reproduced here: past the knee, the long side is a
+    near-certain loser.  FADING it is a different question and is graded above.
+  * Fade edge (enter OPPOSITE the spike, stop beyond the spike extreme): see the
+    per-symbol / per-split table.  A trap is not automatically a clean reversal --
+    chop between the spike extreme and L eats fade stops.
+  * NATGAS spike_range ~0.5-0.7 pt -> fade stops are sub-slippage; treat as
+    DIRECTIONAL/DESCRIPTIVE only, not tradable.
+  * Option-premium edge: NOT claimed (Stage-4).  Underlying only.
+  * UNOBSERVABLE (no proxy invented): true buyer/seller aggression, lifting-the-
+    offer / hitting-the-bid, delta, cumulative delta, R-delta, footprint, depth
+    imbalance, absorption, ignition 'volume' component, BMC/SMC order-flow internals.
+  * PROVEN: nothing -- single spent-holdout regime; correlated intraday events;
+    small samples per split on NIFTY.
+

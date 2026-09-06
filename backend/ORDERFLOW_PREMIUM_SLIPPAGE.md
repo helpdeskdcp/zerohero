@@ -1100,3 +1100,42 @@ else                                          -> AMBIG     (no action)
 Deferred (operator): re-run with the H7 filter once more sessions are
 captured; repeat the final-holdout confirmation on a genuinely new
 multi-month period before anything moves past PROMISING.
+
+---
+
+## 17. Stage-8 — H7 fade-candidate detector + backtest (2026-09-06) → see ORDERFLOW_STAGE8_H7_FADE.md
+
+Built the H7 detector on the Stage-7 reclaim-distance boundary
+(`X = reclaim_dist / spike_range`) and **backtested fading it** (entering
+opposite the spike after `X` crosses the knee), underlying basis, realistic
+stop fill, chronological TRAIN/VAL/OOS/HOLDOUT. Script
+`backend/scripts/orderflow_stage8.py`; full A–L write-up in
+**`backend/ORDERFLOW_STAGE8_H7_FADE.md`**.
+
+**Result — fading H7 is REJECTED as a standalone edge:**
+
+| symbol | fade E2R  train / val / OOS / **HOLDOUT** |
+|--------|:----------------------------------------:|
+| NIFTY  | no usable sample at X > 0.6 |
+| NATGAS | −0.27 / −1.30 / −1.03 / **−0.82**  (negative every split) |
+| CRUDE  | −0.20 / −0.44 / +0.00 / +0.40 (n9)  (pooled non-holdout −0.18) |
+
+**0/3 symbols** have a TRAIN-stable positive fade boundary on the pre-declared
+`X` grid {0.20…1.10}. median MFE_R ≈ 1.0, P(MFE ≥ 5R) = 0 % — no large-R tail
+on the fade side; median MAE_R ≈ −1.0 to −1.2 (stopped at ~1R routinely).
+**Mechanism:** a trap is *not* a clean reversal — price chops between the
+spike extreme and L; the structurally-valid fade stop (beyond the spike
+extreme) is wide, so a 2R target is rarely reached.
+
+**Status:** the reclaim-distance boundary stays **SUPPORTED as an avoidance
+classifier** ("do not buy the trap") — it is **not** a fade trigger. H1
+continuation edge: still PROMISING, CRUDE-only, small. Option-premium edge:
+not claimed (Stage-4). **UNOBSERVABLE:** the volume/delta/order-flow-internal
+half of every ignition / R-delta / BMC-SMC concept — no tick or depth feed.
+**PROVEN:** nothing (spent holdout, correlated intraday N, small samples).
+
+**Next step (from the .md):** acquire an aggressor-classified tick + level-2
+depth feed for CRUDE/NIFTY futures, re-express the H1 "ignition" state with
+the real delta/imbalance/absorption component, and re-run Stage-6→8 with a
+fresh multi-month holdout. The price-only model has been taken as far as the
+maths allows.
