@@ -1,0 +1,306 @@
+wrote 2240 rows -> data/orderflow_stage7_events.csv
+wrote report -> data/orderflow_stage7_report_2026-09-06.txt
+orderflow STAGE-7 -- H1/H7 mathematical boundary. RESEARCH ONLY; no production change, no signal, no orders, no weighted score.
+
+[§11 HOLDOUT DISCIPLINE] No sessions exist after 2026-09-04. The Stage-6 18% FINAL HOLDOUT was already scored once and is shown for reference ONLY -- it is NOT used to pick any threshold here.  ==> INSUFFICIENT NEW HOLDOUT DATA.
+
+######################################################################################################################
+# NIFTY  --  132 events / 35 sessions | ACCEPT-PATH n=41  RECLAIM-PATH n=38  (non-holdout)
+######################################################################################################################
+
+[§1-2] STATE-VARIABLE DISTRIBUTIONS  (state4 outcome: 4A_CONT vs 4B_TRAP, within ACCEPT-PATH)
+    variable             CONT P25/P50/P75       TRAP P25/P50/P75        sepAUC
+    range_pctile         (0.9167, 0.9423, 0.9661) (0.9211, 0.9552, 0.9697)   0.538
+    body_frac            (0.6185, 0.7649, 1.0)  (0.6992, 0.8855, 1.0)    0.564
+    uw_frac              (0.0, 0.0911, 0.3135)  (0.0, 0.0025, 0.1377)    0.603
+    lw_frac              (0.0, 0.0, 0.1085)     (0.0, 0.0167, 0.1504)    0.515
+    disp_atr             (1.279, 1.454, 1.835)  (1.108, 1.599, 1.8)      0.512
+    dist_L_atr           (0.321, 0.783, 1.281)  (0.694, 1.016, 1.519)    0.608
+    struct_level_dist    (3.15, 8.85, 19.9)     (7.3, 13.1, 19.8)        0.582
+    reaction_range_atr   (0.523, 0.59, 1.221)   (0.557, 1.088, 1.374)    0.594
+    reaction_range_spk   (0.28, 0.332, 0.601)   (0.397, 0.575, 0.714)    0.688
+    time_to_acceptance   (1, 1, 1)              (1, 1, 1)                  0.5
+    reclaim_dist_atr2    (0.0, 0.0, 0.0)        (0.0, 0.0, 0.0)          0.568
+    -> best single separators (sepAUC): reaction_range_spk=0.688, dist_L_atr=0.608, uw_frac=0.603, reaction_range_atr=0.594
+
+[§2/§10] SMALLEST CAUSAL COMBINATION  (greedy add on TRAIN, verified VAL/OOS)
+    ACCEPT-PATH base   train (16, 0.375, 0.438, -0.047)   val (14, 0.214, 0.714, -0.698)   oos (11, 0.545, 0.455, 0.463)
+    -> smallest combination that improves TRAIN E and holds on VAL/OOS: (none beat base)
+
+[§3] BODY-FRACTION THRESHOLD GRID  (within ACCEPT-PATH & acc2 & n1; holdout shown, NOT tuned on)
+      thr | train n/cont/trap/E          val n/c/t/E              oos n/c/t/E              HOLDOUT             
+     0.40 | (15, 0.4, 0.467, -0.017) (12, 0.167, 0.75, -0.767) (11, 0.545, 0.455, 0.463) (9, 0.556, 0.333, 1.282) 
+     0.45 | (15, 0.4, 0.467, -0.017) (12, 0.167, 0.75, -0.767) (11, 0.545, 0.455, 0.463) (9, 0.556, 0.333, 1.282) 
+     0.50 | (15, 0.4, 0.467, -0.017) (12, 0.167, 0.75, -0.767) (10, 0.5, 0.5, 0.21)     (9, 0.556, 0.333, 1.282) 
+     0.55 | (14, 0.429, 0.429, 0.067) (11, 0.182, 0.727, -0.729) (10, 0.5, 0.5, 0.21)     (9, 0.556, 0.333, 1.282) 
+     0.60 | (13, 0.385, 0.462, 0.001) (10, 0.2, 0.7, -0.674)   (10, 0.5, 0.5, 0.21)     (9, 0.556, 0.333, 1.282) 
+     0.65 | (12, 0.417, 0.5, -0.006) (10, 0.2, 0.7, -0.674)   (8, 0.375, 0.625, -0.487) (9, 0.556, 0.333, 1.282) 
+     0.70 | (11, 0.455, 0.455, 0.62) (8, 0.25, 0.75, -0.773)  (7, 0.286, 0.714, -0.943) (6, 0.667, 0.167, 1.834) 
+
+[§4] N1 AGREEMENT -- alternative objective definitions (ACCEPT-PATH-ish: acc1 & no reclaim2)
+    close-vs-open direction (Stage-6)      agree (41, 0.366, 0.537, -0.132)   disagree (31, 0.226, 0.581, -0.089)
+    reaction body direction agrees         agree (41, 0.366, 0.537, -0.132)   disagree (31, 0.226, 0.581, -0.089)
+    reaction closes beyond L too           agree (72, 0.306, 0.556, -0.114)   disagree (0, 0.0, 0.0, None)
+    reaction range >= 0.6*ATR & agrees     agree (27, 0.259, 0.593, -0.484)   disagree (45, 0.333, 0.533, 0.109)
+
+[§5] ACCEPTANCE DEPTH  (n1 agrees, no reclaim2; entry-to-stop R & avail_R from spike-close/spike-stop)
+    acc1: n=  41 P(cont)=0.37 P(trap)=0.54 E[3R]=-0.132 medR=20.857pt med_availR=0.78 P3R=17% mMFE_R=1.872 mMAE_R=-1.01
+    acc2: n=  41 P(cont)=0.37 P(trap)=0.54 E[3R]=-0.132 medR=20.857pt med_availR=0.78 P3R=17% mMFE_R=1.872 mMAE_R=-1.01
+    acc3: n=  37 P(cont)=0.41 P(trap)=0.51 E[3R]=0.012 medR=21.039pt med_availR=0.92 P3R=19% mMFE_R=1.911 mMAE_R=-1.002
+
+[§6] RECLAIM MATHEMATICS  (RECLAIM-PATH; is there a distance beyond which continuation collapses?)
+    norm=reclaim_dist_spk  quartiles [0.25, 0.53, 0.88]
+      <=Q1(0.25)     (10, 0.3, 0.6, -1.187)
+      Q1-Q2          (10, 0.0, 0.8, -1.3)
+      Q2-Q3          (9, 0.0, 1.0, -1.361)
+      >Q3(0.88)      (9, 0.0, 1.0, -1.619)
+    norm=reclaim_dist_atr2  quartiles [0.46, 0.92, 1.49]
+      <=Q1(0.46)     (10, 0.2, 0.7, -1.575)
+      Q1-Q2          (10, 0.1, 0.8, -1.097)
+      Q2-Q3          (9, 0.0, 0.889, -1.229)
+      >Q3(1.49)      (9, 0.0, 1.0, -1.546)
+    norm=reclaim_dist_gap  quartiles [1.32, 2.41, 15.52]
+      <=Q1(1.32)     (10, 0.0, 0.9, -2.549)
+      Q1-Q2          (10, 0.1, 0.8, -0.73)
+      Q2-Q3          (9, 0.222, 0.778, -0.828)
+      >Q3(15.52)     (9, 0.0, 0.889, -1.272)
+
+[§7] 2-D STATE MAP  body_frac x acceptance (n1 agrees, no reclaim2; TRAIN cells, then VAL/OOS check)
+    body_frac    acc1 only                  acc2                       acc3                      
+    [0.00,0.45)  (1, 0.0, 0.0, -0.497)     (1, 0.0, 0.0, -0.497)     (1, 0.0, 0.0, -0.497)   
+    [0.45,0.55)  (1, 0.0, 1.0, -1.186)     (1, 0.0, 1.0, -1.186)     (1, 0.0, 1.0, -1.186)   
+    [0.55,0.65)  (2, 0.5, 0.0, 0.502)      (2, 0.5, 0.0, 0.502)      (2, 0.5, 0.0, 0.502)    
+    [0.65,2.00)  (12, 0.417, 0.5, -0.006)  (12, 0.417, 0.5, -0.006)  (11, 0.455, 0.455, 0.088)
+    (cell = (n, P_cont, P_trap, E[3R]))  -- verify the promising cells on val/oos below
+    VAL  body>=0.55 & acc2 & n1 : (11, 0.182, 0.727, -0.729)
+    OOS  body>=0.55 & acc2 & n1 : (10, 0.5, 0.5, 0.21)
+
+[§9] STATE x AVAILABLE_R  (H1_CONT region = acc2 & n1 & body>=0.55 & no reclaim2)
+    availR>=0.0: pooled (35, 0.371, 0.543, -0.142)  oos (10, 0.5, 0.5, 0.21)  HOLDOUT (9, 0.556, 0.333, 1.282)
+    availR>=1.0: pooled (7, 0.286, 0.571, -0.404)  oos (3, 0.333, 0.667, 0.321)  HOLDOUT (2, 0.0, 0.5, -0.157)
+    availR>=1.5: pooled (5, 0.4, 0.4, -0.159)  oos (1, 1.0, 0.0, 2.997)  HOLDOUT (0, 0.0, 0.0, None)
+    availR>=2.0: pooled (1, 0.0, 0.0, 1.143)  oos (0, 0.0, 0.0, None)  HOLDOUT (0, 0.0, 0.0, None)
+
+######################################################################################################################
+# NATURALGAS  --  1141 events / 35 sessions | ACCEPT-PATH n=288  RECLAIM-PATH n=385  (non-holdout)
+######################################################################################################################
+
+[§1-2] STATE-VARIABLE DISTRIBUTIONS  (state4 outcome: 4A_CONT vs 4B_TRAP, within ACCEPT-PATH)
+    variable             CONT P25/P50/P75       TRAP P25/P50/P75        sepAUC
+    range_pctile         (0.9375, 0.9605, 0.9825) (0.9375, 0.962, 0.9839)    0.51
+    body_frac            (0.6, 0.8, 1.0)        (0.6, 0.8333, 1.0)        0.51
+    uw_frac              (0.0, 0.0, 0.2)        (0.0, 0.0, 0.1667)       0.516
+    lw_frac              (0.0, 0.0, 0.2)        (0.0, 0.0, 0.2)          0.518
+    disp_atr             (0.808, 1.143, 1.4)    (0.875, 1.167, 1.591)    0.538
+    dist_L_atr           (0.375, 0.65, 1.143)   (0.368, 0.769, 1.143)    0.532
+    struct_level_dist    (0.1, 0.3, 0.6)        (0.2, 0.33, 0.5)         0.515
+    reaction_range_atr   (0.75, 1.143, 1.611)   (0.667, 0.983, 1.228)    0.595
+    reaction_range_spk   (0.5, 0.8, 1.125)      (0.429, 0.6, 0.833)      0.639
+    time_to_acceptance   (1, 1, 1)              (1, 1, 1)                  0.5
+    reclaim_dist_atr2    (0.0, 0.0, 0.0)        (0.0, 0.0, 0.0)          0.577
+    -> best single separators (sepAUC): reaction_range_spk=0.639, reaction_range_atr=0.595, reclaim_dist_atr2=0.577, disp_atr=0.538
+
+[§2/§10] SMALLEST CAUSAL COMBINATION  (greedy add on TRAIN, verified VAL/OOS)
+    ACCEPT-PATH base   train (161, 0.342, 0.615, -0.134)   val (57, 0.263, 0.684, -0.426)   oos (70, 0.429, 0.486, 0.473)
+    + disp_atr>=1.0      train (102, 0.353, 0.598, 0.074)   val (42, 0.238, 0.714, -0.537)   oos (44, 0.432, 0.432, 0.618)
+    + availR>=1          train (28, 0.393, 0.5, 0.414)   val (16, 0.25, 0.625, -0.349)   oos (14, 0.429, 0.429, 0.591)
+    -> smallest combination that improves TRAIN E and holds on VAL/OOS: ['disp_atr>=1.0', 'availR>=1']
+
+[§3] BODY-FRACTION THRESHOLD GRID  (within ACCEPT-PATH & acc2 & n1; holdout shown, NOT tuned on)
+      thr | train n/cont/trap/E          val n/c/t/E              oos n/c/t/E              HOLDOUT             
+     0.40 | (145, 0.345, 0.607, -0.08) (53, 0.283, 0.66, -0.341) (63, 0.429, 0.476, 0.503) (50, 0.3, 0.6, -0.071)   
+     0.45 | (136, 0.368, 0.588, 0.011) (52, 0.288, 0.654, -0.318) (63, 0.429, 0.476, 0.503) (49, 0.286, 0.612, -0.125) 
+     0.50 | (136, 0.368, 0.588, 0.011) (52, 0.288, 0.654, -0.318) (63, 0.429, 0.476, 0.503) (49, 0.286, 0.612, -0.125) 
+     0.55 | (129, 0.372, 0.581, 0.041) (49, 0.245, 0.694, -0.465) (58, 0.431, 0.466, 0.541) (47, 0.277, 0.617, -0.159) 
+     0.60 | (122, 0.369, 0.582, 0.1) (45, 0.267, 0.689, -0.377) (55, 0.418, 0.473, 0.491) (45, 0.244, 0.644, -0.292) 
+     0.65 | (107, 0.327, 0.617, -0.033) (44, 0.273, 0.682, -0.355) (53, 0.415, 0.472, 0.487) (42, 0.238, 0.643, -0.308) 
+     0.70 | (98, 0.316, 0.622, -0.053) (41, 0.268, 0.683, -0.373) (49, 0.388, 0.49, 0.403) (41, 0.244, 0.634, -0.282) 
+
+[§4] N1 AGREEMENT -- alternative objective definitions (ACCEPT-PATH-ish: acc1 & no reclaim2)
+    close-vs-open direction (Stage-6)      agree (288, 0.347, 0.597, -0.044)   disagree (159, 0.296, 0.648, -0.254)
+    reaction body direction agrees         agree (288, 0.347, 0.597, -0.044)   disagree (159, 0.296, 0.648, -0.254)
+    reaction closes beyond L too           agree (447, 0.329, 0.615, -0.119)   disagree (0, 0.0, 0.0, None)
+    reaction range >= 0.6*ATR & agrees     agree (239, 0.364, 0.582, 0.024)   disagree (208, 0.288, 0.654, -0.282)
+
+[§5] ACCEPTANCE DEPTH  (n1 agrees, no reclaim2; entry-to-stop R & avail_R from spike-close/spike-stop)
+    acc1: n= 288 P(cont)=0.35 P(trap)=0.60 E[3R]=-0.044 medR=0.621pt med_availR=0.96 P3R=31% mMFE_R=1.742 mMAE_R=-1.133
+    acc2: n= 277 P(cont)=0.35 P(trap)=0.60 E[3R]=-0.047 medR=0.621pt med_availR=0.96 P3R=31% mMFE_R=1.742 mMAE_R=-1.133
+    acc3: n= 246 P(cont)=0.39 P(trap)=0.55 E[3R]=0.158 medR=0.621pt med_availR=0.97 P3R=35% mMFE_R=2.056 mMAE_R=-1.092
+
+[§6] RECLAIM MATHEMATICS  (RECLAIM-PATH; is there a distance beyond which continuation collapses?)
+    norm=reclaim_dist_spk  quartiles [0.33, 0.61, 1.17]
+      <=Q1(0.33)     (110, 0.2, 0.718, -0.569)
+      Q1-Q2          (83, 0.096, 0.855, -1.001)
+      Q2-Q3          (99, 0.02, 0.98, -1.578)
+      >Q3(1.17)      (93, 0.0, 1.0, -2.204)
+    norm=reclaim_dist_atr2  quartiles [0.5, 0.91, 1.55]
+      <=Q1(0.50)     (97, 0.206, 0.732, -0.625)
+      Q1-Q2          (96, 0.094, 0.844, -0.988)
+      Q2-Q3          (96, 0.031, 0.958, -1.553)
+      >Q3(1.55)      (96, 0.0, 1.0, -2.108)
+    norm=reclaim_dist_gap  quartiles [1.5, 3.75, 10.0]
+      <=Q1(1.50)     (104, 0.144, 0.817, -0.874)
+      Q1-Q2          (89, 0.09, 0.843, -1.17)
+      Q2-Q3          (99, 0.02, 0.96, -1.613)
+      >Q3(10.00)     (93, 0.075, 0.914, -1.636)
+
+[§7] 2-D STATE MAP  body_frac x acceptance (n1 agrees, no reclaim2; TRAIN cells, then VAL/OOS check)
+    body_frac    acc1 only                  acc2                       acc3                      
+    [0.00,0.45)  (20, 0.2, 0.75, -1.01)    (20, 0.2, 0.75, -1.01)    (17, 0.235, 0.706, -0.878)
+    [0.45,0.55)  (7, 0.286, 0.714, -0.55)  (7, 0.286, 0.714, -0.55)  (5, 0.4, 0.6, 0.04)     
+    [0.55,0.65)  (24, 0.583, 0.417, 0.417)  (22, 0.591, 0.409, 0.401)  (19, 0.632, 0.368, 0.832)
+    [0.65,2.00)  (110, 0.318, 0.627, -0.068)  (107, 0.327, 0.617, -0.033)  (97, 0.361, 0.577, 0.131)
+    (cell = (n, P_cont, P_trap, E[3R]))  -- verify the promising cells on val/oos below
+    VAL  body>=0.55 & acc2 & n1 : (49, 0.245, 0.694, -0.465)
+    OOS  body>=0.55 & acc2 & n1 : (58, 0.431, 0.466, 0.541)
+
+[§9] STATE x AVAILABLE_R  (H1_CONT region = acc2 & n1 & body>=0.55 & no reclaim2)
+    availR>=0.0: pooled (236, 0.36, 0.576, 0.059)  oos (58, 0.431, 0.466, 0.541)  HOLDOUT (47, 0.277, 0.617, -0.159)
+    availR>=1.0: pooled (79, 0.38, 0.532, 0.231)  oos (18, 0.444, 0.444, 0.589)  HOLDOUT (16, 0.312, 0.562, 0.089)
+    availR>=1.5: pooled (58, 0.362, 0.534, 0.16)  oos (13, 0.308, 0.538, 0.105)  HOLDOUT (11, 0.182, 0.636, -0.342)
+    availR>=2.0: pooled (41, 0.317, 0.61, -0.092)  oos (9, 0.111, 0.667, -0.635)  HOLDOUT (9, 0.222, 0.556, -0.114)
+
+######################################################################################################################
+# CRUDEOIL  --  967 events / 38 sessions | ACCEPT-PATH n=279  RECLAIM-PATH n=303  (non-holdout)
+######################################################################################################################
+
+[§1-2] STATE-VARIABLE DISTRIBUTIONS  (state4 outcome: 4A_CONT vs 4B_TRAP, within ACCEPT-PATH)
+    variable             CONT P25/P50/P75       TRAP P25/P50/P75        sepAUC
+    range_pctile         (0.9353, 0.96, 0.9851) (0.932, 0.9583, 0.9873)     0.5
+    body_frac            (0.7391, 0.8824, 1.0)  (0.7429, 0.8889, 1.0)    0.503
+    uw_frac              (0.0, 0.0, 0.1364)     (0.0, 0.0, 0.1176)       0.503
+    lw_frac              (0.0, 0.0, 0.125)      (0.0, 0.0, 0.0857)       0.508
+    disp_atr             (1.05, 1.373, 1.581)   (0.985, 1.308, 1.647)    0.508
+    dist_L_atr           (0.454, 0.878, 1.314)  (0.352, 0.725, 1.331)    0.518
+    struct_level_dist    (7.0, 15.0, 21.0)      (6.0, 13.0, 27.0)        0.511
+    reaction_range_atr   (0.618, 0.956, 1.284)  (0.603, 0.875, 1.167)    0.541
+    reaction_range_spk   (0.407, 0.583, 0.841)  (0.4, 0.571, 0.778)      0.531
+    time_to_acceptance   (1, 1, 1)              (1, 1, 1)                  0.5
+    reclaim_dist_atr2    (0.0, 0.0, 0.0)        (0.0, 0.0, 0.0)          0.562
+    -> best single separators (sepAUC): reclaim_dist_atr2=0.562, reaction_range_atr=0.541, reaction_range_spk=0.531, dist_L_atr=0.518
+
+[§2/§10] SMALLEST CAUSAL COMBINATION  (greedy add on TRAIN, verified VAL/OOS)
+    ACCEPT-PATH base   train (173, 0.451, 0.509, 0.528)   val (58, 0.414, 0.569, 0.424)   oos (48, 0.438, 0.542, 0.485)
+    + disp_atr>=1.0      train (136, 0.471, 0.485, 0.637)   val (39, 0.462, 0.513, 0.688)   oos (39, 0.41, 0.564, 0.361)
+    + uw<0.25            train (124, 0.476, 0.476, 0.693)   val (37, 0.432, 0.541, 0.567)   oos (34, 0.382, 0.588, 0.24)
+    -> smallest combination that improves TRAIN E and holds on VAL/OOS: ['disp_atr>=1.0', 'uw<0.25']
+
+[§3] BODY-FRACTION THRESHOLD GRID  (within ACCEPT-PATH & acc2 & n1; holdout shown, NOT tuned on)
+      thr | train n/cont/trap/E          val n/c/t/E              oos n/c/t/E              HOLDOUT             
+     0.40 | (163, 0.454, 0.509, 0.524) (52, 0.385, 0.596, 0.298) (46, 0.435, 0.543, 0.468) (49, 0.429, 0.51, 0.478) 
+     0.45 | (162, 0.451, 0.512, 0.508) (52, 0.385, 0.596, 0.298) (45, 0.422, 0.556, 0.413) (46, 0.435, 0.5, 0.502)  
+     0.50 | (159, 0.453, 0.509, 0.518) (49, 0.408, 0.571, 0.4)  (45, 0.422, 0.556, 0.413) (45, 0.444, 0.489, 0.537) 
+     0.55 | (155, 0.452, 0.51, 0.526) (47, 0.426, 0.553, 0.472) (44, 0.409, 0.568, 0.356) (44, 0.432, 0.5, 0.485)  
+     0.60 | (149, 0.45, 0.51, 0.547) (44, 0.432, 0.545, 0.558) (42, 0.429, 0.548, 0.44) (40, 0.45, 0.475, 0.582) 
+     0.65 | (147, 0.456, 0.503, 0.583) (42, 0.452, 0.524, 0.64) (40, 0.425, 0.55, 0.425) (36, 0.444, 0.472, 0.56) 
+     0.70 | (140, 0.464, 0.493, 0.633) (41, 0.439, 0.537, 0.583) (37, 0.405, 0.568, 0.332) (32, 0.5, 0.406, 0.799)  
+
+[§4] N1 AGREEMENT -- alternative objective definitions (ACCEPT-PATH-ish: acc1 & no reclaim2)
+    close-vs-open direction (Stage-6)      agree (279, 0.441, 0.527, 0.499)   disagree (170, 0.294, 0.659, -0.079)
+    reaction body direction agrees         agree (279, 0.441, 0.527, 0.499)   disagree (170, 0.294, 0.659, -0.079)
+    reaction closes beyond L too           agree (449, 0.385, 0.577, 0.28)   disagree (0, 0.0, 0.0, None)
+    reaction range >= 0.6*ATR & agrees     agree (211, 0.455, 0.526, 0.514)   disagree (238, 0.324, 0.622, 0.073)
+
+[§5] ACCEPTANCE DEPTH  (n1 agrees, no reclaim2; entry-to-stop R & avail_R from spike-close/spike-stop)
+    acc1: n= 279 P(cont)=0.44 P(trap)=0.53 E[3R]=0.499 medR=26.05pt med_availR=0.85 P3R=41% mMFE_R=2.166 mMAE_R=-1.007
+    acc2: n= 274 P(cont)=0.45 P(trap)=0.52 E[3R]=0.514 medR=26.78pt med_availR=0.85 P3R=42% mMFE_R=2.169 mMAE_R=-1.004
+    acc3: n= 245 P(cont)=0.48 P(trap)=0.49 E[3R]=0.646 medR=26.78pt med_availR=0.86 P3R=44% mMFE_R=2.327 mMAE_R=-0.93
+
+[§6] RECLAIM MATHEMATICS  (RECLAIM-PATH; is there a distance beyond which continuation collapses?)
+    norm=reclaim_dist_spk  quartiles [0.28, 0.6, 1.06]
+      <=Q1(0.28)     (76, 0.263, 0.697, -0.328)
+      Q1-Q2          (77, 0.169, 0.818, -0.571)
+      Q2-Q3          (75, 0.027, 0.947, -1.203)
+      >Q3(1.06)      (75, 0.0, 1.0, -1.674)
+    norm=reclaim_dist_atr2  quartiles [0.47, 0.93, 1.61]
+      <=Q1(0.47)     (77, 0.273, 0.701, -0.309)
+      Q1-Q2          (75, 0.147, 0.827, -0.683)
+      Q2-Q3          (76, 0.039, 0.934, -1.113)
+      >Q3(1.61)      (75, 0.0, 1.0, -1.668)
+    norm=reclaim_dist_gap  quartiles [1.0, 2.43, 6.8]
+      <=Q1(1.00)     (81, 0.185, 0.79, -0.655)
+      Q1-Q2          (72, 0.153, 0.847, -0.761)
+      Q2-Q3          (75, 0.067, 0.92, -1.133)
+      >Q3(6.80)      (75, 0.053, 0.907, -1.225)
+
+[§7] 2-D STATE MAP  body_frac x acceptance (n1 agrees, no reclaim2; TRAIN cells, then VAL/OOS check)
+    body_frac    acc1 only                  acc2                       acc3                      
+    [0.00,0.45)  (8, 0.5, 0.375, 1.026)    (8, 0.5, 0.375, 1.026)    (8, 0.5, 0.375, 1.026)  
+    [0.45,0.55)  (7, 0.429, 0.571, 0.117)  (7, 0.429, 0.571, 0.117)  (6, 0.5, 0.5, 0.4)      
+    [0.55,0.65)  (8, 0.375, 0.625, -0.517)  (8, 0.375, 0.625, -0.517)  (6, 0.5, 0.5, -0.192)   
+    [0.65,2.00)  (150, 0.453, 0.507, 0.576)  (147, 0.456, 0.503, 0.583)  (127, 0.496, 0.465, 0.741)
+    (cell = (n, P_cont, P_trap, E[3R]))  -- verify the promising cells on val/oos below
+    VAL  body>=0.55 & acc2 & n1 : (47, 0.426, 0.553, 0.472)
+    OOS  body>=0.55 & acc2 & n1 : (44, 0.409, 0.568, 0.356)
+
+[§9] STATE x AVAILABLE_R  (H1_CONT region = acc2 & n1 & body>=0.55 & no reclaim2)
+    availR>=0.0: pooled (246, 0.439, 0.528, 0.485)  oos (44, 0.409, 0.568, 0.356)  HOLDOUT (44, 0.432, 0.5, 0.485)
+    availR>=1.0: pooled (72, 0.417, 0.542, 0.349)  oos (12, 0.5, 0.5, 0.695)  HOLDOUT (11, 0.455, 0.545, 0.647)
+    availR>=1.5: pooled (52, 0.404, 0.577, 0.268)  oos (8, 0.5, 0.5, 0.589)  HOLDOUT (9, 0.333, 0.667, 0.133)
+    availR>=2.0: pooled (32, 0.344, 0.625, 0.113)  oos (5, 0.4, 0.6, 0.359)  HOLDOUT (8, 0.375, 0.625, 0.306)
+
+======================================================================================================================
+[§8 CROSS-SYMBOL]  H1_CONT region (acc2 & n1 & body>=0.55 & !reclaim2)  vs  H7 (reclaim2)
+======================================================================================================================
+  SYM       | H1_CONT: train val oos HOLDOUT   || H7_TRAP: train val oos HOLDOUT
+  NIFTY     | 0.067(n14) -0.729(n11) 0.21(n10) 1.282(n9)   || -1.555(n19) -1.365(n14) -0.605(n5) 0.008(n7)
+  NATURALGAS | 0.041(n129) -0.465(n49) 0.541(n58) -0.159(n47)   || -1.299(n219) -1.467(n80) -1.221(n86) -1.344(n87)
+  CRUDEOIL  | 0.526(n155) 0.472(n47) 0.356(n44) 0.485(n44)   || -0.885(n170) -0.864(n56) -1.115(n77) -0.526(n65)
+
+  Reading: H7_TRAP E[3R] strongly negative on every split (incl. holdout) for NATGAS &
+  CRUDE = UNIVERSAL trap mechanism. H1_CONT E[3R] positive on all splits only for CRUDE
+  = SYMBOL-SPECIFIC continuation edge. NATGAS median R ~0.6 pt (sub-slippage) = a
+  DATA/INSTRUMENT-QUALITY effect, not a market effect -- its R-multiples are not tradable.
+
+======================================================================================================================
+[§13-16 STATUS]
+======================================================================================================================
+  THE BOUNDARY (the Stage-7 discovery):  it is a RECLAIM DISTANCE, not reclaim yes/no.
+    reclaim_dist := max over T+1..T+3 of how far a completed close sits back through L,
+    normalised by the spike range.  Continuation probability collapses monotonically:
+      reclaim_dist/spk  <=0.28  ->  P(cont) ~20-26%   E[3R] ~ -0.3 to -0.7   (AMBIGUOUS)
+      reclaim_dist/spk  0.28-0.6 -> P(cont) ~15-17%   E[3R] ~ -0.6 to -1.0
+      reclaim_dist/spk  0.6-1.1  -> P(cont) ~2-3%     E[3R] ~ -1.1 to -1.6   (HARD TRAP)
+      reclaim_dist/spk  >1.1     -> P(cont) ~0%       E[3R] ~ -1.6 to -2.2   (HARD TRAP)
+    Same monotone shape on NIFTY, NATGAS, CRUDE and on /ATR normalisation. The knee is
+    ~0.6x the spike range.  ==> H7_TRAP boundary: reclaim_dist > ~0.6x spike range.
+
+  SUPPORTED  : (1) the reclaim-distance boundary above -- universal, monotone, causal
+               (known by bar T+1..T+3), strongly negative E on train/val/oos AND the
+               already-spent Stage-6 holdout for NATGAS/CRUDE.
+               (2) available_R >= 1.0 as an interaction gate: it lifts NATGAS H1_CONT
+               from holdout-negative (-0.16R) to holdout ~breakeven (+0.09R) and keeps
+               CRUDE holdout-positive (+0.65R).  The H1 edge is DIRECTIONAL x ROOM,
+               not a pure directional edge.
+  PROMISING  : H1_CONT as a positive-E long on the UNDERLYING -- CRUDE only
+               (+0.36..+0.53R every split incl. holdout; small; DD -15R).
+  REJECTED   : body_frac as a strong discriminator -- the greedy search never picked it;
+               'disp_atr >= 1.0' (body size in ATR units) is the more informative form,
+               and even it is only a weak separator (sepAUC ~0.53-0.69).  Also rejected:
+               a single UNIVERSAL threshold across symbols; H1_CONT on NIFTY (unstable)
+               and NATGAS (R ~0.6 pt sub-slippage -- instrument-quality, not market);
+               the 'large-R' tail; every extra Stage-4/5/6 feature.
+  UNOBSERVABLE: true buyer/seller aggression, lifting-offer/hitting-bid, delta,
+               footprint, depth imbalance, absorption -- no aggressor / tick / book
+               feed. No proxy is presented as order flow.
+  PROVEN     : nothing -- INSUFFICIENT NEW HOLDOUT DATA (no sessions after 2026-09-04;
+               the Stage-6 holdout is already spent), correlated intraday events,
+               small edge.
+
+  MINIMUM VIABLE MECHANISM (deterministic, causal, no score):
+    S1  abnormal spike        : range percentile >= P90 (symbol-adaptive)
+    S2  broken level L        : spike high/low displaced a prior structural level
+    boundary at bars T+1..T+3 :
+      if any completed close returns through L by > 0.6 x spike_range   => H7_TRAP (fade/avoid)
+      elif 2 closes hold beyond L AND reaction candle agrees
+           AND displacement >= 1 x ATR AND available_R >= 1.0            => H1_CONT (CRUDE: small +E)
+      else                                                              => AMBIGUOUS (no action)
+
+[FINAL] The mechanism (abnormal displacement -> level break -> acceptance vs graded
+  reclaim -> participation vs trap) IS real, causal and monotone in the reclaim
+  distance. The TRADABLE part is: (a) a reliable 'do not buy / candidate fade' on the
+  hard-trap side (SUPPORTED, universal), and (b) a small CRUDE-only continuation edge on
+  the underlying (PROMISING).  It does not survive ATM option spread/theta (Stage-4) and
+  is marginal on the underlying with a realistic stop.  Nothing PROVEN. Research only;
+  no production change, no signal, no orders, no score.
+
