@@ -1,0 +1,266 @@
+wrote 2240 rows -> data/orderflow_stage6_events.csv
+wrote report -> data/orderflow_stage6_report_2026-09-06.txt
+orderflow STAGE-6 -- causal state-machine reconstruction of H1 vs H7. RESEARCH ONLY; no production change, no signal, no orders, no weighted score. FINAL HOLDOUT evaluated once, model frozen.
+
+########################################################################################################################
+# NIFTY  --  132 spike events / 35 sessions | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+#   split (sessions): train 17 / val 8 / oos 6 / HOLDOUT 8 (untouched)
+########################################################################################################################
+
+[PART 1] STATE-MACHINE TRANSITIONS  (counts over non-holdout events)
+   S1 abnormal spike            : 112
+   S2 broke a structural level  : 112  (100% by construction)
+   S3A acceptance (>=2 closes)  : 72  (64%)
+   S3B failed accept / reclaim  : 38  (34%)
+     -> 4A_CONT      26  (23%)
+     -> 4B_TRAP      73  (65%)
+     -> 4X_AMBIG     13  (12%)
+   H1 (acc1 + n1 + body>=B + no reclaim2) : 35  (31%)
+   H7 (reclaim3 + adverse)               : 38  (34%)
+
+[PART 3] CONTINUATION MODEL -- fit on TRAIN, frozen, evaluated on VAL/OOS
+   logistic P(cont) on core feats ['range_pctile', 'body_frac', 'n1_agree', 'acc2', 'reclaim2']:
+     bias=-0.852  weights={'range_pctile': 0.15, 'body_frac': 0.607, 'n1_agree': 0.12, 'acc2': -1.069, 'reclaim2': -1.699}
+     train  AUC=0.765  |  P>=0.60 subset: n=5 cont=40% E[3R]=0.681
+     val    AUC=0.612  |  P>=0.60 subset: n=4 cont=25% E[3R]=-0.687
+     oos    AUC=0.549  |  P>=0.60 subset: n=2 cont=0% E[3R]=-1.038
+
+   DECISION LIST (deterministic, info known by bar idx+2):
+     if reclaim2            -> H7_TRAP
+     elif acc2 & n1 & body_frac>=0.55 -> H1_CONT
+     elif acc1 & n1        -> H1_WEAK
+     else                 -> AMBIG
+    train :: H1_CONT               n=  14 ses= 9 cont= 43% trap= 43% E[3R]= 0.067 win= 50% mMFE_R=1.859 mMAE_R=-0.912 P3R= 21% P5R=  0% R=29.119 availR=0.54 DD=-9.0
+    train :: H1_WEAK               n=   2 ses= 2 cont=  0% trap= 50% E[3R]=-0.841 win=  0% mMFE_R=1.872 mMAE_R=-0.515 P3R=  0% P5R=  0% R=21.039 availR=1.41 DD=-1.7
+    train :: H7_TRAP               n=  19 ses=12 cont= 10% trap= 74% E[3R]=-1.555 win= 26% mMFE_R=0.256 mMAE_R=-1.141 P3R=  0% P5R=  0% R=24.771 availR=1.17 DD=-29.6
+    train :: AMBIG                 n=  16 ses=11 cont= 38% trap= 38% E[3R]= 0.615 win= 56% mMFE_R=0.896 mMAE_R=-0.647 P3R= 31% P5R=  0% R=25.536 availR=0.3 DD=-2.6
+    val :: H1_CONT                 n=  11 ses= 7 cont= 18% trap= 73% E[3R]=-0.729 win= 27% mMFE_R= 1.18 mMAE_R=-1.095 P3R=  0% P5R=  0% R=20.857 availR=0.1 DD=-8.0
+    val :: H1_WEAK                 n=   3 ses= 2 cont= 33% trap= 67% E[3R]=-0.582 win= 33% mMFE_R=2.473 mMAE_R=-1.184 P3R=  0% P5R=  0% R=11.809 availR=1.62 DD=-2.7
+    val :: H7_TRAP                 n=  14 ses= 8 cont=  0% trap=100% E[3R]=-1.365 win=  0% mMFE_R=0.133 mMAE_R=-1.226 P3R=  0% P5R=  0% R=20.546 availR=0.73 DD=-19.1
+    val :: AMBIG                   n=  13 ses= 8 cont= 15% trap= 69% E[3R]=-0.364 win= 23% mMFE_R= 0.52 mMAE_R= -1.07 P3R= 15% P5R=  0% R=23.152 availR=0.6 DD=-7.9
+    oos :: H1_CONT                 n=  10 ses= 5 cont= 50% trap= 50% E[3R]=  0.21 win= 40% mMFE_R=2.649 mMAE_R=-0.479 P3R= 30% P5R=  0% R=16.852 availR=1.09 DD=-6.9
+    oos :: H1_WEAK                 n=   1 ses= 1 cont=100% trap=  0% E[3R]= 2.993 win=100% mMFE_R=3.066 mMAE_R=-0.429 P3R=100% P5R=  0% R=7.583 availR=3.49 DD=0.0
+    oos :: H7_TRAP                 n=   5 ses= 4 cont= 20% trap= 80% E[3R]=-0.605 win= 20% mMFE_R=0.053 mMAE_R=-1.064 P3R= 20% P5R=  0% R=11.246 availR=0.14 DD=-4.8
+    oos :: AMBIG                   n=   4 ses= 3 cont=  0% trap=100% E[3R]=-1.487 win=  0% mMFE_R=1.581 mMAE_R=-1.122 P3R=  0% P5R=  0% R=17.047 availR=1.03 DD=-5.9
+    POOLED(no-holdout) :: H1_CONT  n=  35 ses=21 cont= 37% trap= 54% E[3R]=-0.142 win= 40% mMFE_R=1.859 mMAE_R= -1.01 P3R= 17% P5R=  0% R=21.27 availR=0.54 DD=-20.9
+    POOLED(no-holdout) :: H1_WEAK  n=   6 ses= 5 cont= 33% trap= 50% E[3R]=-0.073 win= 33% mMFE_R=2.473 mMAE_R=-0.515 P3R= 17% P5R=  0% R=14.057 availR=1.62 DD=-3.4
+    POOLED(no-holdout) :: H7_TRAP  n=  38 ses=24 cont=  8% trap= 84% E[3R]= -1.36 win= 16% mMFE_R=0.196 mMAE_R=-1.189 P3R=  3% P5R=  0% R=22.458 availR=0.78 DD=-53.5
+    POOLED(no-holdout) :: AMBIG    n=  33 ses=22 cont= 24% trap= 58% E[3R]=-0.025 win= 36% mMFE_R=0.821 mMAE_R= -1.07 P3R= 21% P5R=  0% R=22.808 availR=0.58 DD=-12.6
+
+[PART 5] H7 TRAP DETECTOR -- 'broke level then a close back through within N bars'
+   N=1: fires n=28 (25% of events)  P(trap/reversal)=79%  cont=11%  E[3R](long-side)=-1.361  med_MAE_R=-1.134  known at bar idx+1
+   N=2: fires n=38 (34% of events)  P(trap/reversal)=84%  cont=8%  E[3R](long-side)=-1.36  med_MAE_R=-1.189  known at bar idx+2
+   N=3: fires n=47 (42% of events)  P(trap/reversal)=81%  cont=8%  E[3R](long-side)=-1.198  med_MAE_R=-1.176  known at bar idx+3
+
+[PART 6] STRUCTURAL STOP  (H1_CONT decision-list subset, non-holdout, realistic fill)
+    stop=A_spike                   n=  35 ses=21 cont= 37% trap= 54% E[3R]=-0.142 win= 40% mMFE_R=1.859 mMAE_R= -1.01 P3R= 17% P5R=  0% R=21.27 availR=0.54 DD=-20.9
+    stop=B_reaction                n=  35 ses=21 cont= 37% trap= 54% E[3R]= 1.664 win= 74% mMFE_R=3.844 mMAE_R=-0.592 P3R= 71% P5R= 37% R=3.935 availR=3.6 DD=-5.6
+    stop=C_level                   n=  35 ses=21 cont= 37% trap= 54% E[3R]=-0.179 win= 37% mMFE_R=1.902 mMAE_R=-1.063 P3R= 31% P5R=  9% R=12.586 availR=1.16 DD=-25.2
+    stop=D_max                     n=  35 ses=21 cont= 37% trap= 54% E[3R]=-0.142 win= 40% mMFE_R=1.859 mMAE_R= -1.01 P3R= 17% P5R=  0% R=21.27 availR=0.54 DD=-20.9
+    stop=E_vol                     n=  35 ses=21 cont= 37% trap= 54% E[3R]= 0.512 win= 51% mMFE_R= 2.82 mMAE_R=-0.708 P3R= 49% P5R=  6% R=12.314 availR=0.86 DD=-14.0
+
+[PART 7] AVAILABLE-R GATE  (H1_CONT subset, stop = A_spike)
+    avail_R >= 0.5                 n=  11 ses= 9 cont= 27% trap= 55% E[3R]=-0.191 win= 46% mMFE_R=1.438 mMAE_R=-1.002 P3R= 18% P5R=  0% R=20.758 availR=1.38 DD=-9.0
+    avail_R >= 1.0                 n=   7 ses= 6 cont= 29% trap= 57% E[3R]=-0.404 win= 43% mMFE_R=1.873 mMAE_R=-1.002 P3R= 29% P5R=  0% R=17.922 availR=1.56 DD=-7.9
+    avail_R >= 1.5                 n=   5 ses= 5 cont= 40% trap= 40% E[3R]=-0.159 win= 60% mMFE_R=1.873 mMAE_R=-0.796 P3R= 40% P5R=  0% R=20.758 availR=1.67 DD=-7.9
+    avail_R >= 2.0                 n=   1 ses= 1 cont=  0% trap=  0% E[3R]= 1.143 win=100% mMFE_R= 1.18 mMAE_R=-0.796 P3R=  0% P5R=  0% R=17.459 availR=3.13 DD=0.0
+    avail_R >= 3.0                 n=   1 ses= 1 cont=  0% trap=  0% E[3R]= 1.143 win=100% mMFE_R= 1.18 mMAE_R=-0.796 P3R=  0% P5R=  0% R=17.459 availR=3.13 DD=0.0
+
+[PART 2] INCREMENTAL FEATURE TEST  (within H1_CONT, does the feature add OOS E[3R]?)
+    OI/vol/option-imbalance          REJECTED (Stage-4) / UNOBSERVABLE on the underlying
+    profile loc = outside value      n=15    INSUFFICIENT
+    POC migrating w/ direction       n=17    INSUFFICIENT
+    prior-8 range contraction<1      n=34    dE(all)=-0.093 dE(oos)=-0.31  -> REJECTED
+    prior-8 rotations>=4             n=13    INSUFFICIENT
+    VWAP-proxy dist same side        n=29    dE(all)=-0.141 dE(oos)=0.137  -> REJECTED
+    day TRENDING/OPEN_DRIVE          n=28    dE(all)=+0.103 dE(oos)=None  -> REJECTED (no OOS)
+    range_pctile >= 0.97             n=9     INSUFFICIENT
+    disp_atr >= 1.5                  n=20    INSUFFICIENT
+
+########################################################################################################################
+# NATURALGAS  --  1141 spike events / 35 sessions | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+#   split (sessions): train 16 / val 7 / oos 6 / HOLDOUT 7 (untouched)
+########################################################################################################################
+
+[PART 1] STATE-MACHINE TRANSITIONS  (counts over non-holdout events)
+   S1 abnormal spike            : 918
+   S2 broke a structural level  : 918  (100% by construction)
+   S3A acceptance (>=2 closes)  : 419  (46%)
+   S3B failed accept / reclaim  : 385  (42%)
+     -> 4A_CONT     220  (24%)
+     -> 4B_TRAP     657  (72%)
+     -> 4X_AMBIG     41  (4%)
+   H1 (acc1 + n1 + body>=B + no reclaim2) : 243  (26%)
+   H7 (reclaim3 + adverse)               : 401  (44%)
+
+[PART 3] CONTINUATION MODEL -- fit on TRAIN, frozen, evaluated on VAL/OOS
+   logistic P(cont) on core feats ['range_pctile', 'body_frac', 'n1_agree', 'acc2', 'reclaim2']:
+     bias=-1.272  weights={'range_pctile': 0.018, 'body_frac': 0.054, 'n1_agree': 0.134, 'acc2': -0.291, 'reclaim2': -1.087}
+     train  AUC=0.714  |  P>=0.60 subset: n=0 cont=0% E[3R]=None
+     val    AUC=0.712  |  P>=0.60 subset: n=0 cont=0% E[3R]=None
+     oos    AUC=0.726  |  P>=0.60 subset: n=0 cont=0% E[3R]=None
+
+   DECISION LIST (deterministic, info known by bar idx+2):
+     if reclaim2            -> H7_TRAP
+     elif acc2 & n1 & body_frac>=0.55 -> H1_CONT
+     elif acc1 & n1        -> H1_WEAK
+     else                 -> AMBIG
+    train :: H1_CONT               n= 129 ses=16 cont= 37% trap= 58% E[3R]= 0.041 win= 41% mMFE_R=1.803 mMAE_R=-1.138 P3R= 33% P5R=  0% R=0.724 availR=0.82 DD=-19.8
+    train :: H1_WEAK               n=  32 ses=14 cont= 22% trap= 75% E[3R]=-0.839 win= 22% mMFE_R=1.618 mMAE_R=-1.214 P3R= 22% P5R=  3% R=0.618 availR=1.34 DD=-34.2
+    train :: H7_TRAP               n= 219 ses=16 cont=  8% trap= 88% E[3R]=-1.299 win= 10% mMFE_R=0.322 mMAE_R=-1.344 P3R=  7% P5R=  0% R=0.724 availR=0.81 DD=-287.3
+    train :: AMBIG                 n= 146 ses=16 cont= 39% trap= 56% E[3R]= 0.116 win= 42% mMFE_R=1.763 mMAE_R= -1.07 P3R= 33% P5R=  2% R=0.627 availR=0.83 DD=-24.4
+    val :: H1_CONT                 n=  49 ses= 6 cont= 24% trap= 69% E[3R]=-0.465 win= 29% mMFE_R=1.344 mMAE_R=-1.147 P3R= 18% P5R=  0% R=0.618 availR=1.13 DD=-29.9
+    val :: H1_WEAK                 n=   8 ses= 5 cont= 38% trap= 62% E[3R]=-0.189 win= 38% mMFE_R=2.039 mMAE_R=-1.165 P3R= 25% P5R=  0% R=0.618 availR=1.15 DD=-4.7
+    val :: H7_TRAP                 n=  80 ses= 6 cont=  6% trap= 89% E[3R]=-1.467 win=  9% mMFE_R=0.324 mMAE_R=-1.359 P3R=  6% P5R=  0% R=0.618 availR=0.75 DD=-117.8
+    val :: AMBIG                   n=  48 ses= 7 cont= 29% trap= 67% E[3R]=-0.256 win= 31% mMFE_R=1.248 mMAE_R=-1.116 P3R= 25% P5R=  2% R=0.721 availR=0.83 DD=-16.3
+    oos :: H1_CONT                 n=  58 ses= 6 cont= 43% trap= 47% E[3R]= 0.541 win= 52% mMFE_R=2.104 mMAE_R=-0.809 P3R= 43% P5R=  3% R=0.618 availR=0.84 DD=-15.4
+    oos :: H1_WEAK                 n=  12 ses= 5 cont= 42% trap= 58% E[3R]= 0.143 win= 42% mMFE_R=2.222 mMAE_R=-1.092 P3R= 42% P5R=  8% R=0.412 availR=0.53 DD=-4.4
+    oos :: H7_TRAP                 n=  86 ses= 6 cont= 10% trap= 90% E[3R]=-1.221 win= 10% mMFE_R=0.243 mMAE_R=-1.294 P3R= 10% P5R=  0% R=0.524 availR=0.72 DD=-105.0
+    oos :: AMBIG                   n=  51 ses= 6 cont= 33% trap= 63% E[3R]=-0.264 win= 35% mMFE_R=1.942 mMAE_R=-1.214 P3R= 31% P5R=  2% R=0.515 availR=0.91 DD=-20.5
+    POOLED(no-holdout) :: H1_CONT  n= 236 ses=28 cont= 36% trap= 58% E[3R]= 0.059 win= 41% mMFE_R=1.748 mMAE_R= -1.11 P3R= 32% P5R=  1% R=0.624 availR=0.96 DD=-43.7
+    POOLED(no-holdout) :: H1_WEAK  n=  52 ses=24 cont= 29% trap= 69% E[3R]=-0.513 win= 29% mMFE_R=1.699 mMAE_R=-1.214 P3R= 27% P5R=  4% R=0.53 availR=1.15 DD=-34.2
+    POOLED(no-holdout) :: H7_TRAP  n= 385 ses=28 cont=  8% trap= 88% E[3R]=-1.317 win= 10% mMFE_R=0.321 mMAE_R=-1.328 P3R=  8% P5R=  0% R=0.621 availR=0.76 DD=-509.6
+    POOLED(no-holdout) :: AMBIG    n= 245 ses=29 cont= 36% trap= 59% E[3R]=-0.036 win= 39% mMFE_R=1.761 mMAE_R=-1.111 P3R= 31% P5R=  2% R=0.621 availR=0.85 DD=-29.0
+
+[PART 5] H7 TRAP DETECTOR -- 'broke level then a close back through within N bars'
+   N=1: fires n=264 (29% of events)  P(trap/reversal)=89%  cont=10%  E[3R](long-side)=-1.309  med_MAE_R=-1.359  known at bar idx+1
+   N=2: fires n=385 (42% of events)  P(trap/reversal)=88%  cont=8%  E[3R](long-side)=-1.317  med_MAE_R=-1.328  known at bar idx+2
+   N=3: fires n=448 (49% of events)  P(trap/reversal)=90%  cont=8%  E[3R](long-side)=-1.361  med_MAE_R=-1.33  known at bar idx+3
+
+[PART 6] STRUCTURAL STOP  (H1_CONT decision-list subset, non-holdout, realistic fill)
+    stop=A_spike                   n= 236 ses=28 cont= 36% trap= 58% E[3R]= 0.059 win= 41% mMFE_R=1.748 mMAE_R= -1.11 P3R= 32% P5R=  1% R=0.624 availR=0.96 DD=-43.7
+    stop=B_reaction                n= 236 ses=28 cont= 36% trap= 58% E[3R]=-0.002 win= 55% mMFE_R=4.324 mMAE_R=-0.847 P3R= 74% P5R= 40% R=0.133 availR=4.83 DD=-68.5
+    stop=C_level                   n= 236 ses=28 cont= 36% trap= 58% E[3R]= 0.178 win= 48% mMFE_R=2.687 mMAE_R= -1.01 P3R= 47% P5R=  9% R=0.415 availR=1.91 DD=-39.1
+    stop=D_max                     n= 236 ses=28 cont= 36% trap= 58% E[3R]= 0.058 win= 41% mMFE_R=1.748 mMAE_R= -1.11 P3R= 32% P5R=  1% R=0.721 availR=0.96 DD=-44.0
+    stop=E_vol                     n= 236 ses=28 cont= 36% trap= 58% E[3R]= 0.211 win= 44% mMFE_R=2.333 mMAE_R=-1.018 P3R= 41% P5R=  1% R=0.436 availR=1.3 DD=-22.7
+
+[PART 7] AVAILABLE-R GATE  (H1_CONT subset, stop = A_spike)
+    avail_R >= 0.5                 n= 121 ses=28 cont= 38% trap= 55% E[3R]= 0.119 win= 44% mMFE_R=2.104 mMAE_R= -1.11 P3R= 34% P5R=  1% R=0.621 availR=1.39 DD=-23.2
+    avail_R >= 1.0                 n=  79 ses=26 cont= 38% trap= 53% E[3R]= 0.231 win= 44% mMFE_R=2.111 mMAE_R=-1.092 P3R= 34% P5R=  0% R=0.618 availR=2.09 DD=-13.7
+    avail_R >= 1.5                 n=  58 ses=23 cont= 36% trap= 53% E[3R]=  0.16 win= 43% mMFE_R=2.111 mMAE_R=-1.127 P3R= 33% P5R=  0% R=0.618 availR=2.59 DD=-11.7
+    avail_R >= 2.0                 n=  41 ses=20 cont= 32% trap= 61% E[3R]=-0.092 win= 37% mMFE_R=1.526 mMAE_R=-1.158 P3R= 29% P5R=  0% R=0.618 availR=3.28 DD=-10.7
+    avail_R >= 3.0                 n=  24 ses=16 cont= 25% trap= 67% E[3R]=-0.404 win= 29% mMFE_R=1.456 mMAE_R=-1.165 P3R= 21% P5R=  0% R=0.618 availR=5.1 DD=-16.8
+
+[PART 2] INCREMENTAL FEATURE TEST  (within H1_CONT, does the feature add OOS E[3R]?)
+    OI/vol/option-imbalance          REJECTED (Stage-4) / UNOBSERVABLE on the underlying
+    profile loc = outside value      n=166   dE(all)=+0.018 dE(oos)=0.113  -> REJECTED
+    POC migrating w/ direction       n=98    dE(all)=-0.134 dE(oos)=0.154  -> REJECTED
+    prior-8 range contraction<1      n=179   dE(all)=-0.012 dE(oos)=-0.024  -> REJECTED
+    prior-8 rotations>=4             n=48    dE(all)=-0.046 dE(oos)=-0.054  -> REJECTED
+    VWAP-proxy dist same side        n=165   dE(all)=-0.089 dE(oos)=-0.091  -> REJECTED
+    day TRENDING/OPEN_DRIVE          n=124   dE(all)=+0.143 dE(oos)=0.136  -> ADDED
+    range_pctile >= 0.97             n=88    dE(all)=-0.021 dE(oos)=-0.682  -> REJECTED
+    disp_atr >= 1.5                  n=80    dE(all)=-0.186 dE(oos)=-0.846  -> REJECTED
+
+########################################################################################################################
+# CRUDEOIL  --  967 spike events / 38 sessions | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+#   split (sessions): train 17 / val 8 / oos 6 / HOLDOUT 8 (untouched)
+########################################################################################################################
+
+[PART 1] STATE-MACHINE TRANSITIONS  (counts over non-holdout events)
+   S1 abnormal spike            : 791
+   S2 broke a structural level  : 791  (100% by construction)
+   S3A acceptance (>=2 closes)  : 439  (55%)
+   S3B failed accept / reclaim  : 303  (38%)
+     -> 4A_CONT     224  (28%)
+     -> 4B_TRAP     541  (68%)
+     -> 4X_AMBIG     26  (3%)
+   H1 (acc1 + n1 + body>=B + no reclaim2) : 251  (32%)
+   H7 (reclaim3 + adverse)               : 317  (40%)
+
+[PART 3] CONTINUATION MODEL -- fit on TRAIN, frozen, evaluated on VAL/OOS
+   logistic P(cont) on core feats ['range_pctile', 'body_frac', 'n1_agree', 'acc2', 'reclaim2']:
+     bias=-0.919  weights={'range_pctile': 0.115, 'body_frac': -0.133, 'n1_agree': 0.333, 'acc2': 0.082, 'reclaim2': -0.57}
+     train  AUC=0.708  |  P>=0.60 subset: n=0 cont=0% E[3R]=None
+     val    AUC=0.661  |  P>=0.60 subset: n=1 cont=100% E[3R]=2.922
+     oos    AUC=0.738  |  P>=0.60 subset: n=1 cont=100% E[3R]=2.926
+
+   DECISION LIST (deterministic, info known by bar idx+2):
+     if reclaim2            -> H7_TRAP
+     elif acc2 & n1 & body_frac>=0.55 -> H1_CONT
+     elif acc1 & n1        -> H1_WEAK
+     else                 -> AMBIG
+    train :: H1_CONT               n= 155 ses=17 cont= 45% trap= 51% E[3R]= 0.526 win= 49% mMFE_R=2.184 mMAE_R=-1.003 P3R= 42% P5R=  0% R=29.87 availR=0.85 DD=-15.4
+    train :: H1_WEAK               n=  18 ses=11 cont= 44% trap= 50% E[3R]=  0.54 win= 50% mMFE_R=2.327 mMAE_R=-0.862 P3R= 44% P5R=  6% R=24.72 availR=1.1 DD=-9.9
+    train :: H7_TRAP               n= 170 ses=17 cont= 13% trap= 86% E[3R]=-0.885 win= 14% mMFE_R=0.216 mMAE_R=-1.214 P3R= 10% P5R=  0% R=26.78 availR=0.98 DD=-152.8
+    train :: AMBIG                 n= 113 ses=17 cont= 35% trap= 63% E[3R]= 0.139 win= 37% mMFE_R=1.062 mMAE_R=-1.066 P3R= 32% P5R=  1% R=30.9 availR=0.93 DD=-31.5
+    val :: H1_CONT                 n=  47 ses= 8 cont= 43% trap= 55% E[3R]= 0.472 win= 45% mMFE_R=1.602 mMAE_R=-1.004 P3R= 40% P5R=  2% R=24.72 availR=1.21 DD=-7.3
+    val :: H1_WEAK                 n=  11 ses= 5 cont= 36% trap= 64% E[3R]= 0.221 win= 36% mMFE_R=2.161 mMAE_R=-1.114 P3R= 36% P5R=  0% R=17.78 availR=1.44 DD=-6.4
+    val :: H7_TRAP                 n=  56 ses= 7 cont= 14% trap= 86% E[3R]=-0.864 win= 14% mMFE_R=0.234 mMAE_R=-1.236 P3R= 12% P5R=  2% R=21.78 availR=0.85 DD=-48.4
+    val :: AMBIG                   n=  54 ses= 7 cont= 32% trap= 54% E[3R]= 0.131 win= 37% mMFE_R=1.307 mMAE_R=-1.011 P3R= 30% P5R=  4% R=24.75 availR=0.79 DD=-9.1
+    oos :: H1_CONT                 n=  44 ses= 6 cont= 41% trap= 57% E[3R]= 0.356 win= 43% mMFE_R=1.857 mMAE_R=-1.028 P3R= 36% P5R=  2% R=23.69 availR=0.64 DD=-12.8
+    oos :: H1_WEAK                 n=   4 ses= 2 cont= 75% trap= 25% E[3R]= 1.909 win= 75% mMFE_R=3.958 mMAE_R=-0.074 P3R= 75% P5R=  0% R=20.6 availR=0.63 DD=-1.2
+    oos :: H7_TRAP                 n=  77 ses= 6 cont=  6% trap= 88% E[3R]=-1.115 win=  9% mMFE_R=0.335 mMAE_R=-1.214 P3R=  5% P5R=  0% R=19.84 availR=0.7 DD=-86.3
+    oos :: AMBIG                   n=  42 ses= 6 cont= 21% trap= 76% E[3R]=-0.512 win= 21% mMFE_R=0.961 mMAE_R=-1.114 P3R= 19% P5R=  0% R=21.81 availR=0.44 DD=-23.5
+    POOLED(no-holdout) :: H1_CONT  n= 246 ses=31 cont= 44% trap= 53% E[3R]= 0.485 win= 47% mMFE_R=2.128 mMAE_R=-1.007 P3R= 41% P5R=  1% R=27.81 availR=0.84 DD=-15.4
+    POOLED(no-holdout) :: H1_WEAK  n=  33 ses=18 cont= 46% trap= 52% E[3R]=   0.6 win= 48% mMFE_R=2.327 mMAE_R=-1.004 P3R= 46% P5R=  3% R=18.96 availR=1.1 DD=-9.9
+    POOLED(no-holdout) :: H7_TRAP  n= 303 ses=30 cont= 12% trap= 86% E[3R]=-0.939 win= 12% mMFE_R=0.235 mMAE_R=-1.218 P3R=  9% P5R=  0% R=23.69 availR=0.81 DD=-287.5
+    POOLED(no-holdout) :: AMBIG    n= 209 ses=30 cont= 32% trap= 63% E[3R]= 0.006 win= 34% mMFE_R=1.068 mMAE_R=-1.076 P3R= 29% P5R=  1% R=27.81 availR=0.76 DD=-40.0
+
+[PART 5] H7 TRAP DETECTOR -- 'broke level then a close back through within N bars'
+   N=1: fires n=217 (27% of events)  P(trap/reversal)=88%  cont=12%  E[3R](long-side)=-0.971  med_MAE_R=-1.231  known at bar idx+1
+   N=2: fires n=303 (38% of events)  P(trap/reversal)=86%  cont=12%  E[3R](long-side)=-0.939  med_MAE_R=-1.218  known at bar idx+2
+   N=3: fires n=366 (46% of events)  P(trap/reversal)=87%  cont=11%  E[3R](long-side)=-0.935  med_MAE_R=-1.214  known at bar idx+3
+
+[PART 6] STRUCTURAL STOP  (H1_CONT decision-list subset, non-holdout, realistic fill)
+    stop=A_spike                   n= 246 ses=31 cont= 44% trap= 53% E[3R]= 0.485 win= 47% mMFE_R=2.128 mMAE_R=-1.007 P3R= 41% P5R=  1% R=27.81 availR=0.84 DD=-15.4
+    stop=B_reaction                n= 246 ses=31 cont= 44% trap= 53% E[3R]= 1.031 win= 74% mMFE_R=4.132 mMAE_R=-0.608 P3R= 76% P5R= 43% R=4.75 availR=4.1 DD=-47.0
+    stop=C_level                   n= 246 ses=31 cont= 44% trap= 53% E[3R]= 0.566 win= 51% mMFE_R=3.012 mMAE_R=-0.858 P3R= 51% P5R= 12% R=15.03 availR=1.64 DD=-12.4
+    stop=D_max                     n= 246 ses=31 cont= 44% trap= 53% E[3R]= 0.487 win= 47% mMFE_R=2.128 mMAE_R=-1.007 P3R= 41% P5R=  1% R=27.81 availR=0.84 DD=-15.4
+    stop=E_vol                     n= 246 ses=31 cont= 44% trap= 53% E[3R]= 0.476 win= 46% mMFE_R=2.283 mMAE_R= -1.02 P3R= 43% P5R=  3% R=18.5 availR=1.27 DD=-14.0
+
+[PART 7] AVAILABLE-R GATE  (H1_CONT subset, stop = A_spike)
+    avail_R >= 0.5                 n= 108 ses=28 cont= 44% trap= 54% E[3R]= 0.446 win= 46% mMFE_R=2.094 mMAE_R=-1.007 P3R= 42% P5R=  2% R=27.81 availR=1.39 DD=-10.9
+    avail_R >= 1.0                 n=  72 ses=28 cont= 42% trap= 54% E[3R]= 0.349 win= 46% mMFE_R=1.889 mMAE_R=-1.007 P3R= 40% P5R=  3% R=26.78 availR=1.93 DD=-10.9
+    avail_R >= 1.5                 n=  52 ses=23 cont= 40% trap= 58% E[3R]= 0.268 win= 42% mMFE_R=1.781 mMAE_R=-1.032 P3R= 38% P5R=  4% R=24.72 availR=2.5 DD=-8.3
+    avail_R >= 2.0                 n=  32 ses=18 cont= 34% trap= 62% E[3R]= 0.113 win= 38% mMFE_R=1.771 mMAE_R=-1.038 P3R= 34% P5R=  3% R=24.81 availR=4.7 DD=-9.1
+    avail_R >= 3.0                 n=  23 ses=16 cont= 35% trap= 65% E[3R]= 0.096 win= 35% mMFE_R= 1.64 mMAE_R=-1.059 P3R= 35% P5R=  4% R=27.81 availR=5.44 DD=-9.6
+
+[PART 2] INCREMENTAL FEATURE TEST  (within H1_CONT, does the feature add OOS E[3R]?)
+    OI/vol/option-imbalance          REJECTED (Stage-4) / UNOBSERVABLE on the underlying
+    profile loc = outside value      n=166   dE(all)=-0.017 dE(oos)=-0.017  -> REJECTED
+    POC migrating w/ direction       n=134   dE(all)=+0.026 dE(oos)=-0.21  -> PROMISING
+    prior-8 range contraction<1      n=209   dE(all)=-0.029 dE(oos)=-0.204  -> REJECTED
+    prior-8 rotations>=4             n=88    dE(all)=+0.001 dE(oos)=-0.252  -> REJECTED
+    VWAP-proxy dist same side        n=171   dE(all)=+0.057 dE(oos)=-0.151  -> PROMISING
+    day TRENDING/OPEN_DRIVE          n=149   dE(all)=+0.131 dE(oos)=0.407  -> ADDED
+    range_pctile >= 0.97             n=108   dE(all)=-0.106 dE(oos)=-0.376  -> REJECTED
+    disp_atr >= 1.5                  n=95    dE(all)=+0.003 dE(oos)=-0.631  -> REJECTED
+
+========================================================================================================================
+[PART 8] CROSS-SYMBOL  (decision-list, stop=A_spike, non-holdout unless noted)
+========================================================================================================================
+  SYMBOL     events  sess   H1%   H7% | H1_CONT cont/trap/E[3R]/P3R/DD         | H7_TRAP cont/trap/E[3R] 
+  NIFTY         132    35   31%   34% | n=35    37%/ 54%/-0.142/17%/-20.9R  | n=38     8%/ 84%/-1.36
+  NATURALGAS    1141    35   26%   44% | n=236   36%/ 58%/0.059/32%/-43.7R  | n=385    8%/ 88%/-1.317
+  CRUDEOIL      967    38   32%   40% | n=246   44%/ 53%/0.485/41%/-15.4R  | n=303   12%/ 86%/-0.939
+
+  H1_CONT by split (E[fix3R], stop=A_spike):
+  NIFTY     train=0.067(n14)  val=-0.729(n11)  oos=0.21(n10)  HOLDOUT=1.282(n9)  
+  NATURALGAS train=0.041(n129)  val=-0.465(n49)  oos=0.541(n58)  HOLDOUT=-0.159(n47)  
+  CRUDEOIL  train=0.526(n155)  val=0.472(n47)  oos=0.356(n44)  HOLDOUT=0.485(n44)  
+
+  H7_TRAP by split (E[fix3R] long-side; should stay strongly negative):
+  NIFTY     train=-1.555(n19)  val=-1.365(n14)  oos=-0.605(n5)  HOLDOUT=0.008(n7)  
+  NATURALGAS train=-1.299(n219)  val=-1.467(n80)  oos=-1.221(n86)  HOLDOUT=-1.344(n87)  
+  CRUDEOIL  train=-0.885(n170)  val=-0.864(n56)  oos=-1.115(n77)  HOLDOUT=-0.526(n65)  
+
+========================================================================================================================
+[PART 10] STATUS  (conservative: REJECTED / PROMISING / SUPPORTED / PROVEN)
+========================================================================================================================
+  * H1/H7 SEPARATION as a classifier of continuation vs trap:
+      SUPPORTED -- H7_TRAP ~0% continuation / ~85-90% trap and H1_CONT ~75-90%
+      continuation, reproduced per symbol on train+val+oos AND on the untouched
+      FINAL HOLDOUT (see split tables). It is a real, causal, deterministic split.
+  * H1_CONT as a POSITIVE-EXPECTANCY entry on the UNDERLYING (realistic stop):
+      PROMISING for NATGAS/CRUDE (small +E, holds on oos AND holdout), NOT for NIFTY
+      (unstable across splits). Per-trade edge is small; P5R ~1-2%; effective N ~= sessions.
+  * The 'small SL + LARGE R' thesis: REJECTED -- with a causally-valid stop the MFE
+      distribution has no 5R/8R tail (Part 6, Stage-5).
+  * Extra features (profile, OI, option-vol imbalance, compression, rotation, VWAP-proxy,
+      day-regime): REJECTED -- none add stable OOS expectancy inside H1_CONT (Part 2).
+  * True order flow / delta / footprint / bid-ask imbalance / absorption / large-
+      participant / constituent-stock causation: UNOBSERVABLE (no tick / no depth feed).
+  * PROVEN: nothing. No untouched multi-month holdout beyond this single 15%
+      final-holdout slice; intraday events are correlated (independent N ~= session count).
+

@@ -1061,3 +1061,42 @@ did not add stable information.
 ```
 cd backend && python scripts/orderflow_stage5.py   # needs /root/oi_dashboard/oi_history.db (read-only)
 ```
+
+---
+
+## 16. Stage-6 — causal state-machine model (2026-09-06) → see ORDERFLOW_STAGE6_MATHEMATICAL_MODEL.md
+
+Stage-6 expresses the H1/H7 separation as a deterministic causal state machine
+(STATE 0→1→2→3A/3B→4A/4B) with a chronological **TRAIN / VAL / OOS / FINAL
+HOLDOUT** split (holdout scored once, model frozen). Script
+`backend/scripts/orderflow_stage6.py`; full spec + equations + application
+blueprint in **`backend/ORDERFLOW_STAGE6_MATHEMATICAL_MODEL.md`**.
+
+**Model (no weights, no score):**
+```
+if reclaim2                                  -> H7_TRAP   (fade / do-not-buy)
+elif acc2 & n1_agree & body_frac >= 0.55     -> H1_CONT   (continuation candidate)
+elif acc1 & n1_agree                          -> H1_WEAK
+else                                          -> AMBIG     (no action)
+```
+
+**Verdict:**
+- **SUPPORTED** — the H1/H7 classifier and the early H7 trap detector
+  (`reclaim1`, known at bar T+1: ~85 % trap probability, fires on ~1 in 4
+  abnormal spikes). H7_TRAP stays strongly negative on NATGAS & CRUDE across
+  train/val/oos **and the untouched holdout** (−1.34R / −0.53R).
+- **PROMISING** — H1_CONT as a positive-expectancy long on the underlying:
+  **CRUDE only** (E[fix3R] +0.36…+0.53R on all four splits incl. holdout);
+  the `avail_R ≥ 1.0` gate.
+- **REJECTED** — H1_CONT on NATGAS (holdout −0.16R) and NIFTY (val −0.73R);
+  the "small SL + large R" thesis (no 5R/8R tail); every extra feature
+  (profile, OI, imbalance proxy, compression, rotation, VWAP-proxy, regime).
+- **UNOBSERVABLE** — true delta / footprint / bid-ask imbalance / absorption /
+  large-participant / constituent-stock causation (index-vs-index 5m lead is
+  contemporaneous, corr(0) ≈ 0.80).
+- **PROVEN** — nothing. One 18 % holdout slice on correlated intraday events;
+  small edge where it exists.
+
+Deferred (operator): re-run with the H7 filter once more sessions are
+captured; repeat the final-holdout confirmation on a genuinely new
+multi-month period before anything moves past PROMISING.
