@@ -8,8 +8,8 @@
 # report + a dedicated CSV, optionally pings Telegram with the verdict line,
 # and self-disables its own crontab entry.
 #
-# Cron (weekly): 0 7 * * 6  -- Saturdays 07:00 IST. This server's cron runs in
-# the local Asia/Kolkata TZ, not UTC.
+# Cron: 30 16 * * 1-5  -- weekdays (Mon-Fri) 16:30 IST, after the NSE close.
+# This server's cron runs in the local Asia/Kolkata TZ, not UTC.
 #
 # READ-ONLY / RESEARCH: does not touch the frozen H1/H7 engine, the Stage-6
 # baseline, trading logic, execution, broker order logic, or production
