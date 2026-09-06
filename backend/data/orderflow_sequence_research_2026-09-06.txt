@@ -1,0 +1,252 @@
+
+########################################################################################################
+# NIFTY PREMIUM  --  4 usable sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']  regimes ['CHOP', 'TREND_DOWN']
+########################################################################################################
+
+[P1] abnormal-spike definitions  (S0 entry, spike->close, stop=spike, fix3R, no compression)
+   spike=fix2.0               n=   1 ses=1 win%= 100 exp=  15.15 PF=  None net=    15.2 mDD=     0.0 | mfe= 23.45 mae=-12.15 maxR~1.27 Rcap= 0.858 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.41
+   spike=fix2.5               n=   1 ses=1 win%= 100 exp=  15.15 PF=  None net=    15.2 mDD=     0.0 | mfe= 23.45 mae=-12.15 maxR~1.27 Rcap= 0.858 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.41
+   spike=fix3.0               n=0
+   spike=fix4.0               n=0
+   spike=pct90                n=   7 ses=3 win%=  57 exp=  4.471 PF=  4.54 net=    31.3 mDD=    -5.4 | mfe=  9.84 mae= -8.14 maxR~1.36 Rcap= 0.546 3R= 14% 5R=  0% 8R=  0% 10R=  0% gb=0.84
+   spike=pct95                n=   4 ses=2 win%=  50 exp=  3.075 PF=  2.89 net=    12.3 mDD=    -3.5 | mfe=  9.96 mae= -8.78 maxR~1.31 Rcap= 0.186 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.85
+   spike=vol2.0               n=   3 ses=2 win%=  33 exp=   -1.9 PF=  0.62 net=    -5.7 mDD=   -15.2 | mfe=  9.67 mae=  -8.5 maxR~2.08 Rcap=-0.355 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=1.81
+   spike=vol3.0               n=0
+   spike=prof_aware           n=0
+   -> adaptive spike def for NIFTY: pct90  (n=7, exp=4.471, PF=4.54)
+
+[P5] entry model  (compression+spike2.5+rejection, seq_window=2, stop=rejection, fix3R)
+   entry=S0                   n=   2 ses=1 win%=  50 exp=    6.4 PF=  6.45 net=    12.8 mDD=    -2.3 | mfe= 12.85 mae= -8.55 maxR~0.78 Rcap= 0.257 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.53
+   entry=S1                   n=   2 ses=1 win%=  50 exp=   2.95 PF=  2.97 net=     5.9 mDD=    -3.0 | mfe=  8.47 mae=-10.92 maxR~0.74 Rcap= 0.236 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.51
+   entry=S2                   n=   1 ses=1 win%=   0 exp=   -3.0 PF=   0.0 net=    -3.0 mDD=    -3.0 | mfe= -0.25 mae= -3.45 maxR~0.05 Rcap=-0.491 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.54
+   entry=S3                   n=0
+   entry=S5                   n=0
+
+[P6] initial stop structure  (comp+spike2.5+rejection+confirm, entry=S0)
+   stop=spike                 n=0
+   stop=rejection             n=0
+   stop=confirm               n=0
+   stop=swing                 n=0
+
+[P7] profit management  (comp+spike2.5+rej+confirm, entry=S0, stop=rejection)
+   pm=fix3R                   n=0
+   pm=half3R_runner           n=0
+   pm=full_runner             n=0
+
+[P4] profile context mode  (comp+spike-prof_aware+rej+confirm, entry=S0)
+   profile=P0                 n=0
+   profile=P1                 n=0
+   profile=P2                 n=0
+   profile=P3                 n=0
+
+[P3] max sequence window  (comp+spike2.5+rej+confirm, entry=S0)
+   seq_window=1               n=0
+   seq_window=2               n=0
+   seq_window=3               n=0
+
+[P10] ABLATION MATRIX  (best_entry=S0, best_pm=fix3R, comp_lb=5, seq_window=2)
+   A: pct90 c=0 r=0 k=0 P0 S0 fix3R n=   7 ses=3 win%=  57 exp=  4.471 PF=  4.54 net=    31.3 mDD=    -5.4 | mfe=  9.84 mae= -8.14 maxR~1.36 Rcap= 0.546 3R= 14% 5R=  0% 8R=  0% 10R=  0% gb=0.84
+   B: fix2.0 c=0 r=1 k=0 P0 S2 fix3R n=0
+   C: pct90 c=1 r=0 k=0 P0 S0 fix3R n=   2 ses=1 win%=  50 exp=    6.4 PF=  6.45 net=    12.8 mDD=    -2.3 | mfe= 12.85 mae= -8.55 maxR~0.78 Rcap= 0.257 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.53
+   D: pct90 c=1 r=1 k=0 P0 S2 fix3R n=   1 ses=1 win%=   0 exp=   -3.0 PF=   0.0 net=    -3.0 mDD=    -3.0 | mfe= -0.25 mae= -3.45 maxR~0.05 Rcap=-0.491 3R=  0% 5R=  0% 8R=  0% 10R=  0% gb=0.54
+   E: pct90 c=1 r=1 k=1 P0 S3 fix3R n=0
+   F: pct90 c=1 r=1 k=1 P3 S3 fix3R n=0
+   G: prof_aware c=1 r=1 k=1 P3 S3 fix3R n=0
+   H: prof_aware c=1 r=1 k=1 P3 S0 fix3R n=0
+   I: prof_aware c=1 r=1 k=1 P3 S0 fix3R n=0
+
+[P8] R-distribution for variant A (n=7):
+   %reaching  1R+   71  2R+   29  3R+   14  5R+    0  8R+    0  10R+    0
+   median maxR 1.36  avg maxR 1.38  avg R captured 0.546  median t-1R 5 bars  median t-3R 42 bars  avg giveback 0.84R
+     2026-09-02: n=  1 exp=   9.45 Rcap= 0.425 3R+=  0%
+     2026-09-03: n=  3 exp=  4.017 Rcap= 1.126 3R+= 33%
+     2026-09-04: n=  3 exp=  3.267 Rcap= 0.008 3R+=  0%
+
+[P9] leave-one-session-out on variant A (NOT a valid split at 4 sessions):
+   hold-out 2026-09-01: in exp=4.471 n=7 | out exp=None n=0
+   hold-out 2026-09-02: in exp=3.642 n=6 | out exp=9.45 n=1
+   hold-out 2026-09-03: in exp=4.812 n=4 | out exp=4.017 n=3
+   hold-out 2026-09-04: in exp=5.375 n=4 | out exp=3.267 n=3
+
+[P11] answers (NIFTY):
+  Q1 abnormal-spike def: best (n>=10, by expectancy) = pct90 (n=7, exp=4.471, PF=4.54); fixed 4x -> n=0; adaptive pick = pct90.
+  Q2 spike candle as entry (A/S0): n=7 exp=4.471 PF=4.54 Rcap=0.546 maxDD=-5.4.
+  Q3/Q4 candle-after / rejection entry (B/S2): n=0 exp=None PF=None Rcap=None maxDD=None  -> not comparable / not better on this sample.
+  Q5 confirmation (E/S3): n=0  -> kills the sample; cannot justify.
+  Q6 stop structure: P6 study 0 trades (compression gate) -> inconclusive.
+  Q7 R-reach (variant A): 3R+=14%  5R+=0%  8R+=0%  10R+=0%  median maxR=1.36 -> fixed 3R is TOO AMBITIOUS (lower target / partial+runner).
+  Q8 runner vs fix3R: I n=0 / E n=0 -> inconclusive (gated to ~0 by compression).
+  Q9 profile context: P4 modes all 0 trades (gated) -> inconclusive on this data.
+  Q10 highest OOS-expectancy sequence: A: spike-only, S0 -- < 10 sessions, LOSO session-dependent; NOT operationally convincing.
+  NOTE: strict pre-spike compression drives every symbol to ~0 trades (confirmed); over-constrained vs rare-but-good is unresolved.
+
+>>> VERDICT NIFTY PREMIUM: 3. NO ESTABLISHED EDGE
+    sessions=4 (need >=10) | best-variant(A) trades=7 (need >=50) | regimes=2 | exp=4.471 PF=4.54 med_maxR=1.36
+
+########################################################################################################
+# NATURALGAS PREMIUM  --  4 usable sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+########################################################################################################
+
+[P1] abnormal-spike definitions  (S0 entry, spike->close, stop=spike, fix3R, no compression)
+   spike=fix2.0               n= 120 ses=3 win%=  40 exp=  0.116 PF=  1.75 net=    14.0 mDD=    -3.1 | mfe=  0.57 mae= -0.26 maxR~1.56 Rcap= 0.145 3R= 25% 5R=  2% 8R=  0% 10R=  0% gb=1.68
+   spike=fix2.5               n=  63 ses=3 win%=  36 exp=   0.14 PF=  1.74 net=     8.8 mDD=    -3.5 | mfe=  0.67 mae= -0.31 maxR~1.34 Rcap= 0.045 3R= 22% 5R=  0% 8R=  0% 10R=  0% gb=1.55
+   spike=fix3.0               n=  35 ses=3 win%=  29 exp=  0.076 PF=  1.33 net=     2.7 mDD=    -2.9 | mfe=   0.8 mae=  -0.4 maxR~0.86 Rcap=-0.177 3R= 17% 5R=  0% 8R=  0% 10R=  0% gb=1.59
+   spike=fix4.0               n=  12 ses=3 win%=  17 exp= -0.067 PF=  0.81 net=    -0.8 mDD=    -2.2 | mfe=  1.13 mae=  -0.6 maxR~1.12 Rcap=-0.267 3R=  8% 5R=  0% 8R=  0% 10R=  0% gb=1.64
+   spike=pct90                n= 142 ses=3 win%=  39 exp=  0.105 PF=  1.77 net=    14.9 mDD=    -3.7 | mfe=  0.49 mae= -0.22 maxR~1.52 Rcap=-0.008 3R= 22% 5R=  2% 8R=  0% 10R=  0% gb=1.76
+   spike=pct95                n=  62 ses=3 win%=  36 exp=  0.117 PF=  1.76 net=     7.2 mDD=    -2.9 | mfe=  0.63 mae= -0.29 maxR~1.35 Rcap= 0.073 3R= 24% 5R=  3% 8R=  0% 10R=  0% gb=1.58
+   spike=vol2.0               n=  97 ses=3 win%=  44 exp=  0.165 PF=  2.14 net=    16.0 mDD=    -3.4 | mfe=  0.59 mae= -0.24 maxR~1.62 Rcap= 0.358 3R= 30% 5R=  3% 8R=  0% 10R=  0% gb=1.57
+   spike=vol3.0               n=  50 ses=3 win%=  42 exp=  0.178 PF=  1.98 net=     8.9 mDD=    -2.8 | mfe=  0.71 mae= -0.29 maxR~1.96 Rcap= 0.406 3R= 30% 5R=  4% 8R=  0% 10R=  0% gb=1.65
+   spike=prof_aware           n=  72 ses=3 win%=  35 exp=  0.113 PF=  1.58 net=     8.2 mDD=    -3.4 | mfe=  0.67 mae=  -0.3 maxR~1.54 Rcap= 0.045 3R= 24% 5R=  3% 8R=  0% 10R=  0% gb=1.77
+   -> adaptive spike def for NATURALGAS: vol3.0  (n=50, exp=0.178, PF=1.98)
+
+[P5] entry model  (compression+spike2.5+rejection, seq_window=2, stop=rejection, fix3R)
+   entry=S0                   n=0
+   entry=S1                   n=0
+   entry=S2                   n=0
+   entry=S3                   n=0
+   entry=S5                   n=0
+
+[P6] initial stop structure  (comp+spike2.5+rejection+confirm, entry=S0)
+   stop=spike                 n=0
+   stop=rejection             n=0
+   stop=confirm               n=0
+   stop=swing                 n=0
+
+[P7] profit management  (comp+spike2.5+rej+confirm, entry=S0, stop=rejection)
+   pm=fix3R                   n=0
+   pm=half3R_runner           n=0
+   pm=full_runner             n=0
+
+[P4] profile context mode  (comp+spike-prof_aware+rej+confirm, entry=S0)
+   profile=P0                 n=0
+   profile=P1                 n=0
+   profile=P2                 n=0
+   profile=P3                 n=0
+
+[P3] max sequence window  (comp+spike2.5+rej+confirm, entry=S0)
+   seq_window=1               n=0
+   seq_window=2               n=0
+   seq_window=3               n=0
+
+[P10] ABLATION MATRIX  (best_entry=S0, best_pm=fix3R, comp_lb=5, seq_window=2)
+   A: vol3.0 c=0 r=0 k=0 P0 S0 fix3R n=  50 ses=3 win%=  42 exp=  0.178 PF=  1.98 net=     8.9 mDD=    -2.8 | mfe=  0.71 mae= -0.29 maxR~1.96 Rcap= 0.406 3R= 30% 5R=  4% 8R=  0% 10R=  0% gb=1.65
+   B: fix2.0 c=0 r=1 k=0 P0 S2 fix3R n=  64 ses=3 win%=  48 exp=  0.276 PF=  5.97 net=    17.7 mDD=    -1.1 | mfe=   0.5 mae= -0.14 maxR~1.77 Rcap= 0.612 3R= 34% 5R=  3% 8R=  0% 10R=  0% gb=1.43
+   C: vol3.0 c=1 r=0 k=0 P0 S0 fix3R n=0
+   D: vol3.0 c=1 r=1 k=0 P0 S2 fix3R n=0
+   E: vol3.0 c=1 r=1 k=1 P0 S3 fix3R n=0
+   F: vol3.0 c=1 r=1 k=1 P3 S3 fix3R n=0
+   G: prof_aware c=1 r=1 k=1 P3 S3 fix3R n=0
+   H: prof_aware c=1 r=1 k=1 P3 S0 fix3R n=0
+   I: prof_aware c=1 r=1 k=1 P3 S0 fix3R n=0
+
+[P8] R-distribution for variant B (n=64):
+   %reaching  1R+   73  2R+   41  3R+   34  5R+    3  8R+    0  10R+    0
+   median maxR 1.77  avg maxR 2.04  avg R captured 0.612  median t-1R 1 bars  median t-3R 4.0 bars  avg giveback 1.43R
+     2026-09-02: n= 22 exp=  0.073 Rcap=-0.153 3R+= 18%
+     2026-09-03: n= 22 exp=  0.625 Rcap= 1.388 3R+= 46%
+     2026-09-04: n= 20 exp=  0.115 Rcap=   0.6 3R+= 40%
+
+[P9] leave-one-session-out on variant B (NOT a valid split at 4 sessions):
+   hold-out 2026-09-01: in exp=0.276 n=64 | out exp=None n=0
+   hold-out 2026-09-02: in exp=0.382 n=42 | out exp=0.073 n=22
+   hold-out 2026-09-03: in exp=0.093 n=42 | out exp=0.625 n=22
+   hold-out 2026-09-04: in exp=0.349 n=44 | out exp=0.115 n=20
+
+[P11] answers (NATURALGAS):
+  Q1 abnormal-spike def: best (n>=10, by expectancy) = vol3.0 (n=50, exp=0.178, PF=1.98); fixed 4x -> n=12; adaptive pick = vol3.0.
+  Q2 spike candle as entry (A/S0): n=50 exp=0.178 PF=1.98 Rcap=0.406 maxDD=-2.8.
+  Q3/Q4 candle-after / rejection entry (B/S2): n=64 exp=0.276 PF=5.97 Rcap=0.612 maxDD=-1.1  -> REJECTION ENTRY BETTER.
+  Q5 confirmation (E/S3): n=0  -> kills the sample; cannot justify.
+  Q6 stop structure: P6 study 0 trades (compression gate) -> inconclusive.
+  Q7 R-reach (variant B): 3R+=34%  5R+=3%  8R+=0%  10R+=0%  median maxR=1.77 -> fixed 3R is TOO AMBITIOUS (lower target / partial+runner).
+  Q8 runner vs fix3R: I n=0 / E n=0 -> inconclusive (gated to ~0 by compression).
+  Q9 profile context: P4 modes all 0 trades (gated) -> inconclusive on this data.
+  Q10 highest OOS-expectancy sequence: B: spike -> rejection candle (S2), no pre-compression -- < 10 sessions, LOSO session-dependent; NOT operationally convincing.
+  NOTE: strict pre-spike compression drives every symbol to ~0 trades (confirmed); over-constrained vs rare-but-good is unresolved.
+
+>>> VERDICT NATURALGAS PREMIUM: 2. PROMISING - MORE DATA REQUIRED
+    sessions=4 (need >=10) | best-variant(B) trades=64 (need >=50) | regimes=3 | exp=0.276 PF=5.97 med_maxR=1.77
+
+########################################################################################################
+# CRUDEOIL PREMIUM  --  4 usable sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']  regimes ['CHOP', 'TREND_UP']
+########################################################################################################
+
+[P1] abnormal-spike definitions  (S0 entry, spike->close, stop=spike, fix3R, no compression)
+   spike=fix2.0               n=  57 ses=3 win%=  40 exp=  3.332 PF=  1.49 net=   189.9 mDD=  -102.4 | mfe= 19.12 mae= -6.34 maxR~1.13 Rcap= 0.138 3R= 26% 5R=  2% 8R=  0% 10R=  0% gb=1.43
+   spike=fix2.5               n=  26 ses=3 win%=  42 exp=  7.177 PF=  2.21 net=   186.6 mDD=   -52.3 | mfe= 26.93 mae=  -4.2 maxR~1.36 Rcap= 0.196 3R= 27% 5R=  0% 8R=  0% 10R=  0% gb=1.41
+   spike=fix3.0               n=   9 ses=3 win%=  44 exp=    2.3 PF=  1.29 net=    20.7 mDD=   -37.1 | mfe= 33.09 mae= -4.63 maxR~1.69 Rcap=-0.111 3R= 22% 5R=  0% 8R=  0% 10R=  0% gb=1.9
+   spike=fix4.0               n=   3 ses=3 win%=  33 exp=   -1.0 PF=  0.94 net=    -3.0 mDD=   -28.7 | mfe= 27.57 mae= -5.37 maxR~1.59 Rcap= 0.333 3R= 33% 5R=  0% 8R=  0% 10R=  0% gb=1.45
+   spike=pct90                n=  84 ses=3 win%=  43 exp=  2.496 PF=  1.37 net=   209.7 mDD=  -143.0 | mfe= 16.06 mae= -6.56 maxR~1.21 Rcap= 0.153 3R= 27% 5R=  1% 8R=  0% 10R=  0% gb=1.47
+   spike=pct95                n=  39 ses=3 win%=  38 exp=  1.995 PF=  1.26 net=    77.8 mDD=  -103.5 | mfe= 20.31 mae= -8.66 maxR~ 1.2 Rcap= 0.105 3R= 26% 5R=  0% 8R=  0% 10R=  0% gb=1.51
+   spike=vol2.0               n=  72 ses=3 win%=  51 exp=  5.287 PF=  2.27 net=   380.7 mDD=   -51.5 | mfe= 17.11 mae= -4.14 maxR~1.68 Rcap= 0.321 3R= 32% 5R=  3% 8R=  0% 10R=  0% gb=1.51
+   spike=vol3.0               n=  37 ses=3 win%=  43 exp=  4.084 PF=  1.77 net=   151.1 mDD=   -69.2 | mfe= 19.98 mae= -4.55 maxR~1.57 Rcap=-0.004 3R= 24% 5R=  3% 8R=  0% 10R=  0% gb=1.65
+   spike=prof_aware           n=  31 ses=3 win%=  48 exp=  7.132 PF=  2.58 net=   221.1 mDD=   -42.7 | mfe= 24.02 mae= -3.23 maxR~1.69 Rcap=  0.29 3R= 32% 5R=  3% 8R=  0% 10R=  0% gb=1.53
+   -> adaptive spike def for CRUDEOIL: fix2.5  (n=26, exp=7.177, PF=2.21)
+
+[P5] entry model  (compression+spike2.5+rejection, seq_window=2, stop=rejection, fix3R)
+   entry=S0                   n=0
+   entry=S1                   n=0
+   entry=S2                   n=0
+   entry=S3                   n=0
+   entry=S5                   n=0
+
+[P6] initial stop structure  (comp+spike2.5+rejection+confirm, entry=S0)
+   stop=spike                 n=0
+   stop=rejection             n=0
+   stop=confirm               n=0
+   stop=swing                 n=0
+
+[P7] profit management  (comp+spike2.5+rej+confirm, entry=S0, stop=rejection)
+   pm=fix3R                   n=0
+   pm=half3R_runner           n=0
+   pm=full_runner             n=0
+
+[P4] profile context mode  (comp+spike-prof_aware+rej+confirm, entry=S0)
+   profile=P0                 n=0
+   profile=P1                 n=0
+   profile=P2                 n=0
+   profile=P3                 n=0
+
+[P3] max sequence window  (comp+spike2.5+rej+confirm, entry=S0)
+   seq_window=1               n=0
+   seq_window=2               n=0
+   seq_window=3               n=0
+
+[P10] ABLATION MATRIX  (best_entry=S0, best_pm=fix3R, comp_lb=5, seq_window=2)
+   A: fix2.5 c=0 r=0 k=0 P0 S0 fix3R n=  26 ses=3 win%=  42 exp=  7.177 PF=  2.21 net=   186.6 mDD=   -52.3 | mfe= 26.93 mae=  -4.2 maxR~1.36 Rcap= 0.196 3R= 27% 5R=  0% 8R=  0% 10R=  0% gb=1.41
+   B: fix2.0 c=0 r=1 k=0 P0 S2 fix3R n=  29 ses=3 win%=  52 exp=  4.728 PF=  2.66 net=   137.1 mDD=   -28.8 | mfe=  12.3 mae= -4.76 maxR~2.54 Rcap= 0.793 3R= 45% 5R=  3% 8R=  0% 10R=  0% gb=1.43
+   C: fix2.5 c=1 r=0 k=0 P0 S0 fix3R n=0
+   D: fix2.5 c=1 r=1 k=0 P0 S2 fix3R n=0
+   E: fix2.5 c=1 r=1 k=1 P0 S3 fix3R n=0
+   F: fix2.5 c=1 r=1 k=1 P3 S3 fix3R n=0
+   G: prof_aware c=1 r=1 k=1 P3 S3 fix3R n=0
+   H: prof_aware c=1 r=1 k=1 P3 S0 fix3R n=0
+   I: prof_aware c=1 r=1 k=1 P3 S0 fix3R n=0
+
+[P8] R-distribution for variant B (n=29):
+   %reaching  1R+   69  2R+   52  3R+   45  5R+    3  8R+    0  10R+    0
+   median maxR 2.54  avg maxR 2.23  avg R captured 0.793  median t-1R 0.0 bars  median t-3R 6 bars  avg giveback 1.43R
+     2026-09-02: n=  6 exp=  0.083 Rcap= 0.333 3R+= 33%
+     2026-09-03: n= 13 exp=  3.477 Rcap= 1.154 3R+= 54%
+     2026-09-04: n= 10 exp=   9.14 Rcap=   0.6 3R+= 40%
+
+[P9] leave-one-session-out on variant B (NOT a valid split at 4 sessions):
+   hold-out 2026-09-01: in exp=4.728 n=29 | out exp=None n=0
+   hold-out 2026-09-02: in exp=5.939 n=23 | out exp=0.083 n=6
+   hold-out 2026-09-03: in exp=5.744 n=16 | out exp=3.477 n=13
+   hold-out 2026-09-04: in exp=2.405 n=19 | out exp=9.14 n=10
+
+[P11] answers (CRUDEOIL):
+  Q1 abnormal-spike def: best (n>=10, by expectancy) = fix2.5 (n=26, exp=7.177, PF=2.21); fixed 4x -> n=3; adaptive pick = fix2.5.
+  Q2 spike candle as entry (A/S0): n=26 exp=7.177 PF=2.21 Rcap=0.196 maxDD=-52.3.
+  Q3/Q4 candle-after / rejection entry (B/S2): n=29 exp=4.728 PF=2.66 Rcap=0.793 maxDD=-28.8  -> not comparable / not better on this sample.
+  Q5 confirmation (E/S3): n=0  -> kills the sample; cannot justify.
+  Q6 stop structure: P6 study 0 trades (compression gate) -> inconclusive.
+  Q7 R-reach (variant B): 3R+=45%  5R+=3%  8R+=0%  10R+=0%  median maxR=2.54 -> fixed 3R is plausible.
+  Q8 runner vs fix3R: I n=0 / E n=0 -> inconclusive (gated to ~0 by compression).
+  Q9 profile context: P4 modes all 0 trades (gated) -> inconclusive on this data.
+  Q10 highest OOS-expectancy sequence: A: spike-only, S0 -- < 10 sessions, LOSO session-dependent; NOT operationally convincing.
+  NOTE: strict pre-spike compression drives every symbol to ~0 trades (confirmed); over-constrained vs rare-but-good is unresolved.
+
+>>> VERDICT CRUDEOIL PREMIUM: 2. PROMISING - MORE DATA REQUIRED
+    sessions=4 (need >=10) | best-variant(B) trades=29 (need >=50) | regimes=2 | exp=4.728 PF=2.66 med_maxR=2.54

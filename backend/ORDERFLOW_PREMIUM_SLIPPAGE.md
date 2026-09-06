@@ -310,3 +310,102 @@ independent sessions across regimes have been captured:
 cd backend && python scripts/orderflow_composite_ablation.py
 python scripts/orderflow_composite_ablation.py --symbols NIFTY --comp-x 1.5,2,2.5,3
 ```
+
+---
+
+## 8. Sequence research engine (2026-09-06) — RESEARCH ONLY, no edge proven
+
+Per the extended 2026-09-06 spec: model COMPRESSION → ABNORMAL SPIKE →
+REJECTION → CONFIRMATION → ENTRY as **sequential events over a multi-bar
+window** (not one candle); do NOT assume the spike candle is the entry;
+research dynamic spike definitions, entry location, structural stops,
+R-multiple management, and the MFE-in-R distribution.
+
+`backend/scripts/orderflow_sequence_research.py` — standalone, causal
+(completed candles only, `bars[:idx]`, developing volume profile), premium
+basis, thin quotes dropped. Full run saved to
+`backend/data/orderflow_sequence_research_2026-09-06.txt`. **Nothing wired to
+the live engine / API / dashboard / config; no pattern enabled for live.**
+
+### P1 — what is an "abnormal spike" (it is NOT one universal multiple)
+
+| symbol | best usable spike def | why |
+|--------|-----------------------|-----|
+| **NIFTY** | percentile ≥ p90 of prior-bar ranges (n=7/3 sess) | a fixed 2×/2.5× range expansion happens ~1×/session; 3×/4× and volume defs → 0–3 trades. Range-abnormality barely exists in this vol regime. |
+| **NATGAS** | **volume ≥ 2–3× causal avg** (vol3.0: n=50, exp +0.18, PF 1.98, avg maxR 1.96) | volume-abnormality beats every range multiple; fixed 4× goes negative (too rare/late). |
+| **CRUDE** | **fix 2.5× range** (n=26, exp +7.2, PF 2.2) or **vol ≥ 2×** (n=72, exp +5.3, PF 2.3, maxDD −52) or **profile-aware** (n=31, exp +7.1, PF 2.6, tightest MAE) | multiple defs work; fixed 4× → 3 trades, negative. |
+
+Cross-symbol: **fixed 4× is too strict everywhere** (rare + late → negative).
+"Most trades" (pct90, 84–142) ≠ "best trades" (vol/fix2.5, lower count, higher
+expectancy & PF) — the quality-first pick is used downstream.
+
+### P2 / P5 — the spike candle is NOT the best entry
+
+From the ablation (A = spike-only S0 entry; B = spike → **rejection candle**
+S2 entry, no pre-compression):
+
+| symbol | A (spike/S0) | B (rejection/S2) |
+|--------|--------------|------------------|
+| NATGAS | n=142, exp +0.11, PF 1.77, Rcap −0.01, maxDD −3.7 | **n=64, exp +0.28, PF 5.97, Rcap +0.61, maxDD −1.1, 3R+ 34 %** |
+| CRUDE  | n=84, exp +2.50, PF 1.37, Rcap +0.15, maxDD −143 | **n=29, exp +4.73, PF 2.66, Rcap +0.79, maxDD −29, avg maxR 2.54, 3R+ 45 %** |
+| NIFTY  | n=7 | 0 (no rejection candle followed a qualifying spike) |
+
+**Entering on the rejection candle after the spike is materially better** than
+entering on the spike itself — half the trades, ~2–3× the expectancy, ~4× less
+drawdown, more R reached — on NATGAS and CRUDE. (Q2/Q3/Q4.)
+
+### P3 / P4 / P6 / P7 — inconclusive, and why
+
+Every study that sits behind the **compression** gate (P4 profile modes, P6
+stop structures, P7 profit management, P3 sequence window, ablation C–I)
+returns **0 trades on all three symbols**. Strict pre-spike compression (prior
+5–8 bars span ≤ 1.5× the median bar range) essentially never precedes a
+qualifying spike in these 4 sessions. This is the sample-killer — **not**
+rejection or confirmation (B, which has rejection but no compression, has a
+healthy count). Whether compression is *over-constrained* or *rare-but-high-
+quality* cannot be resolved without ≥10 sessions. Confirmation (E/S3) also
+drives the count to 0 once stacked on compression. (Q5/Q6/Q8/Q9.)
+
+### P8 — is a 3R target too restrictive?  YES on this data
+
+R-reach distribution (variant A, the only one with n≥50 on NATGAS/CRUDE):
+
+| symbol | 1R+ | 2R+ | 3R+ | 5R+ | 8R+ | median maxR | avg R captured (fix3R) | giveback |
+|--------|----:|----:|----:|----:|----:|:-----------:|:----------------------:|:--------:|
+| NIFTY  | 71 % | 29 % | 14 % | 0 % | 0 % | 1.36 | +0.55 | 0.84 R |
+| NATGAS | 61 % | 35 % | 22 % | 2 % | 0 % | 1.52 | −0.01 | 1.76 R |
+| CRUDE  | 57 % | 33 % | 27 % | 1 % | 0 % | 1.21 | +0.15 | 1.47 R |
+
+Only ~1 in 4 trades ever tags 3R; **essentially none reach 5R**; typical trade
+peaks near ~1.3–1.5R then round-trips (giveback ~1.5R). A **fixed 3R target is
+too ambitious** — a ~1.5–2R target, or a partial at 1R + a structure runner,
+is the direction indicated. The rejection variant B reaches 3R more often
+(34–45 %) with positive R-captured — better entry ⇒ more of the move. The
+runner rules themselves (H/I) are untestable here (gated to 0). (Q7.)
+
+### P9 — leave-one-session-out
+
+Directionally consistent but not stable: CRUDE held-out expectancies +2.2 /
++5.7 / +0.14 (no sign flip, but one near-flat session); NATGAS +0.15 / −0.03 /
++0.13 (one negative). n per fold = 20–61. Not a valid split at 4 sessions.
+
+### VERDICTS
+
+| | classification | notes |
+|--|----------------|-------|
+| **NIFTY PREMIUM** | **3. NO ESTABLISHED EDGE** (borderline 4 — insufficient occurrences) | the spike, however defined, barely occurs (best variant n=7, 3 sessions). Range-abnormality absent in this regime. |
+| **NATGAS PREMIUM** | **2. PROMISING — MORE DATA REQUIRED** | mechanically positive (A n=142 exp +0.10 PF 1.77; B n=64 exp +0.28 PF 6.0) but expectancy is tiny in absolute premium points and LOSO has a negative fold. 3 traded sessions, 3 regimes. |
+| **CRUDE PREMIUM** | **2. PROMISING — MORE DATA REQUIRED** | strongest of the three (A n=84 exp +2.5 PF 1.37; B n=29 exp +4.7 PF 2.66 maxDD −29; vol2.0 spike n=72 exp +5.3). LOSO positive on all folds. But large DD on wide variants, one near-flat session, only 2 regimes, 3 sessions. |
+
+**No symbol reaches a PROVEN EDGE. Production behaviour is unchanged; no new
+pattern is enabled; no live orders armed.** The concrete leads to re-test once
+≥10 independent sessions across regimes exist:
+1. spike def per symbol (NIFTY percentile; NATGAS/CRUDE volume≥2×; CRUDE also profile-aware),
+2. **enter on the rejection candle after the spike, not the spike candle**,
+3. lower the target to ~1.5–2R or partial-at-1R + structure runner,
+4. treat pre-spike compression as optional/scored, not a hard gate, until it can be shown to add quality rather than just remove trades.
+
+```
+cd backend && python scripts/orderflow_sequence_research.py
+python scripts/orderflow_sequence_research.py --symbols CRUDEOIL
+```
