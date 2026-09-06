@@ -52,12 +52,18 @@ if [ "$FRESH" -lt "$NEED" ]; then
     exit 0
 fi
 
-echo "threshold reached -- re-running the existing evaluator (--source histsrc, unchanged)"
+echo "threshold reached -- re-running the existing evaluators (unchanged)"
 ./venv/bin/python scripts/orderflow_h1h7_performance.py --source histsrc --csv "$CSV" > "$REPORT" 2>&1
 rc=$?
-echo "evaluator exit=$rc  report=$REPORT  csv=$CSV"
+echo "h1h7 evaluator exit=$rc  report=$REPORT  csv=$CSV"
+# also: the spike / sideways_spike backtest on the now-captured NIFTY FUTURES bars
+SPK_REPORT="data/orderflow_spike_backtest_cron_report.txt"
+./venv/bin/python scripts/orderflow_spike_backtest_histcap.py > "$SPK_REPORT" 2>&1
+echo "spike backtest exit=$?  report=$SPK_REPORT"
 VERDICT=$(grep -m1 -E "NOT VALIDATED|VALIDATED|PROMISING|PROVEN" "$REPORT" 2>/dev/null | sed 's/^ *//')
-echo "verdict line: $VERDICT"
+SPK_VERDICT=$(grep -m1 -E "NOT VALIDATED|all gates PASS" "$SPK_REPORT" 2>/dev/null | sed 's/^ *//')
+echo "h1h7 verdict: $VERDICT"
+echo "spike verdict: $SPK_VERDICT"
 
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 cid="${TELEGRAM_CHAT_ID:-}"
