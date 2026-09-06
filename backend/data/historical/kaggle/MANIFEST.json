@@ -423,6 +423,106 @@
         "Low provenance (0 votes, usability 0.24, 21 downloads); column alignment unreliable.",
         "Not fed into any evaluator."
       ]
+    },
+    {
+      "dataset_ref": "rbtj1729/nifty-futures-data-jan-2021-march-2026",
+      "title": "Nifty Futures Data Jan 2021 - March 2026",
+      "source": "https://www.kaggle.com/datasets/rbtj1729/nifty-futures-data-jan-2021-march-2026",
+      "download_date": "2026-09-06",
+      "local_dir": "data/historical/kaggle/rbtj1729__nifty-futures-data-jan-2021-march-2026",
+      "files": [
+        {
+          "original_filename": "nifty_futures_combined.csv",
+          "size_bytes": 435811,
+          "sha256": "ac6a0296498754f83b00fb53c0fb2dd13cd3657ebc926b8e29873467206a0d23",
+          "columns": [
+            "Symbol",
+            "Date",
+            "Expiry",
+            "Open",
+            "High",
+            "Low",
+            "Close",
+            "LTP",
+            "Settle Price",
+            "No. of contracts",
+            "Turnover * in   \u20b9 Lakhs",
+            "Open Int",
+            "Change in OI",
+            "Underlying Value"
+          ],
+          "data_rows": 3928,
+          "first_row": [
+            "NIFTY",
+            "01/01/2021",
+            "25/03/2021",
+            "14069",
+            "14127.8",
+            "14069",
+            "14111.65",
+            "14110.05",
+            "14111.65",
+            "763",
+            "8070.16",
+            "32100",
+            "32100",
+            "14018.5"
+          ],
+          "last_row": [
+            "NIFTY",
+            "30/03/2026",
+            "26/05/2026",
+            "22830.1",
+            "22950",
+            "22525",
+            "22565.4",
+            "22605",
+            "22565.4",
+            "21529",
+            "318012.12",
+            "2275260",
+            "403650",
+            "22331.4"
+          ]
+        }
+      ],
+      "instrument_type": "NIFTY index FUTURE (per-expiry rows)",
+      "exchange": "NSE",
+      "symbols": [
+        "NIFTY"
+      ],
+      "timeframe": "DAILY",
+      "data_kind": "daily bhavcopy OHLC + contracts + OI",
+      "date_range": "2021-01-01 .. 2026-03-30 (3928 daily rows across expiries)",
+      "observability": {
+        "OHLC": "OBSERVABLE (daily)",
+        "volume": "OBSERVABLE (No. of contracts, daily)",
+        "OI": "OBSERVABLE (Open Int + Change in OI, daily)",
+        "tick": "UNOBSERVABLE",
+        "L1_bid_ask": "UNOBSERVABLE",
+        "L2_depth": "UNOBSERVABLE",
+        "trade_side_aggressor": "UNOBSERVABLE",
+        "timestamp_resolution": "1 day"
+      },
+      "suitability": "A (DAILY only) - genuine NIFTY-FUT OHLC+vol+OI but DAILY -> cannot run the intraday 5m spike/sideways_spike backtest. Kept for future daily research.",
+      "license": "not declared on Kaggle API metadata; local research use only, not redistributed",
+      "known_limitations": [
+        "DAILY resolution only.",
+        "Per-expiry rows -> needs continuous-contract stitching.",
+        "Turnover column header has stray whitespace."
+      ]
     }
-  ]
+  ],
+  "NIFTY_FUTURES_INTRADAY_SEARCH_2026_09_06": {
+    "conclusion": "Kaggle has NO genuine NIFTY FUTURES intraday (1m/5m) OHLC + real volume + real OI multi-year time series.",
+    "checked": {
+      "kaalicharan9080/nse-future-and-options-data": "REJECT - ~14 dates; per-second per-contract F&O dump; NO FUT tickers (options only); Volume=1000 flat & OI round 1000s => synthetic-looking.",
+      "sumansarkar24/nifty-bank-1-minute-data-from-10-years": "REJECT - volume+oi columns are 100% zero across 999353 rows (placeholder); cash index mislabeled.",
+      "tanay001/nseindia-futures-options-daily (fobhav.csv 9.5GB)": "NOT DOWNLOADED - DAILY F&O bhavcopy 2000-2020; genuine but DAILY; 9.5GB not pulled for a test it cannot run.",
+      "rbtj1729/nifty-futures-data-jan-2021-march-2026": "DOWNLOADED (141KB) - genuine but DAILY.",
+      "debashis74017 sector series (Nifty Bank/IT/FMCG/Energy 1-5-15min)": "cash INDEX (volume 0), no futures.",
+      "brtnsmth/intraday-market-data": "REJECT - ThinkOrSwim/US instruments, not NSE.",
+      "ranjan15/niftyfutures-tick-by-tick-level-5-depth-data": "ONLY genuine NIFTY-FUTURES intraday with real volume+OI -- ONE session (2025-04-28). Resampled to 5m in scripts/orderflow_spike_futures_research.py; N=1 => NOT VALIDATED."
+    }
+  }
 }
