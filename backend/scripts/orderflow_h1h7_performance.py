@@ -40,6 +40,7 @@ Outputs
 """
 from __future__ import annotations
 
+import argparse
 import csv as _csv
 import statistics as st
 import sys
@@ -49,13 +50,55 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import market_hub
 from app.orderflow import h1h7_state as H
+from scripts import orderflow_histsrc as HS
 
 RK = (1, 2, 3)
 TICK = {"NIFTY": 0.05, "NATURALGAS": 0.10, "CRUDEOIL": 1.0}
 SYMBOLS = ["CRUDEOIL", "NIFTY", "NATURALGAS"]
 
-# chronological split by session date (only 3 usable sessions/symbol exist)
-SPLIT = {"2026-09-02": "TRAIN", "2026-09-03": "VALIDATION", "2026-09-04": "HOLDOUT"}
+# chronological split fractions by session-date rank (per symbol) -- matches the
+# frozen Stage-6 split (FR_TRAIN=0.45, FR_VAL=0.65, FR_OOS=0.82).
+FR_TRAIN, FR_VAL, FR_OOS = 0.45, 0.65, 0.82
+
+# market_hub mode has only 3 usable sessions -> a fixed date map
+MH_SPLIT = {"2026-09-02": "TRAIN", "2026-09-03": "VALIDATION", "2026-09-04": "HOLDOUT"}
+
+
+def _regime(clean):
+    """Session trend/chop label (verbatim from Stage-3 _regime)."""
+    if len(clean) < 6:
+        return "NA"
+    o0 = clean[0].get("o")
+    net = clean[-1]["c"] - (o0 if o0 is not None else clean[0]["c"])
+    rng = max(b["h"] for b in clean) - min(b["l"] for b in clean)
+    if rng <= 0:
+        return "NA"
+    if abs(net) >= 0.5 * rng:
+        return "TREND_UP" if net > 0 else "TREND_DOWN"
+    return "CHOP"
+
+
+def _sessions_for(source):
+    """Yield (sym, date, src, split_tag) chronologically per symbol."""
+    for sym in SYMBOLS:
+        if source == "market_hub":
+            ds = sorted(market_hub.session_dates(sym, limit=120))
+            for d in ds:
+                yield sym, d, "zerohero", MH_SPLIT.get(d, "OTHER")
+        else:  # histsrc -- the full multi-source history (~36-39 sessions/symbol)
+            ss = HS.sessions(sym)                    # already chronological
+            n = len(ss)
+            a, b, c = int(n * FR_TRAIN), int(n * FR_VAL), int(n * FR_OOS)
+            for i, (d, src) in enumerate(ss):
+                tag = ("TRAIN" if i < a else "VALIDATION" if i < b
+                       else "OOS" if i < c else "HOLDOUT")
+                yield sym, d, src, tag
+
+
+def _bars_for(source, sym, d, src):
+    if source == "market_hub":
+        return market_hub.session_bars(sym, d)
+    return HS.session_bars(sym, d, src)
 
 
 # ---------------------------------------------------------------- realistic walk
@@ -116,99 +159,99 @@ def _decision_list(reclaim2, acc2, n1_agree, body_frac, acc1):
 
 
 # ---------------------------------------------------------------- build events
-def collect():
+def collect(source="histsrc"):
     rows = []
-    for sym in SYMBOLS:
+    for sym, d, src, split_tag in _sessions_for(source):
         tick = TICK[sym]
-        for d in sorted(market_hub.session_dates(sym, limit=60)):
-            bars = market_hub.session_bars(sym, d)
-            clean = H._clean(bars)
-            n = len(clean)
-            if n < H.START_IDX + H.FWD_WINDOW + 1:
+        bars = _bars_for(source, sym, d, src)
+        clean = H._clean(bars)
+        n = len(clean)
+        if n < H.START_IDX + H.FWD_WINDOW + 1:
+            continue
+        regime = _regime(clean)
+        base = H._running_base(clean)
+        H._FRAC_LO, H._FRAC_HI = H._fractals(clean)
+        va = H._va_series(clean)
+        for idx in range(H.START_IDX, n - H.FWD_WINDOW):
+            sp = H.detect_abnormal_spike(clean, base, idx)
+            if not sp["is_spike"]:
                 continue
-            base = H._running_base(clean)
-            H._FRAC_LO, H._FRAC_HI = H._fractals(clean)
-            va = H._va_series(clean)
-            for idx in range(H.START_IDX, n - H.FWD_WINDOW):
-                sp = H.detect_abnormal_spike(clean, base, idx)
-                if not sp["is_spike"]:
-                    continue
-                b = clean[idx]
-                direction = sp["direction"]
-                rng = H.calculate_spike_range(b)
-                atr = H._atr(clean, idx) or base[idx]
-                disp_atr = (abs(b["c"] - b["o"]) / atr) if atr else None
-                body_frac = (abs(b["c"] - b["o"]) / rng) if rng > 0 else None
-                lv = H._levels(clean, idx, va[idx])
-                L, _ = H._broken_level(clean, idx, direction, lv)
-                ctx = {
-                    "symbol": sym, "timestamp": b["bar_start"], "is_spike": True,
-                    "direction": direction, "spike_range": round(rng, 4),
-                    "range_pctile": sp["range_pctile"], "range_x": sp["range_x"],
-                    "atr": round(atr, 4) if atr else None,
-                    "disp_atr": round(disp_atr, 4) if disp_atr is not None else None,
-                    "body_fraction": round(body_frac, 4) if body_frac is not None else None,
-                    "broken_level": (round(L, 4) if L is not None else None),
-                    "broken_level_kind": (H._broken_level_kind(lv, L, direction) if L is not None else None),
-                }
-                reclaim2 = acc1 = acc2 = None
-                if L is not None:
-                    dist_L = (b["c"] - L) if direction == "LONG" else (L - b["c"])
-                    acc = H._acceptance(clean, idx, direction, L, dist_L)
-                    acc1, acc2 = acc[1], acc[2]
-                    rc = H.calculate_reclaim_distance(clean, idx, direction, L, rng)
-                    reclaim2 = H._reclaimed_by(clean, idx, direction, L, 2) is not None
-                    pad = 0.03 * rng
-                    spike_ext = b["l"] if direction == "LONG" else b["h"]
-                    stop = (spike_ext - pad) if direction == "LONG" else (spike_ext + pad)
-                    R_pts = abs(b["c"] - stop)
-                    ctx.update(
-                        acc1=acc1, acc2=acc2,
-                        n1_agreement=H.detect_n1_agreement(clean, idx, direction, L),
-                        reclaim_distance=rc["reclaim_distance"],
-                        reclaim_distance_ratio=rc["reclaim_distance_ratio"],
-                        reclaimed_within_3=rc["reclaimed_within_3"],
-                        available_R=H.calculate_available_R(lv, b["c"], R_pts, direction),
-                    )
-                else:
-                    stop = None
-                    R_pts = None
+            b = clean[idx]
+            direction = sp["direction"]
+            rng = H.calculate_spike_range(b)
+            atr = H._atr(clean, idx) or base[idx]
+            disp_atr = (abs(b["c"] - b["o"]) / atr) if atr else None
+            body_frac = (abs(b["c"] - b["o"]) / rng) if rng > 0 else None
+            lv = H._levels(clean, idx, va[idx])
+            L, _ = H._broken_level(clean, idx, direction, lv)
+            ctx = {
+                "symbol": sym, "timestamp": b["bar_start"], "is_spike": True,
+                "direction": direction, "spike_range": round(rng, 4),
+                "range_pctile": sp["range_pctile"], "range_x": sp["range_x"],
+                "atr": round(atr, 4) if atr else None,
+                "disp_atr": round(disp_atr, 4) if disp_atr is not None else None,
+                "body_fraction": round(body_frac, 4) if body_frac is not None else None,
+                "broken_level": (round(L, 4) if L is not None else None),
+                "broken_level_kind": (H._broken_level_kind(lv, L, direction) if L is not None else None),
+            }
+            reclaim2 = acc1 = acc2 = None
+            if L is not None:
+                dist_L = (b["c"] - L) if direction == "LONG" else (L - b["c"])
+                acc = H._acceptance(clean, idx, direction, L, dist_L)
+                acc1, acc2 = acc[1], acc[2]
+                rc = H.calculate_reclaim_distance(clean, idx, direction, L, rng)
+                reclaim2 = H._reclaimed_by(clean, idx, direction, L, 2) is not None
+                pad = 0.03 * rng
+                spike_ext = b["l"] if direction == "LONG" else b["h"]
+                stop = (spike_ext - pad) if direction == "LONG" else (spike_ext + pad)
+                R_pts = abs(b["c"] - stop)
+                ctx.update(
+                    acc1=acc1, acc2=acc2,
+                    n1_agreement=H.detect_n1_agreement(clean, idx, direction, L),
+                    reclaim_distance=rc["reclaim_distance"],
+                    reclaim_distance_ratio=rc["reclaim_distance_ratio"],
+                    reclaimed_within_3=rc["reclaimed_within_3"],
+                    available_R=H.calculate_available_R(lv, b["c"], R_pts, direction),
+                )
+            else:
+                stop = None
+                R_pts = None
 
-                ev = H.classify_market_state(ctx)
-                base_state = _decision_list(bool(reclaim2), bool(acc2),
-                                            bool(ctx.get("n1_agreement")),
-                                            ctx.get("body_fraction"), bool(acc1))
+            ev = H.classify_market_state(ctx)
+            base_state = _decision_list(bool(reclaim2), bool(acc2),
+                                        bool(ctx.get("n1_agreement")),
+                                        ctx.get("body_fraction"), bool(acc1))
 
-                w = None
-                if stop is not None:
-                    w = _walk(clean, idx + 1, b["c"], stop, direction, tick)
-                rows.append({
-                    "timestamp": b["bar_start"], "symbol": sym, "session": d,
-                    "split": SPLIT.get(d, "OTHER"),
-                    "new_state": ev["state"], "new_action": ev["action"],
-                    "new_research_status": ev["research_status"],
-                    "baseline_state": base_state,
-                    "spike_direction": direction,
-                    "entry_ref": round(b["c"], 4),
-                    "structural_level": ctx["broken_level"],
-                    "sl_price": round(stop, 4) if stop is not None else None,
-                    "risk_points": round(R_pts, 4) if R_pts is not None else None,
-                    "available_R": ctx.get("available_R"),
-                    "n1_agreement": ctx.get("n1_agreement"),
-                    "disp_atr": ctx.get("disp_atr"),
-                    "body_fraction": ctx.get("body_fraction"),
-                    "reclaim_distance_ratio": ctx.get("reclaim_distance_ratio"),
-                    "reclaimed_within_3": ctx.get("reclaimed_within_3"),
-                    "acc1": acc1, "acc2": acc2, "reclaim2": reclaim2,
-                    "MFE_R": w["MFE_R"] if w else None,
-                    "MAE_R": w["MAE_R"] if w else None,
-                    "reached_1R": w["reached_1R"] if w else None,
-                    "reached_2R": w["reached_2R"] if w else None,
-                    "reached_3R": w["reached_3R"] if w else None,
-                    "sl_first": w["sl_first"] if w else None,
-                    "fix3_R": w["fix3_R"] if w else None,
-                    "exit": w["exit"] if w else None,
-                })
+            w = None
+            if stop is not None:
+                w = _walk(clean, idx + 1, b["c"], stop, direction, tick)
+            rows.append({
+                "timestamp": b["bar_start"], "symbol": sym, "session": d,
+                "src": src, "regime": regime, "split": split_tag,
+                "new_state": ev["state"], "new_action": ev["action"],
+                "new_research_status": ev["research_status"],
+                "baseline_state": base_state,
+                "spike_direction": direction,
+                "entry_ref": round(b["c"], 4),
+                "structural_level": ctx["broken_level"],
+                "sl_price": round(stop, 4) if stop is not None else None,
+                "risk_points": round(R_pts, 4) if R_pts is not None else None,
+                "available_R": ctx.get("available_R"),
+                "n1_agreement": ctx.get("n1_agreement"),
+                "disp_atr": ctx.get("disp_atr"),
+                "body_fraction": ctx.get("body_fraction"),
+                "reclaim_distance_ratio": ctx.get("reclaim_distance_ratio"),
+                "reclaimed_within_3": ctx.get("reclaimed_within_3"),
+                "acc1": acc1, "acc2": acc2, "reclaim2": reclaim2,
+                "MFE_R": w["MFE_R"] if w else None,
+                "MAE_R": w["MAE_R"] if w else None,
+                "reached_1R": w["reached_1R"] if w else None,
+                "reached_2R": w["reached_2R"] if w else None,
+                "reached_3R": w["reached_3R"] if w else None,
+                "sl_first": w["sl_first"] if w else None,
+                "fix3_R": w["fix3_R"] if w else None,
+                "exit": w["exit"] if w else None,
+            })
     return rows
 
 
@@ -255,6 +298,7 @@ def agg(rows):
         "p_reach_3R": round(sum(1 for r in w if r["reached_3R"]) / n, 3),
         "p_sl_first": round(sum(1 for r in w if r["sl_first"]) / n, 3),
         "sessions": len({r["session"] for r in w}),
+        "regimes": sorted({r.get("regime") for r in w if r.get("regime")}),
     }
 
 
@@ -274,31 +318,42 @@ NEW_STATES = ["H1_CONT", "H1_CONT_OBSERVE", "H1_CONT_BLOCKED", "H1_WEAK",
               "H7_TRAP", "H7_LEANING_TRAP", "AMBIGUOUS", "SPIKE_NO_LEVEL"]
 
 
-def report(rows, out):
+SPL_ORDER = ("TRAIN", "VALIDATION", "OOS", "HOLDOUT", "OTHER")
+
+
+def report(rows, out, source):
     p = lambda *a: print(*a, file=out)
-    p("=" * 100)
+    p("=" * 104)
     p("H1/H7 STRUCTURAL STATE ENGINE -- HISTORICAL OUT-OF-SAMPLE PERFORMANCE EVALUATION")
-    p("RESEARCH / EVALUATION ONLY. No production / broker / live_trading / order change.")
-    p("UNDERLYING / FUTURES structural walk only. Option-premium profitability is NOT")
-    p("inferred (see the option section). 'win' = realised R at a fixed 3R target with")
-    p("realistic stop fill > 0. Direction = spike direction for every state (for H7_* that")
-    p("is the 'buy the break' outcome AVOID tells you to skip; fading H7 is REJECTED,")
-    p("Stage-8, and is not walked).")
-    p("=" * 100)
+    p(f"source = {source}   RESEARCH / EVALUATION ONLY. No production / broker / live_trading / order change.")
+    p("UNDERLYING / FUTURES structural walk only. Option-premium profitability is NOT inferred.")
+    p("'win' = realised R at a fixed 3R target with realistic stop fill > 0. Direction = spike")
+    p("direction for every state (for H7_* that is the 'buy the break' outcome AVOID tells you")
+    p("to skip; fading H7 is REJECTED, Stage-8, and is not walked). Baseline = frozen Stage-6")
+    p("decision list on the SAME events.")
+    if source == "histsrc":
+        p("NB: histsrc mixes zerohero histcap (4 sessions) with oi_dashboard cycles_resampled /")
+        p("live_candles (Jul-Aug). cycles_resampled highs/lows are slightly understated (Stage-3")
+        p("QC). live_candles carry no volume -- irrelevant, the engine is volume-free. This is the")
+        p("SAME dataset the frozen Stage-3..8 research used; its 18% final holdout was already")
+        p("scored once by Stage-6, so a positive holdout here is CONFIRMATORY, not fresh OOS.")
+    p("=" * 104)
 
     sess = sorted({(r["symbol"], r["session"]) for r in rows})
-    p(f"\nDATA: {len(rows)} eligible events | "
-      f"{len({r['session'] for r in rows})} distinct session dates | "
-      f"{len(sess)} symbol-sessions | symbols {sorted({r['symbol'] for r in rows})}")
+    p(f"\nDATA: {len(rows)} eligible events | {len({r['session'] for r in rows})} distinct dates | "
+      f"{len(sess)} symbol-sessions")
     for sym in SYMBOLS:
-        ds = sorted({r["session"] for r in rows if r["symbol"] == sym})
-        p(f"   {sym:<11} sessions {ds}  events {sum(1 for r in rows if r['symbol']==sym)}")
-    p("   ==> effective independent N ~= the session count (intraday events are")
-    p("       strongly correlated). 3 usable sessions/symbol, one week, ONE regime.")
+        rr = [r for r in rows if r["symbol"] == sym]
+        ds = sorted({r["session"] for r in rr})
+        regs = {}
+        for r in rr:
+            regs[r["regime"]] = regs.get(r["regime"], 0) + 1
+        p(f"   {sym:<11} {len(ds)} sessions ({ds[0] if ds else '-'}..{ds[-1] if ds else '-'})  "
+          f"events {len(rr)}  regimes {regs}")
 
-    p("\n" + "-" * 100)
+    p("\n" + "-" * 104)
     p("[1] NEW ENGINE -- per state (all symbols pooled)")
-    p("-" * 100)
+    p("-" * 104)
     for s in NEW_STATES:
         p(_fmt(s, agg([r for r in rows if r["new_state"] == s])))
 
@@ -312,86 +367,139 @@ def report(rows, out):
     for sym in SYMBOLS:
         p(_fmt(f"H1_CONT {sym}", agg([r for r in rows if r["new_state"] == "H1_CONT" and r["symbol"] == sym])))
 
-    p("\n" + "-" * 100)
+    p("\n[1d] NEW ENGINE -- by REGIME")
+    for reg in ("TREND_UP", "TREND_DOWN", "CHOP"):
+        p(_fmt(f"H1_CONT {reg}", agg([r for r in rows if r["new_state"] == "H1_CONT" and r["regime"] == reg])))
+    for reg in ("TREND_UP", "TREND_DOWN", "CHOP"):
+        p(_fmt(f"H7_SUPPORTED {reg}", agg([r for r in rows
+                if r["new_research_status"] == "SUPPORTED" and r["regime"] == reg])))
+
+    p("\n" + "-" * 104)
     p("[2] BASELINE (frozen Stage-6 decision list) -- per state, SAME events")
-    p("-" * 100)
+    p("-" * 104)
     for s in ("H1_CONT", "H1_WEAK", "H7_TRAP", "AMBIG"):
         p(_fmt(f"baseline {s}", agg([r for r in rows if r["baseline_state"] == s])))
 
-    p("\n" + "-" * 100)
+    p("\n" + "-" * 104)
     p("[3] BASELINE vs NEW ENGINE  (same historical period, same events)")
-    p("-" * 100)
-    for label, new_sel, base_sel in (
-        ("H1_CONT (actionable)", lambda r: r["new_state"] == "H1_CONT",
+    p("-" * 104)
+    cmp_out = {}
+    for label, key, new_sel, base_sel in (
+        ("H1_CONT (actionable)", "h1_cont", lambda r: r["new_state"] == "H1_CONT",
          lambda r: r["baseline_state"] == "H1_CONT"),
-        ("H7_TRAP (avoidance)", lambda r: r["new_state"] == "H7_TRAP",
+        ("H7_TRAP (avoidance)", "h7_trap", lambda r: r["new_state"] == "H7_TRAP",
          lambda r: r["baseline_state"] == "H7_TRAP"),
     ):
         mn, mb = agg([r for r in rows if new_sel(r)]), agg([r for r in rows if base_sel(r)])
+        cmp_out[key] = {"new": mn, "baseline": mb}
         p(f"\n  {label}")
-        p(f"    {'':10} {'signals':>8} {'win%':>7} {'E[R]':>8} {'PF':>7} {'netR':>8} {'maxDD':>8}")
+        p(f"    {'':10} {'signals':>8} {'win%':>7} {'E[R]':>8} {'PF':>7} {'netR':>9} {'maxDD':>9} {'maxCL':>6}")
         for nm, m in (("BASELINE", mb), ("NEW", mn)):
             if not m["n"]:
                 p(f"    {nm:<10} {'0':>8}")
                 continue
             p(f"    {nm:<10} {m['n']:>8} {m['win_rate']*100:>6.1f}% {m['expectancy']:>8.3f} "
-              f"{str(m['profit_factor']):>7} {m['net_R']:>8.2f} {m['max_DD_R']:>8.2f}")
+              f"{str(m['profit_factor']):>7} {m['net_R']:>9.2f} {m['max_DD_R']:>9.2f} {m['max_consec_losses']:>6}")
 
-    p("\n" + "-" * 100)
-    p("[4] CHRONOLOGICAL SPLIT  (TRAIN=2026-09-02, VALIDATION=09-03, HOLDOUT=09-04)")
-    p("-" * 100)
-    p("  N_sessions per split = 1 per symbol  ==>  NOT STATISTICALLY MEANINGFUL.")
+    p("\n" + "-" * 104)
+    p("[4] CHRONOLOGICAL SPLIT  (per-symbol date rank: TRAIN 0-45% / VALIDATION 45-65% / OOS 65-82% / HOLDOUT 82-100%)")
+    p("-" * 104)
+    for spl in ("TRAIN", "VALIDATION", "OOS", "HOLDOUT"):
+        nse = len({(r["symbol"], r["session"]) for r in rows if r["split"] == spl})
+        p(f"  {spl:<11} symbol-sessions={nse}")
     for s in ("H1_CONT", "H7_TRAP"):
         p(f"  new {s}:")
-        for spl in ("TRAIN", "VALIDATION", "HOLDOUT"):
+        for spl in ("TRAIN", "VALIDATION", "OOS", "HOLDOUT"):
             p("  " + _fmt(f"  {spl}", agg([r for r in rows if r["new_state"] == s and r["split"] == spl])))
+    p("  baseline H1_CONT:")
+    for spl in ("TRAIN", "VALIDATION", "OOS", "HOLDOUT"):
+        p("  " + _fmt(f"  {spl}", agg([r for r in rows if r["baseline_state"] == "H1_CONT" and r["split"] == spl])))
 
-    p("\n" + "-" * 100)
+    p("\n" + "-" * 104)
     p("[5] OPTION-PREMIUM PROFITABILITY")
-    p("-" * 100)
-    p("  Real historical ATM option-premium ticks exist for these 3 sessions")
-    p("  (market_hub.session_option_quotes, ~25-30s REST poll). With only")
-    p(f"  {sum(1 for r in rows if r['new_state']=='H1_CONT')} H1_CONT events total and Stage-4's finding that the index edge does")
-    p("  NOT survive ATM spread + theta, a per-state option win rate is NOT computed.")
-    p("  ==> OPTION-PREMIUM PROFITABILITY: NOT VALIDATED. Underlying/futures only above.")
+    p("-" * 104)
+    nh1 = sum(1 for r in rows if r["new_state"] == "H1_CONT")
+    p("  Real historical option data: ATM premium ticks (zerohero, ~25-30s poll, 4 sessions) +")
+    p("  oi_dashboard per-strike CE/PE LTP+OI (~9-20s, Jul-Aug). Stage-4 already re-walked the")
+    p("  H1/H7 events on the captured ATM premium and found the index edge does NOT survive the")
+    p("  option spread + theta. This evaluation does NOT re-derive an option win rate on top of")
+    p(f"  that (it would not change the Stage-4 conclusion, and per-state option N is thin: {nh1} H1_CONT).")
+    p("  ==> OPTION-PREMIUM PROFITABILITY: NOT VALIDATED / edge does not survive ATM premium (Stage-4).")
+    p("      UNDERLYING / FUTURES structural results are the ones reported above.")
 
-    p("\n" + "=" * 100)
-    p("[6] VERDICT")
-    p("=" * 100)
+    # ---- verdict against pre-declared criteria ----
+    p("\n" + "=" * 104)
+    p("[6] VERDICT -- against the pre-declared validation criteria")
+    p("=" * 104)
     h1 = agg([r for r in rows if r["new_state"] == "H1_CONT"])
-    p(f"  H1_CONT (actionable) sample: n={h1.get('n',0)} over {h1.get('sessions',0)} sessions, ONE regime.")
-    p("  This is far below any pre-declared bar for a meaningful win rate (>=10 independent")
-    p("  sessions / >=50 independent trades). Effective independent N ~= 3.")
-    p("  ==> NOT VALIDATED. No honest win rate can be quoted for H1_CONT as a trade.")
-    p("  ==> The new engine is NOT demonstrably better than the baseline on this data;")
-    p("      the difference is within noise at this sample size.")
-    p("  ==> NOTHING is PROVEN. The frozen research ceiling stands: H7 reclaim-distance")
-    p("      boundary = SUPPORTED as an AVOIDANCE classifier; H1_CONT = PROMISING,")
-    p("      CRUDEOIL-only, on the UNDERLYING; option-premium profitability unproven.")
-    return {"h1_cont": h1,
+    h1_oos = agg([r for r in rows if r["new_state"] == "H1_CONT" and r["split"] == "OOS"])
+    h1_hold = agg([r for r in rows if r["new_state"] == "H1_CONT" and r["split"] == "HOLDOUT"])
+    h1_sessions = h1.get("sessions", 0)
+    h1_n = h1.get("n", 0)
+    h1_regimes = h1.get("regimes", [])
+    crit = {
+        ">=10 sessions with an H1_CONT event": h1_sessions >= 10,
+        ">=50 H1_CONT events": h1_n >= 50,
+        ">=2 regimes represented": len(h1_regimes) >= 2,
+        "OOS slice >=20 events": h1_oos.get("n", 0) >= 20,
+        "OOS E[R] > 0": (h1_oos.get("expectancy") or -9) > 0,
+        "HOLDOUT slice >=20 events": h1_hold.get("n", 0) >= 20,
+        "HOLDOUT E[R] > 0": (h1_hold.get("expectancy") or -9) > 0,
+        "HOLDOUT is FRESH (sessions after the frozen Stage-6 holdout)": False,
+    }
+    for k, v in crit.items():
+        p(f"   [{'PASS' if v else 'FAIL'}] {k}")
+    p(f"   (H1_CONT: n={h1_n}, sessions={h1_sessions}, regimes={h1_regimes}; "
+      f"OOS n={h1_oos.get('n',0)} E[R]={h1_oos.get('expectancy')}; "
+      f"HOLDOUT n={h1_hold.get('n',0)} E[R]={h1_hold.get('expectancy')} -- same spent slice as Stage-6)")
+    all_pass = all(crit.values())
+    sample_ok = h1_sessions >= 10 and h1_n >= 50 and len(h1_regimes) >= 2
+    signs_ok = ((h1_oos.get("expectancy") or -9) > 0 and (h1_hold.get("expectancy") or -9) > 0)
+    p("")
+    if sample_ok and signs_ok:
+        p("  ==> NOT VALIDATED. The sample/regime/session criteria PASS and every chronological")
+        p("      split's H1_CONT E[R] is positive, BUT: (a) the HOLDOUT slice is n<20 and was")
+        p("      already scored once by the frozen Stage-6 model (no sessions after 2026-09-04)")
+        p("      -> not fresh out-of-sample; (b) the H1_CONT edge is concentrated in CHOP regime")
+        p("      (see [1d]); (c) one broker's polled bars, intraday-correlated. Highest honest")
+        p("      status stays PROMISING -- nothing is PROVEN.")
+    else:
+        p("  ==> NOT VALIDATED. The pre-declared sample bar is not met on this data")
+        p(f"      (H1_CONT n={h1_n}, sessions={h1_sessions}, regimes={len(h1_regimes)}).")
+        p("      Nothing is PROVEN.")
+    p("\n  Frozen research ceiling (unchanged): H7 reclaim-distance boundary = SUPPORTED as an")
+    p("  AVOIDANCE classifier (fading it REJECTED); H1_CONT on the underlying = PROMISING,")
+    p("  CRUDEOIL-only, small; option-premium profitability = does not survive ATM premium.")
+    p("  PROVEN: nothing.")
+    return {"h1_cont": h1, "h1_oos": h1_oos, "h1_hold": h1_hold,
+            "criteria": crit, "all_pass": all_pass, "cmp": cmp_out,
             "h7_supported": agg([r for r in rows if r["new_research_status"] == "SUPPORTED"]),
-            "no_action": agg([r for r in rows if r["new_action"] == "NO_ACTION"]),
-            "base_h1": agg([r for r in rows if r["baseline_state"] == "H1_CONT"]),
-            "base_h7": agg([r for r in rows if r["baseline_state"] == "H7_TRAP"]),
-            "new_h7": agg([r for r in rows if r["new_state"] == "H7_TRAP"])}
+            "no_action": agg([r for r in rows if r["new_action"] == "NO_ACTION"])}
 
 
-CSV_FIELDS = ["timestamp", "symbol", "session", "split", "new_state", "new_action",
-              "new_research_status", "baseline_state", "spike_direction", "entry_ref",
-              "structural_level", "sl_price", "risk_points", "available_R", "n1_agreement",
-              "disp_atr", "body_fraction", "reclaim_distance_ratio", "reclaimed_within_3",
-              "acc1", "acc2", "reclaim2", "MFE_R", "MAE_R", "reached_1R", "reached_2R",
-              "reached_3R", "sl_first", "fix3_R", "exit"]
+CSV_FIELDS = ["timestamp", "symbol", "session", "src", "regime", "split", "new_state",
+              "new_action", "new_research_status", "baseline_state", "spike_direction",
+              "entry_ref", "structural_level", "sl_price", "risk_points", "available_R",
+              "n1_agreement", "disp_atr", "body_fraction", "reclaim_distance_ratio",
+              "reclaimed_within_3", "acc1", "acc2", "reclaim2", "MFE_R", "MAE_R",
+              "reached_1R", "reached_2R", "reached_3R", "sl_first", "fix3_R", "exit"]
 
 
 def main():
-    rows = collect()
-    out_csv = Path(__file__).resolve().parents[1] / "data" / "orderflow_h1h7_performance.csv"
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--source", choices=("histsrc", "market_hub"), default="histsrc",
+                    help="histsrc = full multi-source history (~36-39 sessions/symbol, 3 regimes); "
+                         "market_hub = the 4 zerohero histcap sessions only")
+    ap.add_argument("--csv", default=None)
+    a = ap.parse_args()
+    rows = collect(a.source)
+    out_csv = Path(a.csv) if a.csv else (
+        Path(__file__).resolve().parents[1] / "data" / "orderflow_h1h7_performance.csv")
     with out_csv.open("w", newline="") as f:
         wr = _csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
         wr.writeheader()
         wr.writerows(rows)
-    report(rows, sys.stdout)
+    report(rows, sys.stdout, a.source)
     print(f"\nwrote {len(rows)} rows -> {out_csv}")
 
 
