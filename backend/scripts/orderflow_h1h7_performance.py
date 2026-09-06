@@ -63,6 +63,43 @@ FR_TRAIN, FR_VAL, FR_OOS = 0.45, 0.65, 0.82
 # market_hub mode has only 3 usable sessions -> a fixed date map
 MH_SPLIT = {"2026-09-02": "TRAIN", "2026-09-03": "VALIDATION", "2026-09-04": "HOLDOUT"}
 
+# --- Kaggle NIFTY 50 5-minute OHLC (cash index; volume=0). Downloaded, unmodified,
+#     from debashis74017/nifty-50-minute-data. NSE session 09:15-15:30 IST only.
+#     Fed to the UNCHANGED engine as INDEX bars (same as the frozen research's
+#     market_hub INDEX fallback). See ORDERFLOW_H1H7_PERFORMANCE_V2.md.
+KAGGLE_NIFTY_CSV = (Path(__file__).resolve().parents[1] / "data" / "historical" / "kaggle" /
+                    "debashis74017__nifty-50-minute-data" / "NIFTY_50_5minute.csv")
+_KAGGLE_NIFTY_CACHE: dict | None = None
+
+
+def _load_kaggle_nifty():
+    """Parse the Kaggle NIFTY 5m CSV once -> {date_iso: [ {bar_start,o,h,l,c,v}, ... ]}.
+    Keeps only regular-session bars (09:15..15:30 IST). No resampling, no
+    transformation of prices."""
+    global _KAGGLE_NIFTY_CACHE
+    if _KAGGLE_NIFTY_CACHE is not None:
+        return _KAGGLE_NIFTY_CACHE
+    from datetime import datetime, time as _t
+    out: dict = {}
+    with KAGGLE_NIFTY_CSV.open() as f:
+        for r in _csv.DictReader(f):
+            try:
+                dt = datetime.strptime(r["date"], "%Y-%m-%d %H:%M:%S")
+                o, h, l, c = float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])
+            except (ValueError, KeyError):
+                continue
+            if dt.time() < _t(9, 15) or dt.time() > _t(15, 30):
+                continue
+            if not (o > 0 and h > 0 and l > 0 and c > 0 and h >= l):
+                continue
+            out.setdefault(dt.date().isoformat(), []).append(
+                {"bar_start": dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                 "o": o, "h": h, "l": l, "c": c, "v": 0.0})
+    for d in out:
+        out[d].sort(key=lambda b: b["bar_start"])
+    _KAGGLE_NIFTY_CACHE = out
+    return out
+
 
 def _regime(clean):
     """Session trend/chop label (verbatim from Stage-3 _regime)."""
@@ -78,8 +115,21 @@ def _regime(clean):
     return "CHOP"
 
 
+def _split_tags(n):
+    a, b, c = int(n * FR_TRAIN), int(n * FR_VAL), int(n * FR_OOS)
+    return [("TRAIN" if i < a else "VALIDATION" if i < b else "OOS" if i < c else "HOLDOUT")
+            for i in range(n)]
+
+
 def _sessions_for(source):
     """Yield (sym, date, src, split_tag) chronologically per symbol."""
+    if source == "kaggle_nifty":
+        data = _load_kaggle_nifty()
+        ds = sorted(data)
+        tags = _split_tags(len(ds))
+        for d, tag in zip(ds, tags):
+            yield "NIFTY", d, "kaggle_debashis74017_nifty50_5m", tag
+        return
     for sym in SYMBOLS:
         if source == "market_hub":
             ds = sorted(market_hub.session_dates(sym, limit=120))
@@ -87,15 +137,13 @@ def _sessions_for(source):
                 yield sym, d, "zerohero", MH_SPLIT.get(d, "OTHER")
         else:  # histsrc -- the full multi-source history (~36-39 sessions/symbol)
             ss = HS.sessions(sym)                    # already chronological
-            n = len(ss)
-            a, b, c = int(n * FR_TRAIN), int(n * FR_VAL), int(n * FR_OOS)
-            for i, (d, src) in enumerate(ss):
-                tag = ("TRAIN" if i < a else "VALIDATION" if i < b
-                       else "OOS" if i < c else "HOLDOUT")
+            for (d, src), tag in zip(ss, _split_tags(len(ss))):
                 yield sym, d, src, tag
 
 
 def _bars_for(source, sym, d, src):
+    if source == "kaggle_nifty":
+        return list(_load_kaggle_nifty().get(d, []))
     if source == "market_hub":
         return market_hub.session_bars(sym, d)
     return HS.session_bars(sym, d, src)
@@ -299,7 +347,19 @@ def agg(rows):
         "p_sl_first": round(sum(1 for r in w if r["sl_first"]) / n, 3),
         "sessions": len({r["session"] for r in w}),
         "regimes": sorted({r.get("regime") for r in w if r.get("regime")}),
+        "win_ci95": _wilson(len(wins), n),
     }
+
+
+def _wilson(k, n, z=1.96):
+    """Wilson score 95% CI for a win rate (k wins of n)."""
+    if n == 0:
+        return (None, None)
+    p = k / n
+    d = 1 + z * z / n
+    c = p + z * z / (2 * n)
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5)
+    return (round((c - h) / d, 4), round((c + h) / d, 4))
 
 
 def _fmt(name, m):
@@ -455,8 +515,25 @@ def report(rows, out, source):
     all_pass = all(crit.values())
     sample_ok = h1_sessions >= 10 and h1_n >= 50 and len(h1_regimes) >= 2
     signs_ok = ((h1_oos.get("expectancy") or -9) > 0 and (h1_hold.get("expectancy") or -9) > 0)
+    h7s = agg([r for r in rows if r["new_research_status"] == "SUPPORTED"])
     p("")
-    if sample_ok and signs_ok:
+    if source == "kaggle_nifty":
+        obs = agg([r for r in rows if r["new_state"] == "H1_CONT_OBSERVE"])
+        p("  ==> NOT VALIDATED for H1_CONT. The engine emits H1_CONT for CRUDEOIL only, and")
+        p("      Kaggle has NO MCX CRUDEOIL / MCX Natural Gas intraday data at all -> the")
+        p("      ACTIONABLE state received ZERO new samples (n=0). This dataset cannot move")
+        p("      the CRUDEOIL H1_CONT verdict in either direction.")
+        p(f"  ==> What it DOES add: {h7s.get('n',0)} independent H7_SUPPORTED events over")
+        p(f"      {h7s.get('sessions',0)} NIFTY sessions (2015-2026, all 3 regimes) -- 'buy the break'")
+        p(f"      wins {h7s.get('win_rate',0)*100:.1f}% (E[R] {h7s.get('expectancy')}), i.e. the AVOID")
+        p("      classification is confirmed on a completely independent instrument/vendor/period,")
+        p("      in every regime and every chronological split. This STRENGTHENS H7 = SUPPORTED.")
+        p(f"  ==> The NIFTY H1-continuation GATE (emitted as H1_CONT_OBSERVE, NOT acted on): "
+          f"n={obs.get('n',0)}, win {obs.get('win_rate',0)*100:.1f}%, E[R] {obs.get('expectancy')}. "
+          f"Informative, but NIFTY continuation stays NOT_VALIDATED / observe-only per the frozen")
+        p("      research policy -- this evaluation does not change policy.")
+        p("  ==> PROVEN: nothing.")
+    elif sample_ok and signs_ok:
         p("  ==> NOT VALIDATED. The sample/regime/session criteria PASS and every chronological")
         p("      split's H1_CONT E[R] is positive, BUT: (a) the HOLDOUT slice is n<20 and was")
         p("      already scored once by the frozen Stage-6 model (no sessions after 2026-09-04)")
@@ -487,9 +564,10 @@ CSV_FIELDS = ["timestamp", "symbol", "session", "src", "regime", "split", "new_s
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--source", choices=("histsrc", "market_hub"), default="histsrc",
+    ap.add_argument("--source", choices=("histsrc", "market_hub", "kaggle_nifty"), default="histsrc",
                     help="histsrc = full multi-source history (~36-39 sessions/symbol, 3 regimes); "
-                         "market_hub = the 4 zerohero histcap sessions only")
+                         "market_hub = the 4 zerohero histcap sessions only; "
+                         "kaggle_nifty = debashis74017 NIFTY 50 5m OHLC (cash index, 2015-2026, NIFTY only)")
     ap.add_argument("--csv", default=None)
     a = ap.parse_args()
     rows = collect(a.source)

@@ -27,3 +27,11 @@ backend/data/calibration_subgroups_state.json
 
 # H1/H7 shadow-mode append-only event log (runtime artifact, regenerated on demand)
 backend/data/orderflow_h1h7_shadow.csv
+
+# Kaggle raw downloads: large + license not for redistribution. Manifest is tracked; data is local-only.
+backend/data/historical/kaggle/**
+!backend/data/historical/kaggle/
+!backend/data/historical/kaggle/MANIFEST.json
+# H1/H7 perf eval auto-generated artifacts
+backend/data/orderflow_h1h7_performance_auto.csv
+backend/data/orderflow_h1h7_perf_cron_report.txt
