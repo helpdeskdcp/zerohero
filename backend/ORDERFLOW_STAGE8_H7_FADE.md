@@ -199,6 +199,56 @@ Still **not PROVEN**.
   (Stages 3–7).
 - Any **option-premium** claim from this underlying analysis (Stage-4).
 
+### H.1 Audit — the "200 % order-flow imbalance" rule (status: NOT in production)
+
+Recorded 2026-09-07 from a read-only sweep of the repo for `200%`, `2.0`,
+`imbalance`, `buy_imbalance`, `sell_imbalance`, `bid/ask imbalance`,
+`aggressive_buy`, `aggressive_sell`, `order_flow`.
+
+**Finding: there is no live "200 % imbalance" rule.** The 2:1 imbalance concept
+exists *only* as a rejected research proxy; true aggressor / bid-ask / depth
+imbalance is computed nowhere.
+
+| where | what | status |
+|---|---|---|
+| `scripts/orderflow_stage4.py` → `orderflow_proxy()` (L125–168) | `imb = CE_vol / PE_vol` over the spike window `[T−1,T+1]` from ATM option **traded volume** (a Level-3 proxy, **not** aggressor/footprint). `of_imb_dir = imb` for a LONG spike, `1/imb` for SHORT. Returned L164. | RESEARCH ONLY |
+| `scripts/orderflow_stage4.py` L464, L562; sweep `{2.0, 2.5, 3.0}` at L387 / L477–482 | the threshold: `of_imb_dir >= 2.0` (i.e. `CE_vol/PE_vol ≥ 2` for BUY, `PE_vol/CE_vol ≥ 2` for SELL = "200 %") | RESEARCH ONLY |
+| `scripts/orderflow_stage5.py` L47, L221 | only other consumer (`import orderflow_proxy`). `stage6.py` imports *other* stage4 helpers, not the proxy. | RESEARCH ONLY |
+| `backend/app/**` | **nothing imports `orderflow_stage4` / `orderflow_proxy` / `of_imb_dir`.** | not wired |
+
+**Threshold, mathematically (research proxy only):**
+
+```
+of_imb_dir(LONG)  = CE_vol / PE_vol
+of_imb_dir(SHORT) = PE_vol / CE_vol
+BUY  imbalance  ⇔  CE_vol / PE_vol ≥ 2.0     (2:1 = 200 %)
+SELL imbalance  ⇔  PE_vol / CE_vol ≥ 2.0     (⇔ CE_vol/PE_vol ≤ 0.5)
+```
+
+**Classification:**
+
+- **ACTIVE in live signal generation:** NO. The live order-flow path is
+  `app/orderflow/smart_money.py` (volume-spike breakout, Telegram via
+  `app/orderflow/notify.py`) + `app/orderflow/h1h7_state.py` (H1/H7 SHADOW).
+  Neither uses any imbalance term. `smart_money`'s only volume gate is
+  `b["v"] < volume_mult * avg_v` (`smart_money.py:238`, default `2.0`) —
+  **total bar volume ≥ 2× session-average volume**, a participation-spike
+  filter, *not* a buy/sell or CE/PE ratio.
+- **READ-ONLY / diagnostic:** the `of_imb_dir` proxy, inside
+  `scripts/orderflow_stage4.py` / `stage5.py` only.
+- **DISABLED / REMOVED:** not deleted — kept in the Stage-3→8 research trail —
+  but never importable from `app/` and its verdict is **REJECTED**
+  ("no incremental premium-return edge"; also §H above, Stage-5 L602,
+  Stage-6 L563).
+- **UNOBSERVABLE (never proxied):** true bid/ask imbalance & depth imbalance —
+  declared as such in `app/orderflow/h1h7_state.py` L27–31, L60–69
+  (`UNOBSERVABLE_ORDERFLOW`), never estimated.
+
+**Unrelated:** `app/expiry_zero_to_hero/` has an `oi_imbalance` feature
+(`= (pe_oi − ce_oi)/(pe_oi + ce_oi)`, `oi_change.py:42`) — an **OI**-ratio
+logistic contributor, weight `0.010`/% (`probability.py:36`, `# LIVE ONLY`),
+**no 200 %/2.0 threshold**, not an aggressor/order-flow imbalance.
+
 ## I. What is UNOBSERVABLE (no proxy invented)
 
 - true buyer/seller aggression, lifting-the-offer / hitting-the-bid, delta,

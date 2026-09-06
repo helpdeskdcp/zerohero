@@ -202,7 +202,12 @@ UNOBSERVABLE / PROVEN=not used).
 2. **Order-flow internals.** aggressor volume, trade delta, bid-ask imbalance,
    depth imbalance, absorption, footprint concentration, iceberg liquidity,
    true constituent causation — all `UNOBSERVABLE`; no tick / L2 feed exists
-   (see `ORDERFLOW_STAGE9_L2_RESEARCH.md`). Never estimated.
+   (see `ORDERFLOW_STAGE9_L2_RESEARCH.md`). Never estimated. In particular
+   **there is no "200 % / 2:1 order-flow imbalance" rule in the live path** —
+   the 2:1 CE/PE-volume proxy lives only in `scripts/orderflow_stage4.py` /
+   `stage5.py` and is `REJECTED`; `smart_money.py`'s `volume_mult` (default 2.0)
+   is a total-bar-volume spike filter, not a buy/sell imbalance. Full audit:
+   `ORDERFLOW_STAGE8_H7_FADE.md` §H.1.
 3. **`available_R`** is `None` on fresh-extreme breakouts (nothing structural
    left in the direction of travel). Those events are `H1_CONT_BLOCKED` /
    `NO_ACTION` — the engine does not guess a target.
