@@ -1,0 +1,457 @@
+orderflow entry-timing research -- RESEARCH ONLY, no production change, no score
+
+##################################################################################################################
+# NIFTY  --  30 events (26 level-breaking) | 4 sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'] | regimes ['CHOP', 'TREND_DOWN']
+##################################################################################################################
+
+[§8 ENTRY-QUALITY MATRIX]  (each entry with its own primary structural stop; outcome window 3)
+    entry                       n  cont%  trap%  mMAE_R  mMFE_R   P3R   P5R   P8R  med_availR   med_R
+    A spike-close              30    33%    50%   -1.03    0.75   10%    3%    0%         0.7    22.3
+    B first-reaction           16    56%    25%   -0.63    0.92   12%    0%    0%        0.41   26.95
+    C early-acceptance         10    80%    20%    -0.8    1.07   10%    0%    0%        0.43   30.97
+    D full-acceptance(hold2)    9   100%     0%   -0.88    1.04   11%    0%    0%        0.81   46.87
+
+[§9 ACCURACY vs ENTRY QUALITY]
+    A spike-close            continuation=33%  entry-to-stop R=22.3pts  available_R=0.7  MFE_R=0.75  MAE_R=-1.03  (later entry -> accuracy / ~available_R)
+    B first-reaction         continuation=56%  entry-to-stop R=26.95pts  available_R=0.41  MFE_R=0.92  MAE_R=-0.63  (later entry -> accuracy / ~available_R)
+    C early-acceptance       continuation=80%  entry-to-stop R=30.97pts  available_R=0.43  MFE_R=1.07  MAE_R=-0.8  (later entry -> +accuracy / -available_R)
+    D full-acceptance(hold2) continuation=100%  entry-to-stop R=46.87pts  available_R=0.81  MFE_R=1.04  MAE_R=-0.88  (later entry -> +accuracy / -available_R)
+
+[§10 LARGE-R per entry]  P(kR) and max_R distribution
+    A spike-close            3R=10% 4R=3% 5R=3% 6R=0% 8R=0% 10R=0%   med_maxR=0.75  p75=1.42  p90=3.02
+    B first-reaction         3R=12% 4R=6% 5R=0% 6R=0% 8R=0% 10R=0%   med_maxR=0.92  p75=2.44  p90=3.01
+    C early-acceptance       3R=10% 4R=10% 5R=0% 6R=0% 8R=0% 10R=0%   med_maxR=1.07  p75=2.44  p90=4.14
+    D full-acceptance(hold2) 3R=11% 4R=11% 5R=0% 6R=0% 8R=0% 10R=0%   med_maxR=1.04  p75=2.38  p90=4.09
+
+[§4 FIRST-REACTION ANALYSIS]  (outcome = spike-close-entry, window 3)
+    n1 AGREES                n=  16  cont= 56%  trap= 25%  mMAE_R= -0.77  mMFE_R= 1.28  P3R= 19%  P5R=  6%  P8R=  0%  med_availR=0.55  med_R=22.3
+    n1 DISAGREES             n=  14  cont=  7%  trap= 79%  mMAE_R= -1.03  mMFE_R= 0.17  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.82  med_R=22.65
+    n1 closes BEYOND level   n=  17  cont= 53%  trap= 24%  mMAE_R= -0.77  mMFE_R= 1.28  P3R= 18%  P5R=  6%  P8R=  0%  med_availR=0.7  med_R=23.67
+    n1 closes INSIDE level   n=   9  cont=  0%  trap= 89%  mMAE_R= -1.03  mMFE_R= 0.32  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.43  med_R=22.65
+    n1 re-enters spike range n=   4  cont=  0%  trap=100%  mMAE_R= -1.14  mMFE_R=  0.0  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.76  med_R=18.48
+    n1 does NOT re-enter     n=  26  cont= 38%  trap= 42%  mMAE_R= -0.85  mMFE_R= 1.16  P3R= 12%  P5R=  4%  P8R=  0%  med_availR=0.7  med_R=22.65
+    n1 agree & strong body   n=   3  cont=100%  trap=  0%  mMAE_R= -1.77  mMFE_R= 1.37  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.73  med_R=15.29
+
+[§5 EARLY-ACCEPTANCE definition sweep]  (entry = that bar's close, window-low/high stop)
+    first_close          n=  20 cont= 45% trap= 40% mMFE_R= 1.11 mMAE_R= -0.66 P1R=50% P2R=20% P3R=10% P5R=0% P8R=0%
+    close_no_reclaim     n=  10 cont= 80% trap= 20% mMFE_R= 1.11 mMAE_R= -0.83 P1R=50% P2R=30% P3R=10% P5R=0% P8R=0%
+    hold1                n=  12 cont= 75% trap= 17% mMFE_R= 0.82 mMAE_R= -0.78 P1R=42% P2R=17% P3R=0% P5R=0% P8R=0%
+    hold2                n=   9 cont=100% trap=  0% mMFE_R= 1.41 mMAE_R=  -0.8 P1R=67% P2R=11% P3R=0% P5R=0% P8R=0%
+    hold3                n=   9 cont=100% trap=  0% mMFE_R= 1.08 mMAE_R= -0.78 P1R=56% P2R=22% P3R=11% P5R=0% P8R=0%
+
+[§6 STRUCTURAL-STOP matrix per entry]  (median over events that had the entry)
+  entry A spike-close:
+      stop=spike       n=  30 medR=  22.3pts medMAE_R= -1.03 medMFE_R= 0.75 med_availR=0.7
+      stop=window      n=  30 medR= 21.65pts medMAE_R= -1.03 medMFE_R= 0.78 med_availR=0.72
+      stop=swing       n=  30 medR= 34.55pts medMAE_R= -0.77 medMFE_R= 0.75 med_availR=0.5
+      stop=prevstruct  n=  30 medR= 31.87pts medMAE_R= -0.78 medMFE_R= 0.94 med_availR=0.6
+  entry B first-reaction:
+      stop=spike       n=  16 medR= 26.95pts medMAE_R= -0.63 medMFE_R= 0.92 med_availR=0.41
+      stop=reaction    n=  16 medR= 12.22pts medMAE_R= -1.13 medMFE_R= 1.37 med_availR=1.03
+      stop=window      n=  16 medR= 26.25pts medMAE_R= -0.66 medMFE_R= 0.95 med_availR=0.42
+      stop=swing       n=  16 medR= 36.78pts medMAE_R= -0.51 medMFE_R=  0.8 med_availR=0.33
+      stop=prevstruct  n=  16 medR=  38.6pts medMAE_R= -0.51 medMFE_R= 1.15 med_availR=0.48
+  entry C early-acceptance:
+      stop=spike       n=  10 medR= 30.97pts medMAE_R=  -0.8 medMFE_R= 1.07 med_availR=0.43
+      stop=reaction    n=  10 medR= 11.17pts medMAE_R= -1.13 medMFE_R=  2.3 med_availR=1.15
+      stop=window      n=  10 medR= 30.18pts medMAE_R= -0.83 medMFE_R= 1.11 med_availR=0.44
+      stop=swing       n=  10 medR= 36.78pts medMAE_R= -0.68 medMFE_R= 0.99 med_availR=0.33
+      stop=prevstruct  n=  10 medR= 35.34pts medMAE_R= -0.45 medMFE_R= 1.66 med_availR=0.59
+  entry D full-acceptance(hold2):
+      stop=spike       n=   9 medR= 33.94pts medMAE_R= -0.78 medMFE_R= 1.37 med_availR=0.73
+      stop=reaction    n=   9 medR= 22.25pts medMAE_R= -1.06 medMFE_R= 0.99 med_availR=1.06
+      stop=window      n=   9 medR= 32.97pts medMAE_R=  -0.8 medMFE_R= 1.41 med_availR=0.75
+      stop=swing       n=   9 medR= 46.87pts medMAE_R= -0.88 medMFE_R= 1.04 med_availR=0.81
+      stop=prevstruct  n=   9 medR= 44.24pts medMAE_R= -0.48 medMFE_R= 0.94 med_availR=0.45
+
+[§11 SPIKE-SIZE x ENTRY TIMING]  (range percentile buckets)
+  pctile 0.00-0.90:
+      A spike-close          n=  17  cont= 35%  trap= 47%  mMAE_R= -1.16  mMFE_R= 0.75  P3R= 12%  P5R=  6%  P8R=  0%  med_availR=0.76  med_R=18.35
+      B first-reaction       n=  11  cont= 55%  trap= 27%  mMAE_R= -1.15  mMFE_R= 0.55  P3R= 18%  P5R=  0%  P8R=  0%  med_availR=0.43  med_R=25.54
+      C early-acceptance     n=   5  cont= 80%  trap= 20%  mMAE_R= -0.81  mMFE_R= 0.92  P3R= 20%  P5R=  0%  P8R=  0%  med_availR=0.27  med_R=30.97
+      D full-acceptance(hold2) n=   5  cont=100%  trap=  0%  mMAE_R= -0.93  mMFE_R= 1.36  P3R= 20%  P5R=  0%  P8R=  0%  med_availR=0.77  med_R=29.31
+  pctile 0.90-0.95:
+      A spike-close          n=   4  cont= 25%  trap= 75%  mMAE_R= -0.76  mMFE_R=  2.0  P3R= 25%  P5R=  0%  P8R=  0%  med_availR=0.7  med_R=34.1
+      B first-reaction       n=   2  cont= 50%  trap= 50%  mMAE_R= -0.42  mMFE_R= 2.64  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.41  med_R=28.74
+      C early-acceptance     n=   2  cont= 50%  trap= 50%  mMAE_R= -0.42  mMFE_R= 2.64  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=2.9  med_R=32.34
+      D full-acceptance(hold2) n=   1  cont=100%  trap=  0%  mMAE_R= -0.44  mMFE_R= 1.04  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=None  med_R=59.24
+  pctile 0.95-0.98:
+      A spike-close          n=   1  cont=100%  trap=  0%  mMAE_R= -1.31  mMFE_R=  1.3  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.82  med_R=28.41
+      B first-reaction       n=0
+      C early-acceptance     n=   1  cont=100%  trap=  0%  mMAE_R= -1.28  mMFE_R= 1.07  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.64  med_R=31.51
+      D full-acceptance(hold2) n=   1  cont=100%  trap=  0%  mMAE_R= -1.16  mMFE_R=  0.2  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.81  med_R=54.61
+  pctile 0.98-1.01:
+      A spike-close          n=   4  cont= 25%  trap= 25%  mMAE_R= -0.55  mMFE_R= 1.23  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.84  med_R=33.94
+      B first-reaction       n=   2  cont= 50%  trap=  0%  mMAE_R= -0.09  mMFE_R= 2.44  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.85  med_R=37.72
+      C early-acceptance     n=   1  cont=100%  trap=  0%  mMAE_R= -0.09  mMFE_R= 2.44  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.85  med_R=21.94
+      D full-acceptance(hold2) n=   1  cont=100%  trap=  0%  mMAE_R= -0.88  mMFE_R= 2.61  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.79  med_R=15.94
+
+[§12 PROFILE x ENTRY TIMING]
+  profile=NA:
+      A spike-close          n=   6  cont= 17%  trap= 83%  mMAE_R= -1.15  mMFE_R= 0.26  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.18  med_R=24.07
+      C early-acceptance     n=   3  cont= 33%  trap= 67%  mMAE_R= -1.13  mMFE_R= 0.51  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=2.9  med_R=32.05
+      D full-acceptance(hold2) n=   1  cont=100%  trap=  0%  mMAE_R= -0.81  mMFE_R= 1.01  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=None  med_R=46.87
+  profile=above_VAH:
+      A spike-close          n=   4  cont= 25%  trap= 75%  mMAE_R= -1.03  mMFE_R= 0.53  P3R= 25%  P5R=  0%  P8R=  0%  med_availR=1.37  med_R=18.35
+      C early-acceptance     n=0
+      D full-acceptance(hold2) n=   1  cont=100%  trap=  0%  mMAE_R= -1.54  mMFE_R= 1.36  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.45  med_R=16.2
+  profile=acceptance_outside_value:
+      A spike-close          n=   7  cont= 57%  trap= 14%  mMAE_R= -0.87  mMFE_R= 1.28  P3R= 14%  P5R=  0%  P8R=  0%  med_availR=0.7  med_R=22.3
+      C early-acceptance     n=   4  cont=100%  trap=  0%  mMAE_R= -0.81  mMFE_R= 1.07  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.41  med_R=31.51
+      D full-acceptance(hold2) n=   4  cont=100%  trap=  0%  mMAE_R= -0.88  mMFE_R= 0.28  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.81  med_R=59.24
+  profile=below_VAL:
+      A spike-close          n=   5  cont= 20%  trap= 40%  mMAE_R= -0.71  mMFE_R= 0.75  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.43  med_R=25.54
+      C early-acceptance     n=0
+      D full-acceptance(hold2) n=0
+  profile=inside_value:
+      A spike-close          n=   4  cont= 50%  trap= 25%  mMAE_R= -0.39  mMFE_R=  2.0  P3R= 25%  P5R= 25%  P8R=  0%  med_availR=0.39  med_R=33.94
+      C early-acceptance     n=   2  cont=100%  trap=  0%  mMAE_R= -0.09  mMFE_R= 4.14  P3R= 50%  P5R=  0%  P8R=  0%  med_availR=1.85  med_R=30.97
+      D full-acceptance(hold2) n=   2  cont=100%  trap=  0%  mMAE_R=  -0.3  mMFE_R= 2.61  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.79  med_R=47.57
+  profile=near_POC:
+      A spike-close          n=   4  cont= 25%  trap= 75%  mMAE_R= -2.16  mMFE_R= 0.42  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.0  med_R=16.97
+      C early-acceptance     n=   1  cont=100%  trap=  0%  mMAE_R= -0.48  mMFE_R= 0.94  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.43  med_R=25.54
+      D full-acceptance(hold2) n=   1  cont=100%  trap=  0%  mMAE_R= -0.93  mMFE_R= 4.09  P3R=100%  P5R=  0%  P8R=  0%  med_availR=0.77  med_R=7.24
+
+[§13 OI / VOLUME as secondary evidence]  (within level-breaking events, spike-close entry)
+    ALL level-breaking       n=  26  cont= 35%  trap= 46%  mMAE_R= -0.85  mMFE_R= 1.16  P3R= 12%  P5R=  4%  P8R=  0%  med_availR=0.55  med_R=23.67
+      vol_x >= 2             n=   5  cont= 20%  trap= 60%  mMAE_R= -0.76  mMFE_R= 1.76  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.43  med_R=24.07
+      vol_x < 2 / NA         n=  21  cont= 38%  trap= 43%  mMAE_R= -0.87  mMFE_R= 0.99  P3R= 14%  P5R=  5%  P8R=  0%  med_availR=0.7  med_R=22.3
+      OI ambiguous           n=   9  cont= 33%  trap= 44%  mMAE_R= -0.85  mMFE_R= 0.53  P3R= 11%  P5R=  0%  P8R=  0%  med_availR=0.55  med_R=24.07
+      OI price_down_OI_down  n=   5  cont= 20%  trap= 40%  mMAE_R= -0.59  mMFE_R= 1.42  P3R= 20%  P5R= 20%  P8R=  0%  med_availR=0.39  med_R=23.67
+      OI price_down_OI_up    n=   3  cont= 67%  trap=  0%  mMAE_R= -0.41  mMFE_R= 1.23  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.84  med_R=20.94
+      OI price_up_OI_down    n=   4  cont= 50%  trap= 50%  mMAE_R= -1.03  mMFE_R= 2.04  P3R= 25%  P5R=  0%  P8R=  0%  med_availR=2.52  med_R=15.8
+      OI price_up_OI_up      n=   5  cont= 20%  trap= 80%  mMAE_R= -1.16  mMFE_R= 0.62  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.43  med_R=28.41
+      C_broke_accepted (base) n=  12  cont= 58%  trap= 17%  mMAE_R= -0.77  mMFE_R=  1.3  P3R= 17%  P5R=  8%  P8R=  0%  med_availR=0.55  med_R=23.67
+       + vol_x>=2            n=   1  cont=100%  trap=  0%  mMAE_R= -1.15  mMFE_R= 2.17  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=None  med_R=24.07
+       + OI price-dir==OI-dir n=   3  cont= 67%  trap= 33%  mMAE_R= -0.87  mMFE_R=  1.3  P3R= 33%  P5R= 33%  P8R=  0%  med_availR=0.7  med_R=23.67
+
+[§16 SWEET-SPOT]  balance of continuation, trap-control, available_R, MFE_R, MAE_R
+    spike-close        rank-sum=10  cont=33% trap=50% availR=0.7 MFE_R=0.75 MAE_R=-1.03 R=22.3pts
+    first-reaction     rank-sum=13  cont=56% trap=25% availR=0.41 MFE_R=0.92 MAE_R=-0.63 R=26.95pts
+    early-acceptance   rank-sum= 8  cont=80% trap=20% availR=0.43 MFE_R=1.07 MAE_R=-0.8 R=30.97pts
+    full-acceptance    rank-sum= 5  cont=100% trap=0% availR=0.81 MFE_R=1.04 MAE_R=-0.88 R=46.87pts
+    -> most-balanced on this sample: full-acceptance  (rank-sum 5; NOT a score, just a transparent multi-criterion rank -- and the sample is INSUFFICIENT)
+
+[§17 FINAL REPORT]
+    Q1 spike-close entry viable: n=30 cont=33% trap=50% P3R=10% -- workable count, weak accuracy
+    Q2 first-reaction better: n=16 cont=56% P3R=12% med_availR=0.41
+    Q3 early-acceptance better: n=10 cont=80% trap=20% P3R=10% med_availR=0.43
+    Q4/5 2- vs 3-candle acceptance: see §5 sweep (hold1/hold2/hold3 rows)
+    Q6 earliest reliable continuation evidence: n1 AGREES: cont=56% trap=25% (known 1 bar after spike)
+    Q7 earliest reliable trap warning: n1 DISAGREES: trap=79% cont=7% (known 1 bar after spike)
+    Q8 most robust structural stop: see §6 -- lowest medMAE_R that keeps med_availR usable (spike/window)
+    Q9 best available_R: entry D
+    Q10 best MFE_R: entry C
+    Q11 best expectancy proxy (cont%*MFE_R): entry D
+    Q12 lowest drawdown (|MAE_R| smallest): entry B
+    Q13-16 P3R/P5R/P8R/P10R (spike-close): 10% / 3% / 0% / 0%
+    Q17 spike magnitude changes result: see §11 -- pctile x entry
+    Q18 profile context changes result: see §12 -- profile x entry
+    Q19 OI/volume add info: see §13 -- marginal after controlling for acceptance + level
+    Q20 Stage-3 hypotheses: n1-agree as the earliest gate; early-acceptance(close_no_reclaim) entry; acceptance & available_R>=3; window-low/high stop
+
+>>> NIFTY PREMIUM STATUS: INSUFFICIENT DATA (30 events / 4 sessions / 2 regimes; no OOS split possible).
+
+##################################################################################################################
+# NATURALGAS  --  237 events (201 level-breaking) | 4 sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'] | regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+##################################################################################################################
+
+[§8 ENTRY-QUALITY MATRIX]  (each entry with its own primary structural stop; outcome window 3)
+    entry                       n  cont%  trap%  mMAE_R  mMFE_R   P3R   P5R   P8R  med_availR   med_R
+    A spike-close             237    32%    51%   -1.25    1.05   16%    8%    3%        0.82    0.65
+    B first-reaction          115    48%    30%   -1.12    0.89   15%    5%    2%        0.74    1.02
+    C early-acceptance         61    74%    16%   -1.11    0.89   12%    3%    2%        0.89    1.06
+    D full-acceptance(hold2)   75    80%     0%    -1.1     0.6   11%    7%    3%        1.27    1.33
+
+[§9 ACCURACY vs ENTRY QUALITY]
+    A spike-close            continuation=32%  entry-to-stop R=0.65pts  available_R=0.82  MFE_R=1.05  MAE_R=-1.25  (later entry -> accuracy / ~available_R)
+    B first-reaction         continuation=48%  entry-to-stop R=1.02pts  available_R=0.74  MFE_R=0.89  MAE_R=-1.12  (later entry -> accuracy / ~available_R)
+    C early-acceptance       continuation=74%  entry-to-stop R=1.06pts  available_R=0.89  MFE_R=0.89  MAE_R=-1.11  (later entry -> +accuracy / -available_R)
+    D full-acceptance(hold2) continuation=80%  entry-to-stop R=1.33pts  available_R=1.27  MFE_R=0.6  MAE_R=-1.1  (later entry -> +accuracy / -available_R)
+
+[§10 LARGE-R per entry]  P(kR) and max_R distribution
+    A spike-close            3R=16% 4R=12% 5R=8% 6R=6% 8R=3% 10R=2%   med_maxR=1.05  p75=2.23  p90=4.24
+    B first-reaction         3R=15% 4R=8% 5R=5% 6R=2% 8R=2% 10R=2%   med_maxR=0.89  p75=1.91  p90=3.59
+    C early-acceptance       3R=12% 4R=5% 5R=3% 6R=2% 8R=2% 10R=2%   med_maxR=0.89  p75=1.48  p90=3.02
+    D full-acceptance(hold2) 3R=11% 4R=9% 5R=7% 6R=5% 8R=3% 10R=3%   med_maxR=0.6  p75=1.58  p90=3.64
+
+[§4 FIRST-REACTION ANALYSIS]  (outcome = spike-close-entry, window 3)
+    n1 AGREES                n= 116  cont= 47%  trap= 29%  mMAE_R= -1.18  mMFE_R= 1.76  P3R= 28%  P5R= 15%  P8R=  6%  med_availR=1.11  med_R=0.65
+    n1 DISAGREES             n= 121  cont= 17%  trap= 71%  mMAE_R= -1.32  mMFE_R= 0.47  P3R=  5%  P5R=  2%  P8R=  0%  med_availR=0.65  med_R=0.65
+    n1 closes BEYOND level   n= 120  cont= 51%  trap= 25%  mMAE_R= -1.15  mMFE_R= 1.43  P3R= 18%  P5R= 10%  P8R=  2%  med_availR=0.76  med_R=0.76
+    n1 closes INSIDE level   n=  81  cont=  0%  trap= 86%  mMAE_R= -1.47  mMFE_R= 0.38  P3R=  5%  P5R=  2%  P8R=  1%  med_availR=0.59  med_R=0.64
+    n1 re-enters spike range n=  45  cont=  0%  trap=100%  mMAE_R= -1.58  mMFE_R= 0.18  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=0.94  med_R=0.64
+    n1 does NOT re-enter     n= 192  cont= 40%  trap= 39%  mMAE_R= -1.19  mMFE_R=  1.4  P3R= 20%  P5R= 10%  P8R=  4%  med_availR=0.81  med_R=0.66
+    n1 agree & strong body   n=  58  cont= 57%  trap= 16%  mMAE_R= -1.15  mMFE_R= 2.73  P3R= 41%  P5R= 28%  P8R= 10%  med_availR=1.37  med_R=0.74
+
+[§5 EARLY-ACCEPTANCE definition sweep]  (entry = that bar's close, window-low/high stop)
+    first_close          n= 159 cont= 38% trap= 38% mMFE_R= 0.72 mMAE_R= -1.18 P1R=32% P2R=18% P3R=11% P5R=3% P8R=1%
+    close_no_reclaim     n=  61 cont= 74% trap= 16% mMFE_R= 0.93 mMAE_R= -1.13 P1R=36% P2R=15% P3R=13% P5R=3% P8R=2%
+    hold1                n=  91 cont= 67% trap=  9% mMFE_R= 0.75 mMAE_R= -1.11 P1R=37% P2R=12% P3R=9% P5R=3% P8R=1%
+    hold2                n=  75 cont= 80% trap=  0% mMFE_R= 0.62 mMAE_R= -1.09 P1R=32% P2R=13% P3R=8% P5R=4% P8R=0%
+    hold3                n=  66 cont= 83% trap=  0% mMFE_R= 0.59 mMAE_R=  -1.1 P1R=33% P2R=15% P3R=9% P5R=6% P8R=2%
+
+[§6 STRUCTURAL-STOP matrix per entry]  (median over events that had the entry)
+  entry A spike-close:
+      stop=spike       n= 237 medR=  0.65pts medMAE_R= -1.25 medMFE_R= 1.05 med_availR=0.82
+      stop=window      n= 237 medR=  0.62pts medMAE_R= -1.29 medMFE_R= 1.09 med_availR=0.85
+      stop=swing       n= 237 medR=  0.97pts medMAE_R= -1.14 medMFE_R= 0.85 med_availR=0.64
+      stop=prevstruct  n= 237 medR=  1.14pts medMAE_R= -1.09 medMFE_R= 0.77 med_availR=0.7
+  entry B first-reaction:
+      stop=spike       n= 115 medR=  1.02pts medMAE_R= -1.12 medMFE_R= 0.89 med_availR=0.74
+      stop=reaction    n= 115 medR=  0.52pts medMAE_R= -1.47 medMFE_R=  1.3 med_availR=1.76
+      stop=window      n= 115 medR=  1.02pts medMAE_R= -1.13 medMFE_R= 0.91 med_availR=0.77
+      stop=swing       n= 115 medR=  1.35pts medMAE_R= -1.06 medMFE_R=  0.8 med_availR=0.57
+      stop=prevstruct  n= 115 medR=  1.54pts medMAE_R= -1.04 medMFE_R= 0.65 med_availR=0.71
+  entry C early-acceptance:
+      stop=spike       n=  61 medR=  1.06pts medMAE_R= -1.11 medMFE_R= 0.89 med_availR=0.89
+      stop=reaction    n=  61 medR=  0.33pts medMAE_R= -1.69 medMFE_R= 1.74 med_availR=4.17
+      stop=window      n=  61 medR=  1.03pts medMAE_R= -1.13 medMFE_R= 0.93 med_availR=0.91
+      stop=swing       n=  61 medR=  1.47pts medMAE_R= -1.05 medMFE_R= 0.69 med_availR=0.65
+      stop=prevstruct  n=  61 medR=  1.72pts medMAE_R= -1.02 medMFE_R= 0.56 med_availR=0.67
+  entry D full-acceptance(hold2):
+      stop=spike       n=  75 medR=  1.33pts medMAE_R= -1.09 medMFE_R= 0.61 med_availR=0.75
+      stop=reaction    n=  75 medR=  0.72pts medMAE_R=  -1.3 medMFE_R= 0.81 med_availR=2.43
+      stop=window      n=  75 medR=  1.31pts medMAE_R= -1.09 medMFE_R= 0.62 med_availR=0.76
+      stop=swing       n=  75 medR=  1.33pts medMAE_R=  -1.1 medMFE_R=  0.6 med_availR=1.27
+      stop=prevstruct  n=  75 medR=  2.05pts medMAE_R= -0.97 medMFE_R= 0.38 med_availR=0.8
+
+[§11 SPIKE-SIZE x ENTRY TIMING]  (range percentile buckets)
+  pctile 0.00-0.90:
+      A spike-close          n=  99  cont= 27%  trap= 61%  mMAE_R= -1.34  mMFE_R= 1.07  P3R= 17%  P5R=  6%  P8R=  2%  med_availR=1.11  med_R=0.55
+      B first-reaction       n=  44  cont= 43%  trap= 41%  mMAE_R= -1.12  mMFE_R= 0.93  P3R= 16%  P5R=  2%  P8R=  0%  med_availR=1.37  med_R=0.84
+      C early-acceptance     n=  18  cont= 72%  trap= 17%  mMAE_R= -1.12  mMFE_R= 0.91  P3R= 17%  P5R=  6%  P8R=  0%  med_availR=0.76  med_R=0.84
+      D full-acceptance(hold2) n=  21  cont= 86%  trap=  0%  mMAE_R= -1.13  mMFE_R= 0.65  P3R= 14%  P5R= 10%  P8R=  5%  med_availR=1.27  med_R=1.04
+  pctile 0.90-0.95:
+      A spike-close          n=  70  cont= 30%  trap= 54%  mMAE_R= -1.23  mMFE_R= 1.17  P3R= 16%  P5R=  7%  P8R=  1%  med_availR=0.94  med_R=0.74
+      B first-reaction       n=  37  cont= 46%  trap= 38%  mMAE_R= -1.13  mMFE_R= 0.74  P3R= 14%  P5R=  5%  P8R=  3%  med_availR=0.69  med_R=1.15
+      C early-acceptance     n=  16  cont= 75%  trap= 25%  mMAE_R= -1.15  mMFE_R= 0.71  P3R= 12%  P5R=  0%  P8R=  0%  med_availR=1.82  med_R=1.35
+      D full-acceptance(hold2) n=  20  cont= 90%  trap=  0%  mMAE_R= -1.15  mMFE_R= 0.44  P3R=  5%  P5R=  5%  P8R=  0%  med_availR=2.0  med_R=1.54
+  pctile 0.95-0.98:
+      A spike-close          n=  35  cont= 40%  trap= 34%  mMAE_R= -1.26  mMFE_R= 0.75  P3R= 17%  P5R= 14%  P8R=  6%  med_availR=0.62  med_R=0.85
+      B first-reaction       n=  17  cont= 65%  trap=  6%  mMAE_R=  -1.1  mMFE_R= 0.65  P3R= 24%  P5R= 12%  P8R=  6%  med_availR=0.53  med_R=1.6
+      C early-acceptance     n=  16  cont= 69%  trap= 12%  mMAE_R= -1.12  mMFE_R= 1.01  P3R=  6%  P5R=  0%  P8R=  0%  med_availR=0.8  med_R=1.15
+      D full-acceptance(hold2) n=  17  cont= 71%  trap=  0%  mMAE_R= -1.05  mMFE_R= 1.54  P3R= 18%  P5R= 12%  P8R=  6%  med_availR=1.5  med_R=1.86
+  pctile 0.98-1.01:
+      A spike-close          n=  27  cont= 41%  trap= 33%  mMAE_R=  -1.1  mMFE_R= 0.81  P3R= 18%  P5R= 11%  P8R=  7%  med_availR=0.43  med_R=1.28
+      B first-reaction       n=  13  cont= 46%  trap=  8%  mMAE_R= -1.07  mMFE_R= 0.92  P3R=  8%  P5R=  8%  P8R=  0%  med_availR=0.47  med_R=2.0
+      C early-acceptance     n=   9  cont= 78%  trap= 11%  mMAE_R= -1.03  mMFE_R= 0.92  P3R= 11%  P5R= 11%  P8R= 11%  med_availR=0.78  med_R=1.39
+      D full-acceptance(hold2) n=  14  cont= 71%  trap=  0%  mMAE_R= -1.02  mMFE_R= 1.01  P3R=  7%  P5R=  0%  P8R=  0%  med_availR=0.44  med_R=2.28
+
+[§12 PROFILE x ENTRY TIMING]
+  profile=NA:
+      A spike-close          n=   8  cont= 50%  trap= 25%  mMAE_R= -1.16  mMFE_R= 2.14  P3R= 12%  P5R=  0%  P8R=  0%  med_availR=1.82  med_R=0.43
+      C early-acceptance     n=   4  cont= 75%  trap= 25%  mMAE_R= -0.93  mMFE_R= 1.72  P3R= 25%  P5R=  0%  P8R=  0%  med_availR=5.15  med_R=0.75
+      D full-acceptance(hold2) n=   4  cont= 75%  trap=  0%  mMAE_R= -1.08  mMFE_R=  2.6  P3R= 25%  P5R= 25%  P8R=  0%  med_availR=23.33  med_R=0.93
+  profile=above_VAH:
+      A spike-close          n=  20  cont= 20%  trap= 65%  mMAE_R= -1.39  mMFE_R= 1.11  P3R= 25%  P5R=  5%  P8R=  0%  med_availR=0.93  med_R=0.54
+      C early-acceptance     n=0
+      D full-acceptance(hold2) n=   1  cont=  0%  trap=  0%  mMAE_R= -0.69  mMFE_R= 1.64  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=None  med_R=2.74
+  profile=acceptance_outside_value:
+      A spike-close          n=  52  cont= 60%  trap= 35%  mMAE_R= -1.15  mMFE_R= 1.01  P3R= 12%  P5R=  8%  P8R=  2%  med_availR=1.52  med_R=0.85
+      C early-acceptance     n=  29  cont= 83%  trap= 17%  mMAE_R= -1.11  mMFE_R= 0.89  P3R= 10%  P5R=  3%  P8R=  0%  med_availR=1.1  med_R=1.35
+      D full-acceptance(hold2) n=  30  cont=100%  trap=  0%  mMAE_R= -1.09  mMFE_R= 0.54  P3R= 10%  P5R=  3%  P8R=  3%  med_availR=2.0  med_R=1.19
+  profile=below_VAL:
+      A spike-close          n=  47  cont= 19%  trap= 53%  mMAE_R= -1.39  mMFE_R= 0.77  P3R= 23%  P5R= 15%  P8R=  4%  med_availR=1.54  med_R=0.65
+      C early-acceptance     n=   2  cont= 50%  trap=  0%  mMAE_R= -1.08  mMFE_R=  2.9  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=2.0  med_R=0.65
+      D full-acceptance(hold2) n=  13  cont= 31%  trap=  0%  mMAE_R= -1.13  mMFE_R= 0.49  P3R=  8%  P5R=  8%  P8R=  8%  med_availR=0.63  med_R=1.74
+  profile=inside_value:
+      A spike-close          n=  85  cont= 28%  trap= 58%  mMAE_R= -1.25  mMFE_R= 1.12  P3R= 14%  P5R=  6%  P8R=  2%  med_availR=0.65  med_R=0.64
+      C early-acceptance     n=  20  cont= 70%  trap= 15%  mMAE_R= -1.08  mMFE_R= 0.73  P3R= 10%  P5R=  5%  P8R=  5%  med_availR=0.78  med_R=0.96
+      D full-acceptance(hold2) n=  22  cont= 91%  trap=  0%  mMAE_R= -1.08  mMFE_R= 0.82  P3R=  9%  P5R=  4%  P8R=  0%  med_availR=0.47  med_R=1.54
+  profile=near_POC:
+      A spike-close          n=  25  cont= 16%  trap= 52%  mMAE_R= -1.19  mMFE_R= 0.94  P3R= 16%  P5R=  8%  P8R=  8%  med_availR=0.6  med_R=0.64
+      C early-acceptance     n=   6  cont= 50%  trap= 17%  mMAE_R= -1.12  mMFE_R= 0.94  P3R= 17%  P5R=  0%  P8R=  0%  med_availR=0.74  med_R=0.54
+      D full-acceptance(hold2) n=   5  cont= 60%  trap=  0%  mMAE_R= -1.13  mMFE_R= 1.14  P3R= 20%  P5R= 20%  P8R=  0%  med_availR=1.87  med_R=1.24
+
+[§13 OI / VOLUME as secondary evidence]  (within level-breaking events, spike-close entry)
+    ALL level-breaking       n= 201  cont= 30%  trap= 50%  mMAE_R= -1.25  mMFE_R= 0.94  P3R= 12%  P5R=  7%  P8R=  2%  med_availR=0.66  med_R=0.65
+      vol_x >= 2             n=  83  cont= 41%  trap= 45%  mMAE_R= -1.29  mMFE_R= 1.01  P3R= 14%  P5R= 11%  P8R=  2%  med_availR=0.62  med_R=0.86
+      vol_x < 2 / NA         n= 118  cont= 23%  trap= 53%  mMAE_R= -1.23  mMFE_R= 0.93  P3R= 11%  P5R=  4%  P8R=  2%  med_availR=0.68  med_R=0.64
+      OI ambiguous           n=  34  cont= 24%  trap= 41%  mMAE_R= -1.26  mMFE_R= 0.79  P3R=  9%  P5R=  3%  P8R=  3%  med_availR=0.7  med_R=0.64
+      OI price_down_OI_down  n=  39  cont= 38%  trap= 44%  mMAE_R= -1.26  mMFE_R= 1.11  P3R= 10%  P5R=  8%  P8R=  3%  med_availR=0.91  med_R=0.65
+      OI price_down_OI_up    n=  46  cont= 26%  trap= 56%  mMAE_R= -1.23  mMFE_R= 1.17  P3R= 13%  P5R=  9%  P8R=  2%  med_availR=0.64  med_R=0.85
+      OI price_up_OI_down    n=  32  cont= 41%  trap= 50%  mMAE_R= -1.26  mMFE_R= 0.94  P3R= 16%  P5R=  6%  P8R=  0%  med_availR=0.89  med_R=0.85
+      OI price_up_OI_up      n=  50  cont= 26%  trap= 54%  mMAE_R= -1.21  mMFE_R= 0.93  P3R= 14%  P5R=  8%  P8R=  2%  med_availR=0.6  med_R=0.74
+      C_broke_accepted (base) n=  90  cont= 60%  trap= 32%  mMAE_R= -1.15  mMFE_R= 1.18  P3R= 16%  P5R=  8%  P8R=  2%  med_availR=1.14  med_R=0.85
+       + vol_x>=2            n=  44  cont= 70%  trap= 27%  mMAE_R= -1.15  mMFE_R= 1.22  P3R= 16%  P5R= 11%  P8R=  2%  med_availR=0.91  med_R=1.06
+       + OI price-dir==OI-dir n=  38  cont= 63%  trap= 26%  mMAE_R= -1.08  mMFE_R= 1.39  P3R= 13%  P5R=  8%  P8R=  3%  med_availR=0.65  med_R=0.95
+
+[§16 SWEET-SPOT]  balance of continuation, trap-control, available_R, MFE_R, MAE_R
+    spike-close        rank-sum= 8  cont=32% trap=51% availR=0.82 MFE_R=1.05 MAE_R=-1.25 R=0.65pts
+    first-reaction     rank-sum=10  cont=48% trap=30% availR=0.74 MFE_R=0.89 MAE_R=-1.12 R=1.02pts
+    early-acceptance   rank-sum= 9  cont=74% trap=16% availR=0.89 MFE_R=0.89 MAE_R=-1.11 R=1.06pts
+    full-acceptance    rank-sum= 9  cont=80% trap=0% availR=1.27 MFE_R=0.6 MAE_R=-1.1 R=1.33pts
+    -> most-balanced on this sample: spike-close  (rank-sum 8; NOT a score, just a transparent multi-criterion rank -- and the sample is INSUFFICIENT)
+
+[§17 FINAL REPORT]
+    Q1 spike-close entry viable: n=237 cont=32% trap=51% P3R=16% -- workable count, weak accuracy
+    Q2 first-reaction better: n=115 cont=48% P3R=15% med_availR=0.74
+    Q3 early-acceptance better: n=61 cont=74% trap=16% P3R=12% med_availR=0.89
+    Q4/5 2- vs 3-candle acceptance: see §5 sweep (hold1/hold2/hold3 rows)
+    Q6 earliest reliable continuation evidence: n1 AGREES: cont=47% trap=29% (known 1 bar after spike)
+    Q7 earliest reliable trap warning: n1 DISAGREES: trap=71% cont=17% (known 1 bar after spike)
+    Q8 most robust structural stop: see §6 -- lowest medMAE_R that keeps med_availR usable (spike/window)
+    Q9 best available_R: entry D
+    Q10 best MFE_R: entry A
+    Q11 best expectancy proxy (cont%*MFE_R): entry C
+    Q12 lowest drawdown (|MAE_R| smallest): entry D
+    Q13-16 P3R/P5R/P8R/P10R (spike-close): 16% / 8% / 3% / 2%
+    Q17 spike magnitude changes result: see §11 -- pctile x entry
+    Q18 profile context changes result: see §12 -- profile x entry
+    Q19 OI/volume add info: see §13 -- marginal after controlling for acceptance + level
+    Q20 Stage-3 hypotheses: n1-agree as the earliest gate; early-acceptance(close_no_reclaim) entry; acceptance & available_R>=3; window-low/high stop
+
+>>> NATURALGAS PREMIUM STATUS: INSUFFICIENT DATA (237 events / 4 sessions / 3 regimes; no OOS split possible).
+
+##################################################################################################################
+# CRUDEOIL  --  221 events (180 level-breaking) | 3 sessions ['2026-09-02', '2026-09-03', '2026-09-04'] | regimes ['CHOP']
+##################################################################################################################
+
+[§8 ENTRY-QUALITY MATRIX]  (each entry with its own primary structural stop; outcome window 3)
+    entry                       n  cont%  trap%  mMAE_R  mMFE_R   P3R   P5R   P8R  med_availR   med_R
+    A spike-close             221    36%    52%   -1.24    1.05   27%   18%    8%        1.22    21.2
+    B first-reaction          106    57%    28%   -1.12    1.17   24%   10%    5%        0.79    32.2
+    C early-acceptance         76    72%    18%   -1.14    1.24   24%    8%    4%        1.68   35.56
+    D full-acceptance(hold2)   77    88%     0%   -1.02    1.16   21%    9%    5%        1.69    42.9
+
+[§9 ACCURACY vs ENTRY QUALITY]
+    A spike-close            continuation=36%  entry-to-stop R=21.2pts  available_R=1.22  MFE_R=1.05  MAE_R=-1.24  (later entry -> accuracy / ~available_R)
+    B first-reaction         continuation=57%  entry-to-stop R=32.2pts  available_R=0.79  MFE_R=1.17  MAE_R=-1.12  (later entry -> accuracy / ~available_R)
+    C early-acceptance       continuation=72%  entry-to-stop R=35.56pts  available_R=1.68  MFE_R=1.24  MAE_R=-1.14  (later entry -> +accuracy / -available_R)
+    D full-acceptance(hold2) continuation=88%  entry-to-stop R=42.9pts  available_R=1.69  MFE_R=1.16  MAE_R=-1.02  (later entry -> +accuracy / -available_R)
+
+[§10 LARGE-R per entry]  P(kR) and max_R distribution
+    A spike-close            3R=27% 4R=23% 5R=18% 6R=13% 8R=8% 10R=5%   med_maxR=1.05  p75=3.47  p90=7.3
+    B first-reaction         3R=24% 4R=15% 5R=10% 6R=8% 8R=5% 10R=4%   med_maxR=1.17  p75=2.9  p90=5.63
+    C early-acceptance       3R=24% 4R=12% 5R=8% 6R=7% 8R=4% 10R=4%   med_maxR=1.24  p75=2.86  p90=4.16
+    D full-acceptance(hold2) 3R=21% 4R=16% 5R=9% 6R=9% 8R=5% 10R=5%   med_maxR=1.16  p75=2.37  p90=4.94
+
+[§4 FIRST-REACTION ANALYSIS]  (outcome = spike-close-entry, window 3)
+    n1 AGREES                n= 107  cont= 56%  trap= 28%  mMAE_R= -1.18  mMFE_R= 2.17  P3R= 43%  P5R= 27%  P8R= 11%  med_availR=1.27  med_R=20.38
+    n1 DISAGREES             n= 114  cont= 17%  trap= 75%  mMAE_R=  -1.3  mMFE_R= 0.42  P3R= 12%  P5R=  9%  P8R=  5%  med_availR=1.2  med_R=21.26
+    n1 closes BEYOND level   n= 116  cont= 59%  trap= 27%  mMAE_R= -1.18  mMFE_R= 1.61  P3R= 34%  P5R= 22%  P8R=  9%  med_availR=1.07  med_R=23.86
+    n1 closes INSIDE level   n=  64  cont=  0%  trap= 84%  mMAE_R= -1.33  mMFE_R= 0.42  P3R= 17%  P5R= 12%  P8R=  8%  med_availR=0.55  med_R=18.62
+    n1 re-enters spike range n=  39  cont=  8%  trap= 90%  mMAE_R= -1.48  mMFE_R= 0.13  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=2.03  med_R=15.08
+    n1 does NOT re-enter     n= 182  cont= 42%  trap= 44%  mMAE_R= -1.19  mMFE_R= 1.44  P3R= 33%  P5R= 21%  P8R= 10%  med_availR=0.91  med_R=23.5
+    n1 agree & strong body   n=  59  cont= 64%  trap= 20%  mMAE_R= -1.18  mMFE_R= 2.33  P3R= 49%  P5R= 36%  P8R= 12%  med_availR=1.24  med_R=22.8
+
+[§5 EARLY-ACCEPTANCE definition sweep]  (entry = that bar's close, window-low/high stop)
+    first_close          n= 154 cont= 44% trap= 40% mMFE_R= 1.26 mMAE_R= -1.17 P1R=53% P2R=36% P3R=23% P5R=11% P8R=7%
+    close_no_reclaim     n=  76 cont= 72% trap= 18% mMFE_R= 1.26 mMAE_R= -1.16 P1R=53% P2R=38% P3R=24% P5R=8% P8R=4%
+    hold1                n=  94 cont= 72% trap= 13% mMFE_R= 1.25 mMAE_R= -1.12 P1R=54% P2R=32% P3R=23% P5R=17% P8R=3%
+    hold2                n=  77 cont= 88% trap=  0% mMFE_R= 1.66 mMAE_R= -1.05 P1R=55% P2R=42% P3R=27% P5R=12% P8R=6%
+    hold3                n=  70 cont= 87% trap=  0% mMFE_R= 1.35 mMAE_R= -1.04 P1R=57% P2R=33% P3R=21% P5R=7% P8R=6%
+
+[§6 STRUCTURAL-STOP matrix per entry]  (median over events that had the entry)
+  entry A spike-close:
+      stop=spike       n= 221 medR=  21.2pts medMAE_R= -1.24 medMFE_R= 1.05 med_availR=1.22
+      stop=window      n= 221 medR=  20.6pts medMAE_R= -1.24 medMFE_R= 1.05 med_availR=1.25
+      stop=swing       n= 221 medR= 31.98pts medMAE_R= -1.08 medMFE_R= 0.94 med_availR=0.72
+      stop=prevstruct  n= 221 medR= 37.98pts medMAE_R= -1.05 medMFE_R= 0.84 med_availR=0.8
+  entry B first-reaction:
+      stop=spike       n= 106 medR=  32.2pts medMAE_R= -1.12 medMFE_R= 1.17 med_availR=0.79
+      stop=reaction    n= 106 medR= 15.23pts medMAE_R= -1.35 medMFE_R= 1.13 med_availR=1.75
+      stop=window      n= 106 medR= 31.51pts medMAE_R= -1.14 medMFE_R= 1.16 med_availR=0.81
+      stop=swing       n= 106 medR=  41.9pts medMAE_R= -1.04 medMFE_R=  0.9 med_availR=0.59
+      stop=prevstruct  n= 106 medR= 48.02pts medMAE_R= -1.02 medMFE_R= 0.89 med_availR=0.78
+  entry C early-acceptance:
+      stop=spike       n=  76 medR= 35.56pts medMAE_R= -1.14 medMFE_R= 1.24 med_availR=1.68
+      stop=reaction    n=  76 medR= 12.75pts medMAE_R= -1.48 medMFE_R= 1.53 med_availR=5.03
+      stop=window      n=  76 medR= 34.78pts medMAE_R= -1.16 medMFE_R= 1.26 med_availR=1.74
+      stop=swing       n=  76 medR= 55.74pts medMAE_R= -1.02 medMFE_R= 0.97 med_availR=1.25
+      stop=prevstruct  n=  76 medR= 62.34pts medMAE_R= -1.01 medMFE_R= 0.94 med_availR=1.04
+  entry D full-acceptance(hold2):
+      stop=spike       n=  77 medR= 40.68pts medMAE_R= -1.06 medMFE_R= 1.54 med_availR=1.94
+      stop=reaction    n=  77 medR= 23.02pts medMAE_R= -1.15 medMFE_R= 1.56 med_availR=3.49
+      stop=window      n=  77 medR= 38.87pts medMAE_R= -1.05 medMFE_R= 1.66 med_availR=2.01
+      stop=swing       n=  77 medR=  42.9pts medMAE_R= -1.02 medMFE_R= 1.16 med_availR=1.69
+      stop=prevstruct  n=  77 medR= 71.68pts medMAE_R=  -0.9 medMFE_R= 1.04 med_availR=1.14
+
+[§11 SPIKE-SIZE x ENTRY TIMING]  (range percentile buckets)
+  pctile 0.00-0.90:
+      A spike-close          n= 118  cont= 31%  trap= 61%  mMAE_R=  -1.4  mMFE_R= 1.19  P3R= 27%  P5R= 17%  P8R=  8%  med_availR=1.81  med_R=17.26
+      B first-reaction       n=  59  cont= 54%  trap= 37%  mMAE_R= -1.19  mMFE_R=  1.6  P3R= 25%  P5R=  8%  P8R=  5%  med_availR=1.6  med_R=28.38
+      C early-acceptance     n=  30  cont= 73%  trap= 17%  mMAE_R= -1.13  mMFE_R= 1.94  P3R= 37%  P5R=  7%  P8R=  3%  med_availR=2.48  med_R=32.02
+      D full-acceptance(hold2) n=  36  cont= 89%  trap=  0%  mMAE_R= -1.01  mMFE_R= 1.16  P3R= 19%  P5R=  6%  P8R=  3%  med_availR=1.81  med_R=47.84
+  pctile 0.90-0.95:
+      A spike-close          n=  47  cont= 40%  trap= 47%  mMAE_R= -1.19  mMFE_R= 1.17  P3R= 34%  P5R= 28%  P8R= 11%  med_availR=0.65  med_R=25.74
+      B first-reaction       n=  23  cont= 61%  trap= 17%  mMAE_R= -1.02  mMFE_R= 1.17  P3R= 39%  P5R= 22%  P8R=  9%  med_availR=0.67  med_R=38.04
+      C early-acceptance     n=  20  cont= 70%  trap= 20%  mMAE_R= -1.13  mMFE_R= 1.29  P3R= 20%  P5R= 15%  P8R=  5%  med_availR=1.11  med_R=38.04
+      D full-acceptance(hold2) n=  19  cont= 90%  trap=  0%  mMAE_R= -1.03  mMFE_R= 1.57  P3R= 37%  P5R= 21%  P8R= 16%  med_availR=2.67  med_R=39.04
+  pctile 0.95-0.98:
+      A spike-close          n=  33  cont= 46%  trap= 36%  mMAE_R= -1.17  mMFE_R= 0.89  P3R= 24%  P5R= 12%  P8R=  6%  med_availR=0.64  med_R=31.7
+      B first-reaction       n=  14  cont= 71%  trap= 14%  mMAE_R= -1.05  mMFE_R= 0.64  P3R=  7%  P5R=  7%  P8R=  0%  med_availR=0.49  med_R=40.04
+      C early-acceptance     n=  14  cont= 79%  trap= 14%  mMAE_R= -1.13  mMFE_R=  1.3  P3R= 14%  P5R=  7%  P8R=  7%  med_availR=0.52  med_R=43.7
+      D full-acceptance(hold2) n=  12  cont= 92%  trap=  0%  mMAE_R= -0.89  mMFE_R= 0.99  P3R= 17%  P5R=  8%  P8R=  0%  med_availR=1.74  med_R=60.26
+  pctile 0.98-1.01:
+      A spike-close          n=  20  cont= 40%  trap= 35%  mMAE_R= -1.17  mMFE_R=  1.0  P3R= 15%  P5R=  5%  P8R=  5%  med_availR=0.32  med_R=39.76
+      B first-reaction       n=   9  cont= 44%  trap= 22%  mMAE_R= -1.24  mMFE_R= 0.54  P3R= 11%  P5R=  0%  P8R=  0%  med_availR=0.79  med_R=45.34
+      C early-acceptance     n=  12  cont= 67%  trap= 25%  mMAE_R= -1.16  mMFE_R= 0.82  P3R=  8%  P5R=  0%  P8R=  0%  med_availR=1.29  med_R=45.34
+      D full-acceptance(hold2) n=   9  cont= 89%  trap=  0%  mMAE_R= -1.02  mMFE_R= 1.09  P3R=  0%  P5R=  0%  P8R=  0%  med_availR=1.33  med_R=58.08
+
+[§12 PROFILE x ENTRY TIMING]
+  profile=NA:
+      A spike-close          n=   8  cont= 25%  trap= 38%  mMAE_R= -1.18  mMFE_R=10.15  P3R= 62%  P5R= 62%  P8R= 50%  med_availR=12.74  med_R=12.9
+      C early-acceptance     n=   2  cont= 50%  trap=  0%  mMAE_R= -0.59  mMFE_R=23.45  P3R=100%  P5R=100%  P8R= 50%  med_availR=16.89  med_R=18.14
+      D full-acceptance(hold2) n=   4  cont= 50%  trap=  0%  mMAE_R= -0.92  mMFE_R=10.28  P3R= 75%  P5R= 75%  P8R= 50%  med_availR=16.55  med_R=25.9
+  profile=above_VAH:
+      A spike-close          n=  14  cont= 21%  trap= 71%  mMAE_R= -1.44  mMFE_R= 0.78  P3R= 29%  P5R= 29%  P8R=  7%  med_availR=1.37  med_R=18.74
+      C early-acceptance     n=   2  cont=100%  trap=  0%  mMAE_R= -1.14  mMFE_R=10.48  P3R= 50%  P5R= 50%  P8R= 50%  med_availR=1.4  med_R=46.78
+      D full-acceptance(hold2) n=   3  cont= 67%  trap=  0%  mMAE_R= -1.04  mMFE_R= 0.55  P3R= 33%  P5R=  0%  P8R=  0%  med_availR=None  med_R=111.78
+  profile=acceptance_outside_value:
+      A spike-close          n=  48  cont= 71%  trap= 27%  mMAE_R= -1.18  mMFE_R= 1.85  P3R= 35%  P5R= 25%  P8R=  6%  med_availR=0.91  med_R=24.86
+      C early-acceptance     n=  31  cont= 90%  trap= 10%  mMAE_R= -1.17  mMFE_R= 1.15  P3R= 23%  P5R=  0%  P8R=  0%  med_availR=0.43  med_R=39.5
+      D full-acceptance(hold2) n=  34  cont=100%  trap=  0%  mMAE_R= -1.03  mMFE_R= 1.09  P3R= 12%  P5R=  0%  P8R=  0%  med_availR=1.64  med_R=40.68
+  profile=below_VAL:
+      A spike-close          n=  41  cont= 12%  trap= 66%  mMAE_R= -1.33  mMFE_R= 1.17  P3R= 22%  P5R= 12%  P8R=  5%  med_availR=2.59  med_R=16.62
+      C early-acceptance     n=   6  cont= 33%  trap= 17%  mMAE_R= -1.35  mMFE_R= 2.51  P3R= 17%  P5R=  0%  P8R=  0%  med_availR=2.23  med_R=21.5
+      D full-acceptance(hold2) n=   9  cont= 33%  trap=  0%  mMAE_R= -1.15  mMFE_R= 1.54  P3R= 33%  P5R= 22%  P8R= 22%  med_availR=3.59  med_R=15.74
+  profile=inside_value:
+      A spike-close          n=  72  cont= 25%  trap= 62%  mMAE_R= -1.22  mMFE_R= 0.79  P3R= 17%  P5R=  7%  P8R=  4%  med_availR=1.2  med_R=22.5
+      C early-acceptance     n=  24  cont= 54%  trap= 33%  mMAE_R= -1.11  mMFE_R= 0.82  P3R= 21%  P5R=  4%  P8R=  0%  med_availR=2.41  med_R=32.38
+      D full-acceptance(hold2) n=  15  cont=100%  trap=  0%  mMAE_R= -0.48  mMFE_R=  1.6  P3R= 13%  P5R=  0%  P8R=  0%  med_availR=1.6  med_R=67.38
+  profile=near_POC:
+      A spike-close          n=  38  cont= 45%  trap= 45%  mMAE_R= -1.16  mMFE_R= 1.05  P3R= 34%  P5R= 21%  P8R= 13%  med_availR=0.68  med_R=22.86
+      C early-acceptance     n=  11  cont= 82%  trap= 18%  mMAE_R= -1.05  mMFE_R= 1.29  P3R= 18%  P5R= 18%  P8R=  9%  med_availR=0.65  med_R=39.38
+      D full-acceptance(hold2) n=  12  cont=100%  trap=  0%  mMAE_R= -0.51  mMFE_R=  1.1  P3R= 25%  P5R= 17%  P8R=  0%  med_availR=1.33  med_R=48.94
+
+[§13 OI / VOLUME as secondary evidence]  (within level-breaking events, spike-close entry)
+    ALL level-breaking       n= 180  cont= 38%  trap= 47%  mMAE_R= -1.22  mMFE_R= 1.12  P3R= 28%  P5R= 19%  P8R=  8%  med_availR=0.93  med_R=21.2
+      vol_x >= 2             n=  68  cont= 47%  trap= 38%  mMAE_R= -1.17  mMFE_R= 1.44  P3R= 28%  P5R= 16%  P8R=  7%  med_availR=1.34  med_R=24.86
+      vol_x < 2 / NA         n= 112  cont= 32%  trap= 53%  mMAE_R= -1.25  mMFE_R= 1.11  P3R= 29%  P5R= 20%  P8R=  9%  med_availR=0.68  med_R=19.44
+      OI ambiguous           n=  57  cont= 40%  trap= 46%  mMAE_R= -1.29  mMFE_R= 1.44  P3R= 30%  P5R= 25%  P8R= 10%  med_availR=0.64  med_R=19.04
+      OI price_down_OI_down  n=  27  cont= 48%  trap= 18%  mMAE_R= -1.24  mMFE_R= 0.85  P3R= 18%  P5R= 11%  P8R= 11%  med_availR=0.55  med_R=24.44
+      OI price_down_OI_up    n=  40  cont= 38%  trap= 50%  mMAE_R= -1.22  mMFE_R= 1.08  P3R= 30%  P5R= 22%  P8R= 15%  med_availR=1.5  med_R=21.86
+      OI price_up_OI_down    n=  16  cont= 31%  trap= 69%  mMAE_R= -1.29  mMFE_R= 1.76  P3R= 31%  P5R= 12%  P8R=  0%  med_availR=1.49  med_R=22.32
+      OI price_up_OI_up      n=  40  cont= 30%  trap= 57%  mMAE_R= -1.15  mMFE_R= 0.92  P3R= 30%  P5R= 15%  P8R=  0%  med_availR=1.77  med_R=23.92
+      C_broke_accepted (base) n=  89  cont= 64%  trap= 32%  mMAE_R= -1.15  mMFE_R= 1.69  P3R= 35%  P5R= 20%  P8R=  8%  med_availR=1.22  med_R=25.44
+       + vol_x>=2            n=  39  cont= 72%  trap= 26%  mMAE_R= -1.13  mMFE_R= 1.44  P3R= 28%  P5R= 15%  P8R=  5%  med_availR=1.77  med_R=28.22
+       + OI price-dir==OI-dir n=  29  cont= 66%  trap= 24%  mMAE_R= -1.09  mMFE_R= 1.82  P3R= 38%  P5R= 17%  P8R=  7%  med_availR=1.77  med_R=27.68
+
+[§16 SWEET-SPOT]  balance of continuation, trap-control, available_R, MFE_R, MAE_R
+    spike-close        rank-sum=11  cont=36% trap=52% availR=1.22 MFE_R=1.05 MAE_R=-1.24 R=21.2pts
+    first-reaction     rank-sum=11  cont=57% trap=28% availR=0.79 MFE_R=1.17 MAE_R=-1.12 R=32.2pts
+    early-acceptance   rank-sum= 6  cont=72% trap=18% availR=1.68 MFE_R=1.24 MAE_R=-1.14 R=35.56pts
+    full-acceptance    rank-sum= 8  cont=88% trap=0% availR=1.69 MFE_R=1.16 MAE_R=-1.02 R=42.9pts
+    -> most-balanced on this sample: early-acceptance  (rank-sum 6; NOT a score, just a transparent multi-criterion rank -- and the sample is INSUFFICIENT)
+
+[§17 FINAL REPORT]
+    Q1 spike-close entry viable: n=221 cont=36% trap=52% P3R=27% -- workable count, weak accuracy
+    Q2 first-reaction better: n=106 cont=57% P3R=24% med_availR=0.79
+    Q3 early-acceptance better: n=76 cont=72% trap=18% P3R=24% med_availR=1.68
+    Q4/5 2- vs 3-candle acceptance: see §5 sweep (hold1/hold2/hold3 rows)
+    Q6 earliest reliable continuation evidence: n1 AGREES: cont=56% trap=28% (known 1 bar after spike)
+    Q7 earliest reliable trap warning: n1 DISAGREES: trap=75% cont=17% (known 1 bar after spike)
+    Q8 most robust structural stop: see §6 -- lowest medMAE_R that keeps med_availR usable (spike/window)
+    Q9 best available_R: entry D
+    Q10 best MFE_R: entry C
+    Q11 best expectancy proxy (cont%*MFE_R): entry D
+    Q12 lowest drawdown (|MAE_R| smallest): entry D
+    Q13-16 P3R/P5R/P8R/P10R (spike-close): 27% / 18% / 8% / 5%
+    Q17 spike magnitude changes result: see §11 -- pctile x entry
+    Q18 profile context changes result: see §12 -- profile x entry
+    Q19 OI/volume add info: see §13 -- marginal after controlling for acceptance + level
+    Q20 Stage-3 hypotheses: n1-agree as the earliest gate; early-acceptance(close_no_reclaim) entry; acceptance & available_R>=3; window-low/high stop
+
+>>> CRUDEOIL PREMIUM STATUS: INSUFFICIENT DATA (221 events / 3 sessions / 1 regimes; no OOS split possible).

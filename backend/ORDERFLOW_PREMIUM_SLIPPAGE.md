@@ -632,3 +632,91 @@ cell (NATGAS n = 14) showed 86 % continuation / 7 % trap.
 ```
 cd backend && python scripts/orderflow_continuation_trap.py
 ```
+
+---
+
+## 12. Entry timing + structural risk + available R (2026-09-06) — RESEARCH ONLY, all INSUFFICIENT DATA
+
+`backend/scripts/orderflow_entry_timing.py` → `data/orderflow_entry_timing_report_2026-09-06.txt`.
+Builds on the continuation-vs-trap events; does not alter the dataset.
+Question: *what is the earliest entry that keeps a good continuation/trap
+trade-off while preserving structural reward?* Four causal entry timings, each
+with its own valid structural stop and `available_R`. No score, no weights;
+nothing wired to live; no pattern enabled; no orders.
+
+### §8 Entry-quality matrix (each entry, its primary structural stop, window 3)
+
+| entry | valid at | NIFTY cont/trap/P3R/availR/R | NATGAS | CRUDE |
+|-------|----------|:---------------------------:|:------:|:-----:|
+| **A** spike-close | spike close | 33/50/10 % · 0.7R · 22pt | 32/51/16 % · 0.8R · —pt | 36/52/27 % · 1.2R · 21pt |
+| **B** first-reaction (n1 agrees) | 1st post-spike close | 56/25/12 % · 0.4R · 27pt | 48/30/15 % · 0.7R | 57/28/24 % · 0.8R · 32pt |
+| **C** early-acceptance (1st close beyond level, no reclaim) | 1st close beyond L | **80**/20/10 % · 0.4R · 31pt | **74**/16/12 % · 0.9R | **72**/18/24 % · **1.7R** · 36pt |
+| **D** full-acceptance (hold 2) | after 2 held closes | 100/0/11 % · 0.8R · 47pt | 80/0/11 % · 1.3R | 88/0/21 % · 1.7R · 43pt |
+
+### §9 The trade-off, stated plainly
+
+Later entry buys **accuracy** (continuation% 32→80–100 %, trap% 50→0 %) but
+**pays it back in R distance** — entry-to-structural-stop grows ~2× (NIFTY
+22→47 pt, CRUDE 21→43 pt), so **P3R does NOT improve and often falls** (CRUDE
+27 %→21 %). The most accurate entry is not the best entry for reaching large R.
+
+### §16 Sweet spot
+
+- The single largest accuracy gain is **A → C**: continuation jumps to
+  72–80 % at essentially the *earliest* possible bar (the first close beyond
+  the level). The `close_no_reclaim` refinement is what earns it — raw
+  `first_close` is only 45–74 % continuation, `close_no_reclaim` 72–80 %
+  (§5 sweep). Waiting the extra 2 candles for full acceptance adds little
+  accuracy and costs R.
+- **C early-acceptance entry + the first-reaction candle's low/high as the
+  stop** is the standout risk geometry on CRUDE: median R **12.75 pt**
+  (vs 35 pt for the spike stop), median MFE_R **1.53R**, **median
+  available_R ≈ 5.0** (vs 1.7). The reaction-candle extreme is a tight *valid*
+  invalidation (the low the acceptance held above); it is hit more often
+  (median MAE_R −1.48) but transforms the reward geometry. Needs validation.
+- Multi-criterion rank (transparent, not a score): CRUDE → early-acceptance
+  best; NIFTY → full-acceptance (but NIFTY has no room anywhere, availR ≈
+  0.4–0.8); NATGAS → spike-close / early-acceptance ~tie.
+
+### §4/§6/§7 Earliest reliable evidence
+
+| signal (known 1 bar after the spike) | NIFTY | NATGAS | CRUDE |
+|--------------------------------------|:-----:|:------:|:-----:|
+| **n1 AGREES** → cont% / trap% / P3R | 56 / 25 / 19 % | 47 / 29 / 28 % | 56 / 28 / **43 %** (P5R 27, P8R 11) |
+| **n1 DISAGREES** → trap% / cont% | 79 / 7 % | 71 / 17 % | 75 / 17 % |
+| n1 re-enters the spike range | ~100 % trap (n small) | — | — |
+| n1 closes back INSIDE the level | 89 % trap | — | — |
+
+Earliest continuation evidence = **n1 agrees with the spike direction**;
+earliest trap warning = **n1 disagrees / re-enters the spike range**.
+
+### §10 Large-R — does the room exist?
+
+Only **CRUDE** produces meaningful large-R: A-entry P3R 27 % / P5R 18 % /
+P8R 8 %, rising to **P3R 43 % / P5R 27 % / P8R 11 %** on the `n1-agrees`
+subset; p90 max_R ≈ 4R+. NATGAS modest (P3R 16 %, P8R 3 %). NIFTY negligible
+past 3R (P5R ≈ 3 %) and structurally has no room.
+
+### §13 OI / volume as secondary evidence
+
+Marginal after controlling for level interaction + acceptance — `vol_x ≥ 2`
+and price-dir==OI-dir move `C_broke_accepted` P3R by only a few pp on all
+three symbols. **They do not add usable information at this stage.**
+
+### §17 FINAL STATUS
+
+| symbol | status |
+|--------|--------|
+| **NIFTY PREMIUM** | **INSUFFICIENT DATA** — 30 events / 4 sessions / 2 regimes; no structural room. |
+| **NATGAS PREMIUM** | **INSUFFICIENT DATA** — 237 events / 4 sessions / 3 regimes; large-R tail thin. |
+| **CRUDE PREMIUM** | **INSUFFICIENT DATA** — 221 events / 3 sessions / CHOP only; the sweet-spot geometry (C entry + reaction stop, n1-agree filter) is strongest here but has never been observed in a trending CRUDE session. |
+
+**No edge claimed. No production signal. No live change. No orders. No
+score.** Stage-3 hypotheses (need ≥ 10 independent sessions across regimes +
+chronological train/validation/OOS): (1) **n1-agree** as the earliest gate;
+(2) **early-acceptance (`close_no_reclaim`)** as the entry; (3) **first-
+reaction-candle low/high** as the stop; (4) require **available_R ≥ 3**.
+
+```
+cd backend && python scripts/orderflow_entry_timing.py
+```
