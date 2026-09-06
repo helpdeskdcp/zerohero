@@ -1,0 +1,267 @@
+wrote 488 events -> data/orderflow_event_anatomy.csv  (KNOWN-AT-ENTRY cols 1..57, OUTCOME cols after)
+
+##############################################################################################################
+# CRUDEOIL  --  221 abnormal events  |  3 sessions ['2026-09-02', '2026-09-03', '2026-09-04']  |  regimes ['CHOP']
+##############################################################################################################
+
+[BASELINE] all events (headline = spike-close entry, spike-low/high SL):
+    ALL                        n= 221  medMFE_R= 1.06  medMAE_R= -1.26  P1R= 52%  P2R= 34%  P3R= 26%  P5R= 20%  P8R=  9%  cont= 33%
+    median R (spike SL) = 20.0 pts ; median available_R = 1.3
+
+[Q1/Q2 abnormality] by range_x bucket (research feature, not a gate):
+    range_x 1.5-2.0            n=  96  medMFE_R= 1.27  medMAE_R=  -1.2  P1R= 58%  P2R= 38%  P3R= 30%  P5R= 25%  P8R= 14%  cont= 38%
+    range_x 2.0-2.5            n=  37  medMFE_R= 0.82  medMAE_R= -1.17  P1R= 40%  P2R= 24%  P3R= 22%  P5R= 16%  P8R= 11%  cont= 24%
+    range_x 2.5-3.0            n=  15  medMFE_R= 1.16  medMAE_R= -1.16  P1R= 53%  P2R= 40%  P3R= 33%  P5R= 13%  P8R=  0%  cont= 40%
+    range_x 3.0-+              n=  11  medMFE_R=  0.9  medMAE_R= -1.12  P1R= 46%  P2R= 27%  P3R=  9%  P5R=  0%  P8R=  0%  cont= 27%
+  by vol_x bucket:
+    vol_x 0-1.5                n=  78  medMFE_R=  1.2  medMAE_R= -1.25  P1R= 55%  P2R= 31%  P3R= 26%  P5R= 19%  P8R= 10%  cont= 31%
+    vol_x 1.5-2.0              n=  54  medMFE_R= 1.06  medMAE_R= -1.39  P1R= 54%  P2R= 37%  P3R= 28%  P5R= 22%  P8R=  7%  cont= 37%
+    vol_x 2.0-3.0              n=  46  medMFE_R=  1.0  medMAE_R= -1.26  P1R= 50%  P2R= 39%  P3R= 33%  P5R= 28%  P8R= 13%  cont= 39%
+    vol_x 3.0-+                n=  43  medMFE_R= 0.95  medMAE_R= -1.16  P1R= 49%  P2R= 28%  P3R= 16%  P5R=  7%  P8R=  5%  cont= 28%
+
+[Q3 pre-spike compression] by pre5_rng_contraction quartile (lower = more coiled):
+    coiled  <=Q1               n=  57  medMFE_R= 0.65  medMAE_R= -1.23  P1R= 44%  P2R= 28%  P3R= 21%  P5R= 19%  P8R=  9%  cont= 28%
+    Q1-Q2                      n=  56  medMFE_R= 1.62  medMAE_R= -1.25  P1R= 61%  P2R= 39%  P3R= 25%  P5R= 20%  P8R= 12%  cont= 39%
+    Q2-Q3                      n=  54  medMFE_R= 1.12  medMAE_R= -1.22  P1R= 52%  P2R= 30%  P3R= 24%  P5R= 15%  P8R=  6%  cont= 30%
+    loose  >Q3                 n=  53  medMFE_R= 1.08  medMAE_R= -1.35  P1R= 53%  P2R= 38%  P3R= 34%  P5R= 24%  P8R=  9%  cont= 38%
+
+[Q4/Q5 entry] spike-close vs rejection-candle entry (same events, both walked):
+    spike-close entry (all)    n= 221  medMFE_R= 1.06  medMAE_R= -1.26  P1R= 52%  P2R= 34%  P3R= 26%  P5R= 20%  P8R=  9%  cont= 33%
+    rejection entry (subset)   n= 103  medMFE_R= 1.05  medMAE_R= -1.29  P1R= 53%  P2R= 29%  P3R= 22%  P5R= 15%  P8R=  7%  cont= 29%
+
+[Q6 acceptance vs rejection] level_interaction class:
+    A_broke                    n=  25  medMFE_R= 0.47  medMAE_R= -1.31  P1R= 48%  P2R= 20%  P3R= 16%  P5R= 16%  P8R=  0%  cont= 20%
+    B_swept_returned           n=  46  medMFE_R= 0.31  medMAE_R= -1.38  P1R= 30%  P2R= 24%  P3R= 20%  P5R= 13%  P8R=  9%  cont= 24%
+    C_broke_accepted           n=  89  medMFE_R= 1.49  medMAE_R= -1.12  P1R= 63%  P2R= 44%  P3R= 33%  P5R= 24%  P8R= 10%  cont= 44%
+    D_failed_immediately       n=  14  medMFE_R=  2.0  medMAE_R= -1.27  P1R= 79%  P2R= 50%  P3R= 29%  P5R= 29%  P8R= 14%  cont= 50%
+    E_open_space               n=  47  medMFE_R= 0.94  medMAE_R= -1.38  P1R= 49%  P2R= 26%  P3R= 23%  P5R= 17%  P8R= 11%  cont= 26%
+  acceptance window sensitivity (events that broke a level):
+    accept_1=ACCEPTANCE        n=  78  medMFE_R= 2.47  medMAE_R= -1.17  P1R= 77%  P2R= 58%  P3R= 44%  P5R= 33%  P8R= 12%  cont= 58%
+    accept_1=REJECTION         n=  96  medMFE_R= 0.46  medMAE_R= -1.25  P1R= 34%  P2R= 18%  P3R= 12%  P5R=  9%  P8R=  6%  cont= 18%
+    accept_2=ACCEPTANCE        n=  60  medMFE_R= 4.06  medMAE_R= -1.11  P1R= 85%  P2R= 68%  P3R= 55%  P5R= 42%  P8R= 15%  cont= 68%
+    accept_2=REJECTION         n=  66  medMFE_R=  0.2  medMAE_R= -1.27  P1R= 17%  P2R=  9%  P3R=  9%  P5R=  6%  P8R=  3%  cont=  9%
+    accept_3=ACCEPTANCE        n=  47  medMFE_R= 5.04  medMAE_R=  -1.0  P1R= 89%  P2R= 77%  P3R= 68%  P5R= 51%  P8R= 19%  cont= 77%
+    accept_3=REJECTION         n=  58  medMFE_R=  0.2  medMAE_R= -1.29  P1R= 12%  P2R=  3%  P3R=  3%  P5R=  2%  P8R=  2%  cont=  3%
+
+[Q7 OI behaviour] forward distribution by OI class:
+    ambiguous                  n=  74  medMFE_R= 1.31  medMAE_R= -1.25  P1R= 61%  P2R= 36%  P3R= 27%  P5R= 23%  P8R=  8%  cont= 36%
+    price_down_OI_down         n=  31  medMFE_R= 0.78  medMAE_R= -1.26  P1R= 42%  P2R= 29%  P3R= 19%  P5R= 13%  P8R= 13%  cont= 29%
+    price_down_OI_up           n=  45  medMFE_R= 1.05  medMAE_R= -1.29  P1R= 53%  P2R= 33%  P3R= 27%  P5R= 22%  P8R= 13%  cont= 33%
+    price_up_OI_down           n=  21  medMFE_R= 0.85  medMAE_R= -1.15  P1R= 43%  P2R= 33%  P3R= 24%  P5R= 19%  P8R=  5%  cont= 33%
+    price_up_OI_up             n=  50  medMFE_R=  1.0  medMAE_R= -1.26  P1R= 50%  P2R= 32%  P3R= 28%  P5R= 16%  P8R=  6%  cont= 32%
+
+[Q8 volume] spike-only vs spike+abnormal-volume (vol_x>=2):
+    vol_x < 2 or NA            n= 132  medMFE_R= 1.12  medMAE_R= -1.27  P1R= 55%  P2R= 33%  P3R= 26%  P5R= 20%  P8R=  9%  cont= 33%
+    vol_x >= 2                 n=  89  medMFE_R= 0.95  medMAE_R= -1.22  P1R= 49%  P2R= 34%  P3R= 25%  P5R= 18%  P8R=  9%  cont= 34%
+
+[Q9 profile location] forward distribution by profile_class:
+    NA                         n=   8  medMFE_R=10.82  medMAE_R=  -1.0  P1R= 75%  P2R= 62%  P3R= 62%  P5R= 62%  P8R= 50%  cont= 62%
+    above_VAH                  n=  14  medMFE_R= 0.85  medMAE_R= -1.53  P1R= 36%  P2R= 29%  P3R= 29%  P5R= 29%  P8R=  7%  cont= 29%
+    acceptance_outside_value   n=  48  medMFE_R= 1.81  medMAE_R= -1.17  P1R= 60%  P2R= 46%  P3R= 31%  P5R= 23%  P8R=  8%  cont= 46%
+    below_VAL                  n=  41  medMFE_R= 1.26  medMAE_R= -1.38  P1R= 56%  P2R= 27%  P3R= 22%  P5R= 15%  P8R=  7%  cont= 27%
+    inside_value               n=  72  medMFE_R= 0.78  medMAE_R= -1.27  P1R= 43%  P2R= 28%  P3R= 17%  P5R= 12%  P8R=  6%  cont= 28%
+    near_POC                   n=  38  medMFE_R= 1.12  medMAE_R= -1.11  P1R= 58%  P2R= 32%  P3R= 32%  P5R= 21%  P8R= 10%  cont= 32%
+
+[Q10 level interaction] (see Q6 table) + [Q11 structural stop]:
+    spike SL     : medR=18.0pts medMAE_R=-1.29 medMFE_R=1.05
+    rejection SL : medR=16.0pts (MAE_R/MFE_R computed on the rejection walk in the CSV columns)
+
+[Q12-15 R-reach] P(kR before invalidation), all events, headline SL:
+    1R=52%  2R=34%  3R=26%  4R=23%  5R=20%  6R=14%  8R=9%  10R=6%
+    regime CHOP        1R=52%  2R=34%  3R=26%  5R=20%  8R=9%
+    2026-09-02   n= 61  1R=57%  2R=30%  3R=25%  5R=16%
+    2026-09-03   n= 82  1R=52%  2R=38%  3R=28%  5R=22%
+    2026-09-04   n= 78  1R=49%  2R=32%  3R=24%  5R=19%
+
+[Q16 combinations worth a second-stage test]  (effect vs baseline P3R):
+    baseline P3R = 26%
+      level C_broke_accepted           n=  89  P3R= 33%  effect=+7pp
+      outside value (acc)              n=  48  P3R= 31%  effect=+5pp
+      vol_x>=2 & C_broke_accepted      n=  39  P3R= 28%  effect=+2pp
+      OI price_up_OI_up                n=  50  P3R= 28%  effect=+2pp
+      OI price_down_OI_up              n=  45  P3R= 27%  effect=+1pp
+      bullish/bearish_expansion        n= 125  P3R= 26%  effect=+1pp
+      vol_x>=2                         n=  89  P3R= 25%  effect=-1pp
+      coiled pre5<=0.6                 n=  97  P3R= 24%  effect=-2pp
+
+>>> CRUDEOIL CLASSIFICATION: INSUFFICIENT DATA
+    events=221, sessions=3 (need >=10 independent sessions, >=50 events); regimes=1. Conditional tables above are HYPOTHESES for a second-stage test once the sample is adequate -- not an edge.
+
+##############################################################################################################
+# NATURALGAS  --  237 abnormal events  |  4 sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']  |  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+##############################################################################################################
+
+[BASELINE] all events (headline = spike-close entry, spike-low/high SL):
+    ALL                        n= 237  medMFE_R=  1.0  medMAE_R= -1.17  P1R= 51%  P2R= 28%  P3R= 16%  P5R=  8%  P8R=  3%  cont= 28%
+    median R (spike SL) = 0.6 pts ; median available_R = 0.9
+
+[Q1/Q2 abnormality] by range_x bucket (research feature, not a gate):
+    range_x 1.5-2.0            n=  85  medMFE_R=  1.0  medMAE_R=  -1.2  P1R= 53%  P2R= 26%  P3R= 14%  P5R=  7%  P8R=  2%  cont= 26%
+    range_x 2.0-2.5            n=  63  medMFE_R= 1.33  medMAE_R=  -1.2  P1R= 59%  P2R= 32%  P3R= 16%  P5R=  6%  P8R=  2%  cont= 32%
+    range_x 2.5-3.0            n=  29  medMFE_R= 0.75  medMAE_R=  -1.0  P1R= 45%  P2R= 28%  P3R= 21%  P5R= 14%  P8R=  3%  cont= 28%
+    range_x 3.0-+              n=  38  medMFE_R= 0.86  medMAE_R= -1.14  P1R= 45%  P2R= 24%  P3R= 13%  P5R=  8%  P8R=  5%  cont= 24%
+  by vol_x bucket:
+    vol_x 0-1.5                n=  90  medMFE_R=  1.0  medMAE_R=  -1.2  P1R= 50%  P2R= 27%  P3R= 11%  P5R=  6%  P8R=  0%  cont= 27%
+    vol_x 1.5-2.0              n=  45  medMFE_R= 0.83  medMAE_R=  -1.2  P1R= 47%  P2R= 27%  P3R= 16%  P5R=  2%  P8R=  2%  cont= 27%
+    vol_x 2.0-3.0              n=  45  medMFE_R= 1.17  medMAE_R= -1.08  P1R= 60%  P2R= 29%  P3R= 27%  P5R= 13%  P8R=  4%  cont= 29%
+    vol_x 3.0-+                n=  57  medMFE_R= 0.91  medMAE_R= -1.17  P1R= 49%  P2R= 32%  P3R= 18%  P5R= 12%  P8R=  7%  cont= 32%
+
+[Q3 pre-spike compression] by pre5_rng_contraction quartile (lower = more coiled):
+    coiled  <=Q1               n=  60  medMFE_R=  1.0  medMAE_R= -1.17  P1R= 50%  P2R= 28%  P3R= 18%  P5R=  8%  P8R=  2%  cont= 28%
+    Q1-Q2                      n=  63  medMFE_R=  0.8  medMAE_R= -1.25  P1R= 46%  P2R= 27%  P3R= 16%  P5R=  8%  P8R=  6%  cont= 27%
+    Q2-Q3                      n=  58  medMFE_R=  1.0  medMAE_R=  -1.0  P1R= 48%  P2R= 26%  P3R= 10%  P5R=  7%  P8R=  2%  cont= 26%
+    loose  >Q3                 n=  56  medMFE_R= 1.29  medMAE_R= -1.25  P1R= 61%  P2R= 32%  P3R= 21%  P5R=  9%  P8R=  2%  cont= 32%
+
+[Q4/Q5 entry] spike-close vs rejection-candle entry (same events, both walked):
+    spike-close entry (all)    n= 237  medMFE_R=  1.0  medMAE_R= -1.17  P1R= 51%  P2R= 28%  P3R= 16%  P5R=  8%  P8R=  3%  cont= 28%
+    rejection entry (subset)   n= 122  medMFE_R= 1.07  medMAE_R= -1.25  P1R= 52%  P2R= 30%  P3R= 19%  P5R=  9%  P8R=  4%  cont= 30%
+
+[Q6 acceptance vs rejection] level_interaction class:
+    A_broke                    n=  22  medMFE_R=  0.5  medMAE_R= -1.17  P1R= 32%  P2R= 18%  P3R=  4%  P5R=  0%  P8R=  0%  cont= 18%
+    B_swept_returned           n=  42  medMFE_R= 0.27  medMAE_R=  -1.4  P1R= 26%  P2R=  7%  P3R=  2%  P5R=  2%  P8R=  0%  cont=  7%
+    C_broke_accepted           n=  90  medMFE_R= 1.12  medMAE_R= -1.07  P1R= 57%  P2R= 26%  P3R= 17%  P5R=  8%  P8R=  3%  cont= 26%
+    D_failed_immediately       n=  22  medMFE_R=  2.5  medMAE_R=  -1.0  P1R= 64%  P2R= 59%  P3R= 32%  P5R= 14%  P8R=  4%  cont= 59%
+    E_open_space               n=  61  medMFE_R=  1.6  medMAE_R= -1.33  P1R= 62%  P2R= 39%  P3R= 25%  P5R= 13%  P8R=  5%  cont= 39%
+  acceptance window sensitivity (events that broke a level):
+    accept_1=ACCEPTANCE        n=  72  medMFE_R= 1.75  medMAE_R=  -1.0  P1R= 71%  P2R= 43%  P3R= 26%  P5R= 11%  P8R=  4%  cont= 43%
+    accept_1=REJECTION         n= 104  medMFE_R=  0.5  medMAE_R=  -1.2  P1R= 31%  P2R= 12%  P3R=  5%  P5R=  3%  P8R=  1%  cont= 12%
+    accept_2=ACCEPTANCE        n=  52  medMFE_R=  2.2  medMAE_R=  -1.0  P1R= 85%  P2R= 50%  P3R= 33%  P5R= 14%  P8R=  6%  cont= 50%
+    accept_2=REJECTION         n=  78  medMFE_R=  0.4  medMAE_R= -1.25  P1R= 20%  P2R=  8%  P3R=  4%  P5R=  3%  P8R=  0%  cont=  8%
+    accept_3=ACCEPTANCE        n=  43  medMFE_R= 2.33  medMAE_R=  -1.0  P1R= 88%  P2R= 54%  P3R= 40%  P5R= 16%  P8R=  7%  cont= 53%
+    accept_3=REJECTION         n=  67  medMFE_R= 0.33  medMAE_R= -1.29  P1R= 12%  P2R=  6%  P3R=  3%  P5R=  2%  P8R=  0%  cont=  6%
+
+[Q7 OI behaviour] forward distribution by OI class:
+    ambiguous                  n=  40  medMFE_R= 0.83  medMAE_R= -1.17  P1R= 45%  P2R= 20%  P3R= 12%  P5R=  5%  P8R=  0%  cont= 20%
+    price_down_OI_down         n=  42  medMFE_R=  1.2  medMAE_R= -1.07  P1R= 60%  P2R= 29%  P3R= 14%  P5R=  7%  P8R=  5%  cont= 29%
+    price_down_OI_up           n=  59  medMFE_R= 1.17  medMAE_R=  -1.2  P1R= 52%  P2R= 30%  P3R= 15%  P5R=  7%  P8R=  2%  cont= 31%
+    price_up_OI_down           n=  34  medMFE_R=  1.0  medMAE_R=  -1.0  P1R= 53%  P2R= 29%  P3R= 18%  P5R=  9%  P8R=  0%  cont= 29%
+    price_up_OI_up             n=  62  medMFE_R= 0.91  medMAE_R= -1.25  P1R= 47%  P2R= 31%  P3R= 21%  P5R= 11%  P8R=  6%  cont= 31%
+
+[Q8 volume] spike-only vs spike+abnormal-volume (vol_x>=2):
+    vol_x < 2 or NA            n= 135  medMFE_R=  1.0  medMAE_R=  -1.2  P1R= 49%  P2R= 27%  P3R= 13%  P5R=  4%  P8R=  1%  cont= 27%
+    vol_x >= 2                 n= 102  medMFE_R= 1.17  medMAE_R= -1.11  P1R= 54%  P2R= 30%  P3R= 22%  P5R= 13%  P8R=  6%  cont= 30%
+
+[Q9 profile location] forward distribution by profile_class:
+    NA                         n=   8  medMFE_R= 2.33  medMAE_R=  -1.0  P1R= 62%  P2R= 62%  P3R= 12%  P5R=  0%  P8R=  0%  cont= 62%
+    above_VAH                  n=  20  medMFE_R= 1.17  medMAE_R= -1.33  P1R= 55%  P2R= 25%  P3R= 20%  P5R= 10%  P8R=  0%  cont= 25%
+    acceptance_outside_value   n=  52  medMFE_R= 1.07  medMAE_R= -1.13  P1R= 52%  P2R= 21%  P3R= 14%  P5R=  8%  P8R=  2%  cont= 21%
+    below_VAL                  n=  47  medMFE_R= 0.83  medMAE_R= -1.33  P1R= 49%  P2R= 36%  P3R= 23%  P5R= 13%  P8R=  4%  cont= 36%
+    inside_value               n=  85  medMFE_R=  1.0  medMAE_R= -1.17  P1R= 51%  P2R= 28%  P3R= 15%  P5R=  6%  P8R=  2%  cont= 28%
+    near_POC                   n=  25  medMFE_R=  0.8  medMAE_R=  -1.2  P1R= 48%  P2R= 20%  P3R= 12%  P5R=  8%  P8R=  8%  cont= 20%
+
+[Q10 level interaction] (see Q6 table) + [Q11 structural stop]:
+    spike SL     : medR=0.6pts medMAE_R=-1.25 medMFE_R=1.04
+    rejection SL : medR=0.5pts (MAE_R/MFE_R computed on the rejection walk in the CSV columns)
+
+[Q12-15 R-reach] P(kR before invalidation), all events, headline SL:
+    1R=51%  2R=28%  3R=16%  4R=11%  5R=8%  6R=6%  8R=3%  10R=2%
+    regime CHOP        1R=43%  2R=24%  3R=12%  5R=5%  8R=0%
+    regime TREND_DOWN  1R=53%  2R=26%  3R=17%  5R=10%  8R=4%
+    regime TREND_UP    1R=57%  2R=35%  3R=20%  5R=8%  8R=4%
+    2026-09-01   n=  5  1R=40%  2R=40%  3R=0%  5R=0%
+    2026-09-02   n= 75  1R=43%  2R=24%  3R=12%  5R=5%
+    2026-09-03   n= 83  1R=54%  2R=25%  3R=18%  5R=11%
+    2026-09-04   n= 74  1R=57%  2R=35%  3R=20%  5R=8%
+
+[Q16 combinations worth a second-stage test]  (effect vs baseline P3R):
+    baseline P3R = 16%
+      vol_x>=2                         n= 102  P3R= 22%  effect=+5pp
+      OI price_up_OI_up                n=  62  P3R= 21%  effect=+4pp
+      level C_broke_accepted           n=  90  P3R= 17%  effect=+0pp
+      vol_x>=2 & C_broke_accepted      n=  44  P3R= 16%  effect=-1pp
+      coiled pre5<=0.6                 n=  70  P3R= 16%  effect=-1pp
+      OI price_down_OI_up              n=  59  P3R= 15%  effect=-1pp
+      outside value (acc)              n=  52  P3R= 14%  effect=-3pp
+      bullish/bearish_expansion        n= 121  P3R= 10%  effect=-7pp
+
+>>> NATURALGAS CLASSIFICATION: INSUFFICIENT DATA
+    events=237, sessions=4 (need >=10 independent sessions, >=50 events); regimes=3. Conditional tables above are HYPOTHESES for a second-stage test once the sample is adequate -- not an edge.
+
+##############################################################################################################
+# NIFTY  --  30 abnormal events  |  4 sessions ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']  |  regimes ['CHOP', 'TREND_DOWN']
+##############################################################################################################
+
+[BASELINE] all events (headline = spike-close entry, spike-low/high SL):
+    ALL                        n=  30  medMFE_R= 0.81  medMAE_R= -1.06  P1R= 47%  P2R= 20%  P3R= 10%  P5R=  3%  P8R=  0%  cont= 20%
+    median R (spike SL) = 20.4 pts ; median available_R = 0.7
+
+[Q1/Q2 abnormality] by range_x bucket (research feature, not a gate):
+    range_x 1.5-2.0            n=  17  medMFE_R= 1.35  medMAE_R= -0.82  P1R= 59%  P2R= 24%  P3R= 18%  P5R=  6%  P8R=  0%  cont= 24%
+    range_x 2.0-2.5            n=0
+    range_x 2.5-3.0            n=   1  medMFE_R=  1.3  medMAE_R= -0.44  P1R=100%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+    range_x 3.0-+              n=0
+  by vol_x bucket:
+    vol_x 0-1.5                n=  14  medMFE_R= 1.35  medMAE_R= -0.82  P1R= 64%  P2R= 21%  P3R= 21%  P5R=  7%  P8R=  0%  cont= 21%
+    vol_x 1.5-2.0              n=   8  medMFE_R=  0.3  medMAE_R=  -1.1  P1R= 25%  P2R= 12%  P3R=  0%  P5R=  0%  P8R=  0%  cont= 12%
+    vol_x 2.0-3.0              n=   6  medMFE_R= 1.89  medMAE_R= -0.81  P1R= 50%  P2R= 33%  P3R=  0%  P5R=  0%  P8R=  0%  cont= 33%
+    vol_x 3.0-+                n=   2  medMFE_R= 0.81  medMAE_R= -1.51  P1R=  0%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+
+[Q3 pre-spike compression] by pre5_rng_contraction quartile (lower = more coiled):
+    coiled  <=Q1               n=   8  medMFE_R= 1.89  medMAE_R= -0.92  P1R= 62%  P2R= 38%  P3R= 12%  P5R= 12%  P8R=  0%  cont= 38%
+    Q1-Q2                      n=   7  medMFE_R= 0.66  medMAE_R= -1.25  P1R= 29%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+    Q2-Q3                      n=   7  medMFE_R= 1.45  medMAE_R= -0.81  P1R= 57%  P2R= 43%  P3R= 29%  P5R=  0%  P8R=  0%  cont= 43%
+    loose  >Q3                 n=   7  medMFE_R= 0.18  medMAE_R= -1.06  P1R= 43%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+
+[Q4/Q5 entry] spike-close vs rejection-candle entry (same events, both walked):
+    spike-close entry (all)    n=  30  medMFE_R= 0.81  medMAE_R= -1.06  P1R= 47%  P2R= 20%  P3R= 10%  P5R=  3%  P8R=  0%  cont= 20%
+    rejection entry (subset)   n=  15  medMFE_R= 0.81  medMAE_R= -0.92  P1R= 47%  P2R= 20%  P3R= 13%  P5R=  7%  P8R=  0%  cont= 20%
+
+[Q6 acceptance vs rejection] level_interaction class:
+    A_broke                    n=   4  medMFE_R=  1.3  medMAE_R= -0.62  P1R= 50%  P2R= 25%  P3R= 25%  P5R=  0%  P8R=  0%  cont= 25%
+    B_swept_returned           n=   9  medMFE_R= 0.35  medMAE_R= -1.09  P1R= 22%  P2R= 11%  P3R=  0%  P5R=  0%  P8R=  0%  cont= 11%
+    C_broke_accepted           n=  12  medMFE_R= 1.39  medMAE_R= -0.82  P1R= 75%  P2R= 33%  P3R= 17%  P5R=  8%  P8R=  0%  cont= 33%
+    D_failed_immediately       n=   1  medMFE_R= 1.51  medMAE_R= -0.63  P1R=100%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+    E_open_space               n=   4  medMFE_R= 0.27  medMAE_R= -1.51  P1R=  0%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+  acceptance window sensitivity (events that broke a level):
+    accept_1=ACCEPTANCE        n=  14  medMFE_R= 1.39  medMAE_R= -0.92  P1R= 71%  P2R= 36%  P3R= 21%  P5R=  7%  P8R=  0%  cont= 36%
+    accept_1=REJECTION         n=  12  medMFE_R= 0.18  medMAE_R= -0.81  P1R= 33%  P2R=  8%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  8%
+    accept_2=ACCEPTANCE        n=  11  medMFE_R= 1.39  medMAE_R= -1.08  P1R= 82%  P2R= 46%  P3R= 27%  P5R=  9%  P8R=  0%  cont= 45%
+    accept_2=REJECTION         n=  11  medMFE_R= 0.12  medMAE_R=  -0.9  P1R= 27%  P2R=  9%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  9%
+    accept_3=ACCEPTANCE        n=   8  medMFE_R=  2.3  medMAE_R= -0.82  P1R= 88%  P2R= 62%  P3R= 38%  P5R= 12%  P8R=  0%  cont= 62%
+    accept_3=REJECTION         n=  10  medMFE_R= 0.12  medMAE_R=  -0.9  P1R= 20%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+
+[Q7 OI behaviour] forward distribution by OI class:
+    ambiguous                  n=  12  medMFE_R= 0.59  medMAE_R= -1.06  P1R= 33%  P2R= 17%  P3R=  8%  P5R=  0%  P8R=  0%  cont= 17%
+    price_down_OI_down         n=   5  medMFE_R= 1.51  medMAE_R= -0.63  P1R= 60%  P2R= 20%  P3R= 20%  P5R= 20%  P8R=  0%  cont= 20%
+    price_down_OI_up           n=   3  medMFE_R=  1.3  medMAE_R= -0.44  P1R=100%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+    price_up_OI_down           n=   4  medMFE_R=  2.2  medMAE_R=  -1.1  P1R= 50%  P2R= 50%  P3R= 25%  P5R=  0%  P8R=  0%  cont= 50%
+    price_up_OI_up             n=   6  medMFE_R= 0.66  medMAE_R= -1.25  P1R= 33%  P2R= 17%  P3R=  0%  P5R=  0%  P8R=  0%  cont= 17%
+
+[Q8 volume] spike-only vs spike+abnormal-volume (vol_x>=2):
+    vol_x < 2 or NA            n=  22  medMFE_R= 1.07  medMAE_R= -0.92  P1R= 50%  P2R= 18%  P3R= 14%  P5R=  4%  P8R=  0%  cont= 18%
+    vol_x >= 2                 n=   8  medMFE_R= 0.81  medMAE_R= -1.06  P1R= 38%  P2R= 25%  P3R=  0%  P5R=  0%  P8R=  0%  cont= 25%
+
+[Q9 profile location] forward distribution by profile_class:
+    NA                         n=   6  medMFE_R= 0.27  medMAE_R= -1.22  P1R= 17%  P2R= 17%  P3R=  0%  P5R=  0%  P8R=  0%  cont= 17%
+    above_VAH                  n=   4  medMFE_R= 0.59  medMAE_R= -1.09  P1R= 25%  P2R= 25%  P3R= 25%  P5R=  0%  P8R=  0%  cont= 25%
+    acceptance_outside_value   n=   7  medMFE_R= 1.35  medMAE_R= -0.92  P1R= 86%  P2R= 29%  P3R= 14%  P5R=  0%  P8R=  0%  cont= 29%
+    below_VAL                  n=   5  medMFE_R= 0.81  medMAE_R= -0.76  P1R= 40%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+    inside_value               n=   4  medMFE_R= 2.13  medMAE_R= -0.41  P1R= 75%  P2R= 50%  P3R= 25%  P5R= 25%  P8R=  0%  cont= 50%
+    near_POC                   n=   4  medMFE_R= 0.46  medMAE_R= -1.06  P1R= 25%  P2R=  0%  P3R=  0%  P5R=  0%  P8R=  0%  cont=  0%
+
+[Q10 level interaction] (see Q6 table) + [Q11 structural stop]:
+    spike SL     : medR=18.4pts medMAE_R=-0.92 medMFE_R=0.81
+    rejection SL : medR=13.4pts (MAE_R/MFE_R computed on the rejection walk in the CSV columns)
+
+[Q12-15 R-reach] P(kR before invalidation), all events, headline SL:
+    1R=47%  2R=20%  3R=10%  4R=7%  5R=3%  6R=3%  8R=0%  10R=0%
+    regime CHOP        1R=39%  2R=22%  3R=6%  5R=0%  8R=0%
+    regime TREND_DOWN  1R=58%  2R=17%  3R=17%  5R=8%  8R=0%
+    2026-09-01   n=  1  1R=0%  2R=0%  3R=0%  5R=0%
+    2026-09-02   n=  9  1R=33%  2R=22%  3R=11%  5R=0%
+    2026-09-03   n= 11  1R=64%  2R=18%  3R=18%  5R=9%
+    2026-09-04   n=  9  1R=44%  2R=22%  3R=0%  5R=0%
+
+[Q16 combinations worth a second-stage test]  (effect vs baseline P3R):
+    baseline P3R = 10%
+      level C_broke_accepted           n=  12  P3R= 17%  effect=+7pp
+      outside value (acc)              n=   7  P3R= 14%  effect=+4pp
+      coiled pre5<=0.6                 n=  28  P3R= 11%  effect=+1pp
+      bullish/bearish_expansion        n=  17  P3R=  6%  effect=-4pp
+      vol_x>=2                         n=   8  P3R=  0%  effect=-10pp
+      OI price_up_OI_up                n=   6  P3R=  0%  effect=-10pp
+      OI price_down_OI_up              n=   3  P3R=  n/a  effect=n/a
+      vol_x>=2 & C_broke_accepted      n=   1  P3R=  n/a  effect=n/a
+
+>>> NIFTY CLASSIFICATION: INSUFFICIENT DATA
+    events=30, sessions=4 (need >=10 independent sessions, >=50 events); regimes=2. Conditional tables above are HYPOTHESES for a second-stage test once the sample is adequate -- not an edge.

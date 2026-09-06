@@ -457,3 +457,93 @@ window. Profile-location vs MFE shows no strong edge at this n.
 ```
 cd backend && python scripts/orderflow_spike_ledger.py            # rebuild the CSV + summary
 ```
+
+---
+
+## 10. Event-anatomy research layer (2026-09-06) — RESEARCH ONLY, all INSUFFICIENT DATA
+
+`backend/scripts/orderflow_event_anatomy.py` → one row per abnormal event
+(`data/orderflow_event_anatomy.csv`, 488 events / 4 sessions; KNOWN-AT-ENTRY
+columns first, OUTCOME columns after — §16 causal separation) + a conditional
+forward-distribution report (`data/orderflow_event_anatomy_report_2026-09-06.txt`).
+Abnormality is a *feature* not a gate (`range_x`, `range_pctile`, `range_atr`,
+`vol_x`, `vol_pctile`, displacement all recorded); compression is a continuous
+feature; **no score, no weights** (§14). Nothing wired to live.
+
+### The 16 research questions (answers are HYPOTHESES — 3–4 sessions)
+
+1. **What defines an abnormal event?** A range or volume expansion vs the
+   causal rolling median / ATR / percentile. Recorded as continuous features;
+   a modest expansion (`range_x` ~1.5–2.5) behaves best.
+2. **Does the threshold vary by symbol/regime?** Yes, and it is
+   **non-monotonic**: CRUDE `range_x ≥ 3` → P3R 9 % vs `range_x 1.5–2.0` → 30 %;
+   the largest spikes are exhaustion, not continuation. NIFTY produces almost
+   no range spikes at all (30 events / 4 sessions).
+3. **Does pre-spike compression help?** **No.** CRUDE `coiled ≤Q1` P3R 21 % vs
+   `loose >Q3` P3R 34 %; NATGAS/NIFTY non-monotonic. Confirms §8 — compression
+   must not be a gate.
+4/5. **Spike candle vs post-spike reaction entry?** Spike-close and
+   rejection-candle entry give **near-identical** forward distributions on the
+   anatomy layer. The information is not in *which candle you enter on* — it is
+   in whether **acceptance** follows (see 6).
+6. **Does acceptance add predictive value?** **This is the one strong,
+   consistent signal.** Measured as "close beyond the broken level held for N
+   subsequent completed candles":
+
+   | accept_3 (3-bar hold) | NIFTY | NATGAS | CRUDE |
+   |----------------------|:-----:|:------:|:-----:|
+   | ACCEPTANCE — med MFE_R / P3R / continuation | 2.3R / 38 % / 62 % | 2.3R / 40 % / 53 % | **5.0R / 68 % / 77 %** |
+   | REJECTION — med MFE_R / P3R / continuation | 0.1R / 0 % / 0 % | 0.3R / 3 % / 6 % | 0.2R / 3 % / 3 % |
+   (n per bucket 43–67). Window sensitivity: the separation grows from
+   accept_1 → accept_2 → accept_3. `level_interaction = C_broke_accepted` is a
+   coarser proxy with the same sign (+7 pp P3R on CRUDE).
+7. **Does OI behaviour add value?** **No clear effect** — every price×OI bucket
+   sits within ±5 pp of baseline P3R on all three symbols.
+8. **Does abnormal volume add value?** **Marginal / none.** `vol_x ≥ 2`:
+   CRUDE ±1 pp, NIFTY −14 pp, NATGAS +5 pp. Not a reliable filter.
+9. **Does profile location add value?** **Weak.** `acceptance_outside_value`
+   and `near_POC` run a few pp above `inside_value` on CRUDE (+5 pp) but the
+   opposite on NATGAS. Not a gate.
+10. **Does level interaction add value?** Modest, and it tracks acceptance:
+    `C_broke_accepted` / `D_failed_immediately` > `B_swept_returned`
+    (CRUDE med MFE_R 1.5R / 2.0R vs 0.3R).
+11. **Best structural stop MAE/MFE?** The **spike low/high** is a valid
+    invalidation — median MAE_R ≈ −1.1 to −1.3 (rarely blown through by much);
+    the rejection-candle stop is ~10–20 % tighter in points. Per-stop MAE_R /
+    MFE_R for spike / rejection / prior-structure stops are in the CSV.
+12–15. **P(kR before invalidation)** (all events, spike-SL):
+
+    | | 1R | 2R | 3R | 5R | 8R | 10R |
+    |--|--:|--:|--:|--:|--:|--:|
+    | NIFTY  | 47 % | 20 % | 10 % | 3 % | 0 % | 0 % |
+    | NATGAS | 51 % | 28 % | 16 % | 8 % | 3 % | 2 % |
+    | CRUDE  | 52 % | 34 % | 26 % | 20 % | 9 % | 6 % |
+    A fixed 3R target is realistic for **CRUDE**, aggressive for NIFTY/NATGAS —
+    **but conditioned on acceptance, CRUDE P3R rises to 55–68 % and P5R to
+    42–51 %**, which is the regime where a 3–5R target makes sense.
+16. **Combinations worth a second-stage test** (once ≥10 sessions):
+    (a) **ACCEPTANCE within 2–3 bars of a level break** — dominant, all symbols;
+    (b) `C_broke_accepted` level interaction (coarser proxy);
+    (c) `acceptance_outside_value` profile class (CRUDE only, small).
+    Everything else — volume, OI, compression, spike magnitude, expansion
+    class — showed no usable effect and does **not** warrant a second stage.
+    (NATGAS: pure `expansion` candles did −7 pp vs baseline — a big body is
+    not bullish for continuation.)
+
+### FINAL CLASSIFICATION
+
+| symbol | classification | basis |
+|--------|----------------|-------|
+| **NIFTY PREMIUM**  | **INSUFFICIENT DATA** | 30 events / 4 sessions / 2 regimes; range spikes barely occur. |
+| **NATGAS PREMIUM** | **INSUFFICIENT DATA** | 237 events / 4 sessions / 3 regimes; acceptance signal present but tails thin (P5R ~8–16 %). |
+| **CRUDE PREMIUM**  | **INSUFFICIENT DATA** | 221 events / 3 sessions / **1 regime (CHOP only)**; the acceptance signal is strongest here but has never been seen in a trending CRUDE session. |
+
+**No edge is claimed. No production pattern created or enabled. No live
+behaviour changed. No orders armed.** The one hypothesis that survives to a
+second stage is *acceptance-confirmed continuation after an abnormal level
+break* — to be re-tested with a proper train / validation / out-of-sample
+split once ≥10 independent sessions across regimes exist.
+
+```
+cd backend && python scripts/orderflow_event_anatomy.py            # rebuild CSV + report
+```
