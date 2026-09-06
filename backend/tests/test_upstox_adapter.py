@@ -34,6 +34,17 @@ def _env(monkeypatch):
     monkeypatch.setenv("UPSTOX_API_SECRET", "test-secret-value")
     monkeypatch.setenv("UPSTOX_REDIRECT_URI", "http://127.0.0.1:7060/api/upstox/callback")
     monkeypatch.delenv("UPSTOX_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("UPSTOX_ANALYTICS_TOKEN", raising=False)
+
+
+def _router(rules):
+    """rules: list of (substr_in_url, _Resp). Returns a fake _http."""
+    def fake(method, url, **k):
+        for sub, resp in rules:
+            if sub in url:
+                return resp
+        return _Resp(200, {"status": "success", "data": []})
+    return fake
 
 
 # ---------------------------------------------------------------- auth_health
@@ -41,51 +52,58 @@ def test_health_no_token(monkeypatch):
     monkeypatch.setattr(U, "_http", lambda *a, **k: _Resp(200))
     h = U.auth_health()
     assert h["credentials_configured"] is True
+    assert h["token_kind"] == "none"
     assert h["access_token_present"] is False
-    assert h["access_token_valid"] is None            # can't check without a token
+    assert h["access_token_valid"] is None
     assert "test-secret-value" not in str(h) and "test-key-uuid" not in str(h)
 
 
-def test_health_valid_token(monkeypatch):
-    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "daily-token-xyz")
-    monkeypatch.setattr(U, "_http", lambda method, url, **k: _Resp(200, {"data": ["2024-08-29"]}))
+def test_health_analytics_token_all_read_apis_ok_expired_plus_gated(monkeypatch):
+    monkeypatch.setenv("UPSTOX_ANALYTICS_TOKEN", "analytics-token-xyz")
+    monkeypatch.setattr(U, "_http", _router([
+        ("/v2/expired-instruments/expiries", _Resp(401, {"errors": [{"errorCode": "UDAPI1149"}]})),
+        ("/v2/historical-candle/", _Resp(200, {"status": "success", "data": {"candles": []}})),
+        ("/v2/option/chain", _Resp(200, {"status": "success", "data": []})),
+        ("/v2/market/holidays", _Resp(200, {"status": "success", "data": []})),
+    ]))
     h = U.auth_health()
-    assert h["access_token_present"] is True
+    assert h["token_kind"] == "analytics"
     assert h["access_token_valid"] is True
-    assert h["api_reachable"] is True
-    assert h.get("expired_instruments_api") == "OK"
-    assert "daily-token-xyz" not in str(h)
+    assert h["historical_data_api"] == "OK"
+    assert h["option_chain_api"] == "OK"
+    assert h["market_information_api"] == "OK"
+    assert "Upstox Plus subscription required" in h["expired_instruments_api"]
+    assert h["note"] == "Upstox Plus subscription required"
+    assert "analytics-token-xyz" not in str(h)
 
 
-def test_health_expired_token(monkeypatch):
+def test_health_expired_token_invalid(monkeypatch):
     monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "stale")
-    monkeypatch.setattr(U, "_http", lambda method, url, **k:
-                        _Resp(401, {"status": "error", "errors": [{"errorCode": "UDAPI100050",
-                                                                   "message": "Invalid token"}]}))
+    monkeypatch.setattr(U, "_http", _router([
+        ("/v2/historical-candle/", _Resp(401, {"errors": [{"errorCode": "UDAPI100050"}]})),
+    ]))
     h = U.auth_health()
-    assert h["access_token_present"] is True
+    assert h["token_kind"] == "oauth"
     assert h["access_token_valid"] is False
-    assert "UDAPI100050" in h["note"] and "fresh token" in h["note"]
+    assert "regenerate" in h["note"].lower() or "invalid" in h["note"].lower()
 
 
-def test_health_plus_plan_gate(monkeypatch):
-    """Valid token, but the Expired Instruments API needs an Upstox Plus plan."""
-    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "analytics-token")
-    monkeypatch.setattr(U, "_http", lambda method, url, **k:
-                        _Resp(401, {"status": "error", "errors": [{"errorCode": "UDAPI1149",
-                                                                   "message": "Plus plan required"}]}))
+def test_health_static_ip_gate_on_historical(monkeypatch):
+    monkeypatch.setenv("UPSTOX_ANALYTICS_TOKEN", "tok")
+    monkeypatch.setattr(U, "_http", _router([
+        ("/v2/historical-candle/", _Resp(401, {"errors": [{"errorCode": "UDAPI1221"}]})),
+    ]))
     h = U.auth_health()
-    assert h["access_token_valid"] is True                 # the token is fine
-    assert "Plus" in h["expired_instruments_api"] and "UDAPI1149" in h["expired_instruments_api"]
+    assert "static-IP" in h["historical_data_api"]
 
 
-def test_health_static_ip_gate(monkeypatch):
-    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "tok")
-    monkeypatch.setattr(U, "_http", lambda method, url, **k:
-                        _Resp(401, {"errors": [{"errorCode": "UDAPI1221", "message": "static IP"}]}))
-    h = U.auth_health()
-    assert h["access_token_valid"] is True
-    assert "static-IP" in h["expired_instruments_api"]
+def test_analytics_token_is_preferred_over_oauth(monkeypatch):
+    monkeypatch.setenv("UPSTOX_ANALYTICS_TOKEN", "ANALYTICS")
+    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "OAUTH")
+    c = U._creds()
+    assert c["access_token"] == "ANALYTICS" and c["token_kind"] == "analytics"
+    monkeypatch.delenv("UPSTOX_ANALYTICS_TOKEN")
+    assert U._creds()["access_token"] == "OAUTH" and U._creds()["token_kind"] == "oauth"
 
 
 def test_health_not_configured(monkeypatch):
@@ -151,7 +169,30 @@ def test_expired_wrappers_build_documented_paths(monkeypatch):
 def test_interval_guard():
     with pytest.raises(ValueError):
         U.get_expired_historical_candles("k", "7minute", "2024-01-01", "2024-01-01")
+    with pytest.raises(ValueError):
+        U.get_historical_candles("k", "7minute", "2024-01-01", "2024-01-01")
     assert set(U.INTERVALS) == {"1minute", "3minute", "5minute", "15minute", "30minute", "day"}
+
+
+def test_readonly_market_wrappers_build_paths(monkeypatch):
+    calls = {}
+
+    def fake(method, url, **k):
+        calls.setdefault("urls", []).append(url)
+        calls["params"] = k.get("params", {})
+        return _Resp(200, {"status": "success", "data": []})
+
+    monkeypatch.setenv("UPSTOX_ANALYTICS_TOKEN", "tok")
+    monkeypatch.setattr(U, "_http", fake)
+
+    U.get_historical_candles("NSE_INDEX|Nifty 50", "1minute", "2024-08-30", "2024-08-29")
+    assert "/v2/historical-candle/" in calls["urls"][-1] and "/1minute/2024-08-30/2024-08-29" in calls["urls"][-1]
+    U.get_option_chain("NSE_INDEX|Nifty 50", "2026-09-30")
+    assert calls["urls"][-1].endswith("/v2/option/chain") and calls["params"]["expiry_date"] == "2026-09-30"
+    U.get_market_holidays()
+    assert calls["urls"][-1].endswith("/v2/market/holidays")
+    U.get_ltp("NSE_INDEX|Nifty 50")
+    assert calls["urls"][-1].endswith("/v2/market-quote/ltp")
 
 
 # ---------------------------------------------------------------- no hardcoded secrets
