@@ -511,6 +511,276 @@
         "Per-expiry rows -> needs continuous-contract stitching.",
         "Turnover column header has stray whitespace."
       ]
+    },
+    {
+      "dataset_ref": "sandeepkapri/banknifty-data-upto-2024",
+      "title": "Bank Nifty Data 1-minute to 1-day",
+      "source": "https://www.kaggle.com/datasets/sandeepkapri/banknifty-data-upto-2024",
+      "download_date": "2026-09-06",
+      "local_dir": "data/historical/kaggle/sandeepkapri__banknifty-data-upto-2024",
+      "files": [
+        {
+          "original_filename": "sandeepkapri__banknifty-data-upto-2024/bank-nifty-5m-data.csv",
+          "size_bytes": 10856102,
+          "sha256": "d2a00c3d85fef47b3c6dcc85f0b50bbe38fc1e6a0a78065c809021ba72faf3ec",
+          "columns": [
+            "Instrument",
+            "Date",
+            "Time",
+            "Open",
+            "High",
+            "Low",
+            "Close"
+          ],
+          "data_rows": 171019,
+          "first_row": [
+            "Banknifty",
+            "09-01-2015",
+            "9:15:00",
+            "18845.9",
+            "18864",
+            "18790.2",
+            "18849.25"
+          ],
+          "last_row": [
+            "Banknifty",
+            "09-04-2024",
+            "12:35:00",
+            "48836.75",
+            "48859.1",
+            "48823.75",
+            "48843.55"
+          ]
+        },
+        {
+          "original_filename": "sandeepkapri__banknifty-data-upto-2024/bank-nifty-1m-data.csv",
+          "size_bytes": 67508825,
+          "sha256": "5826b09aa91494408045a1454121e62e4aad79677269e4c34f226d27bf12dffa",
+          "columns": [
+            "Instrument",
+            "Date",
+            "Time",
+            "Open",
+            "High",
+            "Low",
+            "Close"
+          ],
+          "data_rows": 1046599,
+          "first_row": [
+            "Banknifty",
+            "09-01-2015",
+            "9:15:00",
+            "18845.9",
+            "18845.9",
+            "18801.7",
+            "18801.7"
+          ],
+          "last_row": [
+            "Banknifty",
+            "22-04-2026",
+            "15:29:00",
+            "57094",
+            "57119.95",
+            "57079.1",
+            "57114.9"
+          ]
+        }
+      ],
+      "instrument_type": "cash index (spot)",
+      "exchange": "NSE",
+      "symbols": [
+        "BANKNIFTY"
+      ],
+      "timeframe": "5min + 1min",
+      "data_kind": "OHLC bars",
+      "date_range": "5m: 2015-01-09..2024-04-09 ; 1m: 2015-01-09..2026-04-22",
+      "observability": {
+        "OHLC": "OBSERVABLE",
+        "volume": "UNOBSERVABLE (no column)",
+        "OI": "UNOBSERVABLE",
+        "tick": "UNOBSERVABLE",
+        "L1_bid_ask": "UNOBSERVABLE",
+        "L2_depth": "UNOBSERVABLE",
+        "trade_side_aggressor": "UNOBSERVABLE",
+        "timestamp_resolution": "5min / 1min, naive IST (DD-MM-YYYY + HH:MM:SS)"
+      },
+      "suitability": "A - BANKNIFTY 5m OHLC (no volume). 5m file clean; 1m file has ~3.7k dup bars + ~10.7k off-grid (:01s) rows.",
+      "license": "MIT (README/LICENSE in the dataset)",
+      "known_limitations": [
+        "Cash INDEX, not the BANKNIFTY future.",
+        "No volume, no OI.",
+        "5m ends 2024-04-09 (stale ~2yr).",
+        "1m has duplicate bars + second-level jitter -> use the 5m file.",
+        "Superseded for latest data by debashis74017 'NIFTY BANK_5minute.csv' (to 2026-05-18)."
+      ]
+    },
+    {
+      "dataset_ref": "naveennas/metals-price-historical-data-mcx-data-7-metals",
+      "title": "Metals Price Historical Data (MCX Data - 7 Metals)",
+      "source": "https://www.kaggle.com/datasets/naveennas/metals-price-historical-data-mcx-data-7-metals",
+      "download_date": "2026-09-06",
+      "local_dir": "data/historical/kaggle/naveennas__metals-price-historical-data-mcx-data-7-metals",
+      "files": [
+        {
+          "original_filename": "naveennas__metals-price-historical-data-mcx-data-7-metals/Refined Gold Historical Data.csv",
+          "size_bytes": 181710,
+          "sha256": "ac300a1e07bd10476db0b7b1d3413664121374b8c7bc3fe2b230d3424df2fcd9",
+          "columns": [
+            "Date",
+            "Price",
+            "Open",
+            "High",
+            "Low",
+            "Vol.",
+            "Change %"
+          ],
+          "data_rows": 2760,
+          "first_row": [
+            "30-08-2024",
+            "71,864",
+            "71,900",
+            "71,909",
+            "71,856",
+            "0.45K",
+            "-0.45%"
+          ],
+          "last_row": [
+            "01-01-2014",
+            "28,418",
+            "28,400",
+            "28,490",
+            "28,390",
+            "2.79K",
+            "-0.01%"
+          ]
+        },
+        {
+          "original_filename": "naveennas__metals-price-historical-data-mcx-data-7-metals/Silver Historical Data.csv",
+          "size_bytes": 182961,
+          "sha256": "8d5fc00d22b2cd217dde7bd67e039e462d5e014dd4f64f27a658424cb0722c66",
+          "columns": [
+            "Date",
+            "Price",
+            "Open",
+            "High",
+            "Low",
+            "Vol.",
+            "Change %"
+          ],
+          "data_rows": 2759,
+          "first_row": [
+            "30-08-2024",
+            "84,300",
+            "84,528",
+            "84,619",
+            "84,250",
+            "0.49K",
+            "-0.67%"
+          ],
+          "last_row": [
+            "01-01-2014",
+            "43,876",
+            "43,870",
+            "44,034",
+            "43,735",
+            "2.30K",
+            "0.10%"
+          ]
+        }
+      ],
+      "instrument_type": "MCX daily price series (spot/near-month proxy, not stated)",
+      "exchange": "MCX",
+      "symbols": [
+        "GOLD",
+        "SILVER"
+      ],
+      "timeframe": "DAILY",
+      "data_kind": "daily OHLC + daily volume",
+      "date_range": "2014-01-01 .. 2024-08-30 (~2758 daily rows each)",
+      "observability": {
+        "OHLC": "OBSERVABLE (daily)",
+        "volume": "OBSERVABLE (daily, 'Vol.' in thousands, string like '7.88K')",
+        "OI": "UNOBSERVABLE (no column)",
+        "tick": "UNOBSERVABLE",
+        "L1_bid_ask": "UNOBSERVABLE",
+        "L2_depth": "UNOBSERVABLE",
+        "trade_side_aggressor": "UNOBSERVABLE",
+        "timestamp_resolution": "1 day (DD-MM-YYYY)"
+      },
+      "suitability": "A (DAILY only) - genuine MCX Gold/Silver in INR (Gold ~71,864 / Silver ~84,300 on 2024-08-30 = correct MCX scale). Daily fallback; NO intraday MCX Gold/Silver exists on Kaggle.",
+      "license": "not declared on Kaggle API metadata; local research use only, not redistributed",
+      "known_limitations": [
+        "DAILY resolution only.",
+        "'Vol.' is a formatted string in thousands.",
+        "Instrument representation (spot vs near-month future) not stated by the uploader.",
+        "Latest 2024-08-30 (stale).",
+        "investing.com-style scrape (Price/Open/High/Low/Vol./Change%)."
+      ]
+    },
+    {
+      "dataset_ref": "prathamsatani/s-and-p-bse-sensex-01-apr-23-to-15-dec-23",
+      "title": "S&P BSE Sensex daily",
+      "source": "https://www.kaggle.com/datasets/prathamsatani/s-and-p-bse-sensex-01-apr-23-to-15-dec-23",
+      "download_date": "2026-09-06",
+      "local_dir": "data/historical/kaggle/prathamsatani__s-and-p-bse-sensex-01-apr-23-to-15-dec-23",
+      "files": [
+        {
+          "original_filename": "prathamsatani__s-and-p-bse-sensex-01-apr-23-to-15-dec-23/dataset_total.csv",
+          "size_bytes": 35509,
+          "sha256": "a40e3ee78f84b64b4dfca0f87f887f47843d3fb3a4faa674ea7ff9215c1b5f45",
+          "columns": [
+            "Date",
+            "Open",
+            "High",
+            "Low",
+            "Close",
+            "XYZ"
+          ],
+          "data_rows": 672,
+          "first_row": [
+            "1-April-2021",
+            "49868.53",
+            "50092.48",
+            "49478.53",
+            "50029.83",
+            ""
+          ],
+          "last_row": [
+            "15-December-2023",
+            "70804.13",
+            "71605.76",
+            "70655.97",
+            "71483.75",
+            ""
+          ]
+        }
+      ],
+      "instrument_type": "cash index (spot)",
+      "exchange": "BSE",
+      "symbols": [
+        "SENSEX"
+      ],
+      "timeframe": "DAILY",
+      "data_kind": "daily OHLC",
+      "date_range": "2021-04-01 .. 2023-12-15 (672 daily rows)",
+      "observability": {
+        "OHLC": "OBSERVABLE (daily)",
+        "volume": "UNOBSERVABLE",
+        "OI": "UNOBSERVABLE",
+        "tick": "UNOBSERVABLE",
+        "L1_bid_ask": "UNOBSERVABLE",
+        "L2_depth": "UNOBSERVABLE",
+        "trade_side_aggressor": "UNOBSERVABLE",
+        "timestamp_resolution": "1 day (DD-Month-YYYY)"
+      },
+      "suitability": "C (weak) - the ONLY SENSEX dataset with usable OHLC, but DAILY, only ~2.7 yr, ends 2023-12-15, trailing empty 'XYZ' column. No SENSEX intraday exists on Kaggle. Not for backtesting.",
+      "license": "not declared on Kaggle API metadata; local research use only, not redistributed",
+      "known_limitations": [
+        "DAILY only.",
+        "~2.7 years, ends 2023-12-15 (stale).",
+        "Title date range wrong (says Apr-23 start; data starts Apr-2021).",
+        "Empty trailing column 'XYZ'."
+      ]
     }
   ],
   "NIFTY_FUTURES_INTRADAY_SEARCH_2026_09_06": {
@@ -524,5 +794,34 @@
       "brtnsmth/intraday-market-data": "REJECT - ThinkOrSwim/US instruments, not NSE.",
       "ranjan15/niftyfutures-tick-by-tick-level-5-depth-data": "ONLY genuine NIFTY-FUTURES intraday with real volume+OI -- ONE session (2025-04-28). Resampled to 5m in scripts/orderflow_spike_futures_research.py; N=1 => NOT VALIDATED."
     }
+  },
+  "INSTRUMENT_SEARCH_2026_09_06_round2": {
+    "BANKNIFTY": "debashis74017 'NIFTY BANK_5minute.csv' (5m INDEX 2015..2026-05-18, no vol) + sandeepkapri (5m to 2024). Both cash index.",
+    "SENSEX": "NO intraday. Only prathamsatani daily 2021-2023 (weak). BSE SENSEX intraday absent from Kaggle.",
+    "GOLD_MCX": "NO intraday. naveennas daily 2014-2024 (genuine MCX INR). anshbhardwaj 'MCX Gold' REJECTED = XAU/USD (COMEX) mislabeled, USD/oz prices, forward-filled duplicate 5s bars, broken 'Unnamed' header; 712MB file deleted, not kept.",
+    "SILVER_MCX": "NO intraday. naveennas daily. anshbhardwaj SilverMCX (860MB) NOT downloaded - same owner/format/defect as the rejected Gold file.",
+    "CRUDEOIL_MCX": "NONE on Kaggle (confirmed again).",
+    "NATURALGAS_MCX": "NONE on Kaggle (confirmed again).",
+    "NIFTY_FUTURES_intraday": "NONE. rbtj1729 = DAILY (with real OI); ranjan15 = 1 session."
+  },
+  "NORMALIZED_IMPORT": {
+    "db": "data/historical/kaggle/research_historical.db (table normalized_bars) -- SEPARATE research DB, NOT market_history.db / market_candles / any production table. 176 MB, git-ignored (local only).",
+    "inventory": "data/historical/kaggle/inventory.csv (tracked)",
+    "importer": "scripts/kaggle_historical_import.py",
+    "normalized_rows_in_db": 598276,
+    "note": "DB holds 5m + daily. ~4.34M 1m rows were parsed, validated and inventoried, then PRUNED from the DB (they inflate it to ~1.6 GB and the debashis/sandeepkapri 1m files carry ~1% second-level jitter + dup bars). Raw 1m CSVs are preserved on disk; use the mavrick136 1m file if 1m is needed (it is clean).",
+    "raw_files": "left untouched; %20-encoded names normalized to spaces only",
+    "policy": "no fabricated/derived OI; OHLCV-without-OI keeps open_interest=NULL; volume kept only where the source genuinely has it.",
+    "QC_summary": {
+      "5m (NIFTY+BANKNIFTY index)": "0 off-5min-grid, 0 OHLC-integrity violations, 0 future timestamps, ~0.2% weekend rows (NSE special Sat sessions + a few vendor after-hours tail rows -> filter to 09:15-15:30 IST weekday at consumption).",
+      "NIFTY 1d FUTURE (rbtj1729)": "1288/1299 rows carry REAL Open Int + REAL Change-in-OI + contract volume; front-month continuous (raw file has all expiries; UNIQUE(symbol,tf,ts,dataset) keeps first per date).",
+      "GOLD/SILVER 1d (naveennas)": "genuine MCX INR daily; 4/5519 minor OHLC rounding rows; ~0.85% weekend rows (investing.com scrape). Daily only.",
+      "SENSEX 1d (prathamsatani)": "672 daily rows 2021-04..2023-12; weak, do not backtest."
+    }
+  },
+  "REJECTED_ROUND2": {
+    "anshbhardwaj2992004/mcx-gold-1-minute-historical-data-2024-2026": "REJECT + DELETED (712MB). Title says 'MCX Gold' but prices are ~2064 (2024) / ~4325 (2025) = XAU/USD (COMEX) in USD/oz, NOT MCX Gold INR (~70k-100k/10g). Header is 'Date,Unnamed: 1..5'. The '5-second' rows are forward-filled duplicates (identical OHLC repeated every 5s). Wrong instrument + wrong currency + synthetic resolution + broken header.",
+    "anshbhardwaj2992004/silvermcx-india-1-5-yrs-intraday-historical-data": "NOT DOWNLOADED (860MB). Same owner, same 'Silver_IST_Final.csv' pattern as the rejected Gold file -> expected XAG/USD not MCX Silver INR, same ffilled-duplicate defect.",
+    "sumansarkar24/nifty-bank-1-minute-data-from-10-years": "REJECT. Has datetime,open,high,low,close,volume,oi columns but volume AND oi are 100% ZERO across 999353 rows (placeholder). Cash index mislabeled."
   }
 }
