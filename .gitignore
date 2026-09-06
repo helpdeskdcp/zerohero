@@ -36,3 +36,6 @@ backend/data/historical/kaggle/**
 # H1/H7 perf eval auto-generated artifacts
 backend/data/orderflow_h1h7_performance_auto.csv
 backend/data/orderflow_h1h7_perf_cron_report.txt
+
+# Upstox expired-instruments research store (raw API responses + normalized DB): local only
+backend/data/historical/upstox/
