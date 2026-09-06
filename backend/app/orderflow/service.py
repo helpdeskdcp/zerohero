@@ -18,6 +18,7 @@ from ..engines.signal_engine import _vwap
 from . import profile as _p
 from . import smart_money as _sm
 from . import backtest as _bt
+from . import h1h7_state as _h1h7
 
 _CACHE: dict = {}
 _TTL = 30.0          # a completed session is immutable; today's grows slowly
@@ -103,6 +104,40 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
                        trail=trail, sig_filter=sig_filter, pattern=pattern, basis=basis,
                        premium_stop_pct=premium_stop_pct, premium_stop_pts=premium_stop_pts,
                        sessions=sessions)
+    _cache_put(key, out)
+    return out
+
+
+def h1h7_state(symbol: str, session_date: str, *, tf: str = "5m",
+               only_last: bool = False, persist: bool = True) -> dict:
+    """READ-ONLY SHADOW / OBSERVATION. Classify every completed eligible bar of
+    one IST session (or comma-list) into the deterministic Stage-3..8 H1/H7
+    structural states and append the flattened events to the append-only shadow
+    CSV. No order, no notification, no trading signal, no option-premium
+    inference, no confidence score. Existing production behaviour is untouched.
+
+    A 30s TTL cache keeps repeat dashboard polls cheap; the CSV append (with its
+    own on-disk dedup) only runs on a cache miss."""
+    dates = [d.strip() for d in str(session_date or "").split(",") if d.strip()]
+    key = ("H1H7", symbol.upper(), tuple(dates), tf, bool(only_last))
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+
+    bars: list = []
+    for d in dates:
+        bars.extend(market_hub.session_bars(symbol, d, tf=tf))
+    bars.sort(key=lambda b: str(b.get("bar_start") or ""))
+
+    out = _h1h7.classify_session(bars, symbol, only_last=only_last)
+    out["sessions"] = dates
+    out["tf"] = tf
+    out["bar_count"] = len(bars)
+    if persist and out.get("events"):
+        try:
+            out["shadow_log"] = _h1h7.append_shadow_rows(out["events"])
+        except Exception as e:  # logging must never affect the response / prod
+            out["shadow_log"] = {"appended": 0, "error": repr(e)}
     _cache_put(key, out)
     return out
 

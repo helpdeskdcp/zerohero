@@ -551,4 +551,10 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
 #ofBtTable td.neg { color: var(--ember); font-family: var(--font-mono); }
 #ofBtTable td.BUY { color: var(--teal); }
 #ofBtTable td.SELL { color: var(--ember); }
+.of-oc.bad { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.08); }
+.of-oc.warn { color: var(--gold-soft); border-color: rgba(201,162,39,0.4); background: rgba(201,162,39,0.06); }
+#ofH1H7Panel .pill--paper { background: rgba(201,162,39,0.10); color: var(--gold-soft); border-color: rgba(201,162,39,0.4); }
+.of-h1h7-legend { margin-top: 12px; font-size: 11px; color: var(--ink-faint); border-top: 1px solid var(--line); padding-top: 10px; }
+.of-h1h7-legend p { margin: 4px 0; line-height: 1.5; }
+.of-h1h7-legend strong { color: var(--ink); font-family: var(--font-mono); font-size: 10px; }
 .pill--warn { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.06); }

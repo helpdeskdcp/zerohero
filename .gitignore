@@ -24,3 +24,6 @@ backend/data/autoscalp_session_*.md
 backend/data/ngcrude_session_report.md
 # cron watcher runtime state (per-subgroup alert-once tracking)
 backend/data/calibration_subgroups_state.json
+
+# H1/H7 shadow-mode append-only event log (runtime artifact, regenerated on demand)
+backend/data/orderflow_h1h7_shadow.csv

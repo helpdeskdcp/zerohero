@@ -71,6 +71,20 @@ def api_smart_money(symbol: str = Query(...), date: str = Query(..., description
                                pattern=pattern)
 
 
+@router.get("/h1h7-state")
+def api_h1h7_state(symbol: str = Query(...),
+                   date: str = Query(..., description="YYYY-MM-DD (IST); comma-list to scan several"),
+                   tf: str = Query("5m"),
+                   only_last: bool = Query(False, description="return only the most recent eligible spike event")):
+    """READ-ONLY SHADOW / OBSERVATION MODE. Deterministic H1/H7 structural-state
+    classification of every completed eligible bar (Stage-3..8 research rules),
+    with the research-confidence status per event. Appends each event to the
+    append-only shadow CSV. This is NOT a trading signal: it emits only
+    AVOID / NO_ACTION / CONTINUATION_CANDIDATE, never an order, notification,
+    or option-premium inference. Production trading behaviour is unchanged."""
+    return service.h1h7_state(symbol, date, tf=tf, only_last=only_last)
+
+
 @router.get("/backtest")
 def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
                  volume_mult: float = Query(2.0, gt=1.0, le=20.0),

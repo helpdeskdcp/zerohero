@@ -2062,10 +2062,11 @@
 
     // 2. profile + smart-money, in parallel
     try {
-      const [prof, sm, bt] = await Promise.all([
+      const [prof, sm, bt, h1h7] = await Promise.all([
         api(`/api/orderflow/profile?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}`),
         api(`/api/orderflow/smart-money?${smQ}&date=${encodeURIComponent(ofDate)}`),
         api(`/api/orderflow/backtest?${btQ}`),
+        api(`/api/orderflow/h1h7-state?symbol=${encodeURIComponent(ofSymbol)}&date=${encodeURIComponent(ofDate)}`),
       ]);
       if (stale()) return;
 
@@ -2088,7 +2089,58 @@
         ? `${sm.spike_count} spike candle(s) · avg vol ${ofNum(sm.session_avg_volume, 0)} · ×${mult} threshold` : (sm && sm.reason) || "—";
 
       ofRenderBacktest(bt);
+      ofRenderH1H7(h1h7);
     } catch (e) { if (!stale()) { setErr((e && e.message) || String(e)); showError("orderflow", e); } }
+  }
+
+  function ofRenderH1H7(st) {
+    const tb = $("#ofH1H7Table tbody");
+    const sum = $("#ofH1H7Summary");
+    const meta = $("#ofH1H7Meta");
+    const leg = $("#ofH1H7Legend");
+    const events = (st && st.events) || [];
+    const ACT_CLASS = { AVOID: "of-oc bad", NO_ACTION: "of-oc", CONTINUATION_CANDIDATE: "of-oc warn" };
+    if (meta) {
+      meta.textContent = st && st.mode
+        ? `${st.mode} · live_trading ${String(st.live_trading)} · ${st.bar_count || 0} bars · ${events.length} classified event(s)`
+        : "no captured session data";
+    }
+    if (sum) {
+      const s = (st && st.summary) || {};
+      const parts = Object.keys(s).sort().map(k => `${esc(k)} <strong>${s[k]}</strong>`);
+      sum.innerHTML = parts.length
+        ? `<span class="hint">state counts:</span> ${parts.join(" · ")}`
+        : `<span class="hint">no abnormal-spike events on this session (deterministic; nothing to classify)</span>`;
+    }
+    if (tb) {
+      tb.innerHTML = events.length ? events.map(e => {
+        const rd = e.reclaim_distance_ratio == null ? "—"
+          : `${ofNum(e.reclaim_distance, 2)} (${ofNum(e.reclaim_distance_ratio, 2)}×)`;
+        const aR = e.available_R == null
+          ? `<span class="hint" title="no opposing structural level in the bar-derived set — never fabricated">UNOBSERVABLE</span>`
+          : ofNum(e.available_R, 2);
+        return `<tr>
+          <td>${esc((e.timestamp || "").slice(11, 16))}</td>
+          <td>${esc(e.spike_direction || "—")} · ${ofNum(e.spike_range, 2)} · p${ofNum(e.range_pctile, 2)}</td>
+          <td>${e.broken_level == null ? "—" : ofNum(e.broken_level, 2) + " <span class='hint'>" + esc(e.broken_level_kind || "") + "</span>"}</td>
+          <td>${rd}</td>
+          <td>${aR}</td>
+          <td>${e.n1_agreement == null ? "—" : (e.n1_agreement ? "agree" : "no")}</td>
+          <td>${ofNum(e.disp_atr, 2)}</td>
+          <td>${ofNum(e.body_fraction, 2)} <span class="hint">info</span></td>
+          <td><strong>${esc(e.state || "—")}</strong></td>
+          <td class="${ACT_CLASS[e.action] || "of-oc"}">${esc(e.action || "—")}</td>
+          <td>${esc(e.research_status || "—")}</td>
+        </tr>`;
+      }).join("") : `<tr><td colspan="11" class="hint">—</td></tr>`;
+    }
+    if (leg) {
+      const L = (st && st.research_status_legend) || {};
+      const order = ["SUPPORTED", "RESEARCH_ONLY_PROMISING", "NOT_VALIDATED", "NO_ESTABLISHED_EDGE", "UNOBSERVABLE", "PROVEN"];
+      leg.innerHTML = order.filter(k => L[k]).map(k =>
+        `<p><strong>${esc(k)}</strong> — ${esc(L[k])}</p>`).join("")
+        || `<p class="hint">research confidence legend unavailable</p>`;
+    }
   }
 
   (function wireOrderflow() {

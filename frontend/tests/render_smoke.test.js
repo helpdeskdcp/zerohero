@@ -147,6 +147,35 @@ const P = {
               breakout_bar: null, outcome: { status: "PENDING", resolved_bar: null } },
     }],
   }),
+  "/api/orderflow/h1h7-state": load("of_h1h7", {
+    symbol: "NIFTY", sessions: ["2026-09-04"], tf: "5m", mode: "SHADOW_OBSERVATION",
+    live_trading: false, bar_count: 70, eligible_bars: 59,
+    summary: { H7_TRAP: 1, H1_CONT_OBSERVE: 1, AMBIGUOUS: 2 },
+    events: [
+      { symbol: "NIFTY", timestamp: "2026-09-04T06:10:00Z", mode: "SHADOW_OBSERVATION", live_trading: false,
+        spike_direction: "SHORT", spike_range: 22.0, range_pctile: 0.96, range_x: 3.1, atr: 9.0,
+        disp_atr: 1.4, body_fraction: 0.61, broken_level: 24010.0, broken_level_kind: "session_low",
+        reclaim_distance: 18.0, reclaim_distance_ratio: 0.82, reclaimed_within_3: true, available_R: null,
+        n1_agreement: false, acc1: false, acc2: false, state: "H7_TRAP", action: "AVOID",
+        research_status: "SUPPORTED", reason: "hard trap; AVOID -- fading H7 is REJECTED (Stage-8).",
+        unobservable_orderflow: ["aggressor_volume", "trade_delta"], unobservable_note: "DATA NOT AVAILABLE" },
+      { symbol: "NIFTY", timestamp: "2026-09-04T07:30:00Z", mode: "SHADOW_OBSERVATION", live_trading: false,
+        spike_direction: "LONG", spike_range: 15.0, range_pctile: 0.94, range_x: 2.6, atr: 8.0,
+        disp_atr: 1.2, body_fraction: 0.58, broken_level: 24040.0, broken_level_kind: "prior_bar_high",
+        reclaim_distance: 0.0, reclaim_distance_ratio: 0.0, reclaimed_within_3: false, available_R: 2.1,
+        n1_agreement: true, acc1: true, acc2: true, state: "H1_CONT_OBSERVE", action: "NO_ACTION",
+        research_status: "NOT_VALIDATED", reason: "NIFTY continuation is NOT_VALIDATED -- observe only.",
+        unobservable_orderflow: ["aggressor_volume", "trade_delta"], unobservable_note: "DATA NOT AVAILABLE" },
+    ],
+    research_status_legend: {
+      SUPPORTED: "H7 reclaim-distance boundary as an AVOIDANCE classifier only -- fading H7 is REJECTED.",
+      RESEARCH_ONLY_PROMISING: "Small positive expectancy on the UNDERLYING for CRUDEOIL. Never PROVEN.",
+      NOT_VALIDATED: "The H1 gate matched but this symbol's edge did not hold across splits.",
+      NO_ESTABLISHED_EDGE: "No research edge attaches to this state.",
+      UNOBSERVABLE: "DATA NOT AVAILABLE -- no aggressor tick / L2 depth feed.",
+      PROVEN: "Not used. Nothing in this research is PROVEN.",
+    },
+  }),
   "/api/research": load("research", { signals: { by_decision: {}, by_market_regime: {} }, paper_trades: {}, by_strategy: {} }),
   "/api/monitor": load("monitor", { ts: Date.now(), runner: {}, feed: {}, positions: [], scalps: [], combos: [], reversals: [], turning_points: [], execution: {}, recent_signals: [] }),
   "/api/scalp/status": load("scalp_status", { feed: {}, config: {} }),
@@ -346,6 +375,15 @@ try {
   assert.ok(/INSUFFICIENT/.test(elFor("#ofBtBadge").textContent + elFor("#ofBtBadge").innerHTML), "backtest badge flags an insufficient sample");
   const ofBt = elFor("#ofBtTable tbody").innerHTML;
   assert.ok(/WIN/.test(ofBt) && /LOSS/.test(ofBt), "backtest per-trade table renders wins and losses: " + ofBt.slice(0, 200));
+  // ---- H1/H7 structural-state shadow panel ----
+  const ofH1H7 = elFor("#ofH1H7Table tbody").innerHTML;
+  assert.ok(/H7_TRAP/.test(ofH1H7) && /AVOID/.test(ofH1H7), "H1/H7 panel renders an H7_TRAP -> AVOID row: " + ofH1H7.slice(0, 200));
+  assert.ok(/H1_CONT_OBSERVE/.test(ofH1H7) && /NOT_VALIDATED/.test(ofH1H7), "H1/H7 panel keeps NIFTY continuation as observe-only");
+  assert.ok(/UNOBSERVABLE/.test(ofH1H7), "H1/H7 panel shows available_R as UNOBSERVABLE when absent (never fabricated)");
+  const ofH1H7Meta = elFor("#ofH1H7Meta").textContent;
+  assert.ok(/SHADOW_OBSERVATION/.test(ofH1H7Meta) && /live_trading false/.test(ofH1H7Meta), "H1/H7 panel meta states shadow mode + live_trading false: " + ofH1H7Meta);
+  const ofH1H7Leg = elFor("#ofH1H7Legend").innerHTML;
+  assert.ok(/SUPPORTED/.test(ofH1H7Leg) && /PROVEN/.test(ofH1H7Leg) && /Not used/.test(ofH1H7Leg), "H1/H7 legend renders research-confidence tiers incl. PROVEN=not used");
   // order-flow index picker: independent of Math Scalper's, covers NSE/BSE/MCX
   assert.equal(chk.ofSelected(), "NIFTY", "Order Flow index defaults to NIFTY");
   assert.deepEqual(chk.ofFilter("bank").sort(), ["BANKEX", "BANKNIFTY"], "OF picker: 'bank' -> BANKNIFTY + BANKEX");
