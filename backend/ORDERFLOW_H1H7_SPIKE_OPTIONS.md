@@ -169,6 +169,7 @@ premium this is the only place the refinement clearly helps.
   premium-aware R definition (delta/gamma-scaled, not raw points), (b) a real
   bid/ask series (not in the current data), (c) a genuinely out-of-sample
   period — non-overlapping contracts, months apart.
-- The H7-on-premium avoidance result is worth folding into the H7 evidence base
-  as a third independent confirmation (index/futures → Kaggle NIFTY → option
-  premium), still `SUPPORTED`, still not `PROVEN`.
+- The H7-on-premium avoidance result is folded into the H7 evidence base as the
+  third independent confirmation (index/futures → Kaggle NIFTY → option premium)
+  — see `ORDERFLOW_STAGE8_H7_FADE.md` §G.1. Still `SUPPORTED`, still not
+  `PROVEN`.

@@ -161,6 +161,32 @@ boundary.**
 - The P90 range-percentile spike definition; the level-break requirement;
   acceptance vs reclaim as the state separator.
 
+### G.1 Independent confirmations of the H7 avoidance classifier
+
+The `X > 0.6` "buying the break is a near-certain loser" reading has now been
+reproduced on three independent datasets. All three score the *spike-direction
+buy* (the thing AVOID says to skip); none is a fade trade; none makes the
+classifier `PROVEN` (still no untouched multi-month holdout).
+
+| # | dataset | instrument / vendor / period | H7_TRAP "buy the break" outcome | note |
+|---|---|---|---|---|
+| 1 | Stage-3→8 base | NIFTY / NATGAS / CRUDE, polled histcap + oi_dashboard, Jul–Aug 2026, 3 regimes, spent 18 % holdout | continuation ≈ 0 %, spike-direction long/short a near-certain loser | the original basis |
+| 2 | `--source kaggle_nifty` (`ORDERFLOW_H1H7_PERFORMANCE_V2.md`) | NIFTY-50 5-min **cash index**, Kaggle (debashis74017), 2015-01 … 2026-05, 2 616 sessions, 11 360 events, all 3 regimes + all 4 chrono splits | "buy the break" wins **11.2 %** (95 % CI 10.0–12.4), `E[R] −1.005` | independent vendor + 11-year period |
+| 3 | `orderflow_h1h7_spike_options.py` (`ORDERFLOW_H1H7_SPIKE_OPTIONS.md`) | Upstox **expired-option premium** 5-min (the premium *is* the series), 510 contracts / 12 expiries, Jun–Sep 2026, 5 877 `H7_TRAP` events | "buy the break" wins **3.9 %**, `E[R] −1.44`, `fix3_R ≤ −1R` in **93.3 %**; consistent every regime (−1.39…−1.47) and every chrono split (−1.30…−1.63) | independent *instrument type* (a decaying, 0-bounded, convex series) + vendor + period |
+
+**Caveat on #3 — this does NOT reopen the option-premium question (§H).** It
+confirms only the *avoidance* polarity: buying the break of an `H7_TRAP` on
+premium is a near-certain loss. It is **not** a tradeable premium edge — the
+same run's positive-looking `H1_CONT_OBSERVE` `E[R]` is a convexity artifact
+(raw-premium R-multiples are not comparable to a linear instrument), and Stage-4
+"nothing survives ATM option premium" stands. #3 also cannot upgrade the status:
+contracts overlap in calendar time and share expiry dynamics, so its HOLDOUT
+slice is not fresh out-of-sample.
+
+Net effect: `H7` reclaim-distance boundary = **SUPPORTED** (avoidance classifier
+only), now on 3 independent datasets. Fading it is still **REJECTED** (§H).
+Still **not PROVEN**.
+
 ## H. What is REJECTED
 
 - **Fading H7 as a standalone edge** — negative on train + validation for
@@ -258,7 +284,10 @@ framework.* We found:
    continue; one that is *reclaimed* past ~0.6 of its own range was liquidity
    interaction, not directional conviction.
 4. **Historical + OOS evidence:** the `X` boundary reproduces across NIFTY /
-   NATGAS / CRUDE, three regimes, and a spent 18 % holdout, as a **classifier**.
+   NATGAS / CRUDE, three regimes, and a spent 18 % holdout, as a **classifier**
+   — and again on two later independent datasets (Kaggle NIFTY-50 cash index
+   2015–2026, 2 616 sessions; Upstox expired-option premium 2026, 5 877
+   `H7_TRAP` events, "buy the break" wins 3.9 %). See §G.1. Still not `PROVEN`.
 5. **Where it fails:** the boundary tells you what **not** to buy — it is
    **not** a fade signal (Stage-8: fading H7 is negative out-of-sample). A
    trap is not a clean reversal. The continuation (H1) edge on the underlying

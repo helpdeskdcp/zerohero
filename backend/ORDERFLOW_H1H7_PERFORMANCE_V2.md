@@ -204,6 +204,12 @@ confirmed on a fully independent instrument, vendor and period.** Status stays
 `PROVEN`** — that word is reserved for a pre‑registered, untouched multi‑month
 holdout with a real order‑flow feed, which still does not exist.
 
+This is confirmation **#2** of three. A later run
+(`ORDERFLOW_H1H7_SPIKE_OPTIONS.md`) adds **#3** on the Upstox expired-**option
+premium** series — "buy the break" of an `H7_TRAP` wins 3.9 %, `E[R] −1.44`,
+`fix3_R ≤ −1R` in 93.3 %. The consolidated three-dataset ledger is
+`ORDERFLOW_STAGE8_H7_FADE.md` §G.1.
+
 ---
 
 ## Order‑flow observability after V2 (TASK 5)
