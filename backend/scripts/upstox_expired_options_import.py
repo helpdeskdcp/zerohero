@@ -128,16 +128,18 @@ def _norm_candle(row):
     return ts, o, h, l, c, v, oi
 
 
-def run(underlyings, dfrom, dto, interval, max_exp, max_ct, dry, big_ok, out):
+def run(underlyings, dfrom, dto, interval, max_exp, max_ct, dry, big_ok, out, atm_steps=None):
     p = lambda *a: print(*a, file=out)
     health = U.auth_health()
     p(f"[auth] configured={health['credentials_configured']} token_present={health['access_token_present']} "
       f"token_valid={health['access_token_valid']} api_reachable={health['api_reachable']}")
     p(f"       {health['note']}")
 
-    plan = max_exp * max_ct * len(underlyings)
-    p(f"[plan] underlyings={underlyings} expiries<= {max_exp} contracts/expiry<= {max_ct} interval={interval}  "
-      f"=> up to {plan} contract-pulls")
+    per_expiry = (2 * atm_steps + 1) * 2 if atm_steps else max_ct   # CE+PE across +/-N strikes
+    plan = max_exp * per_expiry * len(underlyings)
+    p(f"[plan] underlyings={underlyings} expiries<= {max_exp} "
+      f"{'ATM +/-'+str(atm_steps)+' strikes (CE+PE)' if atm_steps else 'contracts/expiry<= '+str(max_ct)} "
+      f"interval={interval}  => up to {plan} contract-pulls")
     if plan > HARD_CAP and not big_ok:
         p(f"[STOP] plan {plan} > HARD_CAP {HARD_CAP}. Re-run with --i-understand-large to proceed.")
         return 2
@@ -179,8 +181,16 @@ def run(underlyings, dfrom, dto, interval, max_exp, max_ct, dry, big_ok, out):
             if cr["http_status"] != 200 or not cr.get("json"):
                 p(f"  {expiry}: contracts HTTP {cr['http_status']}"); totals["errors"] += 1; continue
             contracts = cr["json"].get("data") or []
-            contracts = contracts[:max_ct]
-            p(f"  {expiry}: {len(contracts)} contracts (capped at {max_ct})")
+            n_all = len(contracts)
+            atm = step = None
+            if atm_steps:
+                spot = _spot_on(str(DB), u, expiry)
+                contracts, atm, step = _atm_filter(contracts, spot, atm_steps)
+                p(f"  {expiry}: {n_all} contracts -> ATM {atm} (spot {spot}, step {step}) "
+                  f"+/-{atm_steps} -> {len(contracts)} kept")
+            else:
+                contracts = contracts[:max_ct]
+                p(f"  {expiry}: {len(contracts)} contracts (capped at {max_ct})")
             for ct in contracts:
                 totals["contracts"] += 1
                 eik = ct.get("expired_instrument_key") or ct.get("instrument_key")
@@ -237,6 +247,39 @@ def _safe_float(x):
         return None
 
 
+def _spot_on(con_read_db, symbol, expiry):
+    """Underlying close on `expiry` (or nearest earlier trading day) from the
+    already-imported Upstox NIFTY series in this same research DB. Returns None
+    if we have no bar -- caller then skips ATM filtering for that expiry."""
+    try:
+        c = sqlite3.connect(f"file:{con_read_db}?mode=ro", uri=True)
+        row = c.execute(
+            "SELECT close FROM normalized_bars WHERE source='upstox' AND symbol=? "
+            "AND substr(timestamp,1,10) <= ? ORDER BY timestamp DESC LIMIT 1",
+            (symbol, expiry)).fetchone()
+        c.close()
+        return float(row[0]) if row else None
+    except Exception:  # noqa
+        return None
+
+
+def _atm_filter(contracts, spot, n_steps):
+    """Keep CE+PE within n_steps strike-increments of the ATM strike. Strike step
+    auto-detected as the smallest positive gap between distinct strikes."""
+    strikes = sorted({_safe_float(x.get("strike_price") or x.get("strike"))
+                      for x in contracts if _safe_float(x.get("strike_price") or x.get("strike"))})
+    if not strikes or spot is None:
+        return contracts, None, None
+    gaps = sorted({round(b - a, 4) for a, b in zip(strikes, strikes[1:]) if b > a})
+    step = gaps[0] if gaps else 50.0
+    atm = min(strikes, key=lambda s: abs(s - spot))
+    lo, hi = atm - n_steps * step, atm + n_steps * step
+    keep = [x for x in contracts
+            if (lambda s: s is not None and lo - 1e-6 <= s <= hi + 1e-6)(
+                _safe_float(x.get("strike_price") or x.get("strike")))]
+    return keep, atm, step
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--underlying", action="append", choices=list(U.UNDERLYING_KEYS),
@@ -244,14 +287,17 @@ def main():
     ap.add_argument("--from", dest="dfrom", default=None, help="earliest expiry YYYY-MM-DD")
     ap.add_argument("--to", dest="dto", default=None, help="latest expiry YYYY-MM-DD")
     ap.add_argument("--interval", default="1minute", choices=list(U.INTERVALS))
-    ap.add_argument("--max-expiries", type=int, default=2)
-    ap.add_argument("--max-contracts-per-expiry", type=int, default=20)
+    ap.add_argument("--max-expiries", type=int, default=2, help="most recent N expiries in the window")
+    ap.add_argument("--max-contracts-per-expiry", type=int, default=20,
+                    help="ignored when --strikes-around-atm is set")
+    ap.add_argument("--strikes-around-atm", type=int, default=None,
+                    help="keep CE+PE within N strike-steps of ATM (ATM from the imported Upstox underlying close)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--i-understand-large", action="store_true")
     a = ap.parse_args()
     unders = a.underlying or ["NIFTY", "BANKNIFTY"]
     rc = run(unders, a.dfrom, a.dto, a.interval, a.max_expiries, a.max_contracts_per_expiry,
-             a.dry_run, a.i_understand_large, sys.stdout)
+             a.dry_run, a.i_understand_large, sys.stdout, atm_steps=a.strikes_around_atm)
     sys.exit(rc)
 
 
