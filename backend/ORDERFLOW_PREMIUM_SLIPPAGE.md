@@ -720,3 +720,120 @@ reaction-candle low/high** as the stop; (4) require **available_R ≥ 3**.
 ```
 cd backend && python scripts/orderflow_entry_timing.py
 ```
+
+---
+
+## 13. Stage-3 cross-session validation (2026-09-06) — PROMISING, MORE DATA REQUIRED
+
+The Stage-1/2 phases were all `INSUFFICIENT DATA` (3–4 sessions). The
+`/root/oi_dashboard/oi_history.db` archive (used read-only, temporarily) adds
+**~30 more sessions per symbol** (2026-07-13 .. 08-28: 5m OHLC resampled from
+`cycles.underlying_ltp` / `live_candles`, plus per-strike CE/PE OI+LTP+greeks
+from `cycles`+`strikes`). Combined with zerohero histcap (Sep 1–4):
+
+| symbol | independent sessions | regimes | abnormal-spike events (pctile ≥ P90) |
+|--------|:--------------------:|:-------:|:-----------------------------------:|
+| NIFTY | 39 (36 with events) | CHOP / TREND_UP / TREND_DOWN | 162 |
+| NATGAS | 36 (35) | all 3 | 1271 |
+| CRUDE | 39 (38) | all 3 | 1090 |
+
+`backend/scripts/orderflow_histsrc.py` (multi-source read-only loader) +
+`backend/scripts/orderflow_stage3_validation.py` →
+`data/orderflow_stage3_report_2026-09-06.txt` + `data/orderflow_stage3_events.csv`
+(8,369 rows, §13 event dataset). Reuses the Stage-1/2 pure helpers. Strictly
+causal; thresholds picked for STABILITY not P&L; chronological
+train/validation/out-of-sample split (never shuffled); no score, no weights;
+nothing wired to live.
+
+### §1 abnormal spike — symbol-adaptive, picked by stability
+
+Range-percentile of prior-session bars. On all three symbols **P90 is the
+most stable** (lowest cross-session CoV: 0.58 NIFTY / 0.31 NATGAS / 0.30
+CRUDE; ≥ 90 % of sessions carry ≥ 1 event; all 3 regimes). Higher percentiles
+(P95–P99) get progressively less stable. Volume-based abnormality is
+unavailable (this feed carries no bar volume).
+
+### CORE setup validated: abnormal spike → early-acceptance entry → reaction stop
+
+Entry = close of the **first bar that closes beyond the broken level without
+the same bar wicking back through** (~1 bar after the spike, fully causal).
+Stop = that reaction candle's low/high. Fixed-3R management. **Index-structural
+R** (underlying points), not option-premium P&L.
+
+| symbol | split | n | sess | cont% | trap% | med R | P3R | P5R | P6R | E[fix3R] | maxDD |
+|--------|-------|--:|-----:|------:|------:|------:|----:|----:|----:|---------:|------:|
+| NIFTY  | train | 45 | 18 | 76 | 18 | 6.3 pt | 33 % | 24 % | 22 % | **+0.42R** | −3.0R |
+|        | validation | 22 | 8 | 82 | 14 | 3.5 | 41 % | 27 % | 27 % | **+0.73R** | −3.0R |
+|        | **out-of-sample** | 16 | 7 | 81 | 6 | 5.2 | **56 %** | 44 % | 31 % | **+1.31R** | −2.0R |
+|        | pooled | 83 | 33 | 78 | 14 | 5.6 | 40 % | 29 % | 25 % | +0.68R | −5.0R |
+| NATGAS | train | 289 | 19 | 68 | 16 | 0.23 | 38 % | 27 % | 23 % | **+0.50R** | −7R |
+|        | validation | 115 | 8 | 66 | 16 | 0.22 | 43 % | 32 % | 30 % | **+0.63R** | −4R |
+|        | **out-of-sample** | 140 | 8 | 61 | 19 | 0.23 | 36 % | 27 % | 24 % | **+0.41R** | −13R |
+|        | pooled | 544 | 35 | 66 | 17 | 0.23 | 38 % | 28 % | 25 % | +0.51R | −13R |
+| CRUDE  | train | 351 | 21 | 65 | 19 | 8.8 | 40 % | 30 % | 27 % | **+0.53R** | −11R |
+|        | validation | 130 | 9 | 64 | 19 | 7.7 | 32 % | 24 % | 20 % | **+0.32R** | −9.3R |
+|        | **out-of-sample** | 114 | 8 | 69 | 17 | 8.5 | 36 % | 25 % | 23 % | **+0.37R** | −9R |
+|        | pooled | 595 | 38 | 66 | 18 | 8.5 | 37 % | 28 % | 25 % | +0.46R | −11.6R |
+
+**Positive fixed-3R expectancy on every split, every symbol** (+0.32 to
++1.31R). **Leave-one-session-out: 0/33, 0/35, 0/38 holdouts flip the total-R
+sign.** No single-session dominance. 3 regimes each, ~1,200 pooled trades.
+
+### Why the ceiling is PROMISING, not SUPPORTED/PROVEN
+
+1. **R is index-structural.** Stage-1 measured the ATM option premium captures
+   **~0.4×** the index move → a ~2.5× haircut + spread + theta translates
+   +0.5R index into roughly **breakeven-to-marginal** in tradable
+   option-premium terms. CRUDE's +0.46R has the most margin; it is still thin.
+2. **The reaction stop overshoots.** median MAE_R ≈ −1.6 to −1.9 — the 5m bar
+   that hits the stop typically trades ~0.6–0.9R past it, so the fixed-3R
+   model understates the loss side by roughly that much (≈ −0.2R on
+   expectancy at a ~35 % loss rate).
+3. **NATGAS median R = 0.23 pt** is below realistic slippage — its
+   R-multiples are inflated by an untradably tight stop; directional only.
+4. **Effective independent N ≈ the session count** (33–38), not the trade
+   count — intraday events are correlated.
+5. The out-of-sample window is only ~8 sessions.
+
+### The 20 research questions — short answers
+
+1. abnormal spike = range ≥ P90 of the session's prior bars (adaptive; volume
+   n/a). 2. spike-close entry is the worst (52 % cont, 30 % trap, E ≈ 0).
+3–5. yes — early-acceptance (1 bar after the spike) is the best balance;
+full 2-candle acceptance is more accurate but the later fill and larger R
+kill P3R. 6. reaction-candle low/high is the most usable stop (small R, valid
+invalidation) but it overshoots — see caveat 2. 7. early-acceptance setups
+naturally carry small R (median 3–9 index pts on NIFTY/CRUDE). 8. genuine
+4R/5R+ potential exists mainly on CRUDE and in TREND regimes (P5R ≈ 25–30 %,
+P6R ≈ 25 %). 9. **OI direction helps** after controlling for level+acceptance
+— C_broke_accepted + OI rising with price → 100 % continuation / 0 % trap on
+NIFTY (n = 30); worth Stage-4 testing. 10. volume unavailable in this feed.
+11. `above_VAH` / `below_VAL` / `near_POC` spike locations are poor;
+`acceptance_outside_value` is good. 12. profile context helps (H5-style
+spread). 13. continuation vs trap is separated by **reclaim of the broken
+level within 3 candles** (→ ~79 % trap) vs **no reclaim** (→ ~82 %
+continuation) and by `n1` direction. 14. early-acceptance entry. 15. **fixed
+3R beats both runner variants** on the 3R-reaching subset (E[final_R] 1.7 vs
+1.6 vs 1.4). 16. CRUDE > NIFTY > NATGAS for tradability; TREND regimes >
+CHOP for large-R.
+
+### FINAL STATUS
+
+| symbol | Stage-3 status |
+|--------|----------------|
+| **NIFTY PREMIUM** | **PROMISING — MORE DATA REQUIRED** (small n = 83, but +E on all splits, OOS strongest) |
+| **NATGAS PREMIUM** | **PROMISING — MORE DATA REQUIRED (directional only)** — R too small to trade as measured |
+| **CRUDE PREMIUM** | **PROMISING — MORE DATA REQUIRED** (best of the three: 595 trades / 38 sessions, +E on all splits, real R) |
+
+**No edge is claimed as proven. No production pattern created or enabled. No
+live behaviour changed. No orders. No weighted score.** The abnormal-spike →
+early-acceptance → continuation sequence is a **reproducible market-behaviour
+pattern** that survives a chronological split and session-level holdout across
+3 regimes — but its *tradable* edge in option-premium terms is not
+demonstrated. Stage-4 needs: an option-premium re-walk over these sessions
+(not index-structural R), realistic stop slippage, more sessions, and a held-
+out final period never touched during this work.
+
+```
+cd backend && python scripts/orderflow_stage3_validation.py     # needs /root/oi_dashboard/oi_history.db (read-only)
+```

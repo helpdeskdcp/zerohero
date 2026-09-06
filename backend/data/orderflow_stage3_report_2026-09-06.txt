@@ -1,0 +1,298 @@
+wrote 8369 rows -> data/orderflow_stage3_events.csv
+wrote report -> data/orderflow_stage3_report_2026-09-06.txt
+orderflow STAGE-3 validation -- RESEARCH ONLY, no production change, no score
+
+====================================================================================================
+[§1] SYMBOL-ADAPTIVE ABNORMAL-SPIKE DETECTION  (range-percentile; chosen for STABILITY, not P&L)
+====================================================================================================
+
+  NIFTY:  39 sessions, regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+     pctile  events  ev/sess  sess>=1  CoV(ev/sess)   regimes
+       0.90     162     4.15   36/39           0.58         3
+       0.95      93     2.38   32/39           0.69         3
+       0.97      57     1.46   29/39           0.94         3
+       0.98      48     1.23   26/39           1.03         3
+       0.99      29     0.74   21/39           1.13         3
+    -> adaptive threshold for NIFTY: pctile >= 0.9  (stability pick)
+
+  NATURALGAS:  36 sessions, regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+     pctile  events  ev/sess  sess>=1  CoV(ev/sess)   regimes
+       0.90    1271    35.31   35/36           0.31         3
+       0.95     741    20.58   34/36           0.33         3
+       0.97     484    13.44   34/36           0.36         3
+       0.98     352     9.78   34/36           0.40         3
+       0.99     227     6.31   34/36           0.54         3
+    -> adaptive threshold for NATURALGAS: pctile >= 0.9  (stability pick)
+
+  CRUDEOIL:  39 sessions, regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+     pctile  events  ev/sess  sess>=1  CoV(ev/sess)   regimes
+       0.90    1090    27.95   38/39           0.30         3
+       0.95     623    15.97   37/39           0.35         3
+       0.97     419    10.74   37/39           0.41         3
+       0.98     324     8.31   37/39           0.44         3
+       0.99     231     5.92   37/39           0.44         3
+    -> adaptive threshold for CRUDEOIL: pctile >= 0.9  (stability pick)
+
+####################################################################################################################
+# NIFTY  --  162 events over 36 sessions (spike pctile >= 0.9)  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+#   chronological split: train 21 sess / val 9 sess / oos 9 sess
+####################################################################################################################
+
+[§2/§9 ENTRY-TIMING comparison]  (each entry, its primary structural stop, outcome window 3)
+    A_spikeclose                 n= 162 ses= 36 cont= 52% trap= 30% mMAE_R= -1.04 mMFE_R= 0.86 P3R= 15% P4R= 10% P5R=  6% P6R=  3% availR=0.65 R=22.4 E[3R]=-0.006
+    B_reaction                   n=  69 ses= 30 cont= 74% trap= 14% mMAE_R= -1.19 mMFE_R= 1.21 P3R= 33% P4R= 26% P5R= 25% P6R= 20% availR=1.27 R=10.13 E[3R]=0.313
+    D_earlyaccept                n=  83 ses= 33 cont= 78% trap= 14% mMAE_R=  -1.6 mMFE_R= 1.92 P3R= 40% P4R= 31% P5R= 29% P6R= 25% availR=3.15 R=5.58 E[3R]=0.676
+    E_fullaccept                 n=  80 ses= 31 cont= 91% trap=  0% mMAE_R= -1.14 mMFE_R= 0.96 P3R= 22% P4R= 19% P5R= 12% P6R=  9% availR=1.75 R=12.65 E[3R]=0.138
+    F_confirm3                   n=  80 ses= 31 cont= 91% trap=  0% mMAE_R= -1.14 mMFE_R= 0.96 P3R= 22% P4R= 19% P5R= 12% P6R=  9% availR=1.75 R=12.65 E[3R]=0.138
+
+[§9 same, chronological OUT-OF-SAMPLE only]
+    (oos: 33 events / 9 sessions)
+    A_spikeclose [oos]           n=  33 ses=  8 cont= 46% trap= 21% mMAE_R= -0.78 mMFE_R= 1.26 P3R= 30% P4R= 15% P5R=  9% P6R=  3% availR=0.56 R=23.9 E[3R]=0.345
+    B_reaction [oos]             n=  16 ses=  7 cont= 69% trap=  6% mMAE_R= -1.06 mMFE_R= 3.67 P3R= 56% P4R= 44% P5R= 44% P6R= 31% availR=1.19 R=11.61 E[3R]=1.032
+    D_earlyaccept [oos]          n=  16 ses=  7 cont= 81% trap=  6% mMAE_R= -1.09 mMFE_R= 3.67 P3R= 56% P4R= 44% P5R= 44% P6R= 31% availR=8.06 R=5.2 E[3R]=1.312
+    E_fullaccept [oos]           n=  17 ses=  7 cont= 82% trap=  0% mMAE_R= -1.04 mMFE_R= 1.67 P3R= 35% P4R= 29% P5R= 18% P6R= 12% availR=1.82 R=13.16 E[3R]=0.176
+    F_confirm3 [oos]             n=  17 ses=  7 cont= 82% trap=  0% mMAE_R= -1.04 mMFE_R= 1.67 P3R= 35% P4R= 29% P5R= 18% P6R= 12% availR=1.82 R=13.16 E[3R]=0.176
+
+[§6 STRUCTURAL STOP]  (early-acceptance entry D; median over events)
+    stop=spike       n=  80 medR= 32.19pt medMAE_R= -0.96 medMFE_R=  0.7 availR=0.59 P4R=6% P5R=5%
+    stop=reaction    n=  80 medR= 12.65pt medMAE_R= -1.14 medMFE_R= 0.96 availR=1.75 P4R=19% P5R=12%
+    stop=window      n=  80 medR= 31.34pt medMAE_R= -0.98 medMFE_R= 0.72 availR=0.6 P4R=8% P5R=5%
+    stop=swing       n=  80 medR= 29.41pt medMAE_R= -0.94 medMFE_R= 0.75 availR=0.73 P4R=9% P5R=8%
+    stop=prevstruct  n=  80 medR= 45.05pt medMAE_R= -0.75 medMFE_R= 0.44 availR=0.61 P4R=2% P5R=2%
+
+[§7/§10 LARGE-R + conditional probabilities]  (spike-close entry unless noted)
+    ALL:            P1R=47% P2R=26% P3R=15% P4R=10% P5R=6% P6R=3% P8R=2%   med_maxR=0.86 p90_maxR=4.27
+    | full-acceptance P3R=22% P4R=19% P5R=12% P6R=9%
+    | n1 agrees      P3R=23% P4R=15% P5R=9% P6R=5%
+    | early-accept   P3R=40% P4R=31% P5R=29% P6R=25%
+
+[§8 R-MULTIPLE profit management]  (events reaching 3R on the spike-close entry)
+    fix3R    n= 25 E[final_R]=1.72 med=3.00 win%=68 med_maxR=3.00 med_giveback=1.18
+    half     n= 25 E[final_R]=1.56 med=2.00 win%=68 med_maxR=3.00 med_giveback=1.30
+    full     n= 25 E[final_R]=1.41 med=1.00 win%=68 med_maxR=3.00 med_giveback=1.18
+
+[§5 SPIKE LOCATION]  (spike-close entry)
+    loc NA                       n=   8 ses=  8 cont= 88% trap= 12% mMAE_R= -0.84 mMFE_R= 2.86 P3R= 25% P4R= 12% P5R= 12% P6R= 12% availR=0.3 R=29.87 E[3R]=0.375
+    loc above_VAH                n=  21 ses= 14 cont= 24% trap= 43% mMAE_R=  -1.1 mMFE_R= 0.01 P3R=  5% P4R=  5% P5R=  5% P6R=  0% availR=1.69 R=27.14 E[3R]=-0.31
+    loc acceptance_outside_value n=  42 ses= 23 cont= 83% trap= 12% mMAE_R= -1.03 mMFE_R= 1.44 P3R= 21% P4R= 12% P5R=  5% P6R=  2% availR=0.65 R=24.26 E[3R]=0.271
+    loc below_VAL                n=  20 ses= 16 cont= 25% trap= 40% mMAE_R= -1.06 mMFE_R= 0.19 P3R= 20% P4R= 20% P5R= 15% P6R= 10% availR=0.4 R=20.29 E[3R]=-0.088
+    loc inside_value             n=  52 ses= 31 cont= 46% trap= 35% mMAE_R= -1.03 mMFE_R= 0.79 P3R= 17% P4R= 12% P5R=  4% P6R=  2% availR=0.78 R=22.26 E[3R]=-0.141
+    loc near_POC                 n=  19 ses= 12 cont= 42% trap= 42% mMAE_R= -1.08 mMFE_R= 1.01 P3R=  0% P4R=  0% P5R=  0% P6R=  0% availR=0.52 R=19.0 E[3R]=0.012
+    lvl A_broke                  n=  38 ses= 24 cont= 37% trap= 24% mMAE_R= -0.65 mMFE_R=  0.2 P3R= 16% P4R=  8% P5R=  5% P6R=  3% availR=0.78 R=24.36 E[3R]=-0.141
+    lvl B_swept_returned         n=  29 ses= 20 cont=  0% trap= 79% mMAE_R= -1.18 mMFE_R= 0.22 P3R=  3% P4R=  3% P5R=  0% P6R=  0% availR=0.52 R=19.74 E[3R]=-0.526
+    lvl C_broke_accepted         n=  76 ses= 33 cont= 79% trap= 17% mMAE_R= -1.02 mMFE_R= 1.44 P3R= 18% P4R= 12% P5R=  5% P6R=  3% availR=0.65 R=22.74 E[3R]=0.235
+    lvl D_failed_immediately     n=   5 ses=  5 cont=  0% trap= 20% mMAE_R= -0.61 mMFE_R= 1.46 P3R= 40% P4R= 40% P5R= 20% P6R=  0% availR=0.27 R=21.66 E[3R]=0.073
+    lvl E_open_space             n=  14 ses= 11 cont= 71% trap= 21% mMAE_R= -0.87 mMFE_R=  1.6 P3R= 14% P4R= 14% P5R= 14% P6R= 14% availR=1.7 R=19.09 E[3R]=0.1
+
+[§10 RETAIL-TRAP hypothesis]
+    n1 AGREES                    n=  75 ses= 30 cont= 68% trap= 13% mMAE_R=  -0.9 mMFE_R= 1.55 P3R= 23% P4R= 15% P5R=  9% P6R=  5% availR=0.71 R=20.86 E[3R]=0.218
+    n1 DISAGREES                 n=  87 ses= 36 cont= 38% trap= 45% mMAE_R=  -1.1 mMFE_R= 0.49 P3R=  9% P4R=  7% P5R=  2% P6R=  1% availR=0.6 R=23.57 E[3R]=-0.199
+    n1 re-enters spike range     n=   7 ses=  6 cont= 14% trap= 71% mMAE_R= -1.16 mMFE_R= 0.13 P3R=  0% P4R=  0% P5R=  0% P6R=  0% availR=1.92 R=18.07 E[3R]=-0.857
+    reclaim within 3             n=  58 ses= 32 cont=  0% trap= 79% mMAE_R= -1.14 mMFE_R= 0.28 P3R=  5% P4R=  3% P5R=  0% P6R=  0% availR=0.6 R=22.46 E[3R]=-0.407
+    no reclaim within 3          n=  90 ses= 31 cont= 82% trap=  0% mMAE_R= -0.91 mMFE_R= 1.34 P3R= 22% P4R= 14% P5R=  8% P6R=  3% availR=0.58 R=22.74 E[3R]=0.236
+
+[§9 OI / §10 volume as secondary evidence]  (early-accept entry, controlled on level=C_broke_accepted)
+    C_broke_accepted (base)      n=  61 ses= 29 cont= 88% trap= 10% mMAE_R= -1.54 mMFE_R=  1.8 P3R= 39% P4R= 31% P5R= 30% P6R= 25% availR=2.3 R=5.86 E[3R]=0.674
+     + OI rising w/ price        n=  30 ses= 21 cont=100% trap=  0% mMAE_R= -1.34 mMFE_R= 2.14 P3R= 40% P4R= 33% P5R= 33% P6R= 30% availR=2.04 R=7.46 E[3R]=0.933
+     + OI falling w/ price       n=  29 ses= 19 cont= 76% trap= 21% mMAE_R= -2.25 mMFE_R= 1.17 P3R= 34% P4R= 28% P5R= 24% P6R= 17% availR=3.15 R=5.74 E[3R]=0.314
+
+[§14 HEADLINE SETUP -- CORE]  early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL
+    TRAIN         n= 45 ses=18 cont=76% trap=18% medR=6.26pt medMAE_R=-1.6 availR=2.64 P3R=33% P4R=24% P5R=24% P6R=22% E[fix3R]=0.424 maxDD=-3.0R
+    VALIDATION    n= 22 ses= 8 cont=82% trap=14% medR=3.46pt medMAE_R=-1.75 availR=5.67 P3R=41% P4R=36% P5R=27% P6R=27% E[fix3R]=0.727 maxDD=-3.0R
+    OUT-OF-SAMPLE n= 16 ses= 7 cont=81% trap=6% medR=5.2pt medMAE_R=-1.09 availR=8.06 P3R=56% P4R=44% P5R=44% P6R=31% E[fix3R]=1.312 maxDD=-2.0R
+    POOLED        n= 83 ses=33 cont=78% trap=14% medR=5.58pt medMAE_R=-1.6 availR=3.15 P3R=40% P4R=31% P5R=29% P6R=25% E[fix3R]=0.676 maxDD=-5.0R
+
+[§14 HEADLINE SETUP -- STRICT (+n1-agree +availR>=3)]  early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL  (+ n1 agrees, available_R>=3)
+    TRAIN         n=  4 ses= 4 cont=75% trap=25% medR=11.36pt medMAE_R=-1.34 availR=4.86 P3R=0% P4R=0% P5R=0% P6R=0% E[fix3R]=-1.0 maxDD=-4.0R
+    VALIDATION    n=  2 ses= 2 cont=50% trap=50% medR=7.11pt medMAE_R=-1.19 availR=45.91 P3R=50% P4R=50% P5R=50% P6R=50% E[fix3R]=1.0 maxDD=-1.0R
+    OUT-OF-SAMPLE n=  1 ses= 1 cont=100% trap=0% medR=2.97pt medMAE_R=-0.67 availR=15.55 P3R=100% P4R=100% P5R=100% P6R=100% E[fix3R]=3.0 maxDD=0.0R
+    POOLED        n=  7 ses= 7 cont=71% trap=29% medR=7.11pt medMAE_R=-1.34 availR=6.91 P3R=29% P4R=29% P5R=29% P6R=29% E[fix3R]=0.143 maxDD=-5.0R
+
+[§12 STATISTICAL QUALITY CONTROL]
+    events=162  sessions_with_events=36/39  regimes={'TREND_UP': 29, 'CHOP': 100, 'TREND_DOWN': 33}
+    by bar source: {'cycles_resampled': 104, 'live_candles': 50, 'zerohero': 8}   (robustness: cycles_resampled highs/lows are slightly understated)
+    headline setup: 83 trades over 33 sessions, total 56.1R (fix3R); largest single-session contribution 2026-07-23 = 9.0R (no single-session dominance)
+    leave-one-session-out: 0/33 holdouts flip the total-R sign
+
+####################################################################################################################
+# NATURALGAS  --  1271 events over 35 sessions (spike pctile >= 0.9)  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+#   chronological split: train 19 sess / val 8 sess / oos 9 sess
+####################################################################################################################
+
+[§2/§9 ENTRY-TIMING comparison]  (each entry, its primary structural stop, outcome window 3)
+    A_spikeclose                 n=1271 ses= 35 cont= 38% trap= 42% mMAE_R= -1.28 mMFE_R= 0.96 P3R= 21% P4R= 16% P5R= 12% P6R=  9% availR=0.95 R=0.62 E[3R]=-0.119
+    B_reaction                   n= 606 ses= 34 cont= 54% trap= 24% mMAE_R= -1.58 mMFE_R= 1.15 P3R= 26% P4R= 21% P5R= 17% P6R= 14% availR=1.94 R=0.41 E[3R]=-0.005
+    D_earlyaccept                n= 544 ses= 35 cont= 66% trap= 17% mMAE_R= -1.81 mMFE_R= 1.74 P3R= 38% P4R= 34% P5R= 28% P6R= 25% availR=3.92 R=0.23 E[3R]=0.508
+    E_fullaccept                 n= 519 ses= 35 cont= 83% trap=  0% mMAE_R=  -1.3 mMFE_R= 0.92 P3R= 22% P4R= 18% P5R= 15% P6R= 12% availR=1.79 R=0.52 E[3R]=0.096
+    F_confirm3                   n= 591 ses= 35 cont= 73% trap=  0% mMAE_R=  -1.3 mMFE_R= 0.96 P3R= 23% P4R= 18% P5R= 16% P6R= 12% availR=1.85 R=0.51 E[3R]=0.13
+
+[§9 same, chronological OUT-OF-SAMPLE only]
+    (oos: 316 events / 9 sessions)
+    A_spikeclose [oos]           n= 316 ses=  8 cont= 37% trap= 41% mMAE_R= -1.26 mMFE_R= 0.97 P3R= 23% P4R= 17% P5R= 14% P6R= 12% availR=0.96 R=0.63 E[3R]=-0.095
+    B_reaction [oos]             n= 147 ses=  8 cont= 50% trap= 23% mMAE_R= -1.54 mMFE_R= 1.22 P3R= 26% P4R= 20% P5R= 16% P6R= 13% availR=2.42 R=0.43 E[3R]=-0.035
+    D_earlyaccept [oos]          n= 140 ses=  8 cont= 61% trap= 19% mMAE_R= -1.74 mMFE_R= 1.54 P3R= 36% P4R= 34% P5R= 27% P6R= 24% availR=4.61 R=0.23 E[3R]=0.413
+    E_fullaccept [oos]           n= 131 ses=  8 cont= 79% trap=  0% mMAE_R=  -1.3 mMFE_R= 1.06 P3R= 23% P4R= 19% P5R= 18% P6R= 14% availR=1.89 R=0.53 E[3R]=0.174
+    F_confirm3 [oos]             n= 154 ses=  8 cont= 67% trap=  0% mMAE_R= -1.26 mMFE_R= 1.06 P3R= 24% P4R= 20% P5R= 20% P6R= 16% availR=1.78 R=0.51 E[3R]=0.213
+
+[§6 STRUCTURAL STOP]  (early-acceptance entry D; median over events)
+    stop=spike       n= 591 medR=  1.04pt medMAE_R= -1.12 medMFE_R= 0.83 availR=0.76 P4R=11% P5R=8%
+    stop=reaction    n= 591 medR=  0.51pt medMAE_R=  -1.3 medMFE_R= 0.96 availR=1.85 P4R=18% P5R=16%
+    stop=window      n= 591 medR=  1.02pt medMAE_R= -1.14 medMFE_R= 0.87 availR=0.78 P4R=12% P5R=9%
+    stop=swing       n= 591 medR=  0.84pt medMAE_R= -1.18 medMFE_R= 0.88 availR=0.96 P4R=17% P5R=14%
+    stop=prevstruct  n= 591 medR=  1.45pt medMAE_R= -1.04 medMFE_R=  0.7 availR=0.67 P4R=8% P5R=6%
+
+[§7/§10 LARGE-R + conditional probabilities]  (spike-close entry unless noted)
+    ALL:            P1R=47% P2R=31% P3R=21% P4R=16% P5R=12% P6R=9% P8R=6%   med_maxR=0.96 p90_maxR=5.73
+    | full-acceptance P3R=22% P4R=18% P5R=15% P6R=12%
+    | n1 agrees      P3R=31% P4R=23% P5R=18% P6R=13%
+    | early-accept   P3R=38% P4R=34% P5R=28% P6R=25%
+
+[§8 R-MULTIPLE profit management]  (events reaching 3R on the spike-close entry)
+    fix3R    n=272 E[final_R]=1.44 med=1.00 win%=67 med_maxR=2.33 med_giveback=1.16
+    half     n=272 E[final_R]=1.28 med=1.00 win%=67 med_maxR=2.33 med_giveback=1.29
+    full     n=272 E[final_R]=1.12 med=1.00 win%=67 med_maxR=2.33 med_giveback=1.39
+
+[§5 SPIKE LOCATION]  (spike-close entry)
+    loc NA                       n=  17 ses= 13 cont= 41% trap= 29% mMAE_R= -1.36 mMFE_R= 0.58 P3R= 29% P4R= 24% P5R= 18% P6R= 18% availR=0.73 R=0.41 E[3R]=-0.353
+    loc above_VAH                n= 277 ses= 33 cont= 17% trap= 56% mMAE_R= -1.29 mMFE_R= 0.48 P3R= 17% P4R= 14% P5R= 11% P6R=  8% availR=1.1 R=0.62 E[3R]=-0.328
+    loc acceptance_outside_value n= 351 ses= 35 cont= 70% trap= 20% mMAE_R= -1.21 mMFE_R= 1.49 P3R= 25% P4R= 20% P5R= 16% P6R= 10% availR=1.08 R=0.72 E[3R]=0.126
+    loc below_VAL                n= 196 ses= 31 cont= 17% trap= 57% mMAE_R= -1.28 mMFE_R=  0.6 P3R= 17% P4R= 11% P5R=  8% P6R=  6% availR=0.97 R=0.63 E[3R]=-0.29
+    loc inside_value             n= 297 ses= 34 cont= 34% trap= 42% mMAE_R= -1.29 mMFE_R= 0.97 P3R= 22% P4R= 16% P5R= 11% P6R= 11% availR=0.78 R=0.62 E[3R]=-0.088
+    loc near_POC                 n= 133 ses= 31 cont= 33% trap= 47% mMAE_R= -1.32 mMFE_R= 1.07 P3R= 23% P4R= 16% P5R= 11% P6R=  8% availR=0.73 R=0.62 E[3R]=-0.114
+    lvl A_broke                  n= 231 ses= 33 cont= 35% trap= 33% mMAE_R= -1.21 mMFE_R= 0.49 P3R= 16% P4R= 12% P5R=  9% P6R=  7% availR=0.98 R=0.62 E[3R]=-0.229
+    lvl B_swept_returned         n= 205 ses= 34 cont=  0% trap= 87% mMAE_R= -1.41 mMFE_R=  0.0 P3R=  8% P4R=  5% P5R=  3% P6R=  3% availR=0.81 R=0.62 E[3R]=-0.705
+    lvl C_broke_accepted         n= 514 ses= 35 cont= 68% trap= 23% mMAE_R= -1.21 mMFE_R= 1.36 P3R= 25% P4R= 18% P5R= 15% P6R= 10% availR=0.96 R=0.72 E[3R]=0.075
+    lvl D_failed_immediately     n=  72 ses= 27 cont=  0% trap= 33% mMAE_R= -1.27 mMFE_R= 1.89 P3R= 36% P4R= 29% P5R= 18% P6R= 17% availR=0.45 R=0.53 E[3R]=0.347
+    lvl E_open_space             n= 249 ses= 34 cont= 20% trap= 54% mMAE_R= -1.36 mMFE_R= 0.97 P3R= 26% P4R= 20% P5R= 16% P6R= 12% availR=0.99 R=0.62 E[3R]=-0.068
+
+[§10 RETAIL-TRAP hypothesis]
+    n1 AGREES                    n= 610 ses= 34 cont= 54% trap= 23% mMAE_R= -1.24 mMFE_R=  1.6 P3R= 31% P4R= 23% P5R= 18% P6R= 13% availR=0.96 R=0.62 E[3R]=0.207
+    n1 DISAGREES                 n= 661 ses= 35 cont= 22% trap= 59% mMAE_R= -1.29 mMFE_R= 0.42 P3R= 13% P4R= 10% P5R=  7% P6R=  5% availR=0.94 R=0.62 E[3R]=-0.42
+    n1 re-enters spike range     n= 186 ses= 34 cont=  2% trap= 92% mMAE_R= -1.45 mMFE_R=  0.0 P3R=  3% P4R=  2% P5R=  2% P6R=  2% availR=1.19 R=0.52 E[3R]=-0.866
+    reclaim within 3             n= 554 ses= 34 cont=  0% trap= 83% mMAE_R= -1.35 mMFE_R= 0.38 P3R=  7% P4R=  5% P5R=  4% P6R=  3% availR=0.81 R=0.62 E[3R]=-0.643
+    no reclaim within 3          n= 597 ses= 35 cont= 72% trap=  0% mMAE_R=  -1.2 mMFE_R= 1.94 P3R= 33% P4R= 26% P5R= 20% P6R= 14% availR=0.94 R=0.63 E[3R]=0.368
+
+[§9 OI / §10 volume as secondary evidence]  (early-accept entry, controlled on level=C_broke_accepted)
+    C_broke_accepted (base)      n= 380 ses= 35 cont= 77% trap= 16% mMAE_R= -1.83 mMFE_R= 1.47 P3R= 34% P4R= 29% P5R= 24% P6R= 20% availR=3.64 R=0.25 E[3R]=0.339
+     + OI rising w/ price        n= 158 ses= 32 cont= 72% trap= 18% mMAE_R= -1.79 mMFE_R= 1.27 P3R= 34% P4R= 29% P5R= 25% P6R= 22% availR=3.4 R=0.22 E[3R]=0.313
+     + OI falling w/ price       n= 186 ses= 31 cont= 81% trap= 14% mMAE_R=  -1.9 mMFE_R= 1.55 P3R= 37% P4R= 31% P5R= 25% P6R= 20% availR=3.5 R=0.31 E[3R]=0.406
+
+[§14 HEADLINE SETUP -- CORE]  early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL
+    TRAIN         n=289 ses=19 cont=68% trap=16% medR=0.23pt medMAE_R=-1.83 availR=3.44 P3R=38% P4R=32% P5R=27% P6R=23% E[fix3R]=0.504 maxDD=-7.0R
+    VALIDATION    n=115 ses= 8 cont=66% trap=16% medR=0.22pt medMAE_R=-1.89 availR=4.55 P3R=43% P4R=40% P5R=32% P6R=30% E[fix3R]=0.63 maxDD=-4.0R
+    OUT-OF-SAMPLE n=140 ses= 8 cont=61% trap=19% medR=0.23pt medMAE_R=-1.74 availR=4.61 P3R=36% P4R=34% P5R=27% P6R=24% E[fix3R]=0.413 maxDD=-13.0R
+    POOLED        n=544 ses=35 cont=66% trap=17% medR=0.23pt medMAE_R=-1.81 availR=3.92 P3R=38% P4R=34% P5R=28% P6R=25% E[fix3R]=0.508 maxDD=-13.0R
+
+[§14 HEADLINE SETUP -- STRICT (+n1-agree +availR>=3)]  early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL  (+ n1 agrees, available_R>=3)
+    TRAIN         n= 42 ses=17 cont=74% trap=10% medR=0.23pt medMAE_R=-1.86 availR=5.22 P3R=40% P4R=31% P5R=29% P6R=26% E[fix3R]=0.405 maxDD=-5.0R
+    VALIDATION    n= 19 ses= 7 cont=74% trap=16% medR=0.22pt medMAE_R=-1.63 availR=9.0 P3R=21% P4R=21% P5R=21% P6R=21% E[fix3R]=-0.079 maxDD=-5.5R
+    OUT-OF-SAMPLE n= 23 ses= 8 cont=74% trap=13% medR=0.23pt medMAE_R=-1.74 availR=6.27 P3R=26% P4R=17% P5R=9% P6R=4% E[fix3R]=0.34 maxDD=-4.0R
+    POOLED        n= 84 ses=32 cont=74% trap=12% medR=0.23pt medMAE_R=-1.79 availR=6.13 P3R=32% P4R=25% P5R=21% P6R=19% E[fix3R]=0.278 maxDD=-9.5R
+
+[§12 STATISTICAL QUALITY CONTROL]
+    events=1271  sessions_with_events=35/36  regimes={'CHOP': 714, 'TREND_UP': 314, 'TREND_DOWN': 243}
+    by bar source: {'cycles_resampled': 793, 'live_candles': 342, 'zerohero': 136}   (robustness: cycles_resampled highs/lows are slightly understated)
+    headline setup: 544 trades over 35 sessions, total 276.1R (fix3R); largest single-session contribution 2026-08-26 = 19.8R (no single-session dominance)
+    leave-one-session-out: 0/35 holdouts flip the total-R sign
+
+####################################################################################################################
+# CRUDEOIL  --  1090 events over 38 sessions (spike pctile >= 0.9)  regimes ['CHOP', 'TREND_DOWN', 'TREND_UP']
+#   chronological split: train 21 sess / val 9 sess / oos 9 sess
+####################################################################################################################
+
+[§2/§9 ENTRY-TIMING comparison]  (each entry, its primary structural stop, outcome window 3)
+    A_spikeclose                 n=1090 ses= 38 cont= 44% trap= 39% mMAE_R= -1.18 mMFE_R= 0.97 P3R= 25% P4R= 21% P5R= 17% P6R= 14% availR=0.86 R=24.72 E[3R]=-0.015
+    B_reaction                   n= 490 ses= 38 cont= 64% trap= 18% mMAE_R= -1.44 mMFE_R= 0.92 P3R= 26% P4R= 22% P5R= 18% P6R= 16% availR=1.99 R=12.93 E[3R]=-0.057
+    D_earlyaccept                n= 595 ses= 38 cont= 66% trap= 18% mMAE_R=  -1.7 mMFE_R= 1.37 P3R= 37% P4R= 32% P5R= 28% P6R= 25% availR=5.14 R=8.51 E[3R]=0.455
+    E_fullaccept                 n= 503 ses= 38 cont= 86% trap=  0% mMAE_R= -1.27 mMFE_R= 1.18 P3R= 32% P4R= 24% P5R= 22% P6R= 18% availR=2.75 R=16.26 E[3R]=0.373
+    F_confirm3                   n= 521 ses= 38 cont= 83% trap=  0% mMAE_R= -1.27 mMFE_R= 1.18 P3R= 32% P4R= 24% P5R= 22% P6R= 18% availR=2.79 R=15.93 E[3R]=0.384
+
+[§9 same, chronological OUT-OF-SAMPLE only]
+    (oos: 238 events / 9 sessions)
+    A_spikeclose [oos]           n= 238 ses=  8 cont= 42% trap= 40% mMAE_R= -1.19 mMFE_R= 0.86 P3R= 24% P4R= 21% P5R= 17% P6R= 14% availR=0.61 R=22.93 E[3R]=-0.071
+    B_reaction [oos]             n=  99 ses=  8 cont= 60% trap= 18% mMAE_R= -1.35 mMFE_R= 0.84 P3R= 23% P4R= 21% P5R= 19% P6R= 18% availR=1.11 R=12.84 E[3R]=-0.242
+    D_earlyaccept [oos]          n= 114 ses=  8 cont= 69% trap= 17% mMAE_R= -1.57 mMFE_R= 1.57 P3R= 36% P4R= 31% P5R= 25% P6R= 23% availR=4.36 R=8.5 E[3R]=0.374
+    E_fullaccept [oos]           n=  99 ses=  8 cont= 88% trap=  0% mMAE_R= -1.24 mMFE_R=  1.3 P3R= 32% P4R= 26% P5R= 24% P6R= 19% availR=4.1 R=12.87 E[3R]=0.396
+    F_confirm3 [oos]             n= 101 ses=  8 cont= 86% trap=  0% mMAE_R= -1.24 mMFE_R=  1.3 P3R= 32% P4R= 26% P5R= 24% P6R= 19% availR=3.77 R=12.78 E[3R]=0.388
+
+[§6 STRUCTURAL STOP]  (early-acceptance entry D; median over events)
+    stop=spike       n= 521 medR= 37.92pt medMAE_R= -1.08 medMFE_R= 0.92 availR=1.02 P4R=19% P5R=14%
+    stop=reaction    n= 521 medR= 15.93pt medMAE_R= -1.27 medMFE_R= 1.18 availR=2.79 P4R=24% P5R=22%
+    stop=window      n= 521 medR= 36.96pt medMAE_R= -1.08 medMFE_R= 0.91 availR=1.06 P4R=20% P5R=15%
+    stop=swing       n= 521 medR=  31.5pt medMAE_R=  -1.1 medMFE_R= 1.16 availR=1.36 P4R=22% P5R=16%
+    stop=prevstruct  n= 521 medR=  58.5pt medMAE_R= -1.01 medMFE_R= 0.83 availR=0.8 P4R=11% P5R=8%
+
+[§7/§10 LARGE-R + conditional probabilities]  (spike-close entry unless noted)
+    ALL:            P1R=50% P2R=34% P3R=25% P4R=21% P5R=17% P6R=14% P8R=10%   med_maxR=0.97 p90_maxR=8.0
+    | full-acceptance P3R=32% P4R=24% P5R=22% P6R=18%
+    | n1 agrees      P3R=36% P4R=30% P5R=23% P6R=20%
+    | early-accept   P3R=37% P4R=32% P5R=28% P6R=25%
+
+[§8 R-MULTIPLE profit management]  (events reaching 3R on the spike-close entry)
+    fix3R    n=275 E[final_R]=1.54 med=1.00 win%=70 med_maxR=2.47 med_giveback=1.09
+    half     n=275 E[final_R]=1.45 med=1.00 win%=70 med_maxR=2.47 med_giveback=1.28
+    full     n=275 E[final_R]=1.36 med=1.00 win%=70 med_maxR=2.47 med_giveback=1.31
+
+[§5 SPIKE LOCATION]  (spike-close entry)
+    loc NA                       n=  19 ses= 15 cont= 47% trap= 21% mMAE_R= -1.39 mMFE_R= 2.21 P3R= 47% P4R= 42% P5R= 42% P6R= 37% availR=0.65 R=10.42 E[3R]=0.421
+    loc above_VAH                n= 178 ses= 29 cont= 18% trap= 60% mMAE_R= -1.18 mMFE_R= 0.43 P3R= 17% P4R= 14% P5R= 13% P6R= 11% availR=0.95 R=22.66 E[3R]=-0.254
+    loc acceptance_outside_value n= 388 ses= 37 cont= 64% trap= 25% mMAE_R= -1.12 mMFE_R= 1.32 P3R= 31% P4R= 26% P5R= 22% P6R= 18% availR=0.84 R=27.81 E[3R]=0.177
+    loc below_VAL                n= 158 ses= 33 cont= 25% trap= 52% mMAE_R= -1.21 mMFE_R= 0.43 P3R= 22% P4R= 18% P5R= 15% P6R= 13% availR=1.44 R=22.66 E[3R]=-0.211
+    loc inside_value             n= 253 ses= 37 cont= 44% trap= 39% mMAE_R= -1.19 mMFE_R= 0.96 P3R= 23% P4R= 18% P5R= 13% P6R= 12% availR=0.68 R=24.72 E[3R]=-0.03
+    loc near_POC                 n=  94 ses= 30 cont= 45% trap= 38% mMAE_R= -1.18 mMFE_R= 0.94 P3R= 24% P4R= 20% P5R= 16% P6R= 12% availR=0.7 R=25.75 E[3R]=-0.07
+    lvl A_broke                  n= 167 ses= 37 cont= 41% trap= 29% mMAE_R= -1.13 mMFE_R= 0.45 P3R= 25% P4R= 22% P5R= 19% P6R= 14% availR=1.12 R=26.78 E[3R]=-0.104
+    lvl B_swept_returned         n= 182 ses= 36 cont=  0% trap= 84% mMAE_R= -1.26 mMFE_R=  0.0 P3R= 12% P4R=  8% P5R=  8% P6R=  6% availR=0.9 R=19.84 E[3R]=-0.505
+    lvl C_broke_accepted         n= 553 ses= 38 cont= 66% trap= 24% mMAE_R= -1.14 mMFE_R= 1.32 P3R= 30% P4R= 25% P5R= 20% P6R= 17% availR=0.8 R=26.84 E[3R]=0.18
+    lvl D_failed_immediately     n=  42 ses= 28 cont=  0% trap= 21% mMAE_R= -1.21 mMFE_R= 1.73 P3R= 31% P4R= 24% P5R= 17% P6R= 17% availR=0.24 R=17.69 E[3R]=0.289
+    lvl E_open_space             n= 146 ses= 35 cont= 33% trap= 57% mMAE_R= -1.22 mMFE_R= 0.63 P3R= 21% P4R= 18% P5R= 15% P6R= 12% availR=1.05 R=21.63 E[3R]=-0.128
+
+[§10 RETAIL-TRAP hypothesis]
+    n1 AGREES                    n= 491 ses= 38 cont= 64% trap= 18% mMAE_R= -1.13 mMFE_R=  1.8 P3R= 36% P4R= 30% P5R= 23% P6R= 20% availR=0.78 R=24.72 E[3R]=0.361
+    n1 DISAGREES                 n= 599 ses= 37 cont= 28% trap= 56% mMAE_R=  -1.2 mMFE_R= 0.38 P3R= 16% P4R= 13% P5R= 12% P6R= 10% availR=0.95 R=25.05 E[3R]=-0.323
+    n1 re-enters spike range     n= 119 ses= 35 cont=  3% trap= 91% mMAE_R= -1.32 mMFE_R=  0.0 P3R=  2% P4R=  2% P5R=  2% P6R=  2% availR=0.99 R=18.54 E[3R]=-0.899
+    reclaim within 3             n= 452 ses= 37 cont=  0% trap= 80% mMAE_R= -1.23 mMFE_R= 0.34 P3R= 11% P4R=  8% P5R=  7% P6R=  5% availR=0.83 R=23.72 E[3R]=-0.475
+    no reclaim within 3          n= 525 ses= 38 cont= 83% trap=  0% mMAE_R=  -1.1 mMFE_R=  2.0 P3R= 39% P4R= 32% P5R= 27% P6R= 22% availR=0.77 R=26.78 E[3R]=0.405
+
+[§9 OI / §10 volume as secondary evidence]  (early-accept entry, controlled on level=C_broke_accepted)
+    C_broke_accepted (base)      n= 430 ses= 38 cont= 78% trap= 15% mMAE_R= -1.65 mMFE_R= 1.25 P3R= 35% P4R= 30% P5R= 26% P6R= 23% availR=4.66 R=9.57 E[3R]=0.345
+     + OI rising w/ price        n= 200 ses= 33 cont= 82% trap= 13% mMAE_R= -1.61 mMFE_R= 1.38 P3R= 37% P4R= 32% P5R= 28% P6R= 26% availR=3.05 R=9.63 E[3R]=0.418
+     + OI falling w/ price       n= 191 ses= 35 cont= 75% trap= 15% mMAE_R= -1.77 mMFE_R= 1.07 P3R= 35% P4R= 30% P5R= 25% P6R= 22% availR=5.85 R=8.36 E[3R]=0.371
+
+[§14 HEADLINE SETUP -- CORE]  early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL
+    TRAIN         n=351 ses=21 cont=65% trap=19% medR=8.75pt medMAE_R=-1.7 availR=5.84 P3R=40% P4R=34% P5R=30% P6R=27% E[fix3R]=0.531 maxDD=-11.0R
+    VALIDATION    n=130 ses= 9 cont=64% trap=19% medR=7.72pt medMAE_R=-1.9 availR=4.78 P3R=32% P4R=27% P5R=24% P6R=20% E[fix3R]=0.323 maxDD=-9.3R
+    OUT-OF-SAMPLE n=114 ses= 8 cont=69% trap=17% medR=8.5pt medMAE_R=-1.57 availR=4.36 P3R=36% P4R=31% P5R=25% P6R=23% E[fix3R]=0.374 maxDD=-9.0R
+    POOLED        n=595 ses=38 cont=66% trap=18% medR=8.51pt medMAE_R=-1.7 availR=5.14 P3R=37% P4R=32% P5R=28% P6R=25% E[fix3R]=0.455 maxDD=-11.6R
+
+[§14 HEADLINE SETUP -- STRICT (+n1-agree +availR>=3)]  early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL  (+ n1 agrees, available_R>=3)
+    TRAIN         n= 49 ses=19 cont=69% trap=14% medR=12.08pt medMAE_R=-1.47 availR=6.67 P3R=24% P4R=20% P5R=16% P6R=16% E[fix3R]=-0.041 maxDD=-11.0R
+    VALIDATION    n= 19 ses= 8 cont=68% trap=21% medR=11.69pt medMAE_R=-1.26 availR=7.51 P3R=32% P4R=32% P5R=21% P6R=16% E[fix3R]=0.316 maxDD=-3.0R
+    OUT-OF-SAMPLE n= 16 ses= 7 cont=56% trap=31% medR=15.23pt medMAE_R=-1.35 availR=6.29 P3R=19% P4R=19% P5R=12% P6R=12% E[fix3R]=-0.375 maxDD=-6.0R
+    POOLED        n= 84 ses=34 cont=67% trap=19% medR=12.72pt medMAE_R=-1.43 availR=7.13 P3R=25% P4R=23% P5R=17% P6R=16% E[fix3R]=-0.024 maxDD=-11.0R
+
+[§12 STATISTICAL QUALITY CONTROL]
+    events=1090  sessions_with_events=38/39  regimes={'TREND_UP': 470, 'CHOP': 464, 'TREND_DOWN': 156}
+    by bar source: {'cycles_resampled': 667, 'live_candles': 324, 'zerohero': 99}   (robustness: cycles_resampled highs/lows are slightly understated)
+    headline setup: 595 trades over 38 sessions, total 270.9R (fix3R); largest single-session contribution 2026-07-28 = 31.0R (no single-session dominance)
+    leave-one-session-out: 0/38 holdouts flip the total-R sign
+
+================================================================================================================================
+[§14 FINAL TABLE]  CORE setup = abnormal spike(pctile>=adaptive) + early-acceptance entry (1st close beyond level, no same-bar reclaim) + reaction-candle SL  |  R is INDEX-STRUCTURAL (underlying points), NOT option premium P&L
+================================================================================================================================
+  SYMBOL    ENTRY          SL           medR   P3R   P4R   P5R   P6R  TRAP%   E[3R]  maxDD_R    N  SESS STATUS                      
+  NIFTY     early-accept   reaction-lo/hi   5.58   40%   31%   29%   25%    14%   0.676     -5.0   83    33 PROMISING - MORE DATA REQUIRED
+  NATURALGAS early-accept   reaction-lo/hi   0.23   38%   34%   28%   25%    17%   0.508    -13.0  544    35 PROMISING - MORE DATA REQUIRED
+  CRUDEOIL  early-accept   reaction-lo/hi   8.51   37%   32%   28%   25%    18%   0.455    -11.6  595    38 PROMISING - MORE DATA REQUIRED
+
+  CAVEATS ON THE STATUS (why it is not stronger than PROMISING):
+   * R here is INDEX-STRUCTURAL. Stage-1 measured the ATM option premium captures ~0.4x
+     the index move -> apply a ~2.5x haircut + spread + theta to translate E[3R] to a
+     tradable option-premium expectancy (most of the margin is consumed).
+   * medMAE_R ~ -1.6 to -1.9: the 5m bar that hits the reaction-candle stop typically
+     overshoots it by ~0.6-0.9R -> the loss side is understated by the fixed-3R model.
+   * NATURALGAS median R = 0.23 pt is below realistic slippage -> its R-multiples are
+     inflated by an untradably tight stop; treat NATGAS numbers as directional only.
+   * intraday events are correlated; effective independent N ~ the session count (33-38).
+
+[FINAL] Research only. No production pattern implemented, no signal enabled, no live change, no orders, no weighted score. Statuses above are the ceiling the data supports -- never 'PROVEN' from this sample.
+
