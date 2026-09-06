@@ -547,3 +547,88 @@ split once ≥10 independent sessions across regimes exist.
 ```
 cd backend && python scripts/orderflow_event_anatomy.py            # rebuild CSV + report
 ```
+
+---
+
+## 11. Continuation vs Trap research (2026-09-06) — RESEARCH ONLY, all INSUFFICIENT DATA
+
+`backend/scripts/orderflow_continuation_trap.py` (report:
+`data/orderflow_continuation_trap_report_2026-09-06.txt`). Builds on the
+event-anatomy events; does not replace that dataset. Question: can abnormal
+spikes be separated into CONTINUATION vs TRAP/REVERSAL, and what distinguishes
+them? Strictly causal; no score, no weights; nothing wired to live; no pattern
+enabled; no orders.
+
+### The result: acceptance vs failed-acceptance is a clean, cross-symbol split
+
+`§4 acceptance-hold sweep` — spike-close-entry forward distribution conditioned
+on whether the close beyond the broken level HELD for `hold` completed candles:
+
+| symbol | hold | ACCEPT: cont% / trap% / medMFE_R (n) | REJECT: cont% / trap% / medMFE_R (n) |
+|--------|:---:|:-----------------------------------:|:------------------------------------:|
+| NIFTY  | 2 | 69 / 15 / 1.34R (13) | 0 / 77 / 0.17R (13) |
+| NIFTY  | 3 | 100 / 0 / 2.12R (9)  | 0 / 71 / 0.33R (17) |
+| NATGAS | 2 | 81 / 7 / 1.52R (75)  | 0 / 75 / 0.65R (126) |
+| NATGAS | 3 | 97 / 0 / 1.61R (63)  | 0 / 72 / 0.65R (138) |
+| CRUDE  | 2 | ~83 / ~8 / — (82)    | ~0 / ~78 / — (98) |
+
+Failed acceptance → **0 % continuation, ~72–77 % trap, median MFE ≈ 0.2–0.65R**
+on all three symbols. Acceptance → majority continuation, MFE ≈ 1.3–2.1R. The
+split **stabilises at hold = 3** (hold 3/4/5 near-identical) — 3 candles is the
+natural confirmation window; more adds nothing.
+
+### Hypothesis tests (H1–H8)
+
+| H | statement | verdict | evidence |
+|---|-----------|---------|----------|
+| **H1** | spike + acceptance > spike alone (continuation) | **SUPPORTED, all 3 symbols** | ΔP(cont) = +36 pp (NIFTY, n13), +49 pp (NATGAS, n75), +47 pp (CRUDE, n82) |
+| **H2** | failed acceptance → higher reversal | **SUPPORTED, all 3 symbols** | ΔP(trap) = +27 / +25 / +26 pp |
+| H3 | post-spike reaction info > spike magnitude | inconclusive (D-entry P3R crushed by inflated R) — but see n1-direction below |
+| H4 | level interaction > raw volume | level effect > volume effect on P3R spread, all 3 |
+| H5 | profile location changes the distribution | continuation-% spread across profile classes ≈ 0.40 (NIFTY) — material but n-thin |
+| **H6** | extremely large spikes = exhaustion | **NOT supported** — pctile ≥ 0.98 spikes show ~40 % continuation, same as moderate; big spikes are not systematically traps |
+| H7 | available space determines large-R feasibility | inconclusive — NIFTY has almost no `available_R ≥ 3` events |
+| **H8** | the best entry is not the earliest | **SUPPORTED** — `A_spike` never has the best P3R; `B_reaction`/`C_rejection` beat it (+11 pp NIFTY, +2–4 pp NATGAS/CRUDE) |
+
+### Other observations
+
+- **`n1` direction is a fast trap tell** (known 1 bar after the spike):
+  first post-spike candle *disagrees* with the spike → 7–17 % continuation,
+  71–79 % trap, median MFE ≈ 0.2–0.5R; *agrees* → 47–56 % continuation, P3R
+  31 % (NATGAS). Nearly as strong as acceptance, available 2 bars earlier.
+- **`B_swept_returned` is the trap signature** — 0 % continuation, 89–90 %
+  trap on NIFTY and NATGAS.
+- **Structural stop (§10):** swing / prev-structure stops give a lower
+  median MAE_R (−0.79 vs −1.03) but a larger R, which collapses `available_R`.
+  The spike low/high stop has median MAE_R ≈ −1.0 to −1.3 — a valid
+  invalidation that is not routinely blown through.
+- **Available reward (§11):** NIFTY median `available_R` ≈ 0.7 — structurally
+  there is almost no room; NATGAS/CRUDE median ≈ 1.1. Very few events have
+  `available_R ≥ 3`.
+- **Runner (§12), on 3R-reaching events only:** fixed 3R beats both runner
+  variants on this sample — E[final_R] 3.0 vs 2.3–2.4 (50 % + runner) vs
+  1.7–1.8 (full runner); median max_R only ≈ 3.4–3.8, so there is rarely a
+  large trend to run. n = 3 (NIFTY) / 43 (NATGAS).
+- **Late entry costs R:** the acceptance-confirmation entry (D) has the best
+  continuation/trap ratio but the *worst* P3R, because waiting 3 candles
+  inflates entry-to-structural-SL distance. The acceptance *label* is the
+  value; entering only after full confirmation gives the R back.
+
+### FINAL STATUS
+
+| symbol | status | basis |
+|--------|--------|-------|
+| **NIFTY PREMIUM**  | **INSUFFICIENT DATA** | 30 events / 4 sessions / 2 regimes; `available_R` ≈ 0.7 (no room). |
+| **NATGAS PREMIUM** | **INSUFFICIENT DATA** | 237 events / 4 sessions / 3 regimes; acceptance split clean at n = 75/126 but P5R only ~11 %. |
+| **CRUDE PREMIUM**  | **INSUFFICIENT DATA** | 221 events / **3 sessions / CHOP only**; acceptance split clean but never observed in a trending CRUDE session. |
+
+**No edge claimed. No production pattern created or enabled. No live
+behaviour changed. No orders.** Carried to Stage-2 (needs ≥ 10 independent
+sessions across regimes + a train/validation/out-of-sample split):
+**acceptance (hold ≥ 2) after an abnormal level break**, ideally combined
+with `available_R ≥ 3` and/or `n1` agreeing — the `accept≥2 & avail_R≥3`
+cell (NATGAS n = 14) showed 86 % continuation / 7 % trap.
+
+```
+cd backend && python scripts/orderflow_continuation_trap.py
+```
