@@ -150,6 +150,47 @@ stops forcing the trade into N+1's colour when the market breaks the other way.
 No config is selected (spec §10). No strategy change, no production wiring,
 frozen H1/H7 + live logic untouched. Nothing `PROVEN`.
 
+## NIFTY deep-dive — TOD / regime / gap / DOW conditioning (2026-09-07)
+
+`scripts/nifty_spike_n1_deepdive.py` (engine imported unchanged). NIFTY 5m
+abnormal-spike → OCO N+1 breakout, conditioned. Upstox NIFTY 5m (1,077 sess) +
+Kaggle NIFTY 5m (2,652 sess), chronological 45/20/17/18 split.
+
+**Correction to the OCO table above:** the OCO `range_only` figures there
+(+0.30 Kaggle / +0.25 Upstox) were **inflated by pooling in 30M-timeframe
+events** (`imbalance_nc_oco_breakout.py` resamples to 5M *and* 30M). On **pure
+NIFTY 5m** the honest number is `E[R] +0.05 (Upstox) / +0.075 (Kaggle)` at 1:3,
+**1:3 target hit only ~6–7 %**, timeout **>52 %**. Barely above zero.
+
+**Conditioner stability scan** — cuts with `E[R] > 0` on ≥3 of 4 chronological
+splits, spread ≤ 0.35R:
+
+| cut | Upstox splits (T/V/O/H) | Kaggle splits (T/V/O/H) |
+|---|---|---|
+| all events | +0.05 / +0.02 / +0.02 / +0.10 | +0.10 / +0.06 / +0.05 / +0.03 |
+| **`*/WIDE`** (spike on a wide-range / high-vol day) | **+0.18 / +0.06 / +0.07 / +0.27** | (via CHOP/WIDE +0.15, TREND_DN/WIDE +0.16, TREND_UP/WIDE +0.11) |
+| `CHOP/*` | +0.09 / +0.00 / +0.10 / +0.07 | +0.08 / +0.03 / +0.06 / +0.07 |
+| `range_x ≥ 3` | +0.09 / +0.00 / +0.17 / +0.26 | +0.03 / +0.12 / +0.07 / +0.09 |
+| `GAP_UP` | (not flagged) | +0.12 / +0.08 / +0.07 / +0.06 |
+
+**The one condition that shows up in BOTH datasets across splits: abnormal
+spikes on already-wide-range (high-volatility) days break out better**
+(`*/WIDE` `E[R] +0.11…+0.27` vs `*/TIGHT` ≈ 0 or negative). `CHOP` days slightly
+beat trend days. `Thu/Fri` weaker than `Tue/Wed` (mild). `near-pivot`,
+`gap direction`, `time-of-day` — no consistent effect.
+
+**Next-25-min excursion (Upstox, 3,357 triggered OCO trades, in R):**
+MFE_R p50 0.76 / p75 1.46 / p90 2.39 / p95 3.13 / max 12.18; MAE_R p50 −0.84 /
+p10 −1.57 / min −6.14. **P(MFE≥1R)=0.40, P(≥2R)=0.15, P(≥3R)=0.06, P(≥5R)=0.004.**
+→ 40 % of trades reach +1R sometime in 25 min but only 6 % reach +3R — the
+1:3-in-25-min combo is structurally hard; a tighter target or a trail would
+capture more of the +1R mass (1:2 already tested, lower E[R] via lower R).
+
+**Verdict:** still a **range-shape proxy on the cash index** — no volume, L2,
+aggressor or OI. `*/WIDE` and `range_x ≥ 3` are the only "candidate for further
+study" cuts; everything else is within-noise or decays OOS. Not an order-flow
+edge, not a production signal. Nothing `PROVEN`.
+
 ## Not done / blocked
 
 - No production wiring, no live signal, no change to frozen H1/H7 or trading logic.
