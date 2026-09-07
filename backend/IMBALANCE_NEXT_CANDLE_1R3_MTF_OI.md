@@ -110,6 +110,46 @@ across vendor + period) but **weak, proxy-only, timeout-dominated,
 order-flow / L2 edge** and not tradeable as specified. No strategy change, no
 production wiring, nothing `PROVEN`.
 
+## OCO variant — arm BOTH N+1 marks (2026-09-07)
+
+`scripts/imbalance_nc_oco_breakout.py` (engine primitives imported unchanged).
+Requested variant: N = abnormal-spike **and** imbalance candle; after N+1 closes,
+mark its high **and** low and arm **both** stop orders — break N+1 high → BUY
+(SL = N+1 low), break N+1 low → SELL (SL = N+1 high), first level wins,
+`R = N+1 range`. Same 1:2/1:3/1:4 + 25-min timeout. Differs from the base module,
+which only trades in N+1's own colour direction. Long share ≈ 50% → genuine
+both-sides bracket. Verdict unchanged: `NOT VALIDATED — GENUINE L2 REQUIRED`
+(imbalance is a proxy).
+
+| cut (≥200%, 1:3) | trig | tgt% | SL% | TO% | **E[R]** | PF | vs directional E[R] |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| futures `spike_AND_book` | 457 | 23.2 | 63.7 | 13.1 | **+0.15** | 1.24 | −0.03 |
+| futures `book_only` | 2123 | 25.5 | 61.9 | 12.5 | +0.23 | 1.36 | (n/a) |
+| futures `vol_range` | 814 | 24.4 | 60.9 | 14.6 | +0.22 | 1.36 | −0.03 |
+| Kaggle NIFTY 5m `range_only` | 9733 | 10.9 | 33.3 | 55.9 | +0.30 | 1.78 | +0.21 |
+| Upstox NIFTY 5m `range_only` | 3300 | 9.1 | 32.2 | 58.7 | +0.25 | 1.66 | +0.16 |
+
+**Arming both sides beats the colour-directional filter everywhere** (futures
+proxy −0.03 → +0.15…+0.23; index proxy +0.16/+0.21 → +0.25/+0.30) — because it
+stops forcing the trade into N+1's colour when the market breaks the other way.
+**But this is a backtest-mechanics gain, not a validated edge:**
+
+- Still no aggressor data → the imbalance is a proxy → `NOT VALIDATED`.
+- Futures = 3–4 sessions, one regime → the +0.15…+0.22 is within-noise.
+- `spike_AND_book` is *worse* than `book_only` (+0.15 vs +0.23) — requiring the
+  abnormal spike on top of the imbalance only cuts sample, adds nothing.
+- Index `range_only` still hits the 1:3 target only ~9–11 % of the time with
+  ~56–59 % timeouts; the +E[R] is timeout-drift + a moderate SL:target ratio.
+  Kaggle decays monotonically OOS (TRAIN +0.34 → HOLDOUT +0.21 → latest +0.18);
+  Upstox is noisy (TRAIN +0.28 → VAL +0.17 → HOLDOUT +0.28).
+- `tf 1M` OCO resolves in ~1 bar and looks best (E[R] +0.25, TO 8 %); `tf 5M`
+  is flat (E[R] −0.01, TO 44 %).
+- `near S/R` vs `away` and `sideways→spike` vs `normal`: identical → no value.
+- 1:2 target is more reachable (tgt ~35 % futures / ~22 % index) but lower E[R].
+
+No config is selected (spec §10). No strategy change, no production wiring,
+frozen H1/H7 + live logic untouched. Nothing `PROVEN`.
+
 ## Not done / blocked
 
 - No production wiring, no live signal, no change to frozen H1/H7 or trading logic.
