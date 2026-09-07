@@ -76,6 +76,40 @@ Only 1 NIFTY event fell inside the Upstox expired-option 5m coverage window
 (`prem_CE_mfe/mae`, `prem_PE_mfe/mae`, strike, distance-from-ATM) are in the CSV
 for when more overlap exists.
 
+## Cross-vendor replication — Upstox NIFTY historical (2026-09-07)
+
+`scripts/imbalance_nc_1r3_upstox_nifty.py` runs the **unchanged** engine on the
+Upstox NIFTY bars (cash index — no volume / bid-ask / depth / aggressor / OI, so
+only the `range_only` proxy applies). Verdict is unchanged:
+`NOT VALIDATED — GENUINE L2 REQUIRED`. Purpose: does the `range_only` N+1
+behaviour replicate on a second vendor/period?
+
+| dataset | events | sessions | ≥200% trig | tgt% | SL% | TO% | E[R]@1:3 | PF |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| **Upstox NIFTY 5m** (2022-01…2026-09) | 3,417 | 1,077 | 2,563 | **7.8** | 35.3 | **56.9** | **+0.16** | 1.40 |
+| Kaggle NIFTY 5m (2015…2026, from above) | 9,995 | 2,652 | 7,492 | ~9 | 35.9 | ~55 | +0.21 | 1.51 |
+| Upstox NIFTY 1m (2026-08-07…09-04) | 302 | 21 | 243 | 16.9 | 57.2 | 25.9 | +0.11 | 1.18 |
+
+**The two vendors AGREE** on the 5m `range_only` proxy: same timeout-dominated
+signature (~57% of trades never resolve in 25 min), 1:3 target hit **<10%**,
+small positive `E[R] ≈ +0.16–0.21`, `PF ≈ 1.4–1.5`. Threshold sweep on Upstox
+(≥200 +0.16 · ≥300 +0.23 · ≥400 +0.23 · ≥500 +0.13) is again **not monotonic /
+200% not special**. `near S/R` vs `away` (+0.17 vs +0.15) and `sideways→spike`
+(+0.19, n=32) add nothing — consistent with the Kaggle result.
+
+Chronological on Upstox 5m: TRAIN +0.15 · VAL +0.14 · OOS +0.16 · HOLDOUT +0.23
+· latest-20%-of-OOS+HOLDOUT +0.41. Unlike Kaggle it does **not** decay, but the
+recent lift is a single 2026 slice (n=155/76 sessions) — regime, not proven
+stability. The Upstox **1m** set (21 sessions) is too short: split runs
+TRAIN −0.05 → VAL −0.16 → OOS +0.18 → HOLDOUT +0.50 (n≤72), pure noise; `TF D
+1M+5M agree` shows +0.49 on n=24 → `OVERFIT/UNSTABLE`, not selected.
+
+**Conclusion:** the `range_only` N+1 pattern is a *consistent* (replicated
+across vendor + period) but **weak, proxy-only, timeout-dominated,
+<10%-target-hit** statistical property of abnormal-range candles — **not an
+order-flow / L2 edge** and not tradeable as specified. No strategy change, no
+production wiring, nothing `PROVEN`.
+
 ## Not done / blocked
 
 - No production wiring, no live signal, no change to frozen H1/H7 or trading logic.
