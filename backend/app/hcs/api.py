@@ -34,3 +34,13 @@ def hcs_adaptive():
     Brier/ECE comparison vs the existing closed-form logistic. Advisory / SHADOW."""
     from . import adaptive as _adp
     return _adp.refit_and_report()
+
+
+@router.get("/adaptive-mc")
+def hcs_adaptive_mc(persist: bool = False):
+    """Tier-A multinomial-logit SHADOW model: 3-class (UP / DOWN / NO_MOVE) +
+    isotonic-calibrated P(win) + expected-R, with an expanding-window
+    walk-forward vs the closed-form logistic baseline. Advisory only -- not
+    wired into any gate. `persist=true` writes data/hcs_adaptive_mc_model.json."""
+    from . import adaptive_mc as _amc
+    return _amc.refit_and_report(persist=persist)

@@ -21,6 +21,7 @@ import os
 import sqlite3
 
 from . import adaptive as _adp
+from . import adaptive_mc as _adp_mc
 from . import evidence as _ev
 from . import filters as _flt
 from . import memory as _mem
@@ -130,10 +131,17 @@ def evaluate_one(snap: dict, cfg: dict | None = None) -> dict:
         reasons.append(f"A+ : HCS {sc['hcs_score']}, p {prob}, conf {conf}, 0 hard vetoes")
 
     # advisory adaptive probability (SHADOW -- does NOT affect the A+ gate above)
-    adp = _adp.score({**snap, "hcs_score": sc["hcs_score"],
-                      "evidence_coverage": sc["evidence_coverage"],
-                      "setup_memory_wr": (mem.get("shrunk_win_rate")
-                                          if mem.get("status") == "OK" else None)})
+    _adp_row = {**snap, "hcs_score": sc["hcs_score"],
+                "evidence_coverage": sc["evidence_coverage"],
+                "setup_memory_wr": (mem.get("shrunk_win_rate")
+                                    if mem.get("status") == "OK" else None)}
+    adp = _adp.score(_adp_row)
+    # Tier-A multinomial-logit shadow model (3-class + calibrated P(win) + E[R]).
+    # SHADOW -- also does NOT affect the A+ gate. Isolated so it can never break evaluate().
+    try:
+        adp_mc = _adp_mc.score(_adp_row)
+    except Exception as _e:  # pragma: no cover - defensive
+        adp_mc = {"status": f"ERROR: {type(_e).__name__}"}
 
     entry = _f(snap.get("entry"))
     atr = _f(snap.get("atr"))
@@ -160,6 +168,15 @@ def evaluate_one(snap: dict, cfg: dict | None = None) -> dict:
         "adaptive_vs_calibrated": (round(adp["adaptive_probability"] - prob, 4)
                                    if (adp.get("adaptive_probability") is not None and prob is not None)
                                    else None),
+        # Tier-A multinomial-logit shadow outputs (advisory; not in any gate)
+        "mc_status": adp_mc.get("status"),
+        "mc_model_version": adp_mc.get("model_id"),
+        "mc_p_up": adp_mc.get("p_up"),
+        "mc_p_down": adp_mc.get("p_down"),
+        "mc_p_no_move": adp_mc.get("p_no_move"),
+        "mc_p_win_calibrated": adp_mc.get("p_win_cal"),
+        "mc_expected_r": adp_mc.get("exp_r"),
+        "mc_setup_rank": adp_mc.get("setup_rank_score"),
         "confidence": conf or None,
         "entry": entry,
         "stop_loss": _f(snap.get("stop_loss")),
