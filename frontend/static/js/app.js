@@ -963,8 +963,55 @@
         }).join("")}
       `;
     } catch (e) { showError("research", e); }
+    loadHcr();
   }
   $("#refreshResearch").addEventListener("click", loadResearch);
+
+  // High-Conviction Runner (read-only research strategy)
+  async function loadHcr() {
+    try {
+      const s = await api("/api/research/hcr/summary");
+      $("#hcrVerdict").textContent = s.verdict || "";
+      if (s.available && s.params) {
+        const p = s.params;
+        $("#hcrParams").textContent =
+          `filter: day range ≥ ${p.day_wide_mult}× median · spike range_x ≥ ${p.spike_x} · before ${p.spike_before} · skip ${p.skip_dow.join("/")} · ` +
+          `Leg A ${p.leg_a}, Leg B ${p.leg_b} · ${p.max_lifetime_min}-min lifetime`;
+      }
+      const card = (title, m) => !m ? "" : `<div class="rcard">
+        <h3>${esc(title)}</h3>
+        <div class="kv"><span>Signals (span)</span><b>${m.signals} · ${esc(m.span || "")}</b></div>
+        <div class="kv"><span>Frequency</span><b>~${m.signals_per_month}/mo</b></div>
+        <div class="kv"><span>Close-green rate</span><b>${m.close_green_pct}%</b></div>
+        <div class="kv"><span>Leg A +1R hit</span><b>${m.legA_1R_hit_pct}%</b></div>
+        <div class="kv"><span>Leg B +3R hit</span><b>${m.legB_3R_hit_pct}%</b></div>
+        <div class="kv"><span>Blended E[R]</span><b>${fmt(m.blended_expectancy_R)}</b></div>
+        <div class="kv"><span>Profit factor</span><b>${fmt(m.blended_profit_factor)}</b></div>
+        <div class="kv"><span>Median R</span><b>${fmt(m.median_blended_R)}</b></div>
+        <div class="kv"><span>Worst / max consec losers</span><b>${fmt(m.worst_blended_R)}R · ${m.max_consec_losers}</b></div>
+      </div>`;
+      $("#hcrGrid").innerHTML = card("Upstox NIFTY 5m", s.upstox) + card("Kaggle NIFTY 5m", s.kaggle) ||
+        '<span class="hint">run scripts/high_conviction_runner_research.py to populate</span>';
+
+      const d = await api("/api/research/hcr/signals?limit=20&scan_days=12");
+      const rows = [];
+      const ls = d.live_scan || {};
+      (ls.fired || []).forEach(x => rows.push({ ...x, _tag: "LIVE" }));
+      (d.recent_backtest_signals || []).forEach(x => rows.push({ ...x, _tag: "BT" }));
+      const rr = (v) => v == null ? "—" : (+v).toFixed(2);
+      $("#hcrTableBody").innerHTML = rows.length ? rows.map(x => {
+        const res = x.outcome === "TRIGGERED"
+          ? `<span class="${x.green ? "pos" : "neg"}">${x.green ? "GREEN" : "RED"} ${rr(x.blended_R)}R</span>`
+          : `<span class="hint">${esc(x.outcome || "—")}</span>`;
+        return `<tr>
+          <td>${esc(x.session)} ${x._tag === "LIVE" ? '<span class="pill pill--paper">scan</span>' : ""}</td>
+          <td>${esc(x.dow || "")}</td><td>${esc(x.spike_time || "")}</td>
+          <td>${rr(x.range_x)}</td><td>${esc(x.side || "—")}</td>
+          <td>${rr(x.legA_R)}</td><td>${rr(x.legB_R)}</td><td>${rr(x.blended_R)}</td><td>${res}</td>
+        </tr>`;
+      }).join("") : '<tr><td colspan="9" class="hint">no signals</td></tr>';
+    } catch (e) { const el = $("#hcrErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
+  }
 
   // ---------------- System & Health ----------------
   // GREEN when true; the failing colour depends on whether the check is a hard

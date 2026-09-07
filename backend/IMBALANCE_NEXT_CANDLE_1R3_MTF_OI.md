@@ -191,6 +191,46 @@ aggressor or OI. `*/WIDE` and `range_x ≥ 3` are the only "candidate for furthe
 study" cuts; everything else is within-noise or decays OOS. Not an order-flow
 edge, not a production signal. Nothing `PROVEN`.
 
+## High-Conviction Runner (HCR) — few signals, scale-out, +3R runner (2026-09-07)
+
+`scripts/high_conviction_runner_research.py` + `app/research_strategy/hcr.py`
+(read-only) + a **Research → High-Conviction Runner** panel in the frontend.
+
+Built from the one conditioner that replicated across both NIFTY datasets and
+all splits (spike on a WIDE-range day). Entry rule:
+
+    day range ≥ 1.3× rolling-median  AND  spike range_x ≥ 3  AND  spike < 14:00
+    AND day-of-week not Thu/Fri
+    → N+1 close → OCO (break high = LONG / break low = SHORT), R = N+1 range
+    → Leg A 60% @ +1R (locker); on fill, Leg B stop → breakeven
+    → Leg B 40% @ +3R (runner); 25-min hard lifetime; blended R = 0.6·A + 0.4·B
+    "close green" = blended R > 0
+
+| dataset | signals | span | /mo | close-green% | A@+1R | B@+3R | blended E[R] | PF | max consec loss |
+|---|--:|---|--:|--:|--:|--:|--:|--:|--:|
+| Upstox NIFTY 5m | 82 | 2022-02 … 2026-08 | ~1.4 | **65.0 %** | 46 % | 17.5 % | **+0.40** | 2.45 | 6 |
+| Kaggle NIFTY 5m | 294 | 2015-02 … 2026-03 | ~2.0 | **62.5 %** | 48 % | 13.9 % | **+0.34** | 2.18 | 6 |
+
+Chronological (Kaggle, larger sample): TRAIN +0.40 · VAL +0.21 · OOS +0.34 ·
+HOLDOUT +0.36 — **no OOS decay** (first thing this session that holds up).
+Cross-vendor agreement is close. blended-R dist: p50 +0.60, p95 +1.80,
+p05 −1.00 (worst trade −1R; no catastrophic tail — hard SL + BE-protected
+runner).
+
+**Honest verdict:** "few signals + big runner" ✅; "80–100 % win rate" ❌ — the
+real close-green rate is **~63 %**, not 80–100 % (that combination does not
+exist with a genuine +3R runner). It is still a **RANGE-SHAPE proxy on the
+NIFTY cash index** — no volume / L2 / aggressor / OI, and the cash index isn't
+directly tradable (future/option spread + theta erode it, cf. Stage-4). It is
+the best candidate this session produced (replicates, no decay, PF > 2) but it
+is **NOT VALIDATED** and is surfaced in the UI as `RESEARCH`, paper-watch only.
+No production wiring, no live signal, nothing `PROVEN`.
+
+Frontend: additive only — `app/research_strategy/` (guarded router
+`/api/research/hcr/{summary,signals}`, read-only), one panel in `#view-research`,
+`loadHcr()` in `app.js`. No trading / frozen / calibration / broker / cron
+change; `live_trading` stays false; 635 tests pass.
+
 ## Not done / blocked
 
 - No production wiring, no live signal, no change to frozen H1/H7 or trading logic.

@@ -198,6 +198,14 @@ try:
 except Exception as _e:
     print(f"[orderflow] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Research strategy panels (read-only backtests + scans; NOT VALIDATED;
+# no order path, no live-signal emission, no frozen/trading logic touched) ----
+try:
+    from .research_strategy import api as _research_strat_api
+    app.include_router(_research_strat_api.router)
+except Exception as _e:
+    print(f"[research_strategy] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
