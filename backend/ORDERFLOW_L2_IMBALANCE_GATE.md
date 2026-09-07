@@ -147,3 +147,9 @@ The full data-acquisition spec — required fields by tier, resolution, coverage
 gate, storage schema, the two acquisition routes and what each does / does not
 unlock, and the pre-declared acceptance criteria — is
 `ORDERFLOW_STAGE9_L2_RESEARCH.md` §6b.
+
+The multi-timeframe / spike / N+1-1R3 / expiry-OI / PCR / S-R extension of this
+research line is `IMBALANCE_NEXT_CANDLE_1R3_MTF_OI.md`
+(`scripts/imbalance_next_candle_1r3_research.py`). Same verdict:
+`NOT VALIDATED — GENUINE L2 REQUIRED`; the proxy matrix is break-even-to-negative
+on the futures book proxy and threshold-flat (200% is not special).
