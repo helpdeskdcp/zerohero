@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import sqlite3
 
+from . import adaptive as _adp
 from . import evidence as _ev
 from . import filters as _flt
 from . import memory as _mem
@@ -128,6 +129,12 @@ def evaluate_one(snap: dict, cfg: dict | None = None) -> dict:
         a_plus = True
         reasons.append(f"A+ : HCS {sc['hcs_score']}, p {prob}, conf {conf}, 0 hard vetoes")
 
+    # advisory adaptive probability (SHADOW -- does NOT affect the A+ gate above)
+    adp = _adp.score({**snap, "hcs_score": sc["hcs_score"],
+                      "evidence_coverage": sc["evidence_coverage"],
+                      "setup_memory_wr": (mem.get("shrunk_win_rate")
+                                          if mem.get("status") == "OK" else None)})
+
     entry = _f(snap.get("entry"))
     atr = _f(snap.get("atr"))
     invalidation = None
@@ -148,6 +155,11 @@ def evaluate_one(snap: dict, cfg: dict | None = None) -> dict:
         "evidence_coverage": sc["evidence_coverage"],
         "calibrated_probability": prob,
         "probability_source": snap.get("calibration_status"),
+        "adaptive_probability": adp.get("adaptive_probability"),
+        "adaptive_status": adp.get("status"),
+        "adaptive_vs_calibrated": (round(adp["adaptive_probability"] - prob, 4)
+                                   if (adp.get("adaptive_probability") is not None and prob is not None)
+                                   else None),
         "confidence": conf or None,
         "entry": entry,
         "stop_loss": _f(snap.get("stop_loss")),

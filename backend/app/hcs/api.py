@@ -26,3 +26,11 @@ def hcs_calibration_report():
 def hcs_forward_test():
     """Replay the HCS A+ gate over every resolved autoscalp signal + the live log."""
     return {"replay": _ft.replay(), "live_log": _ft.log_summary()}
+
+
+@router.get("/adaptive")
+def hcs_adaptive():
+    """The adaptive online-logit model: state, top weights, and a walk-forward
+    Brier/ECE comparison vs the existing closed-form logistic. Advisory / SHADOW."""
+    from . import adaptive as _adp
+    return _adp.refit_and_report()

@@ -55,3 +55,4 @@ backend/data/l2_capture.db-shm
 backend/data/high_conviction_runner_events.csv
 backend/data/hcr_forward_test.jsonl
 backend/data/hcs_forward_test.jsonl
+backend/data/hcs_adaptive_model.json

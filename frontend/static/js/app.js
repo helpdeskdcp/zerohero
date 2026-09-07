@@ -1071,6 +1071,24 @@
             `vs base ${(all.win_rate * 100).toFixed(0)}% · live A+ logged ${(ft.live_log || {}).a_plus_total ?? 0} — ${esc(rp.verdict || "")}`;
         }
       } catch (_) { /* forward-test optional */ }
+
+      try {
+        const ad = await api("/api/hcs/adaptive");
+        const el = $("#hcsAdaptive");
+        if (el && ad.available) {
+          const wf = ad.walk_forward || {};
+          const perSym = (r.results || []).filter(x => x.adaptive_probability != null)
+            .map(x => `${x.symbol} ${(x.adaptive_probability).toFixed(2)}` +
+              (x.adaptive_vs_calibrated != null ? `(${x.adaptive_vs_calibrated >= 0 ? "+" : ""}${x.adaptive_vs_calibrated.toFixed(2)})` : ""))
+            .join(" · ");
+          el.textContent =
+            `Adaptive online-logit (SHADOW, ${ad.trained_rows} rows): walk-fwd Brier ` +
+            `${wf.adaptive?.brier} vs logistic ${wf.existing_logistic?.brier} → winner ${wf.winner}. ` +
+            `adaptive p: ${perSym || "—"}`;
+        } else if (el) {
+          el.textContent = `Adaptive model: ${esc(ad.reason || "insufficient data")}`;
+        }
+      } catch (_) { /* adaptive optional */ }
     } catch (e) { const el = $("#hcsErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
   }
 

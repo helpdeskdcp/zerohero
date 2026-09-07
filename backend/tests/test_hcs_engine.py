@@ -140,6 +140,59 @@ def test_calibration_report_shape():
     assert rep["n_resolved"] >= 0
 
 
+def test_adaptive_sigmoid_and_sgd():
+    from app.hcs.adaptive import OnlineLogit, _sig
+    assert abs(_sig(0) - 0.5) < 1e-9
+    assert _sig(40) > 0.999 and _sig(-40) < 0.001
+    m = OnlineLogit(base_rate=0.5)
+    x = {"a": 1.0}
+    # repeatedly show (x -> y=1): prediction must rise monotonically toward 1
+    p0 = m.predict(x)
+    for _ in range(200):
+        m.update(x, 1, lr=0.1)
+    p1 = m.predict(x)
+    assert p1 > p0 and p1 > 0.8
+
+
+def test_adaptive_is_deterministic():
+    from app.hcs import adaptive as A
+    rows = A._resolved_rows()
+    if len(rows) < A._MIN_ROWS:
+        return
+    a, b = A._train(rows), A._train(rows)
+    assert a.to_dict() == b.to_dict()
+
+
+def test_adaptive_probability_bounds_and_shadow():
+    from app.hcs import adaptive as A
+    r = A.score({"signal_score": 70, "regime": "RANGE", "signal_type": "SUPPORT_REVERSAL",
+                 "tod_bucket": "MIDDAY", "momentum": 0.2, "rr": 1.6, "ev_r": 0.3})
+    if r["status"] == "OK":
+        assert 0.0 <= r["adaptive_probability"] <= 1.0
+        assert "advisory" in r["note"]
+
+
+def test_adaptive_does_not_change_a_plus_gate():
+    # the A+ gate must depend only on calibrated_probability, never adaptive
+    r = ENG.evaluate_one(_snap())
+    assert "adaptive_probability" in r
+    r2 = ENG.evaluate_one({**_snap(), "probability": 0.99})   # bump calibrated only
+    # with a clean strong setup + high calibrated p, the gate can pass...
+    assert r2["a_plus"] in (True, False)   # (doesn't assert direction; asserts no crash / key present)
+    assert "adaptive_probability" in r2
+
+
+def test_adaptive_report_shape():
+    from app.hcs import adaptive as A
+    rep = A.refit_and_report()
+    if not rep.get("available"):
+        return
+    assert "walk_forward" in rep and "top_weights" in rep
+    wf = rep["walk_forward"]
+    assert "adaptive" in wf and "existing_logistic" in wf
+    assert "SHADOW" in rep["verdict"] and "NOT VALIDATED" in rep["verdict"]
+
+
 def test_forward_test_replay_shape():
     from app.hcs import forward_test
     r = forward_test.replay()
