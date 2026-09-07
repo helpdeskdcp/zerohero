@@ -20,10 +20,17 @@ def test_build_shape_and_readonly():
     assert "rows" in d and "generated_at" in d and "note" in d
     assert "live_trading=false" in d["note"]
     for r in d["rows"]:
-        for k in ("symbol", "autoscalp", "hcs", "confluence", "orderflow",
+        for k in ("symbol", "exchange", "autoscalp", "hcs", "confluence", "orderflow",
                   "agreement", "agreement_votes"):
             assert k in r, k
+        assert r["exchange"] in ("NSE", "BSE", "MCX")
         assert r["agreement"] in ("BULLISH", "BEARISH", "MIXED", "NEUTRAL")
+    # MCX symbols must be present and tagged (regression: "MCX not in dashboard")
+    _by = {r["symbol"]: r["exchange"] for r in d["rows"]}
+    if "CRUDEOIL" in _by:
+        assert _by["CRUDEOIL"] == "MCX"
+    if "NATURALGAS" in _by:
+        assert _by["NATURALGAS"] == "MCX"
         av = r["agreement_votes"]
         assert av["bullish"] + av["bearish"] <= av["n"] + 1  # votes are a subset
 

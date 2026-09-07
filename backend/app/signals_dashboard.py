@@ -29,6 +29,19 @@ _cache: dict = {"ts": 0.0, "data": None}
 _BULL = {"BUY_CE", "BULLISH", "SUPPORT_REVERSAL", "RESISTANCE_BREAKOUT", "H1_CONT", "H1_CONT_OBSERVE"}
 _BEAR = {"BUY_PE", "BEARISH", "SUPPORT_BREAKDOWN", "RESISTANCE_REVERSAL"}
 
+# exchange tag so MCX rows are identifiable in the unified view (display only)
+_EXCH = {
+    "NIFTY": "NSE", "BANKNIFTY": "NSE", "FINNIFTY": "NSE", "MIDCPNIFTY": "NSE",
+    "SENSEX": "BSE", "BANKEX": "BSE",
+    "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "CRUDEOILM": "MCX",
+    "GOLD": "MCX", "SILVER": "MCX", "GOLDM": "MCX", "SILVERM": "MCX",
+}
+_EXCH_ORDER = {"NSE": 0, "BSE": 1, "MCX": 2}
+
+
+def _exch(sym: str) -> str:
+    return _EXCH.get(str(sym or "").upper(), "NSE")
+
 
 def _dir(*tokens) -> str:
     t = {str(x or "").upper() for x in tokens}
@@ -133,6 +146,7 @@ def build() -> dict:
 
         rows.append({
             "symbol": s,
+            "exchange": _exch(s),
             "autoscalp": {
                 "decision": h.get("decision"), "direction": as_dir,
                 "signal_type": h.get("signal_type"), "regime": h.get("regime"),
@@ -163,6 +177,9 @@ def build() -> dict:
             "agreement_votes": {"bullish": bull, "bearish": bear,
                                 "n": len(votes)},
         })
+
+    # group by exchange (NSE, BSE, MCX) so the MCX block is easy to find
+    rows.sort(key=lambda r: (_EXCH_ORDER.get(r["exchange"], 9), r["symbol"]))
 
     data = {
         "generated_at": datetime.now(timezone.utc).isoformat(),

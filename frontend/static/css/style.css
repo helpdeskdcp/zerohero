@@ -587,6 +587,11 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
 #signalshubGrid .rcard h3 > span.hint { color: var(--ink-faint); border-style: dashed; }
 #signalshubGrid .rcard h3 > span.agree-note { border: none; padding: 0; font-weight: 400;
   font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0; }
+#signalshubGrid .rcard h3 > span.exch { color: var(--ink-dim); border-color: var(--line);
+  background: var(--bg); letter-spacing: 0.08em; }
+#signalshubGrid .rcard[data-exch="MCX"] { border-left: 2px solid var(--violet); }
+#signalshubGrid .rcard[data-exch="MCX"] h3 > span.exch { color: var(--violet); border-color: rgba(139,123,216,0.4); background: rgba(139,123,216,0.10); }
+#signalshubGrid .rcard[data-exch="BSE"] { border-left: 2px solid rgba(201,162,39,0.5); }
 #signalshubGrid .sig-grid > div > .kv:first-child b { font-family: var(--font-body); }
 #signalshubGrid .sig-grid > div > .kv:first-child span { color: var(--gold-soft); text-transform: uppercase;
   font-size: 10px; letter-spacing: 0.05em; }

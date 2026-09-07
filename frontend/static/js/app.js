@@ -186,8 +186,8 @@
         const badge = `<span class="${_dirCls(r.agreement === "BULLISH" ? "BULLISH" : r.agreement === "BEARISH" ? "BEARISH" : "")}">${esc(r.agreement)}</span>`;
         const av = r.agreement_votes || {};
         const tradeable = a.decision === "BUY_CE" || a.decision === "BUY_PE";
-        return `<div class="rcard" style="margin-bottom:10px">
-          <h3>${esc(r.symbol)} ${badge}
+        return `<div class="rcard" data-exch="${esc(r.exchange || "")}" style="margin-bottom:10px">
+          <h3><span class="exch">${esc(r.exchange || "—")}</span> ${esc(r.symbol)} ${badge}
             <span class="agree-note">agree ${av.bullish || 0}▲ / ${av.bearish || 0}▼ of ${av.n || 0}</span></h3>
           <div class="sig-grid">
             <div>
@@ -2390,7 +2390,8 @@
   // ---------------- Boot ----------------
   connectWs();
   loadInstruments();
-  setView("overview");
+  setView("signalshub");
+  setInterval(() => { if (state.view === "signalshub") loadSignalsHub(); }, 15000);
   setInterval(() => { if (state.view === "overview") loadOverview(); }, 15000);
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
   setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
