@@ -159,6 +159,15 @@ except Exception as _e:  # never let capture wiring break the app
     histcap_worker = None
     print(f"[histcap] disabled: {type(_e).__name__}: {_e}")
 
+# ---- L2 SnapQuote capture (Angel WS mode 3; own socket + own DB; research data
+# capture only; OFF unless L2_CAPTURE_ENABLED=1; no trading / signal path) ----
+try:
+    from .l2capture.worker import L2CaptureWorker as _L2CaptureWorker
+    l2_capture_worker = _L2CaptureWorker()
+except Exception as _e:  # never let capture wiring break the app
+    l2_capture_worker = None
+    print(f"[l2capture] disabled: {type(_e).__name__}: {_e}")
+
 # ---- Option Greeks Engine (derived exposure over captured broker Greeks; read-only) ----
 try:
     from .greeks_engine import api as _greeks_api
@@ -207,6 +216,11 @@ async def _start_scalp_runner():
             histcap_worker.start()
         except Exception as e:
             print(f"[histcap] start failed: {type(e).__name__}: {e}")
+    if l2_capture_worker is not None:
+        try:
+            l2_capture_worker.start()   # no-op unless L2_CAPTURE_ENABLED=1
+        except Exception as e:
+            print(f"[l2capture] start failed: {type(e).__name__}: {e}")
     if smart_scalper_scheduler is not None:
         try:
             smart_scalper_scheduler.start()
@@ -221,6 +235,11 @@ async def _stop_scalp_runner():
     if histcap_worker is not None:
         try:
             await histcap_worker.stop()
+        except Exception:
+            pass
+    if l2_capture_worker is not None:
+        try:
+            await l2_capture_worker.stop()
         except Exception:
             pass
     if smart_scalper_scheduler is not None:

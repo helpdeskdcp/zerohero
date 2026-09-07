@@ -254,11 +254,16 @@ histcap does. No synthetic rows, ever; a gap is a gap.
 
 **Two routes (from §6, with what each does NOT give):**
 
-- **(a) Angel One WS mode 3 (SnapQuote) + a new append-only persistence path in
-  the histcap worker.** Yields **T1** (best-5 depth) + `last_trade_qty` at
-  ~1 Hz. Does **NOT** give T3 (no aggressor flag) or T4 (no event stream). ⇒
-  unlocks B / C / passive-gate only, after ≥ 40 sessions accumulate — i.e. a
-  ~2-month forward capture. Cheapest, but the aggressor components stay blocked.
+- **(a) Angel One WS mode 3 (SnapQuote) + a new append-only persistence path.**
+  Yields **T1** (best-5 depth) + `last_trade_qty` at ~1 Hz. Does **NOT** give T3
+  (no aggressor flag) or T4 (no event stream). ⇒ unlocks B / C / passive-gate
+  only, after ≥ 40 sessions accumulate — i.e. a ~2-month forward capture.
+  Cheapest, but the aggressor components stay blocked.
+  **IMPLEMENTED (2026-09-07), OFF by default** — `app/l2capture/` (own WS
+  socket, own DB `data/l2_capture.db`, leader lease, market-hours gate,
+  append-only, raw frames preserved). Arm with `L2_CAPTURE_ENABLED=1`. Emits no
+  order/signal; production behaviour is byte-identical while the flag is off.
+  Details: `backend/L2_SNAPQUOTE_CAPTURE.md`.
 - **(b) Third-party historical tick + full-depth L2 dataset** (T1–T4, with a
   real aggressor side) for these instruments, ≥ 3 months, ≥ 2 regimes. Unlocks
   **all** of A–G immediately with no waiting. This is the only route that makes
