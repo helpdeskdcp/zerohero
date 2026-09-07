@@ -1020,6 +1020,46 @@
         </tr>`;
       }).join("") : '<tr><td colspan="9" class="hint">no signals</td></tr>';
     } catch (e) { const el = $("#hcrErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
+    loadHcs();
+  }
+
+  // HCS meta-engine (shadow)
+  async function loadHcs() {
+    try {
+      const r = await api("/api/hcs/evaluate");
+      const g = r.a_plus_gate || {};
+      $("#hcsGate").textContent = r.available
+        ? `A+ gate: HCS ≥ ${g.hcs_min} · calib p ≥ ${g.prob_min} · confidence ∈ {${(g.allowed_confidence || []).join(", ")}} · 0 hard vetoes` +
+          `   —   A+ signals right now: ${r.a_plus_count}`
+        : "no live_market_snapshots yet";
+      const rr = (v) => v == null ? "—" : (+v).toFixed(v < 1 ? 3 : 1);
+      const rows = (r.results || []).map(x => {
+        const hard = (x.vetoes || []).filter(v => v.severity === "HARD").map(v => v.filter);
+        const dec = x.decision === "NO_TRADE"
+          ? `<span class="hint">NO_TRADE</span>`
+          : `<span class="${x.direction === "BULLISH" ? "pos" : "neg"}">${esc(x.decision)}</span>`;
+        const mem = x.setup_memory || {};
+        return `<tr>
+          <td>${esc(x.symbol)}</td><td>${dec}</td>
+          <td>${x.a_plus ? '<span class="pos">A+</span>' : "—"}</td>
+          <td>${rr(x.hcs_score)}</td><td>${rr(x.calibrated_probability)}</td>
+          <td>${esc(x.confidence || "—")}</td>
+          <td>${mem.status === "OK" ? `${(mem.knn_win_rate * 100).toFixed(0)}% (k${mem.k})` : esc(mem.status || "—")}</td>
+          <td>${hard.length ? `<span class="neg">${hard.map(esc).join(", ")}</span>` : "—"}</td>
+          <td class="hint">${esc((x.reasons || [])[0] || "")}</td>
+        </tr>`;
+      });
+      $("#hcsTableBody").innerHTML = rows.join("") || '<tr><td colspan="9" class="hint">no rows</td></tr>';
+      $("#hcsVerdict").textContent = (r.results && r.results[0] && r.results[0].note) ||
+        "SHADOW / advisory — not wired into the live engine.";
+
+      const cal = await api("/api/hcs/calibration-report");
+      $("#hcsCalib").textContent = cal.available
+        ? `Calibration: ${cal.n_resolved} resolved (base ${(cal.base_win_rate * 100).toFixed(0)}%), ` +
+          `global curve k=${cal.global_curve?.k} b=${cal.global_curve?.b} n=${cal.global_curve?.n}, ` +
+          `OOS Brier=${cal.oos_holdout?.brier} ECE=${cal.oos_holdout?.ece} — ${esc(cal.verdict)}`
+        : "calibration: no resolved outcomes yet";
+    } catch (e) { const el = $("#hcsErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
   }
 
   // ---------------- System & Health ----------------

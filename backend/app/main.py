@@ -206,6 +206,15 @@ try:
 except Exception as _e:
     print(f"[research_strategy] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- HCS (High-Confidence Signal) meta-engine (SHADOW; re-scores the live
+# engine's own persisted decision with a hard-filter veto layer; read-only;
+# not imported by autoscalp; no order path) ----
+try:
+    from .hcs import api as _hcs_api
+    app.include_router(_hcs_api.router)
+except Exception as _e:
+    print(f"[hcs] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:

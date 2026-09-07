@@ -813,6 +813,23 @@
             </table>
           </div>
         </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>HCS Engine <span class="pill pill--paper">SHADOW</span></h2>
+            <span class="hint">re-scores the live engine's decision · hard-filter veto layer · A+ gate</span>
+          </div>
+          <p class="disclaimer" id="hcsVerdict"></p>
+          <p class="hint" id="hcsGate"></p>
+          <p class="scalp-err" id="hcsErr" hidden></p>
+          <div class="table-wrap">
+            <table class="ledger" id="hcsTable">
+              <thead><tr><th>Symbol</th><th>Decision</th><th>A+</th><th>HCS</th><th>Calib&nbsp;p</th><th>Conf</th><th>Setup mem</th><th>Hard vetoes</th><th>Reason</th></tr></thead>
+              <tbody id="hcsTableBody"><tr><td colspan="9" class="hint">loading…</td></tr></tbody>
+            </table>
+          </div>
+          <p class="hint" id="hcsCalib"></p>
+        </div>
       </section>
 
       <!-- ===== SYSTEM & HEALTH ===== -->
