@@ -142,3 +142,8 @@ stream** for NIFTY / CRUDEOIL futures, persisted across **≥ 40 sessions spanni
 event study becomes a genuine walk-forward validation **with no change to the
 imbalance calculation** — only the aggressor-pressure measures would be added
 alongside the passive ones, and the split would become real.
+
+The full data-acquisition spec — required fields by tier, resolution, coverage
+gate, storage schema, the two acquisition routes and what each does / does not
+unlock, and the pre-declared acceptance criteria — is
+`ORDERFLOW_STAGE9_L2_RESEARCH.md` §6b.

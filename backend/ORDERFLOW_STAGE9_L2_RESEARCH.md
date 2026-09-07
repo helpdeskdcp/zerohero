@@ -206,6 +206,78 @@ was run (`scripts/orderflow_l2_imbalance_probe.py`, read-only; report
   feasibility gate** (untestable, not disproven). 200 % is not a special value
   (threshold sweep flat); more persistence does not help.
 
+### 6b. L2 DATA ACQUISITION REQUIREMENT (spec)
+
+Everything below `INSUFFICIENT DATA` / `UNOBSERVABLE` in §5, plus the 200 %
+imbalance gate (§6a), is blocked on the **same** data gap. This is the spec for
+closing it. Nothing here is a code change — it is what must be *acquired and
+persisted* before Phases B–E or `ORDERFLOW_L2_IMBALANCE_GATE.md` can run for
+real.
+
+**Instruments (minimum):** NIFTY and CRUDEOIL futures (the two the frozen
+Stage-6/7/8 work is anchored on). NATURALGAS futures desirable. Add BANKNIFTY
+futures only if it is cheap to include.
+
+**Fields required, by tier** — a route only unlocks the components it actually
+carries:
+
+| tier | fields | unlocks |
+|---|---|---|
+| **T1 — L2 depth stream** | every book change (or ≥ 4 Hz snapshots) of ≥ 5 levels per side: price, resting qty, order count; plus best-bid/best-ask and their sizes | B (bid-ask imbalance), C (depth imbalance), **passive** side of the 200 % gate, partial G (level qty deltas between updates) |
+| **T2 — trade prints with size** | every trade: timestamp (≥ ms), price, size | tighter event timing; still **not** delta without a side |
+| **T3 — aggressor side** | per trade: buy/sell aggressor flag **from the feed** (not tick-rule-inferred), OR a full order-book feed from which absorption is directly measurable | A (trade delta / signed volume), D (aggressive buy/sell), **aggressor** side of the 200 % gate, E (absorption), F (footprint) |
+| **T4 — L2 event stream** | explicit add / modify / cancel messages with order ids or per-level deltas | full G (liquidity withdrawal / replenishment) |
+
+Tick-rule inference (uptick ⇒ buy) is **not** an acceptable substitute for T3 —
+it is an estimate, and estimating missing L2 is prohibited by the brief. If only
+T1+T2 are obtainable, only B / C / passive-gate can be researched; A / D / E / F
+stay `UNOBSERVABLE` and must be reported as such.
+
+**Resolution:** native event stream, or ≥ 4 Hz if snapshot-only. The current
+~25–30 s cadence is ~100–1000× too coarse — at that spacing `R` = spread is
+smaller than a between-sample move and MFE/MAE saturate (see
+`ORDERFLOW_L2_IMBALANCE_GATE.md` §6).
+
+**Coverage (the hard gate):** ≥ **40 independent trading sessions** spanning
+≥ **2 distinct volatility regimes** (e.g. a low-VIX drift stretch and a
+high-VIX / event stretch), contiguous enough to form a chronological
+**TRAIN 45 % / VALIDATION 20 % / OOS 17 % / HOLDOUT 18 %** split with the
+HOLDOUT genuinely untouched. 3 same-week sessions (what exists now) cannot move
+any verdict.
+
+**Persistence / storage:** append-only, immutable, its own table(s) in a
+separate research DB (do **not** touch `market_history.db` schema or the frozen
+capture path). Suggested `depth_events` (ts_utc, exch_ts, token, side, level,
+price, qty, orders, event_type) and `trade_prints` (ts_utc, exch_ts, token,
+price, qty, aggressor). Preserve raw feed payloads (gzip + sha256) exactly as
+histcap does. No synthetic rows, ever; a gap is a gap.
+
+**Two routes (from §6, with what each does NOT give):**
+
+- **(a) Angel One WS mode 3 (SnapQuote) + a new append-only persistence path in
+  the histcap worker.** Yields **T1** (best-5 depth) + `last_trade_qty` at
+  ~1 Hz. Does **NOT** give T3 (no aggressor flag) or T4 (no event stream). ⇒
+  unlocks B / C / passive-gate only, after ≥ 40 sessions accumulate — i.e. a
+  ~2-month forward capture. Cheapest, but the aggressor components stay blocked.
+- **(b) Third-party historical tick + full-depth L2 dataset** (T1–T4, with a
+  real aggressor side) for these instruments, ≥ 3 months, ≥ 2 regimes. Unlocks
+  **all** of A–G immediately with no waiting. This is the only route that makes
+  the 200 % gate *as specified* testable.
+
+**Acceptance criteria before Phases B–E / the 200 % gate are run:**
+1. ≥ 40 sessions, ≥ 2 regimes, HOLDOUT slice never inspected during design.
+2. Feed-native aggressor side for anything in tiers A / D / E / F (else those
+   stay `UNOBSERVABLE`).
+3. A **pre-declared** parameter grid (thresholds, persistence, horizons,
+   geometry) and pre-declared success gates, registered before the OOS/HOLDOUT
+   slices are touched.
+4. Target labels = the **frozen** Stage-7 / Stage-8 event set (reclaim-distance
+   boundary, H7 = AVOID). The gate is judged only as a *confirmation filter* on
+   those — it never redefines them.
+5. Reject any component that does not show a **statistically stable**
+   improvement across VALIDATION **and** OOS **and** HOLDOUT. `PROVEN` stays
+   reserved for a later, second untouched multi-month holdout.
+
 ### 7. PRODUCTION TRADING BEHAVIOUR — CONFIRMATION
 **Unchanged.** This stage added exactly one file — this Markdown report. No
 change to any engine, adapter, service, router, schema, config, or frozen
