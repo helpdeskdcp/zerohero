@@ -1,10 +1,9 @@
-# PROPOSAL — TRENDING_UP score haircut (NOT APPLIED)
+# TRENDING_UP score haircut — proposal + APPLIED (Option A + E)
 
-**Status: PROPOSAL ONLY. Nothing was changed.** No config, weight, threshold,
-curve, cron, or `live_trading` setting touched. `curl /api/health` →
-`live_trading:false`. This document lays out the options + the expected effect
-from a read-only simulation over the 23 resolved TRENDING_UP trades; the
-operator decides whether/what to apply.
+**Status: Option A + E APPLIED 2026-09-07 (config-only, paper engine, reversible).**
+See §6. No code, weight, curve, or `live_trading` setting was touched;
+`curl /api/health` → `live_trading:false` before and after. §1–§5 below are the
+original proposal (kept for the rationale + the simulation).
 
 Context: `CALIBRATION_OVERCONFIDENCE_AUDIT_TRENDING_UP.md` (K8) — TRENDING_UP
 n=23, calibration gap **+29.4pp** (pred 59.9% / actual 30.4%), Brier 0.315
@@ -136,6 +135,72 @@ Not B, C (needs code), or D (over-reaches the evidence).
 **Is:** the option set + a read-only simulation showing a score-mult haircut is a
 weak lever for TRENDING_UP, with a low-risk interim recommendation.
 
-**Is not:** an applied change. No config, code, weight, threshold, curve, cron,
-or `live_trading` setting was modified. The real fix (a per-regime calibration
-curve) is data-gated at `_MIN_ROWS = 40`.
+**Is not (was):** an applied change. — superseded by §6.
+
+---
+
+## 6. APPLIED — 2026-09-07 (Option A + E)
+
+**Config-only. Paper engine (`paper_mode=true`, `live_trading=false` throughout).
+No code / weight / curve / cron edit. Fully reversible.**
+
+### Option A — mild `TRENDING_UP` haircut `m = 0.80`, non-NIFTY only
+
+Applied via `POST /api/autoscalp/config` (persists to `app_settings.autoscalp_config`,
+no redeploy — `tick_once` re-reads `get_config()` every cycle, effect on the next
+decide tick ≈ 30 s).
+
+Added `filters.regime_score_mult = {"RANGE": 0.7, "TRENDING_UP": 0.80}` to the
+`symbol_profiles` entry of **NATURALGAS, CRUDEOIL, BANKNIFTY, SENSEX** — the four
+non-NIFTY tradable symbols. NATURALGAS / CRUDEOIL kept all their existing keys
+(`max_hold_sec`, `ev`, `sl_atr`, `t1_atr`, `est_cost_r`, `trail_atr`); BANKNIFTY /
+SENSEX had no profile before, so theirs is `{"filters": {...}}` only.
+
+`RANGE: 0.7` is re-stated in each because `decide_from_context._filters()` does a
+**shallow** `.update()` over `_DEFAULT_FILTERS` — a bare `{"TRENDING_UP": 0.8}`
+would have dropped the existing `RANGE` down-weight.
+
+**Verified in-process** (traced through the exact `_evaluate` merge + `_filters`):
+
+| symbol | resolved `regime_score_mult` | block_* keys |
+|---|---|---|
+| **NIFTY** | `{"RANGE": 0.7}` — **no TRENDING_UP haircut, frozen NIFTY intact** | preserved |
+| NATURALGAS / CRUDEOIL / BANKNIFTY / SENSEX | `{"RANGE": 0.7, "TRENDING_UP": 0.8}` | preserved (`UNSTABLE` / `RESISTANCE_BREAKOUT` / `AFTERNOON`) |
+
+Effect: for a `TRENDING_UP` signal on those four symbols, `blended *= 0.80` at
+`scalp_strategy.py:226,319` → lower `signal_score` → lower stored `probability` /
+`ev_r`. Per §2's simulation the historical trade count is ~unchanged; this is an
+"honest numbers + slightly smaller EV sizing" adjustment, not an amputation.
+NIFTY is byte-for-byte unchanged.
+
+### Option E — keep collecting toward a per-regime curve (no action needed)
+
+- `check_calibration_subgroups.sh` cron is **still armed** (self-disables only
+  when all 3 watched subgroups alert; only `trending_up_regime` has — the two
+  NATURALGAS triples are still n=10).
+- `_maybe_recalibrate()` runs every cycle and `calibration.fit()` auto-emits a
+  per-`regime|signal_type` curve once a key clears `_MIN_ROWS = 40`.
+  `TRENDING_UP|SUPPORT_REVERSAL` is at n=17.
+- Choosing A (haircut) over D (block) keeps TRENDING_UP signals flowing, so that
+  key keeps growing toward its own curve — which is the real fix. Nothing to
+  configure.
+
+### Rollback
+
+`POST /api/autoscalp/config` with the pre-change `symbol_profiles`
+(backup: `data/autoscalp_config_pre_trendingup_haircut.json`, git-ignored):
+
+```json
+{"symbol_profiles": {
+  "NATURALGAS": {"max_hold_sec": 1800, "ev": {"min_ev_r": 0.15, "rr_min": 1.4}, "est_cost_r": 0.1, "trail_atr": 1.6},
+  "CRUDEOIL":   {"max_hold_sec": 2400, "ev": {"min_ev_r": 0.15, "rr_min": 1.4}, "sl_atr": 1.2, "t1_atr": 1.9, "est_cost_r": 0.1, "trail_atr": 1.6}
+}}
+```
+
+### Re-measure
+
+After ~2 weeks / ≥ 15 new TRENDING_UP trades on the haircut symbols, re-run the
+queries in `CALIBRATION_OVERCONFIDENCE_AUDIT_TRENDING_UP.md`. If the gap is still
+large and the regime still −EV, escalate to Option C (per-regime EV-gate, needs a
+code change) or D (block).
+
