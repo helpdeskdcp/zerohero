@@ -53,3 +53,4 @@ backend/data/l2_capture.db
 backend/data/l2_capture.db-wal
 backend/data/l2_capture.db-shm
 backend/data/high_conviction_runner_events.csv
+backend/data/hcr_forward_test.jsonl

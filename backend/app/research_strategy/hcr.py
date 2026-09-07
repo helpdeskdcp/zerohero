@@ -275,3 +275,66 @@ def live_scan(n_days: int = 12) -> dict:
         "fired": fired[::-1], "skipped_not_wide": skipped[::-1],
         "n_fired": len(fired), "n_skipped": len(skipped),
     }
+
+
+def forward_test_record(session: str | None = None) -> dict:
+    """One forward-test observation for a single NIFTY 5m session: did HCR fire,
+    why / why not, and (if the session is complete) the walked outcome. READ-ONLY.
+    `session` = 'YYYY-MM-DD' IST, or None for the latest session we have data for."""
+    days = _load_5m()
+    ds = sorted(days)
+    if not ds:
+        return {"available": False, "reason": "no NIFTY 5m data"}
+    d = session or ds[-1]
+    if d not in days:
+        return {"available": False, "reason": f"no data for {d}", "have": ds[-5:]}
+    bars = days[d]
+    k = ds.index(d)
+    prior = [_dayrange(days[x]) for x in ds[max(0, k - DAY_MED_WIN):k] if len(days[x]) >= 6]
+    med = st.median(prior) if prior else None
+    dr = _dayrange(bars)
+    dow = datetime.fromisoformat(d).strftime("%a")
+    day_wide = bool(med and dr >= DAY_WIDE_MULT * med)
+    spikes = []
+    for i in range(ROLL, len(bars)):
+        if _hm(bars[i]["t"]) >= SPIKE_BEFORE:
+            break
+        rx = _range_x(bars, i)
+        if rx is None:
+            continue
+        if rx >= SPIKE_X:
+            spikes.append((i, _hm(bars[i]["t"]), round(rx, 2)))
+    max_rx = max((round(_range_x(bars, i) or 0, 2)
+                  for i in range(ROLL, len(bars)) if _hm(bars[i]["t"]) < SPIKE_BEFORE), default=None)
+    fired = day_wide and dow not in SKIP_DOW and bool(spikes)
+    out = {
+        "available": True, "session": d, "dow": dow,
+        "bars": len(bars), "first": _hm(bars[0]["t"]), "last": _hm(bars[-1]["t"]),
+        "session_complete": _hm(bars[-1]["t"]) >= "15:15",
+        "day_range": round(dr, 1), "day_range_median_20d": round(med, 1) if med else None,
+        "wide_threshold": round(DAY_WIDE_MULT * med, 1) if med else None,
+        "day_wide": day_wide, "dow_ok": dow not in SKIP_DOW,
+        "max_range_x_before_1400": max_rx,
+        "qualifying_spikes": [{"time": t, "range_x": r} for _, t, r in spikes],
+        "hcr_fired": fired,
+    }
+    if fired:
+        trades = []
+        for (i, t, r) in spikes:
+            w = _walk_scaleout(bars, i + 1)
+            trades.append({"spike_time": t, "range_x": r, **w})
+        out["trades"] = trades
+        done = [x for x in trades if x.get("outcome") == "TRIGGERED"]
+        if done:
+            bl = [x["blended_R"] for x in done]
+            out["day_blended_R"] = round(sum(bl), 3)
+            out["day_close_green"] = sum(bl) > 0
+    else:
+        out["reason_no_fire"] = (
+            ("day not wide" if not day_wide else "")
+            + ("; " if (not day_wide and dow in SKIP_DOW) else "")
+            + (f"DoW {dow} skipped" if dow in SKIP_DOW else "")
+            + ("; " if ((not day_wide or dow in SKIP_DOW) and not spikes) else "")
+            + (f"no 5m range_x ≥ {SPIKE_X} before {SPIKE_BEFORE} (max {max_rx})" if not spikes else "")
+        ).strip("; ")
+    return out

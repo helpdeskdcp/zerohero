@@ -994,6 +994,15 @@
         '<span class="hint">run scripts/high_conviction_runner_research.py to populate</span>';
 
       const d = await api("/api/research/hcr/signals?limit=20&scan_days=12");
+      const ft = d.forward_test || {};
+      const ftEl = $("#hcrForwardTest");
+      if (ftEl) {
+        ftEl.textContent = ft.sessions_observed
+          ? `Forward-test: ${ft.sessions_observed} session(s) observed · HCR fired ${ft.fired} · ` +
+            `graded ${ft.graded}${ft.graded ? ` (green ${ft.close_green}/${ft.graded}, net ${fmt(ft.net_blended_R)}R)` : ""} · ` +
+            `last: ${esc(ft.last_session || "—")} → ${esc(String(ft.last_result))}`
+          : "Forward-test: not started yet";
+      }
       const rows = [];
       const ls = d.live_scan || {};
       (ls.fired || []).forEach(x => rows.push({ ...x, _tag: "LIVE" }));
