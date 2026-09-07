@@ -94,7 +94,34 @@ def _line(tag, m):
     return s
 
 
+def summary_line() -> str:
+    pre = _rows("source='LIVE' AND status='CLOSED' AND regime='TRENDING_UP' "
+                "AND probability IS NOT NULL AND created_ts <= ?", (CUTOVER,))
+    post = _rows("source='LIVE' AND regime='TRENDING_UP' AND created_ts > ?", (CUTOVER,))
+    cut = [r for r in post if r["symbol"] in HAIRCUT_SYMS]
+    res = [r for r in cut if r["resolved"] and r["outcome"] in ("WIN", "LOSS", "FLAT")]
+    m_pre = _agg(pre)
+    parts = [f"TRENDING_UP haircut monitor (m=0.80 non-NIFTY)",
+             f"baseline: n={m_pre['n']} win={int(m_pre.get('win_rate',0)*100)}% "
+             f"gap={m_pre.get('calib_gap_pp')}pp exp={m_pre.get('exp_points')}pts"]
+    if not post:
+        parts.append("post-haircut: 0 TRENDING_UP signals yet -- too early")
+    else:
+        mc = _agg(cut)
+        parts.append(f"post (haircut syms): n={mc['n']} buy={mc['buy']} score~{mc['avg_score']} "
+                     f"pred~{mc['avg_pred_prob']} resolved={mc['resolved']}")
+        if len(res) >= 15:
+            parts.append(f"RE-MEASURE: win={int(mc['win_rate']*100)}% gap={mc['calib_gap_pp']}pp "
+                         f"exp={mc['exp_points']}pts (baseline +29.4pp/-1.31)")
+        else:
+            parts.append(f"re-measure needs >=15 resolved (have {len(res)})")
+    return "\n".join(parts)
+
+
 def main():
+    if "--summary" in sys.argv:
+        print(summary_line())
+        return
     P = print
     P("=" * 100)
     P("TRENDING_UP HAIRCUT MONITOR  (m=0.80 non-NIFTY, applied 2026-09-07 ~17:25 IST)  [READ-ONLY]")
