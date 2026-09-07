@@ -41,7 +41,10 @@ render.
 ## `agreement` — a DISPLAY tally, not a signal
 
 `agreement` counts how many of {AutoScalp direction, Confluence CE/PE, Order-flow
-state} point the same way:
+state} point the same way. A source only casts a vote when it has a *live* read:
+AutoScalp votes only on `BUY_CE` / `BUY_PE` (a `NO_TRADE` row's latent
+`signal_type` is ignored), and Confluence votes only when its `signal` is not
+`NO_TRADE` / `NONE`.
 
 - `BULLISH` / `BEARISH` — all non-neutral votes agree
 - `MIXED` — votes disagree

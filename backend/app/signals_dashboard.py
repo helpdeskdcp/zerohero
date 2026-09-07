@@ -108,7 +108,14 @@ def build() -> dict:
         c = conf.get(s) or {}
         of = _orderflow_state(s)
 
-        as_dir = _dir(h.get("decision"), h.get("direction"), h.get("signal_type"))
+        # AutoScalp only casts a directional vote when it actually wants a trade.
+        # A NO_TRADE / WATCH row can still carry a latent signal_type -- that is
+        # not a signal and must not sway `agreement`.
+        as_decision = str(h.get("decision") or "").upper()
+        if as_decision in ("BUY_CE", "BUY_PE"):
+            as_dir = _dir(h.get("decision"), h.get("direction"), h.get("signal_type"))
+        else:
+            as_dir = "NEUTRAL"
         conf_sig = c.get("signal")
         # confluence `direction` is CE/PE; only counts as a vote if it also has a signal
         cd = str(c.get("direction") or "").upper()
