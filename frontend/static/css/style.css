@@ -560,3 +560,33 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
 .pill--warn { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.06); }
 .nav-sep { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); padding: 10px 12px 3px; opacity: 0.6; }
 @media (max-width: 720px) { .nav-sep { display: none; } }
+
+/* Unified Signal Dashboard: one column per engine (4). Falls back to 2 / 1. */
+.sig-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.sig-grid > div { min-width: 0; }
+.sig-grid > div + div { border-top: 1px solid var(--line-soft); padding-top: 8px; }
+@media (min-width: 560px) {
+  .sig-grid { grid-template-columns: repeat(2, 1fr); }
+  .sig-grid > div + div { border-top: none; padding-top: 0; }
+  .sig-grid > div { border-left: 1px solid var(--line-soft); padding-left: 12px; }
+  .sig-grid > div:nth-child(2n+1) { border-left: none; padding-left: 0; }
+}
+@media (min-width: 1000px) {
+  .sig-grid { grid-template-columns: repeat(4, 1fr); }
+  .sig-grid > div:nth-child(2n+1) { border-left: 1px solid var(--line-soft); padding-left: 12px; }
+  .sig-grid > div:first-child { border-left: none; padding-left: 0; }
+}
+/* directional tint (no bare .pos/.neg rule exists elsewhere) */
+#signalshubGrid .sig-grid .kv b.pos { color: var(--teal); }
+#signalshubGrid .sig-grid .kv b.neg { color: var(--ember); }
+#signalshubGrid .rcard h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+#signalshubGrid .rcard h3 > span { font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+#signalshubGrid .rcard h3 > span.pos { color: var(--teal); border-color: rgba(79,184,163,0.4); background: rgba(79,184,163,0.10); }
+#signalshubGrid .rcard h3 > span.neg { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.10); }
+#signalshubGrid .rcard h3 > span.hint { color: var(--ink-faint); border-style: dashed; }
+#signalshubGrid .rcard h3 > span.agree-note { border: none; padding: 0; font-weight: 400;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0; }
+#signalshubGrid .sig-grid > div > .kv:first-child b { font-family: var(--font-body); }
+#signalshubGrid .sig-grid > div > .kv:first-child span { color: var(--gold-soft); text-transform: uppercase;
+  font-size: 10px; letter-spacing: 0.05em; }

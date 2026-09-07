@@ -60,6 +60,10 @@ does not exist (see `HCS_FORWARD_TEST.md` — the HCS A+ gate had negative lift)
 - New default view `#view-signalshub` (`loadSignalsHub()` in `app.js`) — one
   `.rcard` per symbol, 4 columns (AutoScalp / HCS / Confluence / Order-flow) +
   an agreement badge. Refresh button; 15 s server cache.
+- Its own `.sig-grid` (not the shared 3-col `.research-grid`, which would orphan
+  the 4th panel): 4 cols ≥1000px, 2 cols ≥560px, 1 col below, with column
+  rules between engines. Directional tint (`pos`/`neg`) and the agreement pill
+  are scoped under `#signalshubGrid` — no bare `.pos`/`.neg` rule exists.
 - Nav re-ordered into three groups:
   - **primary:** Signals (new), Auto-Scalp (engine control — kept)
   - **operational:** Live Monitor, Paper Trades, System & Health (kept)

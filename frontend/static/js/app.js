@@ -187,9 +187,9 @@
         const av = r.agreement_votes || {};
         const tradeable = a.decision === "BUY_CE" || a.decision === "BUY_PE";
         return `<div class="rcard" style="margin-bottom:10px">
-          <h3>${esc(r.symbol)} &nbsp; ${badge}
-            <span class="hint" style="font-weight:400">agree ${av.bullish || 0}▲ / ${av.bearish || 0}▼ of ${av.n || 0}</span></h3>
-          <div class="research-grid">
+          <h3>${esc(r.symbol)} ${badge}
+            <span class="agree-note">agree ${av.bullish || 0}▲ / ${av.bearish || 0}▼ of ${av.n || 0}</span></h3>
+          <div class="sig-grid">
             <div>
               <div class="kv"><span>AutoScalp</span><b class="${_dirCls(a.direction)}">${esc(a.decision || "—")}</b></div>
               <div class="kv"><span>regime / type</span><b>${esc(a.regime || "—")} · ${esc(a.signal_type || "—")}</b></div>
