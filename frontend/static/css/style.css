@@ -558,3 +558,5 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
 .of-h1h7-legend p { margin: 4px 0; line-height: 1.5; }
 .of-h1h7-legend strong { color: var(--ink); font-family: var(--font-mono); font-size: 10px; }
 .pill--warn { color: var(--ember); border-color: rgba(217,97,79,0.4); background: rgba(217,97,79,0.06); }
+.nav-sep { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); padding: 10px 12px 3px; opacity: 0.6; }
+@media (max-width: 720px) { .nav-sep { display: none; } }

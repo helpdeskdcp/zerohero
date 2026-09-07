@@ -215,6 +215,14 @@ try:
 except Exception as _e:
     print(f"[hcs] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Unified Signal Dashboard (read-only aggregator: every engine's read
+# side-by-side per symbol; no blending, no order path) ----
+try:
+    from . import signals_dashboard as _signals_dash
+    app.include_router(_signals_dash.router)
+except Exception as _e:
+    print(f"[signals_dashboard] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:

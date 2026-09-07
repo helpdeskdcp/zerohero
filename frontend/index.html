@@ -28,23 +28,39 @@
 
     <!-- ===== Nav (tabs on mobile, sidebar on desktop) ===== -->
     <nav class="nav" id="mainNav">
-      <button class="nav-item active" data-view="overview">Overview</button>
-      <button class="nav-item" data-view="monitor">Live Monitor</button>
-      <button class="nav-item" data-view="signals">Signal Ledger</button>
-      <button class="nav-item" data-view="trades">Paper Trades</button>
-      <button class="nav-item" data-view="scalp">Scalping</button>
+      <button class="nav-item active" data-view="signalshub">Signals</button>
       <button class="nav-item" data-view="autoscalp">Auto-Scalp</button>
+      <div class="nav-sep">operational</div>
+      <button class="nav-item" data-view="monitor">Live Monitor</button>
+      <button class="nav-item" data-view="trades">Paper Trades</button>
+      <button class="nav-item" data-view="system">System &amp; Health</button>
+      <div class="nav-sep">analysis / research</div>
+      <button class="nav-item" data-view="overview">Overview</button>
+      <button class="nav-item" data-view="signals">Signal Ledger</button>
       <button class="nav-item" data-view="mathscalp">Math Scalper</button>
       <button class="nav-item" data-view="orderflow">Order Flow</button>
-      <button class="nav-item" data-view="runner">Run Pipeline</button>
       <button class="nav-item" data-view="research">Research</button>
-      <button class="nav-item" data-view="system">System &amp; Health</button>
+      <button class="nav-item" data-view="scalp">Scalping</button>
+      <button class="nav-item" data-view="runner">Run Pipeline</button>
     </nav>
 
     <main class="content">
 
+      <!-- ===== UNIFIED SIGNAL DASHBOARD ===== -->
+      <section class="view active" id="view-signalshub">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Signals — all engines, per symbol</h2>
+            <button class="btn btn-ghost" id="signalshubRefresh">Refresh</button>
+          </div>
+          <p class="hint" id="signalshubNote"></p>
+          <p class="scalp-err" id="signalshubErr" hidden></p>
+          <div id="signalshubGrid"><span class="hint">loading…</span></div>
+        </div>
+      </section>
+
       <!-- ===== OVERVIEW ===== -->
-      <section class="view active" id="view-overview">
+      <section class="view" id="view-overview">
         <div class="stat-grid" id="statGrid">
           <div class="stat-card"><span class="stat-label">Total Signals</span><span class="stat-value" id="statSignals">—</span></div>
           <div class="stat-card"><span class="stat-label">Open Trades</span><span class="stat-value" id="statOpen">—</span></div>
@@ -874,15 +890,10 @@
 
     <!-- Mobile bottom tab bar (auto-shown under 720px via CSS) -->
     <nav class="tabbar" id="tabbar">
-      <button class="tab-item active" data-view="overview"><span class="tab-ic">◈</span>Home</button>
-      <button class="tab-item" data-view="signals"><span class="tab-ic">≡</span>Signals</button>
-      <button class="tab-item" data-view="trades"><span class="tab-ic">⇄</span>Trades</button>
-      <button class="tab-item" data-view="monitor"><span class="tab-ic">◉</span>Monitor</button>
-      <button class="tab-item" data-view="scalp"><span class="tab-ic">⚡</span>Scalp</button>
+      <button class="tab-item active" data-view="signalshub"><span class="tab-ic">◎</span>Signals</button>
       <button class="tab-item" data-view="autoscalp"><span class="tab-ic">🤖</span>Auto</button>
-      <button class="tab-item" data-view="mathscalp"><span class="tab-ic">∮</span>Math</button>
-      <button class="tab-item" data-view="orderflow"><span class="tab-ic">▤</span>Flow</button>
-      <button class="tab-item" data-view="research"><span class="tab-ic">∑</span>Research</button>
+      <button class="tab-item" data-view="monitor"><span class="tab-ic">◉</span>Monitor</button>
+      <button class="tab-item" data-view="trades"><span class="tab-ic">⇄</span>Trades</button>
       <button class="tab-item" data-view="system"><span class="tab-ic">✚</span>Health</button>
     </nav>
   </div>

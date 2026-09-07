@@ -1,6 +1,6 @@
 // Chanakya AI — dashboard client. No build step; vanilla JS.
 (() => {
-  const state = { view: "overview", tradeFilter: "" };
+  const state = { view: "signalshub", tradeFilter: "" };
 
   // ---------------- View routing (shared by sidebar nav + bottom tab bar) ----------------
   function setView(view) {
@@ -8,6 +8,7 @@
     document.querySelectorAll(".view").forEach(el => el.classList.toggle("active", el.id === `view-${view}`));
     document.querySelectorAll(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.view === view));
     document.querySelectorAll(".tab-item").forEach(el => el.classList.toggle("active", el.dataset.view === view));
+    if (view === "signalshub") loadSignalsHub();
     if (view === "overview") loadOverview();
     if (view === "signals") loadSignals();
     if (view === "trades") loadTrades();
@@ -172,6 +173,58 @@
   }
 
   // ---------------- Overview ----------------
+  // ---------------- Unified Signal Dashboard ----------------
+  const _dirCls = (d) => d === "BULLISH" ? "pos" : d === "BEARISH" ? "neg" : "hint";
+  async function loadSignalsHub() {
+    try {
+      const d = await api("/api/signals/unified");
+      $("#signalshubNote").textContent = (d.note || "") + (d.cached ? "  (cached)" : "") +
+        (d.errors && Object.keys(d.errors).length ? "  ⚠ " + JSON.stringify(d.errors) : "");
+      const grid = $("#signalshubGrid");
+      grid.innerHTML = (d.rows || []).map(r => {
+        const a = r.autoscalp || {}, h = r.hcs || {}, c = r.confluence || {}, o = r.orderflow || {};
+        const badge = `<span class="${_dirCls(r.agreement === "BULLISH" ? "BULLISH" : r.agreement === "BEARISH" ? "BEARISH" : "")}">${esc(r.agreement)}</span>`;
+        const av = r.agreement_votes || {};
+        const tradeable = a.decision === "BUY_CE" || a.decision === "BUY_PE";
+        return `<div class="rcard" style="margin-bottom:10px">
+          <h3>${esc(r.symbol)} &nbsp; ${badge}
+            <span class="hint" style="font-weight:400">agree ${av.bullish || 0}▲ / ${av.bearish || 0}▼ of ${av.n || 0}</span></h3>
+          <div class="research-grid">
+            <div>
+              <div class="kv"><span>AutoScalp</span><b class="${_dirCls(a.direction)}">${esc(a.decision || "—")}</b></div>
+              <div class="kv"><span>regime / type</span><b>${esc(a.regime || "—")} · ${esc(a.signal_type || "—")}</b></div>
+              <div class="kv"><span>confidence / p</span><b>${esc(a.confidence || "—")} · ${fmt(a.probability, 3)}</b></div>
+              ${tradeable ? `<div class="kv"><span>entry / SL</span><b>${fmt(a.entry)} / ${fmt(a.stop_loss)}</b></div>
+              <div class="kv"><span>T1 / T2</span><b>${fmt(a.target_1)} / ${fmt(a.target_2)}</b></div>
+              <div class="kv"><span>RR / EV·R</span><b>${fmt(a.rr, 2)} / ${fmt(a.ev_r, 2)}</b></div>` : ""}
+            </div>
+            <div>
+              <div class="kv"><span>HCS A+</span><b class="${h.a_plus ? "pos" : "hint"}">${h.a_plus ? "A+" : "no"}</b></div>
+              <div class="kv"><span>HCS score</span><b>${fmt(h.hcs_score, 1)}</b></div>
+              <div class="kv"><span>adaptive p</span><b>${fmt(h.adaptive_probability, 3)}</b></div>
+              ${h.top_veto ? `<div class="kv"><span>top veto</span><b class="neg">${esc(h.top_veto)}</b></div>` : ""}
+              <div class="kv"><span class="hint" style="font-size:.85em">${esc(h.reason || "")}</span></div>
+            </div>
+            <div>
+              <div class="kv"><span>Confluence</span><b class="${_dirCls(c.direction)}">${esc(c.signal || "—")}</b></div>
+              <div class="kv"><span>score / conf</span><b>${fmt(c.score, 1)} / ${esc(c.confidence ?? "—")}</b></div>
+              <div class="kv"><span>spot</span><b>${fmt(c.spot)}</b></div>
+              <div class="kv"><span>support / resist</span><b>${fmt(c.support)} / ${fmt(c.resistance)}</b></div>
+              <div class="kv"><span>pivot</span><b>${fmt(c.pivot)}</b></div>
+            </div>
+            <div>
+              <div class="kv"><span>Order-flow</span><b>${esc(o.state || o.status || "—")}</b></div>
+              <div class="kv"><span>action</span><b class="${o.action === "AVOID" ? "neg" : "hint"}">${esc(o.action || "—")}</b></div>
+              <div class="kv"><span>research</span><b>${esc(o.research_status || "—")}</b></div>
+              <div class="kv"><span class="hint" style="font-size:.85em">as of ${esc(o.as_of || "—")}</span></div>
+            </div>
+          </div>
+        </div>`;
+      }).join("") || '<span class="hint">no symbols</span>';
+    } catch (e) { const el = $("#signalshubErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
+  }
+  document.addEventListener("click", (e) => { if (e.target && e.target.id === "signalshubRefresh") loadSignalsHub(); });
+
   async function loadOverview() {
     try {
       const [signals, trades, research] = await Promise.all([
