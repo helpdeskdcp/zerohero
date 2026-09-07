@@ -1059,6 +1059,18 @@
           `global curve k=${cal.global_curve?.k} b=${cal.global_curve?.b} n=${cal.global_curve?.n}, ` +
           `OOS Brier=${cal.oos_holdout?.brier} ECE=${cal.oos_holdout?.ece} — ${esc(cal.verdict)}`
         : "calibration: no resolved outcomes yet";
+
+      try {
+        const ft = await api("/api/hcs/forward-test");
+        const rp = ft.replay || {};
+        const el = $("#hcsForwardTest");
+        if (el && rp.available) {
+          const a = rp.hcs_a_plus || {}, all = rp.all_resolved || {};
+          el.textContent =
+            `Forward-test (replay ${all.n} resolved): A+ fired ${a.n} · A+ win ${(a.win_rate * 100).toFixed(0)}% ` +
+            `vs base ${(all.win_rate * 100).toFixed(0)}% · live A+ logged ${(ft.live_log || {}).a_plus_total ?? 0} — ${esc(rp.verdict || "")}`;
+        }
+      } catch (_) { /* forward-test optional */ }
     } catch (e) { const el = $("#hcsErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
   }
 

@@ -138,3 +138,18 @@ def test_calibration_report_shape():
     assert "global_curve" in rep and "coverage" in rep and "oos_holdout" in rep
     assert "INSUFFICIENT" in rep["verdict"] or "NOT VALIDATED" in rep["verdict"]
     assert rep["n_resolved"] >= 0
+
+
+def test_forward_test_replay_shape():
+    from app.hcs import forward_test
+    r = forward_test.replay()
+    if not r.get("available"):
+        return
+    for k in ("all_resolved", "hcs_a_plus", "hcs_rejected", "a_plus_signals", "verdict", "gate"):
+        assert k in r, k
+    a = r["hcs_a_plus"]
+    if a.get("n"):
+        assert 0.0 <= a["win_rate"] <= 1.0
+        # A+ subset must be a strict subset of all-resolved
+        assert a["n"] <= r["all_resolved"]["n"]
+    assert "NOT VALIDATED" in r["verdict"] or "Nothing to forward-test" in r["verdict"]
