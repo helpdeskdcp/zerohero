@@ -57,3 +57,7 @@ backend/data/hcr_forward_test.jsonl
 backend/data/hcs_forward_test.jsonl
 backend/data/hcs_adaptive_model.json
 backend/data/autoscalp_config_pre_trendingup_haircut.json
+
+# order-pressure research engine: parsed-CSV cache + run logs (results .md/.json are kept)
+backend/data/research/order_pressure/_cache/
+backend/data/research/order_pressure/_run*.log
