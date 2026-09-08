@@ -25,6 +25,13 @@ DEFAULT_CONFIG: dict = {
     "breakout_window": 3,           # break IB high/low within this many bars (spec: 2-3)
     "breakout_buffer_atr": 0.03,   # price must exceed IB extreme by this * ATR to count
     "entry_on": "stop",            # 'stop' = enter at IB extreme +/- buffer when touched
+    "entry_ref": "ib",            # 'ib' (aggressive) | 'mother' (conservative -- canonical)
+    "stop_ref": "ib",             # 'ib' | 'mother' | 'mother_mid' (opposite end of the mother bar)
+    "breakout_confirm": "touch",  # 'touch' (intrabar) | 'close' (full bar close beyond the level)
+
+    # --- optional trend-strength gate (canonical teaching: ADX > 20-25) ---
+    "adx_period": 14,
+    "adx_min": 0.0,               # 0 = off
 
     # --- risk / targets ---
     "sl_buffer_atr": 0.05,         # stop = opposite IB extreme -/+ this * ATR

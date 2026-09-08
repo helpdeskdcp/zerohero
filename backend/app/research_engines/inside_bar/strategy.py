@@ -30,6 +30,29 @@ def _rng(b):
     return b["h"] - b["l"]
 
 
+def adx_at(bars: list[dict], i: int, period: int) -> float:
+    """Wilder's ADX over the `period` bars ending at i (simple-average form --
+    deterministic, causal, good enough for a trend-strength gate)."""
+    lo = i - 2 * period + 1
+    if lo < 1:
+        return 0.0
+    plus_dm, minus_dm, tr = [], [], []
+    for j in range(i - period + 1, i + 1):
+        up = bars[j]["h"] - bars[j - 1]["h"]
+        dn = bars[j - 1]["l"] - bars[j]["l"]
+        plus_dm.append(up if (up > dn and up > 0) else 0.0)
+        minus_dm.append(dn if (dn > up and dn > 0) else 0.0)
+        h, l, pc = bars[j]["h"], bars[j]["l"], bars[j - 1]["c"]
+        tr.append(max(h - l, abs(h - pc), abs(l - pc)))
+    atr = sum(tr) / len(tr)
+    if atr <= 1e-9:
+        return 0.0
+    pdi = 100.0 * (sum(plus_dm) / len(plus_dm)) / atr
+    mdi = 100.0 * (sum(minus_dm) / len(minus_dm)) / atr
+    denom = pdi + mdi
+    return (100.0 * abs(pdi - mdi) / denom) if denom > 1e-9 else 0.0
+
+
 def is_inside_bar(bars: list[dict], i: int, cfg: dict) -> bool:
     if i < 2:
         return False
@@ -93,40 +116,74 @@ def find_setups(bars: list[dict], cfg: dict | None = None) -> list[dict]:
             continue
         if not had_momentum(bars, i, c, side, a):
             continue
+        # optional trend-strength gate (canonical inside-bar teaching: ADX > 20-25)
+        if c.get("adx_min", 0) > 0 and adx_at(bars, i, c.get("adx_period", 14)) < c["adx_min"]:
+            continue
         ib_hi, ib_lo = bars[i]["h"], bars[i]["l"]
+        mother_hi, mother_lo = bars[i - 1]["h"], bars[i - 1]["l"]
+        # which candle's extreme is the breakout / entry reference?
+        if c.get("entry_ref", "ib") == "mother":
+            brk_hi, brk_lo = mother_hi, mother_lo
+        else:
+            brk_hi, brk_lo = ib_hi, ib_lo
         buf = c["breakout_buffer_atr"] * a
+        confirm = c.get("breakout_confirm", "touch")   # 'touch' | 'close'
         # look for breakout in the next `breakout_window` bars
         trig = None
         for k in range(1, c["breakout_window"] + 1):
             j = i + k
             if j >= n:
                 break
-            if side == "LONG" and bars[j]["h"] >= ib_hi + buf:
+            px_up = bars[j]["c"] if confirm == "close" else bars[j]["h"]
+            px_dn = bars[j]["c"] if confirm == "close" else bars[j]["l"]
+            if side == "LONG" and px_up >= brk_hi + buf:
                 trig = j
                 break
-            if side == "SHORT" and bars[j]["l"] <= ib_lo - buf:
+            if side == "SHORT" and px_dn <= brk_lo - buf:
                 trig = j
                 break
         if trig is None:
             continue
-        if not _hhmm_le(bars[trig]["hhmm"], c["no_new_entry_after_ist"]):
-            continue
-        if not _hhmm_le(c["session_start_ist"], bars[trig]["hhmm"]):
-            continue
-        if side == "LONG":
-            entry = ib_hi + buf
-            stop = ib_lo - c["sl_buffer_atr"] * a
+        # 'close' confirm only KNOWS the breakout once bar `trig` has closed, so
+        # the fill + the P&L simulation must start on the NEXT bar. 'touch' fills
+        # intrabar on `trig` itself (stop-order semantics).
+        if confirm == "close":
+            entry_idx = trig + 1
+            if entry_idx >= n:
+                continue
         else:
-            entry = ib_lo - buf
-            stop = ib_hi + c["sl_buffer_atr"] * a
+            entry_idx = trig
+        if not _hhmm_le(bars[entry_idx]["hhmm"], c["no_new_entry_after_ist"]):
+            continue
+        if not _hhmm_le(c["session_start_ist"], bars[entry_idx]["hhmm"]):
+            continue
+        stop_ref = c.get("stop_ref", "ib")            # 'ib' | 'mother' | 'mother_mid'
+        if stop_ref == "mother":
+            s_lo, s_hi = mother_lo, mother_hi
+        elif stop_ref == "mother_mid":
+            mid = 0.5 * (mother_hi + mother_lo)
+            s_lo, s_hi = mid, mid
+        else:
+            s_lo, s_hi = ib_lo, ib_hi
+        if confirm == "close":
+            # fill at the confirmed close (no mid-bar time-travel)
+            entry = bars[trig]["c"]
+        elif side == "LONG":
+            entry = brk_hi + buf
+        else:
+            entry = brk_lo - buf
+        if side == "LONG":
+            stop = s_lo - c["sl_buffer_atr"] * a
+        else:
+            stop = s_hi + c["sl_buffer_atr"] * a
         r = abs(entry - stop)
         if r <= c["eps"]:
             continue
         out.append({
-            "ib_index": i, "entry_index": trig, "side": side,
+            "ib_index": i, "entry_index": entry_idx, "side": side,
             "entry": round(entry, 2), "stop": round(stop, 2), "r_points": round(r, 2),
             "ib_high": round(ib_hi, 2), "ib_low": round(ib_lo, 2),
-            "atr": round(a, 3), "entry_hhmm": bars[trig]["hhmm"],
-            "session_date": bars[trig]["session_date"],
+            "atr": round(a, 3), "entry_hhmm": bars[entry_idx]["hhmm"],
+            "session_date": bars[entry_idx]["session_date"],
         })
     return out

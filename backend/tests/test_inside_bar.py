@@ -122,6 +122,28 @@ def test_deterministic():
     assert BT.simulate_trade(bars, a[0], CFG) == BT.simulate_trade(bars, b[0], CFG)
 
 
+def test_close_confirm_is_causal():
+    """A 'close' breakout confirm can only be known after the trigger bar closes,
+    so the fill + simulation must start on the NEXT bar (no mid-bar time travel)."""
+    bars = _session_with_setup()
+    cfg_touch = merged({"breakout_confirm": "touch"})
+    cfg_close = merged({"breakout_confirm": "close"})
+    s_t = S.find_setups(bars, cfg_touch)[0]
+    s_c = S.find_setups(bars, cfg_close)[0]
+    assert s_c["entry_index"] > s_t["entry_index"]        # close waits one more bar
+    # close-confirm fills at a bar close, never at the raw breakout level
+    assert s_c["entry"] == bars[s_c["entry_index"] - 1]["c"]
+    # entry bar's own high/low is fair game for the sim; the trigger bar is not
+    assert s_c["entry_index"] >= s_c["ib_index"] + 2
+
+
+def test_mother_bar_refs_widen_risk():
+    bars = _session_with_setup()
+    ib = S.find_setups(bars, merged({"stop_ref": "ib"}))[0]
+    mo = S.find_setups(bars, merged({"stop_ref": "mother"}))[0]
+    assert mo["r_points"] >= ib["r_points"]               # mother bar is wider than the inside bar
+
+
 def test_no_live_app_imports():
     pkg = Path(__file__).parents[1] / "app" / "research_engines" / "inside_bar"
     banned = ("app.autoscalp", "app.execution", "app.engines", "app.hcs")
