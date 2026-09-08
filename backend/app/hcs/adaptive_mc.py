@@ -222,7 +222,10 @@ _COLS = ("signal_score, momentum, mtf_alignment, regime, signal_type, tod_bucket
 
 
 def _resolved_rows() -> list[dict]:
-    con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    try:
+        con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return []
     con.row_factory = sqlite3.Row
     try:
         rows = con.execute(
