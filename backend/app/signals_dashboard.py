@@ -155,6 +155,8 @@ def build() -> dict:
                 "entry": h.get("entry"), "stop_loss": h.get("stop_loss"),
                 "target_1": h.get("target_1"), "target_2": h.get("target_2"),
                 "rr": h.get("rr"), "ev_r": h.get("ev_r"),
+                "expected_premium_move": h.get("expected_premium_move"),
+                "epm_method": h.get("epm_method"),
                 "as_of": h.get("as_of"),
             },
             "hcs": {

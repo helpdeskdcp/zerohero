@@ -79,3 +79,38 @@ def test_epm_does_not_change_the_decision(monkeypatch):
         outs.append((d["decision"], d["entry"], d["stop_loss"], d["target_1"],
                      d["probability"], d["ev_r"]))
     assert outs[0] == outs[1]
+
+
+def test_epm_persists_to_scalp_signals_and_snapshots(fresh_db):
+    """The new nullable columns exist on a fresh DB and round-trip a value."""
+    with fresh_db.db() as conn:
+        for t in ("scalp_signals", "live_market_snapshots"):
+            cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({t})")}
+            assert {"expected_premium_move", "epm_method"} <= cols, (t, sorted(cols))
+
+    fresh_db.insert_scalp_signal({
+        "signal_id": "EPM-RT-1", "source": "LIVE", "created_ts": "2026-09-08T00:00:00Z",
+        "session_date": "2026-09-08", "symbol": "CRUDEOIL", "decision": "BUY_PE",
+        "expected_premium_move": 9.37, "epm_method": "greeks"})
+    row = fresh_db.get_scalp_signal("EPM-RT-1")
+    assert row["expected_premium_move"] == 9.37 and row["epm_method"] == "greeks"
+
+    fresh_db.insert_live_snapshot({
+        "ts": "2026-09-08T00:00:00Z", "session_date": "2026-09-08", "symbol": "CRUDEOIL",
+        "decision": "BUY_PE", "expected_premium_move": 4.1, "epm_method": "fallback"})
+    snap = fresh_db.list_live_snapshots(symbol="CRUDEOIL", limit=1)[0]
+    assert snap["expected_premium_move"] == 4.1 and snap["epm_method"] == "fallback"
+
+
+def test_epm_migrates_onto_a_preexisting_db():
+    """A DB created before EPM gets the columns via _migrate (ALTER TABLE ADD)."""
+    import sqlite3
+    from app import db as _db
+    c = sqlite3.connect(":memory:"); c.row_factory = sqlite3.Row
+    c.execute("CREATE TABLE scalp_signals (id INTEGER PRIMARY KEY, signal_id TEXT, ev_r REAL)")
+    c.execute("CREATE TABLE live_market_snapshots (id INTEGER PRIMARY KEY, ts TEXT, ev REAL)")
+    c.execute("CREATE TABLE ai_paper_trades (id INTEGER PRIMARY KEY)")
+    _db._migrate(c)
+    for t in ("scalp_signals", "live_market_snapshots"):
+        cols = {r["name"] for r in c.execute(f"PRAGMA table_info({t})")}
+        assert {"expected_premium_move", "epm_method"} <= cols, (t, sorted(cols))

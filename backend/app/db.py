@@ -195,6 +195,8 @@ CREATE TABLE IF NOT EXISTS scalp_signals (
     probability REAL,               -- calibrated 0-1
     confidence TEXT,                -- LOW | MEDIUM | HIGH
     ev REAL, ev_r REAL, rr REAL,
+    expected_premium_move REAL,     -- EPM (advisory): |delta|*|d_index| + 0.5*gamma*d_index^2
+    epm_method TEXT,                -- greeks | fallback
     decision TEXT,                  -- BUY_CE|BUY_PE|NO_TRADE|WATCH|WAIT_FOR_CONFIRMATION
     reason TEXT,
     calib_version TEXT,
@@ -233,6 +235,7 @@ CREATE TABLE IF NOT EXISTS live_market_snapshots (
     signal_type TEXT, direction TEXT, signal_score REAL, probability REAL,
     confidence TEXT, decision TEXT, reason TEXT,
     ev REAL, ev_r REAL, rr REAL,
+    expected_premium_move REAL, epm_method TEXT,
     feed_age_sec REAL, chain_json TEXT
 );
 
@@ -371,11 +374,17 @@ _MIGRATIONS = {
         # (absolute premium points) isn't comparable across symbols with very
         # different premium scales (e.g. NIFTY ~15-35 vs NATURALGAS ~0.7-1.3).
         "ev_r": "REAL",
+        # EPM (advisory) -- option_engine._translation for the selected leg;
+        # was computed but dropped before this row until PHASE 15.
+        "expected_premium_move": "REAL",
+        "epm_method": "TEXT",            # greeks | fallback
     },
     "live_market_snapshots": {
         "ev": "REAL",
         "ev_r": "REAL",
         "rr": "REAL",
+        "expected_premium_move": "REAL",  # EPM (advisory) -- see scalp_signals note
+        "epm_method": "TEXT",            # greeks | fallback
         "vwap_status": "TEXT",   # available | invalid_volume | insufficient_data
         "momentum": "REAL",      # state-classifier roc_pct at decision time
         "state_score": "REAL",   # state-classifier composite score (0-100)
@@ -752,7 +761,8 @@ _SCALP_SIGNAL_COLS = (
     "symbol", "index_ltp", "vwap", "atr", "pcr", "max_pain", "regime", "momentum",
     "support", "resistance", "support_strength", "resistance_strength", "sr_level",
     "sr_side", "signal_type", "direction", "mtf_alignment", "component_scores",
-    "signal_score", "probability", "confidence", "ev", "ev_r", "rr", "decision", "reason",
+    "signal_score", "probability", "confidence", "ev", "ev_r", "rr",
+    "expected_premium_move", "epm_method", "decision", "reason",
     "calib_version", "opt_underlying", "opt_strike", "opt_expiry", "opt_type",
     "opt_token", "opt_tradingsymbol", "entry", "stop_loss", "target_1", "target_2",
     "trailing_stop", "max_hold_sec", "entry_ts", "status", "exit_price", "exit_ts",
@@ -811,7 +821,8 @@ _LIVE_SNAP_COLS = (
     "pcr", "max_pain", "regime", "mtf_alignment", "support",
     "resistance", "support_strength", "resistance_strength", "signal_type",
     "direction", "signal_score", "probability", "confidence", "decision",
-    "reason", "ev", "rr", "feed_age_sec", "chain_json",
+    "reason", "ev", "rr", "expected_premium_move", "epm_method",
+    "feed_age_sec", "chain_json",
     "oi_coverage", "pcr_quality", "greeks_source", "data_quality",
     "data_quality_score", "no_trade_reason_class",
     "raw_score", "calibration_status", "calibration_samples",
