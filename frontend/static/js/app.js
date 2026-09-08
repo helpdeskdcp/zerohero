@@ -194,6 +194,7 @@
               <div class="kv"><span>AutoScalp</span><b class="${_dirCls(a.direction)}">${esc(a.decision || "—")}</b></div>
               <div class="kv"><span>regime / type</span><b>${esc(a.regime || "—")} · ${esc(a.signal_type || "—")}</b></div>
               <div class="kv"><span>confidence / p</span><b>${esc(a.confidence || "—")} · ${fmt(a.probability, 3)}</b></div>
+              ${a.expected_premium_move != null ? `<div class="kv"><span>EPM${a.epm_method === "fallback" ? " ~" : ""}</span><b>${fmt(a.expected_premium_move, 2)} pt</b></div>` : ""}
               ${tradeable ? `<div class="kv"><span>entry / SL</span><b>${fmt(a.entry)} / ${fmt(a.stop_loss)}</b></div>
               <div class="kv"><span>T1 / T2</span><b>${fmt(a.target_1)} / ${fmt(a.target_2)}</b></div>
               <div class="kv"><span>RR / EV·R</span><b>${fmt(a.rr, 2)} / ${fmt(a.ev_r, 2)}</b></div>` : ""}

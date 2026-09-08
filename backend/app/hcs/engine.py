@@ -181,6 +181,8 @@ def evaluate_one(snap: dict, cfg: dict | None = None) -> dict:
         "mc_expected_r": adp_mc.get("exp_r"),
         "mc_setup_rank": adp_mc.get("setup_rank_score"),
         "confidence": conf or None,
+        "expected_premium_move": _f(snap.get("expected_premium_move")),
+        "epm_method": snap.get("epm_method"),
         "entry": entry,
         "stop_loss": _f(snap.get("stop_loss")),
         "target_1": _f(snap.get("target_1")) if "target_1" in snap else None,

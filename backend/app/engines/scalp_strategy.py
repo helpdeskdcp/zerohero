@@ -308,7 +308,9 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
 
     sel_full = analyse_leg(_bars_for(sel["strike"], want), _leg_row(sel["strike"], want) or {"strike": sel["strike"]},
                            opt_type=want, index_move_pts=index_move_pts, chain=chain, config=cfg.get("opt") or {})
-    sel = {**sel, "sr": sel_full.get("sr"), "quality_score": sel_full.get("quality_score", sel["quality_score"])}
+    sel = {**sel, "sr": sel_full.get("sr"), "quality_score": sel_full.get("quality_score", sel["quality_score"]),
+           "translation": sel_full.get("translation") or sel.get("translation"),
+           "translation_score": sel_full.get("translation_score", sel.get("translation_score"))}
     plan = _plan_from_leg(sel, direction, cfg)
 
     # --- calibrated probability + EV gate ---
@@ -345,6 +347,8 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                 "reason": "confidence LOW -> watch only",
                 "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
                 "probability": round(prob, 4),
+                "expected_premium_move": (sel.get("translation") or {}).get("expected_premium_move"),
+                "epm_method": (sel.get("translation") or {}).get("method"),
                 "confidence": confidence, "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],
                 **_cal_meta, "model_version": MODEL_VERSION}
 
@@ -356,6 +360,15 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         "entry": plan["entry"], "stop_loss": plan["stop_loss"],
         "target_1": plan["target_1"], "target_2": plan["target_2"],
         "trailing_stop": plan["trailing_stop"], "max_hold_sec": plan["max_hold_sec"],
+        # EPM -- Expected Premium Move (points) for the selected leg over the
+        # expected index follow-through, from option_engine._translation
+        # (|delta|*|d_index| + 0.5*gamma*d_index^2, or a responsiveness fallback).
+        # ADVISORY / informational only -- no gate reads it; the entry/SL/targets
+        # above are unchanged.
+        "expected_premium_move": (sel.get("translation") or {}).get("expected_premium_move"),
+        "epm_method": (sel.get("translation") or {}).get("method"),
+        "epm_index_move_pts": round(index_move_pts, 2) if index_move_pts is not None else None,
+        "translation_score": sel.get("translation_score"),
         "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
         "probability": round(prob, 4),
         "confidence": confidence, "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],

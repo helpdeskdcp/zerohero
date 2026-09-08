@@ -25,6 +25,8 @@ def test_build_shape_and_readonly():
             assert k in r, k
         assert r["exchange"] in ("NSE", "BSE", "MCX")
         assert r["agreement"] in ("BULLISH", "BEARISH", "MIXED", "NEUTRAL")
+        # EPM (Expected Premium Move) is carried through to the unified row
+        assert "expected_premium_move" in r["autoscalp"]
     # MCX symbols must be present and tagged (regression: "MCX not in dashboard")
     _by = {r["symbol"]: r["exchange"] for r in d["rows"]}
     if "CRUDEOIL" in _by:
