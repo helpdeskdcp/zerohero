@@ -93,7 +93,11 @@ def test_a_plus_requires_live_buy():
 
 
 def test_a_plus_requires_score_and_prob_and_conf():
-    assert ENG.evaluate_one(_snap(signal_score=20.0))["a_plus"] is False   # low score -> low hcs
+    # weak / conflicting evidence -> low hcs_score -> no A+ (deterministic; the old
+    # `signal_score=20` assertion sat right on the 68 threshold and only passed
+    # when the live chanakya.db happened to supply a negative setup_memory).
+    weak = _snap(mtf_alignment=-0.9, momentum=-0.9, vwap_status="below", index_ltp=23700.0)
+    assert ENG.evaluate_one(weak)["a_plus"] is False
     assert ENG.evaluate_one(_snap(probability=0.40))["a_plus"] is False
     assert ENG.evaluate_one(_snap(confidence="LOW"))["a_plus"] is False
 

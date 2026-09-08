@@ -24,7 +24,10 @@ _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 
 def _samples():
-    con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    try:
+        con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return []
     con.row_factory = sqlite3.Row
     try:
         rows = con.execute(

@@ -29,7 +29,10 @@ def _f(x):
 
 
 def _rows(before_ts):
-    con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    try:
+        con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return []
     con.row_factory = sqlite3.Row
     try:
         q = con.execute(

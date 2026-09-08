@@ -46,7 +46,10 @@ def _f(x):
 
 
 def _latest_snaps(symbol=None, session_date=None):
-    con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    try:
+        con = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return []
     con.row_factory = sqlite3.Row
     try:
         where = ["1=1"]
