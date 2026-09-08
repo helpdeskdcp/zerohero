@@ -49,6 +49,10 @@ DEFAULT_CONFIG: dict = {
     "mlp_epochs": 40,
     "mlp_patience": 6,              # early-stop on validation logloss
     "mlp_seed_scale": 0.1,         # deterministic weight init magnitude
+    "mlogit_epochs": 80,          # multinomial-logit SGD passes
+    "gb_n_rounds": 40,           # GB-stumps boosting rounds (per one-vs-rest class)
+    "gb_n_thresholds": 10,      # candidate split points per feature (quantiles)
+    "gb_lr": 0.1,
     "min_rows_for_fit": 400,       # below this -> INSUFFICIENT_SAMPLE, no model
     "min_rows_per_class": 30,
 

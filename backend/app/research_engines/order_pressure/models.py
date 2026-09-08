@@ -101,11 +101,11 @@ class NetPressureLogit:
 class MultinomialLogit:
     name = "multinomial_logit"
 
-    def __init__(self, n_features=None, l2=None, lr=0.05, epochs=120):
+    def __init__(self, n_features=None, l2=None, lr=0.05, epochs=None):
         c = merged()
         self.l2 = c["mlp_l2"] if l2 is None else l2
         self.lr = lr
-        self.epochs = epochs
+        self.epochs = epochs or c.get("mlogit_epochs", 80)
         self.nf = n_features
 
     def fit(self, X, y, X_val=None, y_val=None):
@@ -143,8 +143,11 @@ class _Stump:
 
 
 class _OvRBooster:
-    def __init__(self, n_rounds=60, lr=0.1, n_thresholds=12):
-        self.n_rounds, self.lr, self.nt = n_rounds, lr, n_thresholds
+    def __init__(self, n_rounds=None, lr=None, n_thresholds=None):
+        c = merged()
+        self.n_rounds = n_rounds if n_rounds is not None else c.get("gb_n_rounds", 40)
+        self.lr = lr if lr is not None else c.get("gb_lr", 0.1)
+        self.nt = n_thresholds if n_thresholds is not None else c.get("gb_n_thresholds", 10)
 
     def fit(self, X, target):  # target in {0,1}
         n, d = len(X), len(X[0])
@@ -193,7 +196,7 @@ class GBStumps:
 
     def __init__(self, n_rounds=None):
         c = merged()
-        self.n_rounds = n_rounds or 50
+        self.n_rounds = n_rounds or c.get("gb_n_rounds", 40)
 
     def fit(self, X, y, X_val=None, y_val=None):
         self.mean, self.std = _standardiser(X)
