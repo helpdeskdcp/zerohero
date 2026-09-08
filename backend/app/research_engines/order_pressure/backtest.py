@@ -312,8 +312,10 @@ def run(symbol="NIFTY", tfs=("1m", "3m", "5m"), start="2019-01-01", end=None,
         "option_demonstrator": _option_demo(cfg),
     }
     # preload coarse bars once for MTF
+    import gc
     mtf_bars = {tag: D.load_spot_bars(symbol, tag, start=start, end=end) for tag in ("3m", "5m")}
     for tf in tfs:
+        gc.collect()
         ds = _dataset(symbol, tf, start, end, cfg, mtf_bars=mtf_bars)
         if ds is None:
             report["by_timeframe"][tf] = {"status": "INSUFFICIENT_SAMPLE"}

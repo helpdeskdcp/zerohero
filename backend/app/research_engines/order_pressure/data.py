@@ -42,40 +42,43 @@ _KAGGLE_SPOT = {
 }
 
 
-def _kaggle_ticks_cached(path: str) -> list[dict]:
-    """Parse a Kaggle OHLC csv into 1m ticks once, then pickle-cache keyed on the
-    file's mtime+size. Read-only w.r.t. the source csv."""
+def _kaggle_tuples_cached(path: str) -> list[tuple]:
+    """Parse a Kaggle OHLC csv into COMPACT 1m ticks `(t,o,h,l,c,v)` once, pickle-
+    cache keyed on file mtime+size. Tuples (not dicts) keep 1.4M rows ~150MB."""
     try:
         st = os.stat(path)
         os.makedirs(_CACHE_DIR, exist_ok=True)
-        ck = os.path.join(_CACHE_DIR, f"{os.path.basename(path)}.{int(st.st_mtime)}.{st.st_size}.pkl")
+        ck = os.path.join(_CACHE_DIR, f"{os.path.basename(path)}.tuples.{int(st.st_mtime)}.{st.st_size}.pkl")
         if os.path.exists(ck):
             with open(ck, "rb") as fh:
                 return pickle.load(fh)
     except OSError:
         ck = None
-    ticks: list[dict] = []
+    rows: list[tuple] = []
     with open(path, newline="") as fh:
-        rd = csv.DictReader(fh)
-        cols = {c.lower().strip(): c for c in (rd.fieldnames or [])}
-        dtc = cols.get("datetime") or cols.get("date") or cols.get("timestamp") or cols.get("time")
-        for row in rd:
-            t = _epoch(row.get(dtc))
-            if t is None:
-                continue
+        rd = csv.reader(fh)
+        header = next(rd, [])
+        cols = {c.lower().strip(): i for i, c in enumerate(header)}
+        di = cols.get("datetime", cols.get("date", cols.get("timestamp", cols.get("time", 0))))
+        oi, hi, li, ci = cols.get("open"), cols.get("high"), cols.get("low"), cols.get("close")
+        vi = cols.get("volume")
+        for r in rd:
             try:
-                ticks.append({"t": t, "o": float(row[cols["open"]]), "h": float(row[cols["high"]]),
-                              "l": float(row[cols["low"]]), "c": float(row[cols["close"]]),
-                              "v": float(row.get(cols.get("volume", ""), 0) or 0)})
-            except (ValueError, KeyError):
+                t = _epoch(r[di])
+                if t is None:
+                    continue
+                rows.append((t, float(r[oi]), float(r[hi]), float(r[li]), float(r[ci]),
+                             float(r[vi]) if vi is not None and r[vi] else 0.0))
+            except (ValueError, IndexError, TypeError):
                 continue
+    rows.sort()
     if ck:
         try:
             with open(ck, "wb") as fh:
-                pickle.dump(ticks, fh, protocol=4)
+                pickle.dump(rows, fh, protocol=4)
         except OSError:
             pass
-    return ticks
+    return rows
 
 
 def _ro_conn(path):
@@ -157,51 +160,91 @@ def _resample(ticks: list[dict], tf: str) -> list[dict]:
     return out
 
 
+_IST = timezone(__import__("datetime").timedelta(hours=5, minutes=30))
+_BARS_CACHE: dict = {}          # (sym, tf, start, end, full) -> bars ; cleared by clear_cache()
+
+
+def clear_cache():
+    _BARS_CACHE.clear()
+
+
+def _resample_spot(tuples: list[tuple], tf: str) -> list[dict]:
+    """tuples: (t,o,h,l,c,v) time-ordered. -> closed OHLC bars for tf, memory-lean."""
+    step = _TF_SEC[tf]
+    out: list[dict] = []
+    cur = None
+    b = None
+    prev_v = None
+    for (t, o, h, l, cl, v) in tuples:
+        bk = int(t // step) * step
+        if bk != cur:
+            if b is not None:
+                b["v_delta"] = (b["v"] - prev_v) if (prev_v is not None and b["v"] >= prev_v) else b["v"]
+                prev_v = b["v"] if b["v"] else prev_v
+                out.append(b)
+            cur = bk
+            b = {"t": bk, "o": o, "h": h, "l": l, "c": cl, "v": 0.0, "oi": None,
+                 "oi_change": None, "n": 0}
+        b["h"] = h if h > b["h"] else b["h"]
+        b["l"] = l if l < b["l"] else b["l"]
+        b["c"] = cl
+        b["v"] += v
+        b["n"] += 1
+    if b is not None:
+        b["v_delta"] = (b["v"] - prev_v) if (prev_v is not None and b["v"] >= prev_v) else b["v"]
+        out.append(b)
+    return out
+
+
 # --------------------------------------------------------------------------- SPOT
 def load_spot_bars(symbol: str, tf: str, *, start: str | None = None, end: str | None = None,
-                   max_bars: int | None = None, source: str = "auto") -> list[dict]:
-    """Chronological SPOT/INDEX bars for `symbol` at `tf`. Prefers dense Kaggle
-    1m history, resampled; falls back to market_candles (recent). No look-ahead:
-    just an ordered read."""
+                   max_bars: int | None = None, source: str = "auto",
+                   full_history: bool = False) -> list[dict]:
+    """Chronological SPOT/INDEX bars for `symbol` at `tf`. Kaggle 1m history
+    (primary file only unless full_history), resampled; market_candles fallback.
+    No look-ahead -- an ordered read, date-filtered BEFORE resample. Memory-lean:
+    compact tuples, per-run cache."""
     sym = symbol.upper()
-    ticks: list[dict] = []
+    key = (sym, tf, start, end, full_history)
+    if key in _BARS_CACHE:
+        return _BARS_CACHE[key]
+    s_ep = _epoch(start) if start else 0.0
+    e_ep = _epoch(end) if end else 9e18
+    tuples: list[tuple] = []
     used = None
     if source in ("auto", "kaggle") and sym in _KAGGLE_SPOT:
-        for path in _KAGGLE_SPOT[sym]:
+        paths = _KAGGLE_SPOT[sym] if full_history else _KAGGLE_SPOT[sym][:1]
+        for path in paths:
             if not os.path.exists(path):
                 continue
-            ticks += _kaggle_ticks_cached(path)
-        used = "kaggle" if ticks else used
-    if not ticks and source in ("auto", "market_candles"):
+            for row in _kaggle_tuples_cached(path):
+                if s_ep <= row[0] <= e_ep:
+                    tuples.append(row)
+        if tuples:
+            used = "kaggle"
+    if not tuples and source in ("auto", "market_candles"):
         con = _ro_conn(_MH_DB)
         if con:
             try:
-                q = con.execute(
+                for r in con.execute(
                     "SELECT bar_start, o, h, l, c, v FROM market_candles "
                     "WHERE symbol=? AND kind='INDEX' AND tf=? ORDER BY bar_start",
-                    (sym, tf if tf in ("1m", "3m", "5m", "15m") else "1m"))
-                for r in q:
+                        (sym, tf if tf in ("1m", "3m", "5m", "15m") else "1m")):
                     t = _epoch(r["bar_start"])
-                    if t is not None and r["c"] is not None:
-                        ticks.append({"t": t, "o": r["o"], "h": r["h"], "l": r["l"],
-                                      "c": r["c"], "v": r["v"] or 0.0})
+                    if t is not None and r["c"] is not None and s_ep <= t <= e_ep:
+                        tuples.append((t, r["o"], r["h"], r["l"], r["c"], r["v"] or 0.0))
                 used = "market_candles"
             finally:
                 con.close()
-    ticks.sort(key=lambda x: x["t"])
-    if start:
-        s = _epoch(start) or 0
-        ticks = [t for t in ticks if t["t"] >= s]
-    if end:
-        e = _epoch(end) or 9e18
-        ticks = [t for t in ticks if t["t"] <= e]
-    bars = _resample(ticks, tf) if used == "kaggle" or tf not in ("1m", "3m", "5m") else _resample(ticks, tf)
+    tuples.sort()
+    bars = _resample_spot(tuples, tf)
     for b in bars:
         b["source"] = used
         b["session_date"] = datetime.fromtimestamp(b["t"], tz=timezone.utc).astimezone(
-            timezone(__import__("datetime").timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
+            _IST).strftime("%Y-%m-%d")
     if max_bars:
         bars = bars[-max_bars:]
+    _BARS_CACHE[key] = bars
     return bars
 
 
