@@ -263,11 +263,13 @@ textarea { resize: vertical; }
 .tab-item {
   background: none; border: none; color: var(--ink-faint); font-size: 10px;
   display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1;
-  min-width: 0; padding: 4px 2px; white-space: nowrap;
+  min-width: 0; padding: 4px 1px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
 }
 .tab-item.active { color: var(--gold-soft); }
 .tab-ic { font-size: 17px; }
-@media (max-width: 380px) { .tab-item { font-size: 9px; } .tab-ic { font-size: 15px; } }
+@media (max-width: 440px) { .tab-item { font-size: 9px; } .tab-ic { font-size: 15px; } }
+@media (max-width: 340px) { .tab-item { font-size: 8px; } .tab-ic { font-size: 14px; } }
 
 /* ============================================================
    Desktop layout (>= 860px): sidebar nav, hide bottom tab bar,
