@@ -4,8 +4,11 @@ from __future__ import annotations
 import copy
 
 DEFAULT_CONFIG: dict = {
-    # ---- Pine inputs (verbatim) ----
-    "ssl1_len": 60,
+    # ---- Pine inputs ----
+    # SSL1 = 100 is the user's TRAINED baseline config (NOT the Pine default 60).
+    # Do not change it during filter-layer optimisation; robustness sweep
+    # {80,90,100,110,120} only after baseline + precision-filter are fixed.
+    "ssl1_len": 100,
     "ssl2_len": 5,
     "exit_len": 15,
     "baseline_len": 60,
