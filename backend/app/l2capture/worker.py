@@ -205,12 +205,16 @@ class L2CaptureWorker:
             "Authorization": creds["jwt"], "x-api-key": creds["api_key"],
             "x-client-code": creds["client_code"], "x-feed-token": creds["feed_token"],
         }
+        # websockets >= 14 renamed extra_headers -> additional_headers, and the
+        # kwarg is NOT validated until the connection actually opens -- so a
+        # try/except around connect() is too early. Pick by version.
         try:
-            ws_cm = websockets.connect(WS_URL, additional_headers=headers,
-                                       ping_interval=None, max_size=None)
-        except TypeError:
-            ws_cm = websockets.connect(WS_URL, extra_headers=headers,
-                                       ping_interval=None, max_size=None)
+            _wsver = tuple(int(x) for x in websockets.__version__.split(".")[:2])
+        except Exception:
+            _wsver = (0, 0)
+        _hdr_kw = "additional_headers" if _wsver >= (14, 0) else "extra_headers"
+        ws_cm = websockets.connect(WS_URL, **{_hdr_kw: headers},
+                                   ping_interval=None, max_size=None)
         async with ws_cm as ws:
             self.connected = True
             self.last_error = None
