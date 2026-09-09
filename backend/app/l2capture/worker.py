@@ -384,8 +384,10 @@ class L2CaptureWorker:
                 _log.warning("l2capture: insert_ticks failed: %s", self.last_error)
         if self._run_id:
             try:
-                self.store.finish_run(self._run_id, n_frames=self._n_frames,
-                                      n_ticks=self._n_ticks, note="running")
+                self.store.finish_run(
+                    self._run_id, n_frames=self._n_frames, n_ticks=self._n_ticks,
+                    note=json.dumps({"state": "running", "rejected": self._n_rejected,
+                                     "reject_reasons": dict(self._reject_reasons)}))
             except Exception:
                 pass
 
