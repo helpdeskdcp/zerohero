@@ -99,7 +99,7 @@ def parse(obj: dict, underlying: str, expiry: str, *, ts: str | None = None) -> 
                     "has_oi": True, "has_oi_change": True,
                     "spot_source": "upstox" if spot is not None else "parity_proxy"},
         notes=["source: Upstox option-analytics open/v1 (keyless)"])
-    return chain.sort().compute_atm()
+    return chain.sort().compute_atm().with_expiry_ctx()
 
 
 def fetch(underlying: str, expiry: str, *, timeout: float = 6.0,

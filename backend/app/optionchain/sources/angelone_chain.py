@@ -80,6 +80,19 @@ def _expiry_date(x):
     return None
 
 
+def _available_expiries(con, underlying: str) -> list:
+    rows = con.execute(
+        "SELECT DISTINCT expiry FROM quote_snapshots "
+        "WHERE symbol=? AND kind='OPTION' AND expiry IS NOT NULL AND expiry!='' "
+        "UNION SELECT DISTINCT expiry FROM option_greeks "
+        "WHERE underlying=? AND expiry IS NOT NULL AND expiry!=''",
+        (underlying, underlying)).fetchall()
+    today = datetime.now(timezone.utc).date()
+    dated = sorted({(d, r["expiry"]) for r in rows
+                    if (d := _expiry_date(r["expiry"])) and d >= today})
+    return [e for _d, e in dated]
+
+
 def _pick_expiry(con, underlying: str, want: str) -> str | None:
     rows = con.execute(
         "SELECT DISTINCT expiry FROM quote_snapshots "
@@ -394,6 +407,7 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 f"spot {spot} ({spot_src})",
             ],
         )
-        return chain.sort().compute_atm()
+        chain.available_expiries = _available_expiries(con, u)
+        return chain.sort().compute_atm().with_expiry_ctx()
     finally:
         con.close()

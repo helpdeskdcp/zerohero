@@ -234,6 +234,9 @@ const P = {
   "/api/optionchain/NIFTY": load("oc_nifty", {
     status: "OK", underlying: "NIFTY", expiry: "15SEP2026", ts: "2026-09-09T07:00:00Z",
     source: "angelone_captured", spot: 23450, atm_strike: 23450,
+    expiry_ctx: { phase: "EXPIRY_DAY", dte: 0, is_expiry_day: true, next_expiry: "22SEP2026",
+                  oi_signal_reliability: "LOW" },
+    available_expiries: ["15SEP2026", "22SEP2026"],
     chain: {
       underlying: "NIFTY", expiry: "15SEP2026", source: "angelone_captured", spot: 23450,
       atm_strike: 23450, n_strikes: 3, notes: ["greek spine snap_key=x", "<img src=x onerror=alert(1)>"],
@@ -453,6 +456,10 @@ try {
   const ocStrip = elFor("#ocStrip").innerHTML;
   assert.ok(/PCR \(OI\)/.test(ocStrip) && /Max Pain/.test(ocStrip) && /GEX/.test(ocStrip) && /DQ/.test(ocStrip),
     "option-chain header strip shows PCR / Max Pain / GEX / DQ: " + ocStrip.slice(0, 200));
+  const ocExp = elFor("#ocExpiryBanner").innerHTML;
+  assert.ok(/EXPIRY DAY/.test(ocExp) && /0 DTE/.test(ocExp), "expiry-day banner renders on 0 DTE: " + ocExp.slice(0, 160));
+  assert.ok(/oc-nextexp/.test(ocExp) && /View next expiry/.test(ocExp), "expiry-day banner offers the next-expiry switch");
+  assert.ok(elFor("#ocExpiryBanner").hidden === false, "expiry-day banner is shown, not hidden");
   const ocQual = elFor("#ocQual").innerHTML;
   assert.ok(/oc-verdict/.test(ocQual) && /WATCH/.test(ocQual), "qualification verdict pill rendered: " + ocQual.slice(0, 160));
   assert.ok(/not wired to any order path/.test(ocQual), "qualification carries the research-only note");

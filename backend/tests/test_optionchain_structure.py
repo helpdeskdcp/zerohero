@@ -205,6 +205,24 @@ def test_structure_full_read_has_all_blocks():
     json.dumps(st.to_dict())                     # must be JSON-serialisable
 
 
+def test_expiry_day_context_caveats_the_oi_blocks():
+    c = _chain(spot=23440.0)
+    c.expiry_ctx = {"phase": "EXPIRY_DAY", "dte": 0, "is_expiry_day": True}
+    c.available_expiries = ["15SEP2026", "22SEP2026"]
+    st = S.analyze(c, realized_vol=0.10)
+    ec = st.expiry_context
+    assert ec["phase"] == "EXPIRY_DAY" and ec["oi_signal_reliability"] == "LOW"
+    assert ec["next_expiry"] == "22SEP2026" and "next expiry" in ec["advice"]
+    assert st.pcr_regime.get("expiry_day_caveat") and st.oi_walls.get("expiry_day_caveat")
+    assert st.summary.startswith("⚠ EXPIRY DAY")
+
+    normal = _chain(spot=23440.0)
+    normal.expiry_ctx = {"phase": "NORMAL", "dte": 6}
+    st2 = S.analyze(normal)
+    assert st2.expiry_context["oi_signal_reliability"] == "OK"
+    assert "expiry_day_caveat" not in st2.pcr_regime
+
+
 def test_structure_degrades_without_oi():
     c = _chain(with_oi=False)
     st = S.analyze(c)

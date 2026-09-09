@@ -155,6 +155,25 @@ def test_boxed_book_is_watch():
     assert q.verdict == "WATCH" and any("G_LOCATION" in r for r in q.watch_reasons)
 
 
+def test_expiry_day_downgrades_a_directional_call_to_watch():
+    st = _state(expiry_context={"phase": "EXPIRY_DAY", "dte": 0, "is_expiry_day": True,
+                                "next_expiry": "22SEP2026"})
+    q = Q.qualify(st, external_signal={"direction": "LONG", "source": "HCS"}, ann_p_win=0.7)
+    ge = next(g for g in q.gates if g["name"] == "G_EXPIRY")
+    assert ge["status"] == "WATCH" and "0 DTE" in ge["detail"]
+    assert q.verdict == "WATCH"
+    # disabling the gate lets it through
+    q2 = Q.qualify(st, external_signal={"direction": "LONG", "source": "HCS"},
+                   ann_p_win=0.7, cfg={"use_expiry_gate": False})
+    assert next(g for g in q2.gates if g["name"] == "G_EXPIRY")["status"] == "NA"
+
+
+def test_expired_series_is_no_trade():
+    st = _state(expiry_context={"phase": "EXPIRED", "dte": -1, "is_expiry_day": False})
+    q = Q.qualify(st, external_signal={"direction": "LONG", "source": "HCS"}, ann_p_win=0.8)
+    assert q.verdict == "NO_TRADE" and "G_EXPIRY" in q.blocking
+
+
 def test_gex_pin_context_downgrades_directional_to_watch():
     st = _state(gex_regime={"status": "ok", "regime": "NET_LONG_GAMMA", "regime_sign": 1,
                             "flip_strike": 23455.0, "pin_strike": 23450.0},  # spot == pin
@@ -216,5 +235,7 @@ def test_qualify_from_chain_end_to_end():
                              external_signal={"direction": "LONG", "source": "HCS"},
                              ann_p_win=0.6)
     assert q.verdict in ("QUALIFIED", "WATCH", "NO_TRADE")
-    assert len(q.gates) == 6 and q.structure_bias["bias"] in ("LONG", "SHORT", "NEUTRAL")
+    assert len(q.gates) == 7 and q.structure_bias["bias"] in ("LONG", "SHORT", "NEUTRAL")
+    assert {g["name"] for g in q.gates} >= {"G_DQ", "G_STRUCTURE", "G_DIRECTION",
+                                            "G_ANN", "G_LOCATION", "G_REGIME", "G_EXPIRY"}
     assert "research-only" in " ".join(q.notes)

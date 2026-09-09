@@ -113,7 +113,9 @@ def parse(obj: dict, underlying: str, expiry: str, *, ts: str | None = None) -> 
                     "has_oi": True, "has_oi_change": True,
                     "spot_source": "nse" if spot is not None else "parity_proxy"},
         notes=["source: NSE option-chain-v3 (no Greeks)"])
-    return chain.sort().compute_atm()
+    exps = recs.get("expiryDates") or (obj or {}).get("expiryDates") or []
+    chain.available_expiries = [str(e).upper().replace("-", "") for e in exps if e]
+    return chain.sort().compute_atm().with_expiry_ctx()
 
 
 def fetch(underlying: str, expiry: str, *, timeout: float = 8.0, session=None) -> OptionChain | None:

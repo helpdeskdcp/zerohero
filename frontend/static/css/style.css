@@ -636,3 +636,14 @@ table.oc-tbl td.oc-prof, table.oc-tbl th.oc-prof { width: 180px; text-align: lef
 .oc-oibar-ce { height: 100%; background: var(--teal); opacity: 0.7; border-radius: 2px 0 0 2px; }
 .oc-oibar-pe { height: 100%; background: var(--ember); opacity: 0.7; border-radius: 0 2px 2px 0; }
 @media (max-width: 900px) { .oc-strip.stat-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ===== Option Chain — expiry-day banner ===== */
+.oc-expiry {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 8px 0; padding: 8px 12px; border-radius: 6px;
+  font-size: 12px; line-height: 1.4;
+  border: 1px solid var(--line);
+}
+.oc-expiry.warn { color: var(--gold-soft); border-color: rgba(201,162,39,0.45); background: rgba(201,162,39,0.10); }
+.oc-expiry.bad  { color: var(--ember);     border-color: rgba(217,97,79,0.45);  background: rgba(217,97,79,0.10); }
+.oc-expiry .btn { flex-shrink: 0; }

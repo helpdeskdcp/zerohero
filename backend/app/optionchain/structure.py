@@ -74,6 +74,7 @@ class OptionStructureState:
     iv_skew_bias: dict = field(default_factory=dict)
     iv_vs_realized: dict = field(default_factory=dict)
     gex_regime: dict = field(default_factory=dict)
+    expiry_context: dict = field(default_factory=dict)
     capability: dict = field(default_factory=dict)
     quality: dict | None = None
     notes: list = field(default_factory=list)
@@ -194,6 +195,13 @@ def _gex_block(g, spot, notes):
 
 def _summarize(st: OptionStructureState) -> str:
     bits = []
+    ph = (st.expiry_context or {}).get("phase")
+    if ph == "EXPIRY_DAY":
+        bits.append("⚠ EXPIRY DAY (0 DTE) — front-series OI unwinding")
+    elif ph == "EXPIRED":
+        bits.append("⚠ EXPIRY HAS PASSED")
+    elif ph == "EXPIRY_WEEK":
+        bits.append(f"{(st.expiry_context or {}).get('dte')} DTE")
     mp = st.max_pain
     if mp.get("magnet_dir") not in (None, "UNKNOWN"):
         dpct = "" if mp.get("magnet_dir") == "AT" else f" {mp.get('distance_pct')}%"
@@ -240,6 +248,7 @@ def analyze(chain: OptionChain, *, realized_vol: float | None = None,
     st.iv_vs_realized = _iv_rv_block(sk.atm_iv if sk.status == "ok" else None,
                                      realized_vol, c, notes)
     st.gex_regime = _gex_block(g, chain.spot, notes)
+    st.expiry_context = _expiry_block(chain, st, notes)
 
     ran = sum(1 for b in (st.max_pain, st.pcr_regime, st.oi_walls,
                           st.iv_skew_bias, st.gex_regime)
@@ -251,3 +260,34 @@ def analyze(chain: OptionChain, *, realized_vol: float | None = None,
                         f"skew_thr={c['skew_put_fear']}"]
     st.summary = _summarize(st)
     return st
+
+
+def _expiry_block(chain: OptionChain, st: OptionStructureState, notes: list) -> dict:
+    """Life-cycle of the chain's expiry + what it does to the other blocks. On
+    EXPIRY_DAY the expiring series' OI unwinds structurally -> ΔOI / PCR /
+    OI-walls for THIS series are unreliable; Max-Pain + GEX pinning matter more."""
+    ctx = dict(chain.expiry_ctx or {})
+    phase = ctx.get("phase", "UNKNOWN")
+    nexts = [e for e in (chain.available_expiries or []) if e.upper() != str(chain.expiry).upper()]
+    ctx["next_expiry"] = nexts[0] if nexts else None
+    if phase == "EXPIRY_DAY":
+        ctx["oi_signal_reliability"] = "LOW"
+        ctx["advice"] = ("expiring-series OI is unwinding — ΔOI is structural not "
+                         "directional; read PCR / OI-walls on the next expiry"
+                         + (f" ({ctx['next_expiry']})" if ctx.get("next_expiry") else "")
+                         + ". Watch Max-Pain / GEX pin.")
+        for blk in (st.pcr_regime, st.oi_walls):
+            if blk.get("status") == "ok":
+                blk["expiry_day_caveat"] = "front-series OI unwinding — treat as unreliable today"
+        notes.append(f"EXPIRY DAY (0 DTE) — front-series OI signals downgraded"
+                     + (f"; next expiry {ctx['next_expiry']}" if ctx.get("next_expiry") else ""))
+    elif phase == "EXPIRED":
+        ctx["oi_signal_reliability"] = "NONE"
+        ctx["advice"] = "this expiry has passed — switch to the next one."
+        notes.append("selected expiry has already EXPIRED")
+    elif phase == "EXPIRY_WEEK":
+        ctx["oi_signal_reliability"] = "OK"
+        ctx["advice"] = f"{ctx.get('dte')} DTE — rollover to the next series is under way; gamma rising."
+    else:
+        ctx["oi_signal_reliability"] = "OK"
+    return ctx

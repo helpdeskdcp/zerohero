@@ -2,6 +2,45 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
+from datetime import datetime, time, timedelta, timezone
+
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def expiry_phase(expiry: str, now: datetime | None = None) -> dict:
+    """Where this expiry sits in its life-cycle. `expiry` in '15SEP2026' /
+    '15-SEP-2026' / '2026-09-15'. Returns:
+      { expiry_date, dte (calendar days, may be <0), is_expiry_day, phase }
+      phase = EXPIRED | EXPIRY_DAY | EXPIRY_WEEK (1-4 dte) | NORMAL | UNKNOWN
+    On EXPIRY_DAY the expiring series' OI unwinds structurally (ΔOI is not
+    sentiment) and PCR / OI-walls for that series are unreliable; Max-Pain /
+    GEX pinning matter MORE. Callers should steer to the next expiry.
+    """
+    d = None
+    for f in ("%d%b%Y", "%d-%b-%Y", "%Y-%m-%d"):
+        try:
+            d = datetime.strptime(str(expiry).upper(), f).date()
+            break
+        except (ValueError, TypeError):
+            continue
+    if d is None:
+        return {"expiry_date": None, "dte": None, "is_expiry_day": False, "phase": "UNKNOWN"}
+    now = now or datetime.now(_IST)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    today = now.astimezone(_IST).date()
+    dte = (d - today).days
+    close_passed = now.astimezone(_IST).timetz() >= time(15, 30, tzinfo=_IST)
+    if dte < 0 or (dte == 0 and close_passed):
+        phase = "EXPIRED"
+    elif dte == 0:
+        phase = "EXPIRY_DAY"
+    elif dte <= 4:
+        phase = "EXPIRY_WEEK"
+    else:
+        phase = "NORMAL"
+    return {"expiry_date": d.isoformat(), "dte": dte,
+            "is_expiry_day": phase == "EXPIRY_DAY", "phase": phase}
 
 # a sensible strike grid per underlying (the profile granularity, not the tick)
 _STRIKE_STEP = {
@@ -61,10 +100,16 @@ class OptionChain:
     capability: dict = field(default_factory=dict)          # has_greeks/has_iv/has_oi/has_oi_change/cadence_sec/...
     quality: dict | None = None
     notes: list[str] = field(default_factory=list)
+    expiry_ctx: dict = field(default_factory=dict)          # expiry_phase(): dte / is_expiry_day / phase
+    available_expiries: list = field(default_factory=list)  # other captured/known expiries for this underlying
 
     # -------- helpers --------
     def sort(self) -> "OptionChain":
         self.rows.sort(key=lambda r: r.strike)
+        return self
+
+    def with_expiry_ctx(self) -> "OptionChain":
+        self.expiry_ctx = expiry_phase(self.expiry)
         return self
 
     def compute_atm(self) -> "OptionChain":
@@ -104,4 +149,6 @@ class OptionChain:
             "n_strikes": len(self.rows),
             "rows": [r.to_dict() for r in self.rows],
             "capability": self.capability, "quality": self.quality, "notes": self.notes,
+            "expiry_ctx": self.expiry_ctx or expiry_phase(self.expiry),
+            "available_expiries": self.available_expiries,
         }

@@ -42,6 +42,8 @@ DEFAULT_CFG = {
     # regime (GEX pin) soft gate
     "use_gex_context": True,
     "pin_band_pct": 0.20,       # spot within this % of pin_strike + long-gamma -> WATCH
+    # expiry-day gate
+    "use_expiry_gate": True,    # EXPIRED -> FAIL ; 0 DTE + directional -> WATCH
     # DQ
     "dqs_hard_floor": 45.0,     # dqs below this -> FAIL even if verdict missing
 }
@@ -257,6 +259,26 @@ def _regime_context(state, c):
     return base
 
 
+def _g_expiry(state, direction, c):
+    """The chain's expiry life-cycle. EXPIRED -> FAIL. EXPIRY_DAY on the front
+    series -> the OI-derived direction is built on unwinding data + pin/chop
+    risk, so a directional call is WATCH at best."""
+    if not c.get("use_expiry_gate", True):
+        return Gate("G_EXPIRY", NA, "expiry gate disabled")
+    ec = state.expiry_context or {}
+    phase = ec.get("phase")
+    if phase == "EXPIRED":
+        return Gate("G_EXPIRY", FAIL, "selected expiry has already expired -- switch expiry")
+    if phase == "EXPIRY_DAY":
+        nxt = f" (read {ec['next_expiry']})" if ec.get("next_expiry") else ""
+        if direction in (_LONG, _SHORT):
+            return Gate("G_EXPIRY", WATCH,
+                        f"0 DTE -- front-series OI is unwinding, PCR/walls unreliable, "
+                        f"pin/chop risk{nxt}")
+        return Gate("G_EXPIRY", WATCH, f"0 DTE -- front-series structure is expiry noise{nxt}")
+    return Gate("G_EXPIRY", PASS, f"phase {phase or 'UNKNOWN'}")
+
+
 def _g_regime(state, direction, ctx, c):
     if not c["use_gex_context"]:
         return Gate("G_REGIME", NA, "gex context disabled")
@@ -286,6 +308,8 @@ def qualify(state: OptionStructureState, *, external_signal=None,
 
     sbias = structure_direction(state, c)
     ctx = _regime_context(state, c)
+    if (state.expiry_context or {}).get("phase") == "EXPIRY_DAY" and ctx in ("NEUTRAL", "UNKNOWN"):
+        ctx = "RANGE"                       # 0 DTE pins -> treat as range for G_REGIME
 
     g_dq = _g_dq(state, c, notes)
     g_st = _g_structure(state, c)
@@ -293,7 +317,8 @@ def qualify(state: OptionStructureState, *, external_signal=None,
     g_ann = _g_ann(ann_p_win, c)
     g_loc = _g_location(state, direction, c)
     g_reg = _g_regime(state, direction, ctx, c)
-    gates = [g_dq, g_st, g_dir, g_ann, g_loc, g_reg]
+    g_exp = _g_expiry(state, direction, c)
+    gates = [g_dq, g_st, g_dir, g_ann, g_loc, g_reg, g_exp]
 
     blocking = [g.name for g in gates if g.status == FAIL]
     watch = [f"{g.name}: {g.detail}" for g in gates if g.status == WATCH]

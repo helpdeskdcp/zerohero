@@ -2452,6 +2452,7 @@
         return;
       }
       ocRenderMeta(j);
+      ocRenderExpiryBanner(j);
       ocRenderQual(j.qualification || {});
       ocRenderStrip(j);
       ocRenderTable(j);
@@ -2463,6 +2464,41 @@
       if (errEl) { errEl.textContent = (e && e.message) || String(e); errEl.hidden = false; }
       showError("optionchain", e);
     }
+  }
+
+  function ocRenderExpiryBanner(j) {
+    const box = $("#ocExpiryBanner");
+    if (!box) return;
+    const ec = j.expiry_ctx || (j.structure && j.structure.expiry_context) || {};
+    const phase = ec.phase;
+    if (!phase || phase === "NORMAL") { box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false;
+    let cls = "warn", head = "";
+    if (phase === "EXPIRY_DAY") {
+      cls = "bad";
+      head = `⚠ EXPIRY DAY — ${esc(j.expiry)} (0 DTE). Expiring-series OI is unwinding: ` +
+        `the Δ column and PCR / OI-walls are structural noise today, not sentiment. ` +
+        `Watch Max Pain / GEX pin.`;
+    } else if (phase === "EXPIRED") {
+      cls = "bad";
+      head = `⚠ ${esc(j.expiry)} HAS EXPIRED — switch to a live expiry.`;
+    } else if (phase === "EXPIRY_WEEK") {
+      cls = "warn";
+      head = `${esc(ec.dte)} DTE to ${esc(j.expiry)} — rollover under way, gamma rising.`;
+    }
+    const nxt = ec.next_expiry;
+    const btn = (phase === "EXPIRY_DAY" || phase === "EXPIRED")
+      ? `<button class="btn btn-ghost oc-nextexp" data-next="${esc(nxt || "NEXT")}">View next expiry →</button>`
+      : "";
+    box.className = `oc-expiry ${cls}`;
+    box.innerHTML = `<span>${head}</span>${btn}`;
+    const b = box.querySelector(".oc-nextexp");
+    if (b) b.addEventListener("click", () => {
+      const sel = $("#ocExpiry");
+      if (sel) sel.value = "NEXT";
+      const live = $("#ocLive"); if (live) live.checked = true;   // next expiry usually needs the network source
+      loadOptionchain();
+    });
   }
 
   function ocRenderMeta(j) {
