@@ -102,8 +102,54 @@ def build_signals(bars: list[dict], cfg: dict) -> list[dict]:
             "bull_score": bull_score, "bear_score": bear_score,
             "strong_bull": strong_bull, "strong_bear": strong_bear,
             "buy_signal": buy_sig, "sell_signal": sell_sig,
+            # --- read-only diagnostics (Stage-2 filter screening; NOT used by the
+            #     signal, which is fully defined above) ---
+            "diag": {
+                "adx": adx[i], "di_plus": di_p[i], "di_minus": di_m[i], "rsi": rsi[i],
+                "ema200": ema200[i], "hma": hma[i], "hma_prev": hma[i - 1] if i else None,
+                "vwap": vwap[i], "baseline": baseline[i],
+                "above_ema": above_ema, "below_ema": below_ema,
+                "hma_bull": hma_bull, "hma_bear": hma_bear,
+                "rsi_bull": rsi_bull, "rsi_bear": rsi_bear,
+                "x_bull": x_bull[i], "x_bear": x_bear[i],
+            },
         })
     return out
+
+
+def _passes_filters(row: dict, side: str, c: dict) -> bool:
+    """Stage-2 confirmation filters, chosen from IN-SAMPLE screening and OOS/
+    walk-forward validated. Each is opt-in via config; all OFF -> baseline.
+
+      filter_session_window  [start_min, end_min] IST -> keep only entries whose
+                             minute-of-day is in [start, end). Screening: the
+                             opening hour and the last ~90 min bleed; 10:00-13:30
+                             wins ~+9pp. Recommended [600, 810].
+      filter_require_hma_slope  True -> HMA must slope with the trade side.
+      filter_max_vwap_ext_atr   float -> drop entries > this many ATR from VWAP
+                             (>3 ATR overextension had ~19% win in-sample).
+      filter_max_adx            float -> drop entries with ADX above this
+                             ("don't chase an already-stretched trend").
+    """
+    win = c.get("filter_session_window")
+    if win:
+        m = row["minute_of_day"]
+        if not (win[0] <= m < win[1]):
+            return False
+    d = row.get("diag") or {}
+    if c.get("filter_require_hma_slope"):
+        if not (d.get("hma_bull") if side == "LONG" else d.get("hma_bear")):
+            return False
+    cap = c.get("filter_max_vwap_ext_atr")
+    if cap is not None:
+        atr = row["atr"] or 1e-9
+        vwap = d.get("vwap")
+        if vwap is not None and abs(row["close"] - vwap) / atr > cap:
+            return False
+    adx_cap = c.get("filter_max_adx")
+    if adx_cap is not None and (d.get("adx") or 0.0) > adx_cap:
+        return False
+    return True
 
 
 def find_setups(bars: list[dict], cfg: dict | None = None) -> list[dict]:
@@ -126,6 +172,12 @@ def find_setups(bars: list[dict], cfg: dict | None = None) -> list[dict]:
             side = "SHORT"
         else:
             continue
+
+        # ---- Stage-2 confirmation/filter layer (post-signal; does NOT touch the
+        #      SSL signal, only drops triggered setups). All default OFF. ----
+        if not _passes_filters(row, side, c):
+            continue
+
         entry = row["close"]
         risk = a * c["atr_mult"]
         if risk <= 0:

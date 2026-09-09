@@ -31,6 +31,14 @@ DEFAULT_CONFIG: dict = {
     "warmup_bars": 220,             # EMA200 needs ~200 settled bars before a valid signal
     "session_anchored_vwap": True,  # reset the VWAP proxy each session day
 
+    # ---- Stage-2 confirmation/filter layer (post-signal; OFF = baseline) ----
+    # Validated combo (IN-SAMPLE screen -> OOS + walk-forward): lifts 15m win
+    # ~38% -> ~47%, PF 0.62 -> 0.85. Still net-negative -> NOT a GO, kept opt-in.
+    "filter_session_window": None,        # e.g. [600, 810]  (10:00-13:30 IST)
+    "filter_require_hma_slope": False,
+    "filter_max_vwap_ext_atr": None,      # e.g. 3.0
+    "filter_max_adx": None,               # e.g. 30.0
+
     # ---- backtest: trade management ----
     "scale_out": [[1.0, 0.3333], [2.0, 0.3333]],   # (RR level, fraction) -- last third rides to T3
     "move_sl_to_be_after_rr": 1.0,  # once +1R banked, stop -> entry

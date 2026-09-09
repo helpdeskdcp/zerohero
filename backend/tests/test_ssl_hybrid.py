@@ -132,6 +132,30 @@ def test_run_symbol_insufficient_is_flagged():
     assert r["status"] in ("INSUFFICIENT_SAMPLE", "NO_DATA", "NO_TRADES", "OK")
 
 
+def test_stage2_filters_are_off_by_default_and_only_drop_setups():
+    bars = _synth_bars(n=500)
+    base = S.find_setups(bars, merged())
+    # a filter that keeps nothing must yield a strict subset (never new setups)
+    win_none = S.find_setups(bars, merged({"filter_session_window": [0, 1]}))
+    assert len(win_none) <= len(base)
+    base_idx = {s["entry_index"] for s in base}
+    assert all(s["entry_index"] in base_idx for s in win_none)
+    # HMA-slope + vwap-ext filters likewise only subset
+    hf = S.find_setups(bars, merged({"filter_require_hma_slope": True}))
+    vf = S.find_setups(bars, merged({"filter_max_vwap_ext_atr": 0.01}))
+    assert {s["entry_index"] for s in hf} <= base_idx
+    assert {s["entry_index"] for s in vf} <= base_idx
+    assert len(vf) < len(base)          # a 0.01-ATR cap must drop almost everything
+
+
+def test_stage2_session_window_is_respected():
+    bars = _synth_bars(n=500)
+    got = S.find_setups(bars, merged({"filter_session_window": [600, 810]}))
+    for su in got:
+        m = int(su["entry_hhmm"][:2]) * 60 + int(su["entry_hhmm"][3:])
+        assert 600 <= m < 810
+
+
 def test_no_live_app_imports():
     pkg = Path(__file__).parents[1] / "app" / "research_engines" / "ssl_hybrid"
     banned = ("app.autoscalp", "app.execution", "app.engines", "app.hcs", "app.connectors")

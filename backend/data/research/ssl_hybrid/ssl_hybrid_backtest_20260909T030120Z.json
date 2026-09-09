@@ -1,0 +1,684 @@
+{
+  "engine": "ssl_hybrid_pro",
+  "generated_at": "2026-09-09T03:01:06.434159+00:00",
+  "params": {
+    "symbols": [
+      "NIFTY",
+      "BANKNIFTY"
+    ],
+    "tf_min": 15,
+    "start": "2016-01-01",
+    "end": "2025-12-31",
+    "config": {
+      "ssl1_len": 100,
+      "ssl2_len": 5,
+      "exit_len": 15,
+      "baseline_len": 60,
+      "ema_len": 200,
+      "hma_len": 55,
+      "rsi_len": 14,
+      "adx_len": 14,
+      "adx_min": 20.0,
+      "vol_len": 20,
+      "vol_mult": 1.0,
+      "atr_len": 14,
+      "atr_mult": 1.5,
+      "rr1": 1.0,
+      "rr2": 2.0,
+      "rr3": 3.0,
+      "min_confidence": 70,
+      "tf_min": 15,
+      "warmup_bars": 220,
+      "session_anchored_vwap": true,
+      "filter_session_window": [
+        600,
+        810
+      ],
+      "filter_require_hma_slope": true,
+      "filter_max_vwap_ext_atr": 3.0,
+      "filter_max_adx": null,
+      "scale_out": [
+        [
+          1.0,
+          0.3333
+        ],
+        [
+          2.0,
+          0.3333
+        ]
+      ],
+      "move_sl_to_be_after_rr": 1.0,
+      "final_target_rr": 3.0,
+      "exit_on_opposite_signal": true,
+      "hard_exit_session_end": true,
+      "session_end_ist": "15:15",
+      "one_position_at_a_time": true,
+      "cost_points": 0.0,
+      "oos_frac": 0.3,
+      "min_trades_for_verdict": 40,
+      "verdict_min_pf": 1.3,
+      "verdict_min_pos_years": 2
+    }
+  },
+  "coverage": {
+    "generated_at": "2026-09-09T03:01:06.434192+00:00",
+    "tf_min": 15,
+    "by_symbol": {
+      "NIFTY": {
+        "source": "kaggle",
+        "n_bars": 119188,
+        "sessions": 4568,
+        "range": [
+          "2008-01-01",
+          "2025-12-24"
+        ],
+        "has_volume": false,
+        "verdict": "OOS_CAPABLE"
+      },
+      "BANKNIFTY": {
+        "source": "kaggle",
+        "n_bars": 69539,
+        "sessions": 2793,
+        "range": [
+          "2015-01-09",
+          "2026-04-22"
+        ],
+        "has_volume": false,
+        "verdict": "OOS_CAPABLE"
+      },
+      "SENSEX": {
+        "source": "market_history.db",
+        "n_bars": 80,
+        "sessions": 4,
+        "range": [
+          "2026-09-03",
+          "2026-09-08"
+        ],
+        "has_volume": false,
+        "verdict": "INSUFFICIENT_SAMPLE"
+      }
+    },
+    "notes": [
+      "15m bars resampled from Kaggle 1m history (NIFTY, BANKNIFTY).",
+      "Volume is 0/absent in all multi-year history -> VWAP is a session-anchored cumulative HLC3 mean (price-VWAP proxy); the 5-pt volume score is inert.",
+      "SENSEX: only market_history.db INDEX 1m (~4 sessions) -> INSUFFICIENT_SAMPLE."
+    ]
+  },
+  "by_symbol": {
+    "NIFTY": {
+      "status": "OK",
+      "n_sessions": 2599,
+      "date_range": [
+        "2016-01-01",
+        "2025-12-24"
+      ],
+      "signals": 4571,
+      "trades": 1362,
+      "trades_per_session": 0.524,
+      "has_volume": false,
+      "all": {
+        "n": 1362,
+        "wins": 674,
+        "losses": 688,
+        "win_rate": 0.4949,
+        "net_points": 2017.9,
+        "gross_win_points": 29731.4,
+        "gross_loss_points": -27713.5,
+        "avg_win_points": 44.11,
+        "avg_loss_points": -40.28,
+        "expectancy_points": 1.482,
+        "profit_factor": 1.073,
+        "max_drawdown_points": -1637.3,
+        "expectancy_R": 0.0117,
+        "avg_R": 0.0117
+      },
+      "in_sample": {
+        "n": 935,
+        "wins": 454,
+        "losses": 481,
+        "win_rate": 0.4856,
+        "net_points": -238.4,
+        "gross_win_points": 17193.9,
+        "gross_loss_points": -17432.4,
+        "avg_win_points": 37.87,
+        "avg_loss_points": -36.24,
+        "expectancy_points": -0.255,
+        "profit_factor": 0.986,
+        "max_drawdown_points": -1637.3,
+        "expectancy_R": -0.0216,
+        "avg_R": -0.0216
+      },
+      "out_of_sample": {
+        "n": 427,
+        "wins": 220,
+        "losses": 207,
+        "win_rate": 0.5152,
+        "net_points": 2256.3,
+        "gross_win_points": 12537.5,
+        "gross_loss_points": -10281.1,
+        "avg_win_points": 56.99,
+        "avg_loss_points": -49.67,
+        "expectancy_points": 5.284,
+        "profit_factor": 1.219,
+        "max_drawdown_points": -555.2,
+        "expectancy_R": 0.0847,
+        "avg_R": 0.0847,
+        "since": "2022-12-26",
+        "n_sessions_oos": 780
+      },
+      "by_year": {
+        "2016": {
+          "n": 154,
+          "wins": 72,
+          "losses": 82,
+          "win_rate": 0.4675,
+          "net_points": -191.9,
+          "gross_win_points": 1688.9,
+          "gross_loss_points": -1880.8,
+          "avg_win_points": 23.46,
+          "avg_loss_points": -22.94,
+          "expectancy_points": -1.246,
+          "profit_factor": 0.898,
+          "max_drawdown_points": -506.9,
+          "expectancy_R": -0.0248,
+          "avg_R": -0.0248
+        },
+        "2017": {
+          "n": 122,
+          "wins": 59,
+          "losses": 63,
+          "win_rate": 0.4836,
+          "net_points": -137.7,
+          "gross_win_points": 1150.5,
+          "gross_loss_points": -1288.2,
+          "avg_win_points": 19.5,
+          "avg_loss_points": -20.45,
+          "expectancy_points": -1.129,
+          "profit_factor": 0.893,
+          "max_drawdown_points": -310.5,
+          "expectancy_R": -0.0628,
+          "avg_R": -0.0628
+        },
+        "2018": {
+          "n": 109,
+          "wins": 44,
+          "losses": 65,
+          "win_rate": 0.4037,
+          "net_points": -439.6,
+          "gross_win_points": 1328.9,
+          "gross_loss_points": -1768.5,
+          "avg_win_points": 30.2,
+          "avg_loss_points": -27.21,
+          "expectancy_points": -4.033,
+          "profit_factor": 0.751,
+          "max_drawdown_points": -448.1,
+          "expectancy_R": -0.1627,
+          "avg_R": -0.1627
+        },
+        "2019": {
+          "n": 129,
+          "wins": 61,
+          "losses": 68,
+          "win_rate": 0.4729,
+          "net_points": -336.8,
+          "gross_win_points": 1811.9,
+          "gross_loss_points": -2148.7,
+          "avg_win_points": 29.7,
+          "avg_loss_points": -31.6,
+          "expectancy_points": -2.611,
+          "profit_factor": 0.843,
+          "max_drawdown_points": -688.1,
+          "expectancy_R": -0.019,
+          "avg_R": -0.019
+        },
+        "2020": {
+          "n": 123,
+          "wins": 64,
+          "losses": 59,
+          "win_rate": 0.5203,
+          "net_points": 529.0,
+          "gross_win_points": 3446.2,
+          "gross_loss_points": -2917.2,
+          "avg_win_points": 53.85,
+          "avg_loss_points": -49.44,
+          "expectancy_points": 4.301,
+          "profit_factor": 1.181,
+          "max_drawdown_points": -443.5,
+          "expectancy_R": 0.0572,
+          "avg_R": 0.0572
+        },
+        "2021": {
+          "n": 146,
+          "wins": 77,
+          "losses": 69,
+          "win_rate": 0.5274,
+          "net_points": 468.5,
+          "gross_win_points": 3751.1,
+          "gross_loss_points": -3282.6,
+          "avg_win_points": 48.72,
+          "avg_loss_points": -47.57,
+          "expectancy_points": 3.209,
+          "profit_factor": 1.143,
+          "max_drawdown_points": -961.0,
+          "expectancy_R": 0.0541,
+          "avg_R": 0.0541
+        },
+        "2022": {
+          "n": 155,
+          "wins": 77,
+          "losses": 78,
+          "win_rate": 0.4968,
+          "net_points": -264.6,
+          "gross_win_points": 4016.4,
+          "gross_loss_points": -4281.0,
+          "avg_win_points": 52.16,
+          "avg_loss_points": -54.89,
+          "expectancy_points": -1.707,
+          "profit_factor": 0.938,
+          "max_drawdown_points": -934.6,
+          "expectancy_R": -0.0419,
+          "avg_R": -0.0419
+        },
+        "2023": {
+          "n": 142,
+          "wins": 72,
+          "losses": 70,
+          "win_rate": 0.507,
+          "net_points": 389.5,
+          "gross_win_points": 3112.9,
+          "gross_loss_points": -2723.4,
+          "avg_win_points": 43.23,
+          "avg_loss_points": -38.91,
+          "expectancy_points": 2.743,
+          "profit_factor": 1.143,
+          "max_drawdown_points": -331.8,
+          "expectancy_R": 0.0964,
+          "avg_R": 0.0964
+        },
+        "2024": {
+          "n": 148,
+          "wins": 71,
+          "losses": 77,
+          "win_rate": 0.4797,
+          "net_points": 893.2,
+          "gross_win_points": 5057.2,
+          "gross_loss_points": -4163.9,
+          "avg_win_points": 71.23,
+          "avg_loss_points": -54.08,
+          "expectancy_points": 6.035,
+          "profit_factor": 1.215,
+          "max_drawdown_points": -555.2,
+          "expectancy_R": 0.0295,
+          "avg_R": 0.0295
+        },
+        "2025": {
+          "n": 134,
+          "wins": 77,
+          "losses": 57,
+          "win_rate": 0.5746,
+          "net_points": 1108.2,
+          "gross_win_points": 4367.5,
+          "gross_loss_points": -3259.2,
+          "avg_win_points": 56.72,
+          "avg_loss_points": -57.18,
+          "expectancy_points": 8.271,
+          "profit_factor": 1.34,
+          "max_drawdown_points": -434.7,
+          "expectancy_R": 0.1575,
+          "avg_R": 0.1575
+        }
+      },
+      "by_side": {
+        "LONG": {
+          "n": 745,
+          "wins": 362,
+          "losses": 383,
+          "win_rate": 0.4859,
+          "net_points": 773.9,
+          "gross_win_points": 15031.6,
+          "gross_loss_points": -14257.7,
+          "avg_win_points": 41.52,
+          "avg_loss_points": -37.23,
+          "expectancy_points": 1.039,
+          "profit_factor": 1.054,
+          "max_drawdown_points": -1006.8,
+          "expectancy_R": 0.0054,
+          "avg_R": 0.0054
+        },
+        "SHORT": {
+          "n": 617,
+          "wins": 312,
+          "losses": 305,
+          "win_rate": 0.5057,
+          "net_points": 1244.0,
+          "gross_win_points": 14699.8,
+          "gross_loss_points": -13455.8,
+          "avg_win_points": 47.11,
+          "avg_loss_points": -44.12,
+          "expectancy_points": 2.016,
+          "profit_factor": 1.092,
+          "max_drawdown_points": -1115.3,
+          "expectancy_R": 0.0193,
+          "avg_R": 0.0193
+        }
+      },
+      "by_exit_reason": {
+        "SESSION_END": {
+          "n": 460,
+          "sum_points": 17066.5
+        },
+        "STOP": {
+          "n": 606,
+          "sum_points": -26381.9
+        },
+        "BREAKEVEN": {
+          "n": 185,
+          "sum_points": 2601.8
+        },
+        "TRAIL_BE": {
+          "n": 21,
+          "sum_points": 845.9
+        },
+        "TARGET_T3": {
+          "n": 86,
+          "sum_points": 8003.0
+        },
+        "OPPOSITE": {
+          "n": 4,
+          "sum_points": -117.3
+        }
+      }
+    },
+    "BANKNIFTY": {
+      "status": "OK",
+      "n_sessions": 2477,
+      "date_range": [
+        "2016-01-01",
+        "2025-12-30"
+      ],
+      "signals": 4149,
+      "trades": 1380,
+      "trades_per_session": 0.557,
+      "has_volume": false,
+      "all": {
+        "n": 1380,
+        "wins": 638,
+        "losses": 742,
+        "win_rate": 0.4623,
+        "net_points": -13495.3,
+        "gross_win_points": 85786.1,
+        "gross_loss_points": -99281.4,
+        "avg_win_points": 134.46,
+        "avg_loss_points": -133.8,
+        "expectancy_points": -9.779,
+        "profit_factor": 0.864,
+        "max_drawdown_points": -16258.0,
+        "expectancy_R": -0.0511,
+        "avg_R": -0.0511
+      },
+      "in_sample": {
+        "n": 943,
+        "wins": 447,
+        "losses": 496,
+        "win_rate": 0.474,
+        "net_points": -3783.7,
+        "gross_win_points": 57262.2,
+        "gross_loss_points": -61045.9,
+        "avg_win_points": 128.1,
+        "avg_loss_points": -123.08,
+        "expectancy_points": -4.012,
+        "profit_factor": 0.938,
+        "max_drawdown_points": -6346.6,
+        "expectancy_R": -0.0287,
+        "avg_R": -0.0287
+      },
+      "out_of_sample": {
+        "n": 437,
+        "wins": 191,
+        "losses": 246,
+        "win_rate": 0.4371,
+        "net_points": -9711.5,
+        "gross_win_points": 28523.9,
+        "gross_loss_points": -38235.5,
+        "avg_win_points": 149.34,
+        "avg_loss_points": -155.43,
+        "expectancy_points": -22.223,
+        "profit_factor": 0.746,
+        "max_drawdown_points": -10225.3,
+        "expectancy_R": -0.0996,
+        "avg_R": -0.0996,
+        "since": "2022-12-30",
+        "n_sessions_oos": 744
+      },
+      "by_year": {
+        "2016": {
+          "n": 122,
+          "wins": 53,
+          "losses": 69,
+          "win_rate": 0.4344,
+          "net_points": -1061.7,
+          "gross_win_points": 4077.4,
+          "gross_loss_points": -5139.1,
+          "avg_win_points": 76.93,
+          "avg_loss_points": -74.48,
+          "expectancy_points": -8.702,
+          "profit_factor": 0.793,
+          "max_drawdown_points": -1572.2,
+          "expectancy_R": -0.0955,
+          "avg_R": -0.0955
+        },
+        "2017": {
+          "n": 126,
+          "wins": 60,
+          "losses": 66,
+          "win_rate": 0.4762,
+          "net_points": -168.4,
+          "gross_win_points": 3765.4,
+          "gross_loss_points": -3933.7,
+          "avg_win_points": 62.76,
+          "avg_loss_points": -59.6,
+          "expectancy_points": -1.336,
+          "profit_factor": 0.957,
+          "max_drawdown_points": -706.6,
+          "expectancy_R": -0.0338,
+          "avg_R": -0.0338
+        },
+        "2018": {
+          "n": 120,
+          "wins": 62,
+          "losses": 58,
+          "win_rate": 0.5167,
+          "net_points": -218.1,
+          "gross_win_points": 4771.4,
+          "gross_loss_points": -4989.4,
+          "avg_win_points": 76.96,
+          "avg_loss_points": -86.02,
+          "expectancy_points": -1.817,
+          "profit_factor": 0.956,
+          "max_drawdown_points": -1094.5,
+          "expectancy_R": -0.016,
+          "avg_R": -0.016
+        },
+        "2019": {
+          "n": 132,
+          "wins": 68,
+          "losses": 64,
+          "win_rate": 0.5152,
+          "net_points": 1575.1,
+          "gross_win_points": 8394.5,
+          "gross_loss_points": -6819.3,
+          "avg_win_points": 123.45,
+          "avg_loss_points": -106.55,
+          "expectancy_points": 11.933,
+          "profit_factor": 1.231,
+          "max_drawdown_points": -1187.3,
+          "expectancy_R": 0.0714,
+          "avg_R": 0.0714
+        },
+        "2020": {
+          "n": 143,
+          "wins": 68,
+          "losses": 75,
+          "win_rate": 0.4755,
+          "net_points": -811.4,
+          "gross_win_points": 13251.2,
+          "gross_loss_points": -14062.6,
+          "avg_win_points": 194.87,
+          "avg_loss_points": -187.5,
+          "expectancy_points": -5.674,
+          "profit_factor": 0.942,
+          "max_drawdown_points": -3510.6,
+          "expectancy_R": 0.0093,
+          "avg_R": 0.0093
+        },
+        "2021": {
+          "n": 135,
+          "wins": 63,
+          "losses": 72,
+          "win_rate": 0.4667,
+          "net_points": 488.6,
+          "gross_win_points": 11732.8,
+          "gross_loss_points": -11244.2,
+          "avg_win_points": 186.24,
+          "avg_loss_points": -156.17,
+          "expectancy_points": 3.619,
+          "profit_factor": 1.043,
+          "max_drawdown_points": -2760.7,
+          "expectancy_R": -0.0057,
+          "avg_R": -0.0057
+        },
+        "2022": {
+          "n": 167,
+          "wins": 73,
+          "losses": 94,
+          "win_rate": 0.4371,
+          "net_points": -3887.1,
+          "gross_win_points": 11269.6,
+          "gross_loss_points": -15156.7,
+          "avg_win_points": 154.38,
+          "avg_loss_points": -161.24,
+          "expectancy_points": -23.276,
+          "profit_factor": 0.744,
+          "max_drawdown_points": -4160.3,
+          "expectancy_R": -0.1269,
+          "avg_R": -0.1269
+        },
+        "2023": {
+          "n": 140,
+          "wins": 61,
+          "losses": 79,
+          "win_rate": 0.4357,
+          "net_points": -908.0,
+          "gross_win_points": 9024.4,
+          "gross_loss_points": -9932.5,
+          "avg_win_points": 147.94,
+          "avg_loss_points": -125.73,
+          "expectancy_points": -6.486,
+          "profit_factor": 0.909,
+          "max_drawdown_points": -2423.1,
+          "expectancy_R": -0.0338,
+          "avg_R": -0.0338
+        },
+        "2024": {
+          "n": 138,
+          "wins": 54,
+          "losses": 84,
+          "win_rate": 0.3913,
+          "net_points": -7047.1,
+          "gross_win_points": 8505.3,
+          "gross_loss_points": -15552.4,
+          "avg_win_points": 157.51,
+          "avg_loss_points": -185.15,
+          "expectancy_points": -51.066,
+          "profit_factor": 0.547,
+          "max_drawdown_points": -8042.3,
+          "expectancy_R": -0.2373,
+          "avg_R": -0.2373
+        },
+        "2025": {
+          "n": 157,
+          "wins": 76,
+          "losses": 81,
+          "win_rate": 0.4841,
+          "net_points": -1457.2,
+          "gross_win_points": 10994.1,
+          "gross_loss_points": -12451.3,
+          "avg_win_points": 144.66,
+          "avg_loss_points": -153.72,
+          "expectancy_points": -9.281,
+          "profit_factor": 0.883,
+          "max_drawdown_points": -3146.7,
+          "expectancy_R": -0.0259,
+          "avg_R": -0.0259
+        }
+      },
+      "by_side": {
+        "LONG": {
+          "n": 749,
+          "wins": 352,
+          "losses": 397,
+          "win_rate": 0.47,
+          "net_points": -4270.9,
+          "gross_win_points": 43818.6,
+          "gross_loss_points": -48089.5,
+          "avg_win_points": 124.48,
+          "avg_loss_points": -121.13,
+          "expectancy_points": -5.702,
+          "profit_factor": 0.911,
+          "max_drawdown_points": -6520.0,
+          "expectancy_R": -0.03,
+          "avg_R": -0.03
+        },
+        "SHORT": {
+          "n": 631,
+          "wins": 286,
+          "losses": 345,
+          "win_rate": 0.4532,
+          "net_points": -9224.4,
+          "gross_win_points": 41967.5,
+          "gross_loss_points": -51191.9,
+          "avg_win_points": 146.74,
+          "avg_loss_points": -148.38,
+          "expectancy_points": -14.619,
+          "profit_factor": 0.82,
+          "max_drawdown_points": -11522.0,
+          "expectancy_R": -0.0762,
+          "avg_R": -0.0762
+        }
+      },
+      "by_exit_reason": {
+        "TARGET_T3": {
+          "n": 85,
+          "sum_points": 24163.5
+        },
+        "STOP": {
+          "n": 631,
+          "sum_points": -93840.9
+        },
+        "BREAKEVEN": {
+          "n": 176,
+          "sum_points": 7762.9
+        },
+        "SESSION_END": {
+          "n": 474,
+          "sum_points": 46423.5
+        },
+        "TRAIL_BE": {
+          "n": 14,
+          "sum_points": 1995.8
+        }
+      }
+    }
+  },
+  "go_no_go": {
+    "verdict": "NO-GO",
+    "passing_symbols": [],
+    "failed": [
+      "NIFTY: OOS profit factor 1.219 < 1.3",
+      "BANKNIFTY: OOS net -9711.5 points (<=0)",
+      "BANKNIFTY: OOS profit factor 0.746 < 1.3"
+    ],
+    "note": "Do NOT wire into production. On out-of-sample sessions the SSL Hybrid PRO rule set does not clear the points / PF / multi-year bar."
+  },
+  "runtime_seconds": 13.8
+}
