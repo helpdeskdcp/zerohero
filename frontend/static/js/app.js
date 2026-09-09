@@ -2399,13 +2399,21 @@
     if (_ocInit) return;
     _ocInit = true;
     const sel = $("#ocSymbol");
-    let list = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"];
+    let groups = { NSE: ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"],
+                   BSE: ["SENSEX", "BANKEX"], MCX: ["CRUDEOIL", "NATURALGAS"] };
     try {
       const r = await api("/api/optionchain/underlyings");
-      if (r && Array.isArray(r.underlyings) && r.underlyings.length) list = r.underlyings;
-    } catch (e) { /* fall back to the static list */ }
+      if (r && r.groups && typeof r.groups === "object" && Object.keys(r.groups).length) {
+        groups = r.groups;
+      } else if (r && Array.isArray(r.underlyings) && r.underlyings.length) {
+        groups = { "": r.underlyings };
+      }
+    } catch (e) { /* fall back to the static groups */ }
     if (sel && !(sel.options && sel.options.length)) {
-      sel.innerHTML = list.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join("");
+      sel.innerHTML = Object.entries(groups).map(([g, arr]) => {
+        const opts = arr.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join("");
+        return g ? `<optgroup label="${esc(g)}">${opts}</optgroup>` : opts;
+      }).join("");
       try { sel.value = ocSymbol; } catch (e) { /* stub select in tests */ }
     }
   }

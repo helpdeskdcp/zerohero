@@ -1,7 +1,11 @@
 """
 Layer 6 -- the read-only Option-Chain dashboard route.
 
-GET /api/optionchain/underlyings            -> the supported list
+GET /api/optionchain/underlyings            -> the supported list, grouped by
+                                               exchange (NSE indices + BSE
+                                               SENSEX/BANKEX + MCX CRUDEOIL/
+                                               NATURALGAS). MCX/BSE are quote-only
+                                               (LTP/OI, no broker Greeks).
 GET /api/optionchain/{underlying}           -> {chain, analytics, structure,
                                                 quality, qualification}
     ?expiry=AUTO|NEXT|LATEST|15SEP2026
@@ -27,15 +31,26 @@ from .qualify import qualify as _qualify
 
 router = APIRouter(prefix="/api/optionchain", tags=["optionchain"])
 
-SUPPORTED = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"]
+# Everything IDaddy captures option snapshots for (quote_snapshots kind='OPTION').
+# Only the NSE indices also have broker Greeks (option_greeks) -> for MCX / BSE the
+# chain is quote-only: LTP / bid / ask / OI, no Greeks / IV / GEX. angelone_chain
+# already assembles all of these; the network fallbacks (Upstox / NSE) are
+# NSE-index only, so MCX / BSE resolve from the captured data alone.
+_GROUPS = {
+    "NSE": ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"],
+    "BSE": ["SENSEX", "BANKEX"],
+    "MCX": ["CRUDEOIL", "NATURALGAS"],
+}
+SUPPORTED = [s for g in _GROUPS.values() for s in g]
 _TTL = 20.0
 _cache: dict = {}
 
 
 @router.get("/underlyings")
 def api_optionchain_underlyings():
-    return {"underlyings": SUPPORTED, "default": "NIFTY",
-            "expiries": ["AUTO", "NEXT", "LATEST"]}
+    return {"underlyings": SUPPORTED, "groups": _GROUPS, "default": "NIFTY",
+            "expiries": ["AUTO", "NEXT", "LATEST"],
+            "note": "MCX/BSE are quote-only (LTP/OI, no Greeks); network fallback is NSE-index only"}
 
 
 def _pack(v):

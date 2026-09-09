@@ -66,6 +66,11 @@ def test_underlyings_list():
     r = api_optionchain_underlyings()
     assert r["default"] == "NIFTY" and "NIFTY" in r["underlyings"]
     assert "AUTO" in r["expiries"]
+    # MCX + BSE are exposed alongside the NSE indices, grouped by exchange
+    assert {"NSE", "BSE", "MCX"} <= set(r["groups"])
+    assert "CRUDEOIL" in r["groups"]["MCX"] and "NATURALGAS" in r["groups"]["MCX"]
+    assert "SENSEX" in r["groups"]["BSE"]
+    assert set(r["underlyings"]) == {s for g in r["groups"].values() for s in g}
 
 
 def test_route_returns_the_five_sections(hist_db):

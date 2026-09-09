@@ -227,8 +227,9 @@ const P = {
     instrument: "NIFTY", pivots: { pivot: 23871, r1: 23957, s1: 23829 }, gann: { gann_balance: 23850, gann_up_1: 23882 },
   }),
   "/api/optionchain/underlyings": load("oc_underlyings", {
-    underlyings: ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"], default: "NIFTY",
-    expiries: ["AUTO", "NEXT", "LATEST"],
+    underlyings: ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BANKEX", "CRUDEOIL", "NATURALGAS"],
+    groups: { NSE: ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"], BSE: ["SENSEX", "BANKEX"], MCX: ["CRUDEOIL", "NATURALGAS"] },
+    default: "NIFTY", expiries: ["AUTO", "NEXT", "LATEST"],
   }),
   "/api/optionchain/NIFTY": load("oc_nifty", {
     status: "OK", underlying: "NIFTY", expiry: "15SEP2026", ts: "2026-09-09T07:00:00Z",
@@ -456,6 +457,12 @@ try {
   assert.equal(chk.ocCommitSymbol("BANKNIFTY"), true, "Option Chain accepts a supported underlying");
   assert.equal(chk.ocSelected(), "BANKNIFTY", "Option Chain selection updates");
   assert.equal(chk.ocCommitSymbol(""), false, "Option Chain rejects an empty underlying");
+  const ocSymOpts = elFor("#ocSymbol").innerHTML;
+  assert.ok(/optgroup label="MCX"/.test(ocSymOpts) && /CRUDEOIL/.test(ocSymOpts) && /NATURALGAS/.test(ocSymOpts),
+    "Option Chain underlying picker lists the MCX group: " + ocSymOpts.slice(0, 240));
+  assert.ok(/optgroup label="BSE"/.test(ocSymOpts) && /SENSEX/.test(ocSymOpts),
+    "Option Chain underlying picker lists the BSE group");
+  assert.equal(chk.ocCommitSymbol("CRUDEOIL"), true, "Option Chain accepts an MCX underlying");
 
   console.log("render smoke: 12 view loaders + feed renderer OK, Focus combobox (12 checks) + Order Flow + Option Chain view OK, no runtime errors, output escaped");
   process.exit(0);
