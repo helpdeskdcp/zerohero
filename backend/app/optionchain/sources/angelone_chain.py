@@ -307,11 +307,13 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
             a, b = _epoch(oi_meta["as_of_ts"]), _epoch(ref_ts)
             oi_stale = bool(a and b and (b - a) > _OI_STALE_SEC)
 
-        # ---- change-in-OI: broker sends none, so derive current_oi - each
-        # contract's last prior-session OI (the standard 'Chng in OI' column) ----
+        # ---- change-in-OI: the capture now materialises it (current_oi - prev
+        # session close); for any leg still missing it, derive the same here ----
+        n_doi_captured = sum(1 for r in rows_by_k.values() for l in (r.ce, r.pe)
+                             if l is not None and l.oi is not None and l.oi_change is not None)
         prev_oi, prev_dates = _prev_session_oi(con, u, exp)
         prev_date = prev_dates[-1] if prev_dates else None
-        n_doi = 0
+        n_doi_here = 0
         for k, row in rows_by_k.items():
             for side, leg in (("CE", row.ce), ("PE", row.pe)):
                 if leg is None or leg.oi is None or leg.oi_change is not None:
@@ -319,7 +321,8 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 base = prev_oi.get((k, side))
                 if base is not None:
                     leg.oi_change = round(leg.oi - base, 0)
-                    n_doi += 1
+                    n_doi_here += 1
+        n_doi = n_doi_captured + n_doi_here
 
         if not rows_by_k:
             return None
@@ -359,7 +362,11 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 "oi_coverage": round(n_oi / max(1, len(legs)), 3),
                 "has_oi_change": any(l.oi_change is not None for l in legs),
                 "oi_change_coverage": round(n_doi / max(1, n_oi), 3) if n_oi else 0.0,
-                "oi_change_source": "derived_prev_session_close" if n_doi else None,
+                "oi_change_source": (None if not n_doi
+                                     else "captured" if not n_doi_here
+                                     else "derived_prev_session_close" if not n_doi_captured
+                                     else "mixed"),
+                "oi_change_derived_at_read": n_doi_here,
                 "oi_change_baseline_date": prev_date if n_doi else None,
                 "oi_change_baseline_dates": prev_dates if n_doi else [],
                 "has_ltp": n_ltp > 0,
@@ -380,9 +387,9 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 f"wing-oi overlay: +{n_oi_filled} legs from greek_exposure "
                 f"@ {oi_meta.get('as_of_ts') or 'none'}"
                 + (" (STALE)" if oi_stale else ""),
-                (f"chg-in-oi: derived on {n_doi} legs vs each contract's last "
-                 f"prior-session OI (sessions {prev_dates[0]}..{prev_dates[-1]}; "
-                 f"broker sends no chg-in-OI field)" if n_doi
+                (f"chg-in-oi on {n_doi} legs ({n_doi_captured} from capture, "
+                 f"{n_doi_here} derived at read) vs each contract's prior-session "
+                 f"OI close (broker sends no chg-in-OI field)" if n_doi
                  else "chg-in-oi: no prior-session OI baseline -> Δ unavailable"),
                 f"spot {spot} ({spot_src})",
             ],
