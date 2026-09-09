@@ -39,6 +39,7 @@
       <button class="nav-item" data-view="signals">Signal Ledger</button>
       <button class="nav-item" data-view="mathscalp">Math Scalper</button>
       <button class="nav-item" data-view="orderflow">Order Flow</button>
+      <button class="nav-item" data-view="optionchain">Option Chain</button>
       <button class="nav-item" data-view="research">Research</button>
       <button class="nav-item" data-view="scalp">Scalping</button>
       <button class="nav-item" data-view="runner">Run Pipeline</button>
@@ -797,6 +798,53 @@
             </table>
           </div>
           <div class="of-h1h7-legend" id="ofH1H7Legend"></div>
+        </div>
+      </section>
+
+      <!-- ===== OPTION CHAIN ===== -->
+      <section class="view" id="view-optionchain">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Option Chain — structure &amp; qualification</h2>
+            <div class="oc-controls">
+              <select id="ocSymbol" class="oc-sel" aria-label="Underlying"></select>
+              <select id="ocExpiry" class="oc-sel" aria-label="Expiry">
+                <option value="AUTO">AUTO (front)</option>
+                <option value="NEXT">NEXT</option>
+                <option value="LATEST">LATEST</option>
+              </select>
+              <label class="chk"><input type="checkbox" id="ocLive" checked> live fallback</label>
+              <button class="btn btn-ghost" id="ocRefresh">Refresh</button>
+            </div>
+          </div>
+          <p class="hint" id="ocMeta">loading…</p>
+          <p class="scalp-err" id="ocErr" hidden></p>
+
+          <div class="oc-qual" id="ocQual"></div>
+
+          <div class="stat-grid oc-strip" id="ocStrip"></div>
+
+          <div class="oc-baseline">
+            <label class="chk"><input type="checkbox" id="ocBaseChk"> Δ&thinsp;OI vs an earlier snapshot</label>
+            <input type="text" id="ocBaseTs" class="oc-ts" placeholder="ISO ts, e.g. 2026-09-09T09:20:00Z" hidden>
+          </div>
+
+          <div class="table-wrap oc-wrap">
+            <table class="ledger oc-tbl" id="ocTable">
+              <thead>
+                <tr>
+                  <th scope="col">CE OI</th><th scope="col">Δ</th><th scope="col">Vol</th>
+                  <th scope="col">IV</th><th scope="col">δ</th><th scope="col">CE LTP</th>
+                  <th scope="col" class="oc-k">Strike</th>
+                  <th scope="col">PE LTP</th><th scope="col">δ</th><th scope="col">IV</th>
+                  <th scope="col">Vol</th><th scope="col">Δ</th><th scope="col">PE OI</th>
+                  <th scope="col" class="oc-prof">OI profile (CE ◄ | ► PE)</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="14" class="hint">loading…</td></tr></tbody>
+            </table>
+          </div>
+          <p class="hint" id="ocNote"></p>
         </div>
       </section>
 

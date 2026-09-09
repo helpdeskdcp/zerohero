@@ -223,6 +223,15 @@ try:
 except Exception as _e:
     print(f"[signals_dashboard] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Option-Chain data layer + structure engine (read-only: captured chain +
+# keyless Upstox/NSE fallback -> OI/IV/greeks/PCR/max-pain/GEX -> structure state
+# -> QUALIFIED|WATCH|NO_TRADE gate; no order path, no live_trading, no API keys) ----
+try:
+    from .optionchain import api as _optionchain_api
+    app.include_router(_optionchain_api.router)
+except Exception as _e:
+    print(f"[optionchain] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:

@@ -226,6 +226,53 @@ const P = {
   "/api/mathematics/levels": load("math_levels", {
     instrument: "NIFTY", pivots: { pivot: 23871, r1: 23957, s1: 23829 }, gann: { gann_balance: 23850, gann_up_1: 23882 },
   }),
+  "/api/optionchain/underlyings": load("oc_underlyings", {
+    underlyings: ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"], default: "NIFTY",
+    expiries: ["AUTO", "NEXT", "LATEST"],
+  }),
+  "/api/optionchain/NIFTY": load("oc_nifty", {
+    status: "OK", underlying: "NIFTY", expiry: "15SEP2026", ts: "2026-09-09T07:00:00Z",
+    source: "angelone_captured", spot: 23450, atm_strike: 23450,
+    chain: {
+      underlying: "NIFTY", expiry: "15SEP2026", source: "angelone_captured", spot: 23450,
+      atm_strike: 23450, n_strikes: 3, notes: ["greek spine snap_key=x", "<img src=x onerror=alert(1)>"],
+      rows: [
+        { strike: 23400, ce: { oi: 1.8e6, oi_change: 1.2e5, volume: 9e5, iv: 0.115, delta: 0.57, ltp: 168.6 },
+          pe: { oi: 5.2e6, oi_change: -3e4, volume: 8e5, iv: 0.099, delta: -0.42, ltp: 91.5 } },
+        { strike: 23450, ce: { oi: 2.4e6, oi_change: 2e5, volume: 1.1e6, iv: 0.112, delta: 0.51, ltp: 138.5 },
+          pe: { oi: 2.7e6, oi_change: 5e4, volume: 1.0e6, iv: 0.096, delta: -0.49, ltp: 111.1 } },
+        { strike: 23500, ce: { oi: 8.0e6, oi_change: 4e5, volume: 2e6, iv: 0.109, delta: 0.45, ltp: 111.0 },
+          pe: { oi: 8.3e6, oi_change: 1e5, volume: 2e6, iv: 0.094, delta: -0.55, ltp: 135.2 } },
+      ],
+      capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true },
+    },
+    analytics: {
+      pcr: { status: "ok", pcr_oi: 0.76, pcr_vol: 1.06 },
+      max_pain: { status: "ok", max_pain_strike: 23550, distance_pct: 0.51 },
+      iv_skew: { status: "ok", atm_iv: 0.104, rr_25: 0.0005, skew_slope: 0.7 },
+      oi_walls: { status: "ok", ce_wall: 24000, pe_wall: 23000, nearest_resistance: 23700, nearest_support: 23400 },
+      gex: { status: "ok", regime_sign: 0, total_shape: 3168, flip_strike: 23507, pin_strike: 23700 },
+      strike_step: 50,
+    },
+    structure: {
+      underlying: "NIFTY", summary: "max-pain 23550 (UP 0.51%, MODERATE); PCR 0.76 -> NEUTRAL",
+      notes: ["5/5 structure blocks resolved", "<b>x</b>"],
+      max_pain: { status: "ok", max_pain_strike: 23550, magnet_dir: "UP", magnet_pull: "MODERATE", distance_pct: 0.51 },
+      pcr_regime: { status: "ok", pcr_oi: 0.76, regime: "NEUTRAL" },
+      oi_walls: { status: "ok", nearest_resistance: 23700, nearest_support: 23400, boxed: false },
+      iv_skew_bias: { status: "ok", bias: "NEUTRAL", rr_25: 0.0005 },
+      iv_vs_realized: { status: "ok", state: "FAIR" },
+      gex_regime: { status: "ok", regime: "GAMMA_BALANCED", flip_strike: 23507 },
+    },
+    quality: { dqs: 72.6, verdict: "WARN" },
+    qualification: {
+      verdict: "WATCH", direction: "LONG",
+      structure_bias: { bias: "LONG", net: 1.0 }, regime_context: "NEUTRAL",
+      ann_p_win: null, blocking: [], watch_reasons: ["G_DQ: data quality WARN", "G_DIRECTION: structure-only LONG"],
+      gates: [], notes: ["research-only -- not wired to any order path"],
+    },
+    capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true },
+  }),
 };
 function matchPayload(url) {
   const base = url.split("?")[0];
@@ -274,7 +321,7 @@ try {
   // drive every view loader against the REAL captured payloads
   for (const name of ["loadOverview", "loadSignals", "loadTrades", "loadScalp",
                       "loadResearch", "loadSystem", "loadReport", "loadAutoscalp",
-                      "loadMonitor", "loadMathScalp", "loadOrderflow"]) {
+                      "loadMonitor", "loadMathScalp", "loadOrderflow", "loadOptionchain"]) {
     try { await chk[name](); await flush(); await flush(); }
     catch (e) { errors.push(name + " threw: " + e.message); }
   }
@@ -392,6 +439,24 @@ try {
   assert.equal(chk.ofCommitSymbol("NOTANINDEX"), false, "OF picker rejects unsupported symbol");
   assert.equal(chk.ofSelected(), "NIFTY", "OF picker selection unchanged after a bad commit");
 
-  console.log("render smoke: 11 view loaders + feed renderer OK, Focus combobox (12 checks) + Order Flow view OK, no runtime errors, output escaped");
+  // ---- Option Chain view ----
+  const ocTbl = elFor("#ocTable tbody").innerHTML;
+  assert.ok(/23450/.test(ocTbl) && /is-atm/.test(ocTbl), "option-chain table renders strikes with the ATM row marked: " + ocTbl.slice(0, 200));
+  assert.ok(/oc-oibar-ce/.test(ocTbl) && /oc-oibar-pe/.test(ocTbl), "OI-profile split bar rendered per strike");
+  const ocStrip = elFor("#ocStrip").innerHTML;
+  assert.ok(/PCR \(OI\)/.test(ocStrip) && /Max Pain/.test(ocStrip) && /GEX/.test(ocStrip) && /DQ/.test(ocStrip),
+    "option-chain header strip shows PCR / Max Pain / GEX / DQ: " + ocStrip.slice(0, 200));
+  const ocQual = elFor("#ocQual").innerHTML;
+  assert.ok(/oc-verdict/.test(ocQual) && /WATCH/.test(ocQual), "qualification verdict pill rendered: " + ocQual.slice(0, 160));
+  assert.ok(/not wired to any order path/.test(ocQual), "qualification carries the research-only note");
+  const ocNote = elFor("#ocNote").textContent + elFor("#ocTable tbody").innerHTML + elFor("#ocNote").innerHTML;
+  assert.ok(/&lt;img src=x/.test(elFor("#ocNote").textContent + ocQual + ocStrip + ocTbl) || !/<img\s|<b>x<\/b>/i.test(ocTbl + ocStrip + ocQual + elFor("#ocNote").innerHTML),
+    "hostile markup from option-chain notes is not injected as live tags");
+  assert.equal(chk.ocSelected(), "NIFTY", "Option Chain underlying defaults to NIFTY");
+  assert.equal(chk.ocCommitSymbol("BANKNIFTY"), true, "Option Chain accepts a supported underlying");
+  assert.equal(chk.ocSelected(), "BANKNIFTY", "Option Chain selection updates");
+  assert.equal(chk.ocCommitSymbol(""), false, "Option Chain rejects an empty underlying");
+
+  console.log("render smoke: 12 view loaders + feed renderer OK, Focus combobox (12 checks) + Order Flow + Option Chain view OK, no runtime errors, output escaped");
   process.exit(0);
 })().catch(e => { console.error("render smoke FAILED:", e && e.stack || e); process.exit(1); });

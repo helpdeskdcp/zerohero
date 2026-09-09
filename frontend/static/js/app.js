@@ -19,6 +19,7 @@
     if (view === "autoscalp") loadAutoscalp();
     if (view === "mathscalp") loadMathScalp();
     if (view === "orderflow") loadOrderflow();
+    if (view === "optionchain") loadOptionchain();
     if (view === "runner") { try { refreshRunSelection(); } catch (e) {} }
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
@@ -2372,6 +2373,197 @@
     if (rb) rb.addEventListener("click", () => loadOrderflow({ force: true }));
   })();
 
+  // ================= Option Chain — structure & qualification =================
+  // Read-only. GET /api/optionchain/{sym} -> {chain, analytics, structure,
+  // quality, qualification}. One row per strike (CE cols | strike | PE cols),
+  // ATM highlighted; header strip: spot / PCR / max-pain / ATM-IV / skew / GEX /
+  // DQ / source; a split OI-profile bar; a ΔOI-vs-baseline toggle.
+  let ocSymbol = "NIFTY";
+  let _ocInit = false;
+  let _ocReq = 0;
+
+  const ocFmtOi = (n) => {
+    if (n === null || n === undefined || isNaN(Number(n))) return "—";
+    const v = Math.abs(Number(n));
+    const s = Number(n) < 0 ? "-" : "";
+    if (v >= 1e7) return s + (v / 1e7).toFixed(2) + "Cr";
+    if (v >= 1e5) return s + (v / 1e5).toFixed(1) + "L";
+    if (v >= 1e3) return s + (v / 1e3).toFixed(0) + "k";
+    return s + v.toFixed(0);
+  };
+  const ocPct = (n, d = 2) => (n === null || n === undefined || isNaN(Number(n)))
+    ? "—" : (Number(n) * (Math.abs(Number(n)) <= 2 ? 100 : 1)).toFixed(d) + "%";
+  const ocVerdictClass = (v) => v === "QUALIFIED" ? "ok" : v === "NO_TRADE" ? "bad" : "warn";
+
+  async function ocEnsureSymbols() {
+    if (_ocInit) return;
+    _ocInit = true;
+    const sel = $("#ocSymbol");
+    let list = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"];
+    try {
+      const r = await api("/api/optionchain/underlyings");
+      if (r && Array.isArray(r.underlyings) && r.underlyings.length) list = r.underlyings;
+    } catch (e) { /* fall back to the static list */ }
+    if (sel && !(sel.options && sel.options.length)) {
+      sel.innerHTML = list.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join("");
+      try { sel.value = ocSymbol; } catch (e) { /* stub select in tests */ }
+    }
+  }
+
+  function ocCommitSymbol(v) {
+    const u = String(v || "").toUpperCase().trim();
+    if (!u) return false;
+    ocSymbol = u;
+    const sel = $("#ocSymbol"); if (sel) sel.value = u;
+    loadOptionchain();
+    return true;
+  }
+
+  async function loadOptionchain() {
+    await ocEnsureSymbols();
+    const sel = $("#ocSymbol"); if (sel && sel.value) ocSymbol = sel.value;
+    const exp = ($("#ocExpiry") || {}).value || "AUTO";
+    const live = ($("#ocLive") || {}).checked ? 1 : 0;
+    const baseOn = ($("#ocBaseChk") || {}).checked;
+    const baseTs = (($("#ocBaseTs") || {}).value || "").trim();
+    const bq = (baseOn && baseTs) ? `&baseline=${encodeURIComponent(baseTs)}` : "";
+    const tsInput = $("#ocBaseTs"); if (tsInput) tsInput.hidden = !baseOn;
+
+    const req = ++_ocReq;
+    const stale = () => req !== _ocReq;
+    const errEl = $("#ocErr");
+    try {
+      const j = await api(`/api/optionchain/${encodeURIComponent(ocSymbol)}?expiry=${encodeURIComponent(exp)}&live=${live}&atm_window=12${bq}`);
+      if (stale()) return;
+      if (errEl) errEl.hidden = true;
+      if (!j || j.status === "NO_DATA") {
+        $("#ocMeta").textContent = `${ocSymbol}: ${(j && j.note) || "no data"}`;
+        const tb = $("#ocTable tbody");
+        if (tb) tb.innerHTML = `<tr><td colspan="14" class="hint">no chain available</td></tr>`;
+        $("#ocStrip").innerHTML = ""; $("#ocQual").innerHTML = ""; $("#ocNote").textContent = "";
+        return;
+      }
+      ocRenderMeta(j);
+      ocRenderQual(j.qualification || {});
+      ocRenderStrip(j);
+      ocRenderTable(j);
+      const notes = [].concat((j.structure && j.structure.notes) || [],
+        (j.chain && j.chain.notes) || []).filter(Boolean);
+      $("#ocNote").textContent = notes.slice(0, 6).join("  ·  ");
+    } catch (e) {
+      if (stale()) return;
+      if (errEl) { errEl.textContent = (e && e.message) || String(e); errEl.hidden = false; }
+      showError("optionchain", e);
+    }
+  }
+
+  function ocRenderMeta(j) {
+    const cap = j.capability || {};
+    const bits = [
+      `source ${esc(j.source || "—")}`,
+      `expiry ${esc(j.expiry || "—")}`,
+      `spot ${text(fmt(j.spot, 1))}`,
+      `ATM ${text(j.atm_strike)}`,
+      cap.cadence_sec ? `cadence ~${esc(cap.cadence_sec)}s` : null,
+      j.ts ? `as of ${timeStr(j.ts)}` : null,
+      cap.oi_stale ? "OI STALE" : null,
+    ].filter(Boolean);
+    $("#ocMeta").textContent = bits.join("  ·  ");
+  }
+
+  function ocRenderQual(q) {
+    const box = $("#ocQual");
+    if (!box) return;
+    if (!q || !q.verdict) { box.innerHTML = ""; return; }
+    const reasons = [].concat(q.blocking && q.blocking.length
+      ? q.blocking.map(b => "✕ " + b) : [], (q.watch_reasons || []).map(r => "△ " + r));
+    box.innerHTML =
+      `<span class="oc-verdict ${ocVerdictClass(q.verdict)}">${esc(q.verdict)}` +
+      `${q.direction && q.direction !== "NEUTRAL" ? " " + esc(q.direction) : ""}</span>` +
+      `<span class="oc-qbits">structure ${esc((q.structure_bias || {}).bias || "—")}` +
+      ` (net ${text((q.structure_bias || {}).net)}) · regime ${esc(q.regime_context || "—")}` +
+      `${q.ann_p_win != null ? " · ANN p " + esc(q.ann_p_win) : ""}</span>` +
+      (reasons.length ? `<span class="oc-qreasons">${reasons.map(esc).join(" &nbsp; ")}</span>` : "") +
+      `<span class="oc-qnote">research-only — not wired to any order path</span>`;
+  }
+
+  function ocRenderStrip(j) {
+    const a = j.analytics || {}, st = j.structure || {}, qy = j.quality || {};
+    const mp = a.max_pain || {}, pcr = a.pcr || {}, sk = a.iv_skew || {}, gx = a.gex || {};
+    const card = (label, val, cls) =>
+      `<div class="stat-card"><div class="stat-label">${esc(label)}</div>` +
+      `<div class="stat-value ${cls || ""}">${val}</div></div>`;
+    const skTxt = (st.iv_skew_bias || {}).bias || sk.status || "—";
+    const gxTxt = (st.gex_regime || {}).regime || gx.status || "—";
+    $("#ocStrip").innerHTML = [
+      card("Spot", text(fmt(j.spot, 1))),
+      card("PCR (OI)", text(pcr.pcr_oi), (pcr.pcr_oi > 1.1 ? "pos" : pcr.pcr_oi < 0.9 && pcr.pcr_oi != null ? "neg" : "")),
+      card("Max Pain", text(mp.max_pain_strike) + (mp.distance_pct != null ? ` <small>${mp.distance_pct > 0 ? "+" : ""}${esc(mp.distance_pct)}%</small>` : "")),
+      card("ATM IV", sk.atm_iv != null ? esc((sk.atm_iv * 100).toFixed(2)) + "%" : "—"),
+      card("IV skew", esc(skTxt)),
+      card("GEX", esc(gxTxt) + ((st.gex_regime || {}).flip_strike ? ` <small>flip ${esc(st.gex_regime.flip_strike)}</small>` : "")),
+      card("DQ", text(qy.dqs) + (qy.verdict ? ` <small>${esc(qy.verdict)}</small>` : ""),
+        qy.verdict === "PASS" ? "pos" : qy.verdict === "FAIL" ? "neg" : ""),
+    ].join("");
+  }
+
+  function ocRenderTable(j) {
+    const tb = $("#ocTable tbody");
+    if (!tb) return;
+    const rows = ((j.chain || {}).rows) || [];
+    if (!rows.length) { tb.innerHTML = `<tr><td colspan="14" class="hint">empty chain</td></tr>`; return; }
+    const atm = j.atm_strike;
+    // ΔOI baseline map (strike -> {ce_doi, pe_doi}) when the toggle is on
+    const bmap = {};
+    const bl = j.oi_baseline;
+    if (bl && bl.status === "ok") for (const r of (bl.rows || [])) bmap[r.strike] = r;
+    const usingBase = !!Object.keys(bmap).length;
+    let maxOi = 1;
+    for (const r of rows) maxOi = Math.max(maxOi, Number((r.ce || {}).oi) || 0, Number((r.pe || {}).oi) || 0);
+    const bar = (ceOi, peOi) => {
+      const cw = Math.round(100 * (Number(ceOi) || 0) / maxOi);
+      const pw = Math.round(100 * (Number(peOi) || 0) / maxOi);
+      return `<div class="oc-oibar"><span class="oc-oibar-ce" style="width:${cw / 2}%"></span>` +
+        `<span class="oc-oibar-pe" style="width:${pw / 2}%"></span></div>`;
+    };
+    const dcell = (leg, side, strike) => {
+      if (usingBase) {
+        const b = bmap[strike] || {};
+        const v = side === "ce" ? b.ce_doi : b.pe_doi;
+        return v == null ? "—" : `<span class="${v > 0 ? "pos" : v < 0 ? "neg" : ""}">${ocFmtOi(v)}</span>`;
+      }
+      const oc = (leg || {}).oi_change;
+      return oc == null ? "—" : `<span class="${oc > 0 ? "pos" : oc < 0 ? "neg" : ""}">${ocFmtOi(oc)}</span>`;
+    };
+    tb.innerHTML = rows.map(r => {
+      const ce = r.ce || {}, pe = r.pe || {};
+      const isAtm = atm != null && Math.abs(r.strike - atm) < 1e-6;
+      const itm = (j.spot != null)
+        ? (r.strike < j.spot ? "ce-itm" : r.strike > j.spot ? "pe-itm" : "")
+        : "";
+      return `<tr class="${isAtm ? "is-atm" : ""} ${itm}">` +
+        `<td>${ocFmtOi(ce.oi)}</td><td>${dcell(ce, "ce", r.strike)}</td><td>${ocFmtOi(ce.volume)}</td>` +
+        `<td>${ce.iv != null ? esc((ce.iv * 100).toFixed(1)) : "—"}</td>` +
+        `<td>${text(fmt(ce.delta, 2))}</td><td class="oc-ltp">${text(fmt(ce.ltp, 1))}</td>` +
+        `<td class="oc-k">${text(r.strike)}</td>` +
+        `<td class="oc-ltp">${text(fmt(pe.ltp, 1))}</td><td>${text(fmt(pe.delta, 2))}</td>` +
+        `<td>${pe.iv != null ? esc((pe.iv * 100).toFixed(1)) : "—"}</td>` +
+        `<td>${ocFmtOi(pe.volume)}</td><td>${dcell(pe, "pe", r.strike)}</td><td>${ocFmtOi(pe.oi)}</td>` +
+        `<td class="oc-prof">${bar(ce.oi, pe.oi)}</td></tr>`;
+    }).join("");
+  }
+
+  (function ocWire() {
+    const sel = $("#ocSymbol");
+    if (sel) sel.addEventListener("change", () => ocCommitSymbol(sel.value));
+    ["#ocExpiry", "#ocLive", "#ocBaseChk", "#ocBaseTs"].forEach(id => {
+      const el = $(id);
+      if (el) el.addEventListener("change", () => loadOptionchain());
+    });
+    const rb = $("#ocRefresh");
+    if (rb) rb.addEventListener("click", () => loadOptionchain());
+  })();
+
   // Test seam — inert in production (window.__CHK_TEST__ is never set there).
   // Lets the dependency-free render smoke test drive view loaders without a DOM
   // framework or a build step.
@@ -2379,6 +2571,7 @@
     window.__chk = { setView, loadOverview, loadSignals, loadTrades, loadScalp,
       loadResearch, loadSystem, loadReport, loadAutoscalp, loadMonitor, loadMathScalp,
       loadOrderflow, ofFilter, ofCommitSymbol, ofRenderMenu, ofSelected: () => ofSymbol,
+      loadOptionchain, ocCommitSymbol, ocSelected: () => ocSymbol,
       prependFeed, renderHealthLine,
       // Focus combobox seam
       msFilterUniverse, msUniverseList, msCommitFocus, msRenderMenu, msExchOf,
@@ -2399,6 +2592,7 @@
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
   setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 12000);
   setInterval(() => { if (state.view === "orderflow") loadOrderflow(); }, 20000);
+  setInterval(() => { if (state.view === "optionchain") loadOptionchain(); }, 20000);
   // refresh the health panel while it is on screen (selfcheck is cheap)
   setInterval(() => { if (state.view === "system") loadSystem(); }, 10000);
 })();
