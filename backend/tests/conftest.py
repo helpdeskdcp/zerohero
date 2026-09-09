@@ -27,6 +27,37 @@ _LIVE_DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data",
 _LIVE_DB_OPENED_RW: list = []
 
 
+def _stat_or_none(path):
+    try:
+        st = os.stat(path)
+        return (st.st_ino, st.st_size)
+    except OSError:
+        return None
+
+
+# Snapshot the live DB the moment pytest starts importing conftest -- long before
+# any test runs. The session-end fixture and pytest_configure below use it to
+# catch the classic "someone ran `mv data/chanakya.db /tmp && pytest` in their
+# shell and the `&& mv back` never happened" mistake, which no scan of committed
+# code can see.
+_LIVE_DB_AT_START = _stat_or_none(_LIVE_DB)
+
+
+def pytest_configure(config):
+    """Abort the whole run if the live DB looks like it was moved out from under
+    an open connection (main file gone but its -wal / -shm siblings remain)."""
+    from app.db import db_moved_while_open
+    orph = db_moved_while_open(_LIVE_DB)
+    if orph:
+        raise pytest.UsageError(
+            f"live DB {_LIVE_DB} is missing but {', '.join(orph)} remain -- it was "
+            f"almost certainly moved/renamed while the service held it open. "
+            f"Restore it before running tests (do NOT let the suite or the service "
+            f"recreate an empty stub). Tests never need the live DB: they use "
+            f"TEST_DATABASE_URL automatically."
+        )
+
+
 def _norm_sqlite_target(arg) -> str:
     s = str(arg)
     if s.startswith("file:"):
@@ -48,11 +79,29 @@ sys.addaudithook(_sqlite_audit)
 
 @pytest.fixture(scope="session", autouse=True)
 def _live_db_never_opened_rw():
-    """Session guard: no test may open the live chanakya.db read-write."""
+    """Session guard: no test may open the live chanakya.db read-write, and the
+    live file must not vanish or be truncated during the run (catches a manual
+    `mv ... && pytest` where the move-back never happened, or a test that
+    unlinked/zeroed it)."""
     start = len(_LIVE_DB_OPENED_RW)
     yield
     new = _LIVE_DB_OPENED_RW[start:]
     assert not new, f"a test opened the LIVE db read-write: {new}"
+
+    if _LIVE_DB_AT_START is not None:
+        after = _stat_or_none(_LIVE_DB)
+        assert after is not None, (
+            f"live DB {_LIVE_DB} DISAPPEARED during the test run (it existed at "
+            f"start, inode {_LIVE_DB_AT_START[0]}). A test or the shell moved/"
+            f"deleted it -- restore it from backup.")
+        assert after[0] == _LIVE_DB_AT_START[0], (
+            f"live DB {_LIVE_DB} was replaced during the run "
+            f"(inode {_LIVE_DB_AT_START[0]} -> {after[0]}) -- something recreated it.")
+        # the running service only ever grows / checkpoints it; a big shrink means
+        # truncation.
+        assert after[1] >= _LIVE_DB_AT_START[1] * 0.5, (
+            f"live DB {_LIVE_DB} shrank from {_LIVE_DB_AT_START[1]} to {after[1]} "
+            f"bytes during the run -- it was truncated.")
 
 # HARD GUARD #2: a test must never hit the real Telegram. run_pipeline /
 # run_scalp_pipeline call telegram.notify_signal for real. Strip the creds AND

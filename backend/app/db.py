@@ -34,6 +34,18 @@ def _resolve_db_path() -> str:
 
 DB_PATH = _resolve_db_path()
 
+
+def db_moved_while_open(db_path: str = LIVE_DB_PATH) -> list[str]:
+    """A SQLite DB whose main file is gone while its -wal / -shm / -journal
+    siblings remain was almost certainly `mv`d / renamed out from under an open
+    connection. Returns the orphan suffixes (empty list = fine). Used by the
+    test harness (and safe to call at service start) to refuse to run against a
+    half-moved live DB instead of silently recreating an empty stub.
+    """
+    if os.path.exists(db_path):
+        return []
+    return [s for s in ("-wal", "-shm", "-journal") if os.path.exists(db_path + s)]
+
 _lock = threading.Lock()
 
 SCHEMA = """

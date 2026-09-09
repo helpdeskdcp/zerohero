@@ -107,16 +107,51 @@ def test_exercising_the_stack_never_opens_the_live_db_rw(tmp_path, monkeypatch):
     importlib.reload(DB)
 
 
+# ----------------------------------------------------- moved-while-open guard --
+
+def test_db_moved_while_open_detects_orphaned_wal(tmp_path):
+    p = tmp_path / "x.db"
+    assert DB.db_moved_while_open(str(p)) == []          # nothing there -> fine (fresh checkout)
+    p.write_bytes(b"SQLite format 3\x00")
+    (tmp_path / "x.db-wal").write_bytes(b"")
+    assert DB.db_moved_while_open(str(p)) == []          # main file present -> fine
+    p.unlink()                                            # <-- the `mv away` that never got `mv`d back
+    assert DB.db_moved_while_open(str(p)) == ["-wal"]
+    (tmp_path / "x.db-shm").write_bytes(b"")
+    assert set(DB.db_moved_while_open(str(p))) == {"-wal", "-shm"}
+
+
+def test_conftest_aborts_when_live_db_moved_while_open(tmp_path, monkeypatch):
+    """pytest_configure raises if data/chanakya.db is gone but -wal/-shm stay,
+    and stays quiet in every normal state."""
+    import pytest as _pytest
+    conftest = sys.modules.get("conftest") or sys.modules.get("tests.conftest")
+    assert conftest is not None and hasattr(conftest, "pytest_configure")
+
+    fake = tmp_path / "chanakya.db"
+    monkeypatch.setattr(conftest, "_LIVE_DB", str(fake))
+
+    conftest.pytest_configure(None)                       # nothing on disk -> ok (fresh checkout)
+    fake.write_bytes(b"SQLite format 3\x00")
+    (tmp_path / "chanakya.db-wal").write_bytes(b"")
+    conftest.pytest_configure(None)                       # main file present -> ok
+
+    fake.unlink()                                          # the move that never got undone
+    with _pytest.raises(_pytest.UsageError, match="moved/renamed"):
+        conftest.pytest_configure(None)
+
+
 # ------------------------------------------------------------- static guard --
 
 def test_no_test_or_script_moves_the_live_db():
     """No test/script/CI file may rename, move, delete, or truncate the live db."""
     roots = [_BACKEND / "tests", _BACKEND / "scripts", _BACKEND.parent / ".github"]
     bad = re.compile(
-        r"(^\s*mv\s+\S*chanakya\.db"
+        r"(^\s*(mv|cp|rm|dd|install)\s+[^|;&]*\bchanakya\.db"
+        r"|>\s*\S*chanakya\.db\b"                       # truncating shell redirect
         r"|os\.rename\([^)]*chanakya"
         r"|shutil\.(move|copy\w*)\([^)]*chanakya\.db"
-        r"|os\.(remove|unlink)\([^)]*chanakya\.db"
+        r"|os\.(remove|unlink|truncate)\([^)]*chanakya\.db"
         r"|Path\([^)]*chanakya\.db[^)]*\)\.(unlink|rename|replace)"
         r"|truncate\s+\S*chanakya\.db)")
     hits = []
