@@ -57,15 +57,17 @@ def test_auto_expiry_is_chronological_not_lexical(tmp_path):
 
 
 def test_auto_roll_skips_the_0dte_contract_on_expiry_day(tmp_path):
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     c = AngelOneClient(cache_path=str(tmp_path / "m.json"))
-    today = datetime.now(timezone.utc).strftime("%d%b%Y").upper()
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%d%b%Y").upper()
+    next_wk = (now + timedelta(days=7)).strftime("%d%b%Y").upper()   # relative, so it stays in the future
     c._master = [
         {"exch_seg": "NFO", "name": "NIFTY", "symbol": f"NIFTY{today}24000CE", "token": "1",
          "instrumenttype": "OPTIDX", "expiry": today, "strike": "2400000", "lotsize": "65"},
-        {"exch_seg": "NFO", "name": "NIFTY", "symbol": "NIFTY08SEP2026240000CE", "token": "2",
-         "instrumenttype": "OPTIDX", "expiry": "08SEP2026", "strike": "2400000", "lotsize": "65"},
+        {"exch_seg": "NFO", "name": "NIFTY", "symbol": f"NIFTY{next_wk}240000CE", "token": "2",
+         "instrumenttype": "OPTIDX", "expiry": next_wk, "strike": "2400000", "lotsize": "65"},
     ]
     assert c.resolve_option_contract("NIFTY", "AUTO", "ATM", "CE", spot=24000)["expiry"] == today
     # AUTO_ROLL on expiry day -> the next weekly, never the 0-DTE
-    assert c.resolve_option_contract("NIFTY", "AUTO_ROLL", "ATM", "CE", spot=24000)["expiry"] == "08SEP2026"
+    assert c.resolve_option_contract("NIFTY", "AUTO_ROLL", "ATM", "CE", spot=24000)["expiry"] == next_wk
