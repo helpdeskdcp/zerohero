@@ -1,0 +1,2026 @@
+{
+  "engine": "trend_swing_E1_daily",
+  "generated_at": "2026-09-09T09:32:17.611781+00:00",
+  "params": {
+    "symbol": "NIFTY",
+    "start": "2010-01-01",
+    "end": "2025-12-31"
+  },
+  "capability": {
+    "symbol": "NIFTY",
+    "source": "kaggle_1m->daily",
+    "n_days": 4098,
+    "range": [
+      "2010-01-04",
+      "2025-12-24"
+    ],
+    "volume_available": false,
+    "note": "one OHLC bar per IST session date, resampled from 1m Kaggle. Cash index -> no volume; price-trend signals only."
+  },
+  "config": {
+    "symbol": "NIFTY",
+    "start": "2010-01-01",
+    "end": "2025-12-31",
+    "warmup_days": 220,
+    "cost_points": 1.0,
+    "slippage_points": 1.0,
+    "ema_fast": 20,
+    "ema_slow": 50,
+    "ema_trend": 200,
+    "ema_trend_slope_lookback": 10,
+    "donchian_n": 20,
+    "donchian_buffer_atr": 0.05,
+    "atr_period": 14,
+    "adx_period": 14,
+    "eff_ratio_lookback": 10,
+    "atr_pct_lo_pctl": 0.2,
+    "atr_pct_hi_pctl": 0.97,
+    "min_trend_persist_days": 2,
+    "eff_ratio_min": 0.25,
+    "adx_min": 15,
+    "sl_atr_mult": 3.0,
+    "trail_mode": "chandelier",
+    "trail_atr_mult": 4.0,
+    "donchian_exit_n": 20,
+    "exit_on_trend_flip": true,
+    "reverse_on_flip": false,
+    "max_hold_days": 0,
+    "cooldown_days": 2,
+    "one_position_at_a_time": true,
+    "train_frac": 0.55,
+    "val_frac": 0.2,
+    "wf_folds": 6,
+    "purge_days": 10,
+    "min_trades_for_verdict": 40,
+    "verdict_min_sharpe": 0.6,
+    "verdict_min_pf": 1.3,
+    "verdict_min_expectancy_R": 0.0,
+    "verdict_min_pos_years": 3,
+    "verdict_min_pos_wf_folds": 4,
+    "verdict_max_dd_R": 18.0,
+    "verdict_max_degradation": 0.6,
+    "bench_ema_fast": 50,
+    "bench_ema_slow": 200,
+    "bench_donchian_n": 50,
+    "crisis_min_decline_pct": 0.1,
+    "crisis_max_days": 90
+  },
+  "splits": {
+    "train": [
+      "2010-01-04",
+      "2018-11-23"
+    ],
+    "val": [
+      "2018-11-23",
+      "2022-01-17"
+    ],
+    "oos": [
+      "2022-01-17",
+      "2025-12-24"
+    ],
+    "n_days": 4098
+  },
+  "baselines": {
+    "buy_and_hold": {
+      "all": {
+        "trades": {
+          "n": 0
+        },
+        "daily": {
+          "days": 3878,
+          "sharpe": 0.673,
+          "sortino": 0.858,
+          "total_R": 83.7,
+          "R_per_year": 5.44,
+          "equity_maxdd_R": -23.04,
+          "exposure": 1.0,
+          "worst_day_R": -6.49,
+          "best_day_R": 4.382
+        }
+      },
+      "oos": {
+        "trades": {
+          "n": 0
+        },
+        "daily": {
+          "days": 1025,
+          "sharpe": 0.744,
+          "sortino": 1.001,
+          "total_R": 19.68,
+          "R_per_year": 4.84,
+          "equity_maxdd_R": -8.51,
+          "exposure": 1.0,
+          "worst_day_R": -2.809,
+          "best_day_R": 1.834
+        }
+      }
+    },
+    "ema_cross": {
+      "all": {
+        "trades": {
+          "n": 14,
+          "wins": 6,
+          "losses": 8,
+          "win_rate": 0.4286,
+          "avg_win_R": 11.7558,
+          "avg_loss_R": -3.3245,
+          "expectancy_R": 3.1385,
+          "profit_factor": 2.652,
+          "net_R": 43.94,
+          "net_points": 11512.1,
+          "max_drawdown_R": -13.092,
+          "max_consec_losses": 4,
+          "sl_rate": 0.0,
+          "avg_hold_days": 216.07,
+          "avg_mfe_R": 0.0
+        },
+        "daily": {
+          "days": 3878,
+          "sharpe": 0.38,
+          "sortino": 0.419,
+          "total_R": 44.02,
+          "R_per_year": 2.86,
+          "equity_maxdd_R": -19.29,
+          "exposure": 0.781,
+          "worst_day_R": -5.837,
+          "best_day_R": 2.89
+        }
+      },
+      "oos": {
+        "trades": {
+          "n": 4,
+          "wins": 2,
+          "losses": 2,
+          "win_rate": 0.5,
+          "avg_win_R": 9.8479,
+          "avg_loss_R": -1.0817,
+          "expectancy_R": 4.383,
+          "profit_factor": 9.104,
+          "net_R": 17.53,
+          "net_points": 6671.7,
+          "max_drawdown_R": -1.921,
+          "max_consec_losses": 1,
+          "sl_rate": 0.0,
+          "avg_hold_days": 198.0,
+          "avg_mfe_R": 0.0
+        },
+        "daily": {
+          "days": 1025,
+          "sharpe": 0.249,
+          "sortino": 0.285,
+          "total_R": 7.65,
+          "R_per_year": 1.88,
+          "equity_maxdd_R": -12.51,
+          "exposure": 0.86,
+          "worst_day_R": -3.686,
+          "best_day_R": 2.278
+        }
+      }
+    },
+    "donchian": {
+      "all": {
+        "trades": {
+          "n": 39,
+          "wins": 13,
+          "losses": 26,
+          "win_rate": 0.3333,
+          "avg_win_R": 7.6795,
+          "avg_loss_R": -3.089,
+          "expectancy_R": 0.5005,
+          "profit_factor": 1.243,
+          "net_R": 19.52,
+          "net_points": 3747.5,
+          "max_drawdown_R": -30.342,
+          "max_consec_losses": 8,
+          "sl_rate": 0.0,
+          "avg_hold_days": 99.38,
+          "avg_mfe_R": 0.0
+        },
+        "daily": {
+          "days": 3878,
+          "sharpe": 0.154,
+          "sortino": 0.216,
+          "total_R": 19.74,
+          "R_per_year": 1.28,
+          "equity_maxdd_R": -36.43,
+          "exposure": 1.0,
+          "worst_day_R": -3.242,
+          "best_day_R": 4.882
+        }
+      },
+      "oos": {
+        "trades": {
+          "n": 10,
+          "wins": 4,
+          "losses": 6,
+          "win_rate": 0.4,
+          "avg_win_R": 4.2768,
+          "avg_loss_R": -3.9544,
+          "expectancy_R": -0.6619,
+          "profit_factor": 0.721,
+          "net_R": -6.62,
+          "net_points": -1161.8,
+          "max_drawdown_R": -19.3,
+          "max_consec_losses": 3,
+          "sl_rate": 0.0,
+          "avg_hold_days": 99.5,
+          "avg_mfe_R": 0.0
+        },
+        "daily": {
+          "days": 1025,
+          "sharpe": -0.419,
+          "sortino": -0.556,
+          "total_R": -11.36,
+          "R_per_year": -2.79,
+          "equity_maxdd_R": -24.19,
+          "exposure": 1.0,
+          "worst_day_R": -3.242,
+          "best_day_R": 1.871
+        }
+      }
+    }
+  },
+  "crisis": {
+    "n_windows": 21,
+    "worst_windows": [
+      {
+        "start": "2020-03-10",
+        "trough": "2020-03-23",
+        "decline_pct": 0.272
+      },
+      {
+        "start": "2019-11-05",
+        "trough": "2020-03-09",
+        "decline_pct": 0.123
+      },
+      {
+        "start": "2011-03-30",
+        "trough": "2011-08-08",
+        "decline_pct": 0.117
+      },
+      {
+        "start": "2022-03-17",
+        "trough": "2022-06-17",
+        "decline_pct": 0.115
+      },
+      {
+        "start": "2015-10-05",
+        "trough": "2016-02-10",
+        "decline_pct": 0.112
+      },
+      {
+        "start": "2013-04-25",
+        "trough": "2013-08-28",
+        "decline_pct": 0.108
+      }
+    ],
+    "R_during_crises": -12.45,
+    "R_outside_crises": -3.48,
+    "crisis_alpha_positive": false,
+    "buy_and_hold_R_during_crises": -104.02
+  },
+  "combined": {
+    "all": {
+      "trades": {
+        "n": 66,
+        "wins": 20,
+        "losses": 46,
+        "win_rate": 0.303,
+        "avg_win_R": 0.8348,
+        "avg_loss_R": -0.713,
+        "expectancy_R": -0.2439,
+        "profit_factor": 0.509,
+        "net_R": -16.1,
+        "net_points": -7678.0,
+        "max_drawdown_R": -16.999,
+        "max_consec_losses": 11,
+        "sl_rate": 0.0,
+        "avg_hold_days": 23.58,
+        "avg_mfe_R": 0.926
+      },
+      "daily": {
+        "days": 3878,
+        "sharpe": -0.456,
+        "sortino": -0.404,
+        "total_R": -15.93,
+        "R_per_year": -1.04,
+        "equity_maxdd_R": -17.2,
+        "exposure": 0.401,
+        "worst_day_R": -1.493,
+        "best_day_R": 1.166
+      }
+    },
+    "train": {
+      "trades": {
+        "n": 34,
+        "wins": 9,
+        "losses": 25,
+        "win_rate": 0.2647,
+        "avg_win_R": 0.6212,
+        "avg_loss_R": -0.6736,
+        "expectancy_R": -0.3308,
+        "profit_factor": 0.332,
+        "net_R": -11.25,
+        "net_points": -3619.0,
+        "max_drawdown_R": -12.24,
+        "max_consec_losses": 11,
+        "sl_rate": 0.0,
+        "avg_hold_days": 21.62,
+        "avg_mfe_R": 0.878
+      },
+      "daily": {
+        "days": 2033,
+        "sharpe": -0.625,
+        "sortino": -0.566,
+        "total_R": -11.13,
+        "R_per_year": -1.38,
+        "equity_maxdd_R": -12.7,
+        "exposure": 0.368,
+        "worst_day_R": -1.013,
+        "best_day_R": 0.85
+      }
+    },
+    "val": {
+      "trades": {
+        "n": 13,
+        "wins": 6,
+        "losses": 7,
+        "win_rate": 0.4615,
+        "avg_win_R": 1.487,
+        "avg_loss_R": -0.8061,
+        "expectancy_R": 0.2523,
+        "profit_factor": 1.581,
+        "net_R": 3.28,
+        "net_points": 1367.1,
+        "max_drawdown_R": -3.025,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.85,
+        "avg_mfe_R": 1.409
+      },
+      "daily": {
+        "days": 820,
+        "sharpe": 0.347,
+        "sortino": 0.337,
+        "total_R": 2.88,
+        "R_per_year": 0.89,
+        "equity_maxdd_R": -4.02,
+        "exposure": 0.55,
+        "worst_day_R": -1.172,
+        "best_day_R": 0.544
+      }
+    },
+    "oos": {
+      "trades": {
+        "n": 17,
+        "wins": 5,
+        "losses": 12,
+        "win_rate": 0.2941,
+        "avg_win_R": 0.4365,
+        "avg_loss_R": -0.7372,
+        "expectancy_R": -0.392,
+        "profit_factor": 0.247,
+        "net_R": -6.66,
+        "net_points": -4567.4,
+        "max_drawdown_R": -7.562,
+        "max_consec_losses": 6,
+        "sl_rate": 0.0,
+        "avg_hold_days": 20.76,
+        "avg_mfe_R": 0.722
+      },
+      "daily": {
+        "days": 1025,
+        "sharpe": -0.878,
+        "sortino": -0.69,
+        "total_R": -7.68,
+        "R_per_year": -1.89,
+        "equity_maxdd_R": -8.84,
+        "exposure": 0.348,
+        "worst_day_R": -1.493,
+        "best_day_R": 1.166
+      }
+    },
+    "by_year": {
+      "2010": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.9458,
+        "expectancy_R": -0.9458,
+        "profit_factor": 0.0,
+        "net_R": -0.95,
+        "net_points": -235.3,
+        "max_drawdown_R": -0.946,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 7.0,
+        "avg_mfe_R": 0.301
+      },
+      "2011": {
+        "n": 7,
+        "wins": 1,
+        "losses": 6,
+        "win_rate": 0.1429,
+        "avg_win_R": 0.2075,
+        "avg_loss_R": -0.6204,
+        "expectancy_R": -0.5021,
+        "profit_factor": 0.056,
+        "net_R": -3.51,
+        "net_points": -1076.2,
+        "max_drawdown_R": -3.515,
+        "max_consec_losses": 4,
+        "sl_rate": 0.0,
+        "avg_hold_days": 20.0,
+        "avg_mfe_R": 0.785
+      },
+      "2012": {
+        "n": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.4415,
+        "expectancy_R": -0.4415,
+        "profit_factor": 0.0,
+        "net_R": -1.32,
+        "net_points": -347.7,
+        "max_drawdown_R": -1.325,
+        "max_consec_losses": 3,
+        "sl_rate": 0.0,
+        "avg_hold_days": 24.67,
+        "avg_mfe_R": 0.791
+      },
+      "2013": {
+        "n": 6,
+        "wins": 0,
+        "losses": 6,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.7774,
+        "expectancy_R": -0.7774,
+        "profit_factor": 0.0,
+        "net_R": -4.66,
+        "net_points": -1316.8,
+        "max_drawdown_R": -4.664,
+        "max_consec_losses": 6,
+        "sl_rate": 0.0,
+        "avg_hold_days": 13.0,
+        "avg_mfe_R": 0.503
+      },
+      "2014": {
+        "n": 4,
+        "wins": 4,
+        "losses": 0,
+        "win_rate": 1.0,
+        "avg_win_R": 0.6313,
+        "avg_loss_R": 0.0,
+        "expectancy_R": 0.6313,
+        "profit_factor": 9.99,
+        "net_R": 2.53,
+        "net_points": 727.1,
+        "max_drawdown_R": 0.0,
+        "max_consec_losses": 0,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.75,
+        "avg_mfe_R": 1.821
+      },
+      "2015": {
+        "n": 7,
+        "wins": 1,
+        "losses": 6,
+        "win_rate": 0.1429,
+        "avg_win_R": 0.0315,
+        "avg_loss_R": -0.689,
+        "expectancy_R": -0.5861,
+        "profit_factor": 0.008,
+        "net_R": -4.1,
+        "net_points": -1414.9,
+        "max_drawdown_R": -4.103,
+        "max_consec_losses": 5,
+        "sl_rate": 0.0,
+        "avg_hold_days": 15.86,
+        "avg_mfe_R": 0.553
+      },
+      "2016": {
+        "n": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 0.5,
+        "avg_win_R": 0.9271,
+        "avg_loss_R": -0.523,
+        "expectancy_R": 0.202,
+        "profit_factor": 1.773,
+        "net_R": 0.81,
+        "net_points": 206.5,
+        "max_drawdown_R": -0.666,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 38.0,
+        "avg_mfe_R": 1.353
+      },
+      "2017": {
+        "n": 1,
+        "wins": 1,
+        "losses": 0,
+        "win_rate": 1.0,
+        "avg_win_R": 0.9721,
+        "avg_loss_R": 0.0,
+        "expectancy_R": 0.9721,
+        "profit_factor": 9.99,
+        "net_R": 0.97,
+        "net_points": 333.3,
+        "max_drawdown_R": 0.0,
+        "max_consec_losses": 0,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.0,
+        "avg_mfe_R": 1.972
+      },
+      "2018": {
+        "n": 2,
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.8975,
+        "expectancy_R": -0.8975,
+        "profit_factor": 0.0,
+        "net_R": -1.79,
+        "net_points": -884.4,
+        "max_drawdown_R": -1.795,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 12.0,
+        "avg_mfe_R": 0.145
+      },
+      "2019": {
+        "n": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 0.5,
+        "avg_win_R": 0.4707,
+        "avg_loss_R": -0.7019,
+        "expectancy_R": -0.1156,
+        "profit_factor": 0.671,
+        "net_R": -0.46,
+        "net_points": -329.4,
+        "max_drawdown_R": -1.404,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 38.25,
+        "avg_mfe_R": 0.945
+      },
+      "2020": {
+        "n": 5,
+        "wins": 3,
+        "losses": 2,
+        "win_rate": 0.6,
+        "avg_win_R": 1.2639,
+        "avg_loss_R": -0.9306,
+        "expectancy_R": 0.3861,
+        "profit_factor": 2.037,
+        "net_R": 1.93,
+        "net_points": 1176.9,
+        "max_drawdown_R": -1.742,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 27.4,
+        "avg_mfe_R": 1.592
+      },
+      "2021": {
+        "n": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 0.25,
+        "avg_win_R": 4.1892,
+        "avg_loss_R": -0.7926,
+        "expectancy_R": 0.4529,
+        "profit_factor": 1.762,
+        "net_R": 1.81,
+        "net_points": 519.6,
+        "max_drawdown_R": -1.666,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 37.5,
+        "avg_mfe_R": 1.643
+      },
+      "2022": {
+        "n": 9,
+        "wins": 2,
+        "losses": 7,
+        "win_rate": 0.2222,
+        "avg_win_R": 0.1411,
+        "avg_loss_R": -0.695,
+        "expectancy_R": -0.5092,
+        "profit_factor": 0.058,
+        "net_R": -4.58,
+        "net_points": -3718.6,
+        "max_drawdown_R": -4.582,
+        "max_consec_losses": 5,
+        "sl_rate": 0.0,
+        "avg_hold_days": 16.67,
+        "avg_mfe_R": 0.6
+      },
+      "2023": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.8834,
+        "expectancy_R": -0.8834,
+        "profit_factor": 0.0,
+        "net_R": -0.88,
+        "net_points": -559.0,
+        "max_drawdown_R": -0.883,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 14.0,
+        "avg_mfe_R": 0.261
+      },
+      "2024": {
+        "n": 5,
+        "wins": 1,
+        "losses": 4,
+        "win_rate": 0.2,
+        "avg_win_R": 1.4507,
+        "avg_loss_R": -0.6927,
+        "expectancy_R": -0.2641,
+        "profit_factor": 0.524,
+        "net_R": -1.32,
+        "net_points": -570.0,
+        "max_drawdown_R": -2.771,
+        "max_consec_losses": 4,
+        "sl_rate": 0.0,
+        "avg_hold_days": 19.8,
+        "avg_mfe_R": 0.958
+      },
+      "2025": {
+        "n": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 0.6667,
+        "avg_win_R": 0.2248,
+        "avg_loss_R": -1.0018,
+        "expectancy_R": -0.184,
+        "profit_factor": 0.449,
+        "net_R": -0.55,
+        "net_points": -189.1,
+        "max_drawdown_R": -1.002,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.0,
+        "avg_mfe_R": 0.773
+      }
+    },
+    "walk_forward": [
+      {
+        "fold": 1,
+        "test": [
+          "2012-05-08",
+          "2014-09-15"
+        ],
+        "trades": {
+          "n": 8,
+          "wins": 2,
+          "losses": 6,
+          "win_rate": 0.25,
+          "avg_win_R": 0.1404,
+          "avg_loss_R": -0.7774,
+          "expectancy_R": -0.5479,
+          "profit_factor": 0.06,
+          "net_R": -4.38,
+          "net_points": -1243.1,
+          "max_drawdown_R": -4.664,
+          "max_consec_losses": 6,
+          "sl_rate": 0.0,
+          "avg_hold_days": 15.12,
+          "avg_mfe_R": 0.761
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.644,
+          "sortino": -0.563,
+          "total_R": -3.19,
+          "R_per_year": -1.37,
+          "equity_maxdd_R": -5.63,
+          "exposure": 0.313,
+          "worst_day_R": -0.637,
+          "best_day_R": 0.85
+        }
+      },
+      {
+        "fold": 2,
+        "test": [
+          "2014-09-15",
+          "2016-12-26"
+        ],
+        "trades": {
+          "n": 11,
+          "wins": 4,
+          "losses": 7,
+          "win_rate": 0.3636,
+          "avg_win_R": 0.8093,
+          "avg_loss_R": -0.6449,
+          "expectancy_R": -0.1161,
+          "profit_factor": 0.717,
+          "net_R": -1.28,
+          "net_points": -596.1,
+          "max_drawdown_R": -4.316,
+          "max_consec_losses": 5,
+          "sl_rate": 0.0,
+          "avg_hold_days": 24.91,
+          "avg_mfe_R": 1.045
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.314,
+          "sortino": -0.324,
+          "total_R": -1.87,
+          "R_per_year": -0.8,
+          "equity_maxdd_R": -5.6,
+          "exposure": 0.525,
+          "worst_day_R": -1.013,
+          "best_day_R": 0.795
+        }
+      },
+      {
+        "fold": 3,
+        "test": [
+          "2016-12-26",
+          "2019-03-26"
+        ],
+        "trades": {
+          "n": 3,
+          "wins": 1,
+          "losses": 2,
+          "win_rate": 0.3333,
+          "avg_win_R": 0.9721,
+          "avg_loss_R": -0.8975,
+          "expectancy_R": -0.2743,
+          "profit_factor": 0.542,
+          "net_R": -0.82,
+          "net_points": -551.1,
+          "max_drawdown_R": -1.795,
+          "max_consec_losses": 2,
+          "sl_rate": 0.0,
+          "avg_hold_days": 19.0,
+          "avg_mfe_R": 0.754
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.463,
+          "sortino": -0.236,
+          "total_R": -1.1,
+          "R_per_year": -0.47,
+          "equity_maxdd_R": -2.67,
+          "exposure": 0.13,
+          "worst_day_R": -0.546,
+          "best_day_R": 0.343
+        }
+      },
+      {
+        "fold": 4,
+        "test": [
+          "2019-03-26",
+          "2021-06-23"
+        ],
+        "trades": {
+          "n": 10,
+          "wins": 4,
+          "losses": 6,
+          "win_rate": 0.4,
+          "avg_win_R": 0.9783,
+          "avg_loss_R": -0.8219,
+          "expectancy_R": -0.1018,
+          "profit_factor": 0.794,
+          "net_R": -1.02,
+          "net_points": -664.6,
+          "max_drawdown_R": -3.025,
+          "max_consec_losses": 2,
+          "sl_rate": 0.0,
+          "avg_hold_days": 27.6,
+          "avg_mfe_R": 1.048
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.048,
+          "sortino": -0.045,
+          "total_R": -0.3,
+          "R_per_year": -0.13,
+          "equity_maxdd_R": -4.02,
+          "exposure": 0.552,
+          "worst_day_R": -1.172,
+          "best_day_R": 0.544
+        }
+      },
+      {
+        "fold": 5,
+        "test": [
+          "2021-06-23",
+          "2023-09-21"
+        ],
+        "trades": {
+          "n": 11,
+          "wins": 2,
+          "losses": 9,
+          "win_rate": 0.1818,
+          "avg_win_R": 0.1411,
+          "avg_loss_R": -0.7177,
+          "expectancy_R": -0.5616,
+          "profit_factor": 0.044,
+          "net_R": -6.18,
+          "net_points": -4765.4,
+          "max_drawdown_R": -6.177,
+          "max_consec_losses": 6,
+          "sl_rate": 0.0,
+          "avg_hold_days": 16.27,
+          "avg_mfe_R": 0.546
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.435,
+          "sortino": -0.455,
+          "total_R": -2.23,
+          "R_per_year": -0.96,
+          "equity_maxdd_R": -7.24,
+          "exposure": 0.462,
+          "worst_day_R": -0.59,
+          "best_day_R": 0.58
+        }
+      },
+      {
+        "fold": 6,
+        "test": [
+          "2023-09-21",
+          "2025-12-22"
+        ],
+        "trades": {
+          "n": 8,
+          "wins": 3,
+          "losses": 5,
+          "win_rate": 0.375,
+          "avg_win_R": 0.6335,
+          "avg_loss_R": -0.7546,
+          "expectancy_R": -0.234,
+          "profit_factor": 0.504,
+          "net_R": -1.87,
+          "net_points": -759.1,
+          "max_drawdown_R": -2.771,
+          "max_consec_losses": 4,
+          "sl_rate": 0.0,
+          "avg_hold_days": 24.75,
+          "avg_mfe_R": 0.889
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.356,
+          "sortino": -0.257,
+          "total_R": -1.86,
+          "R_per_year": -0.8,
+          "equity_maxdd_R": -3.29,
+          "exposure": 0.338,
+          "worst_day_R": -1.493,
+          "best_day_R": 1.166
+        }
+      }
+    ],
+    "by_side": {
+      "LONG": {
+        "n": 44,
+        "wins": 17,
+        "losses": 27,
+        "win_rate": 0.3864,
+        "avg_win_R": 0.9366,
+        "avg_loss_R": -0.7666,
+        "expectancy_R": -0.1085,
+        "profit_factor": 0.769,
+        "net_R": -4.78,
+        "net_points": -2241.5,
+        "max_drawdown_R": -6.387,
+        "max_consec_losses": 8,
+        "sl_rate": 0.0,
+        "avg_hold_days": 24.59,
+        "avg_mfe_R": 1.033
+      },
+      "SHORT": {
+        "n": 22,
+        "wins": 3,
+        "losses": 19,
+        "win_rate": 0.1364,
+        "avg_win_R": 0.2577,
+        "avg_loss_R": -0.6367,
+        "expectancy_R": -0.5147,
+        "profit_factor": 0.064,
+        "net_R": -11.32,
+        "net_points": -5436.4,
+        "max_drawdown_R": -11.723,
+        "max_consec_losses": 8,
+        "sl_rate": 0.0,
+        "avg_hold_days": 21.55,
+        "avg_mfe_R": 0.711
+      }
+    },
+    "verdict": {
+      "verdict": "NO-GO",
+      "why": [
+        "all-period expectancy -0.2439 <= 0 over 66 trades",
+        "OOS daily Sharpe -0.878 < 0",
+        "only 0/6 walk-forward folds positive",
+        "OOS expectancy -0.392 <= 0",
+        "crisis-alpha NEGATIVE \u2014 the core TSMOM rationale fails here",
+        "loses to buy&hold OOS (Sharpe -0.878 vs 0.74)"
+      ],
+      "positive_years": [
+        "2020"
+      ],
+      "positive_wf_folds": "0/6",
+      "degradation": 0.405,
+      "beats_buy_and_hold_oos": false
+    }
+  },
+  "long_only": {
+    "all": {
+      "trades": {
+        "n": 44,
+        "wins": 17,
+        "losses": 27,
+        "win_rate": 0.3864,
+        "avg_win_R": 0.9366,
+        "avg_loss_R": -0.7694,
+        "expectancy_R": -0.1103,
+        "profit_factor": 0.766,
+        "net_R": -4.85,
+        "net_points": -2344.0,
+        "max_drawdown_R": -6.387,
+        "max_consec_losses": 8,
+        "sl_rate": 0.0,
+        "avg_hold_days": 24.61,
+        "avg_mfe_R": 1.03
+      },
+      "daily": {
+        "days": 3878,
+        "sharpe": -0.169,
+        "sortino": -0.119,
+        "total_R": -4.74,
+        "R_per_year": -0.31,
+        "equity_maxdd_R": -7.36,
+        "exposure": 0.279,
+        "worst_day_R": -1.493,
+        "best_day_R": 1.166
+      }
+    },
+    "train": {
+      "trades": {
+        "n": 19,
+        "wins": 7,
+        "losses": 12,
+        "win_rate": 0.3684,
+        "avg_win_R": 0.7452,
+        "avg_loss_R": -0.7453,
+        "expectancy_R": -0.1962,
+        "profit_factor": 0.583,
+        "net_R": -3.73,
+        "net_points": -1029.0,
+        "max_drawdown_R": -6.387,
+        "max_consec_losses": 8,
+        "sl_rate": 0.0,
+        "avg_hold_days": 22.84,
+        "avg_mfe_R": 0.947
+      },
+      "daily": {
+        "days": 2033,
+        "sharpe": -0.291,
+        "sortino": -0.187,
+        "total_R": -3.66,
+        "R_per_year": -0.45,
+        "equity_maxdd_R": -6.52,
+        "exposure": 0.213,
+        "worst_day_R": -1.013,
+        "best_day_R": 0.641
+      }
+    },
+    "val": {
+      "trades": {
+        "n": 12,
+        "wins": 6,
+        "losses": 6,
+        "win_rate": 0.5,
+        "avg_win_R": 1.487,
+        "avg_loss_R": -0.8562,
+        "expectancy_R": 0.3154,
+        "profit_factor": 1.737,
+        "net_R": 3.79,
+        "net_points": 1576.6,
+        "max_drawdown_R": -2.519,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.67,
+        "avg_mfe_R": 1.467
+      },
+      "daily": {
+        "days": 820,
+        "sharpe": 0.55,
+        "sortino": 0.514,
+        "total_R": 4.18,
+        "R_per_year": 1.28,
+        "equity_maxdd_R": -3.52,
+        "exposure": 0.499,
+        "worst_day_R": -1.172,
+        "best_day_R": 0.512
+      }
+    },
+    "oos": {
+      "trades": {
+        "n": 12,
+        "wins": 4,
+        "losses": 8,
+        "win_rate": 0.3333,
+        "avg_win_R": 0.446,
+        "avg_loss_R": -0.7524,
+        "expectancy_R": -0.3529,
+        "profit_factor": 0.296,
+        "net_R": -4.24,
+        "net_points": -2422.4,
+        "max_drawdown_R": -4.735,
+        "max_consec_losses": 5,
+        "sl_rate": 0.0,
+        "avg_hold_days": 19.67,
+        "avg_mfe_R": 0.768
+      },
+      "daily": {
+        "days": 1025,
+        "sharpe": -0.698,
+        "sortino": -0.43,
+        "total_R": -5.26,
+        "R_per_year": -1.29,
+        "equity_maxdd_R": -6.01,
+        "exposure": 0.234,
+        "worst_day_R": -1.493,
+        "best_day_R": 1.166
+      }
+    },
+    "by_year": {
+      "2010": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.9458,
+        "expectancy_R": -0.9458,
+        "profit_factor": 0.0,
+        "net_R": -0.95,
+        "net_points": -235.3,
+        "max_drawdown_R": -0.946,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 7.0,
+        "avg_mfe_R": 0.301
+      },
+      "2011": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -1.0037,
+        "expectancy_R": -1.0037,
+        "profit_factor": 0.0,
+        "net_R": -1.0,
+        "net_points": -272.9,
+        "max_drawdown_R": -1.004,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 18.0,
+        "avg_mfe_R": 0.072
+      },
+      "2012": {
+        "n": 2,
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.4793,
+        "expectancy_R": -0.4793,
+        "profit_factor": 0.0,
+        "net_R": -0.96,
+        "net_points": -259.0,
+        "max_drawdown_R": -0.959,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 26.0,
+        "avg_mfe_R": 0.747
+      },
+      "2013": {
+        "n": 4,
+        "wins": 0,
+        "losses": 4,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.8208,
+        "expectancy_R": -0.8208,
+        "profit_factor": 0.0,
+        "net_R": -3.28,
+        "net_points": -992.7,
+        "max_drawdown_R": -3.283,
+        "max_consec_losses": 4,
+        "sl_rate": 0.0,
+        "avg_hold_days": 12.5,
+        "avg_mfe_R": 0.307
+      },
+      "2014": {
+        "n": 4,
+        "wins": 4,
+        "losses": 0,
+        "win_rate": 1.0,
+        "avg_win_R": 0.6313,
+        "avg_loss_R": 0.0,
+        "expectancy_R": 0.6313,
+        "profit_factor": 9.99,
+        "net_R": 2.53,
+        "net_points": 727.1,
+        "max_drawdown_R": 0.0,
+        "max_consec_losses": 0,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.75,
+        "avg_mfe_R": 1.821
+      },
+      "2015": {
+        "n": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 0.25,
+        "avg_win_R": 0.0315,
+        "avg_loss_R": -0.7909,
+        "expectancy_R": -0.5853,
+        "profit_factor": 0.013,
+        "net_R": -2.34,
+        "net_points": -728.6,
+        "max_drawdown_R": -2.341,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 12.75,
+        "avg_mfe_R": 0.575
+      },
+      "2016": {
+        "n": 2,
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 0.5,
+        "avg_win_R": 1.6875,
+        "avg_loss_R": -0.38,
+        "expectancy_R": 0.6538,
+        "profit_factor": 4.441,
+        "net_R": 1.31,
+        "net_points": 399.1,
+        "max_drawdown_R": -0.38,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 44.0,
+        "avg_mfe_R": 1.675
+      },
+      "2017": {
+        "n": 1,
+        "wins": 1,
+        "losses": 0,
+        "win_rate": 1.0,
+        "avg_win_R": 0.9721,
+        "avg_loss_R": 0.0,
+        "expectancy_R": 0.9721,
+        "profit_factor": 9.99,
+        "net_R": 0.97,
+        "net_points": 333.3,
+        "max_drawdown_R": 0.0,
+        "max_consec_losses": 0,
+        "sl_rate": 0.0,
+        "avg_hold_days": 33.0,
+        "avg_mfe_R": 1.972
+      },
+      "2019": {
+        "n": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 0.6667,
+        "avg_win_R": 0.4707,
+        "avg_loss_R": -0.8982,
+        "expectancy_R": 0.0144,
+        "profit_factor": 1.048,
+        "net_R": 0.04,
+        "net_points": -119.9,
+        "max_drawdown_R": -0.898,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 39.0,
+        "avg_mfe_R": 1.024
+      },
+      "2020": {
+        "n": 5,
+        "wins": 3,
+        "losses": 2,
+        "win_rate": 0.6,
+        "avg_win_R": 1.2639,
+        "avg_loss_R": -0.9306,
+        "expectancy_R": 0.3861,
+        "profit_factor": 2.037,
+        "net_R": 1.93,
+        "net_points": 1176.9,
+        "max_drawdown_R": -1.742,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 27.4,
+        "avg_mfe_R": 1.592
+      },
+      "2021": {
+        "n": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 0.25,
+        "avg_win_R": 4.1892,
+        "avg_loss_R": -0.7926,
+        "expectancy_R": 0.4529,
+        "profit_factor": 1.762,
+        "net_R": 1.81,
+        "net_points": 519.6,
+        "max_drawdown_R": -1.666,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 37.5,
+        "avg_mfe_R": 1.643
+      },
+      "2022": {
+        "n": 6,
+        "wins": 2,
+        "losses": 4,
+        "win_rate": 0.3333,
+        "avg_win_R": 0.1411,
+        "avg_loss_R": -0.7303,
+        "expectancy_R": -0.4398,
+        "profit_factor": 0.097,
+        "net_R": -2.64,
+        "net_points": -1798.4,
+        "max_drawdown_R": -2.639,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 15.5,
+        "avg_mfe_R": 0.674
+      },
+      "2024": {
+        "n": 5,
+        "wins": 1,
+        "losses": 4,
+        "win_rate": 0.2,
+        "avg_win_R": 1.4507,
+        "avg_loss_R": -0.6927,
+        "expectancy_R": -0.2641,
+        "profit_factor": 0.524,
+        "net_R": -1.32,
+        "net_points": -570.0,
+        "max_drawdown_R": -2.771,
+        "max_consec_losses": 4,
+        "sl_rate": 0.0,
+        "avg_hold_days": 19.8,
+        "avg_mfe_R": 0.958
+      },
+      "2025": {
+        "n": 2,
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 0.5,
+        "avg_win_R": 0.0509,
+        "avg_loss_R": -1.0018,
+        "expectancy_R": -0.4755,
+        "profit_factor": 0.051,
+        "net_R": -0.95,
+        "net_points": -523.1,
+        "max_drawdown_R": -1.002,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 26.5,
+        "avg_mfe_R": 0.444
+      }
+    },
+    "walk_forward": [
+      {
+        "fold": 1,
+        "test": [
+          "2012-05-08",
+          "2014-09-15"
+        ],
+        "trades": {
+          "n": 6,
+          "wins": 2,
+          "losses": 4,
+          "win_rate": 0.3333,
+          "avg_win_R": 0.1404,
+          "avg_loss_R": -0.8208,
+          "expectancy_R": -0.5004,
+          "profit_factor": 0.086,
+          "net_R": -3.0,
+          "net_points": -919.0,
+          "max_drawdown_R": -3.283,
+          "max_consec_losses": 4,
+          "sl_rate": 0.0,
+          "avg_hold_days": 15.5,
+          "avg_mfe_R": 0.715
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.406,
+          "sortino": -0.28,
+          "total_R": -1.45,
+          "R_per_year": -0.63,
+          "equity_maxdd_R": -3.78,
+          "exposure": 0.227,
+          "worst_day_R": -0.576,
+          "best_day_R": 0.641
+        }
+      },
+      {
+        "fold": 2,
+        "test": [
+          "2014-09-15",
+          "2016-12-26"
+        ],
+        "trades": {
+          "n": 7,
+          "wins": 3,
+          "losses": 4,
+          "win_rate": 0.4286,
+          "avg_win_R": 1.0235,
+          "avg_loss_R": -0.6882,
+          "expectancy_R": 0.0454,
+          "profit_factor": 1.115,
+          "net_R": 0.32,
+          "net_points": 38.9,
+          "max_drawdown_R": -2.721,
+          "max_consec_losses": 3,
+          "sl_rate": 0.0,
+          "avg_hold_days": 26.14,
+          "avg_mfe_R": 1.16
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.064,
+          "sortino": -0.049,
+          "total_R": -0.29,
+          "R_per_year": -0.13,
+          "equity_maxdd_R": -3.64,
+          "exposure": 0.326,
+          "worst_day_R": -1.013,
+          "best_day_R": 0.589
+        }
+      },
+      {
+        "fold": 3,
+        "test": [
+          "2016-12-26",
+          "2019-03-26"
+        ],
+        "trades": {
+          "n": 1,
+          "wins": 1,
+          "losses": 0,
+          "win_rate": 1.0,
+          "avg_win_R": 0.9721,
+          "avg_loss_R": 0.0,
+          "expectancy_R": 0.9721,
+          "profit_factor": 9.99,
+          "net_R": 0.97,
+          "net_points": 333.3,
+          "max_drawdown_R": 0.0,
+          "max_consec_losses": 0,
+          "sl_rate": 0.0,
+          "avg_hold_days": 33.0,
+          "avg_mfe_R": 1.972
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": 0.77,
+          "sortino": 0.257,
+          "total_R": 1.36,
+          "R_per_year": 0.59,
+          "equity_maxdd_R": -0.88,
+          "exposure": 0.075,
+          "worst_day_R": -0.546,
+          "best_day_R": 0.343
+        }
+      },
+      {
+        "fold": 4,
+        "test": [
+          "2019-03-26",
+          "2021-06-23"
+        ],
+        "trades": {
+          "n": 9,
+          "wins": 4,
+          "losses": 5,
+          "win_rate": 0.4444,
+          "avg_win_R": 0.9783,
+          "avg_loss_R": -0.8851,
+          "expectancy_R": -0.0569,
+          "profit_factor": 0.884,
+          "net_R": -0.51,
+          "net_points": -455.2,
+          "max_drawdown_R": -2.519,
+          "max_consec_losses": 2,
+          "sl_rate": 0.0,
+          "avg_hold_days": 26.67,
+          "avg_mfe_R": 1.086
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": 0.037,
+          "sortino": 0.033,
+          "total_R": 0.21,
+          "R_per_year": 0.09,
+          "equity_maxdd_R": -3.52,
+          "exposure": 0.491,
+          "worst_day_R": -1.172,
+          "best_day_R": 0.475
+        }
+      },
+      {
+        "fold": 5,
+        "test": [
+          "2021-06-23",
+          "2023-09-21"
+        ],
+        "trades": {
+          "n": 7,
+          "wins": 2,
+          "losses": 5,
+          "win_rate": 0.2857,
+          "avg_win_R": 0.1411,
+          "avg_loss_R": -0.7265,
+          "expectancy_R": -0.4786,
+          "profit_factor": 0.078,
+          "net_R": -3.35,
+          "net_points": -2286.3,
+          "max_drawdown_R": -3.35,
+          "max_consec_losses": 3,
+          "sl_rate": 0.0,
+          "avg_hold_days": 15.43,
+          "avg_mfe_R": 0.627
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": 0.136,
+          "sortino": 0.121,
+          "total_R": 0.59,
+          "R_per_year": 0.25,
+          "equity_maxdd_R": -4.42,
+          "exposure": 0.34,
+          "worst_day_R": -0.59,
+          "best_day_R": 0.58
+        }
+      },
+      {
+        "fold": 6,
+        "test": [
+          "2023-09-21",
+          "2025-12-22"
+        ],
+        "trades": {
+          "n": 7,
+          "wins": 2,
+          "losses": 5,
+          "win_rate": 0.2857,
+          "avg_win_R": 0.7508,
+          "avg_loss_R": -0.7546,
+          "expectancy_R": -0.3245,
+          "profit_factor": 0.398,
+          "net_R": -2.27,
+          "net_points": -1093.2,
+          "max_drawdown_R": -2.771,
+          "max_consec_losses": 4,
+          "sl_rate": 0.0,
+          "avg_hold_days": 21.71,
+          "avg_mfe_R": 0.811
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.467,
+          "sortino": -0.29,
+          "total_R": -2.26,
+          "R_per_year": -0.97,
+          "equity_maxdd_R": -3.29,
+          "exposure": 0.26,
+          "worst_day_R": -1.493,
+          "best_day_R": 1.166
+        }
+      }
+    ]
+  },
+  "short_only": {
+    "all": {
+      "trades": {
+        "n": 22,
+        "wins": 3,
+        "losses": 19,
+        "win_rate": 0.1364,
+        "avg_win_R": 0.2577,
+        "avg_loss_R": -0.6367,
+        "expectancy_R": -0.5147,
+        "profit_factor": 0.064,
+        "net_R": -11.32,
+        "net_points": -5436.4,
+        "max_drawdown_R": -11.723,
+        "max_consec_losses": 8,
+        "sl_rate": 0.0,
+        "avg_hold_days": 21.55,
+        "avg_mfe_R": 0.711
+      },
+      "daily": {
+        "days": 3878,
+        "sharpe": -0.542,
+        "sortino": -0.299,
+        "total_R": -11.26,
+        "R_per_year": -0.73,
+        "equity_maxdd_R": -13.09,
+        "exposure": 0.122,
+        "worst_day_R": -1.045,
+        "best_day_R": 0.85
+      }
+    },
+    "train": {
+      "trades": {
+        "n": 15,
+        "wins": 2,
+        "losses": 13,
+        "win_rate": 0.1333,
+        "avg_win_R": 0.1871,
+        "avg_loss_R": -0.6073,
+        "expectancy_R": -0.5014,
+        "profit_factor": 0.047,
+        "net_R": -7.52,
+        "net_points": -2590.0,
+        "max_drawdown_R": -7.521,
+        "max_consec_losses": 8,
+        "sl_rate": 0.0,
+        "avg_hold_days": 20.07,
+        "avg_mfe_R": 0.789
+      },
+      "daily": {
+        "days": 2033,
+        "sharpe": -0.591,
+        "sortino": -0.381,
+        "total_R": -7.47,
+        "R_per_year": -0.93,
+        "equity_maxdd_R": -8.73,
+        "exposure": 0.154,
+        "worst_day_R": -0.747,
+        "best_day_R": 0.85
+      }
+    },
+    "val": {
+      "trades": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.5056,
+        "expectancy_R": -0.5056,
+        "profit_factor": 0.0,
+        "net_R": -0.51,
+        "net_points": -209.4,
+        "max_drawdown_R": -0.506,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 36.0,
+        "avg_mfe_R": 0.705
+      },
+      "daily": {
+        "days": 820,
+        "sharpe": -0.386,
+        "sortino": -0.119,
+        "total_R": -1.29,
+        "R_per_year": -0.4,
+        "equity_maxdd_R": -1.29,
+        "exposure": 0.051,
+        "worst_day_R": -1.045,
+        "best_day_R": 0.544
+      }
+    },
+    "oos": {
+      "trades": {
+        "n": 5,
+        "wins": 1,
+        "losses": 4,
+        "win_rate": 0.2,
+        "avg_win_R": 0.3988,
+        "avg_loss_R": -0.726,
+        "expectancy_R": -0.501,
+        "profit_factor": 0.137,
+        "net_R": -2.51,
+        "net_points": -2247.5,
+        "max_drawdown_R": -2.904,
+        "max_consec_losses": 4,
+        "sl_rate": 0.0,
+        "avg_hold_days": 23.6,
+        "avg_mfe_R": 0.584
+      },
+      "daily": {
+        "days": 1025,
+        "sharpe": -0.564,
+        "sortino": -0.31,
+        "total_R": -2.5,
+        "R_per_year": -0.61,
+        "equity_maxdd_R": -3.55,
+        "exposure": 0.115,
+        "worst_day_R": -0.553,
+        "best_day_R": 0.521
+      }
+    },
+    "by_year": {
+      "2011": {
+        "n": 6,
+        "wins": 1,
+        "losses": 5,
+        "win_rate": 0.1667,
+        "avg_win_R": 0.2075,
+        "avg_loss_R": -0.5437,
+        "expectancy_R": -0.4185,
+        "profit_factor": 0.076,
+        "net_R": -2.51,
+        "net_points": -803.4,
+        "max_drawdown_R": -2.511,
+        "max_consec_losses": 3,
+        "sl_rate": 0.0,
+        "avg_hold_days": 20.33,
+        "avg_mfe_R": 0.904
+      },
+      "2012": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.3659,
+        "expectancy_R": -0.3659,
+        "profit_factor": 0.0,
+        "net_R": -0.37,
+        "net_points": -88.7,
+        "max_drawdown_R": -0.366,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 22.0,
+        "avg_mfe_R": 0.878
+      },
+      "2013": {
+        "n": 2,
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.6906,
+        "expectancy_R": -0.6906,
+        "profit_factor": 0.0,
+        "net_R": -1.38,
+        "net_points": -324.1,
+        "max_drawdown_R": -1.381,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 14.0,
+        "avg_mfe_R": 0.896
+      },
+      "2015": {
+        "n": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.5871,
+        "expectancy_R": -0.5871,
+        "profit_factor": 0.0,
+        "net_R": -1.76,
+        "net_points": -686.3,
+        "max_drawdown_R": -1.761,
+        "max_consec_losses": 3,
+        "sl_rate": 0.0,
+        "avg_hold_days": 20.0,
+        "avg_mfe_R": 0.523
+      },
+      "2016": {
+        "n": 2,
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 0.5,
+        "avg_win_R": 0.1667,
+        "avg_loss_R": -0.666,
+        "expectancy_R": -0.2497,
+        "profit_factor": 0.25,
+        "net_R": -0.5,
+        "net_points": -192.7,
+        "max_drawdown_R": -0.666,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 32.0,
+        "avg_mfe_R": 1.031
+      },
+      "2018": {
+        "n": 2,
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.8975,
+        "expectancy_R": -0.8975,
+        "profit_factor": 0.0,
+        "net_R": -1.79,
+        "net_points": -884.4,
+        "max_drawdown_R": -1.795,
+        "max_consec_losses": 2,
+        "sl_rate": 0.0,
+        "avg_hold_days": 12.0,
+        "avg_mfe_R": 0.145
+      },
+      "2019": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.5056,
+        "expectancy_R": -0.5056,
+        "profit_factor": 0.0,
+        "net_R": -0.51,
+        "net_points": -209.4,
+        "max_drawdown_R": -0.506,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 36.0,
+        "avg_mfe_R": 0.705
+      },
+      "2022": {
+        "n": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.6735,
+        "expectancy_R": -0.6735,
+        "profit_factor": 0.0,
+        "net_R": -2.02,
+        "net_points": -2022.6,
+        "max_drawdown_R": -2.02,
+        "max_consec_losses": 3,
+        "sl_rate": 0.0,
+        "avg_hold_days": 19.33,
+        "avg_mfe_R": 0.409
+      },
+      "2023": {
+        "n": 1,
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "avg_win_R": 0.0,
+        "avg_loss_R": -0.8834,
+        "expectancy_R": -0.8834,
+        "profit_factor": 0.0,
+        "net_R": -0.88,
+        "net_points": -559.0,
+        "max_drawdown_R": -0.883,
+        "max_consec_losses": 1,
+        "sl_rate": 0.0,
+        "avg_hold_days": 14.0,
+        "avg_mfe_R": 0.261
+      },
+      "2025": {
+        "n": 1,
+        "wins": 1,
+        "losses": 0,
+        "win_rate": 1.0,
+        "avg_win_R": 0.3988,
+        "avg_loss_R": 0.0,
+        "expectancy_R": 0.3988,
+        "profit_factor": 9.99,
+        "net_R": 0.4,
+        "net_points": 334.1,
+        "max_drawdown_R": 0.0,
+        "max_consec_losses": 0,
+        "sl_rate": 0.0,
+        "avg_hold_days": 46.0,
+        "avg_mfe_R": 1.433
+      }
+    },
+    "walk_forward": [
+      {
+        "fold": 1,
+        "test": [
+          "2012-05-08",
+          "2014-09-15"
+        ],
+        "trades": {
+          "n": 2,
+          "wins": 0,
+          "losses": 2,
+          "win_rate": 0.0,
+          "avg_win_R": 0.0,
+          "avg_loss_R": -0.6906,
+          "expectancy_R": -0.6906,
+          "profit_factor": 0.0,
+          "net_R": -1.38,
+          "net_points": -324.1,
+          "max_drawdown_R": -1.381,
+          "max_consec_losses": 2,
+          "sl_rate": 0.0,
+          "avg_hold_days": 14.0,
+          "avg_mfe_R": 0.896
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.508,
+          "sortino": -0.284,
+          "total_R": -1.73,
+          "R_per_year": -0.75,
+          "equity_maxdd_R": -2.83,
+          "exposure": 0.085,
+          "worst_day_R": -0.637,
+          "best_day_R": 0.85
+        }
+      },
+      {
+        "fold": 2,
+        "test": [
+          "2014-09-15",
+          "2016-12-26"
+        ],
+        "trades": {
+          "n": 4,
+          "wins": 1,
+          "losses": 3,
+          "win_rate": 0.25,
+          "avg_win_R": 0.1667,
+          "avg_loss_R": -0.5871,
+          "expectancy_R": -0.3986,
+          "profit_factor": 0.095,
+          "net_R": -1.59,
+          "net_points": -635.0,
+          "max_drawdown_R": -1.761,
+          "max_consec_losses": 3,
+          "sl_rate": 0.0,
+          "avg_hold_days": 22.75,
+          "avg_mfe_R": 0.843
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.409,
+          "sortino": -0.291,
+          "total_R": -1.58,
+          "R_per_year": -0.68,
+          "equity_maxdd_R": -2.33,
+          "exposure": 0.198,
+          "worst_day_R": -0.747,
+          "best_day_R": 0.795
+        }
+      },
+      {
+        "fold": 3,
+        "test": [
+          "2016-12-26",
+          "2019-03-26"
+        ],
+        "trades": {
+          "n": 2,
+          "wins": 0,
+          "losses": 2,
+          "win_rate": 0.0,
+          "avg_win_R": 0.0,
+          "avg_loss_R": -0.8975,
+          "expectancy_R": -0.8975,
+          "profit_factor": 0.0,
+          "net_R": -1.79,
+          "net_points": -884.4,
+          "max_drawdown_R": -1.795,
+          "max_consec_losses": 2,
+          "sl_rate": 0.0,
+          "avg_hold_days": 12.0,
+          "avg_mfe_R": 0.145
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -1.56,
+          "sortino": -0.605,
+          "total_R": -2.46,
+          "R_per_year": -1.06,
+          "equity_maxdd_R": -2.67,
+          "exposure": 0.055,
+          "worst_day_R": -0.386,
+          "best_day_R": 0.218
+        }
+      },
+      {
+        "fold": 4,
+        "test": [
+          "2019-03-26",
+          "2021-06-23"
+        ],
+        "trades": {
+          "n": 1,
+          "wins": 0,
+          "losses": 1,
+          "win_rate": 0.0,
+          "avg_win_R": 0.0,
+          "avg_loss_R": -0.5056,
+          "expectancy_R": -0.5056,
+          "profit_factor": 0.0,
+          "net_R": -0.51,
+          "net_points": -209.4,
+          "max_drawdown_R": -0.506,
+          "max_consec_losses": 1,
+          "sl_rate": 0.0,
+          "avg_hold_days": 36.0,
+          "avg_mfe_R": 0.705
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -0.181,
+          "sortino": -0.059,
+          "total_R": -0.5,
+          "R_per_year": -0.22,
+          "equity_maxdd_R": -1.05,
+          "exposure": 0.062,
+          "worst_day_R": -1.045,
+          "best_day_R": 0.544
+        }
+      },
+      {
+        "fold": 5,
+        "test": [
+          "2021-06-23",
+          "2023-09-21"
+        ],
+        "trades": {
+          "n": 4,
+          "wins": 0,
+          "losses": 4,
+          "win_rate": 0.0,
+          "avg_win_R": 0.0,
+          "avg_loss_R": -0.726,
+          "expectancy_R": -0.726,
+          "profit_factor": 0.0,
+          "net_R": -2.9,
+          "net_points": -2581.6,
+          "max_drawdown_R": -2.904,
+          "max_consec_losses": 4,
+          "sl_rate": 0.0,
+          "avg_hold_days": 18.0,
+          "avg_mfe_R": 0.372
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": -1.067,
+          "sortino": -0.616,
+          "total_R": -2.9,
+          "R_per_year": -1.25,
+          "equity_maxdd_R": -2.9,
+          "exposure": 0.123,
+          "worst_day_R": -0.553,
+          "best_day_R": 0.521
+        }
+      },
+      {
+        "fold": 6,
+        "test": [
+          "2023-09-21",
+          "2025-12-22"
+        ],
+        "trades": {
+          "n": 1,
+          "wins": 1,
+          "losses": 0,
+          "win_rate": 1.0,
+          "avg_win_R": 0.3988,
+          "avg_loss_R": 0.0,
+          "expectancy_R": 0.3988,
+          "profit_factor": 9.99,
+          "net_R": 0.4,
+          "net_points": 334.1,
+          "max_drawdown_R": 0.0,
+          "max_consec_losses": 0,
+          "sl_rate": 0.0,
+          "avg_hold_days": 46.0,
+          "avg_mfe_R": 1.433
+        },
+        "daily": {
+          "days": 585,
+          "sharpe": 0.205,
+          "sortino": 0.094,
+          "total_R": 0.4,
+          "R_per_year": 0.17,
+          "equity_maxdd_R": -1.06,
+          "exposure": 0.079,
+          "worst_day_R": -0.415,
+          "best_day_R": 0.458
+        }
+      }
+    ]
+  },
+  "ann_note": "ANN not run in this baseline pass. The verdict above is on the RAW frozen E1 engine. Per the brief, ANN may be tested afterwards but must not turn a NO-GO into a GO.",
+  "status": "OK",
+  "runtime_seconds": 6.8
+}
