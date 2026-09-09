@@ -1,4 +1,11 @@
 """
+ARCHIVED 2026-09-09 -- VERDICT: NO-GO. Kept for the record + harness reuse.
+Walk-forward OOS 2016-2025: NIFTY -0.056R / PF 0.90 (1 of 10 yrs +),
+BANKNIFTY -0.194R / PF 0.68 (0 of 10). Every canonical variant (mother-bar
+entry/stop, ADX 20/25 gate, full-close breakout confirm) also NO-GO once a
+look-ahead bug in the close-confirm path was fixed. SENSEX: no intraday
+history. Reports: backend/data/research/inside_bar/.
+
 Inside-Bar 2-minute breakout scalping strategy -- RESEARCH / BACKTEST ONLY.
 
 Imported by NOTHING in the live app: no runner, HCS, ANN, EPM, signal, order,

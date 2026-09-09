@@ -12,9 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.research_engines.inside_bar import strategy as S       # noqa: E402
-from app.research_engines.inside_bar import backtest as BT      # noqa: E402
-from app.research_engines.inside_bar.config import merged       # noqa: E402
+from app.research_engines._archived.inside_bar import strategy as S       # noqa: E402
+from app.research_engines._archived.inside_bar import backtest as BT      # noqa: E402
+from app.research_engines._archived.inside_bar.config import merged       # noqa: E402
 
 CFG = merged()
 
@@ -145,7 +145,7 @@ def test_mother_bar_refs_widen_risk():
 
 
 def test_no_live_app_imports():
-    pkg = Path(__file__).parents[1] / "app" / "research_engines" / "inside_bar"
+    pkg = Path(__file__).parents[1] / "app" / "research_engines" / "_archived" / "inside_bar"
     banned = ("app.autoscalp", "app.execution", "app.engines", "app.hcs")
     for py in pkg.glob("*.py"):
         tree = ast.parse(py.read_text())

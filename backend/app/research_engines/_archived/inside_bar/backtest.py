@@ -6,7 +6,7 @@ here = hold out the most recent slice of sessions and confirm the edge is
 present there AND stable across calendar years -- the honest robustness test
 for a fixed rule set.
 
-    python -m app.research_engines.inside_bar.backtest \
+    python -m app.research_engines._archived.inside_bar.backtest \
         --symbols NIFTY,BANKNIFTY --start 2015-01-01 --end 2025-12-31 \
         --out data/research/inside_bar
 
@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from . import data as D
 from . import strategy as S
 from .config import merged
-from ..order_pressure.metrics import trading as _trading_metrics
+from app.research_engines.order_pressure.metrics import trading as _trading_metrics
 
 
 def _sessions(bars: list[dict]) -> dict[str, list[dict]]:
