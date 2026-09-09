@@ -89,8 +89,8 @@ def test_exercising_the_stack_never_opens_the_live_db_rw(tmp_path, monkeypatch):
                     pass
 
     try:
-        from app.research_engines.ssl_hybrid import data as SD
-        SD.coverage(15)
+        from app.research_engines.order_pressure import data as OD
+        OD.coverage() if hasattr(OD, "coverage") else None
     except Exception:
         pass
 

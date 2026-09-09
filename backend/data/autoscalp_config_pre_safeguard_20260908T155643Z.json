@@ -1,0 +1,121 @@
+{
+  "auto_arm": false,
+  "decide_every_sec": 30,
+  "expiry_day_entry_cutoff": "14:15",
+  "expiry_day_mode": "trade",
+  "expiry_day_profile": {
+    "est_cost_r": 0.12,
+    "ev": {
+      "rr_min": 1.15
+    },
+    "max_hold_sec": 480,
+    "sl_atr": 0.9,
+    "t1_atr": 1.1,
+    "t2_atr": 1.8
+  },
+  "index_vwap_from_future": true,
+  "min_recalibrate_samples": 40,
+  "poll_sec": 2,
+  "recalibrate_every_sec": 900,
+  "safeguards": {},
+  "strategy": {},
+  "strike_window": 2,
+  "symbol_profiles": {
+    "BANKNIFTY": {
+      "filters": {
+        "block_signal_types": [
+          "RESISTANCE_BREAKOUT",
+          "SUPPORT_REVERSAL",
+          "RESISTANCE_REVERSAL"
+        ],
+        "regime_score_mult": {
+          "RANGE": 0.7,
+          "TRENDING_UP": 0.8
+        }
+      }
+    },
+    "CRUDEOIL": {
+      "est_cost_r": 0.1,
+      "ev": {
+        "min_ev_r": 0.15,
+        "rr_min": 1.4
+      },
+      "filters": {
+        "block_signal_types": [
+          "RESISTANCE_BREAKOUT",
+          "SUPPORT_REVERSAL",
+          "RESISTANCE_REVERSAL"
+        ],
+        "regime_score_mult": {
+          "RANGE": 0.7,
+          "TRENDING_UP": 0.8
+        }
+      },
+      "max_hold_sec": 2400,
+      "require_min_confidence": "MEDIUM",
+      "sl_atr": 1.2,
+      "t1_atr": 1.9,
+      "trail_atr": 1.6
+    },
+    "NATURALGAS": {
+      "est_cost_r": 0.1,
+      "ev": {
+        "min_ev_r": 0.15,
+        "rr_min": 1.4
+      },
+      "filters": {
+        "block_signal_types": [
+          "RESISTANCE_BREAKOUT",
+          "SUPPORT_REVERSAL",
+          "RESISTANCE_REVERSAL"
+        ],
+        "regime_score_mult": {
+          "RANGE": 0.7,
+          "TRENDING_UP": 0.8
+        }
+      },
+      "max_hold_sec": 1800,
+      "require_min_confidence": "MEDIUM",
+      "trail_atr": 1.6
+    },
+    "SENSEX": {
+      "filters": {
+        "block_signal_types": [
+          "RESISTANCE_BREAKOUT",
+          "SUPPORT_REVERSAL",
+          "RESISTANCE_REVERSAL"
+        ],
+        "regime_score_mult": {
+          "RANGE": 0.7,
+          "TRENDING_UP": 0.8
+        }
+      }
+    }
+  },
+  "symbols": [
+    "NIFTY",
+    "NATURALGAS",
+    "CRUDEOIL",
+    "BANKNIFTY",
+    "SENSEX",
+    "CRUDEOILMINI"
+  ],
+  "telegram_dedup_sec": 900,
+  "telegram_min_confidence": "HIGH",
+  "zth": {
+    "enabled": true,
+    "hard_exit": "13:30",
+    "max_per_day": 1,
+    "max_premium": 12.0,
+    "min_confidence": "HIGH",
+    "otm_strikes": 4,
+    "require_regime": [
+      "TRENDING_UP",
+      "TRENDING_DOWN",
+      "TRENDING",
+      "STRONG_TREND"
+    ],
+    "stop_frac": 0.5,
+    "target_mult": 3.0
+  }
+}
