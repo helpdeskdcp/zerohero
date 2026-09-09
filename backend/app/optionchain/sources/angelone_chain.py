@@ -14,7 +14,7 @@ Reads `market_history.db` READ-ONLY. Three captured tables, three roles:
                        WHOLE chain, plus pcr_oi / ce_oi_total / pe_oi_total.
                        Emitted by the greek engine and can lag -- used to fill OI
                        on the wings, always tagged with its own as-of stamp.
-  * `quote_snapshots` (kind='INDEX')            -> spot.
+  * `quote_snapshots` (kind='INDEX', else 'FUTURE' for MCX) -> spot.
 
 No network. No writes. CE/PE-pairing concept adapted from
 markov404/AngelOneOptionChainSmartApi (MIT).
@@ -276,14 +276,21 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
         if not rows_by_k:
             return None
 
-        # ---- spot: freshest captured index print, else greek-engine underlying ----
-        srow = con.execute(
-            "SELECT ltp FROM quote_snapshots WHERE symbol=? AND kind='INDEX' "
-            + ("AND received_ts<=? " if ref_ts else "")
-            + "ORDER BY received_ts DESC LIMIT 1",
-            ((u, ref_ts) if ref_ts else (u,))).fetchone()
-        spot = _num(srow["ltp"]) if srow else None
-        spot_src = "captured_index"
+        # ---- spot: freshest captured index print; for MCX (no index) the front
+        # future is the reference; then the greek-engine underlying; else a
+        # put-call-parity proxy off the chain itself ----
+        def _last_ltp(kind):
+            r = con.execute(
+                f"SELECT ltp FROM quote_snapshots WHERE symbol=? AND kind='{kind}' "
+                + ("AND received_ts<=? " if ref_ts else "")
+                + "ORDER BY received_ts DESC LIMIT 1",
+                ((u, ref_ts) if ref_ts else (u,))).fetchone()
+            return _num(r["ltp"]) if r else None
+
+        spot, spot_src = _last_ltp("INDEX"), "captured_index"
+        if spot is None:
+            spot = _last_ltp("FUTURE")
+            spot_src = "captured_future"
         if spot is None and oi_meta.get("underlying_price") is not None:
             spot, spot_src = oi_meta["underlying_price"], "greek_engine_underlying"
         if spot is None:
