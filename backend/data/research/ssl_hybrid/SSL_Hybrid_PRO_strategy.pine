@@ -30,7 +30,7 @@ strategy("SSL Hybrid PRO - STRATEGY", overlay = true, max_labels_count = 500,
 // =====================================================
 // INPUTS  (identical to the indicator)
 // =====================================================
-ssl1Len      = input.int(60,  "SSL1 Length", minval = 1)
+ssl1Len      = input.int(100, "SSL1 Length", minval = 1)  // trained baseline (Pine default was 60)
 ssl2Len      = input.int(5,   "SSL2 Fast Length", minval = 1)
 exitLen      = input.int(15,  "Exit Length", minval = 1)
 baselineLen  = input.int(60,  "Baseline Length", minval = 1)
