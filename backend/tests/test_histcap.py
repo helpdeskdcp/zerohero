@@ -222,6 +222,30 @@ def _worker(store, monkeypatch, sdk):
     return w
 
 
+def test_chain_window_is_per_symbol_with_fallback():
+    from app.histcap.worker import _cfg, CaptureWorker as _CW
+    import os
+    keys = [k for k in os.environ if k.startswith("CHANAKYA_HIST_CHAIN_WINDOW")]
+    saved = {k: os.environ.pop(k) for k in keys}
+    try:
+        os.environ["CHANAKYA_HIST_SYMBOLS"] = "NIFTY,FINNIFTY,BANKEX"
+        os.environ["CHANAKYA_HIST_CHAIN_WINDOW"] = "15"
+        os.environ["CHANAKYA_HIST_CHAIN_WINDOW_BANKEX"] = "30"
+        w = _CW.__new__(_CW)
+        w.cfg = _cfg()
+        assert w._win_for("NIFTY") == 15                 # global
+        assert w._win_for("FINNIFTY") == 25             # built-in wide default
+        assert w._win_for("BANKEX") == 30              # explicit env override
+        # a cfg without the per-symbol map (older shape) still falls back
+        w.cfg = {"chain_window": 7}
+        assert w._win_for("FINNIFTY") == 7
+    finally:
+        for k in list(os.environ):
+            if k.startswith("CHANAKYA_HIST_CHAIN_WINDOW") or k == "CHANAKYA_HIST_SYMBOLS":
+                os.environ.pop(k, None)
+        os.environ.update(saved)
+
+
 def test_run_once_captures_quotes_greeks_candles(store, monkeypatch):
     w = _worker(store, monkeypatch, _FakeSDK())
     r = w.run_once("POLL_ONCE", do_candles=True)

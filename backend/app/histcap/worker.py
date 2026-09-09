@@ -43,12 +43,30 @@ def _env(name, default):
     return v if v not in (None, "") else default
 
 
+# strikes each side of ATM to capture. Indices that can gap a long way between
+# sessions need a wider band so the next day's ATM band still overlaps the
+# prior one (keeps the derived change-in-OI populated near the money).
+_WIDE_CHAIN = {"FINNIFTY": 25, "BANKEX": 25}
+
+
+def _win_env(name: str, default: int) -> int:
+    try:
+        return max(1, min(40, int(_env(name, str(default)))))
+    except ValueError:
+        return default
+
+
 def _cfg() -> dict:
     syms = [s.strip().upper() for s in _env("CHANAKYA_HIST_SYMBOLS", "NIFTY,NATURALGAS,CRUDEOIL").split(",") if s.strip()]
-    try:
-        win = max(1, min(40, int(_env("CHANAKYA_HIST_CHAIN_WINDOW", "15"))))
-    except ValueError:
-        win = 15
+    win = _win_env("CHANAKYA_HIST_CHAIN_WINDOW", 15)
+    # per-symbol override: CHANAKYA_HIST_CHAIN_WINDOW_<SYM>, else the _WIDE_CHAIN
+    # default, else the global window.
+    win_by_sym: dict[str, int] = {}
+    for s in syms:
+        if os.environ.get(f"CHANAKYA_HIST_CHAIN_WINDOW_{s}") not in (None, ""):
+            win_by_sym[s] = _win_env(f"CHANAKYA_HIST_CHAIN_WINDOW_{s}", win)
+        elif s in _WIDE_CHAIN:
+            win_by_sym[s] = _WIDE_CHAIN[s]
     # PHASE 6 — capture every broker-supported intraday interval. 2m is NOT an
     # AngelOne getCandleData interval; if a 2m series is needed it must be
     # resampled from 1m at read time and tagged source=DERIVED (never captured).
@@ -56,7 +74,8 @@ def _cfg() -> dict:
            if t.strip() in _INTERVAL]
     return {
         "enabled": _env("CHANAKYA_HIST_ENABLED", "1") not in ("0", "false", "no"),
-        "symbols": syms, "chain_window": win, "tfs": tfs or ["1m", "5m", "15m"],
+        "symbols": syms, "chain_window": win, "chain_window_by_sym": win_by_sym,
+        "tfs": tfs or ["1m", "5m", "15m"],
         "quote_sec": float(_env("CHANAKYA_HIST_QUOTE_SEC", "20")),
         "candle_sec": float(_env("CHANAKYA_HIST_CANDLE_SEC", "90")),
         "heartbeat_sec": float(_env("CHANAKYA_HIST_HEARTBEAT_SEC", "300")),
@@ -88,6 +107,10 @@ class CaptureWorker:
             return _market_sdk(require_auth=False)
         except Exception:
             return None
+
+    def _win_for(self, sym: str) -> int:
+        """strikes each side of ATM for this symbol (per-symbol override -> global)."""
+        return self.cfg.get("chain_window_by_sym", {}).get(sym, self.cfg["chain_window"])
 
     # ---------------------------------------------------------------- lifecycle
     def start(self):
@@ -253,7 +276,7 @@ class CaptureWorker:
                 spot = uni.get("spot")
                 if strikes and spot is not None:
                     ai = min(range(len(strikes)), key=lambda i: abs(strikes[i] - float(spot)))
-                    w = self.cfg["chain_window"]
+                    w = self._win_for(sym)
                     for k in strikes[max(0, ai - w): ai + w + 1]:
                         for typ in ("CE", "PE"):
                             c = next((r for r in rows if str(r.get("symbol", "")).upper().endswith(typ)
@@ -370,8 +393,8 @@ class CaptureWorker:
             "enabled": self.cfg["enabled"], "running": bool(self._task and not self._task.done()),
             "is_leader": self.is_leader, "lease_owner": db.lease_owner(_LEASE_KEY),
             "started_at": self.started_at, "last_error": self.last_error,
-            "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "tfs",
-                                                "quote_sec", "candle_sec", "option_candles")},
+            "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "chain_window_by_sym",
+                                                "tfs", "quote_sec", "candle_sec", "option_candles")},
             "last_run": self.last_run, "store": self.store.summary(),
         }
 
