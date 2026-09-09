@@ -222,6 +222,44 @@ def _worker(store, monkeypatch, sdk):
     return w
 
 
+class _NoBrokerDOISDK(_FakeSDK):
+    """AngelOne reality: the FULL quote carries no change-in-OI field."""
+    def get_quotes_batch(self, by_ex, mode="FULL"):
+        out = super().get_quotes_batch(by_ex, mode)
+        for q in out.values():
+            q.pop("changeinOpenInterest", None)
+        return out
+
+
+def test_oi_change_is_materialised_from_prev_session_close(store, monkeypatch):
+    sdk = _NoBrokerDOISDK()
+    w = _worker(store, monkeypatch, sdk)
+    exp = sdk.expiry
+    # seed a prior session (strike 278 CE closed at OI 41000) + a token 'today' row
+    with store.transaction() as conn:
+        for sd, rts, oi in (("2000-01-01", "2000-01-01T10:00:00Z", 41000.0),
+                            ("2000-01-02", "2000-01-02T04:00:00Z", 999.0)):
+            conn.execute(
+                "INSERT INTO quote_snapshots(received_ts,snap_key,instrument_key,symbol,kind,"
+                "exchange,token,expiry,strike,option_type,session_date_ist,ltp,oi,source) "
+                "VALUES(?,?,?,?, 'OPTION','MCX','T278CE',?,278.0,'CE',?,278.3,?,'seed')",
+                (rts, rts[:19], "MCX:T278CE", "NATURALGAS", exp, sd, oi))
+    # the FakeSDK's exchangeTimestamp is 2026-09-02 -> new rows are a later session
+    monkeypatch.setattr(WK.time, "time", lambda: 0.0)          # freeze the 30-min cache window
+    r = w.run_once("POLL_ONCE", do_candles=False)
+    assert r["quotes"] >= 10
+    q = next(x for x in store.get_quotes("NATURALGAS", kind="OPTION")
+             if x["strike"] == 278.0 and x["option_type"] == "CE"
+             and x["session_date_ist"] >= "2026-01-01")
+    assert q["oi"] == 50000.0
+    assert q["oi_change"] == pytest.approx(50000.0 - 41000.0)   # current - prev-session close
+    assert "doi_derived" in (q["flags"] or "")
+    # a strike with no prior-session sample -> oi_change stays NULL, no fake 0
+    q2 = next(x for x in store.get_quotes("NATURALGAS", kind="OPTION")
+              if x["strike"] == 285.0 and x["session_date_ist"] >= "2026-01-01")
+    assert q2["oi_change"] is None
+
+
 def test_chain_window_is_per_symbol_with_fallback():
     from app.histcap.worker import _cfg, CaptureWorker as _CW
     import os

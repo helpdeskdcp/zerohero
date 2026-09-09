@@ -119,6 +119,8 @@ class HistStore:
         for r in rows:
             flags = quote_check(r.get("ltp"), r.get("bid"), r.get("ask"),
                                 r.get("oi"), r.get("oi_change"))
+            if r.get("oi_change_src") == "derived":
+                flags.append("doi_derived")         # oi_change = current_oi - prev-session close
             if flags:
                 integ["flagged"] = integ.get("flagged", 0) + 1
             r = {**r, "depth_json": json.dumps(r.get("depth_json")) if r.get("depth_json") else None,

@@ -94,6 +94,7 @@ class CaptureWorker:
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._ref_cache: dict = {}      # sym -> (expires_epoch, refs)
+        self._oi_base_cache: dict = {}  # sym -> (expires_epoch, {(expiry,strike,ot): prev-session oi})
         self.last_run: dict | None = None
         self.last_error: str | None = None
         self.started_at: str | None = None
@@ -297,6 +298,39 @@ class CaptureWorker:
         self._ref_cache[sym] = (time.time() + 3600, refs)
         return refs
 
+    def _oi_baseline_for(self, conn, sym: str) -> dict:
+        """{(expiry, strike, option_type): oi} = each contract's last OI from any
+        session strictly before the current one (oi > 0). AngelOne's quote feed
+        sends no change-in-OI, so we materialise the standard 'Chng in OI' as
+        current_oi - this baseline at write time. Cached ~30 min (a prior-session
+        close does not move intraday)."""
+        hit = self._oi_base_cache.get(sym)
+        if hit and time.time() < hit[0]:
+            return hit[1]
+        out: dict = {}
+        try:
+            today = conn.execute(
+                "SELECT MAX(session_date_ist) FROM quote_snapshots "
+                "WHERE symbol=? AND kind IN ('OPTION','FUTURE')", (sym,)).fetchone()
+            today = today[0] if today else None
+            if today:
+                for r in conn.execute(
+                    "SELECT q.expiry, q.strike, q.option_type, q.oi FROM quote_snapshots q JOIN ("
+                    "  SELECT COALESCE(expiry,'') e, COALESCE(strike,-1) s, COALESCE(option_type,'') o, "
+                    "         MAX(received_ts) mts FROM quote_snapshots "
+                    "  WHERE symbol=? AND kind IN ('OPTION','FUTURE') AND session_date_ist<? "
+                    "    AND oi IS NOT NULL AND oi>0 "
+                    "  GROUP BY COALESCE(expiry,''), COALESCE(strike,-1), COALESCE(option_type,'')"
+                    ") m ON COALESCE(q.expiry,'')=m.e AND COALESCE(q.strike,-1)=m.s "
+                    "     AND COALESCE(q.option_type,'')=m.o AND q.received_ts=m.mts "
+                    "WHERE q.symbol=? AND q.kind IN ('OPTION','FUTURE')",
+                    (sym, today, sym)):
+                    out[(r[0] or "", r[1], r[2])] = r[3]
+        except Exception:
+            out = {}
+        self._oi_base_cache[sym] = (time.time() + 1800, out)
+        return out
+
     # ---------------------------------------------------------------- captures
     def _capture_quotes(self, conn, sdk, sym, refs, recv, rid, counts, integ, errors):
         by_ex: dict[str, list] = {}
@@ -327,6 +361,20 @@ class CaptureWorker:
             nq = N.norm_quote(q, m, recv, spot_ltp=spot_ltp)
             nq["raw_id"] = raw_id
             rows.append(nq)
+
+        # materialise change-in-OI (broker sends none): current_oi - prev-session
+        # close OI per contract. Tagged doi_derived; never overwrites a real value.
+        base = self._oi_baseline_for(conn, sym)
+        if base:
+            for nq in rows:
+                oi = nq.get("oi")
+                if (nq.get("kind") in ("OPTION", "FUTURE") and nq.get("oi_change") is None
+                        and isinstance(oi, (int, float)) and oi > 0):
+                    b = base.get((nq.get("expiry") or "", nq.get("strike"), nq.get("option_type")))
+                    if b is not None:
+                        nq["oi_change"] = round(oi - b, 0)
+                        nq["oi_change_src"] = "derived"
+
         counts["quotes"] += self.store.write_quotes(conn, rows, rid, integ)
 
     def _capture_greeks(self, conn, sdk, sym, refs, recv, rid, counts, integ, errors):
