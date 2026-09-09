@@ -58,6 +58,8 @@ def signals(frame: list[dict], cfg: dict) -> list[dict]:
             direction = "SHORT"
         if direction is None:
             continue
+        if cfg.get("side_filter") and direction != cfg["side_filter"]:
+            continue
 
         if direction == prev_dir and (i - last_fire_i) < cfg["cooldown_bars"]:
             continue

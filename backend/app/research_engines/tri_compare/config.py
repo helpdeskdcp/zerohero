@@ -32,6 +32,7 @@ DEFAULT_CONFIG: dict = {
     "risk_per_trade_pts": 20.0,       # vol-normalized sizing anchor (for points<->R display only)
     "one_position_at_a_time": True,
     "cooldown_bars": 3,              # after a signal, ignore same-direction re-fires for N bars
+    "side_filter": None,            # None = both ; "LONG" / "SHORT" = that side only (hypothesis tests)
 
     # chronological split (by session block) + walk-forward
     "train_frac": 0.55,

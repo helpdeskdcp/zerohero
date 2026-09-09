@@ -49,6 +49,8 @@ def signals(frame: list[dict], bars: list[dict], cfg: dict, *,
         direction = _structure_signal(r, e)
         if direction is None:
             continue
+        if cfg.get("side_filter") and direction != cfg["side_filter"]:
+            continue
 
         # LOCATION
         d = r.get("sr_dist_atr")

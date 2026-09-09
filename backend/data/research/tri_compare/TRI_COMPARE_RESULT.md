@@ -122,3 +122,52 @@ not the 15m long+short form.
 
 _Reproduce: `python -m app.research_engines.tri_compare.compare --tf 15
 --start 2016-01-01 --end 2025-12-31 --out data/research/tri_compare`._
+
+---
+
+## ADDENDUM — E2 Structure retest: 1h, SHORT-only, wider window (2010–2025)
+
+Hypothesis from the 15m run: *"E2's SHORT side had PF 1.17 — retest it on 1h,
+SHORT-only, over a wider window."* 1h data: 4098 sessions, 2010-01-04 …
+2025-12-24 (16 years vs 10). Entry-wait scaled to the 1h bar
+(`entry_max_wait_bars` 16→5, `entry_recovery_window` 4→2, no-new-entry 14:15).
+Rules frozen; OOS scored once.
+
+### Result: **hypothesis REJECTED — NO-GO**
+
+| slice | n | win% | expR | PF | net R | maxDD R | SL% | max consec losses |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| ALL | 81 | 37.0 | **−0.257** | 0.59 | −20.8 | −21.1 | 60 | 13 |
+| TRAIN | 43 | 32.6 | −0.425 | 0.37 | −18.3 | −18.6 | 67 | 13 |
+| VAL | 11 | 45.5 | +0.275 | 1.28 | +3.0 | −2.0 | 36 | 2 |
+| OOS | 27 | 40.7 | **−0.207** | 0.56 | −5.6 | −6.1 | 59 | 4 |
+
+- **Only 81 trades in 16 years** (~5/yr) — far too sparse; OOS n=27 < the 40 floor.
+- Fails every gate: OOS expR ≤ 0, PF 0.56, **0 positive regimes, 0 positive
+  calendar years**, VAL (+0.27, n=11) is a lucky pocket between two badly
+  negative TRAIN and OOS blocks.
+- Walk-forward (6 folds, 11 trades each): +0.07 / **−0.72** / **−0.60** / +0.28
+  / +0.05 / −0.22 → no stability.
+- ANN: INSUFFICIENT (43 train trades).
+
+**Conclusion:** the 15m "SHORT PF 1.17" was a **60-trade small-sample artifact**.
+It does not survive (a) a slower, cleaner timeframe, (b) a 16-year window with
+more regimes, or (c) isolating the SHORT side. Removing the LONG side made E2
+*worse* (−0.26R vs the combined −0.06R at 15m) — the LONG side was diluting
+noise, not hiding a SHORT edge.
+
+### Incidental finding (both-sides, 1h, 2010–2025)
+
+E1 CLAUDE TREND on 1h over the wide window: **OOS expR +0.012R, PF 1.05** —
+the least-bad trend result in the whole study, i.e. essentially break-even.
+Consistent with "the trend edge lives at slower horizons", but break-even is
+not an edge, and ANN hurts it (Δ −0.041R). Still NO-GO. A genuine test of the
+trend hypothesis needs **daily bars + an overnight-capable (swing) harness** —
+the intraday session/exit machinery here cannot represent that.
+
+### Net
+
+No variant of any of the three engines clears GO. The structure engine's
+apparent SHORT edge was noise. Pursuing E2 further is not warranted; a real
+next step for the trend hypothesis is a separate **daily swing harness**, not
+more intraday parameter variants.
