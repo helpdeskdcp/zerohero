@@ -158,6 +158,7 @@ def test_angelone_chain_assembles_spine_plus_overlays(hist_db):
     assert c.leg(23500, "PE").oi_change == pytest.approx(111000.0 - 550.0)
     assert c.capability["oi_change_source"] == "derived_prev_session_close"
     assert c.capability["oi_change_baseline_date"] == "2026-09-08"
+    assert c.capability["oi_change_baseline_dates"] == ["2026-09-08"]
     assert c.capability["has_oi_change"] is True
     # a wing strike with no prior-session sample -> no Δ, not a fabricated 0
     assert wing.oi_change is None

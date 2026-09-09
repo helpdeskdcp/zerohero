@@ -245,7 +245,7 @@ const P = {
         { strike: 23500, ce: { oi: 8.0e6, oi_change: 4e5, volume: 2e6, iv: 0.109, delta: 0.45, ltp: 111.0 },
           pe: { oi: 8.3e6, oi_change: 1e5, volume: 2e6, iv: 0.094, delta: -0.55, ltp: 135.2 } },
       ],
-      capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true },
+      capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true, oi_change_source: "derived_prev_session_close", oi_change_baseline_date: "2026-09-08", oi_change_coverage: 0.81 },
     },
     analytics: {
       pcr: { status: "ok", pcr_oi: 0.76, pcr_vol: 1.06 },
@@ -272,7 +272,7 @@ const P = {
       ann_p_win: null, blocking: [], watch_reasons: ["G_DQ: data quality WARN", "G_DIRECTION: structure-only LONG"],
       gates: [], notes: ["research-only -- not wired to any order path"],
     },
-    capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true },
+    capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true, oi_change_source: "derived_prev_session_close", oi_change_baseline_date: "2026-09-08", oi_change_coverage: 0.81 },
   }),
 };
 function matchPayload(url) {
@@ -444,6 +444,12 @@ try {
   const ocTbl = elFor("#ocTable tbody").innerHTML;
   assert.ok(/23450/.test(ocTbl) && /is-atm/.test(ocTbl), "option-chain table renders strikes with the ATM row marked: " + ocTbl.slice(0, 200));
   assert.ok(/oc-oibar-ce/.test(ocTbl) && /oc-oibar-pe/.test(ocTbl), "OI-profile split bar rendered per strike");
+  // change-in-OI (Δ) cells render numeric values with a pos/neg tint, not "—"
+  assert.ok(/<span class="pos">1\.2L<\/span>/.test(ocTbl) && /<span class="neg">-30k<\/span>/.test(ocTbl),
+    "option-chain Δ (change-in-OI) cells render signed values: " + ocTbl.slice(0, 300));
+  const ocMeta = elFor("#ocMeta").textContent;
+  assert.ok(/Δ vs 2026-09-08 close \(81% of strikes\)/.test(ocMeta),
+    "meta line states the Δ baseline + coverage: " + ocMeta);
   const ocStrip = elFor("#ocStrip").innerHTML;
   assert.ok(/PCR \(OI\)/.test(ocStrip) && /Max Pain/.test(ocStrip) && /GEX/.test(ocStrip) && /DQ/.test(ocStrip),
     "option-chain header strip shows PCR / Max Pain / GEX / DQ: " + ocStrip.slice(0, 200));

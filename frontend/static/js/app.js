@@ -2475,6 +2475,9 @@
       cap.cadence_sec ? `cadence ~${esc(cap.cadence_sec)}s` : null,
       j.ts ? `as of ${timeStr(j.ts)}` : null,
       cap.oi_stale ? "OI STALE" : null,
+      cap.oi_change_source
+        ? `Δ vs ${esc(cap.oi_change_baseline_date || "prev")} close (${Math.round((cap.oi_change_coverage || 0) * 100)}% of strikes)`
+        : "Δ n/a",
     ].filter(Boolean);
     $("#ocMeta").textContent = bits.join("  ·  ");
   }

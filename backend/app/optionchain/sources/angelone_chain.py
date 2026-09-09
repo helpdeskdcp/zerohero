@@ -204,37 +204,35 @@ def _oi_overlay(con, u: str, exp: str, at_ts: str | None) -> tuple[dict, dict]:
     return oi, meta
 
 
-def _prev_session_oi(con, u: str, exp: str) -> tuple[dict, str | None]:
-    """{(strike, CE|PE): oi} from the LAST snapshot of the most recent session
+def _prev_session_oi(con, u: str, exp: str) -> tuple[dict, list]:
+    """{(strike, CE|PE): oi} = each contract's LAST OI snapshot from any session
     strictly before the current one. AngelOne's quote feed carries no
-    change-in-OI field, so the standard 'Chng in OI' column is derived as
-    current_oi - this baseline."""
+    change-in-OI field, so the standard 'Chng in OI' is derived as current_oi -
+    this baseline. Per-strike (not one fixed session) because the ATM-follower
+    capture on a thin index barely overlaps today's ATM band from one day ago --
+    a strike that is ATM today may only have a prior sample from further back.
+    Returns the baseline map + the sorted list of session dates it drew from."""
     today = con.execute(
         "SELECT MAX(session_date_ist) FROM quote_snapshots "
         "WHERE symbol=? AND kind='OPTION' AND expiry=?", (u, exp)).fetchone()
     today = today[0] if today else None
     if not today:
-        return {}, None
-    prev = con.execute(
-        "SELECT MAX(session_date_ist) FROM quote_snapshots "
-        "WHERE symbol=? AND kind='OPTION' AND expiry=? AND session_date_ist<? "
-        "AND oi IS NOT NULL", (u, exp, today)).fetchone()
-    prev = prev[0] if prev and prev[0] else None
-    if not prev:
-        return {}, None
+        return {}, []
     out: dict[tuple, float] = {}
+    dates: set = set()
     for r in con.execute(
-        "SELECT q.strike, q.option_type, q.oi FROM quote_snapshots q JOIN ("
+        "SELECT q.strike, q.option_type, q.oi, q.session_date_ist FROM quote_snapshots q JOIN ("
         "  SELECT strike, option_type, MAX(received_ts) mts FROM quote_snapshots "
-        "  WHERE symbol=? AND kind='OPTION' AND expiry=? AND session_date_ist=? "
+        "  WHERE symbol=? AND kind='OPTION' AND expiry=? AND session_date_ist<? "
         "    AND oi IS NOT NULL GROUP BY strike, option_type"
         ") m ON q.strike=m.strike AND q.option_type=m.option_type AND q.received_ts=m.mts "
         "WHERE q.symbol=? AND q.kind='OPTION' AND q.expiry=?",
-        (u, exp, prev, u, exp)):
+        (u, exp, today, u, exp)):
         k = _num(r["strike"])
         if k is not None and _num(r["oi"]) is not None:
             out[(k, str(r["option_type"]).upper())] = _num(r["oi"])
-    return out, prev
+            dates.add(r["session_date_ist"])
+    return out, sorted(d for d in dates if d)
 
 
 def _cadence_sec(con, u: str, exp: str) -> float | None:
@@ -309,9 +307,10 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
             a, b = _epoch(oi_meta["as_of_ts"]), _epoch(ref_ts)
             oi_stale = bool(a and b and (b - a) > _OI_STALE_SEC)
 
-        # ---- change-in-OI: broker sends none, so derive current_oi - the last
-        # OI of the previous session (the standard 'Chng in OI' column) ----
-        prev_oi, prev_date = _prev_session_oi(con, u, exp)
+        # ---- change-in-OI: broker sends none, so derive current_oi - each
+        # contract's last prior-session OI (the standard 'Chng in OI' column) ----
+        prev_oi, prev_dates = _prev_session_oi(con, u, exp)
+        prev_date = prev_dates[-1] if prev_dates else None
         n_doi = 0
         for k, row in rows_by_k.items():
             for side, leg in (("CE", row.ce), ("PE", row.pe)):
@@ -362,6 +361,7 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 "oi_change_coverage": round(n_doi / max(1, n_oi), 3) if n_oi else 0.0,
                 "oi_change_source": "derived_prev_session_close" if n_doi else None,
                 "oi_change_baseline_date": prev_date if n_doi else None,
+                "oi_change_baseline_dates": prev_dates if n_doi else [],
                 "has_ltp": n_ltp > 0,
                 "ltp_coverage": round(n_ltp / max(1, len(legs)), 3),
                 "ltp_band_strikes": len({k for (k, _s) in q_ov}),
@@ -380,8 +380,9 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 f"wing-oi overlay: +{n_oi_filled} legs from greek_exposure "
                 f"@ {oi_meta.get('as_of_ts') or 'none'}"
                 + (" (STALE)" if oi_stale else ""),
-                (f"chg-in-oi: derived on {n_doi} legs vs the {prev_date} close "
-                 f"(broker sends no chg-in-OI field)" if n_doi
+                (f"chg-in-oi: derived on {n_doi} legs vs each contract's last "
+                 f"prior-session OI (sessions {prev_dates[0]}..{prev_dates[-1]}; "
+                 f"broker sends no chg-in-OI field)" if n_doi
                  else "chg-in-oi: no prior-session OI baseline -> Δ unavailable"),
                 f"spot {spot} ({spot_src})",
             ],
