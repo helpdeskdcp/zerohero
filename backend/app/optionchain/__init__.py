@@ -23,9 +23,17 @@ names) were used; no code was copied.
 
 SAFETY: no broker order path, no `live_trading`, no API keys (Upstox + NSE are
 keyless; Angel uses the existing capture DB). Imports nothing from
-app.autoscalp / execution / main. This layer only PRODUCES a chain object --
-analytics / structure / ANN / qualification / dashboard are separate later
-layers and are NOT built here.
+app.autoscalp / execution / main. Layers 1-3 + 5 are built:
+  1 data layer (chain + sources + resolve + quality)
+  2 analytics  (analytics.py: pcr / max_pain / iv_skew / oi_walls / gex)
+  3 structure  (structure.py: OptionStructureState)
+  5 qualify    (qualify.py: QUALIFIED | WATCH | NO_TRADE, independent gates)
+Layer 4 (ANN) is reused from tri_compare/hcs and passed in as `ann_p_win`;
+Layer 6 (dashboard route + view) is separate. Every output is research-only --
+nothing here touches an order path or `live_trading`.
 """
+from . import analytics, structure, qualify                   # noqa: F401  (submodules)
 from .chain import OptionChain, StrikeRow, OptionLeg          # noqa: F401
 from .resolve import get_chain                                # noqa: F401
+from .structure import OptionStructureState                   # noqa: F401
+from .qualify import Qualification, qualify_from_chain        # noqa: F401
