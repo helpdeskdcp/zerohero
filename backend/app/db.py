@@ -10,8 +10,29 @@ from contextlib import contextmanager
 
 _log = logging.getLogger(__name__)
 
-DB_PATH = os.environ.get("CHANAKYA_DB_PATH", os.path.join(os.path.dirname(__file__), "..", "data", "chanakya.db"))
-DB_PATH = os.path.abspath(DB_PATH)
+# The one real, on-disk production database. Referenced by guards/tests that
+# must prove it is never touched -- do NOT route reads/writes through this.
+LIVE_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "chanakya.db"))
+
+
+def _resolve_db_path() -> str:
+    """Effective SQLite path. Tests/CI set TEST_DATABASE_URL (preferred) or
+    CHANAKYA_DB_PATH to a throwaway file; production sets neither and gets
+    LIVE_DB_PATH. Accepts a bare path, a sqlite:///abs/path URL, or file:...
+    """
+    raw = (os.environ.get("TEST_DATABASE_URL")
+           or os.environ.get("CHANAKYA_DB_PATH")
+           or LIVE_DB_PATH)
+    if raw.startswith("sqlite:///"):
+        raw = raw[len("sqlite:///"):]
+    elif raw.startswith("sqlite://"):
+        raw = raw[len("sqlite://"):]
+    elif raw.startswith("file:"):
+        raw = raw[len("file:"):].split("?", 1)[0]
+    return os.path.abspath(raw)
+
+
+DB_PATH = _resolve_db_path()
 
 _lock = threading.Lock()
 

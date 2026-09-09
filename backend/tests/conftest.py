@@ -10,12 +10,49 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # HARD GUARD: never let a test touch the live data/chanakya.db. Point the DB at
-# a session temp file BEFORE app.db is first imported. Tests that need a clean
-# schema still use the `fresh_db` fixture (which swaps in its own tmp file);
-# this only ensures a stray main.autoscalp.set_config / api_* call in a test
-# without fresh_db writes to a throwaway, not to the running service's DB.
+# a session temp file BEFORE app.db is first imported, via BOTH env vars the
+# resolver honours (TEST_DATABASE_URL wins). Tests that need a clean schema use
+# the `fresh_db` fixture (its own tmp file); this ensures a stray
+# main.autoscalp.set_config / api_* call in a test without fresh_db writes to a
+# throwaway, never to the running service's DB.
 _SESSION_DB = os.path.join(tempfile.mkdtemp(prefix="chanakya-test-"), "session.db")
+os.environ["TEST_DATABASE_URL"] = _SESSION_DB
 os.environ["CHANAKYA_DB_PATH"] = _SESSION_DB
+
+# The real production DB. A hash-before/after check is NOT reliable here: on a
+# dev box the live oi-dashboard.service holds this file open and writes to it
+# every tick, so its bytes change constantly with no test involved. Instead we
+# forbid any test from *opening* it for writing, via an audit hook.
+_LIVE_DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "chanakya.db"))
+_LIVE_DB_OPENED_RW: list = []
+
+
+def _norm_sqlite_target(arg) -> str:
+    s = str(arg)
+    if s.startswith("file:"):
+        s = s[5:]
+    s = s.split("?", 1)[0]
+    return os.path.abspath(s)
+
+
+def _sqlite_audit(event, args):
+    # args[0] is the database path/URI for sqlite3.connect
+    if event == "sqlite3.connect" and args:
+        uri = str(args[0])
+        if _norm_sqlite_target(args[0]) == _LIVE_DB and "mode=ro" not in uri and "immutable=1" not in uri:
+            _LIVE_DB_OPENED_RW.append(uri)
+
+
+sys.addaudithook(_sqlite_audit)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _live_db_never_opened_rw():
+    """Session guard: no test may open the live chanakya.db read-write."""
+    start = len(_LIVE_DB_OPENED_RW)
+    yield
+    new = _LIVE_DB_OPENED_RW[start:]
+    assert not new, f"a test opened the LIVE db read-write: {new}"
 
 # HARD GUARD #2: a test must never hit the real Telegram. run_pipeline /
 # run_scalp_pipeline call telegram.notify_signal for real. Strip the creds AND
@@ -40,6 +77,7 @@ def _no_real_telegram(monkeypatch):
 def fresh_db(monkeypatch):
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
+    monkeypatch.setenv("TEST_DATABASE_URL", path)
     monkeypatch.setenv("CHANAKYA_DB_PATH", path)
     # re-import db so module-level DB_PATH picks up the env
     import importlib

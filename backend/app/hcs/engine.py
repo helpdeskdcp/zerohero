@@ -27,8 +27,10 @@ from . import filters as _flt
 from . import memory as _mem
 from . import score as _sc
 
-_DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                   "data", "chanakya.db")
+# DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
+# read the live data/chanakya.db (reads here are mode=ro regardless).
+from app.db import _resolve_db_path as _resolve_db_path  # noqa: E402
+_DB = _resolve_db_path()
 
 A_PLUS = {
     "hcs_min": 68.0,

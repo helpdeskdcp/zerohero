@@ -163,7 +163,7 @@ def runtime_diag(scalp_runner=None, autoscalp=None, histcap_worker=None) -> dict
     if not my_owner:
         my_owner = f"{os.uname().nodename}:{os.getpid()}"
 
-    trade_db = getattr(getattr(db, "DB_PATH", None), "__str__", lambda: None)() or \
+    trade_db = getattr(db, "DB_PATH", None) or getattr(db, "LIVE_DB_PATH", None) or \
         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "chanakya.db")
 
     leader = _leader_state(my_owner)
