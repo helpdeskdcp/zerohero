@@ -208,14 +208,45 @@ def resolve_nse_option(underlying: str, expiry: str = "AUTO", strike="ATM", opti
             "current_expiry": valid[0], "next_expiry": valid[1] if len(valid) > 1 else None, "latest_expiry": valid[-1]}
 
 
+def _expiry_date(x):
+    """Parse an Angel expiry string ('25SEP2026', '25-SEP-2026', '2026-09-25')
+    to a date, else None."""
+    for f in ("%d%b%Y", "%d-%b-%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(str(x).upper(), f).date()
+        except ValueError:
+            pass
+    return None
+
+
 def resolve_mcx_future(symbol: str, expiry: str = "AUTO") -> dict:
-    u = canonical(symbol); rows = [_master_meta(r) for r in master_rows()]
-    rows = [r for r in rows if r["exchange"] == "MCX" and (r["underlying"] == u or u in str(r["symbol"]).upper()) and r["symboltoken"]]
-    valid = sorted({r["expiry"] for r in rows if r["expiry"]})
-    if not valid: return {"status": "DATA_UNAVAILABLE", "reason": "no MCX contracts in instrument master"}
-    selected = valid[0] if str(expiry).upper() in ("AUTO", "CURRENT") else valid[1] if str(expiry).upper() == "NEXT" and len(valid) > 1 else valid[-1]
-    row = next((r for r in rows if r["expiry"] == selected), None)
-    return {**row, "status": "OK", "available_expiries": valid, "expiry_selection_mode": str(expiry).upper()} if row else {"status": "CONTRACT_INVALID"}
+    """Nearest non-expired MCX commodity FUTURE (FUTCOM) for `symbol`.
+
+    Must NOT lexically sort expiry strings ('20NOV2026' < '25SEP2026') and must
+    NOT match option (OPTFUT) rows -- both bugs picked a dead far/option token
+    (e.g. NATURALGAS -> 583870, an option, instead of 568245 / 25SEP2026).
+    """
+    u = canonical(symbol)
+    rows = [_master_meta(r) for r in master_rows()]
+    rows = [r for r in rows
+            if r["exchange"] == "MCX"
+            and str(r.get("instrumenttype") or "").upper() == "FUTCOM"
+            and r["underlying"] == u
+            and r["symboltoken"]]
+    if not rows:
+        return {"status": "DATA_UNAVAILABLE", "reason": "no MCX FUTCOM in instrument master"}
+    now = datetime.now(_IST).date()
+    dated = sorted(((_expiry_date(r["expiry"]), r) for r in rows
+                    if _expiry_date(r["expiry"]) and _expiry_date(r["expiry"]) >= now),
+                   key=lambda t: t[0])
+    if not dated:
+        return {"status": "CONTRACT_INVALID", "reason": "no non-expired MCX future expiry"}
+    order = [r for _, r in dated]
+    mode = str(expiry or "AUTO").upper()
+    row = order[1] if mode == "NEXT" and len(order) > 1 else order[-1] if mode == "LATEST" else order[0]
+    return {**row, "status": "OK", "exchange": "MCX",
+            "available_expiries": [d.isoformat() for d, _ in dated],
+            "expiry_selection_mode": mode}
 
 
 def resolve_index_future(symbol: str, expiry: str = "AUTO") -> dict:
