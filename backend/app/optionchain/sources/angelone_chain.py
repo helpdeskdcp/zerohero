@@ -7,9 +7,12 @@ Reads `market_history.db` READ-ONLY. Three captured tables, three roles:
                        theta / vega / iv / iv_pct / trade_volume.  No price, no OI.
                        This is the spine of the assembled chain.
   * `quote_snapshots` (kind='OPTION')           -> ltp / bid / ask / bid_qty /
-                       ask_qty / oi / oi_change / volume.  The live capture only
-                       follows a drifting ~ATM band (a couple of legs per poll),
-                       so this overlays the strikes NEAR the money, fresh.
+                       ask_qty / oi / volume.  The live capture only follows a
+                       drifting ~ATM band (a couple of legs per poll), so this
+                       overlays the strikes NEAR the money, fresh.  `oi_change`
+                       is ALWAYS NULL here (AngelOne's quote feed has no
+                       change-in-OI field) -> we derive it as current_oi minus
+                       the previous session's closing OI per contract.
   * `greek_exposure.per_strike_json`            -> per-strike CE/PE OI across the
                        WHOLE chain, plus pcr_oi / ce_oi_total / pe_oi_total.
                        Emitted by the greek engine and can lag -- used to fill OI
@@ -201,6 +204,39 @@ def _oi_overlay(con, u: str, exp: str, at_ts: str | None) -> tuple[dict, dict]:
     return oi, meta
 
 
+def _prev_session_oi(con, u: str, exp: str) -> tuple[dict, str | None]:
+    """{(strike, CE|PE): oi} from the LAST snapshot of the most recent session
+    strictly before the current one. AngelOne's quote feed carries no
+    change-in-OI field, so the standard 'Chng in OI' column is derived as
+    current_oi - this baseline."""
+    today = con.execute(
+        "SELECT MAX(session_date_ist) FROM quote_snapshots "
+        "WHERE symbol=? AND kind='OPTION' AND expiry=?", (u, exp)).fetchone()
+    today = today[0] if today else None
+    if not today:
+        return {}, None
+    prev = con.execute(
+        "SELECT MAX(session_date_ist) FROM quote_snapshots "
+        "WHERE symbol=? AND kind='OPTION' AND expiry=? AND session_date_ist<? "
+        "AND oi IS NOT NULL", (u, exp, today)).fetchone()
+    prev = prev[0] if prev and prev[0] else None
+    if not prev:
+        return {}, None
+    out: dict[tuple, float] = {}
+    for r in con.execute(
+        "SELECT q.strike, q.option_type, q.oi FROM quote_snapshots q JOIN ("
+        "  SELECT strike, option_type, MAX(received_ts) mts FROM quote_snapshots "
+        "  WHERE symbol=? AND kind='OPTION' AND expiry=? AND session_date_ist=? "
+        "    AND oi IS NOT NULL GROUP BY strike, option_type"
+        ") m ON q.strike=m.strike AND q.option_type=m.option_type AND q.received_ts=m.mts "
+        "WHERE q.symbol=? AND q.kind='OPTION' AND q.expiry=?",
+        (u, exp, prev, u, exp)):
+        k = _num(r["strike"])
+        if k is not None and _num(r["oi"]) is not None:
+            out[(k, str(r["option_type"]).upper())] = _num(r["oi"])
+    return out, prev
+
+
 def _cadence_sec(con, u: str, exp: str) -> float | None:
     ts = [r[0] for r in con.execute(
         "SELECT DISTINCT snap_key FROM option_greeks "
@@ -273,6 +309,19 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
             a, b = _epoch(oi_meta["as_of_ts"]), _epoch(ref_ts)
             oi_stale = bool(a and b and (b - a) > _OI_STALE_SEC)
 
+        # ---- change-in-OI: broker sends none, so derive current_oi - the last
+        # OI of the previous session (the standard 'Chng in OI' column) ----
+        prev_oi, prev_date = _prev_session_oi(con, u, exp)
+        n_doi = 0
+        for k, row in rows_by_k.items():
+            for side, leg in (("CE", row.ce), ("PE", row.pe)):
+                if leg is None or leg.oi is None or leg.oi_change is not None:
+                    continue
+                base = prev_oi.get((k, side))
+                if base is not None:
+                    leg.oi_change = round(leg.oi - base, 0)
+                    n_doi += 1
+
         if not rows_by_k:
             return None
 
@@ -310,6 +359,9 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 "has_oi": n_oi > 0,
                 "oi_coverage": round(n_oi / max(1, len(legs)), 3),
                 "has_oi_change": any(l.oi_change is not None for l in legs),
+                "oi_change_coverage": round(n_doi / max(1, n_oi), 3) if n_oi else 0.0,
+                "oi_change_source": "derived_prev_session_close" if n_doi else None,
+                "oi_change_baseline_date": prev_date if n_doi else None,
                 "has_ltp": n_ltp > 0,
                 "ltp_coverage": round(n_ltp / max(1, len(legs)), 3),
                 "ltp_band_strikes": len({k for (k, _s) in q_ov}),
@@ -328,6 +380,9 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 f"wing-oi overlay: +{n_oi_filled} legs from greek_exposure "
                 f"@ {oi_meta.get('as_of_ts') or 'none'}"
                 + (" (STALE)" if oi_stale else ""),
+                (f"chg-in-oi: derived on {n_doi} legs vs the {prev_date} close "
+                 f"(broker sends no chg-in-OI field)" if n_doi
+                 else "chg-in-oi: no prior-session OI baseline -> Δ unavailable"),
                 f"spot {spot} ({spot_src})",
             ],
         )

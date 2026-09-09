@@ -96,16 +96,26 @@ def hist_db(tmp_path):
                     "trade_volume) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (rts, snap, "NIFTY", exp, float(k), ot, "2026-09-09",
                      dl, 0.001, -3.1, 4.2, 0.12, 12.0, 5000.0))
-    # ---- near-money live quotes: only 23400..23600, latest at 10:00:39 ----
+    # ---- near-money live quotes: only 23400..23600, latest at 10:00:39.
+    # oi_change left NULL on purpose -- AngelOne's quote feed never sends it. ----
     for i, rts in enumerate(("2026-09-09T09:59:00Z", "2026-09-09T10:00:39Z")):
         for k in range(23400, 23601, 50):
             for ot in ("CE", "PE"):
                 con.execute(
                     "INSERT INTO quote_snapshots(symbol,kind,expiry,strike,option_type,"
-                    "ltp,oi,oi_change,volume,bid,ask,bid_qty,ask_qty,session_date_ist,"
-                    "received_ts) VALUES('NIFTY','OPTION',?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (exp, float(k), ot, 100.0 + i, 111000.0, 500.0, 9000.0,
+                    "ltp,oi,volume,bid,ask,bid_qty,ask_qty,session_date_ist,"
+                    "received_ts) VALUES('NIFTY','OPTION',?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (exp, float(k), ot, 100.0 + i, 111000.0, 9000.0,
                      99.0 + i, 101.0 + i, 10.0, 12.0, "2026-09-09", rts))
+    # ---- previous-session close OI (for the derived change-in-OI) ----
+    for k in range(23400, 23601, 50):
+        for ot, prev_oi in (("CE", 400.0), ("PE", 550.0)):
+            con.execute(
+                "INSERT INTO quote_snapshots(symbol,kind,expiry,strike,option_type,"
+                "ltp,oi,volume,session_date_ist,received_ts) "
+                "VALUES('NIFTY','OPTION',?,?,?,?,?,?,?,?)",
+                (exp, float(k), ot, 90.0, prev_oi, 8000.0, "2026-09-08",
+                 "2026-09-08T09:59:00Z"))
     # ---- index spot ----
     for rts, ltp in (("2026-09-09T09:59:30Z", 23470.0), ("2026-09-09T10:00:38Z", 23485.0)):
         con.execute("INSERT INTO quote_snapshots(symbol,kind,ltp,session_date_ist,"
@@ -142,6 +152,15 @@ def test_angelone_chain_assembles_spine_plus_overlays(hist_db):
     assert wing.oi == pytest.approx(700000.0)
     assert c.capability["oi_stale"] is True
     assert 0.0 < c.capability["ltp_coverage"] < 1.0
+
+    # change-in-OI is derived (broker sends none): current_oi - prev-session close
+    assert atm_ce.oi_change == pytest.approx(111000.0 - 400.0)      # CE prev close 400
+    assert c.leg(23500, "PE").oi_change == pytest.approx(111000.0 - 550.0)
+    assert c.capability["oi_change_source"] == "derived_prev_session_close"
+    assert c.capability["oi_change_baseline_date"] == "2026-09-08"
+    assert c.capability["has_oi_change"] is True
+    # a wing strike with no prior-session sample -> no Δ, not a fabricated 0
+    assert wing.oi_change is None
 
 
 def test_angelone_chain_none_when_db_missing(tmp_path):
