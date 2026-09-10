@@ -199,7 +199,12 @@ DEFAULT_CONFIG = {
     # An NSE cash index has no volume -> no VWAP. Source it from the front-month
     # index FUTURE for the snapshot + dashboard only (never fed to compute_sr).
     "index_vwap_from_future": True,
-    "strategy": {},                 # base decide_from_context config (all symbols)
+    # base decide_from_context config (all symbols). `chain_gates` is the opt-in
+    # option-chain confirmation/contradiction gate (see scalp_strategy
+    # _CHAIN_GATE_DEFAULTS) -- default OFF, so leaving it here changes nothing.
+    # Enable per-symbol via symbol_profiles.<SYM>.chain_gates only; NIFTY stays
+    # frozen (no profile).
+    "strategy": {"chain_gates": {"enabled": False}},
     # Per-symbol strategy overrides, merged over `strategy`. NIFTY is DELIBERATELY
     # absent -> it runs on the P6-validated defaults and must stay that way
     # (best live win-rate). MCX commodities move slower and trend longer, so

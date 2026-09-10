@@ -49,6 +49,91 @@ def _filters(cfg):
     return f
 
 
+# --- OPTION-CHAIN GATE (opt-in; default OFF -> byte-identical to pre-gate) -----
+# A small, interpretable causal check on the ATM-window option chain, applied
+# AFTER the setup is otherwise qualified. It reads only the point-in-time chain
+# the engine already receives (no new module, no future rows):
+#   * PCR (put/call OI ratio) over the ATM window  -> directional bias
+#   * fresh OI-writing bias (sum of oi_chg>0, PE vs CE) over the same window
+# Roles: CONFIRM (aligns) -> optional +1 confidence notch; CONTRADICT (opposes)
+#   -> veto to NO_TRADE ONLY if the setup is marginal, else -1 confidence notch;
+#   INSUFFICIENT (thin OI coverage) -> no-op (never manufactures confidence).
+# NEVER touches probability / EV / entry / SL / targets. NEVER enabled for a
+# symbol whose profile does not set it (NIFTY stays frozen).
+_CHAIN_GATE_DEFAULTS = {
+    "enabled": False,
+    "bias_window": 3,          # strikes each side of ATM
+    "min_coverage": 0.6,       # fraction of window strikes needing CE+PE OI
+    "pcr_confirm": 1.30,       # PCR >= this = put-heavy (downside support) -> bullish confirm
+    "pcr_contra": 0.70,        # PCR <= this = call-heavy (upside resistance) -> bearish confirm
+    "marginal_ev_r": 0.25,    # contradiction vetoes only when ev_r < this ...
+    "marginal_score": 55.0,    # ... or blended score < this, or confidence LOW
+    "confirm_bumps_confidence": False,
+}
+
+
+def _chain_gate_cfg(cfg):
+    g = dict(_CHAIN_GATE_DEFAULTS)
+    g.update(cfg.get("chain_gates") or {})
+    return g
+
+
+_CONF_ORDER = ["LOW", "MEDIUM", "HIGH"]
+
+
+def _conf_step(c, delta):
+    try:
+        i = _CONF_ORDER.index(c)
+    except ValueError:
+        return c
+    return _CONF_ORDER[max(0, min(len(_CONF_ORDER) - 1, i + delta))]
+
+
+def _chain_bias(chain, atm, want, g):
+    """Point-in-time ATM-window read. `want` = 'CE' (bullish setup) / 'PE'.
+    Returns {pcr, ce_oi, pe_oi, doi_side, coverage, verdict, reason}.
+    verdict in {CONFIRM, CONTRADICT, NEUTRAL, INSUFFICIENT}."""
+    rows = chain or []
+    if not rows or atm is None:
+        return {"verdict": "INSUFFICIENT", "reason": "no chain / no atm", "coverage": 0.0}
+    strikes = sorted({_num(r.get("strike")) for r in rows if _num(r.get("strike")) is not None})
+    if len(strikes) < 3:
+        return {"verdict": "INSUFFICIENT", "reason": "thin chain", "coverage": 0.0}
+    ai = min(range(len(strikes)), key=lambda i: abs(strikes[i] - atm))
+    w = int(g["bias_window"])
+    win_k = set(strikes[max(0, ai - w): ai + w + 1])
+    by_k = {_num(r.get("strike")): r for r in rows}
+    ce_oi = pe_oi = ce_dw = pe_dw = 0.0
+    have = 0
+    for k in win_k:
+        r = by_k.get(k) or {}
+        ce, pe = r.get("ce") or {}, r.get("pe") or {}
+        c_oi, p_oi = _num(ce.get("oi")), _num(pe.get("oi"))
+        if c_oi is not None and p_oi is not None and (c_oi > 0 or p_oi > 0):
+            have += 1
+            ce_oi += c_oi or 0.0
+            pe_oi += p_oi or 0.0
+        c_dw, p_dw = _num(ce.get("oi_chg")), _num(pe.get("oi_chg"))
+        ce_dw += c_dw if (c_dw and c_dw > 0) else 0.0
+        pe_dw += p_dw if (p_dw and p_dw > 0) else 0.0
+    coverage = round(have / max(1, len(win_k)), 3)
+    if coverage < float(g["min_coverage"]) or ce_oi <= 0:
+        return {"verdict": "INSUFFICIENT", "reason": f"OI coverage {coverage}", "coverage": coverage,
+                "pcr": round(pe_oi / ce_oi, 3) if ce_oi > 0 else None}
+    pcr = pe_oi / ce_oi
+    doi_side = ("PUT_WRITE" if pe_dw > ce_dw * 1.25 else
+               "CALL_WRITE" if ce_dw > pe_dw * 1.25 else "FLAT")
+    bull = want == "CE"
+    confirm = ((bull and (pcr >= g["pcr_confirm"] or doi_side == "PUT_WRITE")) or
+               (not bull and (pcr <= g["pcr_contra"] or doi_side == "CALL_WRITE")))
+    contra = ((bull and pcr <= g["pcr_contra"] and doi_side != "PUT_WRITE") or
+              (not bull and pcr >= g["pcr_confirm"] and doi_side != "CALL_WRITE"))
+    verdict = "CONFIRM" if confirm and not contra else "CONTRADICT" if contra else "NEUTRAL"
+    return {"verdict": verdict, "pcr": round(pcr, 3), "ce_oi": round(ce_oi), "pe_oi": round(pe_oi),
+            "doi_side": doi_side, "coverage": coverage,
+            "reason": f"PCR {round(pcr, 2)} / {doi_side}"}
+
+
 def _num(x):
     try:
         f = float(x)
@@ -342,6 +427,26 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                          "option_quality": sel["final_quality"], **_cal_meta})
 
     confidence = _confidence(prob, st["false_risk"]["verdict"], mtf["conflict"])
+
+    # --- OPTION-CHAIN GATE (opt-in; default OFF) -------------------------------
+    _cg = _chain_gate_cfg(cfg)
+    chain_bias = None
+    if _cg.get("enabled"):
+        chain_bias = _chain_bias(chain, atm or base, want, _cg)
+        if chain_bias["verdict"] == "CONTRADICT":
+            marginal = (confidence == "LOW"
+                        or (gate.get("ev_r") is not None and gate["ev_r"] < _cg["marginal_ev_r"])
+                        or blended < _cg["marginal_score"])
+            if marginal:
+                return out_none(
+                    f"option-chain bias contradicts a marginal setup ({chain_bias['reason']})",
+                    {**ctx, "chain_bias": chain_bias, "signal_score": round(blended, 1),
+                     "probability": round(prob, 4), "ev_r": gate.get("ev_r"),
+                     "confidence": confidence, "option_quality": sel["final_quality"], **_cal_meta})
+            confidence = _conf_step(confidence, -1)          # strong setup: haircut only
+        elif chain_bias["verdict"] == "CONFIRM" and _cg.get("confirm_bumps_confidence"):
+            confidence = _conf_step(confidence, +1)
+
     if confidence == "LOW" and cfg.get("require_min_confidence", "LOW") != "LOW":
         return {**ctx, "decision": "WATCH", "direction": direction,
                 "reason": "confidence LOW -> watch only",
@@ -350,6 +455,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                 "expected_premium_move": (sel.get("translation") or {}).get("expected_premium_move"),
                 "epm_method": (sel.get("translation") or {}).get("method"),
                 "confidence": confidence, "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],
+                "chain_bias": chain_bias,
                 **_cal_meta, "model_version": MODEL_VERSION}
 
     return {
@@ -391,7 +497,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                              "regime_conf": reg["confidence"],
                              "false_risk": st["false_risk"]["score"] / 100.0},
         "false_risk": st["false_risk"]["verdict"],
-        "ce_pe": conf, "calib_version": (calib or {}).get("version"),
+        "ce_pe": conf, "chain_bias": chain_bias, "calib_version": (calib or {}).get("version"),
         "reason": " | ".join(st["reason"][:2] + [f"opt_q {sel['final_quality']}",
                                                  f"p {round(prob, 3)}", f"ev {gate['ev_r']}R"]),
         "model_version": MODEL_VERSION,
