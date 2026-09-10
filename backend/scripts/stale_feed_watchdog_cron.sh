@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Read-only monitoring wrapper for scripts/stale_feed_watchdog.py.
-# Cron: 45 10 * * 1-5   (10:45 UTC = 16:15 IST weekdays, after the NSE/BSE close)
-#   crontab -e  ->  45 10 * * 1-5 /root/zerohero/backend/scripts/stale_feed_watchdog_cron.sh
+# Cron: 15 16 * * 1-5   (16:15 IST weekdays, after the NSE/BSE close -- crontab is IST)
+#   crontab -e  ->  15 16 * * 1-5 /root/zerohero/backend/scripts/stale_feed_watchdog_cron.sh
 #
 # Appends a timestamped full run to a log the operator reads. Sends a Telegram
 # line ONLY when the watchdog exits 2 -- i.e. an ANOMALOUS index-value freeze
