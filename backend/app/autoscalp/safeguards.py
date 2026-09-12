@@ -59,6 +59,14 @@ class Safeguards:
         self.consecutive_losses = 0
         self._halt_reason = None            # sticky within a session once tripped
 
+    # ---- external halt (e.g. app.structural_break.adaptation, or any other
+    # future caller) -- a small, explicit, public hook rather than reaching
+    # into the private `_halt_reason` field from outside this class. Setting
+    # a reason makes check_entry() refuse every subsequent call (same sticky
+    # behavior as the existing daily-loss-cap halt); passing None clears it. ----
+    def set_external_halt(self, reason: str | None) -> None:
+        self._halt_reason = reason
+
     # ---- outcome feedback (runner calls after each close) ----
     def on_trade_closed(self, pnl: float) -> None:
         if pnl is not None and pnl < 0:

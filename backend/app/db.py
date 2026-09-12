@@ -832,10 +832,11 @@ def get_scalp_signal(signal_id: str):
 
 
 def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
-                       session_date=None, limit: int = 1000):
+                       session_date=None, regime=None, limit: int = 1000):
     clauses, params = [], []
     for col, val in (("source", source), ("status", status), ("symbol", symbol),
-                     ("resolved", resolved), ("session_date", session_date)):
+                     ("resolved", resolved), ("session_date", session_date),
+                     ("regime", regime)):
         if val is not None:
             clauses.append(f"{col}=?")
             params.append(val)

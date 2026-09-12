@@ -232,6 +232,15 @@ try:
 except Exception as _e:
     print(f"[optionchain] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Structural Break / Adaptive Model layer (read-only: on-demand
+# performance/drift re-scoring + durable transition audit log; no order
+# path, no live_trading, never auto-wired into Safeguards from here) ----
+try:
+    from .structural_break import api as _structural_break_api
+    app.include_router(_structural_break_api.router)
+except Exception as _e:
+    print(f"[structural_break] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
