@@ -241,6 +241,15 @@ try:
 except Exception as _e:
     print(f"[structural_break] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Institutional Edge layer (read-only: conditional edge / EV-with-real-
+# costs analysis over already-captured scalp_signals; no order path, no
+# live_trading, never wired into signal generation) ----
+try:
+    from .institutional_edge import api as _institutional_edge_api
+    app.include_router(_institutional_edge_api.router)
+except Exception as _e:
+    print(f"[institutional_edge] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
