@@ -1026,24 +1026,34 @@ class ScalpRunner:
 
         self._save_latches()   # persist alert latches (only writes when changed)
 
-        # reversal scan — S/R turn detection for held + watched symbols
+        # reversal scan — S/R turn detection for held + watched symbols.
+        # This is a NEW SIGNAL announcement (section 19), so it goes through
+        # the canonical dispatcher (cross-engine agreement/conflict +
+        # dedup) instead of _tg_send directly -- unlike the wrong-side/
+        # order-adapter alerts elsewhere in this loop, which are one-per-
+        # position lifecycle events and stay on the direct path.
+        from . import telegram_dispatcher
         try:
             for r in await asyncio.to_thread(self._scan_reversals, cfg):
-                await asyncio.to_thread(_tg_send,
+                text = (
                     f"🔄 <b>REVERSAL {r.get('timeframe','')} — {r['symbol']} {r['reversal']} {r['kind']}</b>\n"
                     f"Level {r.get('level')}  ·  price {r.get('price')}  ·  conf {r.get('confidence')}%\n"
                     f"Trade: buy {r.get('option')}  entry {r.get('entry')}  "
                     f"SL {r.get('stop')}  T1 {r.get('target_1')}  T2 {r.get('target_2')}  (RR {r.get('risk_reward')})\n"
-                    f"{' · '.join(r.get('reason') or [])}\n⚠️ Monitor-only — you place it.",
-                    os.environ.get("TELEGRAM_CHAT_ID"))
+                    f"{' · '.join(r.get('reason') or [])}\n⚠️ Monitor-only — you place it.")
+                await asyncio.to_thread(
+                    telegram_dispatcher.dispatch, source_engine="reversal_scan",
+                    underlying=r["symbol"], direction=r.get("reversal"), text=text,
+                    chat_id=os.environ.get("TELEGRAM_CHAT_ID"))
                 await self._emit("reversal_signal", r)
         except Exception as e:
             self.last_error = f"reversal scan: {type(e).__name__}: {e}"
 
         # Turning-Point high-confidence alerts (populated by _scan_reversals)
+        # -- also a NEW SIGNAL announcement, same canonical-dispatcher path.
         for tp in getattr(self, "_fresh_tp", []):
             tr = tp.get("trade_ref") or {}
-            await asyncio.to_thread(_tg_send,
+            text = (
                 f"🎯 <b>TURNING POINT {tp.get('timeframe','')} — {tp['symbol']} {tp['direction']}</b>\n"
                 f"conf {tp['confidence']}%  ·  p_up {tp['p_up']}  ·  turn {tp['turn']}\n"
                 f"Expected move: {tp['expected_move']['direction']} {tp['expected_move']['pts']} pts "
@@ -1052,8 +1062,11 @@ class ScalpRunner:
                 f"SL {tr.get('stop_loss')}  T1 {tr.get('target_1')}  T2 {tr.get('target_2')}  "
                 f"(RR {tr.get('risk_reward')})\n"
                 f"{' · '.join(tp.get('reason') or [])[:3] if isinstance(tp.get('reason'), list) else ''}\n"
-                f"⚠️ Deterministic zone estimate — monitor-only, you place it.",
-                os.environ.get("TELEGRAM_CHAT_ID"))
+                f"⚠️ Deterministic zone estimate — monitor-only, you place it.")
+            await asyncio.to_thread(
+                telegram_dispatcher.dispatch, source_engine="turning_point",
+                underlying=tp["symbol"], direction=tp.get("direction"), text=text,
+                chat_id=os.environ.get("TELEGRAM_CHAT_ID"))
             await self._emit("turning_point_signal", tp)
         self._fresh_tp = []
 

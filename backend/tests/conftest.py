@@ -122,6 +122,22 @@ def _no_real_telegram(monkeypatch):
         pass
 
 
+@pytest.fixture(autouse=True)
+def _fresh_telegram_dispatcher():
+    """app.telegram_dispatcher's canonical dispatcher is a process-lifetime
+    singleton by design (its whole point is a registry SHARED across every
+    live engine, for cross-engine agreement/conflict detection) -- but that
+    means, left alone, its in-memory recent-signal registry would leak
+    between unrelated tests across different test files/order, e.g. a
+    "NIFTY BUY_CE" from one test making an unrelated later test's "NIFTY"
+    signal spuriously look CONFIRMED or in CONFLICT. Reset it before every
+    test so each test only ever sees its own dispatches."""
+    import app.telegram_dispatcher as _td
+    _td._singleton = None
+    yield
+    _td._singleton = None
+
+
 @pytest.fixture()
 def fresh_db(monkeypatch):
     fd, path = tempfile.mkstemp(suffix=".db")

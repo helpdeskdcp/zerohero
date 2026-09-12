@@ -757,7 +757,8 @@ class AutoScalpRunner:
             note=f"far-OTM {ot} @ {round(prem, 2)} -> {round(prem * float(z.get('target_mult', 3.0)), 2)}"),
             conf=sig.get("confidence"))
 
-    def _tg_send(self, key, text, conf=None, *, dedup=True, gate=True):
+    def _tg_send(self, key, text, conf=None, *, dedup=True, gate=True,
+                 canonical=None):
         """Single Telegram exit point: HIGH-confidence gate + de-duplication.
 
         - `conf`: the signal's confidence label. Unless `gate=False`, the card is
@@ -765,6 +766,14 @@ class AutoScalpRunner:
           (default HIGH). An unknown/None confidence fails closed (dropped).
         - `key`: dedup identity. A repeat of the same key inside
           config.telegram_dedup_sec is silently dropped.
+        - `canonical`: {"underlying", "direction", "signal_id"} -- when given,
+          routes through the section-19 canonical dispatcher
+          (app.telegram_dispatcher) instead of sending directly, so this NEW
+          ENTRY signal is checked against what other engines have recently
+          said about the same underlying. Only the ENTRY card passes this --
+          lifecycle (TARGET/STOP/TRAIL/EXIT/...) alerts are one-per-position
+          events, not competing "new signal" announcements, so they keep
+          sending directly, unchanged.
         """
         cfg = self.get_config()
         if gate:
@@ -778,6 +787,18 @@ class AutoScalpRunner:
             if last is not None and (now - last) < gap:
                 return
         self._tg_last[key] = now
+        if canonical:
+            try:
+                from .. import telegram_dispatcher
+                import os
+                telegram_dispatcher.dispatch(
+                    source_engine="autoscalp", underlying=canonical.get("underlying"),
+                    direction=canonical.get("direction"), text=text,
+                    chat_id=os.environ.get("TELEGRAM_CHAT_ID"),
+                    signal_id=canonical.get("signal_id"))
+            except Exception:
+                pass
+            return
         notify.push(self._telegram, text)
 
     def _open_paper(self, sym, sig, chain=None):
@@ -853,7 +874,9 @@ class AutoScalpRunner:
         asyncio.create_task(self._emit("autoscalp_open", {"symbol": sym, "trade": row, "signal_id": signal_id}))
         self._tg_send("entry:" + signal_id, notify.signal_card(
             {**sig, "opt_tradingsymbol": sig.get("tradingsymbol")}, symbol=sym,
-            index_ltp=self._aggs[sym.upper()].last_price), conf=sig.get("confidence"))
+            index_ltp=self._aggs[sym.upper()].last_price), conf=sig.get("confidence"),
+            canonical={"underlying": sym, "direction": sig.get("direction") or sig.get("decision"),
+                      "signal_id": signal_id})
 
     def _monitor(self):
         for t in self._open_positions():

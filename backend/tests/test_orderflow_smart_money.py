@@ -321,6 +321,33 @@ def test_notify_only_sends_broken_out_setups_and_dedupes(monkeypatch):
     assert r3["new_marked"] == 0 and r3["sent"] == 0
 
 
+def test_notify_routes_through_canonical_dispatcher_when_configured(monkeypatch):
+    """section 19: with real Telegram creds present, the smart-money card now
+    goes through app.telegram_dispatcher instead of calling
+    app.connectors.telegram._send directly."""
+    _fresh_db(monkeypatch)
+    import importlib
+    import app.orderflow.notify as notify
+    importlib.reload(notify)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "12345")
+
+    calls = []
+    monkeypatch.setattr("app.telegram_dispatcher.dispatch",
+                        lambda **kw: calls.append(kw) or {"status": "SENT"})
+
+    # a session_date not used by any other test in this file -- push_new_signals'
+    # dedup marker is persisted in app_settings, which this file's local
+    # _fresh_db() helper does not actually isolate per test (a session-scoped
+    # TEST_DATABASE_URL takes precedence over its CHANAKYA_DB_PATH override).
+    sm = _broken_out_result()
+    r = notify.push_new_signals("NIFTY", "2026-09-09-dispatcher-test", sm, dry_run=False)
+    assert r["sent"] == 1
+    assert len(calls) == 1
+    assert calls[0]["source_engine"] == "orderflow"
+    assert calls[0]["underlying"] == "NIFTY"
+
+
 def test_notify_skips_when_status_not_ok(monkeypatch):
     _fresh_db(monkeypatch)
     import importlib, app.orderflow.notify as notify

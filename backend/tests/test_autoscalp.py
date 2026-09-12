@@ -319,6 +319,33 @@ def test_runner_opens_paper_trade_and_persists(fresh_db, monkeypatch):
     assert sigs[0]["holding_sec"] is not None and sigs[0]["holding_sec"] >= 0
 
 
+def test_runner_high_confidence_entry_routes_through_canonical_dispatcher(fresh_db, monkeypatch):
+    """section 19: the ENTRY card (not lifecycle) now goes through the
+    canonical telegram_dispatcher instead of straight to notify.push, so
+    autoscalp's signals are visible to other engines' agreement/conflict
+    checks."""
+    sig = {"decision": "BUY_CE", "signal_type": "RESISTANCE_BREAKOUT", "direction": "BULLISH",
+           "strike": 24100, "token": "CE24100", "tradingsymbol": "NIFTY24100CE",
+           "expiry": "2026-09-03", "entry": 130.0, "stop_loss": 115.0, "target_1": 160.0,
+           "target_2": 180.0, "trailing_stop": 10.0, "max_hold_sec": 480, "probability": 0.62,
+           "confidence": "HIGH", "ev": 8.0, "rr": 1.8, "regime": "TRENDING_UP",
+           "mtf_alignment": 35.0, "signal_score": 70.0, "component_scores": {"x": 1},
+           "reason": "test", "support": 24050, "resistance": 24120, "support_strength": 60,
+           "resistance_strength": 62, "sr_level": 24120, "sr_side": "RESISTANCE",
+           "atr": 12.0, "vwap": 24090.0}
+    r, feed = _runner(monkeypatch, sig)
+    calls = []
+    monkeypatch.setattr("app.telegram_dispatcher.dispatch",
+                        lambda **kw: calls.append(kw) or {"status": "SENT"})
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert len(calls) == 1
+    assert calls[0]["source_engine"] == "autoscalp"
+    assert calls[0]["underlying"] == "NIFTY"
+    assert calls[0]["direction"] == "BULLISH"
+    assert "IDADDY AI SIGNAL" in calls[0]["text"]
+
+
 def test_resolve_index_future_picks_front_month_nfo_token():
     from app import instruments
     r = instruments.resolve_index_future("NIFTY", "AUTO")

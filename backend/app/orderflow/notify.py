@@ -135,9 +135,12 @@ def push_new_signals(symbol: str, session_date: str, sm_result: dict, *,
             ok = False
             if cid and os.environ.get("TELEGRAM_BOT_TOKEN"):
                 try:
-                    from ..connectors import telegram
-                    r = telegram._send(text, cid)
-                    ok = bool(r.get("ok"))
+                    from .. import telegram_dispatcher
+                    r = telegram_dispatcher.dispatch(
+                        source_engine="orderflow", underlying=symbol,
+                        direction=leg.get("side"), text=text, chat_id=cid,
+                        signal_id=did)
+                    ok = r.get("status") == "SENT"
                     if not ok:
                         _log.warning("orderflow.notify: telegram send not ok: %r", r)
                 except Exception as e:

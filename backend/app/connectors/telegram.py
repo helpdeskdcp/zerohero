@@ -24,7 +24,12 @@ def _send(text, chat_id):
         return {"ok": False, "reason": str(e)}
 
 
-def notify_signal(contract: dict):
+def _signal_text(contract: dict) -> str:
+    """Pure text builder, split out of notify_signal() so
+    app.telegram_dispatcher (the canonical section-19 dispatcher) can reuse
+    this exact, already-tested formatting without also triggering the send
+    -- the same "build text separately from sending it" shape
+    autoscalp/notify.py and orderflow/notify.py already use."""
     d = contract.get("direction", "NONE")
     emoji = "🟢" if d == "BUY" else ("🔴" if d == "SELL" else "⚪")
     und = contract.get("underlying") or contract.get("symbol", "") or "?"
@@ -47,7 +52,11 @@ def notify_signal(contract: dict):
         f"Risk: {contract.get('risk_status','-')}  |  Signal ID: {contract.get('signal_id','-')}",
         "⚠️ PAPER MODE — live_trading=false",
     ]
-    text = "\n".join(lines)
+    return "\n".join(lines)
+
+
+def notify_signal(contract: dict):
+    text = _signal_text(contract)
     chat_id = os.environ.get("TELEGRAM_SIGNALS_CHANNEL_ID") or os.environ.get("TELEGRAM_CHAT_ID")
     return _send(text, chat_id)
 

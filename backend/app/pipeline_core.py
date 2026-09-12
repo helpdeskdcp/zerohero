@@ -11,7 +11,7 @@ the audit says orchestrator must keep its 1:1 n8n semantics.
 import time
 import random
 
-from . import db
+from . import db, telegram_dispatcher
 from .connectors import telegram
 from .engines.paper_trading import open_trade
 
@@ -43,7 +43,19 @@ def log_and_notify(contract: dict) -> None:
     if str(contract.get("final_decision", "")).upper() != "APPROVED":
         return
     try:
-        telegram.notify_signal(contract)
+        import os
+        text = telegram._signal_text(contract)
+        chat_id = os.environ.get("TELEGRAM_SIGNALS_CHANNEL_ID") or os.environ.get("TELEGRAM_CHAT_ID")
+        # signal_id prefix distinguishes the two pipelines sharing this
+        # function: SIG-* = orchestrator, SCL-* = scalp_pipeline (see
+        # signal_id() above).
+        sid = str(contract.get("signal_id") or "")
+        source = "scalp_pipeline" if sid.startswith("SCL-") else "orchestrator"
+        telegram_dispatcher.dispatch(
+            source_engine=source,
+            underlying=contract.get("underlying") or contract.get("symbol") or "",
+            direction=contract.get("direction"), text=text, chat_id=chat_id,
+            signal_id=contract.get("signal_id"))
     except Exception:
         pass
 
