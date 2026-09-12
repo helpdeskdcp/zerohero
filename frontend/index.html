@@ -848,6 +848,24 @@
           </div>
           <p class="hint" id="ocNote"></p>
         </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Option Analytics <span class="pill pill--paper">read-only</span></h2>
+            <span class="hint">built on the same captured data as the chain above — no live order path</span>
+          </div>
+          <div class="oc-charts" id="ocCharts">
+            <div class="oc-chart-card"><h3>IV Smile</h3><div class="oc-chart" id="ocChartSmile"></div></div>
+            <div class="oc-chart-card"><h3>GEX profile</h3><div class="oc-chart" id="ocChartGex"></div></div>
+            <div class="oc-chart-card"><h3>Max Pain curve</h3><div class="oc-chart" id="ocChartMaxPain"></div></div>
+            <div class="oc-chart-card"><h3>Greeks history <small>(net exposure)</small></h3><div class="oc-chart" id="ocChartGreeksHist"></div></div>
+            <div class="oc-chart-card"><h3>PCR history</h3><div class="oc-chart" id="ocChartPcrHist"></div></div>
+            <div class="oc-chart-card"><h3>Volatility surface <small>(strike × expiry)</small></h3><div class="oc-chart" id="ocChartVolSurface"></div></div>
+            <div class="oc-chart-card oc-chart-wide"><h3>Straddle P&amp;L <small>(ATM)</small></h3><div class="oc-chart" id="ocChartStraddle"></div></div>
+            <div class="oc-chart-card oc-chart-wide"><h3>OI profile <small>(top strikes + underlying)</small></h3><div class="oc-chart" id="ocChartOiProfile"></div></div>
+          </div>
+          <p class="hint" id="ocChartsNote"></p>
+        </div>
       </section>
 
       <!-- ===== RESEARCH ===== -->
@@ -897,6 +915,16 @@
             </table>
           </div>
           <p class="hint" id="hcsCalib"></p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Adaptive Research Layers <span class="pill pill--paper">SHADOW</span></h2>
+            <span class="hint">structural break · institutional edge · microstructure — on-demand, dark, no order path</span>
+          </div>
+          <p class="hint" id="adaptiveLayersNote"></p>
+          <p class="scalp-err" id="adaptiveLayersErr" hidden></p>
+          <div class="research-grid" id="adaptiveLayersGrid"></div>
         </div>
       </section>
 

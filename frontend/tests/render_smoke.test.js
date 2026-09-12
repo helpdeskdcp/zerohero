@@ -252,10 +252,15 @@ const P = {
     },
     analytics: {
       pcr: { status: "ok", pcr_oi: 0.76, pcr_vol: 1.06 },
-      max_pain: { status: "ok", max_pain_strike: 23550, distance_pct: 0.51 },
-      iv_skew: { status: "ok", atm_iv: 0.104, rr_25: 0.0005, skew_slope: 0.7 },
+      max_pain: { status: "ok", max_pain_strike: 23550, distance_pct: 0.51,
+        curve: [[23400, 3.1e7], [23450, 2.6e7], [23500, 2.0e7], [23550, 1.7e7], [23600, 2.2e7]] },
+      iv_skew: { status: "ok", atm_iv: 0.104, rr_25: 0.0005, skew_slope: 0.7,
+        per_strike: [{ strike: 23400, ce_iv: 0.115, pe_iv: 0.099, skew: -0.016 },
+                     { strike: 23450, ce_iv: 0.112, pe_iv: 0.096, skew: -0.016 },
+                     { strike: 23500, ce_iv: 0.109, pe_iv: 0.094, skew: -0.015 }] },
       oi_walls: { status: "ok", ce_wall: 24000, pe_wall: 23000, nearest_resistance: 23700, nearest_support: 23400 },
-      gex: { status: "ok", regime_sign: 0, total_shape: 3168, flip_strike: 23507, pin_strike: 23700 },
+      gex: { status: "ok", regime_sign: 0, total_shape: 3168, flip_strike: 23507, pin_strike: 23700,
+        per_strike: [{ strike: 23400, shape: -1200 }, { strike: 23450, shape: 400 }, { strike: 23500, shape: 1800 }] },
       strike_step: 50,
     },
     structure: {
@@ -276,6 +281,41 @@ const P = {
       gates: [], notes: ["research-only -- not wired to any order path"],
     },
     capability: { has_greeks: true, has_oi: true, cadence_sec: 39, oi_stale: true, oi_change_source: "derived_prev_session_close", oi_change_baseline_date: "2026-09-08", oi_change_coverage: 0.81 },
+  }),
+  "/api/greeks-engine/exposure": load("greeks_exposure", [
+    { as_of_ts: "2026-09-09T07:00:00Z", pcr_oi: 0.72, net_delta_exp: 12000, net_gamma_exp: 300, net_theta_exp: -8000, net_vega_exp: 15000 },
+    { as_of_ts: "2026-09-09T07:05:00Z", pcr_oi: 0.76, net_delta_exp: 14000, net_gamma_exp: 320, net_theta_exp: -8200, net_vega_exp: 15400 },
+    { as_of_ts: "2026-09-09T07:10:00Z", pcr_oi: 0.79, net_delta_exp: 13500, net_gamma_exp: 310, net_theta_exp: -8100, net_vega_exp: 15200 },
+  ]),
+  "/api/optionchain/NIFTY/vol-surface": load("oc_vol_surface", {
+    status: "ok", underlying: "NIFTY", expiries: ["15SEP2026", "22SEP2026"],
+    points: [
+      { expiry: "15SEP2026", strike: 23400, option_type: "CE", iv: 0.115 },
+      { expiry: "15SEP2026", strike: 23400, option_type: "PE", iv: 0.099 },
+      { expiry: "22SEP2026", strike: 23400, option_type: "CE", iv: 0.121 },
+      { expiry: "22SEP2026", strike: 23400, option_type: "PE", iv: 0.108 },
+    ],
+  }),
+  "/api/optionchain/NIFTY/straddle-pnl": load("oc_straddle_pnl", {
+    status: "ok", underlying: "NIFTY", expiry: "15SEP2026", strike: 23450,
+    entry_ts: "2026-09-09T07:00:00Z", entry_premium: 250.0,
+    series: [
+      { ts: "2026-09-09T07:00:00Z", ce: 138.5, pe: 111.5, straddle: 250.0, pnl: 0.0 },
+      { ts: "2026-09-09T07:05:00Z", ce: 142.0, pe: 105.0, straddle: 247.0, pnl: -3.0 },
+      { ts: "2026-09-09T07:10:00Z", ce: 130.0, pe: 118.0, straddle: 248.0, pnl: -2.0 },
+    ],
+  }),
+  "/api/optionchain/NIFTY/oi-profile": load("oc_oi_profile", {
+    status: "ok", underlying: "NIFTY", expiry: "15SEP2026", strikes: [23400, 23450, 23500],
+    oi_series: [
+      { ts: "2026-09-09T07:00:00Z", strike: 23400, ce_oi: 1.8e6, pe_oi: 5.2e6 },
+      { ts: "2026-09-09T07:00:00Z", strike: 23450, ce_oi: 2.4e6, pe_oi: 2.7e6 },
+      { ts: "2026-09-09T07:00:00Z", strike: 23500, ce_oi: 8.0e6, pe_oi: 8.3e6 },
+    ],
+    underlying_candles: [
+      { ts: "2026-09-09T07:00:00Z", o: 23440, h: 23460, l: 23430, c: 23450 },
+      { ts: "2026-09-09T07:05:00Z", o: 23450, h: 23470, l: 23440, c: 23460 },
+    ],
   }),
 };
 function matchPayload(url) {
@@ -463,6 +503,21 @@ try {
   const ocQual = elFor("#ocQual").innerHTML;
   assert.ok(/oc-verdict/.test(ocQual) && /WATCH/.test(ocQual), "qualification verdict pill rendered: " + ocQual.slice(0, 160));
   assert.ok(/not wired to any order path/.test(ocQual), "qualification carries the research-only note");
+
+  // Option Analytics charts (IV smile / GEX / max-pain from the already-fetched
+  // chain payload; greeks-history / PCR-history / vol-surface / straddle-pnl /
+  // oi-profile from their own endpoints) -- each renders real inline SVG, not
+  // the "no data" empty state, given the fixtures above.
+  for (const [id, label] of [["#ocChartSmile", "IV smile"], ["#ocChartGex", "GEX"],
+                             ["#ocChartMaxPain", "Max Pain curve"], ["#ocChartGreeksHist", "Greeks history"],
+                             ["#ocChartPcrHist", "PCR history"], ["#ocChartVolSurface", "Vol surface"],
+                             ["#ocChartStraddle", "Straddle P&L"], ["#ocChartOiProfile", "OI profile"]]) {
+    const html = elFor(id).innerHTML;
+    assert.ok(/<svg/.test(html), `${label} chart (${id}) should render an SVG, got: ` + html.slice(0, 120));
+  }
+  const straddleHtml = elFor("#ocChartStraddle").innerHTML;
+  assert.ok(/entry ₹250/.test(straddleHtml), "straddle P&L note shows the entry premium: " + straddleHtml.slice(-200));
+
   const ocNote = elFor("#ocNote").textContent + elFor("#ocTable tbody").innerHTML + elFor("#ocNote").innerHTML;
   assert.ok(/&lt;img src=x/.test(elFor("#ocNote").textContent + ocQual + ocStrip + ocTbl) || !/<img\s|<b>x<\/b>/i.test(ocTbl + ocStrip + ocQual + elFor("#ocNote").innerHTML),
     "hostile markup from option-chain notes is not injected as live tags");

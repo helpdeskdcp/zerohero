@@ -647,3 +647,28 @@ table.oc-tbl td.oc-prof, table.oc-tbl th.oc-prof { width: 180px; text-align: lef
 .oc-expiry.warn { color: var(--gold-soft); border-color: rgba(201,162,39,0.45); background: rgba(201,162,39,0.10); }
 .oc-expiry.bad  { color: var(--ember);     border-color: rgba(217,97,79,0.45);  background: rgba(217,97,79,0.10); }
 .oc-expiry .btn { flex-shrink: 0; }
+
+/* ---- Option Analytics charts (dependency-free inline SVG, matches the rest of this codebase) ---- */
+.oc-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.oc-chart-card {
+  background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.oc-chart-card.oc-chart-wide { grid-column: 1 / -1; }
+.oc-chart-card h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--ink-dim); font-weight: 600; }
+.oc-chart-card h3 small { color: var(--ink-faint); font-weight: 400; }
+.oc-chart { width: 100%; overflow-x: auto; }
+.oc-chart svg { display: block; max-width: 100%; }
+.oc-chart .oc-chart-empty { color: var(--ink-faint); font-size: 12px; padding: 20px 4px; text-align: center; }
+.oc-chart .oc-axis-label { fill: var(--ink-faint); font-size: 9px; font-family: var(--font-mono); }
+.oc-chart .oc-line-ce { stroke: var(--teal); }
+.oc-chart .oc-line-pe { stroke: var(--ember); }
+.oc-chart .oc-line-straddle { stroke: var(--gold-soft); }
+.oc-chart .oc-line-pnl { stroke: var(--violet); }
+.oc-chart .oc-bar-pos { fill: var(--teal); }
+.oc-chart .oc-bar-neg { fill: var(--ember); }
+.oc-chart .oc-atm-marker { stroke: var(--ink-faint); stroke-dasharray: 3 3; }

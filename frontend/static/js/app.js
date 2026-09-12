@@ -1145,6 +1145,59 @@
         }
       } catch (_) { /* adaptive optional */ }
     } catch (e) { const el = $("#hcsErr"); if (el) { el.hidden = false; el.textContent = String(e.message || e); } }
+    loadAdaptiveLayers();
+  }
+
+  // Adaptive research layers (structural break / institutional edge / microstructure):
+  // each is an on-demand, read-only evaluation over already-captured data -- no
+  // schedule calls these, so this panel IS what triggers the evaluation, same as
+  // curling the endpoint yourself. Per-symbol calls are isolated with .catch(()=>null)
+  // so one symbol/layer failing (e.g. no captured data yet) never blanks the others.
+  const ADAPTIVE_LAYER_SYMBOLS = ["NIFTY", "BANKNIFTY", "NATURALGAS", "CRUDEOIL", "SENSEX"];
+  async function loadAdaptiveLayers() {
+    try {
+      const sbResults = await Promise.all(ADAPTIVE_LAYER_SYMBOLS.map(sym =>
+        api(`/api/structural-break/status/${sym}`).catch(() => null)));
+      const sbRows = sbResults.filter(Boolean).map(r =>
+        `<div class="kv"><span>${esc(r.symbol)}</span><b>${esc(r.state)}</b></div>`).join("");
+
+      const ieCondition = encodeURIComponent("confidence==HIGH");
+      const ieResults = await Promise.all(ADAPTIVE_LAYER_SYMBOLS.map(sym =>
+        api(`/api/institutional-edge/status/${sym}?condition=${ieCondition}`).catch(() => null)));
+      const ieRows = ieResults.filter(Boolean).map(r => {
+        const ev = r.ev || {};
+        const netEv = ev.net_ev_points != null ? fmt(ev.net_ev_points)
+          : (ev.status === "UNCALIBRATED_COST" ? "n/a (cost)" : "—");
+        return `<div class="kv"><span>${esc(r.instrument)}</span><b>${esc(r.state)} · net EV ${netEv}</b></div>`;
+      }).join("");
+
+      const today = new Date().toISOString().slice(0, 10);
+      const msResults = await Promise.all(ADAPTIVE_LAYER_SYMBOLS.map(sym =>
+        api(`/api/microstructure/status/${sym}?session_date=${today}`).catch(() => null)));
+      const msRows = msResults.filter(Boolean).map(r =>
+        `<div class="kv"><span>${esc(r.symbol)}</span><b>${esc(r.state)}</b></div>`).join("");
+
+      $("#adaptiveLayersGrid").innerHTML = `
+        <div class="rcard">
+          <h3>Structural Break</h3>
+          ${sbRows || '<span class="hint">no evaluations yet</span>'}
+        </div>
+        <div class="rcard">
+          <h3>Institutional Edge <span class="hint">(confidence==HIGH)</span></h3>
+          ${ieRows || '<span class="hint">no evaluations yet</span>'}
+        </div>
+        <div class="rcard">
+          <h3>Microstructure <span class="hint">(today)</span></h3>
+          ${msRows || '<span class="hint">no data for today yet</span>'}
+        </div>
+      `;
+      $("#adaptiveLayersNote").textContent =
+        "Each card is an on-demand, dark evaluation over already-captured data -- no schedule, no order path. " +
+        "“INSUFFICIENT_DATA” / “CANDIDATE” is expected until enough resolved signals accumulate.";
+    } catch (e) {
+      const el = $("#adaptiveLayersErr");
+      if (el) { el.hidden = false; el.textContent = String(e.message || e); }
+    }
   }
 
   // ---------------- System & Health ----------------
@@ -2456,6 +2509,7 @@
       ocRenderQual(j.qualification || {});
       ocRenderStrip(j);
       ocRenderTable(j);
+      ocRenderCharts(j);
       const notes = [].concat((j.structure && j.structure.notes) || [],
         (j.chain && j.chain.notes) || []).filter(Boolean);
       $("#ocNote").textContent = notes.slice(0, 6).join("  ·  ");
@@ -2598,6 +2652,225 @@
         `<td>${ocFmtOi(pe.volume)}</td><td>${dcell(pe, "pe", r.strike)}</td><td>${ocFmtOi(pe.oi)}</td>` +
         `<td class="oc-prof">${bar(ce.oi, pe.oi)}</td></tr>`;
     }).join("");
+  }
+
+  // ---------------- Option Analytics charts ----------------
+  // Dependency-free inline SVG (no charting library anywhere else in this
+  // codebase — matches the existing OI-bar's plain-CSS-div convention).
+  // Every chart here either (a) re-renders data already present in the
+  // GET /api/optionchain/{u} response the table above already fetched
+  // (IV smile, GEX profile, Max Pain curve — analytics.*.per_strike/curve),
+  // or (b) calls one of the three new read-only endpoints added alongside
+  // this view (vol-surface / straddle-pnl / oi-profile) or the pre-existing
+  // /api/greeks-engine/exposure endpoint (Greeks history / PCR history —
+  // that endpoint already existed with zero frontend consumer before this).
+  const OC_W = 480, OC_H = 160, OC_PAD = { l: 34, r: 8, t: 8, b: 18 };
+
+  function ocEmpty(id, msg) {
+    const el = $(id);
+    if (el) el.innerHTML = `<div class="oc-chart-empty">${esc(msg || "no data")}</div>`;
+  }
+
+  function ocScale(lo, hi, outLo, outHi) {
+    const span = hi - lo || 1;
+    return (v) => outLo + ((v - lo) / span) * (outHi - outLo);
+  }
+
+  function ocPath(pts) {
+    return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  }
+
+  // Generic multi-series line/scatter chart. series = [{label, color, points:[[x,y],...]}]
+  function ocLineChart(series, { width = OC_W, height = OC_H, xLabel, yFmt } = {}) {
+    const all = series.flatMap(s => s.points);
+    if (!all.length) return null;
+    const xs = all.map(p => p[0]), ys = all.map(p => p[1]);
+    const xLo = Math.min(...xs), xHi = Math.max(...xs);
+    const yLo = Math.min(0, Math.min(...ys)), yHi = Math.max(...ys) || 1;
+    const sx = ocScale(xLo, xHi, OC_PAD.l, width - OC_PAD.r);
+    const sy = ocScale(yLo, yHi, height - OC_PAD.b, OC_PAD.t);
+    const zeroY = sy(0);
+    const gridY = [yLo, (yLo + yHi) / 2, yHi];
+    let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet">`;
+    for (const gy of gridY) {
+      svg += `<line x1="${OC_PAD.l}" y1="${sy(gy).toFixed(1)}" x2="${width - OC_PAD.r}" y2="${sy(gy).toFixed(1)}" stroke="var(--line-soft)" stroke-width="1"/>`;
+      svg += `<text class="oc-axis-label" x="2" y="${(sy(gy) + 3).toFixed(1)}">${esc(yFmt ? yFmt(gy) : gy.toFixed(1))}</text>`;
+    }
+    if (yLo < 0 && yHi > 0) svg += `<line class="oc-atm-marker" x1="${OC_PAD.l}" y1="${zeroY.toFixed(1)}" x2="${width - OC_PAD.r}" y2="${zeroY.toFixed(1)}"/>`;
+    for (const s of series) {
+      const pts = s.points.map(p => [sx(p[0]), sy(p[1])]);
+      svg += `<path d="${ocPath(pts)}" fill="none" stroke="${s.color || "var(--teal)"}" stroke-width="1.6" class="${s.cls || ""}"/>`;
+    }
+    if (xLabel) svg += `<text class="oc-axis-label" x="${OC_PAD.l}" y="${height - 4}">${esc(xLabel(xLo))}</text>` +
+      `<text class="oc-axis-label" x="${width - OC_PAD.r - 40}" y="${height - 4}">${esc(xLabel(xHi))}</text>`;
+    svg += "</svg>";
+    return svg;
+  }
+
+  // Diverging (or single-side) bar chart. bars = [{x, y, cls}]
+  function ocBarChart(bars, { width = OC_W, height = OC_H, xTick } = {}) {
+    if (!bars.length) return null;
+    const xs = bars.map(b => b.x), ys = bars.map(b => b.y);
+    const xLo = Math.min(...xs), xHi = Math.max(...xs);
+    const yAbs = Math.max(1, ...ys.map(Math.abs));
+    const sx = ocScale(xLo, xHi, OC_PAD.l, width - OC_PAD.r);
+    const sy = ocScale(-yAbs, yAbs, height - OC_PAD.b, OC_PAD.t);
+    const zeroY = sy(0);
+    const bw = Math.max(2, (width - OC_PAD.l - OC_PAD.r) / bars.length - 1);
+    let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet">`;
+    svg += `<line x1="${OC_PAD.l}" y1="${zeroY.toFixed(1)}" x2="${width - OC_PAD.r}" y2="${zeroY.toFixed(1)}" stroke="var(--line-soft)"/>`;
+    for (const b of bars) {
+      const x = sx(b.x) - bw / 2, y = sy(Math.max(0, b.y)), h = Math.abs(sy(b.y) - zeroY);
+      svg += `<rect class="${b.y >= 0 ? "oc-bar-pos" : "oc-bar-neg"}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, h).toFixed(1)}"/>`;
+    }
+    if (xTick) svg += `<text class="oc-axis-label" x="${OC_PAD.l}" y="${height - 4}">${esc(xTick(xLo))}</text>` +
+      `<text class="oc-axis-label" x="${width - OC_PAD.r - 40}" y="${height - 4}">${esc(xTick(xHi))}</text>`;
+    svg += "</svg>";
+    return svg;
+  }
+
+  // Strike x expiry heatmap (Volatility Surface, 2D projection — a true 3D
+  // plot needs a charting library this codebase deliberately doesn't carry).
+  function ocHeatmap(expiries, strikes, valueAt, { width = OC_W, height = OC_H } = {}) {
+    if (!expiries.length || !strikes.length) return null;
+    const vals = [];
+    for (const e of expiries) for (const s of strikes) { const v = valueAt(e, s); if (v != null) vals.push(v); }
+    if (!vals.length) return null;
+    const vLo = Math.min(...vals), vHi = Math.max(...vals) || vLo + 1;
+    const cw = (width - OC_PAD.l - OC_PAD.r) / expiries.length;
+    const ch = (height - OC_PAD.t - OC_PAD.b) / strikes.length;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet">`;
+    strikes.forEach((s, si) => expiries.forEach((e, ei) => {
+      const v = valueAt(e, s);
+      const t = v == null ? 0 : (v - vLo) / (vHi - vLo || 1);
+      const color = v == null ? "var(--bg-panel)" : `hsl(${(1 - t) * 200}, 55%, ${28 + t * 30}%)`;
+      svg += `<rect x="${(OC_PAD.l + ei * cw).toFixed(1)}" y="${(OC_PAD.t + si * ch).toFixed(1)}" ` +
+        `width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="${color}"><title>${esc(e)} @ ${esc(s)}: ${v == null ? "—" : (v * 100).toFixed(1) + "%"}</title></rect>`;
+    }));
+    svg += "</svg>";
+    return svg;
+  }
+
+  function ocRenderSmileChart(a) {
+    const per = ((a.iv_skew || {}).per_strike) || [];
+    const ce = per.filter(p => p.ce_iv != null).map(p => [p.strike, p.ce_iv * 100]);
+    const pe = per.filter(p => p.pe_iv != null).map(p => [p.strike, p.pe_iv * 100]);
+    if (!ce.length && !pe.length) return ocEmpty("#ocChartSmile", "no IV in this chain");
+    const svg = ocLineChart(
+      [{ label: "CE", color: "var(--teal)", points: ce }, { label: "PE", color: "var(--ember)", points: pe }],
+      { xLabel: (x) => x.toFixed(0), yFmt: (y) => y.toFixed(0) + "%" });
+    $("#ocChartSmile").innerHTML = svg || "";
+  }
+
+  function ocRenderGexChart(a) {
+    const per = ((a.gex || {}).per_strike) || [];
+    if (!per.length) return ocEmpty("#ocChartGex", (a.gex || {}).status === "no_oi" ? "no OI" : "no data");
+    const bars = per.map(p => ({ x: p.strike, y: p.shape }));
+    const svg = ocBarChart(bars, { xTick: (x) => x.toFixed(0) });
+    $("#ocChartGex").innerHTML = svg || "";
+  }
+
+  function ocRenderMaxPainChart(a) {
+    const curve = ((a.max_pain || {}).curve) || [];
+    if (!curve.length) return ocEmpty("#ocChartMaxPain", (a.max_pain || {}).status === "no_oi" ? "no OI" : "no data");
+    const pts = curve.map(([k, p]) => [k, p]);
+    const svg = ocLineChart([{ color: "var(--gold-soft)", points: pts }],
+      { xLabel: (x) => x.toFixed(0), yFmt: (y) => (y / 1e5).toFixed(1) + "L" });
+    $("#ocChartMaxPain").innerHTML = svg || "";
+  }
+
+  async function ocRenderGreeksHistory(underlying) {
+    try {
+      const rows = await api(`/api/greeks-engine/exposure?underlying=${encodeURIComponent(underlying)}&limit=500`);
+      if (!Array.isArray(rows) || !rows.length) return ocEmpty("#ocChartGreeksHist", "no captured history yet");
+      const xs = rows.map((_, i) => i);
+      const mk = (key, color) => ({ color, points: rows.map((r, i) => [i, Number(r[key]) || 0]) });
+      const svg = ocLineChart([mk("net_delta_exp", "var(--teal)"), mk("net_gamma_exp", "var(--violet)"),
+        mk("net_theta_exp", "var(--ember)"), mk("net_vega_exp", "var(--gold-soft)")],
+        { xLabel: () => "", yFmt: (y) => (Math.abs(y) >= 1e5 ? (y / 1e5).toFixed(1) + "L" : y.toFixed(0)) });
+      $("#ocChartGreeksHist").innerHTML = (svg || "") +
+        `<p class="hint" style="margin:4px 0 0">teal Δ · violet Γ · ember Θ · gold V · ${rows.length} snapshots, ${rows[0].as_of_ts ? timeStr(rows[0].as_of_ts) : "—"} → ${rows[rows.length - 1].as_of_ts ? timeStr(rows[rows.length - 1].as_of_ts) : "—"}</p>`;
+    } catch (e) { ocEmpty("#ocChartGreeksHist", "unavailable"); }
+  }
+
+  async function ocRenderPcrHistory(underlying) {
+    try {
+      const rows = await api(`/api/greeks-engine/exposure?underlying=${encodeURIComponent(underlying)}&limit=500`);
+      const pts = (Array.isArray(rows) ? rows : []).map((r, i) => [i, Number(r.pcr_oi)]).filter(p => !isNaN(p[1]));
+      if (!pts.length) return ocEmpty("#ocChartPcrHist", "no captured PCR history yet");
+      const svg = ocLineChart([{ color: "var(--gold-soft)", points: pts }], { xLabel: () => "", yFmt: (y) => y.toFixed(2) });
+      $("#ocChartPcrHist").innerHTML = svg || "";
+    } catch (e) { ocEmpty("#ocChartPcrHist", "unavailable"); }
+  }
+
+  async function ocRenderVolSurface(underlying) {
+    try {
+      const j = await api(`/api/optionchain/${encodeURIComponent(underlying)}/vol-surface`);
+      if (!j || j.status !== "ok" || !j.points || !j.points.length) return ocEmpty("#ocChartVolSurface", "no captured multi-expiry Greeks yet");
+      const expiries = j.expiries;
+      const strikes = [...new Set(j.points.map(p => p.strike))].sort((a, b) => a - b);
+      const byKey = {};
+      for (const p of j.points) byKey[`${p.expiry}|${p.strike}|${p.option_type}`] = p.iv;
+      // average CE/PE IV per (expiry,strike) when both exist, else whichever is present
+      const valueAt = (e, s) => {
+        const c = byKey[`${e}|${s}|CE`], pv = byKey[`${e}|${s}|PE`];
+        if (c != null && pv != null) return (c + pv) / 2;
+        return c != null ? c : pv;
+      };
+      const svg = ocHeatmap(expiries, strikes, valueAt);
+      $("#ocChartVolSurface").innerHTML = (svg || "") +
+        `<p class="hint" style="margin:4px 0 0">${expiries.length} expiries × ${strikes.length} strikes, darker/redder = higher IV</p>`;
+    } catch (e) { ocEmpty("#ocChartVolSurface", "unavailable"); }
+  }
+
+  async function ocRenderStraddlePnl(underlying, expiry) {
+    if (!expiry) return ocEmpty("#ocChartStraddle", "no resolved expiry");
+    try {
+      const j = await api(`/api/optionchain/${encodeURIComponent(underlying)}/straddle-pnl?expiry=${encodeURIComponent(expiry)}`);
+      if (!j || j.status !== "ok" || !j.series || !j.series.length) return ocEmpty("#ocChartStraddle", "no captured straddle history for this expiry");
+      const pts = j.series.map((r, i) => [i, r.straddle]);
+      const pnl = j.series.map((r, i) => [i, r.pnl]);
+      const svg = ocLineChart([{ color: "var(--gold-soft)", points: pts, cls: "oc-line-straddle" },
+        { color: "var(--violet)", points: pnl, cls: "oc-line-pnl" }], { xLabel: () => "", yFmt: (y) => y.toFixed(0) });
+      $("#ocChartStraddle").innerHTML = (svg || "") +
+        `<p class="hint" style="margin:4px 0 0">strike ${text(j.strike)} · entry ₹${text(j.entry_premium)} at ${j.entry_ts ? timeStr(j.entry_ts) : "—"} ` +
+        `· gold=straddle premium, violet=P&amp;L vs entry · ${j.series.length} pts</p>`;
+    } catch (e) { ocEmpty("#ocChartStraddle", "unavailable"); }
+  }
+
+  async function ocRenderOiProfile(underlying, expiry) {
+    if (!expiry) return ocEmpty("#ocChartOiProfile", "no resolved expiry");
+    try {
+      const j = await api(`/api/optionchain/${encodeURIComponent(underlying)}/oi-profile?expiry=${encodeURIComponent(expiry)}`);
+      if (!j || j.status !== "ok" || !j.strikes || !j.strikes.length) return ocEmpty("#ocChartOiProfile", "no captured OI history for this expiry");
+      // latest OI per strike (last row seen for each strike in the series)
+      const latest = {};
+      for (const row of j.oi_series) latest[row.strike] = row;
+      const bars = j.strikes.map(s => {
+        const r = latest[s] || {};
+        return { x: s, y: (Number(r.ce_oi) || 0) - (Number(r.pe_oi) || 0) };
+      });
+      const svg = ocBarChart(bars, { xTick: (x) => x.toFixed(0) });
+      const cand = j.underlying_candles || [];
+      const rng = cand.length ? `${text(cand[0].c)} → ${text(cand[cand.length - 1].c)}` : "—";
+      $("#ocChartOiProfile").innerHTML = (svg || "") +
+        `<p class="hint" style="margin:4px 0 0">bars = CE OI − PE OI per strike (latest captured) · underlying moved ${rng} over the same window · ${cand.length} candles</p>`;
+    } catch (e) { ocEmpty("#ocChartOiProfile", "unavailable"); }
+  }
+
+  function ocRenderCharts(j) {
+    const a = j.analytics || {};
+    ocRenderSmileChart(a);
+    ocRenderGexChart(a);
+    ocRenderMaxPainChart(a);
+    ocRenderGreeksHistory(j.underlying || ocSymbol);
+    ocRenderPcrHistory(j.underlying || ocSymbol);
+    ocRenderVolSurface(j.underlying || ocSymbol);
+    ocRenderStraddlePnl(j.underlying || ocSymbol, j.expiry);
+    ocRenderOiProfile(j.underlying || ocSymbol, j.expiry);
+    $("#ocChartsNote").textContent = (a.gex || {}).status === "no_oi" || (a.pcr || {}).status === "no_oi"
+      ? "This underlying has no captured OI (quote-only source) — OI-dependent charts above stay empty by design, not an error."
+      : "";
   }
 
   (function ocWire() {
