@@ -250,6 +250,16 @@ try:
 except Exception as _e:
     print(f"[institutional_edge] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Microstructure / Operator-Behaviour Proxy layer (read-only: translates
+# app.orderflow.h1h7_state's existing price-action classification into
+# BUYING_PRESSURE/SELLING_PRESSURE/ABSORPTION/REJECTION/BREAKOUT/
+# FAILED_BREAKOUT/BALANCED/UNKNOWN; no order path, no live_trading) ----
+try:
+    from .microstructure import api as _microstructure_api
+    app.include_router(_microstructure_api.router)
+except Exception as _e:
+    print(f"[microstructure] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
