@@ -1,0 +1,613 @@
+{
+  "A_TREND_CONTINUATION": {
+    "hypothesis": "A_TREND_CONTINUATION",
+    "majority_dir_from_train": "DOWN",
+    "splits": {
+      "train": {
+        "n_signals": 5743,
+        "n_up": 3081,
+        "n_down": 2662,
+        "n_label_up": 2743,
+        "n_label_down": 2783,
+        "n_label_range": 217,
+        "wins": 2769,
+        "accuracy": 0.4822,
+        "baseline_accuracy": 0.4846,
+        "p_value": 0.721506,
+        "p_value_vs_half": 0.007099
+      },
+      "validation": {
+        "n_signals": 2802,
+        "n_up": 1492,
+        "n_down": 1310,
+        "n_label_up": 1419,
+        "n_label_down": 1283,
+        "n_label_range": 100,
+        "wins": 1376,
+        "accuracy": 0.4911,
+        "baseline_accuracy": 0.4579,
+        "p_value": 0.000451,
+        "p_value_vs_half": 0.354613
+      },
+      "oos": {
+        "n_signals": 3093,
+        "n_up": 1508,
+        "n_down": 1585,
+        "n_label_up": 1439,
+        "n_label_down": 1535,
+        "n_label_range": 119,
+        "wins": 1459,
+        "accuracy": 0.4717,
+        "baseline_accuracy": 0.4963,
+        "p_value": 0.006272,
+        "p_value_vs_half": 0.001752
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 1184,
+        "accuracy": 0.4637,
+        "baseline_accuracy": 0.4561
+      },
+      "2026": {
+        "n_signals": 1909,
+        "accuracy": 0.4767,
+        "baseline_accuracy": 0.5212
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 494,
+        "accuracy": 0.498,
+        "baseline_accuracy": 0.5385
+      },
+      "MID": {
+        "n_signals": 2053,
+        "accuracy": 0.4691,
+        "baseline_accuracy": 0.4803
+      },
+      "CLOSING": {
+        "n_signals": 546,
+        "accuracy": 0.4579,
+        "baseline_accuracy": 0.5183
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.4717 vs baseline 0.4963, p=0.006272 (Bonferroni alpha=0.00625, n=3093)"
+  },
+  "B_BREAKOUT": {
+    "hypothesis": "B_BREAKOUT",
+    "majority_dir_from_train": "UP",
+    "splits": {
+      "train": {
+        "n_signals": 1469,
+        "n_up": 757,
+        "n_down": 712,
+        "n_label_up": 710,
+        "n_label_down": 701,
+        "n_label_range": 58,
+        "wins": 733,
+        "accuracy": 0.499,
+        "baseline_accuracy": 0.4833,
+        "p_value": 0.229951,
+        "p_value_vs_half": 0.958386
+      },
+      "validation": {
+        "n_signals": 762,
+        "n_up": 414,
+        "n_down": 348,
+        "n_label_up": 381,
+        "n_label_down": 358,
+        "n_label_range": 23,
+        "wins": 369,
+        "accuracy": 0.4843,
+        "baseline_accuracy": 0.5,
+        "p_value": 0.404747,
+        "p_value_vs_half": 0.404747
+      },
+      "oos": {
+        "n_signals": 790,
+        "n_up": 387,
+        "n_down": 403,
+        "n_label_up": 373,
+        "n_label_down": 390,
+        "n_label_range": 27,
+        "wins": 383,
+        "accuracy": 0.4848,
+        "baseline_accuracy": 0.4722,
+        "p_value": 0.476324,
+        "p_value_vs_half": 0.4132
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 297,
+        "accuracy": 0.4815,
+        "baseline_accuracy": 0.4882
+      },
+      "2026": {
+        "n_signals": 493,
+        "accuracy": 0.4868,
+        "baseline_accuracy": 0.4625
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 185,
+        "accuracy": 0.4973,
+        "baseline_accuracy": 0.4216
+      },
+      "MID": {
+        "n_signals": 466,
+        "accuracy": 0.4764,
+        "baseline_accuracy": 0.4764
+      },
+      "CLOSING": {
+        "n_signals": 139,
+        "accuracy": 0.4964,
+        "baseline_accuracy": 0.5252
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.4848 vs baseline 0.4722, p=0.476324 (Bonferroni alpha=0.00625, n=790)"
+  },
+  "C_MEAN_REVERSION": {
+    "hypothesis": "C_MEAN_REVERSION",
+    "majority_dir_from_train": "DOWN",
+    "splits": {
+      "train": {
+        "n_signals": 1146,
+        "n_up": 542,
+        "n_down": 604,
+        "n_label_up": 540,
+        "n_label_down": 541,
+        "n_label_range": 65,
+        "wins": 496,
+        "accuracy": 0.4328,
+        "baseline_accuracy": 0.4721,
+        "p_value": 0.007746,
+        "p_value_vs_half": 6e-06
+      },
+      "validation": {
+        "n_signals": 626,
+        "n_up": 239,
+        "n_down": 387,
+        "n_label_up": 291,
+        "n_label_down": 292,
+        "n_label_range": 43,
+        "wins": 290,
+        "accuracy": 0.4633,
+        "baseline_accuracy": 0.4665,
+        "p_value": 0.904357,
+        "p_value_vs_half": 0.072003
+      },
+      "oos": {
+        "n_signals": 666,
+        "n_up": 372,
+        "n_down": 294,
+        "n_label_up": 314,
+        "n_label_down": 291,
+        "n_label_range": 61,
+        "wins": 333,
+        "accuracy": 0.5,
+        "baseline_accuracy": 0.4369,
+        "p_value": 0.001171,
+        "p_value_vs_half": 1.0
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 175,
+        "accuracy": 0.5143,
+        "baseline_accuracy": 0.4514
+      },
+      "2026": {
+        "n_signals": 491,
+        "accuracy": 0.4949,
+        "baseline_accuracy": 0.4318
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 303,
+        "accuracy": 0.4851,
+        "baseline_accuracy": 0.4455
+      },
+      "MID": {
+        "n_signals": 301,
+        "accuracy": 0.5116,
+        "baseline_accuracy": 0.4186
+      },
+      "CLOSING": {
+        "n_signals": 62,
+        "accuracy": 0.5161,
+        "baseline_accuracy": 0.4839
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.5 vs baseline 0.4369, p=0.001171 (Bonferroni alpha=0.00625, n=666)"
+  },
+  "C_MEAN_CONTINUATION": {
+    "hypothesis": "C_MEAN_CONTINUATION",
+    "majority_dir_from_train": "DOWN",
+    "splits": {
+      "train": {
+        "n_signals": 1146,
+        "n_up": 604,
+        "n_down": 542,
+        "n_label_up": 540,
+        "n_label_down": 541,
+        "n_label_range": 65,
+        "wins": 585,
+        "accuracy": 0.5105,
+        "baseline_accuracy": 0.4721,
+        "p_value": 0.010023,
+        "p_value_vs_half": 0.496891
+      },
+      "validation": {
+        "n_signals": 626,
+        "n_up": 387,
+        "n_down": 239,
+        "n_label_up": 291,
+        "n_label_down": 292,
+        "n_label_range": 43,
+        "wins": 293,
+        "accuracy": 0.4681,
+        "baseline_accuracy": 0.4665,
+        "p_value": 0.936197,
+        "p_value_vs_half": 0.118984
+      },
+      "oos": {
+        "n_signals": 666,
+        "n_up": 294,
+        "n_down": 372,
+        "n_label_up": 314,
+        "n_label_down": 291,
+        "n_label_range": 61,
+        "wins": 272,
+        "accuracy": 0.4084,
+        "baseline_accuracy": 0.4369,
+        "p_value": 0.148325,
+        "p_value_vs_half": 3e-06
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 175,
+        "accuracy": 0.3886,
+        "baseline_accuracy": 0.4514
+      },
+      "2026": {
+        "n_signals": 491,
+        "accuracy": 0.4155,
+        "baseline_accuracy": 0.4318
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 303,
+        "accuracy": 0.3993,
+        "baseline_accuracy": 0.4455
+      },
+      "MID": {
+        "n_signals": 301,
+        "accuracy": 0.4153,
+        "baseline_accuracy": 0.4186
+      },
+      "CLOSING": {
+        "n_signals": 62,
+        "accuracy": 0.4194,
+        "baseline_accuracy": 0.4839
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.4084 vs baseline 0.4369, p=0.148325 (Bonferroni alpha=0.00625, n=666)"
+  },
+  "D_PULLBACK_IN_TREND": {
+    "hypothesis": "D_PULLBACK_IN_TREND",
+    "majority_dir_from_train": "UP",
+    "splits": {
+      "train": {
+        "n_signals": 1506,
+        "n_up": 722,
+        "n_down": 784,
+        "n_label_up": 738,
+        "n_label_down": 686,
+        "n_label_range": 82,
+        "wins": 747,
+        "accuracy": 0.496,
+        "baseline_accuracy": 0.49,
+        "p_value": 0.642823,
+        "p_value_vs_half": 0.776841
+      },
+      "validation": {
+        "n_signals": 759,
+        "n_up": 385,
+        "n_down": 374,
+        "n_label_up": 332,
+        "n_label_down": 393,
+        "n_label_range": 34,
+        "wins": 376,
+        "accuracy": 0.4954,
+        "baseline_accuracy": 0.4374,
+        "p_value": 0.001443,
+        "p_value_vs_half": 0.827613
+      },
+      "oos": {
+        "n_signals": 667,
+        "n_up": 340,
+        "n_down": 327,
+        "n_label_up": 324,
+        "n_label_down": 329,
+        "n_label_range": 14,
+        "wins": 342,
+        "accuracy": 0.5127,
+        "baseline_accuracy": 0.4858,
+        "p_value": 0.163429,
+        "p_value_vs_half": 0.535604
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 240,
+        "accuracy": 0.5833,
+        "baseline_accuracy": 0.475
+      },
+      "2026": {
+        "n_signals": 427,
+        "accuracy": 0.4731,
+        "baseline_accuracy": 0.4918
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 33,
+        "accuracy": 0.3333,
+        "baseline_accuracy": 0.3333
+      },
+      "MID": {
+        "n_signals": 483,
+        "accuracy": 0.5569,
+        "baseline_accuracy": 0.501
+      },
+      "CLOSING": {
+        "n_signals": 151,
+        "accuracy": 0.4106,
+        "baseline_accuracy": 0.4702
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.5127 vs baseline 0.4858, p=0.163429 (Bonferroni alpha=0.00625, n=667)"
+  },
+  "E_OPENING_RANGE": {
+    "hypothesis": "E_OPENING_RANGE",
+    "majority_dir_from_train": "UP",
+    "splits": {
+      "train": {
+        "n_signals": 12161,
+        "n_up": 6198,
+        "n_down": 5963,
+        "n_label_up": 5992,
+        "n_label_down": 5713,
+        "n_label_range": 456,
+        "wins": 6060,
+        "accuracy": 0.4983,
+        "baseline_accuracy": 0.4927,
+        "p_value": 0.217447,
+        "p_value_vs_half": 0.716813
+      },
+      "validation": {
+        "n_signals": 5205,
+        "n_up": 2706,
+        "n_down": 2499,
+        "n_label_up": 2534,
+        "n_label_down": 2462,
+        "n_label_range": 209,
+        "wins": 2516,
+        "accuracy": 0.4834,
+        "baseline_accuracy": 0.4868,
+        "p_value": 0.627469,
+        "p_value_vs_half": 0.017114
+      },
+      "oos": {
+        "n_signals": 5626,
+        "n_up": 2936,
+        "n_down": 2690,
+        "n_label_up": 2744,
+        "n_label_down": 2673,
+        "n_label_range": 197,
+        "wins": 2809,
+        "accuracy": 0.4993,
+        "baseline_accuracy": 0.4877,
+        "p_value": 0.085357,
+        "p_value_vs_half": 0.925646
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 2346,
+        "accuracy": 0.4979,
+        "baseline_accuracy": 0.4979
+      },
+      "2026": {
+        "n_signals": 3280,
+        "accuracy": 0.5003,
+        "baseline_accuracy": 0.4805
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 108,
+        "accuracy": 0.3981,
+        "baseline_accuracy": 0.4722
+      },
+      "MID": {
+        "n_signals": 4248,
+        "accuracy": 0.5066,
+        "baseline_accuracy": 0.5021
+      },
+      "CLOSING": {
+        "n_signals": 1270,
+        "accuracy": 0.4835,
+        "baseline_accuracy": 0.4409
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.4993 vs baseline 0.4877, p=0.085357 (Bonferroni alpha=0.00625, n=5626)"
+  },
+  "F_VOLATILITY_EXPANSION": {
+    "hypothesis": "F_VOLATILITY_EXPANSION",
+    "majority_dir_from_train": "DOWN",
+    "splits": {
+      "train": {
+        "n_signals": 366,
+        "n_up": 179,
+        "n_down": 187,
+        "n_label_up": 163,
+        "n_label_down": 180,
+        "n_label_range": 23,
+        "wins": 168,
+        "accuracy": 0.459,
+        "baseline_accuracy": 0.4918,
+        "p_value": 0.229165,
+        "p_value_vs_half": 0.129443
+      },
+      "validation": {
+        "n_signals": 245,
+        "n_up": 129,
+        "n_down": 116,
+        "n_label_up": 115,
+        "n_label_down": 119,
+        "n_label_range": 11,
+        "wins": 123,
+        "accuracy": 0.502,
+        "baseline_accuracy": 0.4857,
+        "p_value": 0.609915,
+        "p_value_vs_half": 1.0
+      },
+      "oos": {
+        "n_signals": 143,
+        "n_up": 69,
+        "n_down": 74,
+        "n_label_up": 54,
+        "n_label_down": 73,
+        "n_label_range": 16,
+        "wins": 54,
+        "accuracy": 0.3776,
+        "baseline_accuracy": 0.5105,
+        "p_value": 0.001867,
+        "p_value_vs_half": 0.004301
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 8,
+        "status": "INSUFFICIENT_SAMPLE"
+      },
+      "2026": {
+        "n_signals": 135,
+        "accuracy": 0.3704,
+        "baseline_accuracy": 0.5185
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 130,
+        "accuracy": 0.3538,
+        "baseline_accuracy": 0.5077
+      },
+      "MID": {
+        "n_signals": 11,
+        "status": "INSUFFICIENT_SAMPLE"
+      },
+      "CLOSING": {
+        "n_signals": 2,
+        "status": "INSUFFICIENT_SAMPLE"
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.3776 vs baseline 0.5105, p=0.001867 (Bonferroni alpha=0.00625, n=143)"
+  },
+  "G_MTF_STRUCTURE": {
+    "hypothesis": "G_MTF_STRUCTURE",
+    "majority_dir_from_train": "DOWN",
+    "splits": {
+      "train": {
+        "n_signals": 332,
+        "n_up": 180,
+        "n_down": 152,
+        "n_label_up": 149,
+        "n_label_down": 164,
+        "n_label_range": 19,
+        "wins": 167,
+        "accuracy": 0.503,
+        "baseline_accuracy": 0.494,
+        "p_value": 0.742337,
+        "p_value_vs_half": 0.956243
+      },
+      "validation": {
+        "n_signals": 123,
+        "n_up": 99,
+        "n_down": 24,
+        "n_label_up": 50,
+        "n_label_down": 65,
+        "n_label_range": 8,
+        "wins": 62,
+        "accuracy": 0.5041,
+        "baseline_accuracy": 0.5285,
+        "p_value": 0.58944,
+        "p_value_vs_half": 1.0
+      },
+      "oos": {
+        "n_signals": 131,
+        "n_up": 72,
+        "n_down": 59,
+        "n_label_up": 66,
+        "n_label_down": 58,
+        "n_label_range": 7,
+        "wins": 58,
+        "accuracy": 0.4427,
+        "baseline_accuracy": 0.4427,
+        "p_value": 1.0,
+        "p_value_vs_half": 0.221116
+      }
+    },
+    "oos_per_year": {
+      "2025": {
+        "n_signals": 18,
+        "status": "INSUFFICIENT_SAMPLE"
+      },
+      "2026": {
+        "n_signals": 113,
+        "accuracy": 0.4602,
+        "baseline_accuracy": 0.4248
+      }
+    },
+    "oos_per_time_bucket": {
+      "OPENING": {
+        "n_signals": 4,
+        "status": "INSUFFICIENT_SAMPLE"
+      },
+      "MID": {
+        "n_signals": 93,
+        "accuracy": 0.5161,
+        "baseline_accuracy": 0.4086
+      },
+      "CLOSING": {
+        "n_signals": 34,
+        "accuracy": 0.2647,
+        "baseline_accuracy": 0.5
+      }
+    },
+    "bonferroni_alpha": 0.00625,
+    "passes_bar": false,
+    "bar_rationale": "OOS accuracy 0.4427 vs baseline 0.4427, p=1.0 (Bonferroni alpha=0.00625, n=131)"
+  }
+}
