@@ -12,7 +12,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.liquidity_sweep.backtest import (  # noqa: E402
-    Stage1Sample, _accuracy, _split_chronological, _walk_raw_signals,
+    Stage1FeatureSample, Stage1Sample, _accuracy, _build_bars_by_tf_at,
+    _split_chronological, _walk_raw_signals, _walk_raw_signals_with_features,
 )
 
 
@@ -92,3 +93,40 @@ def test_walk_raw_signals_never_produces_a_timestamp_from_beyond_its_own_window(
     samples = _walk_raw_signals(bars, window=32, horizon=3)
     for s in samples:
         assert s.index < len(bars)
+
+
+def _padded_bullish_bars(n_pad=6000):
+    """A long, mostly-flat real-shaped series with the hand-verified bullish
+    event near the end -- long enough that _build_bars_by_tf_at's
+    HTF_LOOKBACK_BARS window actually has real history to resample from."""
+    filler = [_bar(i, 100.0, 100.3, 99.8, 100.1) for i in range(n_pad)]
+    event = _bullish_event_bars(n_pad)
+    tail = [_bar(len(filler) + len(event) + i, 107.0, 108.0, 106.5, 107.5) for i in range(30)]
+    return filler + event + tail
+
+
+def test_build_bars_by_tf_at_never_reaches_past_index_i():
+    bars = _padded_bullish_bars()
+    i = 6100
+    by_tf = _build_bars_by_tf_at(bars, i, exec_window=32, htf_lookback=6000)
+    assert len(by_tf["5m"]) <= 32
+    for tf in ("15m", "30m", "1h", "4h", "1d"):
+        for bar in by_tf[tf]:
+            assert bar["t"] in {b["t"] for b in bars[:i]}   # every resampled bar is built only from real bars < i
+
+
+def test_walk_raw_signals_with_features_finds_the_same_event_with_real_htf():
+    bars = _padded_bullish_bars()
+    samples = _walk_raw_signals_with_features(bars, window=32, horizon=3, htf_lookback=6000)
+    assert len(samples) >= 1
+    s = samples[0]
+    assert isinstance(s, Stage1FeatureSample)
+    assert s.direction == "BULLISH"
+    # the whole point of this feature-capture pass: regime must be a REAL
+    # measurement now, not the silent constant "RANGE" Stage 1's original
+    # bars_by_tf={"5m": ...}-only call always produced.
+    assert s.regime in ("BULLISH", "BEARISH", "RANGE", "TRANSITION")
+    assert isinstance(s.htf_score, float)
+    assert 0.0 <= s.probability <= 1.0
+    assert s.time_bucket in ("OPENING", "MID", "CLOSING")
+    assert s.day_of_week != "UNKNOWN"

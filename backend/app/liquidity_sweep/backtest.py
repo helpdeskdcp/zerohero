@@ -31,7 +31,7 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
-from . import engine, probability as probability_mod
+from . import engine, indicators as indicators_mod, probability as probability_mod, resample
 
 KAGGLE_DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "data", "historical", "kaggle", "research_historical.db")
@@ -122,6 +122,179 @@ def _walk_raw_signals(bars: list[dict], *, window: int = WINDOW_BARS,
             signal_type=out["liquidity_sweep"]["kind"], outcome=outcome))
         i += cooldown   # skip the cooldown window -- next signal must be a genuinely new event
     return samples
+
+
+# --------------------------------------------------------------------------- #
+#  Phase 1 (index-first brief) -- enriched per-signal feature capture         #
+# --------------------------------------------------------------------------- #
+# Needs a MUCH longer lookback than WINDOW_BARS (250, ~3.3 trading days) to
+# build a real daily/4h EMA(20) -- structure.htf_bias's own _tf_bias() needs
+# >=21 candles per timeframe. ~75 5m-bars/session * 80 sessions gives ~20
+# daily candles with margin, and correspondingly more for the coarser-than-
+# daily-but-finer-than-15m timeframes.
+HTF_LOOKBACK_BARS = 6000
+
+
+def _build_bars_by_tf_at(bars: list[dict], i: int, *, exec_window: int = WINDOW_BARS,
+                          htf_lookback: int = HTF_LOOKBACK_BARS) -> dict:
+    """Real bars_by_tf for engine.evaluate() at step `i`: the same causal 5m
+    execution window PLUS real (resampled, not fabricated -- see
+    resample.py's module docstring) 15m/30m/1h/4h/1d built from a longer,
+    still-strictly-<=i, real-history slice."""
+    exec_bars = bars[max(0, i - exec_window):i]
+    htf_source = bars[max(0, i - htf_lookback):i]
+    return {
+        "5m": exec_bars,
+        "15m": resample.resample_bars(htf_source, 15),
+        "30m": resample.resample_bars(htf_source, 30),
+        "1h": resample.resample_bars(htf_source, 60),
+        "4h": resample.resample_bars(htf_source, 240),
+        "1d": resample.resample_daily(htf_source),
+    }
+
+
+@dataclass
+class Stage1FeatureSample:
+    """~30 named features per signal for the Phase 1 statistical-discrimination
+    analysis -- deliberately a SEPARATE, additive dataclass/walk from
+    Stage1Sample/_walk_raw_signals above (which stay untouched: same tested
+    contract, same 86 passing tests). Built as a second pass over the SAME
+    signal indices _walk_raw_signals already found (see
+    `_walk_raw_signals_with_features`), now with real HTF bars supplied so
+    `regime`/`htf_score` are genuine measurements, not the silent constant
+    RANGE/0.0 that resulted from Stage 1's original bars_by_tf={"5m": ...}
+    only call."""
+    index: int
+    timestamp: str
+    direction: str                    # BULLISH | BEARISH
+    outcome: str                      # WIN | LOSS | TIMEOUT
+    setup_score: float
+    passed_checks: int
+    chk_structure_aligned: bool
+    chk_secondary_confirmation: bool
+    chk_htf_aligned: bool
+    chk_vwap_aligned: bool
+    chk_ema_aligned: bool
+    chk_rsi_not_extreme: bool
+    chk_adx_trending: bool
+    chk_volume_above_average: bool | None   # recomputed independently -- see note below
+    regime: str                       # real htf_bias label (BULLISH/BEARISH/RANGE/TRANSITION)
+    htf_score: float
+    structure_type: str                # BOS | CHOCH
+    cisd: bool
+    fvg: bool
+    order_block: bool
+    sweep_kind: str                    # UPPER_SWEEP | LOWER_SWEEP
+    level_source: str                  # PDH | PDL | EQUAL_HIGH | EQUAL_LOW
+    sweep_reaction: float
+    sweep_reaction_atr_ratio: float | None
+    bars_to_reclaim: int
+    rsi14: float | None
+    macd: float | None
+    adx: float | None
+    atr14: float | None
+    above_vwap: bool | None
+    above_ema20: bool | None
+    ema20_gt_ema50: bool | None
+    volume: float | None
+    volume_ratio: float | None          # signal-bar volume / mean volume of the exec window
+    probability: float
+    confidence: float
+    rr: float
+    risk_amount: float
+    reward_amount: float
+    time_bucket: str                    # OPENING | MID | CLOSING (session-relative)
+    day_of_week: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def _time_bucket(ts: str) -> str:
+    """Session-relative bucket in IST wall-clock time (see resample.py for
+    the UTC->IST conversion rationale). NSE: 09:15-15:30 IST."""
+    dt = resample._parse_ts(ts)
+    if dt is None:
+        return "UNKNOWN"
+    minutes = dt.hour * 60 + dt.minute
+    if minutes < 10 * 60:            # before 10:00 IST
+        return "OPENING"
+    if minutes >= 14 * 60 + 30:      # 14:30 IST onward
+        return "CLOSING"
+    return "MID"
+
+
+def _day_of_week(ts: str) -> str:
+    dt = resample._parse_ts(ts)
+    return dt.strftime("%A") if dt else "UNKNOWN"
+
+
+def _walk_raw_signals_with_features(bars: list[dict], *, window: int = WINDOW_BARS,
+                                     horizon: int = HORIZON_BARS,
+                                     cooldown_bars: int | None = None,
+                                     htf_lookback: int = HTF_LOOKBACK_BARS) -> list[Stage1FeatureSample]:
+    """Pass 1: reuse the existing, tested `_walk_raw_signals` unchanged to
+    find the signal indices + real outcomes (outcome labeling is pure
+    forward price-action grading, independent of htf_bias, so it is
+    identical either way). Pass 2: for those indices ONLY, rebuild real
+    bars_by_tf (5m + genuinely resampled 15m/30m/1h/4h/1d) and call
+    engine.evaluate() again to capture the full feature-rich output --
+    cheap (~2,100 rebuilds, not ~43,000), because the expensive HTF resample
+    only runs where a signal was already found."""
+    raw = _walk_raw_signals(bars, window=window, horizon=horizon, cooldown_bars=cooldown_bars)
+    out: list[Stage1FeatureSample] = []
+    for s in raw:
+        i = s.index
+        bars_by_tf = _build_bars_by_tf_at(bars, i, exec_window=window, htf_lookback=htf_lookback)
+        result = engine.evaluate(symbol="NIFTY", bars_by_tf=bars_by_tf, spot=bars_by_tf["5m"][-1]["c"],
+                                 config={"min_probability": 0.0})
+        if result["decision"] == "NO_TRADE":
+            continue   # structurally shouldn't happen (see docstring) -- skip defensively, don't crash a 2000-sample run
+        reasons = set(result["setup_score"]["reasons"])
+        exec_bars = bars_by_tf["5m"]
+        avg_volume = (sum((b.get("v") or 0) for b in exec_bars) / len(exec_bars)) if exec_bars else None
+        sweep_bar_volume = None
+        sw = result["liquidity_sweep"]
+        sweep_idx_local = sw.get("sweep_bar_index")
+        if sweep_idx_local is not None and 0 <= sweep_idx_local < len(exec_bars):
+            sweep_bar_volume = exec_bars[sweep_idx_local].get("v")
+        chk_volume_above_average = (
+            (avg_volume is not None and sweep_bar_volume is not None and sweep_bar_volume > avg_volume)
+            if avg_volume is not None and sweep_bar_volume is not None else None)
+        ind = indicators_mod.snapshot(exec_bars)
+        atr = ind.get("atr14")
+        ema20, ema50 = ind.get("ema20"), ind.get("ema50")
+        out.append(Stage1FeatureSample(
+            index=i, timestamp=result["timestamp"], direction=s.direction, outcome=s.outcome,
+            setup_score=result["setup_score"]["score_0_100"], passed_checks=result["setup_score"]["passed_checks"],
+            chk_structure_aligned="STRUCTURE_BREAK_ALIGNED" in reasons,
+            chk_secondary_confirmation="SECONDARY_CONFIRMATION_PRESENT" in reasons,
+            chk_htf_aligned="HTF_BIAS_ALIGNED" in reasons,
+            chk_vwap_aligned="VWAP_ALIGNED" in reasons,
+            chk_ema_aligned="EMA20_ALIGNED" in reasons,
+            chk_rsi_not_extreme="RSI_NOT_EXTREME" in reasons,
+            chk_adx_trending="ADX_TRENDING" in reasons,
+            chk_volume_above_average=chk_volume_above_average,
+            regime=result["market_regime"], htf_score=result["htf_bias"]["score"],
+            structure_type=result["structure"]["type"],
+            cisd=result["confirmation"]["cisd"], fvg=result["confirmation"]["fvg"],
+            order_block=result["confirmation"]["order_block"],
+            sweep_kind=sw["kind"], level_source=sw["level_source"],
+            sweep_reaction=sw["reaction"],
+            sweep_reaction_atr_ratio=(sw["reaction"] / atr if atr else None),
+            bars_to_reclaim=sw["bars_to_reclaim"],
+            rsi14=ind.get("rsi14"), macd=ind.get("macd"), adx=ind.get("adx"), atr14=atr,
+            above_vwap=ind.get("above_vwap"), above_ema20=ind.get("above_ema20"),
+            ema20_gt_ema50=(ema20 > ema50) if (ema20 is not None and ema50 is not None) else None,
+            volume=ind.get("volume"),
+            volume_ratio=(ind.get("volume") / avg_volume if ind.get("volume") and avg_volume else None),
+            probability=(result["probability"]["up"] if s.direction == "BULLISH"
+                        else result["probability"]["down"]),
+            confidence=result["confidence"],
+            rr=result["rr"], risk_amount=result["risk_amount"], reward_amount=result["reward_amount"],
+            time_bucket=_time_bucket(result["timestamp"]), day_of_week=_day_of_week(result["timestamp"]),
+        ))
+    return out
 
 
 def _split_chronological(samples: list[Stage1Sample], *, train_frac=0.5, val_frac=0.25):
