@@ -62,12 +62,52 @@ def test_illiquid_leg_penalised():
 
 
 def test_ce_pe_confirmation_confirmed_and_conflict():
-    strong_ce = {"confirm": "STRONG"}
-    weak_pe = {"confirm": "WEAK"}
-    strong_pe = {"confirm": "STRONG"}
-    assert ce_pe_confirmation("BULLISH", strong_ce, weak_pe)["agreement"] == "CONFIRMED"
-    assert ce_pe_confirmation("BULLISH", strong_ce, strong_pe)["agreement"] == "CONFLICT"
-    assert ce_pe_confirmation("BULLISH", {"confirm": "OPPOSING"}, weak_pe)["agreement"] == "OPPOSING"
+    """`confirm` is direction-relative (CE's own_ok wants UP, PE's wants
+    DOWN) -- fixtures here carry the RAW own_trend `dir` each `confirm`
+    would realistically come with, so this test can't silently re-encode
+    the inverted-CONFLICT bug (see ce_pe_confirmation's own docstring)."""
+    strong_ce_up = {"confirm": "STRONG", "own_trend": {"dir": "UP"}}       # CE up -> STRONG
+    weak_pe_none = {"confirm": "WEAK", "own_trend": {"dir": "NONE"}}
+    strong_pe_down = {"confirm": "STRONG", "own_trend": {"dir": "DOWN"}}   # PE down -> STRONG
+    strong_pe_up = {"confirm": "OPPOSING", "own_trend": {"dir": "UP"}}     # PE up -> OPPOSING (wants DOWN)
+    # CE up + PE quiet -> coherent enough, CONFIRMED
+    assert ce_pe_confirmation("BULLISH", strong_ce_up, weak_pe_none)["agreement"] == "CONFIRMED"
+    # CE up + PE down -> the textbook COHERENT bullish move -> CONFIRMED, not a conflict
+    assert ce_pe_confirmation("BULLISH", strong_ce_up, strong_pe_down)["agreement"] == "CONFIRMED"
+    # CE up + PE ALSO up (same raw direction, e.g. an IV expansion) -> the genuinely ambiguous case -> CONFLICT
+    assert ce_pe_confirmation("BULLISH", strong_ce_up, strong_pe_up)["agreement"] == "CONFLICT"
+    assert ce_pe_confirmation("BULLISH", {"confirm": "OPPOSING", "own_trend": {"dir": "DOWN"}},
+                              weak_pe_none)["agreement"] == "OPPOSING"
+
+
+def test_ce_pe_confirmation_on_real_analyse_leg_output_coherent_move_confirms():
+    """Regression test for the actual bug (not just the abstracted fixture
+    version above): a real CE analyse_leg() on a rising leg + a real PE
+    analyse_leg() on a falling leg -- the exact signature of one real
+    coherent bullish move -- must CONFIRM, not CONFLICT."""
+    up = [120 + i * 1.5 for i in range(30)]
+    dn = [80 - i * 1.5 for i in range(30)]
+    ce_a = analyse_leg({"5m": bars(up)}, _leg(160, delta=0.52, strike=24100, ot="CE"),
+                       opt_type="CE", index_move_pts=25.0)
+    pe_a = analyse_leg({"5m": bars(dn)}, _leg(40, delta=-0.48, strike=24100, ot="PE"),
+                       opt_type="PE", index_move_pts=25.0)
+    assert ce_a["own_trend"]["dir"] == "UP" and pe_a["own_trend"]["dir"] == "DOWN"
+    conf = ce_pe_confirmation("BULLISH", ce_a, pe_a)
+    assert conf["agreement"] == "CONFIRMED"
+
+
+def test_ce_pe_confirmation_on_real_analyse_leg_output_same_direction_conflicts():
+    """Both legs' own premium trending the SAME raw direction (both up) --
+    the genuine ambiguous case (e.g. an IV expansion) -- must CONFLICT."""
+    up = [120 + i * 1.5 for i in range(30)]
+    up2 = [40 + i * 0.8 for i in range(30)]
+    ce_a = analyse_leg({"5m": bars(up)}, _leg(160, delta=0.52, strike=24100, ot="CE"),
+                       opt_type="CE", index_move_pts=25.0)
+    pe_a = analyse_leg({"5m": bars(up2)}, _leg(40, delta=-0.48, strike=24100, ot="PE"),
+                       opt_type="PE", index_move_pts=25.0)
+    assert ce_a["own_trend"]["dir"] == "UP" and pe_a["own_trend"]["dir"] == "UP"
+    conf = ce_pe_confirmation("BULLISH", ce_a, pe_a)
+    assert conf["agreement"] == "CONFLICT"
 
 
 def test_select_option_prefers_quality_and_atm():

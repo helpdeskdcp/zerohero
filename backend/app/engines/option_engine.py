@@ -153,16 +153,38 @@ def analyse_leg(leg_bars_by_tf: dict, leg: dict, *, opt_type: str,
 
 
 def ce_pe_confirmation(direction: str, ce: dict | None, pe: dict | None) -> dict:
-    """spec-5: index sets structure; CE and PE must independently agree."""
+    """spec-5: index sets structure; CE and PE must independently agree.
+
+    A genuine, coherent index move shows CE and PE moving in OPPOSITE raw
+    directions (call premium up + put premium down for a bullish move, and
+    the reverse for bearish) -- that is the textbook CONFIRMING signature.
+    The real ambiguous case this gate exists to catch is both legs' own
+    premium trending the SAME raw direction together (e.g. an IV expansion
+    lifting both sides with no real directional edge) -- "both legs bid up
+    together," genuinely unclear.
+
+    FIXED BUG (found via an OOS signal-pipeline audit, see
+    SIGNAL_PIPELINE_AUDIT_REPORT.md): the previous version compared each
+    leg's `confirm` string (STRONG/WEAK/OPPOSING) directly -- but `confirm`
+    is computed relative to EACH LEG'S OWN expected direction (CE wants UP,
+    PE wants DOWN, see analyse_leg's `own_ok`), so "both STRONG" actually
+    meant "CE trending up AND PE trending down" -- the coherent, CONFIRMING
+    case above -- and was being blocked as CONFLICT. The genuinely
+    ambiguous "both legs bid the same way" case instead produced
+    CE=STRONG/PE=OPPOSING and passed through as CONFIRMED: exactly
+    inverted. A 3,430-candidate OOS audit found 55-59% of trades blocked at
+    this gate would have won -- consistent with the bug throwing out
+    coherent setups. Fixed by comparing each leg's RAW own_trend direction
+    instead of the direction-relative `confirm` string."""
     d = str(direction).upper()
     bull = d in ("BULLISH", "BUY_CE", "UP")
     primary, other = (ce, pe) if bull else (pe, ce)
     p_conf = (primary or {}).get("confirm", "WEAK")
     o_conf = (other or {}).get("confirm", "WEAK")
-    if p_conf == "STRONG" and o_conf != "STRONG":
-        agreement = "CONFIRMED"
-    elif p_conf == "STRONG" and o_conf == "STRONG":
-        agreement = "CONFLICT"          # both legs bid -> unclear -> prefer NO_TRADE
+    p_dir = ((primary or {}).get("own_trend") or {}).get("dir", "NONE")
+    o_dir = ((other or {}).get("own_trend") or {}).get("dir", "NONE")
+    if p_conf == "STRONG":
+        agreement = "CONFLICT" if (o_dir != "NONE" and o_dir == p_dir) else "CONFIRMED"
     elif p_conf == "OPPOSING":
         agreement = "OPPOSING"
     else:
