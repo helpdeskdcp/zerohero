@@ -95,6 +95,11 @@ class OrderManager:
         # live registries (also persisted via broker_orders / order_events)
         self.states: dict[str, TradeState] = {}
         self.monitors: dict[str, TradeMonitor] = {}
+        # trade_ids already alerted as DEAD via reconcile() -- see reconcile()'s
+        # own comment: without this, the SAME "order dead" alert (e.g. Telegram
+        # "paper: no record / lost on restart") fires every reconcile cycle for
+        # as long as the trade stays in self.states, not just once.
+        self._dead_alerted: set[str] = set()
 
     # ---------------------------------------------------------------- freeze
     def freeze(self, reason: str):
@@ -348,8 +353,19 @@ class OrderManager:
                                              "order_status": res.order_status,
                                              "position_match": res.position_match})
         elif res.action == "DEAD":
-            self._alert("order_dead", {"trade_id": trade_id, "status": res.order_status,
-                                       "reasons": res.reasons})
+            # Alert exactly once per trade_id -- without this, a DEAD trade
+            # left in self.states (e.g. a REJECTED/CANCELLED order whose
+            # monitor is deliberately kept around, just marked .closed, so
+            # its final state stays queryable) gets re-reconciled and
+            # re-alerted on EVERY future cycle for as long as it stays
+            # registered, which is the bug that sent the same "ORDER DEAD /
+            # paper: no record (never placed / lost on restart)" Telegram
+            # message on a loop all day. This does NOT change self.states/
+            # self.monitors membership or lifetime -- only alert dedup.
+            if trade_id not in self._dead_alerted:
+                self._dead_alerted.add(trade_id)
+                self._alert("order_dead", {"trade_id": trade_id, "status": res.order_status,
+                                           "reasons": res.reasons})
         # also reconcile any EXIT leg that was sent
         exit_tag = idem.tag(trade_id, Leg.EXIT)
         if idem.get(exit_tag) and not idem.is_terminal(exit_tag):

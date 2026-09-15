@@ -248,3 +248,39 @@ def test_recover_abandons_paper_intent_the_broker_lost_on_restart(fresh_db):
     assert "T1" not in om2.states
     row = next(r for r in fresh_db.list_broker_orders(trade_id="T1") if r["leg"] == "ENTRY")
     assert row["status"] == OStatus.CANCELLED       # terminal -> not re-reconciled next boot
+
+
+def test_reconcile_stops_re_alerting_a_dead_trade_every_cycle(fresh_db):
+    """Regression test for a real bug: recover() already drops a DEAD intent
+    from self.states so it's never reconciled again, but the ONGOING
+    reconcile() path (called every tick in the live loop, not just at
+    startup) alerted on DEAD without ever removing the trade -- so the same
+    Telegram "ORDER DEAD" alert fired forever, every cycle, for the rest of
+    the day. A second reconcile() call for the same trade must be a no-op
+    (state already gone), not a second alert."""
+    from app.execution.paper_broker import PaperBroker
+    alerts = []
+    om = _mgr(fresh_db, broker=PaperBroker(ltp_provider=lambda t: 100.0,
+                                           scenario={"fill_mode": "FULL"}), alerts=alerts)
+    st = om.prearm(_contract())
+    om.submit(st, clocks=_fresh_clocks())
+    # simulate the broker losing the order (e.g. a restart) without going
+    # through recover() -- exercising the steady-state reconcile() path.
+    # Reconciler captures its own `broker` reference at construction, so both
+    # attributes need swapping to actually break the connection.
+    fresh_broker = PaperBroker(ltp_provider=lambda t: 100.0)
+    om.broker = fresh_broker
+    om.reconciler.broker = fresh_broker
+
+    res1 = om.reconcile("T1")
+    assert res1 is not None and res1.action == "DEAD"
+    dead_alerts_after_first = [p for k, p in alerts if k == "order_dead"]
+    assert len(dead_alerts_after_first) == 1
+
+    res2 = om.reconcile("T1")                        # a later tick, same trade_id
+    assert res2 is not None and res2.action == "DEAD"   # still reconciles (state untouched --
+                                                          # a REJECTED/CANCELLED order's monitor
+                                                          # must stay queryable, see
+                                                          # test_rejected_reconcile_kills_monitor)
+    dead_alerts_after_second = [p for k, p in alerts if k == "order_dead"]
+    assert len(dead_alerts_after_second) == 1        # still exactly one -- the fix: no repeat spam
