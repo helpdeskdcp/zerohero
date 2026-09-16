@@ -13,6 +13,7 @@ import ast
 import os
 import pathlib
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -25,6 +26,16 @@ from app.optionchain.sources import angelone_chain, upstox_open, nse_v3
 # --------------------------------------------------------------------------- #
 #  canonical shape                                                             #
 # --------------------------------------------------------------------------- #
+def _future_expiry(days_ahead: int = 30) -> str:
+    """A real calendar date `days_ahead` from whenever the test actually
+    runs, in the same '%d%b%Y' canonical format real expiries use -- unlike
+    a hardcoded date, this never goes stale (quality.py's _expiry_ok()
+    genuinely compares against real datetime.now(), no grace period, so a
+    fixed past-tense string was a time-bomb that broke once real time
+    caught up to it)."""
+    return (datetime.now(timezone.utc) + timedelta(days=days_ahead)).strftime("%d%b%Y").upper()
+
+
 def _demo_chain(spot=None):
     rows = []
     for k in range(23000, 24001, 50):
@@ -33,7 +44,7 @@ def _demo_chain(spot=None):
             strike=float(k),
             ce=OptionLeg(ltp=200.0 - (k - 23500) * 0.04, oi=1000.0 + k, iv=0.12, delta=0.5 - d),
             pe=OptionLeg(ltp=200.0 + (k - 23500) * 0.04, oi=2000.0 + k, iv=0.13, delta=-0.5 - d)))
-    return OptionChain(underlying="NIFTY", expiry="15SEP2026", ts="2026-09-09T00:00:00Z",
+    return OptionChain(underlying="NIFTY", expiry=_future_expiry(), ts="2026-09-09T00:00:00Z",
                        source="unit", spot=spot, rows=rows,
                        capability={"has_greeks": True, "greek_coverage": 1.0,
                                    "has_oi": True}).sort().compute_atm()

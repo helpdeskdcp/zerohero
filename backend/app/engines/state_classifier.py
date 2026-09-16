@@ -263,7 +263,17 @@ def _eval_reversal(side, zone, O, H, L, C, V, atr, vwap, rsi, roc, htf, chain, c
         "momentum": mom,
         "vwap": 1.0 if (vwap is None) else (1.0 if ((C[-1] > vwap) == up) else 0.3),
         "atr": max(0.0, min(1.0, rej_depth / 0.8)),
-        "htf": 0.0 if ((htf == "UP" and not up) or (htf == "DOWN" and up)) else (1.0 if htf in ("FLAT", "UNKNOWN") else 0.7),
+        # FIXED BUG (found via a signal-engine bug hunt following the
+        # option_engine.ce_pe_confirmation fix): this used to read
+        # `0.0 if opposed else (1.0 if no-HTF-info else 0.7)` -- i.e. a
+        # reversal setup that AGREES with a real higher-timeframe trend
+        # scored LOWER (0.7) than one with no HTF information at all (1.0),
+        # backwards from _eval_break's own (correct) monotonic convention
+        # two blocks above (aligned=1.0, neutral=0.5, opposed=0.0). Buying a
+        # dip within an established HTF uptrend should score HIGHER than a
+        # reversal with no trend context, never lower. Now mirrors
+        # _eval_break's exact formula.
+        "htf": 1.0 if ((htf == "UP") == up and htf in ("UP", "DOWN")) else (0.5 if htf in ("FLAT", "UNKNOWN") else 0.0),
         "retest": 1.0 if subsequent else 0.2,
     }
     raw = _score(comp, _W)

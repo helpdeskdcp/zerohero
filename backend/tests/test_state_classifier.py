@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.engines.sr_engine import compute_sr
-from app.engines.state_classifier import classify
+from app.engines.state_classifier import _eval_reversal, classify
 
 
 def path(points, wick=0.3, vol=1000):
@@ -150,3 +150,29 @@ def test_score_and_components_shape():
         "price_action", "level_strength", "volume", "oi", "momentum", "vwap", "atr", "htf", "retest"}
     for v in r["components"].values():
         assert 0.0 <= v <= 1.0
+
+
+def test_reversal_htf_component_is_monotonic_not_inverted():
+    """Regression test for a real bug: _eval_reversal's htf component used
+    to score an ALIGNED higher-timeframe trend (0.7) LOWER than having no
+    HTF information at all (1.0), while OPPOSED correctly scored lowest
+    (0.0) -- backwards. A support reversal (buying a dip) that agrees with
+    a real HTF uptrend must score htf=1.0 (highest), no-information must be
+    neutral (0.5), and an opposing HTF trend must score lowest (0.0) --
+    exactly mirroring _eval_break's own (already-correct) convention."""
+    O = [100, 99.5, 99, 98.5, 98, 97.8]
+    H = [100.2, 99.7, 99.2, 98.7, 98.2, 98.0]
+    L = [99.8, 99.3, 98.8, 98.2, 97.6, 96.5]
+    C = [99.6, 99.0, 98.5, 98.0, 97.9, 97.8]
+    V = [1000] * 6
+    zone = {"level": 97.5, "zone": (97.0, 98.0), "strength": 60}
+
+    def htf_component(htf):
+        r = _eval_reversal("SUPPORT", zone, O, H, L, C, V, 1.0, None, 40.0, 0.05, htf, None, {})
+        return r["components"]["htf"]
+
+    aligned, opposed, no_info = htf_component("UP"), htf_component("DOWN"), htf_component("FLAT")
+    assert aligned == 1.0
+    assert opposed == 0.0
+    assert no_info == 0.5
+    assert aligned > no_info > opposed   # the actual regression check: strictly monotonic, not shuffled
