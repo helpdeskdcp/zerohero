@@ -219,6 +219,12 @@ DEFAULT_CONFIG = {
     # Enable per-symbol via symbol_profiles.<SYM>.chain_gates only; NIFTY stays
     # frozen (no profile).
     "strategy": {"chain_gates": {"enabled": False}},
+    # High-confidence single-signal gate (app.signal_gate.final_signal_gate).
+    # Opt-in, default OFF -> Telegram entry publishing is byte-identical to
+    # before this existed. Gates ONLY the Telegram publish; the paper trade
+    # and every audit row above it are unaffected either way, so research/
+    # calibration sample generation never changes.
+    "final_signal_gate": {"enabled": False},
     # Per-symbol strategy overrides, merged over `strategy`. NIFTY is DELIBERATELY
     # absent -> it runs on the P6-validated defaults and must stay that way
     # (best live win-rate). MCX commodities move slower and trend longer, so
@@ -410,6 +416,8 @@ class AutoScalpRunner:
         self._tg_last: dict[str, float] = {}   # dedup key -> last-sent epoch
         self._seeded: set[str] = set()         # aggs already backfilled from broker candles
         self._blocks: dict[str, dict] = {}     # sym -> {n, last, ts, signal} — why entries were refused
+        self.last_final_signal_gate: dict | None = None
+        self._active_fsg_fingerprint: dict[str, str] = {}   # sym -> fingerprint of its active APPROVED signal
 
     # ---------------- config ----------------
     def get_config(self) -> dict:
@@ -894,6 +902,36 @@ class AutoScalpRunner:
             "status": "OPEN", "resolved": 0,
         })
         asyncio.create_task(self._emit("autoscalp_open", {"symbol": sym, "trade": row, "signal_id": signal_id}))
+
+        # --- FINAL SIGNAL GATE (opt-in; default OFF) --------------------------
+        # Paper trade + audit row above are UNCHANGED by this -- research/
+        # calibration sample generation keeps working exactly as before.
+        # Only the Telegram publish below is gated: only an APPROVED
+        # FinalSignalDecision (high confluence score, SR not contradicting,
+        # not a duplicate/cooldown repeat) may reach Telegram.
+        fsg_cfg = (self.get_config().get("final_signal_gate") or {})
+        if fsg_cfg.get("enabled"):
+            from ..signal_gate import final_signal_gate as _fsg_mod
+            fsg = _fsg_mod.evaluate_final_signal(
+                {**sig, "symbol": sym.upper()}, sr_confirmation=sig.get("sr_confirmation"),
+                chain_bias=sig.get("chain_bias"),
+                min_signal_score=fsg_cfg.get("min_signal_score", _fsg_mod.MIN_SIGNAL_SCORE),
+                min_rr=fsg_cfg.get("min_rr", _fsg_mod.MIN_RR),
+                cooldown_sec=fsg_cfg.get("cooldown_sec", _fsg_mod.SIGNAL_COOLDOWN_SEC),
+                require_sr_confirmation=fsg_cfg.get("require_sr_confirmation", True),
+                require_volume_confirmation=fsg_cfg.get("require_volume_confirmation", False),
+                require_oi_confirmation=fsg_cfg.get("require_oi_confirmation", False),
+                one_active_signal=fsg_cfg.get("one_active_signal", True),
+                allow_opposite_while_active=fsg_cfg.get("allow_opposite_while_active", False))
+            self.last_final_signal_gate = {"symbol": sym.upper(), "signal_id": signal_id,
+                                           "state": fsg.state, "reason": fsg.reason,
+                                           "confidence_score": fsg.confidence_score,
+                                           "historical_confidence": fsg.historical_confidence}
+            db.set_setting(f"fsg_last:{sym.upper()}", json.dumps(self.last_final_signal_gate))
+            if fsg.state != _fsg_mod.APPROVED:
+                return
+            self._active_fsg_fingerprint[sym.upper()] = fsg.fingerprint
+
         self._tg_send("entry:" + signal_id, notify.signal_card(
             {**sig, "opt_tradingsymbol": sig.get("tradingsymbol")}, symbol=sym,
             index_ltp=self._aggs[sym.upper()].last_price), conf=sig.get("confidence"),
@@ -944,6 +982,11 @@ class AutoScalpRunner:
     def _finalize_close(self, updated):
         """Shared close bookkeeping: safeguard feedback, scalp_signal outcome
         backfill, WS emit, Telegram exit card."""
+        _sym = str(updated.get("underlying") or "").upper()
+        if _sym in self._active_fsg_fingerprint:
+            from ..signal_gate.final_signal_gate import mark_resolved
+            mark_resolved(_sym)
+            self._active_fsg_fingerprint.pop(_sym, None)
         pnl = updated.get("pnl")
         # ZTH is a fixed-premium lottery leg — its P&L must not move the
         # scalp daily-loss / streak budget that halts the core engine.

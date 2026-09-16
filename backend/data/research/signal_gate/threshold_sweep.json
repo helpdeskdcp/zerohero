@@ -1,0 +1,344 @@
+{
+  "NATGAS": {
+    "instrument": "NATGAS",
+    "n_bars_5m": 12854,
+    "raw_signals": 2500,
+    "sr_confirmed_signals": 417,
+    "raw_stats": {
+      "n": 2500,
+      "win_rate_pct": 53.1,
+      "expectancy": 0.0159,
+      "median_r_proxy": 0.0519,
+      "profit_factor": 1.103,
+      "exit_reason_pct": {
+        "TIME": 4.6,
+        "STOP": 43.0,
+        "TRAIL": 26.3,
+        "TARGET": 26.0
+      }
+    },
+    "sr_confirmed_stats": {
+      "n": 417,
+      "win_rate_pct": 54.4,
+      "expectancy": 0.03,
+      "median_r_proxy": 0.0739,
+      "profit_factor": 1.188,
+      "exit_reason_pct": {
+        "TIME": 7.0,
+        "TRAIL": 26.9,
+        "STOP": 39.6,
+        "TARGET": 26.6
+      }
+    },
+    "by_threshold": {
+      "70.0": {
+        "n_approved": 221,
+        "n": 221,
+        "win_rate_pct": 54.8,
+        "expectancy": 0.0421,
+        "median_r_proxy": 0.0786,
+        "profit_factor": 1.256,
+        "exit_reason_pct": {
+          "TIME": 6.3,
+          "TRAIL": 27.6,
+          "STOP": 39.8,
+          "TARGET": 26.2
+        }
+      },
+      "75.0": {
+        "n_approved": 115,
+        "n": 115,
+        "win_rate_pct": 54.8,
+        "expectancy": 0.048,
+        "median_r_proxy": 0.0786,
+        "profit_factor": 1.292,
+        "exit_reason_pct": {
+          "TRAIL": 25.2,
+          "STOP": 39.1,
+          "TIME": 6.1,
+          "TARGET": 29.6
+        }
+      },
+      "80.0": {
+        "n_approved": 17,
+        "n": 17,
+        "win_rate_pct": 82.4,
+        "expectancy": 0.2433,
+        "median_r_proxy": 0.1729,
+        "profit_factor": 5.828,
+        "exit_reason_pct": {
+          "TRAIL": 52.9,
+          "STOP": 17.6,
+          "TARGET": 29.4
+        }
+      },
+      "85.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "90.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "95.0": {
+        "n_approved": 0,
+        "n": 0
+      }
+    }
+  },
+  "NIFTY": {
+    "instrument": "NIFTY",
+    "n_bars_5m": 25438,
+    "raw_signals": 8166,
+    "sr_confirmed_signals": 1157,
+    "raw_stats": {
+      "n": 8165,
+      "win_rate_pct": 57.6,
+      "expectancy": 1.1543,
+      "median_r_proxy": 2.8145,
+      "profit_factor": 1.188,
+      "exit_reason_pct": {
+        "STOP": 41.9,
+        "TRAIL": 28.9,
+        "TARGET": 28.5,
+        "TIME": 0.6,
+        "NA": 0.0
+      }
+    },
+    "sr_confirmed_stats": {
+      "n": 1156,
+      "win_rate_pct": 57.4,
+      "expectancy": 1.0873,
+      "median_r_proxy": 3.1761,
+      "profit_factor": 1.162,
+      "exit_reason_pct": {
+        "TRAIL": 29.7,
+        "STOP": 41.7,
+        "TARGET": 27.4,
+        "TIME": 1.0,
+        "NA": 0.1
+      }
+    },
+    "by_threshold": {
+      "70.0": {
+        "n_approved": 246,
+        "n": 246,
+        "win_rate_pct": 58.5,
+        "expectancy": 2.0336,
+        "median_r_proxy": 4.7293,
+        "profit_factor": 1.255,
+        "exit_reason_pct": {
+          "TARGET": 24.4,
+          "TRAIL": 33.7,
+          "STOP": 39.8,
+          "TIME": 2.0
+        }
+      },
+      "75.0": {
+        "n_approved": 48,
+        "n": 48,
+        "win_rate_pct": 58.3,
+        "expectancy": 1.042,
+        "median_r_proxy": 5.9051,
+        "profit_factor": 1.107,
+        "exit_reason_pct": {
+          "TRAIL": 29.2,
+          "STOP": 41.7,
+          "TARGET": 29.2
+        }
+      },
+      "80.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "85.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "90.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "95.0": {
+        "n_approved": 0,
+        "n": 0
+      }
+    }
+  },
+  "BANKNIFTY": {
+    "instrument": "BANKNIFTY",
+    "n_bars_5m": 3956,
+    "raw_signals": 566,
+    "sr_confirmed_signals": 93,
+    "raw_stats": {
+      "n": 566,
+      "win_rate_pct": 55.7,
+      "expectancy": 2.6727,
+      "median_r_proxy": 5.9982,
+      "profit_factor": 1.185,
+      "exit_reason_pct": {
+        "STOP": 43.3,
+        "TRAIL": 27.4,
+        "TARGET": 27.4,
+        "TIME": 1.9
+      }
+    },
+    "sr_confirmed_stats": {
+      "n": 93,
+      "win_rate_pct": 64.5,
+      "expectancy": 13.1876,
+      "median_r_proxy": 11.33,
+      "profit_factor": 2.038,
+      "exit_reason_pct": {
+        "TRAIL": 31.2,
+        "TARGET": 32.3,
+        "STOP": 33.3,
+        "TIME": 3.2
+      }
+    },
+    "by_threshold": {
+      "70.0": {
+        "n_approved": 32,
+        "n": 32,
+        "win_rate_pct": 68.8,
+        "expectancy": 22.8494,
+        "median_r_proxy": 19.3325,
+        "profit_factor": 2.514,
+        "exit_reason_pct": {
+          "STOP": 28.1,
+          "TARGET": 37.5,
+          "TRAIL": 28.1,
+          "TIME": 6.2
+        }
+      },
+      "75.0": {
+        "n_approved": 14,
+        "n": 14,
+        "win_rate_pct": 71.4,
+        "expectancy": 33.9064,
+        "median_r_proxy": 39.27,
+        "profit_factor": 3.174,
+        "exit_reason_pct": {
+          "STOP": 28.6,
+          "TARGET": 57.1,
+          "TRAIL": 14.3
+        }
+      },
+      "80.0": {
+        "n_approved": 1,
+        "n": 1,
+        "win_rate_pct": 0.0,
+        "expectancy": -70.6673,
+        "median_r_proxy": -70.6673,
+        "profit_factor": 0.0,
+        "exit_reason_pct": {
+          "STOP": 100.0
+        }
+      },
+      "85.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "90.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "95.0": {
+        "n_approved": 0,
+        "n": 0
+      }
+    }
+  },
+  "CRUDEOIL": {
+    "instrument": "CRUDEOIL",
+    "n_bars_5m": 12983,
+    "raw_signals": 1869,
+    "sr_confirmed_signals": 348,
+    "raw_stats": {
+      "n": 1869,
+      "win_rate_pct": 56.8,
+      "expectancy": 1.2042,
+      "median_r_proxy": 2.4829,
+      "profit_factor": 1.235,
+      "exit_reason_pct": {
+        "STOP": 41.5,
+        "TIME": 2.6,
+        "TARGET": 27.3,
+        "TRAIL": 28.5,
+        "END_OF_DATA": 0.1
+      }
+    },
+    "sr_confirmed_stats": {
+      "n": 348,
+      "win_rate_pct": 60.1,
+      "expectancy": 2.3498,
+      "median_r_proxy": 2.915,
+      "profit_factor": 1.494,
+      "exit_reason_pct": {
+        "TIME": 3.7,
+        "TARGET": 30.2,
+        "STOP": 37.4,
+        "TRAIL": 28.7
+      }
+    },
+    "by_threshold": {
+      "70.0": {
+        "n_approved": 173,
+        "n": 173,
+        "win_rate_pct": 60.7,
+        "expectancy": 4.0134,
+        "median_r_proxy": 3.5515,
+        "profit_factor": 1.894,
+        "exit_reason_pct": {
+          "TIME": 2.3,
+          "STOP": 37.0,
+          "TARGET": 32.9,
+          "TRAIL": 27.7
+        }
+      },
+      "75.0": {
+        "n_approved": 70,
+        "n": 70,
+        "win_rate_pct": 58.6,
+        "expectancy": 3.4868,
+        "median_r_proxy": 2.7894,
+        "profit_factor": 1.756,
+        "exit_reason_pct": {
+          "TIME": 1.4,
+          "TARGET": 28.6,
+          "STOP": 40.0,
+          "TRAIL": 30.0
+        }
+      },
+      "80.0": {
+        "n_approved": 7,
+        "n": 7,
+        "win_rate_pct": 57.1,
+        "expectancy": 12.9456,
+        "median_r_proxy": 22.1,
+        "profit_factor": 6.709,
+        "exit_reason_pct": {
+          "TIME": 14.3,
+          "TARGET": 57.1,
+          "STOP": 28.6
+        }
+      },
+      "85.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "90.0": {
+        "n_approved": 0,
+        "n": 0
+      },
+      "95.0": {
+        "n_approved": 0,
+        "n": 0
+      }
+    }
+  },
+  "SENSEX": {
+    "status": "NO_REAL_DATA",
+    "reason": "no SENSEX historical futures/option dataset exists anywhere in this repo"
+  }
+}

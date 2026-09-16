@@ -29,6 +29,38 @@ def api_autoscalp_signals(status: Optional[str] = None, symbol: Optional[str] = 
     return db.list_scalp_signals(source="LIVE", status=status, symbol=symbol, limit=limit)
 
 
+@router.get("/api/signals/debug")
+def api_signals_debug(status: Optional[str] = None, symbol: Optional[str] = None,
+                      limit: int = Query(200, le=2000)):
+    """Every raw candidate this engine has evaluated (LIVE source), including
+    ones the final signal gate would WAIT/REJECT/COOLDOWN -- for research and
+    audit only. This is the SAME data as /api/autoscalp/signals; named per
+    the final-signal-gate spec's developer/debug endpoint convention."""
+    return db.list_scalp_signals(source="LIVE", status=status, symbol=symbol, limit=limit)
+
+
+@router.get("/api/signals/final")
+def api_signals_final():
+    """Only the currently ACTIVE, gate-APPROVED signal(s) -- what a
+    subscriber-facing UI should actually show. Empty when nothing has been
+    approved (that is the correct, expected common case, not an error)."""
+    from ..signal_gate.final_signal_gate import get_active_signal
+    cfg = runtime.autoscalp.get_config()
+    out = []
+    for sym in cfg.get("symbols") or []:
+        active = get_active_signal(sym)
+        if not active:
+            continue
+        last_gate = runtime.autoscalp.last_final_signal_gate or {}
+        out.append({"symbol": sym.upper(), **active,
+                    "confidence_score": (last_gate.get("confidence_score")
+                                        if last_gate.get("symbol") == sym.upper() else None),
+                    "historical_confidence": (last_gate.get("historical_confidence")
+                                              if last_gate.get("symbol") == sym.upper() else None)})
+    return {"active_signals": out,
+           "gate_enabled": bool((cfg.get("final_signal_gate") or {}).get("enabled"))}
+
+
 @router.get("/api/autoscalp/snapshots")
 def api_autoscalp_snapshots(symbol: Optional[str] = None, limit: int = Query(200, le=2000)):
     return db.list_live_snapshots(symbol=symbol, limit=limit)
