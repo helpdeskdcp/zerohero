@@ -1,0 +1,144 @@
+{
+  "NATGAS": {
+    "instrument": "NATGAS",
+    "n_bars_5m": 12854,
+    "by_timeframe": {
+      "5m": {
+        "n_zones": 114,
+        "avg_strength": null,
+        "total_breakouts": 2725,
+        "successful_retest_pct": 32.4,
+        "false_breakout_pct": 65.5,
+        "pending_breakout_pct": 2.1,
+        "support_resistance_reaction_rate_pct": 79.0,
+        "avg_touches_per_zone": 147.89,
+        "avg_volume_ratio": 0.835,
+        "zones_confirmed_on_2plus_tf": 0
+      },
+      "15m": {
+        "n_zones": 84,
+        "avg_strength": null,
+        "total_breakouts": 981,
+        "successful_retest_pct": 41.1,
+        "false_breakout_pct": 55.7,
+        "pending_breakout_pct": 3.3,
+        "support_resistance_reaction_rate_pct": 71.5,
+        "avg_touches_per_zone": 89.82,
+        "avg_volume_ratio": 0.534,
+        "zones_confirmed_on_2plus_tf": 0
+      },
+      "30m": {
+        "n_zones": 53,
+        "avg_strength": null,
+        "total_breakouts": 462,
+        "successful_retest_pct": 37.0,
+        "false_breakout_pct": 59.1,
+        "pending_breakout_pct": 3.9,
+        "support_resistance_reaction_rate_pct": 80.8,
+        "avg_touches_per_zone": 59.09,
+        "avg_volume_ratio": 0.535,
+        "zones_confirmed_on_2plus_tf": 0
+      }
+    },
+    "live_snapshot_5m": {
+      "n_zones": 17,
+      "avg_strength": 65.2,
+      "total_breakouts": 535,
+      "successful_retest_pct": 40.7,
+      "false_breakout_pct": 57.4,
+      "pending_breakout_pct": 1.9,
+      "support_resistance_reaction_rate_pct": 85.9,
+      "avg_touches_per_zone": 163.24,
+      "avg_volume_ratio": 1.584,
+      "zones_confirmed_on_2plus_tf": 7
+    },
+    "dynamic_engine_5m": {
+      "n_zones": 114,
+      "avg_strength": null,
+      "total_breakouts": 2725,
+      "successful_retest_pct": 32.4,
+      "false_breakout_pct": 65.5,
+      "pending_breakout_pct": 2.1,
+      "support_resistance_reaction_rate_pct": 79.0,
+      "avg_touches_per_zone": 147.89,
+      "avg_volume_ratio": 0.835,
+      "zones_confirmed_on_2plus_tf": 0
+    },
+    "existing_engine_5m": {
+      "n_snapshots": 40,
+      "avg_levels_per_snapshot": 18.85,
+      "avg_level_strength": 37.3
+    }
+  },
+  "NIFTY": {
+    "instrument": "NIFTY",
+    "n_bars_5m": 25438,
+    "by_timeframe": {
+      "5m": {
+        "n_zones": 133,
+        "avg_strength": null,
+        "total_breakouts": 4056,
+        "successful_retest_pct": 40.9,
+        "false_breakout_pct": 57.6,
+        "pending_breakout_pct": 1.5,
+        "support_resistance_reaction_rate_pct": 84.6,
+        "avg_touches_per_zone": 247.26,
+        "avg_volume_ratio": null,
+        "zones_confirmed_on_2plus_tf": 0
+      },
+      "15m": {
+        "n_zones": 82,
+        "avg_strength": null,
+        "total_breakouts": 1398,
+        "successful_retest_pct": 39.6,
+        "false_breakout_pct": 58.3,
+        "pending_breakout_pct": 2.1,
+        "support_resistance_reaction_rate_pct": 84.9,
+        "avg_touches_per_zone": 137.11,
+        "avg_volume_ratio": null,
+        "zones_confirmed_on_2plus_tf": 0
+      },
+      "30m": {
+        "n_zones": 48,
+        "avg_strength": null,
+        "total_breakouts": 553,
+        "successful_retest_pct": 41.0,
+        "false_breakout_pct": 56.1,
+        "pending_breakout_pct": 2.9,
+        "support_resistance_reaction_rate_pct": 80.0,
+        "avg_touches_per_zone": 110.58,
+        "avg_volume_ratio": null,
+        "zones_confirmed_on_2plus_tf": 0
+      }
+    },
+    "live_snapshot_5m": {
+      "n_zones": 13,
+      "avg_strength": 66.6,
+      "total_breakouts": 413,
+      "successful_retest_pct": 29.3,
+      "false_breakout_pct": 70.2,
+      "pending_breakout_pct": 0.5,
+      "support_resistance_reaction_rate_pct": 87.6,
+      "avg_touches_per_zone": 203.46,
+      "avg_volume_ratio": null,
+      "zones_confirmed_on_2plus_tf": 8
+    },
+    "dynamic_engine_5m": {
+      "n_zones": 133,
+      "avg_strength": null,
+      "total_breakouts": 4056,
+      "successful_retest_pct": 40.9,
+      "false_breakout_pct": 57.6,
+      "pending_breakout_pct": 1.5,
+      "support_resistance_reaction_rate_pct": 84.6,
+      "avg_touches_per_zone": 247.26,
+      "avg_volume_ratio": null,
+      "zones_confirmed_on_2plus_tf": 0
+    },
+    "existing_engine_5m": {
+      "n_snapshots": 40,
+      "avg_levels_per_snapshot": 17.6,
+      "avg_level_strength": 49.0
+    }
+  }
+}
