@@ -418,6 +418,8 @@ class AutoScalpRunner:
         self._blocks: dict[str, dict] = {}     # sym -> {n, last, ts, signal} — why entries were refused
         self.last_final_signal_gate: dict | None = None
         self._active_fsg_fingerprint: dict[str, str] = {}   # sym -> fingerprint of its active APPROVED signal
+        self._pending_fsg_telegram: list[dict] = []   # this tick_once() pass's held APPROVED cards, for cross-symbol arbitration
+        self.last_fsg_arbitration: dict | None = None
 
     # ---------------- config ----------------
     def get_config(self) -> dict:
@@ -906,9 +908,18 @@ class AutoScalpRunner:
         # --- FINAL SIGNAL GATE (opt-in; default OFF) --------------------------
         # Paper trade + audit row above are UNCHANGED by this -- research/
         # calibration sample generation keeps working exactly as before.
-        # Only the Telegram publish below is gated: only an APPROVED
-        # FinalSignalDecision (high confluence score, SR not contradicting,
-        # not a duplicate/cooldown repeat) may reach Telegram.
+        #
+        # Two independent switches:
+        #   enabled       -- compute the gate at all (cheap; pure function over
+        #                     data already on hand, no new I/O).
+        #   shadow_mode   -- when True (the default whenever enabled=True),
+        #                     the decision is computed AND logged, but never
+        #                     blocks the Telegram publish below -- this is the
+        #                     safe "watch it run against real signals" mode.
+        #                     Only shadow_mode=False lets a non-APPROVED
+        #                     verdict actually withhold Telegram, and that is
+        #                     a separate, explicit decision from turning the
+        #                     gate on at all.
         fsg_cfg = (self.get_config().get("final_signal_gate") or {})
         if fsg_cfg.get("enabled"):
             from ..signal_gate import final_signal_gate as _fsg_mod
@@ -917,26 +928,68 @@ class AutoScalpRunner:
                 chain_bias=sig.get("chain_bias"),
                 min_signal_score=fsg_cfg.get("min_signal_score", _fsg_mod.MIN_SIGNAL_SCORE),
                 min_rr=fsg_cfg.get("min_rr", _fsg_mod.MIN_RR),
+                late_entry_atr_mult=fsg_cfg.get("late_entry_atr_mult", _fsg_mod.LATE_ENTRY_ATR_MULT),
                 cooldown_sec=fsg_cfg.get("cooldown_sec", _fsg_mod.SIGNAL_COOLDOWN_SEC),
                 require_sr_confirmation=fsg_cfg.get("require_sr_confirmation", True),
                 require_volume_confirmation=fsg_cfg.get("require_volume_confirmation", False),
                 require_oi_confirmation=fsg_cfg.get("require_oi_confirmation", False),
                 one_active_signal=fsg_cfg.get("one_active_signal", True),
                 allow_opposite_while_active=fsg_cfg.get("allow_opposite_while_active", False))
+            shadow = fsg_cfg.get("shadow_mode", True)
             self.last_final_signal_gate = {"symbol": sym.upper(), "signal_id": signal_id,
                                            "state": fsg.state, "reason": fsg.reason,
                                            "confidence_score": fsg.confidence_score,
-                                           "historical_confidence": fsg.historical_confidence}
+                                           "historical_confidence": fsg.historical_confidence,
+                                           "shadow_mode": shadow}
             db.set_setting(f"fsg_last:{sym.upper()}", json.dumps(self.last_final_signal_gate))
-            if fsg.state != _fsg_mod.APPROVED:
+            if fsg.state == _fsg_mod.APPROVED:
+                self._active_fsg_fingerprint[sym.upper()] = fsg.fingerprint
+                # Cross-symbol arbitration (opt-in, default OFF): rather than
+                # publish this symbol's card immediately, hold it until this
+                # tick_once() pass finishes evaluating every due symbol, then
+                # publish only the single highest-scoring APPROVED one. Never
+                # affects which symbols opened a paper trade -- only which
+                # one's card reaches Telegram this pass. Only meaningful when
+                # shadow_mode=False (otherwise nothing is ever withheld).
+                if fsg_cfg.get("cross_symbol_arbitration") and not shadow:
+                    self._pending_fsg_telegram.append({
+                        "symbol": sym.upper(), "signal_id": signal_id,
+                        "confidence_score": fsg.confidence_score or 0.0,
+                        "key": "entry:" + signal_id,
+                        "text": notify.signal_card({**sig, "opt_tradingsymbol": sig.get("tradingsymbol")},
+                                                   symbol=sym, index_ltp=self._aggs[sym.upper()].last_price),
+                        "conf": sig.get("confidence"),
+                        "canonical": {"underlying": sym, "direction": sig.get("direction") or sig.get("decision"),
+                                     "signal_id": signal_id},
+                    })
+                    return
+            elif not shadow:
                 return
-            self._active_fsg_fingerprint[sym.upper()] = fsg.fingerprint
 
         self._tg_send("entry:" + signal_id, notify.signal_card(
             {**sig, "opt_tradingsymbol": sig.get("tradingsymbol")}, symbol=sym,
             index_ltp=self._aggs[sym.upper()].last_price), conf=sig.get("confidence"),
             canonical={"underlying": sym, "direction": sig.get("direction") or sig.get("decision"),
                       "signal_id": signal_id})
+
+    def _publish_best_pending_fsg_signal(self):
+        """Called once per tick_once() pass, after every due symbol has been
+        evaluated: sends Telegram for only the highest-scoring held-back
+        APPROVED card (cross_symbol_arbitration), and records which symbols
+        were suppressed this pass for the audit trail."""
+        pending = self._pending_fsg_telegram
+        self._pending_fsg_telegram = []
+        if not pending:
+            return
+        pending.sort(key=lambda p: p["confidence_score"], reverse=True)
+        best = pending[0]
+        self._tg_send(best["key"], best["text"], conf=best["conf"], canonical=best["canonical"])
+        self.last_fsg_arbitration = {
+            "published": {"symbol": best["symbol"], "signal_id": best["signal_id"],
+                         "confidence_score": best["confidence_score"]},
+            "suppressed": [{"symbol": p["symbol"], "signal_id": p["signal_id"],
+                           "confidence_score": p["confidence_score"]} for p in pending[1:]],
+        }
 
     def _monitor(self):
         for t in self._open_positions():
@@ -1176,6 +1229,7 @@ class AutoScalpRunner:
             except Exception as e:
                 self.last_error = f"evaluate {sym}: {type(e).__name__}: {e}"
                 traceback.print_exc()
+        self._publish_best_pending_fsg_signal()
         self._maybe_recalibrate(cfg)
 
     async def _loop(self):

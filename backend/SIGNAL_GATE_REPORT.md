@@ -1,5 +1,50 @@
 # High-Confidence Single-Signal Gate — Report
 
+---
+## Addendum (2026-09-17): remaining items closed, shadow mode enabled live
+
+Implemented the three items previously flagged as not-yet-done, all opt-in,
+all defaulting to their safest setting:
+
+1. **Anti-chase check** — `app.engines.scalp_strategy.decide_from_context`
+   now additionally returns `dist_from_anchor_atr` (how far price has
+   already moved from the S/R trigger level, in ATR units — advisory only,
+   entry/SL/targets unchanged). `final_signal_gate` WAITs (never REJECTs)
+   when that distance exceeds `late_entry_atr_mult` (default 3.0, same
+   convention as `app.strategy_mtf.mtf_config.late_entry_atr_mult`).
+2. **Shadow mode** — `final_signal_gate.shadow_mode` (default **True**
+   whenever the gate is enabled at all): the gate computes and logs a
+   verdict for every real signal, but **never** withholds Telegram. Only
+   `shadow_mode: false` lets a non-APPROVED verdict actually block
+   publishing — a separate, explicit switch from turning the gate on.
+3. **Cross-symbol arbitration** (opt-in, default off,
+   `cross_symbol_arbitration`) — within one `tick_once()` pass, if more
+   than one symbol produces an APPROVED (non-shadow) signal, only the
+   highest-confidence-score one is published to Telegram; the rest are
+   logged as suppressed (`last_fsg_arbitration`). Paper trades still open
+   for every symbol regardless — only the Telegram card is arbitrated,
+   deliberately not the trading decision itself (restructuring that would
+   have real trading-behavior implications for very little benefit, since
+   symbols are evaluated on independent staggered timers and rarely
+   collide in the same pass anyway).
+
+**What's live right now** (paper only, unchanged): `sr_gates` enabled for
+NATURALGAS + CRUDEOIL (from earlier today), and **`final_signal_gate`
+enabled globally in shadow mode** (`{"enabled": true, "shadow_mode": true}`)
+— every signal across every symbol now gets a logged high-confidence-gate
+verdict (`last_final_signal_gate`, `fsg_last:<SYMBOL>` setting), but
+Telegram behavior is **unchanged** — nothing a subscriber sees is any
+different than before this addendum. Service was restarted to deploy this
+code before the config change took effect, specifically to avoid the old
+code's `enabled=True` meaning "block on non-APPROVED" with no shadow
+concept.
+
+8 new tests (anti-chase x3, shadow-mode-default x1, cross-symbol
+arbitration x4) — all passing alongside the full existing suite.
+
+Broker live-order execution: unaffected, still `PAPER`/`live_enabled: false`.
+No commit made yet for this addendum.
+
 **Real subscribers act on these Telegram signals with real money.** Every
 gate in this feature ships at its most conservative default, the whole
 feature ships disabled, and no broker order path was touched.

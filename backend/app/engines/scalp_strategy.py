@@ -525,6 +525,12 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         "expected_premium_move": (sel.get("translation") or {}).get("expected_premium_move"),
         "epm_method": (sel.get("translation") or {}).get("method"),
         "epm_index_move_pts": round(index_move_pts, 2) if index_move_pts is not None else None,
+        # How far price has ALREADY moved (in ATR units) from the anchor S/R
+        # level this setup is based on -- an anti-chase distance. ADVISORY /
+        # informational only, same as epm_index_move_pts above: no existing
+        # gate reads it, entry/SL/targets are unchanged. Consumed by
+        # app.signal_gate.final_signal_gate's anti-chase check.
+        "dist_from_anchor_atr": round(abs(price - anchor) / sr["atr"], 3) if sr.get("atr") else None,
         "translation_score": sel.get("translation_score"),
         "signal_score": round(blended, 1), "raw_score": round(raw_blended, 1),
         "probability": round(prob, 4),

@@ -9,6 +9,7 @@ import asyncio
 
 from tests.test_autoscalp import _runner, _CHAIN
 
+from app.autoscalp import runner as ascr
 from app.signal_gate import final_signal_gate as fsg_mod
 
 
@@ -54,11 +55,26 @@ def test_gate_enabled_approved_sends_telegram_and_tracks_active_signal(fresh_db,
     assert "NIFTY" in r._active_fsg_fingerprint
 
 
-def test_gate_enabled_rejected_blocks_telegram_but_trade_still_opens(monkeypatch, fresh_db):
+def test_gate_enabled_default_shadow_mode_never_blocks_telegram(fresh_db, monkeypatch):
+    # shadow_mode defaults True: the gate computes+logs a REJECT verdict but
+    # Telegram still fires as before -- this is the safe default, deliberately
+    # distinct from FINAL_SIGNAL_ENABLED actually gating subscriber-facing output.
+    r, feed = _runner(monkeypatch, _sig(rr=0.5))
+    r.set_config({"final_signal_gate": {"enabled": True}})
+    sent = []
+    monkeypatch.setattr(r, "_tg_send", lambda key, *a, **k: sent.append(key))
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert any(k.startswith("entry:") for k in sent)
+    assert r.last_final_signal_gate["state"] == "REJECT"
+    assert r.last_final_signal_gate["shadow_mode"] is True
+
+
+def test_gate_enabled_shadow_mode_off_rejected_blocks_telegram_but_trade_still_opens(monkeypatch, fresh_db):
     # rr below the gate's minimum -> REJECT, but the underlying strategy still
     # opened a paper trade (research/calibration must not be affected)
     r, feed = _runner(monkeypatch, _sig(rr=0.5))
-    r.set_config({"final_signal_gate": {"enabled": True}})
+    r.set_config({"final_signal_gate": {"enabled": True, "shadow_mode": False}})
     sent = []
     monkeypatch.setattr(r, "_tg_send", lambda key, *a, **k: sent.append(key))
     r.arm()
@@ -68,12 +84,61 @@ def test_gate_enabled_rejected_blocks_telegram_but_trade_still_opens(monkeypatch
     assert fresh_db.list_trades(strategy="AUTOSCALP") != []
 
 
-def test_gate_enabled_sr_contradict_blocks_telegram(fresh_db, monkeypatch):
+def test_gate_enabled_shadow_mode_off_sr_contradict_blocks_telegram(fresh_db, monkeypatch):
     r, feed = _runner(monkeypatch, _sig(sr_confirmation={"verdict": "CONTRADICT", "reason": "stub"}))
-    r.set_config({"final_signal_gate": {"enabled": True}})
+    r.set_config({"final_signal_gate": {"enabled": True, "shadow_mode": False}})
     sent = []
     monkeypatch.setattr(r, "_tg_send", lambda key, *a, **k: sent.append(key))
     r.arm()
     asyncio.run(r.tick_once())
     assert not any(k.startswith("entry:") for k in sent)
     assert r.last_final_signal_gate["state"] == "REJECT"
+
+
+def test_cross_symbol_arbitration_holds_the_card_instead_of_sending_immediately(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, _sig())
+    r.set_config({"final_signal_gate": {"enabled": True, "shadow_mode": False,
+                                        "cross_symbol_arbitration": True}})
+    sent = []
+    monkeypatch.setattr(r, "_tg_send", lambda key, *a, **k: sent.append(key))
+    r.arm()
+    asyncio.run(r.tick_once())
+    # never opens paper trade differently -- only Telegram is deferred
+    assert fresh_db.list_trades(strategy="AUTOSCALP") != []
+    # sent exactly once, via tick_once()'s end-of-pass arbitration publish
+    # (not immediately inside _open_paper) -- with only one symbol due this
+    # pass, it trivially is its own "best", but the path taken is the
+    # arbitration one, confirmed by last_fsg_arbitration being populated.
+    assert [k for k in sent if k.startswith("entry:")] == [f"entry:{r.last_fsg_arbitration['published']['signal_id']}"]
+    assert r.last_fsg_arbitration is not None
+    assert r.last_fsg_arbitration["published"]["symbol"] == "NIFTY"
+    assert r.last_fsg_arbitration["suppressed"] == []
+
+
+def test_publish_best_pending_fsg_signal_picks_the_highest_score_and_reports_suppressed():
+    r = ascr.AutoScalpRunner()
+    sent = []
+    r._tg_send = lambda key, text, conf=None, canonical=None: sent.append((key, conf))
+    r._pending_fsg_telegram = [
+        {"symbol": "NATURALGAS", "signal_id": "a", "confidence_score": 70.0,
+         "key": "entry:a", "text": "t", "conf": "HIGH", "canonical": {}},
+        {"symbol": "CRUDEOIL", "signal_id": "b", "confidence_score": 91.0,
+         "key": "entry:b", "text": "t", "conf": "HIGH", "canonical": {}},
+        {"symbol": "NIFTY", "signal_id": "c", "confidence_score": 85.0,
+         "key": "entry:c", "text": "t", "conf": "HIGH", "canonical": {}},
+    ]
+    r._publish_best_pending_fsg_signal()
+    assert sent == [("entry:b", "HIGH")]
+    assert r.last_fsg_arbitration["published"]["symbol"] == "CRUDEOIL"
+    suppressed = {s["symbol"] for s in r.last_fsg_arbitration["suppressed"]}
+    assert suppressed == {"NATURALGAS", "NIFTY"}
+    assert r._pending_fsg_telegram == []
+
+
+def test_publish_best_pending_fsg_signal_is_a_noop_when_nothing_pending():
+    r = ascr.AutoScalpRunner()
+    sent = []
+    r._tg_send = lambda *a, **k: sent.append(a)
+    r._publish_best_pending_fsg_signal()
+    assert sent == []
+    assert r.last_fsg_arbitration is None

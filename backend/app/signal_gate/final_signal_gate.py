@@ -39,6 +39,9 @@ MIN_SIGNAL_SCORE = 80.0
 MIN_RR = 1.5
 MIN_CALIBRATION_SAMPLES = 40
 SIGNAL_COOLDOWN_SEC = 600.0          # 10 min, mid-point of the spec's 5-15 min default
+# Same convention as app.strategy_mtf.mtf_config.late_entry_atr_mult (3.0):
+# price already this many ATRs beyond the anchor S/R level is "chasing".
+LATE_ENTRY_ATR_MULT = 3.0
 
 WEIGHTS = {"sr": 0.25, "trend": 0.20, "momentum": 0.15, "volume": 0.15, "oi": 0.15, "risk_reward": 0.10}
 
@@ -122,6 +125,7 @@ def historical_confidence_label(decision: dict) -> str:
 def evaluate_final_signal(decision: dict, *, sr_confirmation: dict | None = None,
                           chain_bias: dict | None = None,
                           min_signal_score: float = MIN_SIGNAL_SCORE, min_rr: float = MIN_RR,
+                          late_entry_atr_mult: float = LATE_ENTRY_ATR_MULT,
                           cooldown_sec: float = SIGNAL_COOLDOWN_SEC, now: float | None = None,
                           require_sr_confirmation: bool = True,
                           require_volume_confirmation: bool = False,
@@ -150,6 +154,11 @@ def evaluate_final_signal(decision: dict, *, sr_confirmation: dict | None = None
     rr = decision.get("rr")
     if rr is not None and rr < min_rr:
         return FinalSignalDecision(state=REJECT, reason=f"risk/reward {rr} below minimum {min_rr}")
+
+    dist_atr = decision.get("dist_from_anchor_atr")
+    if dist_atr is not None and dist_atr > late_entry_atr_mult:
+        return FinalSignalDecision(state=WAIT,
+                                   reason=f"price already {dist_atr}x ATR from the trigger level -- chasing")
 
     comp = decision.get("component_scores") or {}
     sr_component = sr.get("sr_score")

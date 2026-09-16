@@ -61,6 +61,22 @@ def test_rr_below_minimum_is_rejected():
     assert "risk/reward" in d.reason
 
 
+def test_chasing_an_extended_move_waits_not_rejects():
+    d = evaluate_final_signal(_decision(dist_from_anchor_atr=4.5), sr_confirmation=_sr("CONFIRM", 95.0))
+    assert d.state == WAIT
+    assert "chasing" in d.reason
+
+
+def test_a_fresh_entry_near_the_trigger_level_is_not_blocked_as_chasing():
+    d = evaluate_final_signal(_decision(dist_from_anchor_atr=0.5), sr_confirmation=_sr("CONFIRM", 95.0))
+    assert d.state == APPROVED
+
+
+def test_missing_dist_from_anchor_never_blocks_as_chasing():
+    d = evaluate_final_signal(_decision(dist_from_anchor_atr=None), sr_confirmation=_sr("CONFIRM", 95.0))
+    assert d.state == APPROVED
+
+
 def test_missing_components_are_excluded_not_penalized_to_zero():
     d = evaluate_final_signal(_decision(component_scores={}), sr_confirmation=_sr("CONFIRM", 95.0))
     # only SR + RR available -> score should still reflect what's real, not crash
