@@ -1,0 +1,236 @@
+[
+  {
+    "ts": "2025-09-17T03:45:00+00:00",
+    "split": "TRAIN",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -1.242,
+      "resolved": false
+    }
+  },
+  {
+    "ts": "2025-10-10T03:45:00+00:00",
+    "split": "TRAIN",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 3.0,
+      "resolved": true
+    }
+  },
+  {
+    "ts": "2025-10-29T03:45:00+00:00",
+    "split": "TRAIN",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -1.046,
+      "resolved": false
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -1.046,
+      "resolved": false
+    }
+  },
+  {
+    "ts": "2025-11-17T03:45:00+00:00",
+    "split": "VALIDATION",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 3.0,
+      "resolved": true
+    }
+  },
+  {
+    "ts": "2025-11-27T03:45:00+00:00",
+    "split": "VALIDATION",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -3.548,
+      "resolved": false
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -3.548,
+      "resolved": false
+    }
+  },
+  {
+    "ts": "2025-11-28T03:45:00+00:00",
+    "split": "VALIDATION",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -2.709,
+      "resolved": false
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -2.709,
+      "resolved": false
+    }
+  },
+  {
+    "ts": "2025-12-24T03:45:00+00:00",
+    "split": "VALIDATION",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -2.205,
+      "resolved": false
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -2.205,
+      "resolved": false
+    }
+  },
+  {
+    "ts": "2026-01-05T03:45:00+00:00",
+    "split": "VALIDATION",
+    "decision": "BUY_CE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -4.41,
+      "resolved": false
+    },
+    "1:3_with_SL": {
+      "exit_reason": "STOPPED_OUT",
+      "r_achieved": -1.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TIME_CUTOFF",
+      "r_achieved": -4.41,
+      "resolved": false
+    }
+  },
+  {
+    "ts": "2026-05-12T03:45:00+00:00",
+    "split": "OOS",
+    "decision": "BUY_PE",
+    "is_zth": false,
+    "1:2_with_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:2_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 2.0,
+      "resolved": true
+    },
+    "1:3_with_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 3.0,
+      "resolved": true
+    },
+    "1:3_without_SL": {
+      "exit_reason": "TARGET",
+      "r_achieved": 3.0,
+      "resolved": true
+    }
+  }
+]
