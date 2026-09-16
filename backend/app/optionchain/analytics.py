@@ -456,5 +456,103 @@ def compute_all(chain: OptionChain, *, atm_window: int = 10, walls_k: int = 3) -
         "iv_skew": iv_skew(chain),
         "oi_walls": oi_walls(chain, k=walls_k),
         "gex": gex(chain),
+        "weighted_iv": weighted_chain_iv(chain),
         "strike_step": strike_step_for(chain.underlying),
     }
+
+
+# --------------------------------------------------------------------------- #
+#  OI Build-Up Regime -- price direction x OI-change direction, per side      #
+#  (a named classification of oi_change_vs_baseline's raw numbers above; the   #
+#  same "Long Build-Up / Short Build-Up / Short Covering / Long Unwinding"     #
+#  taxonomy from classic derivatives-desk OI analysis -- checked against
+#  Quantech-innovation/options-flow-ml-workstation's README, which names this
+#  concept but only computes it on SYNTHETIC GBM/Black-Scholes data; this
+#  version runs on REAL captured chains via oi_change_vs_baseline above.)      #
+# --------------------------------------------------------------------------- #
+LONG_BUILDUP, SHORT_BUILDUP, SHORT_COVERING, LONG_UNWINDING, FLAT_OI = (
+    "LONG_BUILDUP", "SHORT_BUILDUP", "SHORT_COVERING", "LONG_UNWINDING", "FLAT")
+
+
+def _classify_buildup(price_up: bool, oi_delta: float | None) -> str | None:
+    if oi_delta is None or oi_delta == 0:
+        return FLAT_OI
+    oi_up = oi_delta > 0
+    if price_up and oi_up:
+        return LONG_BUILDUP        # fresh positions opening WITH the move -- strong confirmation
+    if not price_up and oi_up:
+        return SHORT_BUILDUP       # fresh positions opening AGAINST the move -- strong reversal pressure
+    if price_up and not oi_up:
+        return SHORT_COVERING      # positions closing as price moves up -- a weaker, unwind-driven move
+    return LONG_UNWINDING          # positions closing as price moves down -- a weaker, unwind-driven move
+
+
+@dataclass
+class OiBuildup:
+    status: str
+    price_direction: str | None = None     # "UP" | "DOWN" | "FLAT"
+    ce_regime: str | None = None
+    pe_regime: str | None = None
+    ce_doi: float | None = None
+    pe_doi: float | None = None
+    method: str = ("classifies oi_change_vs_baseline's net CE/PE OI change against the spot's own "
+                   "direction over the same window -- LONG_BUILDUP/SHORT_BUILDUP = fresh positioning "
+                   "(strong), SHORT_COVERING/LONG_UNWINDING = position unwind (weak)")
+
+    def to_dict(self):
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+def oi_buildup_regime(now: OptionChain, baseline: OptionChain) -> OiBuildup:
+    """`now`/`baseline`: two REAL captured chains for the same underlying at
+    different real timestamps (same causal contract as
+    oi_change_vs_baseline -- baseline must be the EARLIER capture; this
+    function does not enforce that itself, matching oi_change_vs_baseline's
+    own contract, so the caller must pass them in the right order)."""
+    delta = oi_change_vs_baseline(now, baseline)
+    if delta["status"] != "ok":
+        return OiBuildup(status=delta["status"])
+    if now.spot is None or baseline.spot is None:
+        return OiBuildup(status="no_spot")
+    if now.spot == baseline.spot:
+        return OiBuildup(status="ok", price_direction="FLAT", ce_regime=FLAT_OI, pe_regime=FLAT_OI,
+                         ce_doi=delta["net_ce_doi"], pe_doi=delta["net_pe_doi"])
+    price_up = now.spot > baseline.spot
+    return OiBuildup(status="ok", price_direction="UP" if price_up else "DOWN",
+                     ce_regime=_classify_buildup(price_up, delta["net_ce_doi"]),
+                     pe_regime=_classify_buildup(price_up, delta["net_pe_doi"]),
+                     ce_doi=delta["net_ce_doi"], pe_doi=delta["net_pe_doi"])
+
+
+# --------------------------------------------------------------------------- #
+#  Weighted Chain IV -- OI-weighted average IV across every real leg          #
+# --------------------------------------------------------------------------- #
+@dataclass
+class WeightedIv:
+    status: str
+    value: float | None = None
+    n_legs: int = 0
+    method: str = "sum(iv_i * oi_i) / sum(oi_i) across every CE/PE leg with both real IV and real OI"
+
+    def to_dict(self):
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+def weighted_chain_iv(chain: OptionChain) -> WeightedIv:
+    if not chain.rows:
+        return WeightedIv(status="empty")
+    num = den = 0.0
+    n = 0
+    for r in chain.rows:
+        for leg in (r.ce, r.pe):
+            if not leg:
+                continue
+            iv = _n(getattr(leg, "iv", None))
+            oi = _n(getattr(leg, "oi", None))
+            if iv is not None and oi is not None and oi > 0:
+                num += iv * oi
+                den += oi
+                n += 1
+    if den <= 0:
+        return WeightedIv(status="no_oi_or_iv")
+    return WeightedIv(status="ok", value=round(num / den, 4), n_legs=n)
