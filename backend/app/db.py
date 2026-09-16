@@ -317,6 +317,26 @@ CREATE TABLE IF NOT EXISTS trade_exit_outcomes (
     reversal_after_entry INTEGER, time_expiry INTEGER
 );
 
+-- app.signal_gate.final_signal_gate shadow-mode audit: one row per real
+-- signal the gate was run against, written at trade-open time (the paper
+-- trade opens regardless of the gate's verdict, so every row here always
+-- has a resolvable trade_id to join against trade_exit_outcomes for the
+-- REAL outcome later). Lets shadow-mode data actually be analyzed instead
+-- of only exposing the latest per-symbol verdict.
+CREATE TABLE IF NOT EXISTS fsg_shadow_log (
+    trade_id TEXT PRIMARY KEY,
+    signal_id TEXT,
+    created_ts TEXT NOT NULL,
+    symbol TEXT,
+    state TEXT,
+    reason TEXT,
+    confidence_score REAL,
+    historical_confidence TEXT,
+    sr_verdict TEXT,
+    components TEXT,
+    shadow_mode INTEGER
+);
+
 -- SLICE 4 — SMART_INDEX_SCALPER signals + paper-trade state machine.
 -- Positions themselves live in ai_paper_trades WHERE strategy='SMART_SCALPER'
 -- (reuse of the existing paper engine). These two are the evidence + state audit.
@@ -935,6 +955,47 @@ def insert_trade_exit_outcome(row: dict) -> bool:
             f"INSERT OR IGNORE INTO trade_exit_outcomes ({','.join(_EXIT_OUTCOME_COLS)}) "
             f"VALUES ({ph})", vals)
         return bool(cur.rowcount)
+
+
+_FSG_SHADOW_COLS = (
+    "trade_id", "signal_id", "created_ts", "symbol", "state", "reason",
+    "confidence_score", "historical_confidence", "sr_verdict", "components", "shadow_mode",
+)
+
+
+def insert_fsg_shadow_log(row: dict) -> bool:
+    """app.signal_gate.final_signal_gate: one row per real signal the gate
+    was run against, at trade-open time. Write-once (INSERT OR IGNORE) --
+    matches insert_trade_entry_features/insert_trade_exit_outcome's
+    convention of never overwriting a historical audit row."""
+    if not row.get("trade_id"):
+        return False
+    vals = [row.get(c) for c in _FSG_SHADOW_COLS]
+    ph = ",".join(["?"] * len(_FSG_SHADOW_COLS))
+    with db() as conn:
+        cur = conn.execute(
+            f"INSERT OR IGNORE INTO fsg_shadow_log ({','.join(_FSG_SHADOW_COLS)}) "
+            f"VALUES ({ph})", vals)
+        return bool(cur.rowcount)
+
+
+def list_fsg_shadow_analysis(symbol: str | None = None, limit: int = 5000) -> list[dict]:
+    """Join every gate verdict against its trade's REAL resolved outcome
+    (trade_exit_outcomes), for shadow-mode analysis: was the gate's
+    APPROVED/WAIT/REJECT call actually associated with a better/worse
+    outcome than what fired live? Only resolved trades are returned --
+    still-open positions have no y_outcome yet, not a fabricated one."""
+    with db() as conn:
+        where = "WHERE g.symbol = ?" if symbol else ""
+        params = [symbol] if symbol else []
+        rows = conn.execute(
+            f"SELECT g.trade_id, g.signal_id, g.created_ts, g.symbol, g.state, g.reason, "
+            f"g.confidence_score, g.historical_confidence, g.sr_verdict, g.shadow_mode, "
+            f"o.outcome AS y_outcome, o.r_multiple AS y_r_multiple, o.realized_points AS y_points, "
+            f"o.exit_reason AS y_exit_reason "
+            f"FROM fsg_shadow_log g JOIN trade_exit_outcomes o USING (trade_id) "
+            f"{where} ORDER BY g.created_ts ASC LIMIT ?", (*params, limit)).fetchall()
+        return [dict(r) for r in rows]
 
 
 def list_clean_training_rows(limit: int = 5000) -> list[dict]:

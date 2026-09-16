@@ -39,6 +39,16 @@ def api_signals_debug(status: Optional[str] = None, symbol: Optional[str] = None
     return db.list_scalp_signals(source="LIVE", status=status, symbol=symbol, limit=limit)
 
 
+@router.get("/api/signals/gate-analysis")
+def api_signals_gate_analysis():
+    """Shadow-mode analysis: every real final_signal_gate verdict joined
+    against its trade's REAL resolved outcome. Read-only, no recompute
+    beyond the join+aggregate itself (cheap, bounded by resolved-trade
+    count)."""
+    from ..signal_gate.shadow_analysis import build_shadow_report
+    return build_shadow_report(limit=20000)
+
+
 @router.get("/api/signals/final")
 def api_signals_final():
     """Only the currently ACTIVE, gate-APPROVED signal(s) -- what a

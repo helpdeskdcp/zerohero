@@ -55,6 +55,27 @@ def test_gate_enabled_approved_sends_telegram_and_tracks_active_signal(fresh_db,
     assert "NIFTY" in r._active_fsg_fingerprint
 
 
+def test_gate_enabled_writes_a_shadow_log_row(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, _sig())
+    r.set_config({"final_signal_gate": {"enabled": True}})
+    r.arm()
+    asyncio.run(r.tick_once())
+    trade_id = fresh_db.list_trades(strategy="AUTOSCALP")[0]["trade_id"]
+    with fresh_db.db() as conn:
+        row = conn.execute("SELECT state, symbol FROM fsg_shadow_log WHERE trade_id=?", (trade_id,)).fetchone()
+    assert row is not None
+    assert row["symbol"] == "NIFTY"
+
+
+def test_gate_disabled_writes_no_shadow_log_row(fresh_db, monkeypatch):
+    r, feed = _runner(monkeypatch, _sig())
+    r.arm()
+    asyncio.run(r.tick_once())
+    with fresh_db.db() as conn:
+        n = conn.execute("SELECT COUNT(*) FROM fsg_shadow_log").fetchone()[0]
+    assert n == 0
+
+
 def test_gate_enabled_default_shadow_mode_never_blocks_telegram(fresh_db, monkeypatch):
     # shadow_mode defaults True: the gate computes+logs a REJECT verdict but
     # Telegram still fires as before -- this is the safe default, deliberately

@@ -942,6 +942,16 @@ class AutoScalpRunner:
                                            "historical_confidence": fsg.historical_confidence,
                                            "shadow_mode": shadow}
             db.set_setting(f"fsg_last:{sym.upper()}", json.dumps(self.last_final_signal_gate))
+            try:
+                db.insert_fsg_shadow_log({
+                    "trade_id": row.get("trade_id"), "signal_id": signal_id, "created_ts": _now_iso(),
+                    "symbol": sym.upper(), "state": fsg.state, "reason": fsg.reason,
+                    "confidence_score": fsg.confidence_score, "historical_confidence": fsg.historical_confidence,
+                    "sr_verdict": (sig.get("sr_confirmation") or {}).get("verdict"),
+                    "components": json.dumps(fsg.components), "shadow_mode": int(shadow),
+                })
+            except Exception as e:
+                self.last_error = f"fsg_shadow_log: {type(e).__name__}: {e}"
             if fsg.state == _fsg_mod.APPROVED:
                 self._active_fsg_fingerprint[sym.upper()] = fsg.fingerprint
                 # Cross-symbol arbitration (opt-in, default OFF): rather than
