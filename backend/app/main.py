@@ -260,6 +260,15 @@ try:
 except Exception as _e:
     print(f"[microstructure] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Strategy Verification Engine (read-only: verifies a raw BUY/SELL read
+# against a weighted CE/PE strategy before it may become a trade signal; no
+# order path, no live_trading, existing signal-generation engines untouched) ----
+try:
+    from .strategy import api as _strategy_api
+    app.include_router(_strategy_api.router)
+except Exception as _e:
+    print(f"[strategy] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
