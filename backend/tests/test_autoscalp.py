@@ -451,6 +451,39 @@ def test_symbol_meta_and_default_watchlist():
     assert ascr._sym_meta("WHATEVER")["exchange"] == "NSE"        # graceful default
 
 
+def test_symbol_meta_includes_sensex_and_bankex_as_bse():
+    # Before this, SENSEX/BANKEX were absent from _SYMBOL_META and fell back
+    # to the generic {"exchange": "NSE"} default -- see
+    # test_ensure_option_subs_routes_bse_legs_to_bfo for the WS-feed impact.
+    assert ascr._sym_meta("SENSEX") == {"exchange": "BSE", "strike_step": 100.0}
+    assert ascr._sym_meta("BANKEX")["exchange"] == "BSE"
+
+
+def test_ensure_option_subs_routes_bse_legs_to_bfo_exchange_type():
+    """Real-signal audit (2026-09-16): every one of 13 live SENSEX
+    SUPPORT_BREAKDOWN signals closed TIME_NODATA -- the WS feed never
+    delivered a single mark for a SENSEX option token. Root cause: option
+    legs were always subscribed under NFO(2) regardless of the underlying's
+    real exchange, and SENSEX/BANKEX trade options on BFO(4), not NFO. This
+    proves the fix: BSE-market legs now route to exchange_type 4, NSE/MCX
+    legs are unaffected."""
+    r = ascr.AutoScalpRunner(feed=FakeFeed({}))
+    r._ensure_option_subs(
+        [{"ce": {"token": "SENSEXCE1"}, "pe": {"token": "SENSEXPE1"}}], "BSE")
+    assert r._sub_tokens["SENSEXCE1"]["exchange_type"] == 4
+    assert r._sub_tokens["SENSEXPE1"]["exchange_type"] == 4
+
+    r._ensure_option_subs([{"ce": {"token": "NIFTYCE1"}}], "NSE")
+    assert r._sub_tokens["NIFTYCE1"]["exchange_type"] == 2
+
+    r._ensure_option_subs([{"pe": {"token": "NGPE1"}}], "MCX")
+    assert r._sub_tokens["NGPE1"]["exchange_type"] == 5
+
+    # a chain leg carrying its own exchange_type always wins over the guess
+    r._ensure_option_subs([{"ce": {"token": "EXPLICIT1", "exchange_type": 4}}], "NSE")
+    assert r._sub_tokens["EXPLICIT1"]["exchange_type"] == 4
+
+
 def test_underlying_ref_nse_uses_registry(fresh_db):
     ref = ascr._underlying_ref("NIFTY")
     assert ref["exchange"] == "NSE" and ref["token"] == "99926000"

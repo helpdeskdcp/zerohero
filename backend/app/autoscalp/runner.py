@@ -45,10 +45,24 @@ CONFIG_KEY = "autoscalp_config"
 _SYMBOL_META = {
     "NIFTY":      {"exchange": "NSE", "strike_step": 50.0},
     "BANKNIFTY":  {"exchange": "NSE", "strike_step": 100.0},
+    "SENSEX":     {"exchange": "BSE", "strike_step": 100.0},
+    "BANKEX":     {"exchange": "BSE", "strike_step": 100.0},
     "NATURALGAS": {"exchange": "MCX", "strike_step": 2.5},
     "CRUDEOIL":   {"exchange": "MCX", "strike_step": 50.0},
     "CRUDEOILM":  {"exchange": "MCX", "strike_step": 50.0},
 }
+
+# `_sym_meta(sym)["exchange"]` -> Angel WS exchangeType code for that
+# underlying's OPTION segment (never its cash segment): NSE index options
+# trade on NFO(2), BSE index options (SENSEX/BANKEX) trade on BFO(4), MCX
+# commodity options trade on MCX(5). Before this map existed, SENSEX (absent
+# from _SYMBOL_META, so _sym_meta fell back to a generic {"exchange":"NSE"})
+# had its option legs subscribed under NFO(2) — the wrong segment — so the
+# WS feed never delivered a tick for any SENSEX option token: 13/13 (100%)
+# of live SENSEX SUPPORT_BREAKDOWN signals closed TIME_NODATA (a forced
+# flat scratch after 2x max_hold with no mark), discarding whatever real
+# MFE/MAE the move actually had. Every other symbol (NFO/MCX) was unaffected.
+_OPTION_EXCHANGE_TYPE = {"NSE": 2, "BSE": 4, "MCX": 5}
 
 
 _META_CACHE: dict[str, dict] = {}
@@ -508,10 +522,10 @@ class AutoScalpRunner:
             if not tok or tok in self._seeded:
                 continue
             self._seeded.add(tok)
-            is_mcx = str(t.get("market") or "").upper() == "MCX"
-            opt_ex = "MCX" if is_mcx else "NFO"
+            mkt = str(t.get("market") or "").upper()
+            opt_ex = {"MCX": "MCX", "BSE": "BFO"}.get(mkt, "NFO")
             agg = self._opt_aggs.setdefault(tok, CandleAggregator())
-            self._sub_tokens.setdefault(tok, {"exchange_type": 5 if is_mcx else 2})
+            self._sub_tokens.setdefault(tok, {"exchange_type": _OPTION_EXCHANGE_TYPE.get(mkt, 2)})
             if agg.last_ts is not None:
                 continue
             try:
@@ -522,16 +536,24 @@ class AutoScalpRunner:
             except Exception as e:
                 self.last_error = f"seed opt {tok}: {type(e).__name__}: {e}"
 
-    def _ensure_option_subs(self, chain):
-        """Subscribe the ATM-band option tokens so their premium candles build."""
+    def _ensure_option_subs(self, chain, market: str | None = None):
+        """Subscribe the ATM-band option tokens so their premium candles build.
+
+        `market` is the underlying's exchange (NSE/BSE/MCX, from `_sym_meta`)
+        and picks the option segment's WS exchange_type. A chain leg's own
+        `exchange_type` (if the chain provider ever sets one) wins when present;
+        otherwise this NEVER silently assumes NFO(2) -- that default is only
+        correct for NSE and previously misrouted every BSE (SENSEX/BANKEX)
+        option token to the wrong segment, so the WS feed never marked them."""
         if not self.feed:
             return
+        default_ex = _OPTION_EXCHANGE_TYPE.get(str(market or "").upper(), 2)
         for row in chain or []:
             for ot in ("ce", "pe"):
                 leg = row.get(ot) or {}
                 tok = leg.get("token")
                 if tok and str(tok) not in self._sub_tokens:
-                    self._sub_tokens[str(tok)] = {"exchange_type": int(leg.get("exchange_type") or 2)}
+                    self._sub_tokens[str(tok)] = {"exchange_type": int(leg.get("exchange_type") or default_ex)}
                     self._opt_aggs.setdefault(str(tok), CandleAggregator())
 
     def _pump_feed(self):
@@ -608,7 +630,7 @@ class AutoScalpRunner:
                     self.chain_provider, sym, atm, cfg["strike_window"], smeta["exchange"], emode) or []
             except Exception as e:
                 self.last_error = f"chain: {type(e).__name__}: {e}"
-        self._ensure_option_subs(chain)
+        self._ensure_option_subs(chain, smeta["exchange"])
 
         # 0-DTE today? Only NSE index weeklies expire intraday-often; when the
         # operator chose "roll" we are already on the next weekly, so never.
@@ -733,7 +755,7 @@ class AutoScalpRunner:
             prem = None
         if not prem or prem <= 0 or prem > float(z.get("max_premium", 12.0)):
             return
-        self._ensure_option_subs([row])
+        self._ensure_option_subs([row], smeta["exchange"])
         zid = "ZTH-" + format(int(time.time() * 1000), "x")
         trow = open_trade({
             "signal_id": zid, "market": smeta["exchange"], "underlying": sym.upper(),
