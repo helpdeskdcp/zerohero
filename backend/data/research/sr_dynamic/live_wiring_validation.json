@@ -1,0 +1,94 @@
+{
+  "NATGAS": {
+    "touches_per_day": {
+      "status": "ok",
+      "n_zones": 17,
+      "trading_days": 78,
+      "total_touches": 2775,
+      "total_rejections": 2347,
+      "touches_per_day": 35.58,
+      "rejections_per_day": 30.09,
+      "reaction_rate_pct": 84.6
+    },
+    "signal_impact": {
+      "total_raw_signals": 2500,
+      "before_sr_gate": 2500,
+      "after_sr_gate_marginal_veto_only": 565,
+      "sr_confirm": 417,
+      "sr_contradict": 1935,
+      "sr_neutral": 134,
+      "sr_insufficient": 14,
+      "pct_would_be_filtered_if_all_marginal": 77.4
+    }
+  },
+  "NIFTY": {
+    "touches_per_day": {
+      "status": "ok",
+      "n_zones": 13,
+      "trading_days": 340,
+      "total_touches": 2645,
+      "total_rejections": 2304,
+      "touches_per_day": 7.78,
+      "rejections_per_day": 6.78,
+      "reaction_rate_pct": 87.1
+    },
+    "signal_impact": {
+      "total_raw_signals": 8166,
+      "before_sr_gate": 8166,
+      "after_sr_gate_marginal_veto_only": 1513,
+      "sr_confirm": 1157,
+      "sr_contradict": 6653,
+      "sr_neutral": 335,
+      "sr_insufficient": 21,
+      "pct_would_be_filtered_if_all_marginal": 81.5
+    }
+  },
+  "BANKNIFTY": {
+    "touches_per_day": {
+      "status": "ok",
+      "n_zones": 11,
+      "trading_days": 52,
+      "total_touches": 319,
+      "total_rejections": 274,
+      "touches_per_day": 6.13,
+      "rejections_per_day": 5.27,
+      "reaction_rate_pct": 85.9
+    },
+    "signal_impact": {
+      "total_raw_signals": 566,
+      "before_sr_gate": 566,
+      "after_sr_gate_marginal_veto_only": 104,
+      "sr_confirm": 93,
+      "sr_contradict": 462,
+      "sr_neutral": 7,
+      "sr_insufficient": 4,
+      "pct_would_be_filtered_if_all_marginal": 81.6
+    }
+  },
+  "CRUDEOIL": {
+    "touches_per_day": {
+      "status": "ok",
+      "n_zones": 13,
+      "trading_days": 79,
+      "total_touches": 84,
+      "total_rejections": 83,
+      "touches_per_day": 1.06,
+      "rejections_per_day": 1.05,
+      "reaction_rate_pct": 98.8
+    },
+    "signal_impact": {
+      "total_raw_signals": 1869,
+      "before_sr_gate": 1869,
+      "after_sr_gate_marginal_veto_only": 406,
+      "sr_confirm": 348,
+      "sr_contradict": 1463,
+      "sr_neutral": 47,
+      "sr_insufficient": 11,
+      "pct_would_be_filtered_if_all_marginal": 78.3
+    }
+  },
+  "SENSEX": {
+    "status": "NO_REAL_DATA",
+    "reason": "no SENSEX historical futures/option dataset exists anywhere in this repo (checked data/historical/upstox_v3_validation/ and Kaggle) -- not fabricated, reported as a hard data ceiling"
+  }
+}

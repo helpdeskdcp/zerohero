@@ -104,6 +104,7 @@ def compute_dynamic_sr(bars_by_tf: dict, *, primary_tf: str = "5m", config: dict
             "rejection_strength": ta.rejection_strength,
             "volume_ratio": ta.volume_ratio,
             "breakout_status": bo.breakout_status,
+            "breakout_direction": bo.breakout_direction,
             "retest_status": bo.retest_status,
             "flip_status": bo.flip_status,
             "breakout_count": bo.breakout_count,

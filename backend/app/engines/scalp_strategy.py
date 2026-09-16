@@ -19,6 +19,8 @@ from .sr_engine import compute_sr
 from .state_classifier import classify, BULLISH
 from .regime_mtf import detect_regime, mtf_alignment
 from .option_engine import analyse_leg, ce_pe_confirmation, ev_gate, select_option
+from ..sr_dynamic.live_state import refresh_and_store
+from ..sr_dynamic.signal_confirm import evaluate_sr_confirmation
 
 MODEL_VERSION = "scalp-strategy-v1"
 
@@ -75,6 +77,33 @@ _CHAIN_GATE_DEFAULTS = {
 def _chain_gate_cfg(cfg):
     g = dict(_CHAIN_GATE_DEFAULTS)
     g.update(cfg.get("chain_gates") or {})
+    return g
+
+
+# --- LIVE SR CONFIRMATION GATE (opt-in; default OFF -> byte-identical to
+# pre-gate) -----------------------------------------------------------------
+# A confirmation/context layer, never an unconditional trigger: reads the
+# UNDERLYING's own live SR state (app.sr_dynamic -- zones reused from
+# app.engines.sr_engine's clustering, touch/rejection/breakout/retest state
+# from app.sr_dynamic's own pipeline) and checks whether it supports or
+# opposes the setup already produced above. Same CONFIRM/CONTRADICT/NEUTRAL/
+# INSUFFICIENT contract and same "veto only when marginal, else a confidence
+# haircut" policy as the option-chain gate right above -- deliberately
+# mirrored, not reinvented. NEVER touches probability / EV / entry / SL /
+# targets. Disabled for every symbol by default; a symbol profile must
+# explicitly opt in (same convention as chain_gates).
+_SR_GATE_DEFAULTS = {
+    "enabled": False,
+    "min_room_ratio": 1.0,       # next opposing zone must be >= this many expected-moves away
+    "marginal_ev_r": 0.25,
+    "marginal_score": 55.0,
+    "confirm_bumps_confidence": False,
+}
+
+
+def _sr_gate_cfg(cfg):
+    g = dict(_SR_GATE_DEFAULTS)
+    g.update(cfg.get("sr_gates") or {})
     return g
 
 
@@ -447,6 +476,27 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
         elif chain_bias["verdict"] == "CONFIRM" and _cg.get("confirm_bumps_confidence"):
             confidence = _conf_step(confidence, +1)
 
+    # --- LIVE SR CONFIRMATION GATE (opt-in; default OFF) -----------------------
+    _sg = _sr_gate_cfg(cfg)
+    sr_confirmation = None
+    live_sr = refresh_and_store(cfg.get("symbol") or "UNKNOWN", bars_by_tf, config=cfg.get("sr_dynamic"))
+    if _sg.get("enabled"):
+        sr_confirmation = evaluate_sr_confirmation(want, live_sr, index_move_pts=index_move_pts,
+                                                   min_room_ratio=_sg["min_room_ratio"])
+        if sr_confirmation["verdict"] == "CONTRADICT":
+            marginal = (confidence == "LOW"
+                        or (gate.get("ev_r") is not None and gate["ev_r"] < _sg["marginal_ev_r"])
+                        or blended < _sg["marginal_score"])
+            if marginal:
+                return out_none(
+                    f"SR confirmation contradicts a marginal setup ({sr_confirmation['reason']})",
+                    {**ctx, "sr_confirmation": sr_confirmation, "signal_score": round(blended, 1),
+                     "probability": round(prob, 4), "ev_r": gate.get("ev_r"),
+                     "confidence": confidence, "option_quality": sel["final_quality"], **_cal_meta})
+            confidence = _conf_step(confidence, -1)
+        elif sr_confirmation["verdict"] == "CONFIRM" and _sg.get("confirm_bumps_confidence"):
+            confidence = _conf_step(confidence, +1)
+
     if confidence == "LOW" and cfg.get("require_min_confidence", "LOW") != "LOW":
         return {**ctx, "decision": "WATCH", "direction": direction,
                 "reason": "confidence LOW -> watch only",
@@ -455,7 +505,8 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                 "expected_premium_move": (sel.get("translation") or {}).get("expected_premium_move"),
                 "epm_method": (sel.get("translation") or {}).get("method"),
                 "confidence": confidence, "ev": gate["ev"], "ev_r": gate["ev_r"], "rr": gate["rr"],
-                "chain_bias": chain_bias,
+                "chain_bias": chain_bias, "sr_confirmation": sr_confirmation,
+                "live_sr": live_sr.to_dict() if live_sr else None,
                 **_cal_meta, "model_version": MODEL_VERSION}
 
     return {
@@ -498,6 +549,7 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
                              "false_risk": st["false_risk"]["score"] / 100.0},
         "false_risk": st["false_risk"]["verdict"],
         "ce_pe": conf, "chain_bias": chain_bias, "calib_version": (calib or {}).get("version"),
+        "sr_confirmation": sr_confirmation, "live_sr": live_sr.to_dict() if live_sr else None,
         "reason": " | ".join(st["reason"][:2] + [f"opt_q {sel['final_quality']}",
                                                  f"p {round(prob, 3)}", f"ev {gate['ev_r']}R"]),
         "model_version": MODEL_VERSION,

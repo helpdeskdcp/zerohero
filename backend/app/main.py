@@ -269,6 +269,15 @@ try:
 except Exception as _e:
     print(f"[strategy] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Dynamic SR live-state observability (/api/sr/status). Read-only --
+# reads whatever the live decision cycle last computed, never recomputes,
+# never blocks the request. ----------------------------------------------
+try:
+    from .sr_dynamic import api as _sr_dynamic_api
+    app.include_router(_sr_dynamic_api.router)
+except Exception as _e:
+    print(f"[sr_dynamic] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
