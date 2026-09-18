@@ -1,0 +1,47 @@
+{
+  "NATURALGAS": {
+    "symbol": "NATURALGAS",
+    "n_bars_5m": 1235,
+    "n_real_days": 8,
+    "n_events": 0,
+    "overall": {
+      "n": 0
+    },
+    "chronological_train_60pct": {
+      "n": 0
+    },
+    "chronological_oos_40pct": {
+      "n": 0
+    }
+  },
+  "CRUDEOIL": {
+    "symbol": "CRUDEOIL",
+    "n_bars_5m": 1236,
+    "n_real_days": 8,
+    "n_events": 0,
+    "overall": {
+      "n": 0
+    },
+    "chronological_train_60pct": {
+      "n": 0
+    },
+    "chronological_oos_40pct": {
+      "n": 0
+    }
+  },
+  "NIFTY": {
+    "symbol": "NIFTY",
+    "n_bars_5m": 510,
+    "n_real_days": 7,
+    "n_events": 0,
+    "overall": {
+      "n": 0
+    },
+    "chronological_train_60pct": {
+      "n": 0
+    },
+    "chronological_oos_40pct": {
+      "n": 0
+    }
+  }
+}
