@@ -138,6 +138,22 @@ def _fresh_telegram_dispatcher():
     _td._singleton = None
 
 
+@pytest.fixture(autouse=True)
+def _fresh_candle_cache():
+    """app.connectors.angelone.fetch_candles caches successful results in a
+    module-level dict (process-lifetime, by design - it throttles real calls
+    to AngelOne's rate-limited API). Left alone, an earlier test's cached
+    "OK" result for the same (symbol, exchange, ..., timeframe) key can leak
+    into a later, unrelated test expecting a different (e.g. STALE) outcome
+    for that same key, purely because both ran within the cache TTL of each
+    other. Reset it before every test, same reasoning as
+    _fresh_telegram_dispatcher above."""
+    from app.connectors import angelone as _ao
+    _ao._candle_cache.clear()
+    yield
+    _ao._candle_cache.clear()
+
+
 @pytest.fixture()
 def fresh_db(monkeypatch):
     fd, path = tempfile.mkstemp(suffix=".db")

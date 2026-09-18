@@ -191,7 +191,41 @@ def get_stream_credentials():
     }
 
 
+_CANDLE_CACHE_TTL_SEC = float(os.environ.get("CHANAKYA_CANDLE_CACHE_TTL_SEC", "5"))
+_candle_cache: dict = {}
+_candle_cache_lock = threading.Lock()
+
+
 def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, todate, timeframe=None, instrument=None):
+    """Cached wrapper around _fetch_candles_uncached (see that docstring).
+
+    AngelOne's real API rate-limits (HTTP 403 "Access denied because of
+    exceeding access rate") when called too often - observed in production
+    from scalper.py's fast_mode 1-second scan cycle re-fetching the same
+    symbol/window on consecutive ticks. This caches successful results per
+    exact call signature for _CANDLE_CACHE_TTL_SEC (default 5s - short
+    enough that live scalping signals never see meaningfully stale data,
+    long enough to absorb repeated calls within the same or adjacent 1s
+    scan ticks). Only "OK" results are cached; DATA_UNAVAILABLE/failures
+    are never cached so a real recovery is picked up on the very next call.
+    Does not change any caller's polling cadence or trading logic - purely
+    a data-layer throttle, same category of fix as the app/histcap one."""
+    key = (market, symbol, exchange, symboltoken, interval, fromdate, todate, timeframe, instrument)
+    now = time.time()
+    with _candle_cache_lock:
+        cached = _candle_cache.get(key)
+        if cached is not None and now - cached[0] < _CANDLE_CACHE_TTL_SEC:
+            return cached[1]
+
+    result = _fetch_candles_uncached(market, symbol, exchange, symboltoken, interval,
+                                      fromdate, todate, timeframe=timeframe, instrument=instrument)
+    if result.get("data_status") == "OK":
+        with _candle_cache_lock:
+            _candle_cache[key] = (now, result)
+    return result
+
+
+def _fetch_candles_uncached(market, symbol, exchange, symboltoken, interval, fromdate, todate, timeframe=None, instrument=None):
     """
     Fetch historical candles from AngelOne SmartAPI.
     Returns a normalized dict matching the n8n 'Normalize Candles' contract.
