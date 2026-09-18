@@ -154,6 +154,23 @@ def test_autoscalp_chain_mcx_exchange_type(monkeypatch):
     assert out[0]["ce"]["exchange_type"] == 5
 
 
+def test_autoscalp_chain_bse_exchange_type(monkeypatch):
+    """Regression: SENSEX/BANKEX option legs must route to BFO(4), not the
+    NFO(2) default. This exact bug shipped live (confirmed on real SENSEX
+    AUTOSCALP trades on 2026-09-17 and 2026-09-18, both swept TIME_NODATA)
+    despite app/autoscalp/runner.py's earlier SENSEX/BANKEX exchange fix --
+    that fix only covered the DEFAULT used when a leg has no exchange_type
+    of its own, but this function always sets one explicitly, silently
+    overriding it for every SENSEX/BANKEX leg. The old binary
+    `5 if mkt == "MCX" else 2` had no BSE branch at all."""
+    monkeypatch.setattr(runtime.market_hub, "get_chain",
+                        lambda sym, **kw: {"chain": [_hc_row(74300.0)], "expiry": "17SEP2026"})
+    monkeypatch.setattr(runtime, "_merge_broker_greeks", lambda *a, **k: None)
+    out = runtime._autoscalp_chain("SENSEX", 74300, 2, market="BSE")
+    assert out[0]["ce"]["exchange_type"] == 4
+    assert out[0]["pe"]["exchange_type"] == 4
+
+
 def test_autoscalp_chain_empty_result_returns_empty_list(monkeypatch):
     monkeypatch.setattr(runtime.market_hub, "get_chain", lambda sym, **kw: {"chain": [], "expiry": None})
     out = runtime._autoscalp_chain("NIFTY", 24000, 2)

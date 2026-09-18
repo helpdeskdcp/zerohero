@@ -125,7 +125,19 @@ def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
     histcap/REST actually answered."""
     try:
         mkt = str(market or "NSE").upper()
-        et = 5 if mkt == "MCX" else 2                       # WS exchange type for the legs
+        # WS exchange type for the legs. NSE index options -> NFO(2), BSE
+        # index options (SENSEX/BANKEX) -> BFO(4), MCX commodity options ->
+        # MCX(5). This is the SAME class of bug already fixed once in
+        # app/autoscalp/runner.py (_OPTION_EXCHANGE_TYPE) -- that fix only
+        # covered the DEFAULT used when a chain leg lacks its own
+        # exchange_type, but THIS function always sets one explicitly on
+        # every leg, so its old binary MCX-vs-NFO split silently overrode
+        # that fix for every SENSEX/BANKEX leg: every SENSEX option token
+        # got WS-subscribed under NFO(2) instead of BFO(4), so the feed
+        # never marked it -- confirmed live on 2026-09-17/18, two more
+        # TIME_NODATA sweeps on real SENSEX AUTOSCALP signals after the
+        # runner.py fix was already deployed.
+        et = {"MCX": 5, "BSE": 4}.get(mkt, 2)
         gc = market_hub.get_chain(symbol, window=window, allow_rest_fallback=True,
                                   expiry_mode=str(expiry_mode or "AUTO"))
         rows = gc.get("chain") or []
