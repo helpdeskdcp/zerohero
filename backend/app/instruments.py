@@ -185,13 +185,20 @@ def resolve_nse_option(underlying: str, expiry: str = "AUTO", strike="ATM", opti
     rows = [_master_meta(r) for r in master_rows()]
     rows = [r for r in rows if r["exchange"] == "NFO" and r["underlying"] == u and r["option_type"] == typ and r["symboltoken"]]
     if not rows: return {"status": "DATA_UNAVAILABLE", "reason": "no NFO contracts in instrument master"}
-    valid = sorted({r["expiry"] for r in rows if r["expiry"]})
     now = datetime.now(_IST).date()
     def key(x):
         for f in ("%d%b%Y", "%Y-%m-%d", "%d-%b-%Y"):
             try: return datetime.strptime(x.upper(), f).date()
             except ValueError: pass
         return None
+    # Sort by the PARSED date, not the raw string -- a plain string sort is
+    # lexicographic ("01OCT2026" < "24SEP2026") and silently picks the wrong
+    # "nearest" expiry across a month boundary. This exact bug class was
+    # already fixed in resolve_mcx_future/resolve_index_future below; this
+    # was the one sibling that still had it (see
+    # ZEROHERO_FULL_AUDIT_2026-09-19.md).
+    valid = sorted({r["expiry"] for r in rows if r["expiry"]},
+                   key=lambda x: key(x) or datetime.max.date())
     valid = [x for x in valid if key(x) and key(x) >= now]
     if not valid: return {"status": "CONTRACT_INVALID", "reason": "no non-expired expiry"}
     mode = str(expiry or "AUTO").upper()
