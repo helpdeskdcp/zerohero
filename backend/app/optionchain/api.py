@@ -25,6 +25,9 @@ import time
 from fastapi import APIRouter
 
 from .analytics import compute_all, oi_change_vs_baseline
+from .history_analytics import vol_surface as _vol_surface
+from .history_analytics import straddle_pnl as _straddle_pnl
+from .history_analytics import oi_profile as _oi_profile
 from .resolve import get_chain
 from .structure import analyze as _analyze_structure
 from .qualify import qualify as _qualify
@@ -124,3 +127,45 @@ def api_optionchain(underlying: str, expiry: str = "AUTO", live: int = 1,
     else:
         _cache[key] = {"ts": now, "data": out}
     return out
+
+
+# --------------------------------------------------------------------------- #
+#  Time-series analytics -- built on ALREADY-CAPTURED histcap data only:      #
+#  no new broker fetch, no order path. See history_analytics.py docstring.    #
+# --------------------------------------------------------------------------- #
+_hist_cache: dict = {}
+_HIST_TTL = 30.0
+
+
+def _hist_cached(key, fn):
+    now = time.time()
+    hit = _hist_cache.get(key)
+    if hit and now - hit["ts"] < _HIST_TTL:
+        return hit["data"]
+    data = _pack(fn())
+    _hist_cache[key] = {"ts": now, "data": data}
+    return data
+
+
+@router.get("/{underlying}/vol-surface")
+def api_vol_surface(underlying: str, max_expiries: int = 6):
+    u = str(underlying or "").upper()
+    max_expiries = max(1, min(12, int(max_expiries)))
+    return _hist_cached(("vs", u, max_expiries),
+                         lambda: _vol_surface(u, max_expiries=max_expiries))
+
+
+@router.get("/{underlying}/straddle-pnl")
+def api_straddle_pnl(underlying: str, expiry: str, entry_ts: str | None = None,
+                     strike: float | None = None):
+    u = str(underlying or "").upper()
+    return _hist_cached(("sp", u, expiry, entry_ts, strike),
+                         lambda: _straddle_pnl(u, expiry, entry_ts=entry_ts, strike=strike))
+
+
+@router.get("/{underlying}/oi-profile")
+def api_oi_profile(underlying: str, expiry: str, top_n_strikes: int = 8):
+    u = str(underlying or "").upper()
+    top_n_strikes = max(1, min(20, int(top_n_strikes)))
+    return _hist_cached(("op", u, expiry, top_n_strikes),
+                         lambda: _oi_profile(u, expiry, top_n_strikes=top_n_strikes))
