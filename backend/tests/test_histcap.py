@@ -356,3 +356,31 @@ def test_schema_init_is_idempotent(tmp_path):
     HistStore(p)
     s2 = HistStore(p)                                  # second init on the same file
     assert s2.summary()["candles"] == 0
+
+
+def test_capture_candles_spaces_out_calls_to_avoid_rate_limit(store, monkeypatch):
+    # Production incident: len(symbols)*len(tfs) get_candles calls fired
+    # back-to-back with zero delay tripped AngelOne's real rate limit
+    # (HTTP 403 "Access denied because of exceeding access rate"). This
+    # locks in that a delay is actually applied between calls, not just
+    # configured.
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg["tfs"] = ["1m", "5m", "15m"]
+    w.cfg["candle_delay_sec"] = 1.0
+    sleeps = []
+    monkeypatch.setattr(WK.time, "sleep", lambda secs: sleeps.append(secs))
+    w.run_once("POLL_ONCE", do_candles=True)
+    # 1 meta (NATURALGAS future) x 3 tfs = 3 calls -> 2 delays (none before
+    # the first call).
+    assert sleeps == [1.0, 1.0]
+
+
+def test_capture_candles_delay_is_configurable_via_env(store, monkeypatch):
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg["tfs"] = ["1m", "5m"]
+    w.cfg["candle_delay_sec"] = 0.0
+    sleeps = []
+    monkeypatch.setattr(WK.time, "sleep", lambda secs: sleeps.append(secs))
+    w.run_once("POLL_ONCE", do_candles=True)
+    # candle_delay_sec=0 must not call time.sleep at all (not even sleep(0))
+    assert sleeps == []

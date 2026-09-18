@@ -78,6 +78,7 @@ def _cfg() -> dict:
         "tfs": tfs or ["1m", "5m", "15m"],
         "quote_sec": float(_env("CHANAKYA_HIST_QUOTE_SEC", "20")),
         "candle_sec": float(_env("CHANAKYA_HIST_CANDLE_SEC", "90")),
+        "candle_delay_sec": float(_env("CHANAKYA_HIST_CANDLE_DELAY_SEC", "1.0")),
         "heartbeat_sec": float(_env("CHANAKYA_HIST_HEARTBEAT_SEC", "300")),
         "option_candles": _env("CHANAKYA_HIST_OPTION_CANDLES", "0") in ("1", "true", "yes"),
     }
@@ -412,8 +413,22 @@ class CaptureWorker:
         metas = [m for m in (refs.get("spot_meta"), refs.get("fut_meta")) if m]
         if self.cfg["option_candles"]:
             metas += refs.get("opt_metas", [])
+        # AngelOne's historical-candle endpoint rate-limits (HTTP 403
+        # "Access denied because of exceeding access rate") when called
+        # back-to-back with no delay. With len(symbols)*len(tfs) calls per
+        # cycle (8*6=48 by default) fired with zero spacing, this endpoint
+        # alone was enough to exhaust the account's real rate limit -
+        # observed in production, affecting this worker AND every other
+        # consumer of the same AngelOne login concurrently. Runs off the
+        # asyncio event loop (via asyncio.to_thread in _run), so a plain
+        # blocking sleep here is safe and doesn't stall anything else.
+        candle_delay_sec = self.cfg.get("candle_delay_sec", 1.0)
+        first_call = True
         for m in metas:
             for tf in self.cfg["tfs"]:
+                if not first_call and candle_delay_sec > 0:
+                    time.sleep(candle_delay_sec)
+                first_call = False
                 # session-aware window: recent bars during hours, last close off-hours
                 frm, to = instruments.lookback_window(tf, bars=int(self.cfg.get("candle_bars", 20)))
                 try:
@@ -442,7 +457,8 @@ class CaptureWorker:
             "is_leader": self.is_leader, "lease_owner": db.lease_owner(_LEASE_KEY),
             "started_at": self.started_at, "last_error": self.last_error,
             "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "chain_window_by_sym",
-                                                "tfs", "quote_sec", "candle_sec", "option_candles")},
+                                                "tfs", "quote_sec", "candle_sec", "candle_delay_sec",
+                                                "option_candles")},
             "last_run": self.last_run, "store": self.store.summary(),
         }
 
