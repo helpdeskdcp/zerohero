@@ -32,10 +32,23 @@ from app.orderflow import service, notify
 syms = [s.strip().upper() for s in sys.argv[1].split(",") if s.strip()]
 today = sys.argv[2]
 
+# Stage-11 (ORDERFLOW_STAGE11_TIME_EXIT_EDGE.md): entry_mode="immediate" +
+# sig_filter="candle_dir" is a whole-grid-robust, OOS-confirmed edge for
+# NATURALGAS specifically (both TRAIN and OOS PF>1.0 across the entire
+# hold_bars x stop_frac sweep). CRUDEOIL's earlier apparent confirmation was
+# a methodology bug (both-sides-per-spike double counting) and was NOT
+# confirmed once corrected -- CRUDEOIL and every other symbol stay on the
+# original default (breakout entry, no time-exit) until/unless a real edge
+# is found for them too.
+_SYMBOL_OVERRIDES = {
+    "NATURALGAS": dict(entry_mode="immediate", sig_filter="candle_dir",
+                       max_hold_bars=2, stop_frac=1.0),
+}
+
 total_sent = 0
 for sym in syms:
     try:
-        sm = service.smart_money(sym, today)
+        sm = service.smart_money(sym, today, **_SYMBOL_OVERRIDES.get(sym, {}))
     except Exception as e:
         print(f"  {sym}: ERROR {type(e).__name__}: {e}")
         continue

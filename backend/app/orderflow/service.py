@@ -59,13 +59,16 @@ def available_sessions(symbol: str, tf: str = "5m", limit: int = 30) -> list:
 def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
                 volume_mult: float = 2.0, rr: float = 3.0, stop_frac: float = 1.0,
                 trail: bool = False, sig_filter: str = "none",
-                pattern: str = "spike") -> dict:
+                pattern: str = "spike", max_hold_bars: int | None = None,
+                entry_mode: str = "breakout") -> dict:
     """Trigger-candle breakout setups for one IST session (or comma-list for a
     multi-session scan). `pattern` in {spike, sideways_spike, hammer}.
+    `max_hold_bars` / `entry_mode`: see smart_money.smart_money_setups --
+    Stage-11 time-exit / immediate-entry, both opt-in, default unchanged.
     Read-only over captured bars."""
     dates = [d.strip() for d in str(session_date or "").split(",") if d.strip()]
     key = ("SM", symbol.upper(), tuple(dates), tf, volume_mult, rr, stop_frac,
-           bool(trail), sig_filter, pattern)
+           bool(trail), sig_filter, pattern, max_hold_bars, entry_mode)
     cached = _cache_get(key)
     if cached is not None:
         return cached
@@ -74,7 +77,8 @@ def smart_money(symbol: str, session_date: str, *, tf: str = "5m",
         bars.extend(market_hub.session_bars(symbol, d, tf=tf))
     bars.sort(key=lambda b: str(b.get("bar_start") or ""))
     out = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
-                                 trail=trail, sig_filter=sig_filter, pattern=pattern)
+                                 trail=trail, sig_filter=sig_filter, pattern=pattern,
+                                 max_hold_bars=max_hold_bars, entry_mode=entry_mode)
     out["symbol"] = symbol.upper()
     out["sessions"] = dates
     out["tf"] = tf

@@ -37,6 +37,12 @@ def signal_card(*, symbol: str, session_date: str, spike: dict, side: str) -> st
     leg = spike[side]
     c = spike["candle"]
     oc = (leg.get("outcome") or {}).get("status", "-")
+    immediate = leg.get("entry_mode") == "immediate"
+    entry_label = "Entry (market, spike close)" if immediate else "Entry (breakout)"
+    granularity_note = ("Entry is immediate at the spike candle's close, no breakout wait; "
+                        "exit is at market after a short time-exit if stop/target isn't hit "
+                        "first." if immediate else
+                        "Breakout/target/stop judged at bar granularity;")
     return "\n".join([
         BAR, "      ORDERFLOW SIGNAL", BAR, "",
         f"Instrument: {symbol}",
@@ -45,14 +51,14 @@ def signal_card(*, symbol: str, session_date: str, spike: dict, side: str) -> st
         f"Smart-money candle: {c.get('bar_start')}",
         f"  O/H/L/C: {_fmt(c.get('o'))} / {_fmt(c.get('h'))} / {_fmt(c.get('l'))} / {_fmt(c.get('c'))}",
         f"  Volume: {_fmt(c.get('v'), 0)}  ({spike.get('volume_x_avg')}x session avg)", "",
-        f"Entry (breakout): {_fmt(leg.get('entry'))}",
+        f"{entry_label}: {_fmt(leg.get('entry'))}",
         f"Stop Loss: {_fmt(leg.get('stop_loss'))}",
         f"Target: {_fmt(leg.get('target'))}",
         f"Risk / Reward: {_fmt(leg.get('risk_points'))} pts  ->  1:{leg.get('rr')}", "",
         f"Breakout bar: {leg.get('breakout_bar') or '-'}",
         f"Outcome so far: {oc}", "",
-        "OHLCV ~5m bars, not tick data. Breakout/target/stop judged at bar",
-        "granularity; a bar spanning both -> STOP assumed.",
+        "OHLCV ~5m bars, not tick data. " + granularity_note,
+        "A bar spanning both stop and target is scored STOP (pessimistic).",
         BAR,
     ])
 

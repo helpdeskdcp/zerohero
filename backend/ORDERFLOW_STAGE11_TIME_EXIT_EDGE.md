@@ -189,3 +189,27 @@ live/paper wiring decision, and a premium-basis re-run to see if the option
 spread erases it (as happened to several other candidates this session).
 Still NOT wired into live/paper signal generation -- that remains a
 separate, explicit decision given subscribers trade on our signals.
+
+## Correction 2026-09-18 (part 3): the CRUDEOIL confirmation above was a methodology bug
+
+Before wiring anything live, re-checked Part 2's sweep and found a real
+mistake: it ran with the default `sig_filter="none"`, which builds BOTH a
+BUY and a SELL setup for every spike candle, both entering at the SAME
+`entry_mode="immediate"` price (the spike's own close). That is not what
+the Stage-11 research measured -- the research script picks exactly ONE
+direction per spike (`direction = 1 if c>o else -1`, i.e. the candle's own
+close-vs-open direction), never both. Re-running the identical sweep with
+`sig_filter="candle_dir"` (the production filter that does the same
+one-side-per-spike restriction) gives a materially different picture:
+
+| symbol | pattern across the whole hold(1,2,3,5) x stop(0.5,1.0,1.5) grid |
+|---|---|
+| NATURALGAS | **PF > 1.0 on BOTH TRAIN and OOS for every single one of the 12 combos tested** -- e.g. hold=2 stop=1.0: TRAIN 1.44 / OOS 1.385; hold=1 stop=1.0: TRAIN 1.134 / OOS 1.49. This is a robust, whole-grid result, not a cherry-picked cell. |
+| CRUDEOIL | TRAIN PF is BELOW 1.0 (0.58-0.90) for every combo once restricted to one side per spike. OOS looks very strong (1.27-2.14) but TRAIN is losing -- this is the opposite of a validated edge; the earlier "CRUDEOIL confirmed" claim in Part 2 was an artifact of counting a losing SELL and a winning BUY off the same spike bar as if both were real, independent trades. |
+
+**Corrected verdict**: only **NATURALGAS**, with `entry_mode="immediate",
+sig_filter="candle_dir"`, holds up as a real, methodologically-honest,
+whole-grid-robust, OOS-confirmed edge. **CRUDEOIL is NOT confirmed** and
+must not be wired on this basis. This correction was caught and applied
+before any live signal changes went out -- see the 2026-09-18 live-wiring
+note below for what was actually enabled.
