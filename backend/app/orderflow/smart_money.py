@@ -47,7 +47,7 @@ def _clean(bars: list) -> list:
 
 
 def _walk_outcome(bars_after: list, entry: float, stop: float, target: float,
-                  side: str, *, trail_dist: float = 0.0) -> dict:
+                  side: str, *, trail_dist: float = 0.0, max_hold_bars: int | None = None) -> dict:
     """Walk the post-breakout bars; return status + which bar resolved it +
     the REALIZED points (signed, in the trade's favourable direction) and the
     exit price.
@@ -57,10 +57,21 @@ def _walk_outcome(bars_after: list, entry: float, stop: float, target: float,
     exit can therefore land in profit -- points is `exit - entry` (BUY) /
     `entry - exit` (SELL), which _trade_from_leg turns into WIN/LOSS/FLAT by
     its sign, not by the status label.
+
+    `max_hold_bars` (Stage-11 research finding, ORDERFLOW_STAGE11_TIME_EXIT_EDGE.md):
+    if the stop/target haven't resolved the trade within this many bars, exit
+    at that bar's CLOSE (a market exit, not a level) -- status "TIME_EXIT".
+    Real forward-return significance testing found the spike-continuation
+    effect is real over a SHORT horizon (1-5 bars) but decays to noise over
+    the long horizon a distant R-multiple target needs (10-20 bars) -- a
+    short time-exit captures the real part of the signal instead of waiting
+    for a move that OOS data shows rarely completes. None (default) =
+    unchanged prior behaviour (PENDING/TRIGGERED at session end, no new exit
+    path) -- existing callers see byte-identical results.
     """
     cur_stop = stop
     best = entry
-    for b in bars_after:
+    for idx, b in enumerate(bars_after):
         hi, lo = b["h"], b["l"]
         if trail_dist > 0:
             if side == "BUY":
@@ -88,6 +99,11 @@ def _walk_outcome(bars_after: list, entry: float, stop: float, target: float,
             pts = (target - entry) if side == "BUY" else (entry - target)
             return {"status": "TARGET_HIT", "resolved_bar": b["bar_start"],
                     "exit_price": round(target, 4), "points": round(pts, 4)}
+        if max_hold_bars and (idx + 1) >= max_hold_bars:
+            exit_price = b["c"]
+            pts = (exit_price - entry) if side == "BUY" else (entry - exit_price)
+            return {"status": "TIME_EXIT", "resolved_bar": b["bar_start"],
+                    "exit_price": round(exit_price, 4), "points": round(pts, 4)}
     return {"status": "TRIGGERED", "resolved_bar": None, "exit_price": None, "points": 0.0}
 
 
@@ -101,13 +117,15 @@ def _first_breakout_idx(bars_after: list, level: float, side: str) -> Optional[i
 
 
 def _setup(spike: dict, bars_after: list, side: str, rr: float,
-           stop_frac: float = 1.0, trail: bool = False) -> dict:
+           stop_frac: float = 1.0, trail: bool = False, max_hold_bars: int | None = None) -> dict:
     """`stop_frac`: the stop distance as a fraction of the spike candle's
     high-low range. 1.0 (default) = stop at the opposite extreme (the original
     spec). 0.5 = stop halfway between entry and that extreme -- a TIGHTER stop.
     `target` is always rr x the ACTUAL (possibly tighter) stop distance, so a
     tighter stop also pulls the target in. `trail=True` trails the stop the
-    same distance behind the best price after entry."""
+    same distance behind the best price after entry. `max_hold_bars`: see
+    _walk_outcome -- Stage-11's validated short time-exit; None = unchanged
+    prior behaviour."""
     h, l = spike["h"], spike["l"]
     rng = h - l
     sd = max(0.0, stop_frac) * rng            # stop distance in points
@@ -132,7 +150,7 @@ def _setup(spike: dict, bars_after: list, side: str, rr: float,
     else:
         d["breakout_bar"] = bars_after[bidx]["bar_start"]
         d["outcome"] = _walk_outcome(bars_after[bidx:], entry, stop, target, side,
-                                     trail_dist=sd if trail else 0.0)
+                                     trail_dist=sd if trail else 0.0, max_hold_bars=max_hold_bars)
     return d
 
 
@@ -197,7 +215,8 @@ def _sides_for(b: dict, sig_filter: str) -> tuple:
 def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
                        stop_frac: float = 1.0, trail: bool = False,
                        sig_filter: str = "none", pattern: str = "spike",
-                       consol_lookback: int = 5, consol_span_x: float = 1.5) -> dict:
+                       consol_lookback: int = 5, consol_span_x: float = 1.5,
+                       max_hold_bars: int | None = None) -> dict:
     """Detect trigger candles and build breakout setups for each, with a
     same-session forward-walked outcome.
 
@@ -252,9 +271,9 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
             "pattern": pattern,
         }
         if "BUY" in sides:
-            row["buy"] = _setup(b, after, "BUY", rr, stop_frac, trail)
+            row["buy"] = _setup(b, after, "BUY", rr, stop_frac, trail, max_hold_bars)
         if "SELL" in sides:
-            row["sell"] = _setup(b, after, "SELL", rr, stop_frac, trail)
+            row["sell"] = _setup(b, after, "SELL", rr, stop_frac, trail, max_hold_bars)
         setups.append(row)
     return {
         "status": "OK",
@@ -266,6 +285,7 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
         "session_avg_range": round(avg_range, 4),
         "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
         "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern,
+        "max_hold_bars": max_hold_bars,
         "spike_count": len(setups),
         "setups": setups,
     }

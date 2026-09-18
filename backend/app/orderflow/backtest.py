@@ -132,9 +132,15 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
              pattern: str = "spike", consol_lookback: int = 5, consol_span_x: float = 1.5,
              basis: str = "index",
              premium_stop_pct: float = 0.0, premium_stop_pts: float = 0.0,
+             max_hold_bars: int | None = None,
              sessions: int | list | None = None) -> dict:
     """`sessions`: None -> all captured; an int -> that many most-recent; a list
     -> exactly those IST dates.
+
+    `max_hold_bars`: Stage-11 finding (ORDERFLOW_STAGE11_TIME_EXIT_EDGE.md) --
+    exit at market after this many bars if stop/target haven't resolved the
+    trade yet, instead of only ever exiting on the (often unreachable) rr x
+    risk target. None (default) = unchanged prior behaviour.
 
     `pattern`: which trigger candle to trade -- "spike" (volume spike, default),
     "sideways_spike" (a volume spike that breaks OUT of a prior tight range),
@@ -179,7 +185,8 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         scanned += 1
         sm = _sm.smart_money_setups(bars, volume_mult=volume_mult, rr=rr, stop_frac=stop_frac,
                                     trail=trail, sig_filter=sig_filter, pattern=pattern,
-                                    consol_lookback=consol_lookback, consol_span_x=consol_span_x)
+                                    consol_lookback=consol_lookback, consol_span_x=consol_span_x,
+                                    max_hold_bars=max_hold_bars)
         if sm.get("status") != "OK":
             continue
         opt_map = market_hub.session_option_quotes(sym, d) if basis == "premium" else None
@@ -199,6 +206,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         return {"status": "NO_SIGNALS", "symbol": sym, "sessions_scanned": scanned,
                 "sessions": dates, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
                 "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern, "basis": basis,
+                "max_hold_bars": max_hold_bars,
                 "premium_stop_pct": premium_stop_pct, "premium_stop_pts": premium_stop_pts,
                 "note": f"no {pattern} setup hit target or stop in the captured sessions"}
 
@@ -265,6 +273,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
         "note": note,
         "symbol": sym, "tf": tf, "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
         "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern, "basis": basis,
+        "max_hold_bars": max_hold_bars,
         "premium_stop_pct": premium_stop_pct, "premium_stop_pts": premium_stop_pts,
         "basis_coverage": basis_coverage,
         "sessions_scanned": scanned, "traded_sessions": n_traded_sessions,

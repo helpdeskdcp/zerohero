@@ -95,6 +95,50 @@ def test_buy_outcome_stop_hit():
     assert buy["outcome"]["resolved_bar"] == "t4"
 
 
+def test_max_hold_bars_exits_at_market_close_when_neither_hit():
+    """Stage-11 finding: a short time-exit instead of waiting for the
+    (often unreachable) rr x risk target. max_hold_bars=1 -> exit at the
+    FIRST post-breakout bar's close if neither stop nor target was hit
+    on that bar."""
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),   # spike -> BUY entry 110, stop 100, tgt 140
+        _bar("t3", 108, 112, 107, 111, 100),    # breaks out (high 112>110), closes 111 -- neither stop nor target
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0, max_hold_bars=1)
+    buy = out["setups"][0]["buy"]
+    assert buy["outcome"]["status"] == "TIME_EXIT"
+    assert buy["outcome"]["resolved_bar"] == "t3"
+    assert buy["outcome"]["exit_price"] == 111
+    assert buy["outcome"]["points"] == 1          # 111 - 110 entry, a small real WIN
+
+
+def test_max_hold_bars_still_prefers_a_real_stop_or_target_hit_first():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),   # spike -> BUY entry 110, stop 100, tgt 140
+        _bar("t3", 108, 112, 99, 100, 100),     # breaks out AND hits stop (low 99<=100) same bar
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0, max_hold_bars=5)
+    buy = out["setups"][0]["buy"]
+    assert buy["outcome"]["status"] == "STOP_HIT"   # not TIME_EXIT -- a real hit always wins
+
+
+def test_max_hold_bars_none_is_unchanged_prior_behaviour():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),
+        _bar("t3", 108, 112, 107, 111, 100),
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0)   # max_hold_bars defaults to None
+    buy = out["setups"][0]["buy"]
+    assert buy["outcome"]["status"] == "TRIGGERED"       # still open, no target/stop hit, no time exit
+    assert out["max_hold_bars"] is None
+
+
 def test_outcome_bar_spanning_both_is_stop_hit():
     bars = [
         _bar("t0", 100, 101, 99, 100, 100),

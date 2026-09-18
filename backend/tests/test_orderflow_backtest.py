@@ -148,6 +148,29 @@ def test_backtest_echoes_trail_and_sig_filter(monkeypatch):
     assert ns["trail"] is True and ns["sig_filter"] == "strong_body"
 
 
+def test_backtest_echoes_max_hold_bars(monkeypatch):
+    """Stage-11: max_hold_bars must actually reach smart_money_setups (not
+    just sit unused in backtest()'s own signature), and echo into the
+    output for observability."""
+    calls = {}
+    def _spy(*a, **k):
+        calls.update(k)
+        return {"status": "OK", "setups": [_spike("t0", "TARGET_HIT", "STOP_HIT")]}
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "TARGET_HIT", "STOP_HIT")]}})
+    monkeypatch.setattr(BT._sm, "smart_money_setups", _spy)
+    bt = BT.backtest("NIFTY", max_hold_bars=3)
+    assert calls.get("max_hold_bars") == 3
+    assert bt["max_hold_bars"] == 3
+
+
+def test_backtest_max_hold_bars_defaults_to_none_unchanged(monkeypatch):
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "TARGET_HIT", "STOP_HIT")]}})
+    bt = BT.backtest("NIFTY")
+    assert bt["max_hold_bars"] is None
+
+
 def test_flat_trailed_exit_is_its_own_bucket(monkeypatch):
     # a trailed exit exactly at entry -> points 0 -> FLAT, not WIN/LOSS
     _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [

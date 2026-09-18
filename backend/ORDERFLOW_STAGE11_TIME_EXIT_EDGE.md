@@ -93,4 +93,50 @@ robustness across a wider sweep, not the single best OOS number (which is
 itself a form of overfitting if picked post-hoc). Reusable script:
 `scripts/orderflow_time_exit_research.py` (to be saved alongside this doc).
 
-No production code touched. No signal, no orders, no live wiring.
+No production code touched at the time this doc was written. No signal, no orders, no live wiring.
+
+## Update 2026-09-18: production wiring done, edge does NOT transfer
+
+`max_hold_bars` was threaded into the real engine (`app/orderflow/smart_money.py`
+`_walk_outcome`/`_setup`/`smart_money_setups`, and `app/orderflow/backtest.py`
+`backtest()`) as an opt-in parameter, default `None` = byte-identical to prior
+behaviour. Mechanically correct and unit-tested (24 tests across
+`tests/test_orderflow_smart_money.py` + `tests/test_orderflow_backtest.py`,
+including 4 new tests specific to this parameter).
+
+Running the SAME hold_bars x stop sweep through the real production
+`backtest()` (breakout-trigger entries via `smart_money_setups`, sessions
+passed explicitly as the TRAIN/OOS lists above) does **NOT** reproduce the
+edge found in the standalone script above:
+
+| symbol | config | TRAIN PF | OOS PF | OOS net |
+|---|---|---|---|---|
+| NATURALGAS | baseline (no time-exit) | 0.723 | 0.479 | -56.8 |
+| NATURALGAS | hold=1 stop=1.5 (best found) | 1.706 | 1.080 | +2.1 |
+| CRUDEOIL | baseline | 0.970 | 1.114 | **+286.0** |
+| CRUDEOIL | hold=1 stop=1.5 | 0.882 | 1.086 | +60.0 |
+| NIFTY | baseline | 0.307 | 0.399 | -613.3 |
+| NIFTY | hold=1 stop=1.5 | 0.796 | 1.133 | +40.25 (not reliable, n too small) |
+
+**Root cause of the gap**: the research script above enters at MARKET on the
+spike bar's own close (`entry = b0["c"]`, immediate). The production engine
+enters on a BREAKOUT trigger -- price has to subsequently trade through the
+spike bar's high/low before a trade even opens
+(`smart_money.py::_setup`). These are two different strategies wearing the
+same "volume spike" label; the time-exit edge measured on immediate-entry
+does not carry over to delayed breakout-entry.
+
+**Honest verdict**: NATGAS improves from clearly-losing (PF 0.48 OOS) to
+roughly breakeven (PF 1.08 OOS, net +2.1 over 146 correlated intraday
+trades) -- not a proven edge, just less-bad. CRUDEOIL is actively hurt by
+the same config on OOS (its baseline was already the best number in this
+whole table, +286 net, and time-exit cuts that to +60). NIFTY's sample
+isn't reliable either way (`min_sample`/`min_sessions` gate fails).
+
+**Conclusion**: the code fix is real, safe (opt-in, default-off, tested)
+and available for further research (`backtest(symbol, max_hold_bars=N,
+stop_frac=X, sessions=[...])`), but it is NOT a validated fix for the
+production breakout engine's losses and must not be described as one or
+wired into live/paper signal generation. The Stage-11 finding stays a
+research result about immediate-entry spike trading, not the deployed
+engine.
