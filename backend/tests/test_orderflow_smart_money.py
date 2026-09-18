@@ -139,6 +139,62 @@ def test_max_hold_bars_none_is_unchanged_prior_behaviour():
     assert out["max_hold_bars"] is None
 
 
+def test_entry_mode_breakout_is_default_and_unchanged():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),   # spike: h=110 l=100 c=105
+        _bar("t3", 108, 112, 107, 111, 100),
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0)
+    buy = out["setups"][0]["buy"]
+    assert out["entry_mode"] == "breakout"
+    assert buy["entry_mode"] == "breakout"
+    assert buy["entry"] == 110               # entry is the spike candle's HIGH, not its close
+
+
+def test_entry_mode_immediate_enters_at_spike_close_no_breakout_wait():
+    """Stage-11 research construction: market entry at the spike candle's own
+    close, walk starts on the very next bar -- no waiting for a breakout."""
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),   # spike: h=110 l=100 c=105
+        _bar("t3", 104, 106, 102, 103, 100),    # never trades above 110 -- breakout mode would be PENDING
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0, entry_mode="immediate")
+    buy = out["setups"][0]["buy"]
+    assert out["entry_mode"] == "immediate"
+    assert buy["entry_mode"] == "immediate"
+    assert buy["entry"] == 105               # spike candle's close, not its high
+    assert buy["outcome"]["status"] != "PENDING"   # walk started immediately on t3
+
+
+def test_entry_mode_immediate_with_max_hold_bars_time_exits():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),
+        _bar("t3", 104, 106, 102, 103, 100),
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0, entry_mode="immediate", max_hold_bars=1)
+    buy = out["setups"][0]["buy"]
+    assert buy["outcome"]["status"] == "TIME_EXIT"
+    assert buy["outcome"]["exit_price"] == 103
+    assert buy["outcome"]["points"] == -2      # entry 105 -> exit 103
+
+
+def test_entry_mode_invalid_falls_back_to_breakout():
+    bars = [
+        _bar("t0", 100, 101, 99, 100, 100),
+        _bar("t1", 100, 101, 99, 100, 100),
+        _bar("t2", 100, 110, 100, 105, 1000),
+        _bar("t3", 108, 112, 107, 111, 100),
+    ]
+    out = SM.smart_money_setups(bars, volume_mult=2.0, entry_mode="bogus")
+    assert out["entry_mode"] == "breakout"
+
+
 def test_outcome_bar_spanning_both_is_stop_hit():
     bars = [
         _bar("t0", 100, 101, 99, 100, 100),

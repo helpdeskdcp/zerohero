@@ -116,8 +116,12 @@ def _first_breakout_idx(bars_after: list, level: float, side: str) -> Optional[i
     return None
 
 
+_ENTRY_MODES = ("breakout", "immediate")
+
+
 def _setup(spike: dict, bars_after: list, side: str, rr: float,
-           stop_frac: float = 1.0, trail: bool = False, max_hold_bars: int | None = None) -> dict:
+           stop_frac: float = 1.0, trail: bool = False, max_hold_bars: int | None = None,
+           entry_mode: str = "breakout") -> dict:
     """`stop_frac`: the stop distance as a fraction of the spike candle's
     high-low range. 1.0 (default) = stop at the opposite extreme (the original
     spec). 0.5 = stop halfway between entry and that extreme -- a TIGHTER stop.
@@ -125,16 +129,32 @@ def _setup(spike: dict, bars_after: list, side: str, rr: float,
     tighter stop also pulls the target in. `trail=True` trails the stop the
     same distance behind the best price after entry. `max_hold_bars`: see
     _walk_outcome -- Stage-11's validated short time-exit; None = unchanged
-    prior behaviour."""
+    prior behaviour.
+
+    `entry_mode`: "breakout" (default, original spec) -- wait for price to
+    subsequently trade through the spike candle's high (BUY) / low (SELL)
+    before opening. "immediate" -- the exact Stage-11 research construction
+    (scripts/orderflow_time_exit_research.py): enter at MARKET on the spike
+    candle's own close, no breakout wait; stop/target are the same
+    stop_frac x range distance, just measured from that close instead of
+    the high/low. Only meaningful paired with max_hold_bars (see
+    ORDERFLOW_STAGE11_TIME_EXIT_EDGE.md's 2026-09-18 update for why
+    "breakout" does not reproduce the research edge)."""
+    if entry_mode not in _ENTRY_MODES:
+        entry_mode = "breakout"
     h, l = spike["h"], spike["l"]
     rng = h - l
     sd = max(0.0, stop_frac) * rng            # stop distance in points
-    if side == "BUY":
+    if entry_mode == "immediate":
+        entry = spike["c"]
+    elif side == "BUY":
         entry = h
+    else:
+        entry = l
+    if side == "BUY":
         stop = entry - sd
         target = entry + rr * sd
     else:
-        entry = l
         stop = entry + sd
         target = entry - rr * sd
     risk = abs(entry - stop)
@@ -142,8 +162,11 @@ def _setup(spike: dict, bars_after: list, side: str, rr: float,
     d = {"side": side, "entry": round(entry, 4), "stop_loss": round(stop, 4),
          "target": round(target, 4), "risk_points": round(risk, 4),
          "reward_points": round(reward, 4), "trail": bool(trail),
-         "rr": round(reward / risk, 2) if risk else None}
-    bidx = _first_breakout_idx(bars_after, entry, side)
+         "rr": round(reward / risk, 2) if risk else None, "entry_mode": entry_mode}
+    if entry_mode == "immediate":
+        bidx = 0 if bars_after else None
+    else:
+        bidx = _first_breakout_idx(bars_after, entry, side)
     if bidx is None:
         d["outcome"] = {"status": "PENDING", "resolved_bar": None, "exit_price": None, "points": 0.0}
         d["breakout_bar"] = None
@@ -216,9 +239,13 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
                        stop_frac: float = 1.0, trail: bool = False,
                        sig_filter: str = "none", pattern: str = "spike",
                        consol_lookback: int = 5, consol_span_x: float = 1.5,
-                       max_hold_bars: int | None = None) -> dict:
+                       max_hold_bars: int | None = None,
+                       entry_mode: str = "breakout") -> dict:
     """Detect trigger candles and build breakout setups for each, with a
     same-session forward-walked outcome.
+
+    `entry_mode`: "breakout" (default, unchanged) or "immediate" (Stage-11
+    research construction -- see _setup's docstring).
 
     `pattern`:
       "spike"          -- bar volume >= volume_mult x session avg (original).
@@ -236,6 +263,8 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
     is already fixed by the wick)."""
     if pattern not in _PATTERNS:
         pattern = "spike"
+    if entry_mode not in _ENTRY_MODES:
+        entry_mode = "breakout"
     clean = _clean(bars)
     vols = [b["v"] for b in clean if b["v"] > 0]
     if len(clean) < 3 or (pattern != "hammer" and len(vols) < 3):
@@ -271,9 +300,9 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
             "pattern": pattern,
         }
         if "BUY" in sides:
-            row["buy"] = _setup(b, after, "BUY", rr, stop_frac, trail, max_hold_bars)
+            row["buy"] = _setup(b, after, "BUY", rr, stop_frac, trail, max_hold_bars, entry_mode)
         if "SELL" in sides:
-            row["sell"] = _setup(b, after, "SELL", rr, stop_frac, trail, max_hold_bars)
+            row["sell"] = _setup(b, after, "SELL", rr, stop_frac, trail, max_hold_bars, entry_mode)
         setups.append(row)
     return {
         "status": "OK",
@@ -285,7 +314,7 @@ def smart_money_setups(bars: list, *, volume_mult: float = 2.0, rr: float = 3.0,
         "session_avg_range": round(avg_range, 4),
         "volume_mult": volume_mult, "rr": rr, "stop_frac": stop_frac,
         "trail": bool(trail), "sig_filter": sig_filter, "pattern": pattern,
-        "max_hold_bars": max_hold_bars,
+        "max_hold_bars": max_hold_bars, "entry_mode": entry_mode,
         "spike_count": len(setups),
         "setups": setups,
     }

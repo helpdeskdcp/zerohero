@@ -171,6 +171,28 @@ def test_backtest_max_hold_bars_defaults_to_none_unchanged(monkeypatch):
     assert bt["max_hold_bars"] is None
 
 
+def test_backtest_echoes_entry_mode(monkeypatch):
+    calls = {}
+    def _spy(*a, **k):
+        calls.update(k)
+        return {"status": "OK", "setups": [_spike("t0", "TARGET_HIT", "STOP_HIT")]}
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "TARGET_HIT", "STOP_HIT")]}})
+    monkeypatch.setattr(BT._sm, "smart_money_setups", _spy)
+    bt = BT.backtest("NIFTY", entry_mode="immediate")
+    assert calls.get("entry_mode") == "immediate"
+    assert bt["entry_mode"] == "immediate"
+
+
+def test_backtest_entry_mode_defaults_to_breakout_and_invalid_falls_back(monkeypatch):
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "TARGET_HIT", "STOP_HIT")]}})
+    assert BT.backtest("NIFTY")["entry_mode"] == "breakout"
+    _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [
+        _spike("t0", "TARGET_HIT", "STOP_HIT")]}})
+    assert BT.backtest("NIFTY", entry_mode="bogus")["entry_mode"] == "breakout"
+
+
 def test_flat_trailed_exit_is_its_own_bucket(monkeypatch):
     # a trailed exit exactly at entry -> points 0 -> FLAT, not WIN/LOSS
     _wire(monkeypatch, {"2026-09-04": {"status": "OK", "setups": [

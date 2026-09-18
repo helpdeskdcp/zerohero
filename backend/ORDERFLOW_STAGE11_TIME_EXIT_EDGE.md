@@ -140,3 +140,52 @@ production breakout engine's losses and must not be described as one or
 wired into live/paper signal generation. The Stage-11 finding stays a
 research result about immediate-entry spike trading, not the deployed
 engine.
+
+## Update 2026-09-18 (part 2): entry_mode="immediate" -- matches research, production PF>1.0 confirmed
+
+Per explicit request, the exact research construction (market entry at the
+spike candle's own close, no breakout wait) was added to the production
+engine as `entry_mode="immediate"` (`smart_money.py::_setup`,
+`smart_money_setups`, `backtest.py::backtest`) -- opt-in, default remains
+`entry_mode="breakout"` (byte-identical to all prior behaviour). 6 new
+tests, 39/39 orderflow tests pass.
+
+Re-ran the hold_bars x stop_frac sweep through the real production
+`backtest(symbol, entry_mode="immediate", max_hold_bars=H, stop_frac=S,
+sessions=[...])` on the same TRAIN(10)/OOS(4) session lists:
+
+| symbol | config | TRAIN PF | OOS PF | OOS net |
+|---|---|---|---|---|
+| NATURALGAS | hold=2 stop=0.5 | 1.101 | 1.085 | +3.95 |
+| NATURALGAS | hold=1 stop=0.5 | 1.072 | 1.051 | +1.75 |
+| CRUDEOIL | hold=2 stop=0.5 | 1.059 | **1.193** | +248.0 |
+| CRUDEOIL | hold=5 stop=0.5 | 1.089 | 1.193 | +320.0 |
+| CRUDEOIL | hold=3 stop=0.5 | 0.996 | 1.284 | +412.0 (TRAIN fails, OOS-only -- not robust) |
+| NIFTY | any config tried | mixed | mixed | not reliable, sample too thin |
+
+`entry_mode="immediate"` DOES reproduce PF > 1.0 on both TRAIN and OOS for
+NATURALGAS and CRUDEOIL at a consistent `hold=2, stop_frac=0.5` -- this is
+the real, production-code-path confirmation of the Stage-11 finding.
+CRUDEOIL's edge is notably stronger than NATGAS's here.
+
+**Still-honest caveats, unchanged from Part 1**:
+- OOS is only 4 real captured sessions -- `reliable` stays `False` for
+  every OOS run shown above regardless of trade count, purely because
+  `MIN_SESSIONS=10` distinct sessions isn't met. This is a real, structural
+  small-sample limitation, not a code bug.
+- Intraday spike signals are correlated within a session, not independent
+  draws -- n=100+ resolved "trades" is not 100+ independent bets.
+- Still index-points basis, no spread/slippage.
+- PF magnitudes are modest (1.05-1.2 for most winning configs) -- real
+  after-cost economics (brokerage, slippage on immediate market entry,
+  which is itself harder to achieve than a passive breakout order) have not
+  been modeled. `basis="premium"` re-pricing has not been run for this
+  entry mode yet.
+
+**Recommendation**: this is now a genuinely promising, production-code-
+verified signal for NATGAS/CRUDEOIL specifically at `entry_mode=immediate,
+max_hold_bars=2, stop_frac=0.5` -- worth more real sessions before any
+live/paper wiring decision, and a premium-basis re-run to see if the option
+spread erases it (as happened to several other candidates this session).
+Still NOT wired into live/paper signal generation -- that remains a
+separate, explicit decision given subscribers trade on our signals.
