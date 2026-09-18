@@ -518,9 +518,17 @@ def insert_trade(row: dict):
 def update_trade(trade_id: str, fields: dict):
     if not fields:
         return
-    sets = ",".join([f"{k}=?" for k in fields.keys()])
-    vals = list(fields.values()) + [trade_id]
     with db() as conn:
+        # Column NAMES are interpolated below (can't be parameterized like
+        # values can) -- every caller today passes a hardcoded literal dict,
+        # but nothing enforced that. Verify against the real schema instead
+        # of trusting callers forever (ZEROHERO_FULL_AUDIT_2026-09-19.md).
+        have = {r["name"] for r in conn.execute("PRAGMA table_info(ai_paper_trades)")}
+        bad = set(fields) - have
+        if bad:
+            raise ValueError(f"update_trade: unknown column(s) {sorted(bad)}")
+        sets = ",".join([f"{k}=?" for k in fields.keys()])
+        vals = list(fields.values()) + [trade_id]
         conn.execute(f"UPDATE ai_paper_trades SET {sets} WHERE trade_id=?", vals)
 
 
@@ -573,8 +581,12 @@ def insert_smart_scalper_signal(row: dict) -> bool:
 def update_smart_scalper_signal(signal_id: str, fields: dict):
     if not fields or not signal_id:
         return
-    sets = ",".join(f"{k}=?" for k in fields)
     with db() as conn:
+        have = {r["name"] for r in conn.execute("PRAGMA table_info(smart_scalper_signals)")}
+        bad = set(fields) - have
+        if bad:
+            raise ValueError(f"update_smart_scalper_signal: unknown column(s) {sorted(bad)}")
+        sets = ",".join(f"{k}=?" for k in fields)
         conn.execute(f"UPDATE smart_scalper_signals SET {sets} WHERE signal_id=?",
                      list(fields.values()) + [signal_id])
 
