@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from .broker_base import Side, OStatus
+from .broker_base import Side
 from .trade_state import TradeState
 
 _log = logging.getLogger(__name__)

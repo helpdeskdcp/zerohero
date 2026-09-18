@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from . import schema
 from .compute import build_snapshot
-from .model import EXPOSURE_COLS, RUN_COLS, SOURCE
+from .model import EXPOSURE_COLS, SOURCE
 
 try:
     from ..histcap.store import DB_PATH as _HIST_DB

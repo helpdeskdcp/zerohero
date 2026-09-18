@@ -7,7 +7,6 @@ Rolling lookbacks: 1, 2, 3, 5, 10 minutes.
 """
 from __future__ import annotations
 
-import statistics as st
 
 
 def _slope(xs):

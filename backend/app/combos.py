@@ -12,7 +12,6 @@ Combos live in app_settings['position_combos'] (JSON). Alert + paper-close
 only — no broker order is ever sent.
 """
 import json
-import time
 import uuid
 from datetime import datetime, timezone
 

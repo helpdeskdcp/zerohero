@@ -27,7 +27,7 @@ say exactly which of the four is/isn't currently supporting the edge:
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
 STATES = ("CANDIDATE", "VALIDATED", "ACTIVE", "WEAKENING", "DECAYING", "INVALID")

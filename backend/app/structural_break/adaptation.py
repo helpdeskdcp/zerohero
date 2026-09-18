@@ -26,7 +26,7 @@ plus the adaptation-lag bookkeeping from section H.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
 # States where the OLD model must not be trusted for new entries.

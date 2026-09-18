@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-import numpy as np
 import pandas as pd
 from scipy import stats as scipy_stats
 

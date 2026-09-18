@@ -29,7 +29,6 @@ from __future__ import annotations
 import os
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 
 from . import engine, indicators as indicators_mod, probability as probability_mod, resample
 

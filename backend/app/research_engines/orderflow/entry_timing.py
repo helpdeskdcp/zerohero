@@ -20,7 +20,6 @@ Also computes the ENTRY_QUALITY_SCORE (0-100) at ENTRY_READY.
 """
 from __future__ import annotations
 
-from .config import merged
 
 
 def _mod(hhmm: str) -> int:

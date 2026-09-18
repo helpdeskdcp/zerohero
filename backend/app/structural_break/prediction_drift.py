@@ -51,7 +51,7 @@ performance_monitor.py and feature_drift.py (a fresh detector is built each
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 from .drift import PageHinkleyDetector, fit_baseline
 

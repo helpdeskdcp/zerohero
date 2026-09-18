@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 
-from .labels import CLASSES, CLASS_IDX
+from .labels import CLASSES
 
 
 def _argmax(p: dict) -> str:

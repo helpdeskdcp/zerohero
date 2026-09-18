@@ -12,7 +12,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from broker.angelone.greeks import normalize_greek_row, index_greek_rows, match_greek  # noqa: E402
+from broker.angelone.greeks import normalize_greek_row  # noqa: E402
 
 _IST = timezone(timedelta(hours=5, minutes=30))
 

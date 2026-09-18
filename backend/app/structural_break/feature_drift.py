@@ -47,7 +47,7 @@ import json
 import math
 from dataclasses import asdict, dataclass, field
 
-from .drift import CusumDetector, PsiTracker, fit_baseline, ks_2sample
+from .drift import CusumDetector, fit_baseline, ks_2sample
 
 DEFAULT_BASELINE_N = 150
 DEFAULT_CURRENT_N = 30

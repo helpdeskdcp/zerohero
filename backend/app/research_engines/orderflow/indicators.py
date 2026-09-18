@@ -1,7 +1,6 @@
 """Causal, pure-Python indicators for ORDERFLOW_ENGINE v1. value[i] depends
 only on inputs <= i. Lists are input-length; undefined positions are None."""
 from __future__ import annotations
-import math
 
 
 def ema(x: list[float], n: int) -> list[float]:

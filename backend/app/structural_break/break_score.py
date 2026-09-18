@@ -86,7 +86,7 @@ were fit to the OLD model. This is a deliberate boundary, not an oversight.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
 from .shadow import ShadowValidator

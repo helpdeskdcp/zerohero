@@ -13,7 +13,6 @@ just surfaces the numbers.
 """
 from __future__ import annotations
 
-import os
 import sqlite3
 from collections import Counter
 

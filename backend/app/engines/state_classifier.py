@@ -19,7 +19,6 @@ Pure & deterministic. Weights are seed values exposed for P5 calibration.
 """
 from __future__ import annotations
 
-from typing import Optional
 
 from .signal_engine import _atr, _ema_series, _rsi, _sma
 

@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import math
 
-from .config import merged
 from .formulas import atr
 
 _TM_FEATS_THREAT = ["dist_sl_atr", "adverse_net", "adverse_accel", "opt_deterioration",

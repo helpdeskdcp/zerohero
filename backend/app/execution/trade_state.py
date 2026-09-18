@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Optional
 
-from .broker_base import Side, OrderType, Leg, OStatus, OrderReq
+from .broker_base import Side, OrderType, OStatus, OrderReq
 from .idempotency import tag as _tag
 
 

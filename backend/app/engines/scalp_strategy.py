@@ -13,7 +13,6 @@ a NO_TRADE / WATCH dict.
 """
 from __future__ import annotations
 
-from typing import Optional
 
 from .sr_engine import compute_sr
 from .state_classifier import classify, BULLISH

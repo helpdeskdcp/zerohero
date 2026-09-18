@@ -26,7 +26,7 @@ key format instead of each inventing its own.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 # Mirrors app.engines.regime_mtf.detect_regime()'s output values as of this
 # writing. Deliberately a plain tuple, not imported from regime_mtf, because

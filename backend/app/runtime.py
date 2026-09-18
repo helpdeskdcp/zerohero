@@ -21,7 +21,6 @@ import os
 from fastapi import WebSocket
 
 from . import instruments
-from . import market_data
 from . import market_hub
 from .scalper import ScalpRunner
 

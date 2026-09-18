@@ -12,7 +12,7 @@ import requests
 import pyotp
 import sys
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from .. import instruments
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from statistics import pstdev
 
-from ..engines.signal_engine import _adx, _atr, _ema_series, _macd, _rsi, _sma
+from ..engines.signal_engine import _adx, _atr, _macd, _rsi, _sma
 
 
 def _num(x):

@@ -24,7 +24,7 @@ import os
 from ..connectors import angelone, angelone_orders
 from .broker_base import (
     BrokerBase, LiveDisabled, OrderReq, OrderAck, OrderStatusResult,
-    PositionSnapshot, BrokerPosition, Side, OrderType, OStatus, map_broker_status,
+    PositionSnapshot, BrokerPosition, OrderType, OStatus, map_broker_status,
 )
 from .ratelimit import TokenBucket, CircuitBreaker, call_with_retry
 

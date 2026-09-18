@@ -15,7 +15,6 @@ Deterministic and scriptable for tests via `scenario`:
 from __future__ import annotations
 
 import time
-import random
 from datetime import datetime, timezone
 
 from .broker_base import (

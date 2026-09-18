@@ -25,8 +25,7 @@ window (a small losing streak) cannot by itself look like a structural break.
 """
 from __future__ import annotations
 
-import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 from .. import db
 from ..autoscalp.calibration_report import _reliability

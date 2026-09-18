@@ -134,7 +134,7 @@ for _mod in (engines_routes, instruments_routes, analysis_routes, scalp_routes,
 # than going through HTTP). Keep them reachable under their old home so those
 # tests need no changes -- the definitions themselves now live in app/runtime
 # and app/api/*.
-from .api.schemas import SignalRequest, LevelsRequest, TrackPositionRequest  # noqa: E402
+from .api.schemas import SignalRequest, LevelsRequest, TrackPositionRequest  # noqa: E402,F401
 
 _label_marks = runtime._label_marks
 _compact = runtime._compact
