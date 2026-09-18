@@ -67,8 +67,19 @@ app.add_middleware(
 # /api/health) and the /ws upgrade must present it (Authorization: Bearer <t>
 # or ?token=<t>). If unset, this is a no-op and the app behaves as before.
 API_TOKEN = (os.environ.get("CHANAKYA_API_TOKEN") or "").strip()
-ADMIN_USERNAME = os.environ.get("CHANAKYA_ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("CHANAKYA_ADMIN_PASSWORD", "admin@1234")
+# No hardcoded fallback: an unset/blank credential must fail CLOSED (deny
+# every Basic-Auth attempt), never silently accept a well-known default.
+# Both env vars must be explicitly configured for Basic-Auth to work at all;
+# CHANAKYA_API_TOKEN remains a fully independent way in if Basic-Auth is
+# left unconfigured.
+ADMIN_USERNAME = (os.environ.get("CHANAKYA_ADMIN_USERNAME") or "").strip()
+ADMIN_PASSWORD = (os.environ.get("CHANAKYA_ADMIN_PASSWORD") or "").strip()
+if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+    _log.warning(
+        "CHANAKYA_ADMIN_USERNAME / CHANAKYA_ADMIN_PASSWORD not set -- HTTP "
+        "Basic auth is disabled (fails closed, no default credential). Set "
+        "both in .env, or rely on CHANAKYA_API_TOKEN instead."
+    )
 
 
 def _token_from(request) -> str:
@@ -79,6 +90,8 @@ def _token_from(request) -> str:
 
 
 def _basic_ok(value: str) -> bool:
+    if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+        return False        # fail closed: no configured credential, no access
     try:
         raw = base64.b64decode(value[6:].strip(), validate=True).decode("utf-8")
         user, password = raw.split(":", 1)

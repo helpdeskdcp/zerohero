@@ -9,11 +9,17 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 set -a; . ./.env 2>/dev/null; set +a
-U="${CHANAKYA_ADMIN_USERNAME:-admin}"
-P="${CHANAKYA_ADMIN_PASSWORD:-admin@1234}"
+# No hardcoded fallback -- fail loudly rather than silently using a public
+# default credential (see ZEROHERO_FULL_AUDIT_2026-09-19.md, HIGH finding).
+U="${CHANAKYA_ADMIN_USERNAME:-}"
+P="${CHANAKYA_ADMIN_PASSWORD:-}"
 PORT="${CHANAKYA_PORT:-7060}"
 BASE="http://127.0.0.1:${PORT}/api/mathematics"
 LOG="data/market_map_monitor.log"
+if [ -z "$U" ] || [ -z "$P" ]; then
+  echo "$(date '+%F %T') ERROR: CHANAKYA_ADMIN_USERNAME/CHANAKYA_ADMIN_PASSWORD not set in .env -- refusing to run" >> "$LOG"
+  exit 1
+fi
 
 [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 2000000 ] && mv "$LOG" "$LOG.1"
 
