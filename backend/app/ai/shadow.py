@@ -32,7 +32,11 @@ def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict) -> dict
         _metrics.record_profile_usage(symbol)
         _metrics.record_regime(behavior.regime)
 
-        ai_result = {"status": "UNAVAILABLE"}
+        # Distinguish "AI isn't configured at all" from "AI is configured
+        # but this tick didn't need it" (Phase 14 performance protection --
+        # never call AI on every tick).
+        ai_result = ({"status": "CONFIG_REQUIRED"} if not _client.is_available()
+                    else {"status": "SKIPPED_NOT_REQUIRED"})
         if behavior.ai_required and _client.is_available():
             ctx = behavior_ai.build_ai_context(symbol, behavior.to_dict(), effective_profile, sig)
             ai_result = behavior_ai.analyze_with_ai(ctx).to_dict()

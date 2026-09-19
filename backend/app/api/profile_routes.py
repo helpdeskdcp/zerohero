@@ -69,7 +69,19 @@ def api_data_quality(symbol: str, limit: int = 500):
 
 @router.get("/ai/status")
 def api_ai_status():
-    """Never returns the API key or any header -- only whether one is
-    configured, plus in-process counters (see app.ai.metrics docstring:
-    resets on restart, not a persisted audit trail)."""
-    return {"available": _client.is_available(), "metrics": _ai_metrics.snapshot()}
+    """Never returns the API key or any header -- only config status/model
+    name/counters (see app.ai.metrics docstring: resets on restart, not a
+    persisted audit trail -- the persisted trail is /api/... shadow_decisions
+    via db.list_shadow_decisions)."""
+    diag = _client.diagnostics()
+    m = _ai_metrics.snapshot()
+    return {
+        "available": diag["openrouter_available"],
+        "openrouter_model": diag["openrouter_model"],
+        "ai_config_status": diag["ai_config_status"],
+        "ai_request_count": m["ai_requests"],
+        "ai_success_count": m["ai_success"],
+        "ai_failure_count": m["ai_failures"],
+        "ai_avg_latency_ms": m["ai_avg_latency_ms"],
+        "metrics": m,
+    }

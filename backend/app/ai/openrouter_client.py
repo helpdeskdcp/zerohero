@@ -38,9 +38,18 @@ def _env_list(name: str, default: str = "") -> list[str]:
 
 def _config() -> dict:
     """Read fresh every call (not module-level constants) so tests can
-    monkeypatch os.environ without needing a module reload."""
+    monkeypatch os.environ without needing a module reload.
+
+    OPENROUTER_MODEL is the simple, single primary-model override (Phase G).
+    OPENROUTER_FAST_MODEL/OPENROUTER_REASONING_MODEL (Phase F) remain
+    available for callers doing their own fast/reasoning routing (Phase 13)
+    -- OPENROUTER_MODEL just needs to work as *a* way to configure a model
+    without requiring that finer-grained split. Neither name is invented as
+    a default value: if none of these are set, there is no model, full stop
+    -- no hardcoded model-name fallback exists anywhere in this module."""
     return {
         "api_key": (os.environ.get("OPENROUTER_API_KEY") or "").strip(),
+        "model": os.environ.get("OPENROUTER_MODEL", "").strip(),
         "fast_model": os.environ.get("OPENROUTER_FAST_MODEL", "").strip(),
         "reasoning_model": os.environ.get("OPENROUTER_REASONING_MODEL", "").strip(),
         "fallback_models": _env_list("OPENROUTER_FALLBACK_MODELS"),
@@ -51,7 +60,7 @@ def _config() -> dict:
 
 @dataclass
 class AIResult:
-    status: str                    # OK | UNAVAILABLE | TIMEOUT | HTTP_ERROR | INVALID_JSON | ERROR
+    status: str                    # OK | CONFIG_REQUIRED | TIMEOUT | HTTP_ERROR | INVALID_JSON | ERROR
     data: dict | None
     model_used: str | None
     latency_ms: float | None
@@ -64,11 +73,36 @@ class AIResult:
 
 
 def is_available() -> bool:
-    """Cheap, no-network check -- True only if an API key is configured.
-    Callers should check this before deciding to invoke the AI path at all
-    (Phase 14 performance protection: never even attempt a call that's
-    certain to be UNAVAILABLE)."""
-    return bool(_config()["api_key"])
+    """Cheap, no-network check -- True only if an API key AND at least one
+    model are configured. Callers should check this before deciding to
+    invoke the AI path at all (Phase 14 performance protection: never even
+    attempt a call that's certain to be CONFIG_REQUIRED)."""
+    cfg = _config()
+    return bool(cfg["api_key"]) and bool(cfg["model"] or cfg["fast_model"])
+
+
+def config_status() -> str:
+    """OK | CONFIG_REQUIRED -- never a network call, purely a config check."""
+    return "OK" if is_available() else "CONFIG_REQUIRED"
+
+
+def selected_model() -> str | None:
+    """The model that would actually be used as primary right now, or None
+    if none is configured. OPENROUTER_MODEL wins if set (Phase G's simple
+    single-model config); otherwise OPENROUTER_FAST_MODEL (Phase F's
+    fast/reasoning routing)."""
+    cfg = _config()
+    return cfg["model"] or cfg["fast_model"] or None
+
+
+def diagnostics() -> dict:
+    """Safe, secret-free config+status snapshot for /api/ai/status."""
+    return {
+        "openrouter_available": is_available(),
+        "openrouter_model": selected_model(),
+        "ai_config_status": config_status(),
+        "base_url": BASE_URL,
+    }
 
 
 def _extract_json(text: str) -> dict | None:
@@ -101,14 +135,17 @@ def chat_completion_json(messages: list[dict], *, model: str | None = None,
     stopping at the first one that returns valid parseable JSON content."""
     cfg = _config()
     if not cfg["api_key"]:
-        return AIResult(status="UNAVAILABLE", data=None, model_used=None, latency_ms=None,
+        _metrics.record_ai_call("CONFIG_REQUIRED", None, None)
+        return AIResult(status="CONFIG_REQUIRED", data=None, model_used=None, latency_ms=None,
                         error="OPENROUTER_API_KEY not configured")
 
-    primary = model or cfg["fast_model"]
+    primary = model or cfg["model"] or cfg["fast_model"]
     candidates = [m for m in [primary] + list(fallback_models or cfg["fallback_models"]) if m]
     if not candidates:
-        return AIResult(status="UNAVAILABLE", data=None, model_used=None, latency_ms=None,
-                        error="no model configured (OPENROUTER_FAST_MODEL / _FALLBACK_MODELS unset)")
+        _metrics.record_ai_call("CONFIG_REQUIRED", None, None)
+        return AIResult(status="CONFIG_REQUIRED", data=None, model_used=None, latency_ms=None,
+                        error="no model configured (OPENROUTER_MODEL / OPENROUTER_FAST_MODEL / "
+                              "_FALLBACK_MODELS unset)")
 
     to = timeout if timeout is not None else cfg["timeout_sec"]
     attempts = []
@@ -157,3 +194,21 @@ def chat_completion_json(messages: list[dict], *, model: str | None = None,
     _metrics.record_ai_call("ERROR", None, None)
     return AIResult(status="ERROR", data=None, model_used=None, latency_ms=None,
                     error="all models/attempts exhausted", attempts=attempts)
+
+
+def run_smoke_test() -> dict:
+    """ONE minimal, harmless real network call -- no trading/broker content,
+    no private data in the prompt. Records model/status/latency only; never
+    stores the raw model response. Returns
+    {"status": "SKIPPED", "reason": "..."} without ever touching the network
+    if no key/model is configured -- callers must never report a smoke test
+    as having run when it didn't."""
+    if not is_available():
+        return {"status": "SKIPPED", "reason": "API_KEY_NOT_CONFIGURED" if not _config()["api_key"]
+                else "MODEL_NOT_CONFIGURED", "model": None, "latency_ms": None}
+    result = chat_completion_json(
+        messages=[{"role": "system", "content": "Respond with only this JSON object, nothing else."},
+                 {"role": "user", "content": '{"ping": "pong"}'}],
+        max_tokens=20)
+    return {"status": result.status, "reason": result.error, "model": result.model_used,
+           "latency_ms": result.latency_ms}

@@ -9,26 +9,54 @@ import requests
 from app.ai import openrouter_client as oc
 
 
-def test_unavailable_when_no_api_key(monkeypatch):
+def test_config_required_when_no_api_key(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     assert oc.is_available() is False
+    assert oc.config_status() == "CONFIG_REQUIRED"
     result = oc.chat_completion_json([{"role": "user", "content": "hi"}])
-    assert result.status == "UNAVAILABLE"
+    assert result.status == "CONFIG_REQUIRED"
     assert result.data is None
 
 
-def test_available_when_key_set(monkeypatch):
+def test_available_when_key_and_model_set(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake-not-real")
+    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
     assert oc.is_available() is True
+    assert oc.config_status() == "OK"
+    assert oc.selected_model() == "test/model-a"
 
 
-def test_unavailable_when_key_set_but_no_model_configured(monkeypatch):
+def test_config_required_when_key_set_but_no_model_configured(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
     monkeypatch.delenv("OPENROUTER_FAST_MODEL", raising=False)
     monkeypatch.delenv("OPENROUTER_FALLBACK_MODELS", raising=False)
+    assert oc.is_available() is False
     result = oc.chat_completion_json([{"role": "user", "content": "hi"}])
-    assert result.status == "UNAVAILABLE"
+    assert result.status == "CONFIG_REQUIRED"
     assert "model" in result.error
+
+
+def test_openrouter_model_takes_priority_over_fast_model(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
+    monkeypatch.setenv("OPENROUTER_MODEL", "test/primary-simple")
+    monkeypatch.setenv("OPENROUTER_FAST_MODEL", "test/fast-routing")
+    assert oc.selected_model() == "test/primary-simple"
+
+
+def test_selected_model_none_when_unconfigured(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.delenv("OPENROUTER_FAST_MODEL", raising=False)
+    assert oc.selected_model() is None
+
+
+def test_diagnostics_never_exposes_the_key(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-super-secret-diag-test")
+    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    d = oc.diagnostics()
+    assert d == {"openrouter_available": True, "openrouter_model": "test/model-a",
+                "ai_config_status": "OK", "base_url": oc.BASE_URL}
+    assert "sk-super-secret-diag-test" not in str(d)
 
 
 class _FakeResp:
@@ -141,3 +169,34 @@ def test_api_key_never_appears_in_result_or_attempts(monkeypatch):
     result = oc.chat_completion_json([{"role": "user", "content": "x"}])
     dumped = str(result.to_dict())
     assert "sk-super-secret-value-xyz" not in dumped
+
+
+# ---------------------------------------------------------------- smoke test
+
+def test_smoke_test_skipped_when_no_key(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    out = oc.run_smoke_test()
+    assert out["status"] == "SKIPPED"
+    assert out["reason"] == "API_KEY_NOT_CONFIGURED"
+
+
+def test_smoke_test_skipped_when_key_but_no_model(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.delenv("OPENROUTER_FAST_MODEL", raising=False)
+    out = oc.run_smoke_test()
+    assert out["status"] == "SKIPPED"
+    assert out["reason"] == "MODEL_NOT_CONFIGURED"
+
+
+def test_smoke_test_runs_real_call_path_when_configured(monkeypatch):
+    """Confirms the smoke test actually invokes chat_completion_json when
+    configured (mocked network -- this test proves wiring, not a live call)."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
+    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    body = {"choices": [{"message": {"content": '{"ping": "pong"}'}}]}
+    monkeypatch.setattr(oc.requests, "post", lambda *a, **k: _FakeResp(200, body))
+    out = oc.run_smoke_test()
+    assert out["status"] == "OK"
+    assert out["model"] == "test/model-a"
+    assert out["latency_ms"] is not None
