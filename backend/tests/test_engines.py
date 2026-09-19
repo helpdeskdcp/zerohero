@@ -1,5 +1,4 @@
 """Deterministic engine behaviour — signal / scalp / risk / reversal / OI."""
-import time
 
 import pytest
 

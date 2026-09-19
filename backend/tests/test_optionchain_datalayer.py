@@ -10,7 +10,6 @@ Covers:
   * static: the module imports nothing from app.main / autoscalp / execution
 """
 import ast
-import os
 import pathlib
 import sqlite3
 from datetime import datetime, timedelta, timezone

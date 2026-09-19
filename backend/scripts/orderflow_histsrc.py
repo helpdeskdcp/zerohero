@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

@@ -60,8 +60,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.orderflow import h1h7_state as H
 from app.orderflow import smart_money as SM
 from scripts.orderflow_h1h7_performance import (
-    _walk, _decision_list, _regime, agg as h1_agg, _fmt, _wilson,
-    FR_TRAIN, FR_VAL, FR_OOS,
+    _walk, _decision_list, _regime, agg as h1_agg, _fmt, FR_TRAIN, FR_VAL, FR_OOS,
 )
 from scripts.orderflow_smartmoney_kaggle_nifty import agg as sp_agg, _line as sp_line
 

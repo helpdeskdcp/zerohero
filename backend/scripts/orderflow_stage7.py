@@ -33,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.orderflow_stage6 import collect, agg, _r, BODY_BETA
+from scripts.orderflow_stage6 import collect, agg
 
 BODY_GRID = (0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70)
 AVAILR_GRID = (0.0, 1.0, 1.5, 2.0)

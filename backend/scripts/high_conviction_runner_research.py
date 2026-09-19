@@ -33,7 +33,6 @@ PROVEN.
 from __future__ import annotations
 
 import csv as _csv
-import json
 import sqlite3
 import statistics as st
 import sys

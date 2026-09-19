@@ -5,7 +5,7 @@ requests==2.33.0
 pyotp==2.9.0
 python-dotenv==1.2.2
 websockets==13.1
-pytest==8.3.3
+pytest==9.0.3
 numpy==2.4.6
 scipy==1.17.1
 scikit-learn==1.9.1

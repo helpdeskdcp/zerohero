@@ -9,7 +9,6 @@ app/optionchain/ Layer 2 (analytics) + Layer 3 (structure engine) -- offline.
 No network, no DB.
 """
 import json
-import math
 
 import pytest
 

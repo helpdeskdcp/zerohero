@@ -7,7 +7,6 @@ redacted in logs; the module hardcodes no credentials; the Expired Instruments
 wrappers build the documented paths.
 """
 import sys
-import types
 from pathlib import Path
 
 import pytest

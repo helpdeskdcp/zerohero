@@ -15,7 +15,7 @@ from app.histcap import integrity as IG             # noqa: E402
 from app.histcap.store import HistStore             # noqa: E402
 from app.histcap.worker import CaptureWorker        # noqa: E402
 from app.histcap import worker as WK                # noqa: E402
-from app import market_calendar, instruments        # noqa: E402
+from app import market_calendar        # noqa: E402
 
 _IST = timezone(timedelta(hours=5, minutes=30))
 

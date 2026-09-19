@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import csv as _csv
 import sqlite3
-import statistics as st
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

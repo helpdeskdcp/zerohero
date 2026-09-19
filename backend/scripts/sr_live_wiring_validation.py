@@ -18,16 +18,13 @@ from __future__ import annotations
 import gzip
 import json
 import sys
-from datetime import date
 from pathlib import Path
-from statistics import mean
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.sr_dynamic.engine import compute_dynamic_sr  # noqa: E402
 from app.engines.state_classifier import classify  # noqa: E402
 from app.engines.sr_engine import compute_sr  # noqa: E402
-from app.engines.regime_mtf import detect_regime  # noqa: E402
 from app.autoscalp.aggregator import CandleAggregator  # noqa: E402
 from app.sr_dynamic.signal_confirm import evaluate_sr_confirmation  # noqa: E402
 from app.sr_dynamic.live_state import compute_live_sr_state  # noqa: E402

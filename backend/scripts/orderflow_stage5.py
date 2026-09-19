@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts import orderflow_histsrc as HS
 from scripts.orderflow_stage3_validation import (
-    HSess, _dev_va, _levels, _broken_level, _reclaimed_by, _outcome, _split,
+    HSess, _levels, _broken_level, _reclaimed_by, _outcome, _split,
     _classify_spike, _n1, _acc_entry_bar, _entry_stops, spike_percentile,
 )
 from scripts.orderflow_stage4 import day_regime, balance_features, orderflow_proxy, profile_context

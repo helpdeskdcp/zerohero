@@ -5,11 +5,9 @@ import sqlite3
 import sys
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.backtest import oi_history_adapter as ad
 from app.backtest import replay as rp
 
 _DDL = """

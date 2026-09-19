@@ -65,12 +65,12 @@ import json
 import os
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.backtest import calibration, oi_history_adapter as ad  # noqa: E402
-from app.backtest.replay import ReplayContext, SimTrade, _leg, _mod, _tod_bucket  # noqa: E402
+from app.backtest.replay import ReplayContext, SimTrade, _mod, _tod_bucket  # noqa: E402
 from app.backtest.runner import _LegCache, _train_samples  # noqa: E402
 from app.engines.scalp_strategy import decide_from_context  # noqa: E402
 from app.engines.state_classifier import BULLISH, BEARISH  # noqa: E402

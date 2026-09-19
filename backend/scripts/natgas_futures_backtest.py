@@ -49,13 +49,12 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from statistics import median
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.autoscalp.aggregator import CandleAggregator  # noqa: E402
 from app.engines.sr_engine import compute_sr  # noqa: E402
-from app.engines.state_classifier import classify, BULLISH  # noqa: E402
+from app.engines.state_classifier import classify  # noqa: E402
 from app.engines.regime_mtf import detect_regime  # noqa: E402
 from app.backtest.replay import _tod_bucket, _mod  # noqa: E402
 

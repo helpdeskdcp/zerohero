@@ -12,7 +12,7 @@ from app.execution import OrderManager
 from app.execution.reconciler import Reconciler
 from app.execution.paper_broker import PaperBroker
 from app.execution.broker_base import (
-    BrokerBase, OrderStatusResult, PositionSnapshot, OStatus, Side,
+    BrokerBase, OrderStatusResult, PositionSnapshot, OStatus,
 )
 from app.execution.staleness import Clocks
 

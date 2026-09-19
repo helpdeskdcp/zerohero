@@ -6,11 +6,10 @@ soft-in-between -> WATCH. Structure alone never reaches QUALIFIED (SIGNAL != ENT
 """
 import json
 
-import pytest
 
 from app.optionchain import bs
 from app.optionchain.chain import OptionChain, StrikeRow, OptionLeg
-from app.optionchain.structure import OptionStructureState, analyze
+from app.optionchain.structure import OptionStructureState
 from app.optionchain import qualify as Q          # submodule (also re-exported on the package)
 
 

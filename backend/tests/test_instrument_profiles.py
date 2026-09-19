@@ -1,7 +1,6 @@
 """Phase F: instrument profile registry, regime overlay, effective-profile
 selection, and SENSEX contamination classification. All pure/deterministic
 -- no network, no broker, no live DB writes."""
-import pytest
 
 from app import instrument_profiles as ip
 from app import regime_profiles as rp

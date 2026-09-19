@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).parents[1]))
 from app.research_engines.trend_swing import data as D           # noqa: E402
 from app.research_engines.trend_swing import engine as E         # noqa: E402
 from app.research_engines.trend_swing import harness as HN       # noqa: E402
-from app.research_engines.trend_swing import metrics as MT       # noqa: E402
 from app.research_engines.trend_swing import backtest as B       # noqa: E402
 from app.research_engines.trend_swing.config import merged       # noqa: E402
 

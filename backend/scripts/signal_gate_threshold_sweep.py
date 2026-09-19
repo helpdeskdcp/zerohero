@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
 from statistics import mean, median
 
@@ -43,7 +43,7 @@ from app.engines.sr_engine import compute_sr  # noqa: E402
 from app.engines.state_classifier import classify  # noqa: E402
 from app.sr_dynamic.live_state import compute_live_sr_state  # noqa: E402
 from app.sr_dynamic.signal_confirm import evaluate_sr_confirmation  # noqa: E402
-from app.signal_gate.final_signal_gate import evaluate_final_signal, APPROVED  # noqa: E402
+from app.signal_gate.final_signal_gate import evaluate_final_signal  # noqa: E402
 import scripts.natgas_futures_backtest as ngb  # noqa: E402
 from app.liquidity_sweep.backtest import load_kaggle_nifty_bars  # noqa: E402
 from scripts.sr_live_wiring_validation import _load_upstox_1m, _resample_1m_to_5m  # noqa: E402

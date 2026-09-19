@@ -33,7 +33,6 @@ import csv as _csv
 import sqlite3
 import statistics as st
 import sys
-from bisect import bisect_right
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -45,7 +44,7 @@ MAX_MIN = 25
 
 from scripts.imbalance_next_candle_1r3_research import (   # noqa: E402  (unchanged engine)
     load_fut_1m, load_book_series, load_kaggle_nifty_5m, resample, spike_feats,
-    _asof, agg, _line, _pivots, _swings, colour, THRESHOLDS, TARGETS, ROLL, _bucket,
+    _asof, _pivots, colour, THRESHOLDS, TARGETS, ROLL, _bucket,
     HDB,
 )
 UDB = ROOT / "data" / "historical" / "upstox" / "upstox_research.db"

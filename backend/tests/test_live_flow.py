@@ -13,8 +13,7 @@ from datetime import datetime, timezone, timedelta
 from app.execution import OrderManager, killswitch
 from app.execution.paper_broker import PaperBroker
 from app.execution.staleness import Clocks
-from app.execution.broker_base import OStatus, Side, Leg, OrderType, OrderReq
-from app.execution import idempotency as idem
+from app.execution.broker_base import OStatus, Leg, OrderType
 
 
 def _iso(dt=None):

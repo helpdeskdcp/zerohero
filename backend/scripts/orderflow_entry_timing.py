@@ -36,7 +36,6 @@ Output: data/orderflow_entry_timing_report_2026-09-06.txt
 from __future__ import annotations
 
 import argparse
-import statistics as st
 import sys
 from pathlib import Path
 
@@ -46,7 +45,7 @@ from app import market_hub
 from scripts.orderflow_continuation_trap import (
     Sess, _atr_series, _classify_spike, _levels, _level_interaction, _prof_loc,
     _oi_ctx, _oi_class, _load_opt_ctx, _walk, _broken_level, _held_beyond,
-    _reclaimed_by, _outcome, _struct_sl, _avail_R,
+    _outcome, _struct_sl, _avail_R,
 )
 
 RL = (1, 2, 3, 4, 5, 6, 8, 10)

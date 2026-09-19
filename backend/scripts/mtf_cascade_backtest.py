@@ -27,7 +27,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.liquidity_sweep.backtest import load_kaggle_nifty_bars  # noqa: E402
-from app.strategy.base_strategy import IndicatorSnapshot, MarketFeatures, build_indicator_snapshot  # noqa: E402
+from app.strategy.base_strategy import MarketFeatures, build_indicator_snapshot  # noqa: E402
 from app.strategy_mtf.mtf_config import MTFConfig  # noqa: E402
 from app.strategy_mtf.mtf_verifier import verify  # noqa: E402
 from app.strategy_mtf.target_stop import initial_trail_state, update_trailing  # noqa: E402

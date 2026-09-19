@@ -10,7 +10,6 @@ import sys
 from datetime import datetime, timedelta, timezone as _tz
 from pathlib import Path
 
-import pytest
 import requests
 
 sys.path.insert(0, str(Path(__file__).parents[2]))

@@ -3,10 +3,8 @@ Order-flow module Phase 1 -- Volume Profile + Market Profile (TPO).
 Pure-function math is tested against hand-computed expectations; the
 market_hub read helper is tested against a throwaway market_history.db.
 """
-import os
 import sqlite3
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))

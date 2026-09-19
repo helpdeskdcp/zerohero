@@ -3,7 +3,6 @@ configured (real UNAVAILABLE path, no network) or mocks requests.post
 directly. No real network call is ever made."""
 import json
 
-import pytest
 import requests
 
 from app.ai import openrouter_client as oc

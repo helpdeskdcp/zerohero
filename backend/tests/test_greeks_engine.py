@@ -4,7 +4,6 @@ Option Greeks Engine — derived exposure over captured broker Greeks.
 No network, no broker fetch, no trading logic. Seeds the histcap store tables
 directly and runs the engine against them.
 """
-import json
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone

@@ -9,7 +9,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.mtf_config import MTFConfig  # noqa: E402
 from app.strategy_mtf.mtf_verifier import verify  # noqa: E402
 
 

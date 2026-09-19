@@ -5,7 +5,6 @@ Covers: market entry, limit entry, SL-M, SL-L, target exit, rejected order,
 timeout, session/login, order book, positions, and the triple-gated
 LiveDisabled guard.
 """
-import os
 import pytest
 
 from app.execution.paper_broker import PaperBroker, BrokerTimeout
