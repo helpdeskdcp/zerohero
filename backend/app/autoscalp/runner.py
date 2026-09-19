@@ -658,10 +658,25 @@ class AutoScalpRunner:
                      **((cfg.get("expiry_day_profile") or {}) if is_expiry_day else {})}
         # CPU-bound S/R + regime + MTF + per-leg analysis -- also off the loop.
         _leg_fn = self._leg_bars_fn(chain)
+        # EV gate: use empirical avg_win/avg_loss from real closed trades once
+        # enough exist (>=30), else the original idealized ~1.55R fallback.
+        # Only ever reads already-CLOSED historical trades -- no future or
+        # forming-bar information (ZEROHERO_TRADING_EDGE_VALIDATION_2026-09-19.md
+        # Phase C, item 1).
+        _wl = await asyncio.to_thread(db.get_recent_win_loss_stats, "AUTOSCALP", sym.upper(), 100)
+        if _wl["n"] >= 30 and _wl["avg_win"] is not None and _wl["avg_loss"] is not None:
+            _avg_win, _avg_loss = _wl["avg_win"], _wl["avg_loss"]
+            _ev_mode = f"EMPIRICAL(n={_wl['n']})"
+        else:
+            _avg_win, _avg_loss = None, None
+            _ev_mode = f"IDEALIZED(n={_wl['n']})"
         sig = await asyncio.to_thread(
             decide_from_context, bars, chain, atm=atm, calib=self.calibration(),
-            avg_win=None, avg_loss=None, leg_bars_fn=_leg_fn,
+            avg_win=_avg_win, avg_loss=_avg_loss, leg_bars_fn=_leg_fn,
             tod_bucket=tod, config=strat_cfg)
+        sig["ev_mode"] = _ev_mode
+        if sig.get("reason"):
+            sig["reason"] = f"{sig['reason']} | ev_mode={_ev_mode}"
 
         # NSE cash index has no volume of its own -> borrow a VWAP from its
         # front-month FUTURE for the snapshot + dashboard. Decision is already
@@ -849,6 +864,7 @@ class AutoScalpRunner:
             "strategy": "AUTOSCALP", "setup": sig.get("signal_type"),
             "atr_pct": None, "max_hold_sec": sig.get("max_hold_sec"),
             "symboltoken": str(sig.get("token") or ""),
+            "ev_mode": sig.get("ev_mode"),
         })
 
         # PHASE 8 — immutable entry-feature snapshot, written ONCE, straight from

@@ -123,6 +123,20 @@ CREATE TABLE IF NOT EXISTS app_settings (
     value TEXT
 );
 
+-- Clean-edge-validation phase (ZEROHERO_TRADING_EDGE_VALIDATION_2026-09-19.md
+-- Phase C, item 3): append-only lifecycle audit trail for paper trades --
+-- open, every SL/target modification, and close -- so the sequence of
+-- ratchets leading to a trade's final state is preserved, not just the
+-- final row. Read-only for analysis; nothing here gates execution.
+CREATE TABLE IF NOT EXISTS paper_trade_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trade_id TEXT NOT NULL,
+    ts TEXT NOT NULL,
+    event_type TEXT NOT NULL,     -- OPEN | SL_MODIFIED | CLOSE
+    detail TEXT                   -- JSON string
+);
+CREATE INDEX IF NOT EXISTS idx_paper_trade_events_trade_id ON paper_trade_events(trade_id);
+
 -- Turning-Point Engine predictions, resolved against future OHLC for
 -- deterministic closed-form calibration (no ML).
 CREATE TABLE IF NOT EXISTS tp_predictions (
@@ -420,6 +434,22 @@ _MIGRATIONS = {
         "exit_reason": "TEXT",
         "symboltoken": "TEXT",
         "risk_ref": "REAL",          # |entry - initial stop| captured at open (1R)
+        # Clean-edge-validation phase (ZEROHERO_TRADING_EDGE_VALIDATION_2026-09-19.md
+        # Phase C, item 2): realized P&L split into gross/cost/net. `pnl` keeps its
+        # existing (gross) meaning unchanged for backward compatibility; gross_pnl
+        # is the same value under an explicit name. cost_model_status is "OK" only
+        # for instruments with a real, validated per-lot cost profile
+        # (app/institutional_edge/costs.py) -- "UNCALIBRATED" everywhere else,
+        # never a guessed cost.
+        "gross_pnl": "REAL",
+        "trading_cost": "REAL",
+        "slippage_cost": "REAL",
+        "net_pnl": "REAL",
+        "cost_model_status": "TEXT",
+        # EV-gate mode actually used for this trade's entry decision --
+        # "EMPIRICAL(n=N)" once >=30 real closed trades exist for this
+        # underlying, else "IDEALIZED(n=N)" (the original ~1.55R fallback).
+        "ev_mode": "TEXT",
     },
     "scalp_signals": {
         # ev_r = ev / risk (the R-normalised value the EV gate actually decides
@@ -505,7 +535,7 @@ def insert_trade(row: dict):
             "stop_loss", "trailing_stop", "quantity", "probability", "confidence",
             "market_regime", "oi_evidence", "pnl", "reason",
             "strategy", "setup", "atr_pct", "max_hold_sec", "mfe", "mae", "exit_reason",
-            "symboltoken", "risk_ref"]
+            "symboltoken", "risk_ref", "ev_mode"]
     vals = [row.get(c) for c in cols]
     placeholders = ",".join(["?"] * len(cols))
     with db() as conn:
@@ -537,6 +567,61 @@ def get_trade(trade_id: str):
         cur = conn.execute("SELECT * FROM ai_paper_trades WHERE trade_id=?", (trade_id,))
         r = cur.fetchone()
         return dict(r) if r else None
+
+
+def insert_paper_trade_event(trade_id: str, event_type: str, detail: dict | None = None):
+    """Append-only lifecycle audit row -- OPEN / SL_MODIFIED / CLOSE. Never
+    updates or deletes; each call is one more line in the trade's history."""
+    if not trade_id or not event_type:
+        return
+    import json as _json
+    from datetime import datetime as _dt, timezone as _tz
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO paper_trade_events (trade_id, ts, event_type, detail) VALUES (?,?,?,?)",
+            (trade_id, _dt.now(_tz.utc).isoformat(), event_type,
+             _json.dumps(detail or {}, default=str)))
+
+
+def list_paper_trade_events(trade_id: str) -> list:
+    with db() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM paper_trade_events WHERE trade_id=? ORDER BY id ASC", (trade_id,))]
+
+
+def get_recent_win_loss_stats(strategy: str, underlying: str, limit: int = 100) -> dict:
+    """Empirical avg_win / avg_loss from the last `limit` real CLOSED trades
+    for this strategy+underlying -- used by the live EV gate instead of the
+    hardcoded idealized ~1.55R fallback once enough real history exists
+    (ZEROHERO_TRADING_EDGE_VALIDATION_2026-09-19.md Phase C, item 1).
+
+    Only ever reads already-CLOSED trades (real past outcomes) ordered by
+    closed_ts -- no forming-bar or future information is possible here by
+    construction. Prefers `net_pnl` per-row when that row's cost model was
+    "OK" (a validated per-instrument cost profile existed at close time),
+    falling back to gross `pnl` for rows without one -- never invents a
+    cost, just uses whatever each row actually has.
+
+    Returns {"n": int, "avg_win": float|None, "avg_loss": float|None}.
+    `avg_loss` is a positive magnitude (mean of |losing pnl|)."""
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT pnl, net_pnl, cost_model_status FROM ai_paper_trades "
+            "WHERE strategy=? AND underlying=? AND status='CLOSED' "
+            "ORDER BY closed_ts DESC LIMIT ?", (strategy, underlying.upper(), limit)
+        ).fetchall()
+    vals = []
+    for r in rows:
+        v = r["net_pnl"] if (r["cost_model_status"] == "OK" and r["net_pnl"] is not None) else r["pnl"]
+        if v is not None:
+            vals.append(v)
+    wins = [v for v in vals if v > 0]
+    losses = [v for v in vals if v < 0]
+    return {
+        "n": len(vals),
+        "avg_win": round(sum(wins) / len(wins), 4) if wins else None,
+        "avg_loss": round(abs(sum(losses) / len(losses)), 4) if losses else None,
+    }
 
 
 def list_trades(status=None, limit=200, strategy=None):

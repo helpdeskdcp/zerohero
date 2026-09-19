@@ -778,3 +778,29 @@ def test_daily_report_pushes_once_per_segment(fresh_db, monkeypatch):
     sent.clear()
     asyncio.run(r.tick_once())
     assert sent == []
+
+
+# ---------------- Phase C: EV gate empirical stats wiring (end-to-end) ----------------
+
+def test_runner_stamps_ev_mode_onto_persisted_trade(fresh_db, monkeypatch):
+    """With zero prior closed AUTOSCALP trades for NIFTY, the runner must
+    fall back to the idealized EV mode (n < 30) and stamp that onto both the
+    persisted trade row and its reason string."""
+    sig = {"decision": "BUY_PE", "signal_type": "SUPPORT_BREAKDOWN", "direction": "BEARISH",
+           "strike": 24100, "token": "PE24100", "tradingsymbol": "NIFTY24100PE",
+           "expiry": "2026-09-03", "entry": 95.0, "stop_loss": 83.0, "target_1": 116.0,
+           "target_2": 128.0, "trailing_stop": 8.0, "max_hold_sec": 1500,
+           "probability": 0.58, "confidence": "MEDIUM", "ev": 6.0, "rr": 1.6,
+           "regime": "TRENDING_DOWN", "mtf_alignment": -30.0, "signal_score": 63.0,
+           "momentum": -0.42, "state_score": 71.0,
+           "component_scores": {"x": 1}, "reason": "test", "support": 24080,
+           "resistance": 24150, "support_strength": 60, "resistance_strength": 62,
+           "sr_level": 24085, "sr_side": "SUPPORT", "atr": 11.0, "vwap": 24110.0}
+    r, _feed = _runner(monkeypatch, sig)
+    r.arm()
+    asyncio.run(r.tick_once())
+    trades = fresh_db.list_trades(strategy="AUTOSCALP")
+    assert len(trades) == 1
+    assert trades[0]["ev_mode"] == "IDEALIZED(n=0)"          # no prior NIFTY history in fresh_db
+    sigs = fresh_db.list_scalp_signals(source="LIVE")
+    assert "ev_mode=IDEALIZED(n=0)" in sigs[0]["reason"]

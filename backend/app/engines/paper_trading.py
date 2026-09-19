@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from .. import db
 from ..connectors import telegram
+from ..institutional_edge import costs as _costs
 
 
 def _new_trade_id():
@@ -68,6 +69,7 @@ def open_trade(signal: dict) -> dict:
         "mfe": 0.0,
         "mae": 0.0,
         "exit_reason": None,
+        "ev_mode": signal.get("ev_mode"),
     }
     # 1R reference captured at open (stop moves later; this stays fixed)
     _e, _s = signal.get("entry"), signal.get("stop_loss")
@@ -76,6 +78,10 @@ def open_trade(signal: dict) -> dict:
     except (TypeError, ValueError):
         row["risk_ref"] = None
     db.insert_trade(row)
+    db.insert_paper_trade_event(trade_id, "OPEN", {
+        "underlying": row.get("underlying"), "direction": row.get("direction"),
+        "entry": row.get("entry"), "stop_loss": row.get("stop_loss"),
+        "target_1": row.get("target_1"), "ev_mode": row.get("ev_mode")})
     return row
 
 
@@ -196,6 +202,9 @@ def update_trade_price(trade_id: str, ltp: float, now: datetime | None = None) -
         fields["stop_loss"] = new_sl
 
     db.update_trade(trade_id, fields)
+    if "stop_loss" in fields:
+        db.insert_paper_trade_event(trade_id, "SL_MODIFIED",
+                                    {"old_stop_loss": sl, "new_stop_loss": fields["stop_loss"], "ltp": ltp})
     return db.get_trade(trade_id)
 
 
@@ -209,20 +218,46 @@ def close_trade(trade_id: str, exit_price: float, forced_result: str | None = No
     direction = t["direction"]
     sign = 1 if direction == "BUY" else -1
     pnl = round(sign * (exit_price - entry) * qty, 2)
+    # WIN/LOSS/FLAT classification stays gross-based (unchanged behavior/blast
+    # radius) -- the net-of-cost economics feed the EV gate's rolling stats
+    # (db.get_recent_win_loss_stats) instead, per the Phase C item 2 scope.
     result = forced_result or ("WIN" if pnl > 0 else ("LOSS" if pnl < 0 else "FLAT"))
     mfe, mae = _excursions(t, exit_price)
+
+    gross_pnl = pnl
+    trading_cost = slippage_cost = net_pnl = None
+    cost_model_status = "UNCALIBRATED"
+    try:
+        segment = f"{(t.get('underlying') or '').upper()}_{(t.get('instrument') or '').upper()}"
+        est = _costs.estimate_cost(t.get("market") or "", segment)
+        if est.status == "OK":
+            trading_cost = est.total_cost_points
+            slippage_cost = 0.0   # no validated slippage estimate exists yet -- not invented
+            net_pnl = round(gross_pnl - trading_cost - slippage_cost, 4)
+            cost_model_status = "OK"
+    except Exception:
+        pass   # cost lookup must never block a paper-trade close
 
     fields = {
         "status": "CLOSED",
         "closed_ts": datetime.now(timezone.utc).isoformat(),
         "exit_price": exit_price,
         "pnl": pnl,
+        "gross_pnl": gross_pnl,
+        "trading_cost": trading_cost,
+        "slippage_cost": slippage_cost,
+        "net_pnl": net_pnl,
+        "cost_model_status": cost_model_status,
         "result": result,
         "exit_reason": exit_reason,
         "mfe": mfe,
         "mae": mae,
     }
     db.update_trade(trade_id, fields)
+    db.insert_paper_trade_event(trade_id, "CLOSE", {
+        "exit_price": exit_price, "exit_reason": exit_reason, "result": result,
+        "gross_pnl": gross_pnl, "trading_cost": trading_cost, "net_pnl": net_pnl,
+        "cost_model_status": cost_model_status})
     updated = db.get_trade(trade_id)
     try:
         if str(exit_reason).startswith("COMBO"):
