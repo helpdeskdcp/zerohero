@@ -113,8 +113,24 @@ def test_atm_window_is_clamped(hist_db):
     assert j["status"] == "OK"                       # clamped, no slice/þrow
 
 
+def _all_route_paths(routes):
+    """Recursively collect .path from every route, descending into
+    include_router() wrappers (Starlette >=1.0 wraps an included APIRouter
+    in an _IncludedRouter with .original_router.routes instead of exposing
+    .path directly on app.routes)."""
+    paths = set()
+    for r in routes:
+        p = getattr(r, "path", None)
+        if p is not None:
+            paths.add(p)
+        sub = getattr(getattr(r, "original_router", None), "routes", None) or getattr(r, "routes", None)
+        if sub:
+            paths |= _all_route_paths(sub)
+    return paths
+
+
 def test_router_is_mounted_on_the_app():
     from app.main import app
-    paths = {r.path for r in app.routes}
+    paths = _all_route_paths(app.routes)
     assert "/api/optionchain/{underlying}" in paths
     assert "/api/optionchain/underlyings" in paths
