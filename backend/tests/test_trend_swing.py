@@ -7,8 +7,11 @@ purged walk-forward drops boundary-straddling trades, R/points consistency,
 verdict is evidence-based (3-way), no live-app imports.
 """
 import ast
+import os
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
@@ -19,6 +22,16 @@ from app.research_engines.trend_swing import harness as HN
 from app.research_engines.trend_swing.config import merged
 
 CFG = merged()
+
+# These tests need the real NIFTY historical data (Kaggle CSV / market_history.db)
+# that lives under data/historical/kaggle/ and data/market_history.db -- correctly
+# gitignored (large, licensed datasets), so it isn't present in a fresh CI
+# checkout. Skip gracefully there rather than fail on an IndexError from an
+# empty bar list; every test still runs locally where the data exists.
+_HAS_REAL_DATA = any(os.path.exists(p) for p, _ in D._KAGGLE_1M.get("NIFTY", []))
+pytestmark = pytest.mark.skipif(
+    not _HAS_REAL_DATA,
+    reason="real NIFTY historical data (Kaggle CSV / market_history.db) not present in this environment")
 
 
 def test_daily_resample_one_bar_per_session():

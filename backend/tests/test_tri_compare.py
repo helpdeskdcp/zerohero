@@ -7,8 +7,11 @@ mathematical RR gate, ANN no-future-leak + TRAIN-only fit, composite
 sample-sufficiency, and no live-app imports.
 """
 import ast
+import os
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
@@ -23,6 +26,15 @@ from app.research_engines.tri_compare.ann_layer import AnnConfirm, _feat
 from app.research_engines.tri_compare.config import merged
 
 CFG = merged({"tf_min": 15})
+
+# See tests/test_trend_swing.py for the same rationale: these tests need the
+# real NIFTY historical data (Kaggle CSV / market_history.db), correctly
+# gitignored and absent from a fresh CI checkout. Skip gracefully there.
+_HAS_REAL_DATA = (any(os.path.exists(p) for p, _ in D._KAGGLE_1M.get("NIFTY", []))
+                  or os.path.exists(D._MH_DB))
+pytestmark = pytest.mark.skipif(
+    not _HAS_REAL_DATA,
+    reason="real NIFTY historical data (Kaggle CSV / market_history.db) not present in this environment")
 
 
 def _real_frame(start="2019-01-01", end="2020-06-30"):
