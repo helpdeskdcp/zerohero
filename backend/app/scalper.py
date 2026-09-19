@@ -18,14 +18,15 @@ Disarmed by default. State + config persist in app_settings so an
 arm survives a process restart only if you re-arm — arming is never sticky.
 """
 from __future__ import annotations
-import os
-import time
-import json
-import socket
+
 import asyncio
+import json
+import os
+import socket
+import time
 import traceback
 from collections import deque
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 # ---- single-active-runner lease (survives multi-worker uvicorn) ----
 LEASE_KEY = "runner_lease"
@@ -34,16 +35,15 @@ ARMED_KEY = "runner_armed"  # arm/disarm intent, shared across workers
 PUB_KEY = "runner_pub"      # leader publishes its live status here for standby workers to serve
 LATCH_KEY = "runner_latches"  # persisted alert latches — a restart must not re-spam Telegram
 
-from . import db
-from . import instruments
-from . import combos
-from .scalp_pipeline import run_scalp_pipeline
+from . import combos, db, instruments
 from .connectors import angelone, telegram
-from .connectors.angel_ws import AngelMarketFeed, EXCHANGE_TYPE
-from .engines.paper_trading import update_trade_price, open_trade, close_trade
-from .engines.signal_engine import run_signal_engine
-from .connectors.telegram import notify_position_alert, _send as _tg_send
+from .connectors.angel_ws import EXCHANGE_TYPE, AngelMarketFeed
+from .connectors.telegram import _send as _tg_send
+from .connectors.telegram import notify_position_alert
+from .engines.paper_trading import close_trade, open_trade, update_trade_price
 from .engines.scalp_engine import _parse_hhmm
+from .engines.signal_engine import run_signal_engine
+from .scalp_pipeline import run_scalp_pipeline
 
 CONFIG_KEY = "scalp_config"
 
@@ -660,8 +660,10 @@ class ScalpRunner:
                 # prediction stream for calibration (+ high-confidence alert)
                 if cfg.get("tp_engine", True):
                     try:
-                        from .engines.turning_point_engine import run_turning_point_engine
                         from . import tp_calibration
+                        from .engines.turning_point_engine import (
+                            run_turning_point_engine,
+                        )
                         tp = run_turning_point_engine({
                             "candles": cds, "config": cfg.get("tp_config") or {},
                             "calibration": tp_calibration.load()})

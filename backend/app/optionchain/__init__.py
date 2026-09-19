@@ -37,8 +37,8 @@ app.autoscalp / execution / main. Layers:
 Every output is research-only -- nothing here touches an order path or
 `live_trading`.
 """
-from . import analytics, structure, qualify                   # noqa: F401  (submodules)
-from .chain import OptionChain, StrikeRow, OptionLeg          # noqa: F401
-from .resolve import get_chain                                # noqa: F401
-from .structure import OptionStructureState                   # noqa: F401
-from .qualify import Qualification, qualify_from_chain        # noqa: F401
+from . import analytics, qualify, structure
+from .chain import OptionChain, OptionLeg, StrikeRow
+from .qualify import Qualification, qualify_from_chain
+from .resolve import get_chain
+from .structure import OptionStructureState

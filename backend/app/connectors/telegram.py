@@ -4,6 +4,7 @@ Reads TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_SIGNALS_CHANNEL_ID from env
 Never raises on failure — alerting must never break the trading pipeline.
 """
 import os
+
 import requests
 
 API_BASE = "https://api.telegram.org/bot{token}/sendMessage"

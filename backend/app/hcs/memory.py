@@ -15,7 +15,8 @@ import sqlite3
 
 # DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
 # read the live data/chanakya.db (reads here are mode=ro regardless).
-from app.db import _resolve_db_path as _resolve_db_path  # noqa: E402
+from app.db import _resolve_db_path as _resolve_db_path
+
 _DB = _resolve_db_path()
 _K = 15
 _MIN_N = 12

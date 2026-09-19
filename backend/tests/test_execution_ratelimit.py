@@ -8,7 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.execution.ratelimit import TokenBucket, CircuitBreaker, call_with_retry  # noqa: E402
+from app.execution.ratelimit import (
+    CircuitBreaker,
+    TokenBucket,
+    call_with_retry,
+)
 
 
 class _FakeClock:

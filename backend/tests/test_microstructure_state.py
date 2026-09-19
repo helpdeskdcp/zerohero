@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.microstructure.state import STATES, classify  # noqa: E402
+from app.microstructure.state import STATES, classify
 
 
 def _event(state, **overrides):

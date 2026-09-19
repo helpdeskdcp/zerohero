@@ -14,8 +14,11 @@ This script is READ-ONLY. Re-run after each session:
     python3 data/autoscalp_reversal_block_ledger.py            # refresh + rewrite the .md
     python3 data/autoscalp_reversal_block_ledger.py --print    # also echo to stdout
 """
-import sqlite3, statistics as st, sys, pathlib
-from datetime import datetime, timezone, timedelta
+import pathlib
+import sqlite3
+import statistics as st
+import sys
+from datetime import datetime, timedelta, timezone
 
 DB = str(pathlib.Path(__file__).resolve().parents[1] / "data" / "chanakya.db")
 OUT = pathlib.Path(__file__).resolve().parent / "autoscalp_reversal_block_ledger.md"
@@ -86,7 +89,7 @@ def main():
 
     L = []
     p = L.append
-    p(f"# AUTOSCALP — REVERSAL-block forward ledger")
+    p("# AUTOSCALP — REVERSAL-block forward ledger")
     p("")
     p(f"_regenerated: {now} · cutoff (change applied): {CUTOFF} · read-only_")
     p("")
@@ -101,7 +104,7 @@ def main():
     p(f"- window: {b['window']}")
     p(f"- {b['decided']} decided · WR {b['win_rate']}% · expectancy **{b['expectancy_pt']:+.2f} pt** · "
       f"net {b['net_pt']:+.1f} pt · PF {b['profit_factor']} · maxDD {b['max_dd_pt']} pt")
-    p(f"- SUPPORT_BREAKDOWN net +94.6 (PF 2.75) · SUPPORT_REVERSAL net -43.0 · RESISTANCE_REVERSAL net -47.4")
+    p("- SUPPORT_BREAKDOWN net +94.6 (PF 2.75) · SUPPORT_REVERSAL net -43.0 · RESISTANCE_REVERSAL net -47.4")
     p("")
     p("## Forward (trades opened after cutoff)")
     p("")

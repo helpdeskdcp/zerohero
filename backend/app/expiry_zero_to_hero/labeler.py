@@ -6,7 +6,6 @@ them and reports which one an operator should adopt.
 """
 from __future__ import annotations
 
-
 DEFINITIONS = {
     "A_2x": {"mult": 2.0},
     "B_3x": {"mult": 3.0},

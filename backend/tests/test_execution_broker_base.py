@@ -7,8 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.execution.broker_base import (   # noqa: E402
-    Side, OStatus, map_broker_status, OrderAck, OrderStatusResult,
+from app.execution.broker_base import (
+    OrderAck,
+    OrderStatusResult,
+    OStatus,
+    Side,
+    map_broker_status,
 )
 
 

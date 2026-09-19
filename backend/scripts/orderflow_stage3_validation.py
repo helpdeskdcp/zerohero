@@ -36,11 +36,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts import orderflow_histsrc as HS
 from scripts.orderflow_continuation_trap import (
-    _classify_spike, _levels, _level_interaction, _prof_loc, _walk, _broken_level, _reclaimed_by, _outcome, _struct_sl,
     _avail_R,
+    _broken_level,
+    _classify_spike,
+    _level_interaction,
+    _levels,
+    _outcome,
+    _prof_loc,
+    _reclaimed_by,
+    _struct_sl,
+    _walk,
 )
 from scripts.orderflow_entry_timing import (
-    _n1, _acc_entry_bar, _entry_stops,
+    _acc_entry_bar,
+    _entry_stops,
+    _n1,
 )
 from scripts.orderflow_spike_ledger import _asof
 
@@ -52,8 +62,19 @@ SPIKE_PCTLS = (0.90, 0.95, 0.97, 0.98, 0.99)
 # ================================================================ HSess
 class HSess:
     """Sess-compatible session object built from historical source bars."""
-    __slots__ = ("sym", "date", "src", "clean", "regime", "base", "avgvol",
-                 "va", "frac_lo", "frac_hi", "oi")
+    __slots__ = (
+        "avgvol",
+        "base",
+        "clean",
+        "date",
+        "frac_hi",
+        "frac_lo",
+        "oi",
+        "regime",
+        "src",
+        "sym",
+        "va",
+    )
 
     def __init__(self, sym, date, src):
         self.sym, self.date, self.src = sym, date, src

@@ -85,7 +85,7 @@ def _market_open_at(symbol: str, ts: str) -> bool:
     dt_ist = _parse(ts).astimezone(_IST)
     try:
         sys.path.insert(0, str(_ROOT))
-        from app.market_calendar import segment_status  # noqa: E402
+        from app.market_calendar import segment_status
         return segment_status(exch, dt_ist) == "OPEN"
     except Exception:
         m = dt_ist.hour * 60 + dt_ist.minute

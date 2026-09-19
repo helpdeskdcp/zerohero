@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep import structure  # noqa: E402
+from app.liquidity_sweep import structure
 
 
 def _bar(t, o, h, l, c, v=1000):

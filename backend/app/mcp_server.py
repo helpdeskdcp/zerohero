@@ -21,9 +21,9 @@ Claude Code / Desktop config:
       }
     }
 """
+import json
 import os
 import sys
-import json
 
 # load .env if python-dotenv is around and a path is hinted / present
 try:
@@ -33,8 +33,8 @@ except Exception:
     pass
 
 from .connectors import angelone
-from .engines.signal_engine import run_signal_engine
 from .engines.scalp_engine import run_scalp_engine
+from .engines.signal_engine import run_signal_engine
 from .reversal import detect_reversal
 
 PROTOCOL = "2024-11-05"

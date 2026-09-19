@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from app.hcs import forward_test as ft  # noqa: E402
+from app.hcs import forward_test as ft
 
 
 def main():

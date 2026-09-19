@@ -9,7 +9,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.index_signal_research.labels import compute_labels  # noqa: E402
+from app.index_signal_research.labels import compute_labels
 
 
 def _df(rows):

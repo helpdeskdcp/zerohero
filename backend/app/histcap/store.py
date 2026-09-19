@@ -17,7 +17,7 @@ import threading
 from datetime import datetime, timezone
 
 from . import schema
-from .integrity import candle_check, quote_check, greek_check
+from .integrity import candle_check, greek_check, quote_check
 
 _DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "data", "market_history.db")

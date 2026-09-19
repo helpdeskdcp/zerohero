@@ -48,7 +48,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import market_hub
 from scripts.orderflow_sequence_research import (
-    Sess, _prof_loc, _rejection,
+    Sess,
+    _prof_loc,
+    _rejection,
 )
 
 _HDB = str(Path(__file__).resolve().parents[1] / "data" / "market_history.db")

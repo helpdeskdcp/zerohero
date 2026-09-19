@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.fvg_candle import evaluate  # noqa: E402
+from app.strategy_mtf.fvg_candle import evaluate
 
 
 def _bar(o, h, l, c, t="2026-08-04T03:45:00Z", v=1000):

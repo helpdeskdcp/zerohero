@@ -38,7 +38,7 @@ def _asof(series: list, ts: str):
     return series[i - 1][1] if i > 0 else None
 
 
-def _pick_atm(opt_map: dict, ref_price: float, option_type: str) -> Optional[float]:
+def _pick_atm(opt_map: dict, ref_price: float, option_type: str) -> float | None:
     """Nearest captured strike to `ref_price` that has a series for this side."""
     strikes = sorted({k[0] for k in opt_map if k[1] == option_type and opt_map.get(k)})
     if not strikes:
@@ -47,9 +47,9 @@ def _pick_atm(opt_map: dict, ref_price: float, option_type: str) -> Optional[flo
 
 
 def rewalk_leg(opt_map: dict, *, entry_price: float, side: str,
-               entry_ts: Optional[str], exit_ts: Optional[str],
+               entry_ts: str | None, exit_ts: str | None,
                premium_stop_pct: float = 0.0,
-               premium_stop_pts: float = 0.0) -> Optional[dict]:
+               premium_stop_pts: float = 0.0) -> dict | None:
     """Re-price one resolved leg on the captured option premium.
 
     opt_map     : market_hub.session_option_quotes() output for the session

@@ -39,7 +39,7 @@ def _color(bar) -> str:
     return "GREEN" if bar["c"] >= bar["o"] else "RED"
 
 
-def structure_break(bars: list[dict], pts: list["structure.SwingPoint"]) -> dict:
+def structure_break(bars: list[dict], pts: list[structure.SwingPoint]) -> dict:
     """CHoCH or BOS on the CLOSE of the last bar, relative to the most
     recent CONFIRMED swing point of each kind and the prevailing structure
     direction from swing_structure_labels()."""
@@ -123,7 +123,7 @@ class Confirmation:
         return asdict(self)
 
 
-def evaluate(bars: list[dict], pts: list["structure.SwingPoint"], *, atr: float | None = None) -> Confirmation:
+def evaluate(bars: list[dict], pts: list[structure.SwingPoint], *, atr: float | None = None) -> Confirmation:
     sb = structure_break(bars, pts)
     c = cisd(bars)
     f = fvg(bars)

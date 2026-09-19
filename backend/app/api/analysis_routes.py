@@ -34,10 +34,10 @@ def api_turning_point(symbol: str, timeframe: str = "5m"):
     """Deterministic turning-point read for a symbol: direction, up/down turn
     zones, next High/Low + Swing zones with probabilities, confidence, expected
     move, and a Risk-Engine-ready trade_ref. Predicts ZONES, not prices."""
-    from ..connectors import angelone as _a
-    from ..engines.turning_point_engine import run_turning_point_engine
-    from ..engines.signal_engine import run_signal_engine
     from .. import tp_calibration
+    from ..connectors import angelone as _a
+    from ..engines.signal_engine import run_signal_engine
+    from ..engines.turning_point_engine import run_turning_point_engine
     conn = _a.fetch_candles(market=None, symbol=symbol, exchange=None, symboltoken=None,
                             interval=None, fromdate=None, todate=None, timeframe=timeframe,
                             instrument="FUT")

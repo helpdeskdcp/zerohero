@@ -24,8 +24,9 @@ def test_autoscalp_endpoints_present_and_paper(fresh_db):
 
 
 def test_autoscalp_config_validation(fresh_db):
-    from app import main
     from fastapi import HTTPException
+
+    from app import main
     with pytest.raises(HTTPException):
         main.api_autoscalp_set_config({"bogus": 1})
     out = main.api_autoscalp_set_config({"decide_every_sec": 45})
@@ -71,8 +72,9 @@ def test_autoscalp_universe_grouped(fresh_db):
 
 
 def test_watchlist_add_remove(fresh_db):
-    from app import main
     from fastapi import HTTPException
+
+    from app import main
     base = list(main.autoscalp.get_config()["symbols"])
     out = main.api_autoscalp_watchlist({"symbol": "reliance", "action": "add"})
     assert "RELIANCE" in out["symbols"]

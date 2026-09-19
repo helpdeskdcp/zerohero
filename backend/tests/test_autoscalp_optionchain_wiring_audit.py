@@ -20,7 +20,6 @@ import pytest
 
 from app.engines.scalp_strategy import decide_from_context
 
-
 # --------------------------------------------------------------------------- #
 #  1. the new optionchain module is isolated from the decision path            #
 # --------------------------------------------------------------------------- #

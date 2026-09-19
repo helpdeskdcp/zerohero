@@ -127,7 +127,7 @@ def run_leakage_safe_model_check(samples: list, *, train_frac: float = 0.5, val_
     y = [1 if r["outcome"] == "WIN" else 0 for r in rows]
     n = len(rows)
     a, b = int(n * train_frac), int(n * (train_frac + val_frac))
-    train_idx, val_idx, oos_idx = list(range(0, a)), list(range(a, b)), list(range(b, n))
+    train_idx, val_idx, oos_idx = list(range(a)), list(range(a, b)), list(range(b, n))
 
     X, columns = _design_matrix(rows)
     y_arr = np.array(y)

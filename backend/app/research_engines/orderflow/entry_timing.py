@@ -21,7 +21,6 @@ Also computes the ENTRY_QUALITY_SCORE (0-100) at ENTRY_READY.
 from __future__ import annotations
 
 
-
 def _mod(hhmm: str) -> int:
     return int(hhmm[:2]) * 60 + int(hhmm[3:])
 

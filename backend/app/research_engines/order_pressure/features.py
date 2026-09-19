@@ -21,7 +21,7 @@ ENH (operator-approved 2026-09-08):
 from __future__ import annotations
 
 from .config import merged
-from .formulas import pressure, atr
+from .formulas import atr, pressure
 from .series import multi_window
 
 _LB = None  # filled from cfg

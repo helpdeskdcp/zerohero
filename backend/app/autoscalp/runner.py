@@ -20,20 +20,19 @@ import time
 import traceback
 from datetime import date, datetime, timedelta, timezone
 
-from .. import db
-from .. import instrument_profiles
-from ..effective_profile import select_effective_profile
+from .. import db, instrument_profiles
 from ..ai import shadow as _ai_shadow
+from ..effective_profile import select_effective_profile
 
 _log = logging.getLogger(__name__)
-from .aggregator import CandleAggregator
-from .safeguards import Safeguards
-from ..engines.scalp_strategy import decide_from_context
-from ..engines.paper_trading import open_trade, update_trade_price, close_trade
-from ..engines.oi_math import max_pain_strike
 from ..backtest import calibration as _cal
 from ..backtest.replay import _mod, _tod_bucket
+from ..engines.oi_math import max_pain_strike
+from ..engines.paper_trading import close_trade, open_trade, update_trade_price
+from ..engines.scalp_strategy import decide_from_context
 from . import notify
+from .aggregator import CandleAggregator
+from .safeguards import Safeguards
 
 LEASE_KEY = "autoscalp_lease"
 LEASE_TTL = 30
@@ -871,8 +870,9 @@ class AutoScalpRunner:
         self._tg_last[key] = now
         if canonical:
             try:
-                from .. import telegram_dispatcher
                 import os
+
+                from .. import telegram_dispatcher
                 telegram_dispatcher.dispatch(
                     source_engine="autoscalp", underlying=canonical.get("underlying"),
                     direction=canonical.get("direction"), text=text,
@@ -905,7 +905,8 @@ class AutoScalpRunner:
         # PHASE 8 — immutable entry-feature snapshot, written ONCE, straight from
         # the live decision context. Guarded: a failure here never blocks the trade.
         try:
-            from . import trade_features as _tf, data_quality as _dq
+            from . import data_quality as _dq
+            from . import trade_features as _tf
             _u_ltp = self._aggs[sym.upper()].last_price
             _oiq = _chain_oi_quality(chain)
             _cap = None

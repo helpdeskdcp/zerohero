@@ -17,8 +17,8 @@ claimed from the numbers before then.
 from __future__ import annotations
 
 from .. import market_hub
-from . import smart_money as _sm
 from . import premium_walk as _pw
+from . import smart_money as _sm
 
 MIN_SAMPLE = 20          # resolved trades, matches analyze_holdtime.py / calibration_report
 MIN_SESSIONS = 10        # distinct trading days -- intra-day signals are highly

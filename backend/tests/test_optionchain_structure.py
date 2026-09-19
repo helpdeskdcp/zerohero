@@ -12,10 +12,10 @@ import json
 
 import pytest
 
-from app.optionchain import bs
 from app.optionchain import analytics as A
+from app.optionchain import bs
 from app.optionchain import structure as S
-from app.optionchain.chain import OptionChain, StrikeRow, OptionLeg
+from app.optionchain.chain import OptionChain, OptionLeg, StrikeRow
 
 
 # --------------------------------------------------------------------------- #

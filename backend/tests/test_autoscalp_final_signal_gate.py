@@ -7,10 +7,9 @@ change). Mirrors tests/test_scalp_strategy_sr_gate.py's mocking style.
 """
 import asyncio
 
-from tests.test_autoscalp import _runner
-
 from app.autoscalp import runner as ascr
 from app.signal_gate import final_signal_gate as fsg_mod
+from tests.test_autoscalp import _runner
 
 
 def setup_function(_):

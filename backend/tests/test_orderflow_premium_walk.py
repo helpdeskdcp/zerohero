@@ -10,8 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.orderflow import premium_walk as PW   # noqa: E402
-import app.orderflow.backtest as BT            # noqa: E402
+import app.orderflow.backtest as BT
+from app.orderflow import premium_walk as PW
 
 
 # ---------------------------------------------------------------- premium_walk

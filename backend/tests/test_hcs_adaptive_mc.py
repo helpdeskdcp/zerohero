@@ -16,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.hcs import adaptive_mc as MC   # noqa: E402
-from app.hcs import labels as LAB       # noqa: E402
+from app.hcs import adaptive_mc as MC
+from app.hcs import labels as LAB
 
 
 # --------------------------------------------------------------------------- labels
@@ -100,7 +100,7 @@ def test_ridge_moves_toward_target():
 
 # --------------------------------------------------------------------------- served
 def test_score_insufficient_when_no_data(monkeypatch):
-    monkeypatch.setattr(MC, "_resolved_rows", lambda: [])
+    monkeypatch.setattr(MC, "_resolved_rows", list)
     MC._CACHE.update(bundle=None, rows=-1)
     out = MC.score({"signal_score": 60})
     assert out["status"] == "INSUFFICIENT"

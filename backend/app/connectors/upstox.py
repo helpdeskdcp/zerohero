@@ -182,7 +182,7 @@ def _err_code(r) -> str:
         j = r.json()
         if isinstance(j, dict) and j.get("errors"):
             return j["errors"][0].get("errorCode") or ""
-    except Exception:  # noqa
+    except Exception:
         pass
     return ""
 

@@ -10,9 +10,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy.base_strategy import StrategyResult  # noqa: E402
-from app.strategy.conflict import decide_direction, resolve  # noqa: E402
-from app.strategy.config import StrategyConfig  # noqa: E402
+from app.strategy.base_strategy import StrategyResult
+from app.strategy.config import StrategyConfig
+from app.strategy.conflict import decide_direction, resolve
 
 
 def _result(direction, score):

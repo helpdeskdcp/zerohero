@@ -33,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.orderflow_stage6 import collect, agg
+from scripts.orderflow_stage6 import agg, collect
 
 BODY_GRID = (0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70)
 AVAILR_GRID = (0.0, 1.0, 1.5, 2.0)
@@ -158,8 +158,8 @@ def analyse(sym, sessions, rows, out):
         pc, pt = _p(cont_rows, v), _p(trap_rows, v)
         au = _sep_auc(cont_rows, trap_rows, v)
         if pc and pt:
-            pr(f"    {v:<20} {str((pc['P25'],pc['P50'],pc['P75'])):<22} "
-               f"{str((pt['P25'],pt['P50'],pt['P75'])):<22} {str(au):>7}")
+            pr(f"    {v:<20} {(pc['P25'],pc['P50'],pc['P75'])!s:<22} "
+               f"{(pt['P25'],pt['P50'],pt['P75'])!s:<22} {au!s:>7}")
             if au is not None:
                 ranked.append((au, v))
     ranked.sort(reverse=True)
@@ -213,7 +213,7 @@ def analyse(sym, sessions, rows, out):
         line = f"    {thr:>5.2f} | "
         for spl in SPL:
             g = sel(_split_rows(rows, spl))
-            line += f"{str(_outc(g)):<24} "
+            line += f"{_outc(g)!s:<24} "
         pr(line)
 
     # ---- §4 n1 agreement definitions ----

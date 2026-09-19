@@ -52,11 +52,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.autoscalp.aggregator import CandleAggregator  # noqa: E402
-from app.engines.sr_engine import compute_sr  # noqa: E402
-from app.engines.state_classifier import classify  # noqa: E402
-from app.engines.regime_mtf import detect_regime  # noqa: E402
-from app.backtest.replay import _tod_bucket, _mod  # noqa: E402
+from app.autoscalp.aggregator import CandleAggregator
+from app.backtest.replay import _mod, _tod_bucket
+from app.engines.regime_mtf import detect_regime
+from app.engines.sr_engine import compute_sr
+from app.engines.state_classifier import classify
 
 DATA_FILE = (Path(__file__).parents[1] / "data" / "historical" / "upstox_v3_validation" /
              "raw_futures_windows_NATURALGAS_FUT_25_SEP_26_2026-09-10.json.gz")
@@ -118,10 +118,8 @@ def _simulate_outcome(direction: str, entry: float, atr: float, future_5m: list[
         for px in (bar["o"], bar["h"], bar["l"], bar["c"]) if sign == 1 else (bar["o"], bar["l"], bar["h"], bar["c"]):
             fav = sign * (px - entry)
             adv = -fav
-            if fav > mfe:
-                mfe = fav
-            if adv > mae:
-                mae = adv
+            mfe = max(mfe, fav)
+            mae = max(mae, adv)
 
             hit_sl = (sign == 1 and px <= sl) or (sign == -1 and px >= sl)
             hit_t1 = (sign == 1 and px >= t1) or (sign == -1 and px <= t1)

@@ -80,7 +80,7 @@ def _f(v):
     return f
 
 
-def _minute_of_day(ts: str) -> Optional[int]:
+def _minute_of_day(ts: str) -> int | None:
     """IST minute-of-day from a naive 'YYYY-MM-DDTHH:MM:SS[.ffffff]' string.
     The source stores IST wall-clock with no timezone."""
     try:
@@ -90,7 +90,7 @@ def _minute_of_day(ts: str) -> Optional[int]:
     return dt.hour * 60 + dt.minute
 
 
-def _bucket_start(ts: str, tf_min: int) -> Optional[str]:
+def _bucket_start(ts: str, tf_min: int) -> str | None:
     """Floor a timestamp to the start of its `tf_min` bucket (IST wall-clock),
     returned as an ISO 'YYYY-MM-DDTHH:MM:00' string."""
     try:

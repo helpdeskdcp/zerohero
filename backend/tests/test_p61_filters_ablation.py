@@ -7,8 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.engines import scalp_strategy as ss
 from app.backtest import runner as bt
+from app.engines import scalp_strategy as ss
 from tests.test_calibration_backtest import _DDL, _synth_day  # reuse the synth history
 
 

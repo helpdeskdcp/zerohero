@@ -9,11 +9,14 @@ and "accepted != filled" stays provisional until confirmed.
 from datetime import datetime, timezone
 
 from app.execution import OrderManager
-from app.execution.reconciler import Reconciler
-from app.execution.paper_broker import PaperBroker
 from app.execution.broker_base import (
-    BrokerBase, OrderStatusResult, PositionSnapshot, OStatus,
+    BrokerBase,
+    OrderStatusResult,
+    OStatus,
+    PositionSnapshot,
 )
+from app.execution.paper_broker import PaperBroker
+from app.execution.reconciler import Reconciler
 from app.execution.staleness import Clocks
 
 

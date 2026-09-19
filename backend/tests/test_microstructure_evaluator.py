@@ -8,11 +8,10 @@ existing orderflow tests.
 import sys
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.microstructure import evaluator  # noqa: E402
-from app.optionchain.analytics import MaxPain, OiWalls, Pcr  # noqa: E402
+from app.microstructure import evaluator
+from app.optionchain.analytics import MaxPain, OiWalls, Pcr
 
 
 def _fake_h1h7(events):

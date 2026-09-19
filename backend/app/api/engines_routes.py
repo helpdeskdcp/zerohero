@@ -10,9 +10,9 @@ import logging
 from fastapi import APIRouter
 
 from .. import runtime
-from ..engines.signal_engine import run_signal_engine
 from ..engines.oi_options_engine import run_oi_options_engine
 from ..engines.risk_engine import run_risk_engine
+from ..engines.signal_engine import run_signal_engine
 from ..orchestrator import run_pipeline
 from .schemas import SignalRequest
 

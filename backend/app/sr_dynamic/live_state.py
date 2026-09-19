@@ -23,10 +23,10 @@ field in this v1.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 from ..engines.sr_engine import _atr, _bars
-from .engine import compute_dynamic_sr, DEFAULT_CONFIG
+from .engine import DEFAULT_CONFIG, compute_dynamic_sr
 from .visits import latest_touch_state
 
 MODEL_VERSION = "sr-live-v1"

@@ -79,7 +79,8 @@ def _load_kaggle_nifty():
     global _KAGGLE_NIFTY_CACHE
     if _KAGGLE_NIFTY_CACHE is not None:
         return _KAGGLE_NIFTY_CACHE
-    from datetime import datetime, time as _t
+    from datetime import datetime
+    from datetime import time as _t
     out: dict = {}
     with KAGGLE_NIFTY_CSV.open() as f:
         for r in _csv.DictReader(f):
@@ -459,7 +460,7 @@ def report(rows, out, source):
                 p(f"    {nm:<10} {'0':>8}")
                 continue
             p(f"    {nm:<10} {m['n']:>8} {m['win_rate']*100:>6.1f}% {m['expectancy']:>8.3f} "
-              f"{str(m['profit_factor']):>7} {m['net_R']:>9.2f} {m['max_DD_R']:>9.2f} {m['max_consec_losses']:>6}")
+              f"{m['profit_factor']!s:>7} {m['net_R']:>9.2f} {m['max_DD_R']:>9.2f} {m['max_consec_losses']:>6}")
 
     p("\n" + "-" * 104)
     p("[4] CHRONOLOGICAL SPLIT  (per-symbol date rank: TRAIN 0-45% / VALIDATION 45-65% / OOS 65-82% / HOLDOUT 82-100%)")

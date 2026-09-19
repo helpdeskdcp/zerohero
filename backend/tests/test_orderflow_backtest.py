@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import app.orderflow.backtest as BT   # noqa: E402
+import app.orderflow.backtest as BT
 
 
 def _leg(side, entry, stop, target, status):

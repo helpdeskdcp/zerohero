@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep import probability as prob  # noqa: E402
+from app.liquidity_sweep import probability as prob
 
 
 def _bar(h, l):

@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.model_check import run_leakage_safe_model_check  # noqa: E402
+from app.liquidity_sweep.model_check import run_leakage_safe_model_check
 
 
 @dataclass

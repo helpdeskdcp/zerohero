@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.orderflow import smart_money as SM   # noqa: E402
+from app.orderflow import smart_money as SM
 
 
 def _bar(bs, o, h, l, c, v):
@@ -382,7 +382,9 @@ def test_higher_volume_mult_filters_out_marginal_spikes():
 def _fresh_db(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "t.db"))
-    import importlib, app.db as db
+    import importlib
+
+    import app.db as db
     importlib.reload(db)
     db.init_db()
     return db
@@ -402,6 +404,7 @@ def _broken_out_result():
 def test_notify_only_sends_broken_out_setups_and_dedupes(monkeypatch):
     _fresh_db(monkeypatch)
     import importlib
+
     import app.orderflow.notify as notify
     importlib.reload(notify)
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)   # -> no real send, dry marking
@@ -427,6 +430,7 @@ def test_notify_routes_through_canonical_dispatcher_when_configured(monkeypatch)
     app.connectors.telegram._send directly."""
     _fresh_db(monkeypatch)
     import importlib
+
     import app.orderflow.notify as notify
     importlib.reload(notify)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
@@ -450,7 +454,9 @@ def test_notify_routes_through_canonical_dispatcher_when_configured(monkeypatch)
 
 def test_notify_skips_when_status_not_ok(monkeypatch):
     _fresh_db(monkeypatch)
-    import importlib, app.orderflow.notify as notify
+    import importlib
+
+    import app.orderflow.notify as notify
     importlib.reload(notify)
     r = notify.push_new_signals("NIFTY", "2026-09-05", {"status": "NO_DATA"})
     assert r["sent"] == 0 and r.get("skipped_status") == "NO_DATA"
@@ -460,11 +466,13 @@ def test_notify_suppresses_stale_backlog_but_marks_handled(monkeypatch):
     """A breakout from hours ago must NOT be sent (not actionable) but must be
     marked so a later run doesn't fire it either."""
     _fresh_db(monkeypatch)
-    import importlib, app.orderflow.notify as notify
+    import importlib
+
+    import app.orderflow.notify as notify
     importlib.reload(notify)
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
 
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
     old = (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat()
     recent = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
 

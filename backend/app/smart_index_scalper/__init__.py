@@ -7,17 +7,37 @@ layer ranks the configured index universe and emits a candidate signal; it does
 NOT open a paper position (slice 3 = option selection + profile filter over the
 existing autoscalp.safeguards + paper_trading).
 """
-from .scanner import ENGINE_NAME, SmartIndexScalper
-from .universe import DEFAULT_UNIVERSE, index_meta, resolve_universe
-from . import (eligibility, selection_score, option_selector, profiles,
-               state_machine, journal, historical_context, replay_metrics)
+from . import (
+               eligibility,
+               historical_context,
+               journal,
+               option_selector,
+               profiles,
+               replay_metrics,
+               selection_score,
+               state_machine,
+)
 from .paper_engine import SmartScalperPaperEngine
 from .replay import SmartScalperReplay
+from .scanner import ENGINE_NAME, SmartIndexScalper
 from .scheduler import SmartScalperScheduler
+from .universe import DEFAULT_UNIVERSE, index_meta, resolve_universe
 
 __all__ = [
-    "SmartIndexScalper", "ENGINE_NAME", "DEFAULT_UNIVERSE",
-    "index_meta", "resolve_universe", "eligibility", "selection_score",
-    "option_selector", "profiles", "state_machine", "journal", "SmartScalperPaperEngine",
-    "historical_context", "replay_metrics", "SmartScalperReplay", "SmartScalperScheduler",
+               "DEFAULT_UNIVERSE",
+               "ENGINE_NAME",
+               "SmartIndexScalper",
+               "SmartScalperPaperEngine",
+               "SmartScalperReplay",
+               "SmartScalperScheduler",
+               "eligibility",
+               "historical_context",
+               "index_meta",
+               "journal",
+               "option_selector",
+               "profiles",
+               "replay_metrics",
+               "resolve_universe",
+               "selection_score",
+               "state_machine",
 ]

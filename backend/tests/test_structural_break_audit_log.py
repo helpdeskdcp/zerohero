@@ -9,8 +9,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.audit_log import StructuralBreakAuditLog  # noqa: E402
-from app.structural_break.break_score import StructuralBreakStateMachine  # noqa: E402
+from app.structural_break.audit_log import StructuralBreakAuditLog
+from app.structural_break.break_score import StructuralBreakStateMachine
 
 
 @pytest.fixture

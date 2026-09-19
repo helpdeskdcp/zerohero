@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.strikes import rank_strikes  # noqa: E402
+from app.liquidity_sweep.strikes import rank_strikes
 
 
 def _leg(strike, delta, ltp=100.0, bid=99.0, ask=101.0, volume=5000, oi=50000):

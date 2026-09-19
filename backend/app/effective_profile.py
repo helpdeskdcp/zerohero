@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .instrument_profiles import get_instrument_profile, _BASE
+from .instrument_profiles import _BASE, get_instrument_profile
 from .regime_profiles import get_regime_profile
 
 

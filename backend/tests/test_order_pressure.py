@@ -14,13 +14,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.research_engines.order_pressure import formulas as F      # noqa: E402
-from app.research_engines.order_pressure import series as S        # noqa: E402
-from app.research_engines.order_pressure import labels as LB       # noqa: E402
-from app.research_engines.order_pressure import features as FE     # noqa: E402
-from app.research_engines.order_pressure import models as M        # noqa: E402
-from app.research_engines.order_pressure import walkforward as WF  # noqa: E402
-from app.research_engines.order_pressure.config import merged      # noqa: E402
+from app.research_engines.order_pressure import features as FE
+from app.research_engines.order_pressure import formulas as F
+from app.research_engines.order_pressure import labels as LB
+from app.research_engines.order_pressure import models as M
+from app.research_engines.order_pressure import series as S
+from app.research_engines.order_pressure import walkforward as WF
+from app.research_engines.order_pressure.config import merged
 
 CFG = merged()
 

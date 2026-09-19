@@ -4,9 +4,8 @@ selection, and SENSEX contamination classification. All pure/deterministic
 
 from app import instrument_profiles as ip
 from app import regime_profiles as rp
-from app.effective_profile import select_effective_profile
 from app.autoscalp import trade_contamination as tc
-
+from app.effective_profile import select_effective_profile
 
 # ---------------------------------------------------------------- instrument profiles
 

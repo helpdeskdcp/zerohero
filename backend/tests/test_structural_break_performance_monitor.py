@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.performance_monitor import PerformanceMonitor  # noqa: E402
+from app.structural_break.performance_monitor import PerformanceMonitor
 
 
 def _seed(db, n, *, win_rate=0.5, symbol="NIFTY", regime="TRENDING_UP",

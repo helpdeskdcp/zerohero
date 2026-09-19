@@ -6,8 +6,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.mtf_config import MTFConfig  # noqa: E402
-from app.strategy_mtf.target_stop import build_plan, initial_trail_state, update_trailing  # noqa: E402
+from app.strategy_mtf.mtf_config import MTFConfig
+from app.strategy_mtf.target_stop import (
+    build_plan,
+    initial_trail_state,
+    update_trailing,
+)
 
 
 def _bar(o, h, l, c, v=1000):

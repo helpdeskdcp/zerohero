@@ -18,7 +18,7 @@ from typing import Optional
 _log = logging.getLogger(__name__)
 
 
-def _parse(ts) -> Optional[datetime]:
+def _parse(ts) -> datetime | None:
     if ts is None:
         return None
     if isinstance(ts, (int, float)):
@@ -35,7 +35,7 @@ def _parse(ts) -> Optional[datetime]:
         return None
 
 
-def age_sec(ts, now: Optional[datetime] = None) -> Optional[float]:
+def age_sec(ts, now: datetime | None = None) -> float | None:
     d = _parse(ts)
     if d is None:
         return None
@@ -45,13 +45,13 @@ def age_sec(ts, now: Optional[datetime] = None) -> Optional[float]:
 
 @dataclass
 class Clocks:
-    signal_ts: Optional[str] = None
-    market_data_ts: Optional[str] = None          # age of the LTP we'd act on
-    order_submit_ts: Optional[str] = None
-    order_fill_ts: Optional[str] = None
-    last_broker_confirm_ts: Optional[str] = None  # last successful order-status read
-    last_position_sync_ts: Optional[str] = None
-    last_reconcile_ts: Optional[str] = None
+    signal_ts: str | None = None
+    market_data_ts: str | None = None          # age of the LTP we'd act on
+    order_submit_ts: str | None = None
+    order_fill_ts: str | None = None
+    last_broker_confirm_ts: str | None = None  # last successful order-status read
+    last_position_sync_ts: str | None = None
+    last_reconcile_ts: str | None = None
 
     def ages(self, now=None) -> dict:
         return {k: age_sec(v, now) for k, v in self.__dict__.items()}

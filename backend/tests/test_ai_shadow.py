@@ -2,8 +2,8 @@
 Real DB writes (fresh_db, isolated), mocked AI calls only -- no network."""
 import json
 
-from app.ai import shadow as sh
 from app.ai import openrouter_client as oc
+from app.ai import shadow as sh
 
 
 def _sig(**over):

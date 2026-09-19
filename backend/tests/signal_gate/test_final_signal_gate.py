@@ -1,8 +1,15 @@
 """Final high-confidence single-signal gate: APPROVED/WAIT/REJECT/DUPLICATE/
 COOLDOWN, confidence scoring, and historical-confidence labeling."""
 from app.signal_gate.final_signal_gate import (
-    evaluate_final_signal, signal_fingerprint, APPROVED, WAIT, REJECT, DUPLICATE, COOLDOWN,
-    _LAST_APPROVED, _ACTIVE_SIGNAL,
+    _ACTIVE_SIGNAL,
+    _LAST_APPROVED,
+    APPROVED,
+    COOLDOWN,
+    DUPLICATE,
+    REJECT,
+    WAIT,
+    evaluate_final_signal,
+    signal_fingerprint,
 )
 
 

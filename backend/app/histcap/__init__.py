@@ -28,4 +28,4 @@ Nothing in this package imports or calls trading/signal logic.
 from .store import HistStore, hist_store
 from .worker import CaptureWorker
 
-__all__ = ["HistStore", "hist_store", "CaptureWorker"]
+__all__ = ["CaptureWorker", "HistStore", "hist_store"]

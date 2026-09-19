@@ -12,8 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.engines import scalp_strategy as ss  # noqa: E402
-
+from app.engines import scalp_strategy as ss
 
 # --------------------------------------------------------------------------- #
 #  _chain_bias -- pure classifier                                              #

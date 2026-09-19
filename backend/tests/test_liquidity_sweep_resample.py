@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.resample import resample_bars, resample_daily  # noqa: E402
+from app.liquidity_sweep.resample import resample_bars, resample_daily
 
 
 def _bar(t, o, h, l, c, v=1000):

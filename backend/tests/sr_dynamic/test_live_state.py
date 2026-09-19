@@ -1,6 +1,11 @@
 """Live-wiring spec section 2-3 + test list item 11 (nearest support/
 resistance selection)."""
-from app.sr_dynamic.live_state import compute_live_sr_state, refresh_and_store, get_latest, _LATEST
+from app.sr_dynamic.live_state import (
+    _LATEST,
+    compute_live_sr_state,
+    get_latest,
+    refresh_and_store,
+)
 from tests.sr_dynamic.test_engine import _bars_with_a_support_zone
 
 

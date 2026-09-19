@@ -14,15 +14,15 @@ import base64
 import hmac
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-from . import db
-from . import runtime
+from . import db, runtime
 
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = APP_ROOT / "frontend"
@@ -112,16 +112,18 @@ async def _auth_gate(request, call_next):
     return await call_next(request)
 
 
-@app.on_event("startup")
-def _startup():
-    db.init_db()
-
-
 # ---------------------------------------------------------------- route modules
-from .api import (   # noqa: E402
-    engines_routes, instruments_routes, analysis_routes, scalp_routes,
-    execution_routes, monitor_routes, autoscalp_routes, positions_routes,
-    data_routes, system_routes,
+from .api import (
+    analysis_routes,
+    autoscalp_routes,
+    data_routes,
+    engines_routes,
+    execution_routes,
+    instruments_routes,
+    monitor_routes,
+    positions_routes,
+    scalp_routes,
+    system_routes,
 )
 
 for _mod in (engines_routes, instruments_routes, analysis_routes, scalp_routes,
@@ -134,7 +136,11 @@ for _mod in (engines_routes, instruments_routes, analysis_routes, scalp_routes,
 # than going through HTTP). Keep them reachable under their old home so those
 # tests need no changes -- the definitions themselves now live in app/runtime
 # and app/api/*.
-from .api.schemas import SignalRequest, LevelsRequest, TrackPositionRequest  # noqa: E402,F401
+from .api.schemas import (
+    LevelsRequest,
+    SignalRequest,
+    TrackPositionRequest,
+)
 
 _label_marks = runtime._label_marks
 _compact = runtime._compact
@@ -163,8 +169,8 @@ api_autoscalp_disarm = autoscalp_routes.api_autoscalp_disarm
 
 # ---- historical market-data capture (standalone; own DB, no WS, no trading logic) ----
 try:
-    from .histcap.worker import CaptureWorker as _CaptureWorker
     from .histcap import api as _histcap_api
+    from .histcap.worker import CaptureWorker as _CaptureWorker
     histcap_worker = _CaptureWorker()
     _histcap_api.bind_worker(histcap_worker)
     app.include_router(_histcap_api.router)
@@ -308,8 +314,9 @@ except Exception as _e:
     print(f"[smart_index_scalper] scheduler disabled: {type(_e).__name__}: {_e}")
 
 
-@app.on_event("startup")
-async def _start_scalp_runner():
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    db.init_db()
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:
@@ -328,9 +335,8 @@ async def _start_scalp_runner():
         except Exception as e:
             print(f"[smart_scalper_scheduler] start failed: {type(e).__name__}: {e}")
 
+    yield
 
-@app.on_event("shutdown")
-async def _stop_scalp_runner():
     await runtime.scalp_runner.stop()
     await runtime.autoscalp.stop()
     if histcap_worker is not None:
@@ -348,6 +354,13 @@ async def _stop_scalp_runner():
             await smart_scalper_scheduler.stop()
         except Exception:
             pass
+
+
+# Registered post-hoc (not via FastAPI(lifespan=...)) because this context
+# manager closes over histcap_worker/l2_capture_worker/smart_scalper_scheduler,
+# which are only defined after `app` is constructed and the route modules
+# above are imported.
+app.router.lifespan_context = _lifespan
 
 
 @app.websocket("/ws")

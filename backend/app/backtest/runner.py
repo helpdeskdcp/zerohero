@@ -18,10 +18,10 @@ import json
 from collections import defaultdict
 from statistics import mean
 
+from ..engines.scalp_strategy import decide_from_context
 from . import calibration
 from . import oi_history_adapter as ad
-from .replay import ReplayHarness, ReplayContext, _mod, _tod_bucket
-from ..engines.scalp_strategy import decide_from_context
+from .replay import ReplayContext, ReplayHarness, _mod, _tod_bucket
 
 _LEG_TFS = ("1m", "3m", "5m", "15m", "30m")
 

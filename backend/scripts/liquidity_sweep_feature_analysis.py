@@ -27,7 +27,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.liquidity_sweep import backtest, feature_analysis, model_check  # noqa: E402
+from app.liquidity_sweep import backtest, feature_analysis, model_check
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(BACKEND_DIR, "data", "research", "liquidity_sweep")
@@ -124,7 +124,7 @@ def main():
     lines.append("")
     lines.append("## Dataset")
     lines.append("")
-    lines.append(f"- Real Kaggle NIFTY 5m OHLC, 2-year window (same as the original Stage 1 backtest)")
+    lines.append("- Real Kaggle NIFTY 5m OHLC, 2-year window (same as the original Stage 1 backtest)")
     lines.append(f"- Bars walked: {len(bars)}")
     lines.append(f"- Signals captured with full feature set: **{report['n_total_signals']}**")
     lines.append(f"- WIN: {report['n_win']} | LOSS: {report['n_loss']} | TIMEOUT (excluded from "

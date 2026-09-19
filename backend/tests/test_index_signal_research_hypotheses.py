@@ -12,9 +12,15 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.index_signal_research.hypotheses import (  # noqa: E402
-    HYPOTHESES, hyp_a_trend_continuation, hyp_b_breakout, hyp_c_mean_reversion,
-    hyp_d_pullback_in_trend, hyp_e_opening_range, hyp_f_volatility_expansion, hyp_g_mtf_structure,
+from app.index_signal_research.hypotheses import (
+    HYPOTHESES,
+    hyp_a_trend_continuation,
+    hyp_b_breakout,
+    hyp_c_mean_reversion,
+    hyp_d_pullback_in_trend,
+    hyp_e_opening_range,
+    hyp_f_volatility_expansion,
+    hyp_g_mtf_structure,
 )
 
 

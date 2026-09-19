@@ -11,8 +11,11 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.index_signal_research.evaluate import (  # noqa: E402
-    BONFERRONI_ALPHA, N_HYPOTHESES_TESTED, chronological_split, evaluate_hypothesis,
+from app.index_signal_research.evaluate import (
+    BONFERRONI_ALPHA,
+    N_HYPOTHESES_TESTED,
+    chronological_split,
+    evaluate_hypothesis,
 )
 
 

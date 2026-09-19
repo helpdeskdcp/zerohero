@@ -14,10 +14,10 @@ from datetime import datetime, timezone
 
 from .. import db
 from ..behavior_engine import analyze_behavior
-from . import openrouter_client as _client
 from . import behavior_ai
 from . import fusion as _fusion
 from . import metrics as _metrics
+from . import openrouter_client as _client
 
 _log = logging.getLogger("chanakya.ai.shadow")
 

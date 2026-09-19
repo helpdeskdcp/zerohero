@@ -10,8 +10,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.l2capture.snapquote import (  # noqa: E402
-    parse_snapquote, build_snapquote_packet, SNAPQUOTE_PACKET, SNAPQUOTE_MODE)
+from app.l2capture.snapquote import (
+    SNAPQUOTE_MODE,
+    SNAPQUOTE_PACKET,
+    build_snapquote_packet,
+    parse_snapquote,
+)
 
 _DEPTH = {
     "buy": [{"price": 100.1, "quantity": 300, "orders": 3},

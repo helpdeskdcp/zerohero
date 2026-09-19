@@ -30,7 +30,7 @@ import sqlite3
 import statistics
 from datetime import datetime, timezone
 
-from ..chain import OptionChain, StrikeRow, OptionLeg
+from ..chain import OptionChain, OptionLeg, StrikeRow
 
 try:
     from ...histcap.store import DB_PATH as _HIST_DB

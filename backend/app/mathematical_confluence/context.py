@@ -25,6 +25,7 @@ _MKT = {"SENSEX": "BSE", "BANKEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"
 # scan can only bridge the gap if the TTL outlasts one scan + its poll interval,
 # hence the 45s default (research/analysis surface — NOT the execution path).
 import os as _os
+
 _CACHE: dict[str, tuple[float, dict]] = {}
 _TTL_SEC = max(2.0, float(_os.environ.get("CHANAKYA_MATH_CTX_TTL_SEC", "12")))
 _STALE_MAX_SEC = 300.0   # how long a last-good context may be served if a live fetch fails
@@ -88,6 +89,7 @@ def _spot_from_histcap(symbol: str, max_age_sec: float = 180.0) -> dict | None:
     {ltp, open, high, low} or None if nothing recent enough."""
     try:
         import sqlite3
+
         from ..histcap.store import DB_PATH as _HDB
         with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
             c.row_factory = sqlite3.Row
@@ -111,6 +113,7 @@ def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
     a broker-free fallback when the live daily-candle call fails."""
     try:
         import sqlite3
+
         from ..histcap.store import DB_PATH as _HDB
         with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
             c.row_factory = sqlite3.Row

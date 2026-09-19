@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge.conditional_edge import (  # noqa: E402
+from app.institutional_edge.conditional_edge import (
     conditional_edge,
 )
 

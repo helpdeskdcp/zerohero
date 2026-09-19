@@ -12,11 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.research_engines.trend_swing import data as D           # noqa: E402
-from app.research_engines.trend_swing import engine as E         # noqa: E402
-from app.research_engines.trend_swing import harness as HN       # noqa: E402
-from app.research_engines.trend_swing import backtest as B       # noqa: E402
-from app.research_engines.trend_swing.config import merged       # noqa: E402
+from app.research_engines.trend_swing import backtest as B
+from app.research_engines.trend_swing import data as D
+from app.research_engines.trend_swing import engine as E
+from app.research_engines.trend_swing import harness as HN
+from app.research_engines.trend_swing.config import merged
 
 CFG = merged()
 

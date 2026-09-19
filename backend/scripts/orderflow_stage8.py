@@ -286,7 +286,7 @@ def run(sym, sessions, ev, out):
     m = fmetrics(g)
     if m["n"]:
         p(f"    n={m['n']}  med_MFE_R={m['med_MFE_R']}  med_MAE_R={m['med_MAE_R']}  p95_MAE_R={m['p95_MAE_R']}")
-        p(f"    P(MFE>=kR): " + "  ".join(f"{k}R={pk*100:.0f}%" for k, pk in
+        p("    P(MFE>=kR): " + "  ".join(f"{k}R={pk*100:.0f}%" for k, pk in
           ((1, m.get('P2R', 0)), (2, m['P2R']), (3, m['P3R']), (5, m['P5R']), (8, m['P8R']))))
         p(f"    E[fixed target]: 1R={m['E1R']}  2R={m['E2R']}  3R={m['E3R']}")
 
@@ -352,7 +352,7 @@ def main():
         p("=" * 118)
         p(f"  {'SYM':<9} {'X':>6} {'stable?':>8} | " + "  ".join(f"{s} E2R(n)" for s in SPL))
         for sym, d in per.items():
-            row = f"  {sym:<9} {d['X']:>6.2f} {str(d['stable']):>8} | "
+            row = f"  {sym:<9} {d['X']:>6.2f} {d['stable']!s:>8} | "
             for spl in SPL:
                 m = d["tvo"].get(spl, {})
                 row += f"{m.get('E2R') if m.get('n') else 'n0'}(n{m.get('n',0)})  "

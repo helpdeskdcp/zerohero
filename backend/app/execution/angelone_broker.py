@@ -23,10 +23,18 @@ import os
 
 from ..connectors import angelone, angelone_orders
 from .broker_base import (
-    BrokerBase, LiveDisabled, OrderReq, OrderAck, OrderStatusResult,
-    PositionSnapshot, BrokerPosition, OrderType, OStatus, map_broker_status,
+    BrokerBase,
+    BrokerPosition,
+    LiveDisabled,
+    OrderAck,
+    OrderReq,
+    OrderStatusResult,
+    OrderType,
+    OStatus,
+    PositionSnapshot,
+    map_broker_status,
 )
-from .ratelimit import TokenBucket, CircuitBreaker, call_with_retry
+from .ratelimit import CircuitBreaker, TokenBucket, call_with_retry
 
 _ORDER_TYPE_MAP = {
     OrderType.MARKET: "MARKET",
@@ -194,7 +202,7 @@ class AngelOneBroker(BrokerBase):
                                                 ordertag=client_tag)
         try:
             res = call_with_retry(_do, retries=self._read_retries)
-        except Exception as e:                       # noqa: BLE001
+        except Exception as e:
             return OrderStatusResult(status=OStatus.UNKNOWN, text=f"{type(e).__name__}: {e}")
         if res.get("status") != "OK":
             return OrderStatusResult(status=OStatus.UNKNOWN, text=res.get("status") or "lookup failed")

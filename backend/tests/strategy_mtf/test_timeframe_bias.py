@@ -9,7 +9,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.timeframe_bias import BULLISH, BEARISH, NEUTRAL, compute_bias  # noqa: E402
+from app.strategy_mtf.timeframe_bias import (
+    BEARISH,
+    BULLISH,
+    NEUTRAL,
+    compute_bias,
+)
 
 
 def _bar(i, c, start=datetime.datetime(2020, 1, 1, 3, 45), v=1000):

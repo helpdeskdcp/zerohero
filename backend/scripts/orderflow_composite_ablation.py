@@ -56,9 +56,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import market_hub
-from app.orderflow.smart_money import _clean
 from app.orderflow import premium_walk as _pw
 from app.orderflow import profile as _prof
+from app.orderflow.smart_money import _clean
 
 RR = 3.0
 STOP_FRAC = 1.0
@@ -339,8 +339,8 @@ def main():
                             cxs = f"{comp_x:g}" if nc else "-"
                             print(f"{variant:<4}{spike_x:>4}{comp_lb:>3}{cxs:>5}{v:>4} {a['n']:>4}{a['sessions']:>4}"
                                   f"{a['win_rate']*100:>6.1f}%{a['avg_mfe']:>7}{a['avg_mae']:>7}"
-                                  f"{str(a['asym']):>6}{a['avg_pts']:>7}{a['net_pts']:>8}{a['expectancy']:>8}"
-                                  f"{str(a['profit_factor']):>7}{a['max_dd']:>8}")
+                                  f"{a['asym']!s:>6}{a['avg_pts']:>7}{a['net_pts']:>8}{a['expectancy']:>8}"
+                                  f"{a['profit_factor']!s:>7}{a['max_dd']:>8}")
                             score = ((a["asym"] or 0), a["expectancy"])
                             if a["n"] >= 6 and a["expectancy"] > 0 and (best is None or score > best[0]):
                                 best = (score, variant, spike_x, comp_lb, use_vol, a, tr, comp_x)

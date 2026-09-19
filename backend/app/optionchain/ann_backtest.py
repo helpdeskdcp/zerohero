@@ -26,10 +26,10 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 
-from .chain import OptionChain, StrikeRow, OptionLeg, expiry_phase
-from .structure import analyze as analyze_structure
+from .ann_confirm import DEFAULT_ANN_CFG, OcAnnConfirm, oc_feat
+from .chain import OptionChain, OptionLeg, StrikeRow, expiry_phase
 from .qualify import structure_direction
-from .ann_confirm import OcAnnConfirm, oc_feat, DEFAULT_ANN_CFG
+from .structure import analyze as analyze_structure
 
 _IST = timezone(timedelta(hours=5, minutes=30))
 

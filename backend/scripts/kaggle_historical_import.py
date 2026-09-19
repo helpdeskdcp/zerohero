@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import csv as _csv
 import sqlite3
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1] / "data" / "historical" / "kaggle"

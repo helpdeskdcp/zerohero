@@ -9,8 +9,8 @@ reconciles before it ever considers re-sending.
 """
 from __future__ import annotations
 
-import time
 import threading
+import time
 
 
 class TokenBucket:
@@ -101,7 +101,7 @@ def call_with_retry(fn, *, retries: int = 2, backoff_base: float = 0.4,
             last = res
             if not is_retryable(res) or attempt == retries:
                 return res
-        except Exception as e:                     # noqa: BLE001 — deliberately broad
+        except Exception as e:
             last = e
             if attempt == retries:
                 raise

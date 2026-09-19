@@ -100,7 +100,7 @@ def summary_line() -> str:
     cut = [r for r in post if r["symbol"] in HAIRCUT_SYMS]
     res = [r for r in cut if r["resolved"] and r["outcome"] in ("WIN", "LOSS", "FLAT")]
     m_pre = _agg(pre)
-    parts = [f"TRENDING_UP haircut monitor (m=0.80 non-NIFTY)",
+    parts = ["TRENDING_UP haircut monitor (m=0.80 non-NIFTY)",
              f"baseline: n={m_pre['n']} win={int(m_pre.get('win_rate',0)*100)}% "
              f"gap={m_pre.get('calib_gap_pp')}pp exp={m_pre.get('exp_points')}pts"]
     if not post:

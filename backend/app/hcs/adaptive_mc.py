@@ -32,12 +32,13 @@ import math
 import os
 import sqlite3
 
+# DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
+# read the live data/chanakya.db (reads here are mode=ro regardless).
+from app.db import _resolve_db_path as _resolve_db_path
+
 from . import adaptive as _adp
 from . import labels as _lab
 
-# DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
-# read the live data/chanakya.db (reads here are mode=ro regardless).
-from app.db import _resolve_db_path as _resolve_db_path  # noqa: E402
 _DB = _resolve_db_path()
 _STATE = os.path.join(os.path.dirname(_DB), "hcs_adaptive_mc_model.json")
 
@@ -148,7 +149,7 @@ class Isotonic:
         self.xs: list[float] = []            # block right-edges (sorted)
         self.ys: list[float] = []            # block values (non-decreasing)
 
-    def fit(self, pairs) -> "Isotonic":
+    def fit(self, pairs) -> Isotonic:
         pts = sorted(((float(p), float(y)) for p, y in pairs if p is not None),
                      key=lambda t: t[0])
         if not pts:
@@ -184,7 +185,7 @@ class Isotonic:
 class Bundle:
     """One fitted Tier-A model: the 3 heads + the isotonic layer + metadata."""
 
-    def __init__(self, mc: MultinomialLogit, win: "_adp.OnlineLogit",
+    def __init__(self, mc: MultinomialLogit, win: _adp.OnlineLogit,
                  iso: Isotonic, rr: Ridge, n_rows: int, through: str | None):
         self.mc, self.win, self.iso, self.rr = mc, win, iso, rr
         self.n_rows = n_rows

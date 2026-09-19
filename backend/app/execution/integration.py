@@ -53,5 +53,5 @@ def run_execution(contract: dict, req: dict, *, connector: dict | None = None):
             "state": state.to_dict(),
             "monitor": res.monitor.snapshot() if res.monitor else None,
         }
-    except Exception as e:                       # noqa: BLE001 — execution must never break a signal
+    except Exception as e:
         return {"enabled": True, "status": "ERROR", "error": f"{type(e).__name__}: {str(e)[:200]}"}

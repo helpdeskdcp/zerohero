@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 _STATES = ("STRONG_SELL", "SELL", "WEAK_SELL", "NO_TRADE", "WEAK_BUY", "BUY", "STRONG_BUY")
 
 

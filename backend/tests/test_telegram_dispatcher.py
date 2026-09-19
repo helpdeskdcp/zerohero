@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.telegram_dispatcher import TelegramDispatcher, dispatch  # noqa: E402
+from app.telegram_dispatcher import TelegramDispatcher, dispatch
 
 
 def _fake_sender():

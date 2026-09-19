@@ -16,11 +16,12 @@ from __future__ import annotations
 import sqlite3
 from collections import Counter
 
-from ..backtest import calibration as _cal
-
 # DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
 # read the live data/chanakya.db (reads here are mode=ro regardless).
-from app.db import _resolve_db_path as _resolve_db_path  # noqa: E402
+from app.db import _resolve_db_path as _resolve_db_path
+
+from ..backtest import calibration as _cal
+
 _DB = _resolve_db_path()
 
 

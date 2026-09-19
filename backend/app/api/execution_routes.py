@@ -9,8 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from .. import db
-from .. import runtime
+from .. import db, runtime
 from .schemas import KillSwitchRequest
 
 router = APIRouter()
@@ -32,7 +31,7 @@ def api_execution_status():
 
 
 @router.get("/api/execution/orders")
-def api_execution_orders(trade_id: Optional[str] = None, status: Optional[str] = None,
+def api_execution_orders(trade_id: str | None = None, status: str | None = None,
                          limit: int = Query(200, le=2000)):
     from ..execution import audit as _audit
     rows = db.list_broker_orders(trade_id=trade_id, status=status, limit=limit)
@@ -43,7 +42,7 @@ def api_execution_orders(trade_id: Optional[str] = None, status: Optional[str] =
 
 
 @router.get("/api/execution/events")
-def api_execution_events(trade_id: Optional[str] = None, limit: int = Query(300, le=3000)):
+def api_execution_events(trade_id: str | None = None, limit: int = Query(300, le=3000)):
     return {"events": db.list_order_events(trade_id=trade_id, limit=limit)}
 
 

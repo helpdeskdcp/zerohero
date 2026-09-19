@@ -8,7 +8,6 @@ Rolling lookbacks: 1, 2, 3, 5, 10 minutes.
 from __future__ import annotations
 
 
-
 def _slope(xs):
     """Least-squares slope of a short series vs index 0..n-1 (per step)."""
     n = len(xs)

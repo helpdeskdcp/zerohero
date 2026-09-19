@@ -43,7 +43,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts import orderflow_histsrc as HS
 from scripts.orderflow_stage3_validation import (
-    HSess, collect, hset_core, _split,
+    HSess,
+    _split,
+    collect,
+    hset_core,
 )
 
 OUT_WIN = 3

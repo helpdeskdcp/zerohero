@@ -153,7 +153,7 @@ def persistent_events(snaps, measure, thr, p_min):
         if side is not None and side == run_side:
             ratios.append(r)
             if (i - run_lo + 1) == p_min:                 # just reached persistence
-                dur = (snaps[i]["t"] - snaps[run_lo]["t"]).total_seconds()
+                dur = (s["t"] - snaps[run_lo]["t"]).total_seconds()
                 ev.append({"idx": i, "side": side, "n_snaps": p_min,
                            "ratio_mean": round(st.fmean(ratios), 3),
                            "ratio_at_confirm": round(r, 3),

@@ -42,6 +42,6 @@ def costs_known():
 
 
 @router.get("/history")
-def history(instrument: Optional[str] = None, condition: Optional[str] = None,
-            state: Optional[str] = None, limit: int = Query(200, le=2000)):
+def history(instrument: str | None = None, condition: str | None = None,
+            state: str | None = None, limit: int = Query(200, le=2000)):
     return {"evaluations": store().history(instrument, condition, state=state, limit=limit)}

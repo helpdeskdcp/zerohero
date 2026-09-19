@@ -14,7 +14,7 @@ import signal
 
 os.environ.setdefault("L2_CAPTURE_ENABLED", "1")
 
-from .worker import L2CaptureWorker  # noqa: E402
+from .worker import L2CaptureWorker
 
 
 async def _main():

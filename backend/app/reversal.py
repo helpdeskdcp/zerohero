@@ -14,7 +14,11 @@ can be acted on directly (as an options CE/PE pick).
 import math
 
 from .engines.signal_engine import (
-    _num, _round, _ema_series, _rsi, _atr,
+    _atr,
+    _ema_series,
+    _num,
+    _round,
+    _rsi,
 )
 
 

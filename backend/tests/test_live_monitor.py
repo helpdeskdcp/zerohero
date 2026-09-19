@@ -65,7 +65,7 @@ def test_monitor_stale_or_unavailable_quote_fails_closed(fresh_db, monkeypatch):
 
 
 def test_feed_freshness_boundary_and_stale_get_ltp():
-    from app.connectors.angel_ws import AngelMarketFeed, LTP_MAX_AGE_SEC, is_ltp_fresh
+    from app.connectors.angel_ws import LTP_MAX_AGE_SEC, AngelMarketFeed, is_ltp_fresh
 
     assert is_ltp_fresh(LTP_MAX_AGE_SEC)
     assert not is_ltp_fresh(LTP_MAX_AGE_SEC + 0.01)

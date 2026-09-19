@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.microstructure import api  # noqa: E402
+from app.microstructure import api
 
 
 def _fake_h1h7(events):

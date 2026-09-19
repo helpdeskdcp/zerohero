@@ -14,9 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import app.market_hub as market_hub   # noqa: E402
-import app.market_data as market_data  # noqa: E402
-import app.runtime as runtime          # noqa: E402
+import app.market_data as market_data
+import app.market_hub as market_hub
+import app.runtime as runtime
 
 
 # ---------------------------------------------------------------- get_chain()

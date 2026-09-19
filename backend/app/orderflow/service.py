@@ -15,10 +15,10 @@ import time
 
 from .. import market_hub
 from ..engines.signal_engine import _vwap
-from . import profile as _p
-from . import smart_money as _sm
 from . import backtest as _bt
 from . import h1h7_state as _h1h7
+from . import profile as _p
+from . import smart_money as _sm
 
 _CACHE: dict = {}
 _TTL = 30.0          # a completed session is immutable; today's grows slowly

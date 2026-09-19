@@ -10,8 +10,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.feature_analysis import (  # noqa: E402
-    analyze_categorical, analyze_continuous, analyze_features, cohens_d, cramers_v_and_p,
+from app.liquidity_sweep.feature_analysis import (
+    analyze_categorical,
+    analyze_continuous,
+    analyze_features,
+    cohens_d,
+    cramers_v_and_p,
 )
 
 

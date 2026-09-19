@@ -113,7 +113,7 @@ def self_check(runner) -> dict:
     bars_ready = {}
     for s, a in aggs.items():
         try:
-            n5 = len((a.snapshot(now_epoch=runner._now()).get("5m") or []))
+            n5 = len(a.snapshot(now_epoch=runner._now()).get("5m") or [])
         except Exception:
             n5 = 0
         bars_ready[s] = {"bars_5m": n5, "ready": n5 >= 20, "last_price": a.last_price}

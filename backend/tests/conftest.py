@@ -1,8 +1,8 @@
 """Shared test fixtures. Each test module gets a fresh throwaway SQLite file."""
 import os
 import sys
-import time
 import tempfile
+import time
 
 import pytest
 
@@ -171,6 +171,7 @@ def fresh_db(monkeypatch):
     monkeypatch.setenv("CHANAKYA_DB_PATH", path)
     # re-import db so module-level DB_PATH picks up the env
     import importlib
+
     from app import db as _db
     importlib.reload(_db)
     _db.init_db()

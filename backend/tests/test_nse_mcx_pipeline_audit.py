@@ -80,6 +80,7 @@ def test_read_only_quote_adapter_normalizes_oi_without_orders(monkeypatch):
 
 def test_dynamic_expiry_and_atm_resolver_uses_master(monkeypatch):
     from datetime import datetime, timedelta, timezone
+
     from app import instruments
     # relative future expiries so AUTO does not roll past a hard-coded past date
     e1 = (datetime.now(timezone.utc) + timedelta(days=6)).strftime("%d%b%Y").upper()
@@ -102,8 +103,9 @@ def test_auto_expiry_resolver_sorts_chronologically_not_lexically(monkeypatch):
     happened to trigger the bug on some calendar dates), this test
     constructs the day-of-month mismatch explicitly so it fails/passes
     deterministically regardless of what day it runs."""
-    from datetime import datetime, timezone
     import calendar
+    from datetime import datetime, timezone
+
     from app import instruments
 
     base = datetime.now(timezone.utc)

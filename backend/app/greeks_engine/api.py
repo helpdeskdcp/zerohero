@@ -16,13 +16,13 @@ def status():
 
 
 @router.get("/latest")
-def latest(underlying: str = "NIFTY", expiry: Optional[str] = None):
+def latest(underlying: str = "NIFTY", expiry: str | None = None):
     return greeks_engine().latest(underlying, expiry) or {"status": "NO_DATA"}
 
 
 @router.get("/exposure")
-def exposure(underlying: str = "NIFTY", expiry: Optional[str] = None,
-             as_of: Optional[str] = None, since: Optional[str] = None,
+def exposure(underlying: str = "NIFTY", expiry: str | None = None,
+             as_of: str | None = None, since: str | None = None,
              limit: int = Query(2000, le=20000)):
     """Look-ahead-safe history: as_of_ts <= as_of, oldest first."""
     return greeks_engine().history(underlying, expiry=expiry, as_of=as_of,

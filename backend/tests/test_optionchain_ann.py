@@ -14,8 +14,8 @@ import sqlite3
 
 import pytest
 
-from app.optionchain import ann_confirm as AC
 from app.optionchain import ann_backtest as BT
+from app.optionchain import ann_confirm as AC
 from app.optionchain.structure import OptionStructureState
 
 

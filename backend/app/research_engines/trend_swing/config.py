@@ -2,6 +2,7 @@
 is fitted on OOS or before the baseline result. Lookbacks are in TRADING DAYS.
 The E1 signal logic is exactly the intraday tri_compare E1, moved to daily."""
 from __future__ import annotations
+
 import copy
 
 DEFAULT_CONFIG: dict = {

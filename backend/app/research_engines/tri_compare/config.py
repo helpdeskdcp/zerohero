@@ -2,6 +2,7 @@
 harness block (data / cost / session / risk / splits); engine-specific blocks
 only change WHICH bar and WHICH direction to enter."""
 from __future__ import annotations
+
 import copy
 
 DEFAULT_CONFIG: dict = {

@@ -25,11 +25,11 @@ from . import data as D
 from . import features as FE
 from . import labels as LB
 from . import models as M
-from . import walkforward as WF
 from . import trade_mgmt as TM
+from . import walkforward as WF
 from .config import merged
-from .metrics import classification, trading
 from .formulas import atr
+from .metrics import classification, trading
 
 
 # --------------------------------------------------------------------------- regime

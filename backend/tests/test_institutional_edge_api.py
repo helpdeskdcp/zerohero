@@ -9,8 +9,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge import api, evaluator  # noqa: E402
-from app.institutional_edge.store import EdgeStore  # noqa: E402
+from app.institutional_edge import api, evaluator
+from app.institutional_edge.store import EdgeStore
 
 
 @pytest.fixture(autouse=True)

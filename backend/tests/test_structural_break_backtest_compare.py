@@ -7,7 +7,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.backtest_compare import compare_static_vs_adaptive  # noqa: E402
+from app.structural_break.backtest_compare import (
+    compare_static_vs_adaptive,
+)
 
 
 def _rows(n, *, win_rate=0.5, points_win=10.0, points_loss=-8.0, mfe_win=12.0,

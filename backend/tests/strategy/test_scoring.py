@@ -12,9 +12,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy.base_strategy import MarketFeatures, build_indicator_snapshot  # noqa: E402
-from app.strategy.config import StrategyConfig  # noqa: E402
-from app.strategy.scoring import bearish_conditions, bullish_conditions, weighted_score  # noqa: E402
+from app.strategy.base_strategy import (
+    MarketFeatures,
+    build_indicator_snapshot,
+)
+from app.strategy.config import StrategyConfig
+from app.strategy.scoring import (
+    bearish_conditions,
+    bullish_conditions,
+    weighted_score,
+)
 
 
 def _bar(i, o, h, l, c, v=1000):

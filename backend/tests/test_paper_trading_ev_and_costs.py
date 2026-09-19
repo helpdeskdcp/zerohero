@@ -4,8 +4,8 @@ Regression tests for ZEROHERO_TRADING_EDGE_VALIDATION_2026-09-19.md Phase C
 and the paper-trade lifecycle audit log). No strategy parameters (theta/IV
 weights, timeout, ATR multiples) were changed and none are tested here.
 """
-from app.engines import paper_trading as PT
 from app import db
+from app.engines import paper_trading as PT
 
 
 def _signal(**over):

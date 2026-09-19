@@ -19,7 +19,7 @@ from __future__ import annotations
 import math
 
 from .config import merged
-from .labels import CLASSES, CLASS_IDX
+from .labels import CLASS_IDX, CLASSES
 
 
 # --------------------------------------------------------------------------- util
@@ -136,7 +136,7 @@ class MultinomialLogit:
 
 # ------------------------------------------------------- GB stumps (OvR)  [ENH]
 class _Stump:
-    __slots__ = ("j", "thr", "lo", "hi")
+    __slots__ = ("hi", "j", "lo", "thr")
 
     def value(self, x):
         return self.lo if x[self.j] <= self.thr else self.hi

@@ -177,6 +177,7 @@ def test_replay_writes_nothing_to_paper_trades(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "app.db"))
     import importlib
+
     import app.db as db
     importlib.reload(db)
     db.init_db()

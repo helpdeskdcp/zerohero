@@ -24,16 +24,15 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from .broker_base import BrokerBase, LiveDisabled, OrderType, Leg, Side, OStatus
+from .broker_base import BrokerBase, Leg, LiveDisabled, OrderType, OStatus, Side
 
 _log = logging.getLogger(__name__)
-from .trade_state import TradeState
-from .trade_monitor import TradeMonitor, ExitDecision
-from .reconciler import Reconciler
+from . import audit, killswitch
 from . import idempotency as idem
-from . import audit
-from . import killswitch
+from .reconciler import Reconciler
 from .staleness import Clocks, assess
+from .trade_monitor import ExitDecision, TradeMonitor
+from .trade_state import TradeState
 
 
 def _now():
@@ -64,8 +63,8 @@ class SubmitResult:
     status: str                       # SUBMITTED|DUPLICATE_SUPPRESSED|AMBIGUOUS|REJECTED|
                                       # BLOCKED_KILLSWITCH|BLOCKED_RISK|BLOCKED_STALE|
                                       # BLOCKED_FROZEN|LIVE_DISABLED
-    state: Optional[TradeState] = None
-    monitor: Optional[TradeMonitor] = None
+    state: TradeState | None = None
+    monitor: TradeMonitor | None = None
     ack: object = None
     reasons: list = field(default_factory=list)
 
@@ -125,7 +124,7 @@ class OrderManager:
         self.risk_halt_reason = reason if active else ""
         audit.event(None, None, "RISK_HALT_ON" if active else "RISK_HALT_OFF", {"reason": reason})
 
-    def _entries_blocked(self, state: TradeState | None) -> Optional[SubmitResult]:
+    def _entries_blocked(self, state: TradeState | None) -> SubmitResult | None:
         if killswitch.is_active():
             return SubmitResult("BLOCKED_KILLSWITCH", state,
                                 reasons=[f"kill switch active: {killswitch.state().get('reason')}"])
@@ -208,7 +207,7 @@ class OrderManager:
         except LiveDisabled as e:
             audit.event(state.trade_id, entry_tag, "LIVE_DISABLED", {"error": str(e)})
             return SubmitResult("LIVE_DISABLED", state, reasons=[str(e)])
-        except Exception as e:                       # noqa: BLE001 — treat as ambiguous
+        except Exception as e:
             idem.mark_ambiguous(entry_tag, _AckLike(str(e)))
             audit.event(state.trade_id, entry_tag, "SUBMIT_EXCEPTION", {"error": str(e)[:200]})
             mon = self._start_monitor(state)         # still monitor — position may exist
@@ -281,7 +280,7 @@ class OrderManager:
         return {"placed": placed}
 
     # ---------------------------------------------------------------- monitor tick
-    def on_ltp(self, trade_id: str, ltp: float) -> Optional[ExitDecision]:
+    def on_ltp(self, trade_id: str, ltp: float) -> ExitDecision | None:
         mon = self.monitors.get(trade_id)
         state = self.states.get(trade_id)
         if not mon or mon.closed or state is None:
@@ -326,7 +325,7 @@ class OrderManager:
             self._alert("exit_signal", {"trade_id": state.trade_id, "reason": dec.reason,
                                         "price": dec.price, "note": "live disabled — alert only"})
             return SubmitResult("LIVE_DISABLED", state, reasons=[str(e)])
-        except Exception as e:                       # noqa: BLE001
+        except Exception as e:
             idem.mark_ambiguous(exit_tag, _AckLike(str(e)))
             return SubmitResult("AMBIGUOUS", state, reasons=[str(e)])
         if ack.ok:
@@ -341,7 +340,7 @@ class OrderManager:
                             reasons=[ack.error])
 
     # ---------------------------------------------------------------- reconcile
-    def reconcile(self, trade_id: str) -> Optional[object]:
+    def reconcile(self, trade_id: str) -> object | None:
         state = self.states.get(trade_id)
         if state is None:
             return None
@@ -402,7 +401,7 @@ class OrderManager:
         entry = next((l for l in legs if l["leg"] == Leg.ENTRY), legs[0])
         tgt = next((l for l in legs if l["leg"] == Leg.TARGET), None)
         sl = next((l for l in legs if l["leg"] == Leg.SL), None)
-        from .trade_state import TargetPlan, StopPlan
+        from .trade_state import StopPlan, TargetPlan
         st = TradeState(
             trade_id=trade_id, strategy="RECOVERED",
             symbol=entry.get("symbol") or "", symboltoken=str(entry.get("symboltoken") or ""),

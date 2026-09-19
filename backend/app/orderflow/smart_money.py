@@ -25,7 +25,7 @@ from statistics import mean
 from typing import Optional
 
 
-def _num(x) -> Optional[float]:
+def _num(x) -> float | None:
     try:
         f = float(x)
         return f if f == f and abs(f) != float("inf") else None
@@ -107,7 +107,7 @@ def _walk_outcome(bars_after: list, entry: float, stop: float, target: float,
     return {"status": "TRIGGERED", "resolved_bar": None, "exit_price": None, "points": 0.0}
 
 
-def _first_breakout_idx(bars_after: list, level: float, side: str) -> Optional[int]:
+def _first_breakout_idx(bars_after: list, level: float, side: str) -> int | None:
     for i, b in enumerate(bars_after):
         if side == "BUY" and b["h"] > level:
             return i

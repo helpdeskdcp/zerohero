@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.indicators import session_vwap, snapshot  # noqa: E402
+from app.liquidity_sweep.indicators import session_vwap, snapshot
 
 
 def _bar(t, o, h, l, c, v=1000):

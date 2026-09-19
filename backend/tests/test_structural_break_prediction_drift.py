@@ -8,7 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.prediction_drift import evaluate_prediction_drift  # noqa: E402
+from app.structural_break.prediction_drift import (
+    evaluate_prediction_drift,
+)
 
 random.seed(21)
 

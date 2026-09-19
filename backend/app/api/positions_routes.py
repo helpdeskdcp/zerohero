@@ -9,12 +9,15 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from .. import combos
-from .. import db
-from .. import instruments
-from .. import runtime
+from .. import combos, db, instruments, runtime
 from ..engines.paper_trading import close_trade, open_trade
-from .schemas import ComboLevelsRequest, ComboRequest, CloseTradeRequest, LevelsRequest, TrackPositionRequest
+from .schemas import (
+    CloseTradeRequest,
+    ComboLevelsRequest,
+    ComboRequest,
+    LevelsRequest,
+    TrackPositionRequest,
+)
 
 router = APIRouter()
 
@@ -111,7 +114,7 @@ async def api_track_position(req: TrackPositionRequest):
 
 
 @router.get("/api/positions")
-def api_positions(status: Optional[str] = None, limit: int = Query(200, le=2000)):
+def api_positions(status: str | None = None, limit: int = Query(200, le=2000)):
     return db.list_trades(status=status, limit=limit, strategy="MANUAL")
 
 

@@ -13,7 +13,10 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.index_signal_research.features import add_htf_bias, build_feature_frame  # noqa: E402
+from app.index_signal_research.features import (
+    add_htf_bias,
+    build_feature_frame,
+)
 
 
 def _bars(n, start="2026-01-05T03:45:00Z", freq="5min", price_fn=None):

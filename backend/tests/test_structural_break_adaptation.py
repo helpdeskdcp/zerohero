@@ -10,9 +10,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-import app.autoscalp.safeguards as _sg  # noqa: E402
-from app.autoscalp.safeguards import Safeguards  # noqa: E402
-from app.structural_break.adaptation import AdaptationTracker, apply_to_safeguards  # noqa: E402
+import app.autoscalp.safeguards as _sg
+from app.autoscalp.safeguards import Safeguards
+from app.structural_break.adaptation import (
+    AdaptationTracker,
+    apply_to_safeguards,
+)
 
 
 @pytest.fixture(autouse=True)

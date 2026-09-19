@@ -25,7 +25,7 @@ No network, no DB, no order path.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 from . import analytics as A
 from .chain import OptionChain
@@ -279,7 +279,7 @@ def _expiry_block(chain: OptionChain, st: OptionStructureState, notes: list) -> 
         for blk in (st.pcr_regime, st.oi_walls):
             if blk.get("status") == "ok":
                 blk["expiry_day_caveat"] = "front-series OI unwinding — treat as unreliable today"
-        notes.append(f"EXPIRY DAY (0 DTE) — front-series OI signals downgraded"
+        notes.append("EXPIRY DAY (0 DTE) — front-series OI signals downgraded"
                      + (f"; next expiry {ctx['next_expiry']}" if ctx.get("next_expiry") else ""))
     elif phase == "EXPIRED":
         ctx["oi_signal_reliability"] = "NONE"

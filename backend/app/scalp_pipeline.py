@@ -13,10 +13,10 @@ live_trading is hard-coded False. No broker order call exists in this file.
 """
 from datetime import datetime, timezone
 
-from .engines.scalp_engine import run_scalp_engine
-from .engines.risk_engine import run_risk_engine
-from .connectors import angelone
 from . import pipeline_core
+from .connectors import angelone
+from .engines.risk_engine import run_risk_engine
+from .engines.scalp_engine import run_scalp_engine
 
 
 def _signal_id():
@@ -61,8 +61,8 @@ def run_scalp_pipeline(req: dict) -> dict:
     tp = None
     if req.get("turning_point", True) and (conn.get("candles") or []):
         try:
-            from .engines.turning_point_engine import run_turning_point_engine
             from . import tp_calibration
+            from .engines.turning_point_engine import run_turning_point_engine
             tp = run_turning_point_engine({
                 "candles": conn.get("candles") or [],
                 "signal_calc": sig.get("calculations"),

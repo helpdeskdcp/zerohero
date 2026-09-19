@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from . import _entry
 
-
 _LONG_STATES = {"BOS_UP", "CHOCH_UP", "HH_HL"}
 _SHORT_STATES = {"BOS_DN", "CHOCH_DN", "LH_LL"}
 
@@ -81,7 +80,7 @@ def signals(frame: list[dict], bars: list[dict], cfg: dict, *,
         if direction == prev_dir and (i - last_fire_i) < cfg["cooldown_bars"]:
             continue
 
-        rk = round(min(100.0, 45.0 + (r.get("adx") or 0) * 0.6 + abs((rsi - 50.0)) * 0.4), 1)
+        rk = round(min(100.0, 45.0 + (r.get("adx") or 0) * 0.6 + abs(rsi - 50.0) * 0.4), 1)
         stage = _entry.two_stage(bars, frame, i, direction, rk, e, cfg)
         prev_dir, last_fire_i = direction, i
         if stage.get("status") != "ENTRY_READY":

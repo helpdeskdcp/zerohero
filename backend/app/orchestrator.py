@@ -12,12 +12,11 @@ import os
 import time
 from datetime import datetime, timezone
 
-from .engines.signal_engine import run_signal_engine
+from . import instruments, pipeline_core
+from .connectors import angelone
 from .engines.oi_options_engine import run_oi_options_engine
 from .engines.risk_engine import run_risk_engine
-from .connectors import angelone
-from . import pipeline_core
-from . import instruments
+from .engines.signal_engine import run_signal_engine
 
 
 def _signal_id():
@@ -95,8 +94,8 @@ def run_pipeline(req: dict) -> dict:
     tp = None
     if (req.get("signal_config") or {}).get("turning_point", True) and (conn.get("candles") or []):
         try:
-            from .engines.turning_point_engine import run_turning_point_engine
             from . import tp_calibration
+            from .engines.turning_point_engine import run_turning_point_engine
             tp = run_turning_point_engine({
                 "candles": conn.get("candles") or [],
                 "signal_calc": sig.get("calculations"),

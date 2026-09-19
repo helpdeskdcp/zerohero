@@ -12,15 +12,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.research_engines.tri_compare import features as FE       # noqa: E402
-from app.research_engines.tri_compare import engine_trend as E1    # noqa: E402
-from app.research_engines.tri_compare import engine_structure as E2  # noqa: E402
-from app.research_engines.tri_compare import engine_hybrid as E3    # noqa: E402
-from app.research_engines.tri_compare import harness as H          # noqa: E402
-from app.research_engines.tri_compare import metrics as M          # noqa: E402
-from app.research_engines.tri_compare.ann_layer import AnnConfirm, _feat  # noqa: E402
-from app.research_engines.tri_compare.config import merged         # noqa: E402
-from app.research_engines.orderflow import data as D               # noqa: E402
+from app.research_engines.orderflow import data as D
+from app.research_engines.tri_compare import engine_hybrid as E3
+from app.research_engines.tri_compare import engine_structure as E2
+from app.research_engines.tri_compare import engine_trend as E1
+from app.research_engines.tri_compare import features as FE
+from app.research_engines.tri_compare import harness as H
+from app.research_engines.tri_compare import metrics as M
+from app.research_engines.tri_compare.ann_layer import AnnConfirm, _feat
+from app.research_engines.tri_compare.config import merged
 
 CFG = merged({"tf_min": 15})
 

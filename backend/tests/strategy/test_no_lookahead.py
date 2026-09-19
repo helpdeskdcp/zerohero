@@ -12,9 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy.base_strategy import MarketFeatures  # noqa: E402
-from app.strategy.config import StrategyConfig  # noqa: E402
-from app.strategy.strategy_verifier import StrategyVerifier  # noqa: E402
+from app.strategy.base_strategy import MarketFeatures
+from app.strategy.config import StrategyConfig
+from app.strategy.strategy_verifier import StrategyVerifier
 
 PKG_DIR = Path(__file__).resolve().parents[2] / "app" / "strategy"
 FORBIDDEN_IMPORT_SUBSTRINGS = ("db", "market_hub", "requests", "connectors", "histcap", "runtime")

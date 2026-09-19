@@ -47,7 +47,7 @@ KAGGLE = (ROOT / "data" / "historical" / "kaggle" /
 OUT = ROOT / "data" / "high_conviction_runner_events.csv"
 _IST = timezone(timedelta(hours=5, minutes=30))
 
-from scripts.imbalance_next_candle_1r3_research import spike_feats, ROLL  # noqa: E402
+from scripts.imbalance_next_candle_1r3_research import ROLL, spike_feats
 
 # ---- tunables (frozen for this run; a sweep is in the report) ----
 DAY_WIDE_MULT = 1.3

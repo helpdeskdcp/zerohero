@@ -69,11 +69,12 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.backtest import calibration, oi_history_adapter as ad  # noqa: E402
-from app.backtest.replay import ReplayContext, SimTrade, _mod, _tod_bucket  # noqa: E402
-from app.backtest.runner import _LegCache, _train_samples  # noqa: E402
-from app.engines.scalp_strategy import decide_from_context  # noqa: E402
-from app.engines.state_classifier import BULLISH, BEARISH  # noqa: E402
+from app.backtest import calibration
+from app.backtest import oi_history_adapter as ad
+from app.backtest.replay import ReplayContext, SimTrade, _mod, _tod_bucket
+from app.backtest.runner import _LegCache, _train_samples
+from app.engines.scalp_strategy import decide_from_context
+from app.engines.state_classifier import BEARISH, BULLISH
 
 SYMBOL = "NIFTY"
 TRAIN = ("2026-07-13", "2026-08-10")
@@ -346,15 +347,15 @@ def _write_report(candidates, n_train_samples, avg_win, avg_loss, n_states):
     lines.append("")
     lines.append("## Dataset")
     lines.append("")
-    lines.append(f"- Source: `/root/oi_dashboard/oi_history.db` (real NIFTY option-chain cycles, "
-                 f"35 real days, 2026-07-13..2026-08-28) -- the same archive that produced the "
-                 f"P6/P6.1 filter-ablation numbers cited in scalp_strategy.py's own comments.")
+    lines.append("- Source: `/root/oi_dashboard/oi_history.db` (real NIFTY option-chain cycles, "
+                 "35 real days, 2026-07-13..2026-08-28) -- the same archive that produced the "
+                 "P6/P6.1 filter-ablation numbers cited in scalp_strategy.py's own comments.")
     lines.append(f"- TRAIN (calibration fit only): {TRAIN[0]}..{TRAIN[1]} -- {n_train_samples} samples, "
                  f"avg_win={avg_win}, avg_loss={avg_loss}")
     lines.append(f"- OOS/TEST (everything below): {TEST[0]}..{TEST[1]}")
     lines.append(f"- Raw market states in OOS window: {n_states}")
     lines.append(f"- Throttled decision calls captured (decide_every_sec={DECIDE_EVERY_SEC}): {n_total}")
-    lines.append(f"- Config: PRODUCTION DEFAULTS, unchanged (no filters/thresholds overridden)")
+    lines.append("- Config: PRODUCTION DEFAULTS, unchanged (no filters/thresholds overridden)")
     lines.append("")
     lines.append("## Observability gap found while building this audit")
     lines.append("")

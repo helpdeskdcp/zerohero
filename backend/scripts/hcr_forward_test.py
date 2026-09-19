@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 LOG = ROOT / "data" / "hcr_forward_test.jsonl"
 
-from app.research_strategy import hcr  # noqa: E402
+from app.research_strategy import hcr
 
 
 def main():

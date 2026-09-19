@@ -20,6 +20,7 @@ def _fresh(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "t.db"))
     import importlib
+
     import app.db as db
     importlib.reload(db)
     db.init_db()
@@ -92,7 +93,7 @@ def test_evaluate_called_with_dry_run_false_when_armed(monkeypatch):
 
 def test_leader_election_only_leader_ticks(monkeypatch):
     db = _fresh(monkeypatch)
-    from app.smart_index_scalper.scheduler import SmartScalperScheduler, LEASE_KEY
+    from app.smart_index_scalper.scheduler import LEASE_KEY, SmartScalperScheduler
     a = SmartScalperScheduler(profile="BALANCED", poll_sec=15, owner="owner-a")
     b = SmartScalperScheduler(profile="BALANCED", poll_sec=15, owner="owner-b")
     assert db.lease_acquire(LEASE_KEY, "owner-a", 30) is True
@@ -119,7 +120,7 @@ def test_scheduler_module_has_no_order_path():
 
 def test_start_stop_lifecycle_is_idempotent_and_releases_lease(monkeypatch):
     db = _fresh(monkeypatch)
-    from app.smart_index_scalper.scheduler import SmartScalperScheduler, LEASE_KEY
+    from app.smart_index_scalper.scheduler import LEASE_KEY, SmartScalperScheduler
 
     async def go():
         s = SmartScalperScheduler(profile="BALANCED", poll_sec=60, owner="owner-x")

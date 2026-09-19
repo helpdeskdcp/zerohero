@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.engines import scalp_strategy as ss  # noqa: E402
+from app.engines import scalp_strategy as ss
 
 
 def _stub_engines(monkeypatch, *, epm=12.5, method="greeks"):
@@ -105,6 +105,7 @@ def test_epm_persists_to_scalp_signals_and_snapshots(fresh_db):
 def test_epm_migrates_onto_a_preexisting_db():
     """A DB created before EPM gets the columns via _migrate (ALTER TABLE ADD)."""
     import sqlite3
+
     from app import db as _db
     c = sqlite3.connect(":memory:"); c.row_factory = sqlite3.Row
     c.execute("CREATE TABLE scalp_signals (id INTEGER PRIMARY KEY, signal_id TEXT, ev_r REAL)")

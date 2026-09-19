@@ -37,9 +37,20 @@ UDB = ROOT / "data" / "historical" / "upstox" / "upstox_research.db"
 OUT = ROOT / "data" / "imbalance_nc_1r3_upstox_nifty_events.csv"
 _IST = timezone(timedelta(hours=5, minutes=30))
 
-from scripts.imbalance_next_candle_1r3_research import (   # noqa: E402  (engine, unchanged)
-    resample, spike_feats, walk_n1, agg, _line, _pivots, _swings, _mtf_confirm,
-    colour, THRESHOLDS, TARGETS, ROLL, _bucket,
+from scripts.imbalance_next_candle_1r3_research import (
+    ROLL,
+    TARGETS,
+    THRESHOLDS,
+    _bucket,
+    _line,
+    _mtf_confirm,
+    _pivots,
+    _swings,
+    agg,
+    colour,
+    resample,
+    spike_feats,
+    walk_n1,
 )
 
 
@@ -192,8 +203,8 @@ def report(ev5, ev1, out):
     p("VERDICT")
     p("=" * 104)
     a5 = agg([r for r in ev5 if r["imb_ratio"] >= 2.0], "rr3") if ev5 else {}
-    p(f"  Genuine L2 / aggressor-side data on Upstox NIFTY: NONE (cash index OHLC only).")
-    p(f"  => NOT VALIDATED -- GENUINE L2 REQUIRED.")
+    p("  Genuine L2 / aggressor-side data on Upstox NIFTY: NONE (cash index OHLC only).")
+    p("  => NOT VALIDATED -- GENUINE L2 REQUIRED.")
     p(f"  range_only proxy, Upstox NIFTY 5m >=200%: n={a5.get('triggered', 0)} "
       f"tgt%={(a5.get('target_hit_pct') or 0)*100:.1f} SL%={(a5.get('sl_pct') or 0)*100:.1f} "
       f"TO%={(a5.get('timeout_pct') or 0)*100:.1f} E[R]={a5.get('expectancy')} PF={a5.get('profit_factor')}")

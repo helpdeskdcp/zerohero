@@ -2,6 +2,7 @@
 anything marked CALIBRATED is a starting value that backtest.calibrate()
 overwrites from the TRAIN split only."""
 from __future__ import annotations
+
 import copy
 
 DEFAULT_CONFIG: dict = {

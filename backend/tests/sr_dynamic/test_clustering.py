@@ -1,6 +1,6 @@
 """Requirement 3: price-distance clustering of swing pivots into zones."""
-from app.sr_dynamic.pivots import SwingPivot
 from app.sr_dynamic.clustering import cluster_swings
+from app.sr_dynamic.pivots import SwingPivot
 
 
 def test_two_nearby_swings_merge_into_one_zone():

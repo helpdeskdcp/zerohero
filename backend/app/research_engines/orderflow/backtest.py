@@ -21,12 +21,12 @@ import sys
 import time
 from datetime import datetime, timezone
 
+from . import calibrate as CAL
 from . import data as D
-from . import orderflow as OF
-from . import signal as SG
 from . import entry_timing as ET
 from . import exit_engine as EX
-from . import calibrate as CAL
+from . import orderflow as OF
+from . import signal as SG
 from .config import merged
 
 
@@ -211,7 +211,7 @@ def _write(rep: dict, out: str, learn: list | None = None) -> dict:
 
 
 def _md(r) -> str:
-    L = [f"# ORDERFLOW_ENGINE v1 -- NIFTY -- backtest", "",
+    L = ["# ORDERFLOW_ENGINE v1 -- NIFTY -- backtest", "",
          f"_generated {r['generated_at']} · tf {r['params']['tf_min']}m · "
          f"{r['params']['start']}..{r['params']['end']} · runtime {r.get('runtime_seconds','?')}s_", ""]
     cap = r["capability"]

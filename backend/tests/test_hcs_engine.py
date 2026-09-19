@@ -13,10 +13,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.hcs import evidence as EV       # noqa: E402
-from app.hcs import filters as FL        # noqa: E402
-from app.hcs import score as SC          # noqa: E402
-from app.hcs import engine as ENG        # noqa: E402
+from app.hcs import engine as ENG
+from app.hcs import evidence as EV
+from app.hcs import filters as FL
+from app.hcs import score as SC
 
 
 def _snap(**kw):

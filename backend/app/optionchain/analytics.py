@@ -15,7 +15,7 @@ min-OI shortcut the audited repos used.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 from . import bs
 from .chain import OptionChain, strike_step_for

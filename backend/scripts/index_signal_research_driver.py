@@ -32,7 +32,13 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.index_signal_research import data, evaluate, features, hypotheses, labels  # noqa: E402
+from app.index_signal_research import (
+    data,
+    evaluate,
+    features,
+    hypotheses,
+    labels,
+)
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(BACKEND_DIR, "data", "research", "index_signal_research")

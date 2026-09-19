@@ -8,8 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.mtf_aggregator import compute_aggregate  # noqa: E402
-from app.strategy_mtf.mtf_config import MTFConfig  # noqa: E402
+from app.strategy_mtf.mtf_aggregator import compute_aggregate
+from app.strategy_mtf.mtf_config import MTFConfig
 
 
 def _bar(i, c, start=datetime.datetime(2020, 1, 1, 3, 45), v=1000):

@@ -24,7 +24,7 @@ def api_of_sessions(symbol: str = Query(...), tf: str = Query("5m"),
 
 @router.get("/volume-profile")
 def api_volume_profile(symbol: str = Query(...), date: str = Query(..., description="YYYY-MM-DD (IST); comma-list for composite"),
-                       tf: str = Query("5m"), tick_size: Optional[float] = Query(None, gt=0),
+                       tf: str = Query("5m"), tick_size: float | None = Query(None, gt=0),
                        value_pct: float = Query(0.70, gt=0.0, lt=1.0)):
     return service.profile(symbol, date, tf=tf, tick_size=tick_size,
                            value_pct=value_pct, which="volume")
@@ -32,7 +32,7 @@ def api_volume_profile(symbol: str = Query(...), date: str = Query(..., descript
 
 @router.get("/market-profile")
 def api_market_profile(symbol: str = Query(...), date: str = Query(..., description="YYYY-MM-DD (IST); comma-list for composite"),
-                       tf: str = Query("5m"), tick_size: Optional[float] = Query(None, gt=0),
+                       tf: str = Query("5m"), tick_size: float | None = Query(None, gt=0),
                        tpo_minutes: int = Query(30, ge=5, le=120),
                        value_pct: float = Query(0.70, gt=0.0, lt=1.0)):
     return service.profile(symbol, date, tf=tf, tick_size=tick_size,
@@ -41,7 +41,7 @@ def api_market_profile(symbol: str = Query(...), date: str = Query(..., descript
 
 @router.get("/profile")
 def api_profile(symbol: str = Query(...), date: str = Query(..., description="YYYY-MM-DD (IST); comma-list for composite"),
-                tf: str = Query("5m"), tick_size: Optional[float] = Query(None, gt=0),
+                tf: str = Query("5m"), tick_size: float | None = Query(None, gt=0),
                 tpo_minutes: int = Query(30, ge=5, le=120),
                 value_pct: float = Query(0.70, gt=0.0, lt=1.0)):
     """Volume Profile + Market Profile + session VWAP in one call (dashboard)."""
@@ -102,7 +102,7 @@ def api_backtest(symbol: str = Query(...), tf: str = Query("5m"),
                                                  description="basis=premium only: hard stop on the option premium as a fraction of entry premium (0.30 = -30%)"),
                  premium_stop_pts: float = Query(0.0, ge=0.0, le=100000.0,
                                                  description="basis=premium only: hard stop on the option premium in absolute premium points; whichever of pct/pts hits first wins"),
-                 sessions: Optional[int] = Query(None, ge=1, le=400,
+                 sessions: int | None = Query(None, ge=1, le=400,
                                                  description="most-recent N captured sessions; omit = all")):
     """Runs the smart-money engine over every captured session and aggregates:
     win/loss counts, win rate, gross win points, gross loss (SL-hit) points,

@@ -1,8 +1,9 @@
 """PHASE 3 + 7 — snapshot data-quality contract + NO_TRADE reason classifier."""
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parents[1]))
-from app.autoscalp.data_quality import snapshot_data_quality, classify_no_trade_reason
+from app.autoscalp.data_quality import classify_no_trade_reason, snapshot_data_quality
 
 
 def _chain(oi=True, greeks="BROKER"):

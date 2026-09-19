@@ -11,11 +11,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.mathematical_confluence import (
-    MathematicalConfluenceEngine, classical_pivots, gann_levels,
-    cluster_levels, detect_swings, market_position, classify_regime, oi_matrix,
+    MathematicalConfluenceEngine,
+    classical_pivots,
+    classify_regime,
+    cluster_levels,
+    detect_swings,
+    gann_levels,
+    market_position,
+    oi_matrix,
+    scoring,
 )
 from app.mathematical_confluence.levels import normalized_levels
-from app.mathematical_confluence import scoring
 
 
 # --------------------------------------------------------- section 25: NATURALGAS

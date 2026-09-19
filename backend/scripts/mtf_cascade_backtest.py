@@ -26,11 +26,17 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.liquidity_sweep.backtest import load_kaggle_nifty_bars  # noqa: E402
-from app.strategy.base_strategy import MarketFeatures, build_indicator_snapshot  # noqa: E402
-from app.strategy_mtf.mtf_config import MTFConfig  # noqa: E402
-from app.strategy_mtf.mtf_verifier import verify  # noqa: E402
-from app.strategy_mtf.target_stop import initial_trail_state, update_trailing  # noqa: E402
+from app.liquidity_sweep.backtest import load_kaggle_nifty_bars
+from app.strategy.base_strategy import (
+    MarketFeatures,
+    build_indicator_snapshot,
+)
+from app.strategy_mtf.mtf_config import MTFConfig
+from app.strategy_mtf.mtf_verifier import verify
+from app.strategy_mtf.target_stop import (
+    initial_trail_state,
+    update_trailing,
+)
 
 DECIDE_EVERY_SEC = 24 * 3600.0  # one decision check per real trading day -- the cascade is
                                 # fundamentally swing/position-timed (monthly/weekly-driven), and a
@@ -64,7 +70,7 @@ def _momentum_ok(direction: str, bars_so_far: list[dict], cfg: MTFConfig) -> boo
 
 
 def _simulate_forward(sig, all_bars: list[dict], start_idx: int, cfg: MTFConfig) -> dict:
-    from app.strategy_mtf.target_stop import TargetStopPlan, SLPlacement
+    from app.strategy_mtf.target_stop import SLPlacement, TargetStopPlan
     direction = "BULLISH" if sig.decision == "BUY_CE" else "BEARISH"
     plan = TargetStopPlan(entry=sig.entry, direction=direction, stop_loss=sig.stop_loss,
                           r_unit=abs(sig.entry - sig.stop_loss), targets=sig.targets,

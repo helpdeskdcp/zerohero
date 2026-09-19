@@ -27,9 +27,12 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.liquidity_sweep.backtest import load_kaggle_nifty_bars  # noqa: E402
-from app.strategy_mtf.mtf_config import MTFConfig, TIMEFRAME_LOOKBACK_5M_BARS  # noqa: E402
-from app.strategy_mtf.mtf_verifier import verify  # noqa: E402
+from app.liquidity_sweep.backtest import load_kaggle_nifty_bars
+from app.strategy_mtf.mtf_config import (
+    TIMEFRAME_LOOKBACK_5M_BARS,
+    MTFConfig,
+)
+from app.strategy_mtf.mtf_verifier import verify
 
 DECIDE_EVERY_SEC = 24 * 3600.0
 BARS_LIMIT_YEARS = 3.0

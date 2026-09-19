@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.signal_gate.shadow_analysis import build_shadow_report  # noqa: E402
+from app.signal_gate.shadow_analysis import build_shadow_report
 
 
 def main():

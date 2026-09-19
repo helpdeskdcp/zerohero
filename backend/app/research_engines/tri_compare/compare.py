@@ -17,10 +17,10 @@ import time
 from datetime import datetime, timezone
 
 from ..orderflow import data as D
-from . import features as FE
-from . import engine_trend as E1
-from . import engine_structure as E2
 from . import engine_hybrid as E3
+from . import engine_structure as E2
+from . import engine_trend as E1
+from . import features as FE
 from . import harness as H
 from . import metrics as M
 from .ann_layer import AnnConfirm
@@ -289,7 +289,7 @@ def _md(r: dict) -> str:
               "|--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
         for k in ("all", "train", "val", "oos"):
             L.append(f"| {k} " + _row(e["A_engine_only"][k]))
-        L.append(f"| oos+ANN " + _row(e["B_engine_plus_ann"]["oos"]))
+        L.append("| oos+ANN " + _row(e["B_engine_plus_ann"]["oos"]))
         L += ["", "by regime (OOS): " + json.dumps({k: {"n": m.get("n"), "expR": m.get("expectancy_R"),
                                                         "PF": m.get("profit_factor")}
                                                     for k, m in e["by_regime_oos"].items()}),

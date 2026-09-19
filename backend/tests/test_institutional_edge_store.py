@@ -9,10 +9,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge.conditional_edge import ConditionalEdgeResult  # noqa: E402
-from app.institutional_edge.edge_score import EdgeEvidence  # noqa: E402
-from app.institutional_edge.ev import EVResult  # noqa: E402
-from app.institutional_edge.store import EdgeStore  # noqa: E402
+from app.institutional_edge.conditional_edge import ConditionalEdgeResult
+from app.institutional_edge.edge_score import EdgeEvidence
+from app.institutional_edge.ev import EVResult
+from app.institutional_edge.store import EdgeStore
 
 
 @pytest.fixture

@@ -242,7 +242,7 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
     so a bulk 3-5 symbol read is always ~50ms regardless of market hours or how
     fresh histcap's capture is. The focused single-symbol endpoints
     (/signal, /oi, /levels) keep the throttled fallback for accuracy."""
-    from .mathematical_confluence import context as _ctx     # reuse the primitives
+    from .mathematical_confluence import context as _ctx  # reuse the primitives
 
     sym = sym.upper()
     sess = _now_ist_date()

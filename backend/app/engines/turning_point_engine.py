@@ -23,8 +23,18 @@ Feature-score sign convention:  + = bullish turn / expect UP / a LOW forming
 import math
 from datetime import datetime, timezone
 
-from .signal_engine import _num, _round, _sma, _ema_series, _rsi, _atr, _macd, _adx, _vwap
 from .oi_math import max_pain_strike
+from .signal_engine import (
+    _adx,
+    _atr,
+    _ema_series,
+    _macd,
+    _num,
+    _round,
+    _rsi,
+    _sma,
+    _vwap,
+)
 
 MODEL_VERSION = "turning-point-rule-based-v1"
 

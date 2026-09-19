@@ -7,9 +7,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.mtf_config import MTFConfig  # noqa: E402
-from app.strategy_mtf.prev_day_levels import (  # noqa: E402
-    BREAKOUT_DOWN, BREAKOUT_UP, FAILED_BREAKOUT_UP, NONE, REJECTION_UP, RETEST_UP, REVERSAL_UP, detect,
+from app.strategy_mtf.mtf_config import MTFConfig
+from app.strategy_mtf.prev_day_levels import (
+    BREAKOUT_DOWN,
+    BREAKOUT_UP,
+    FAILED_BREAKOUT_UP,
+    NONE,
+    REJECTION_UP,
+    RETEST_UP,
+    REVERSAL_UP,
+    detect,
 )
 
 ATR = 1.0

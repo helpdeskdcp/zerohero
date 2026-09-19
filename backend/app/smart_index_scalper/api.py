@@ -5,22 +5,22 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from .scanner import SmartIndexScalper
-from .profiles import get_profile, list_profiles
-from . import option_selector
 from ..mathematical_confluence.context import market_context
+from . import option_selector
+from .profiles import get_profile, list_profiles
+from .scanner import SmartIndexScalper
 
 router = APIRouter(prefix="/api/smart-scalper", tags=["smart-index-scalper"])
 
 
-def _sc(profile: Optional[str] = None) -> SmartIndexScalper:
+def _sc(profile: str | None = None) -> SmartIndexScalper:
     return SmartIndexScalper(profile=profile)
 
 
 @router.get("/ranking")
-def api_ranking(symbols: Optional[str] = Query(None,
+def api_ranking(symbols: str | None = Query(None,
                description="comma list; default = SMART_SCALPER_UNIVERSE"),
-               profile: Optional[str] = None, fresh: bool = False):
+               profile: str | None = None, fresh: bool = False):
     """Rank the index universe by INDEX_SELECTION_SCORE. Returns #1/#2/#3 and
     why #1 won, the not-eligible list with failed filters, and — for a
     directional eligible setup — the picked CE/PE contract."""
@@ -28,7 +28,7 @@ def api_ranking(symbols: Optional[str] = Query(None,
 
 
 @router.get("/signal")
-def api_signal(symbol: str = "NIFTY", profile: Optional[str] = None, fresh: bool = False):
+def api_signal(symbol: str = "NIFTY", profile: str | None = None, fresh: bool = False):
     """Full candidate signal for one index (engine output + eligibility +
     selection score + selected option). No paper position is opened."""
     return _sc(profile).signal_for(symbol, use_cache=not fresh)
@@ -36,7 +36,7 @@ def api_signal(symbol: str = "NIFTY", profile: Optional[str] = None, fresh: bool
 
 @router.get("/option")
 def api_option(symbol: str = "NIFTY", direction: str = "CE",
-               profile: Optional[str] = None, fresh: bool = False):
+               profile: str | None = None, fresh: bool = False):
     """Slice 3 — the CE/PE contract selection for `symbol` given a direction,
     standalone. Reuses option_engine.analyse_leg + select_option."""
     ctx = market_context(symbol, use_cache=not fresh)
@@ -62,13 +62,13 @@ def api_profiles():
 
 # --------------------------------------------------------------- SLICE 4: paper trade state machine
 @router.get("/signals")
-def api_signals(instrument: Optional[str] = None, limit: int = 100):
+def api_signals(instrument: str | None = None, limit: int = 100):
     from .. import db
     return {"signals": db.list_smart_scalper_signals(limit=min(limit, 500), instrument=instrument)}
 
 
 @router.get("/paper/state")
-def api_paper_state(signal_id: Optional[str] = None, trade_id: Optional[str] = None, limit: int = 100):
+def api_paper_state(signal_id: str | None = None, trade_id: str | None = None, limit: int = 100):
     from .. import db
     return {"transitions": db.list_smart_scalper_states(signal_id=signal_id, trade_id=trade_id,
                                                        limit=min(limit, 500))}
@@ -89,7 +89,7 @@ def api_paper_journal(limit: int = 5000):
 
 
 @router.post("/paper/evaluate")
-def api_paper_evaluate(symbols: Optional[str] = None, profile: Optional[str] = None,
+def api_paper_evaluate(symbols: str | None = None, profile: str | None = None,
                        dry_run: bool = True):
     """Scan -> pre-entry state machine. With dry_run=false (and safeguards
     passing) opens ONE paper position for the top-ranked index. Never a real order."""
@@ -98,7 +98,7 @@ def api_paper_evaluate(symbols: Optional[str] = None, profile: Optional[str] = N
 
 
 @router.post("/paper/manage")
-def api_paper_manage(profile: Optional[str] = None):
+def api_paper_manage(profile: str | None = None):
     """Mark every open SMART_SCALPER paper trade + run the in-trade state machine."""
     from .paper_engine import SmartScalperPaperEngine
     return SmartScalperPaperEngine(profile=profile).manage(use_cache=False)
@@ -135,7 +135,7 @@ def api_scheduler_disarm():
 
 # --------------------------------------------------------------- SLICE 5: historical replay / backtest
 @router.get("/replay/sessions")
-def api_replay_sessions(symbols: Optional[str] = None):
+def api_replay_sessions(symbols: str | None = None):
     """The (instrument, session) pairs in market_history.db that the strict-causal
     replay can run — needs both intraday candles and a real option chain."""
     from .replay import SmartScalperReplay
@@ -144,7 +144,7 @@ def api_replay_sessions(symbols: Optional[str] = None):
 
 
 @router.get("/replay")
-def api_replay(symbols: Optional[str] = None, profile: Optional[str] = None,
+def api_replay(symbols: str | None = None, profile: str | None = None,
                step_min: int = 3, max_hold_min: int = 25):
     """Strict-causal historical replay over the captured sessions -> simulated
     trades + metrics per profile / instrument / market-regime + calibration

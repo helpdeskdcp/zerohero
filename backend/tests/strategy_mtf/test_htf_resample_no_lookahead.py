@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy_mtf.htf_resample import TIMEFRAMES, resample_confirmed  # noqa: E402
+from app.strategy_mtf.htf_resample import TIMEFRAMES, resample_confirmed
 
 
 def _bars_5m(start_iso: str, n: int, step_price=0.1):

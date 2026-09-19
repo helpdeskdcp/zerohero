@@ -13,10 +13,9 @@ Same DB rows in  ->  identical coefficients out.
 """
 import json
 import time as _time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
-from . import db
-from . import instruments
+from . import db, instruments
 
 CAL_KEY = "tp_calibration"
 _SEED = {"k": 3.2, "b": 0.0,
@@ -110,7 +109,7 @@ def resolve_pending(fetch_fn, now: datetime | None = None) -> int:
 
     if resolved:
         cal = load()
-        newly = int((db.get_setting("_tp_resolved_since_cal") or 0)) + resolved
+        newly = int(db.get_setting("_tp_resolved_since_cal") or 0) + resolved
         if newly >= _RECAL_EVERY:
             recalibrate()
             db.set_setting("_tp_resolved_since_cal", "0")

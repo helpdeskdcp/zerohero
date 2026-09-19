@@ -39,12 +39,12 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.backtest import oi_history_adapter as ad  # noqa: E402
-from app.engines.sr_engine import compute_sr  # noqa: E402
-from app.engines.state_classifier import classify  # noqa: E402
-from app.strategy.base_strategy import MarketFeatures  # noqa: E402
-from app.strategy.config import StrategyConfig  # noqa: E402
-from app.strategy.strategy_verifier import StrategyVerifier  # noqa: E402
+from app.backtest import oi_history_adapter as ad
+from app.engines.sr_engine import compute_sr
+from app.engines.state_classifier import classify
+from app.strategy.base_strategy import MarketFeatures
+from app.strategy.config import StrategyConfig
+from app.strategy.strategy_verifier import StrategyVerifier
 
 SYMBOL = "NIFTY"
 FULL_RANGE = ("2026-07-13", "2026-08-28")
@@ -156,11 +156,11 @@ def _stats_for(rows: list[dict], *, verified: bool) -> dict:
         graded = [r for r in rows if r["entry_allowed"] and r["label"] in ("UP", "DOWN")]
         is_win = [(r["strategy_direction"] == "CE" and r["label"] == "UP")
                  or (r["strategy_direction"] == "PE" and r["label"] == "DOWN") for r in graded]
-        side_of = lambda r: r["strategy_direction"]  # noqa: E731
+        side_of = lambda r: r["strategy_direction"]
     else:
         graded = [r for r in rows if r["label"] in ("UP", "DOWN")]
         is_win = [r["raw_win"] for r in graded]
-        side_of = lambda r: r["raw_signal"]  # noqa: E731
+        side_of = lambda r: r["raw_signal"]
 
     n = len(graded)
     n_wins = sum(is_win)

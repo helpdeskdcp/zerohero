@@ -11,8 +11,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break import evaluator  # noqa: E402
-from app.structural_break.audit_log import StructuralBreakAuditLog  # noqa: E402
+from app.structural_break import evaluator
+from app.structural_break.audit_log import StructuralBreakAuditLog
 
 
 def _seed(db, n, *, win_rate=0.5, symbol="NIFTY", regime="TRENDING_UP",

@@ -11,8 +11,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break import api, evaluator  # noqa: E402
-from app.structural_break.audit_log import StructuralBreakAuditLog  # noqa: E402
+from app.structural_break import api, evaluator
+from app.structural_break.audit_log import StructuralBreakAuditLog
 
 
 @pytest.fixture(autouse=True)

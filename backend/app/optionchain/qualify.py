@@ -19,7 +19,7 @@ Research-only. No network, no DB, no order path, no live-app import.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 from .structure import OptionStructureState
 

@@ -10,12 +10,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.histcap import normalize as N              # noqa: E402
-from app.histcap import integrity as IG             # noqa: E402
-from app.histcap.store import HistStore             # noqa: E402
-from app.histcap.worker import CaptureWorker        # noqa: E402
-from app.histcap import worker as WK                # noqa: E402
-from app import market_calendar        # noqa: E402
+from app import market_calendar
+from app.histcap import integrity as IG
+from app.histcap import normalize as N
+from app.histcap import worker as WK
+from app.histcap.store import HistStore
+from app.histcap.worker import CaptureWorker
 
 _IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -261,8 +261,10 @@ def test_oi_change_is_materialised_from_prev_session_close(store, monkeypatch):
 
 
 def test_chain_window_is_per_symbol_with_fallback():
-    from app.histcap.worker import _cfg, CaptureWorker as _CW
     import os
+
+    from app.histcap.worker import CaptureWorker as _CW
+    from app.histcap.worker import _cfg
     keys = [k for k in os.environ if k.startswith("CHANAKYA_HIST_CHAIN_WINDOW")]
     saved = {k: os.environ.pop(k) for k in keys}
     try:

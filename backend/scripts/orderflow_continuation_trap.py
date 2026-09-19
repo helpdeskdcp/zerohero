@@ -29,8 +29,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import market_hub
 from scripts.orderflow_event_anatomy import (
-    Sess, _prof_loc, _rejection, _atr_series, _classify_spike, _levels,
-    _level_interaction, _walk, _oi_ctx, _oi_class, _load_opt_ctx,
+    Sess,
+    _atr_series,
+    _classify_spike,
+    _level_interaction,
+    _levels,
+    _load_opt_ctx,
+    _oi_class,
+    _oi_ctx,
+    _prof_loc,
+    _rejection,
+    _walk,
 )
 
 RL = (1, 2, 3, 4, 5, 6, 8)
@@ -633,11 +642,11 @@ def _final(sym, ev, sess, regs, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--symbols", default="NIFTY,NATURALGAS,CRUDEOIL")
-    ap.add_argument("--out", default=f"data/orderflow_continuation_trap_report_2026-09-06.txt")
+    ap.add_argument("--out", default="data/orderflow_continuation_trap_report_2026-09-06.txt")
     a = ap.parse_args()
     syms = [x.strip().upper() for x in a.symbols.split(",") if x.strip()]
     with open(a.out, "w") as f:
-        print(f"orderflow continuation-vs-trap research  --  RESEARCH ONLY, no production change", file=f)
+        print("orderflow continuation-vs-trap research  --  RESEARCH ONLY, no production change", file=f)
         for sym in syms:
             ev = collect(sym)
             if not ev:

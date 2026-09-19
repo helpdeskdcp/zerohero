@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app import signals_dashboard as sd  # noqa: E402
+from app import signals_dashboard as sd
 
 
 def test_dir_classifier():

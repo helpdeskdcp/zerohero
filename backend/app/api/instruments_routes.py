@@ -8,8 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from .. import instruments
-from .. import market_data
+from .. import instruments, market_data
 from .schemas import InstrumentRequest
 
 router = APIRouter()
@@ -49,7 +48,7 @@ def api_market_instruments(market: str = Query("NSE")):
 @router.get("/api/market-selection")
 def api_market_selection(market: str = Query("NSE"), symbol: str = Query(...),
                          expiry: str = Query("AUTO"), option_type: str = Query("BOTH"),
-                         instrument: Optional[str] = Query(None),
+                         instrument: str | None = Query(None),
                          window: int = Query(5, ge=0, le=20)):
     """Read-only resolved contract and display snapshot for the Run form."""
     try:

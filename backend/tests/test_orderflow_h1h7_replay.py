@@ -18,8 +18,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app import market_hub                      # noqa: E402
-from app.orderflow import h1h7_state as H       # noqa: E402
+from app import market_hub
+from app.orderflow import h1h7_state as H
 
 SYMBOLS = ["CRUDEOIL", "NIFTY", "NATURALGAS"]
 STAGE7_CSV = Path(__file__).parents[1] / "data" / "orderflow_stage7_events.csv"

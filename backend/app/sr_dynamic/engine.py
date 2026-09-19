@@ -24,12 +24,12 @@ reorders or peeks past the bars it's given.
 from __future__ import annotations
 
 from ..engines.sr_engine import _atr, _bars
-from .pivots import confirmed_swings
-from .clustering import cluster_swings
-from .touches import analyze_touches
 from .breakout import analyze_breakout_retest_flip
-from .mtf_confirm import confirmed_timeframes, TF_ORDER
+from .clustering import cluster_swings
+from .mtf_confirm import TF_ORDER, confirmed_timeframes
+from .pivots import confirmed_swings
 from .scoring import score_zone
+from .touches import analyze_touches
 
 MODEL_VERSION = "sr-dynamic-v1"
 

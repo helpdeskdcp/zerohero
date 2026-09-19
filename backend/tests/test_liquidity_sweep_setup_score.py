@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.setup_score import compute  # noqa: E402
+from app.liquidity_sweep.setup_score import compute
 
 FULL_IND = {"above_vwap": True, "above_ema20": True, "rsi14": 55.0, "adx": 30.0}
 

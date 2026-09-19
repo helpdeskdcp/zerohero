@@ -26,11 +26,12 @@ Degrades safely: if creds are missing or the socket can't connect it simply
 reports not-connected and the runner falls back to REST / replay marks.
 """
 from __future__ import annotations
-import json
-import time
-import struct
+
 import asyncio
+import json
 import math
+import struct
+import time
 from collections import deque
 
 WS_URL = "wss://smartapisocket.angelone.in/smart-stream"

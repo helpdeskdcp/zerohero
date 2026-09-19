@@ -5,15 +5,14 @@ Covers: pre-arm, immediate local monitor, market/limit entry, duplicate-order
 suppression, kill switch, stale data, target hit, SL hit, trailing SL, time
 stop, monitor-only vs auto-exit, LIVE-disabled exit, and "accepted != filled".
 """
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.execution import OrderManager
-from app.execution import killswitch
+from app.execution import OrderManager, killswitch
+from app.execution.broker_base import OStatus, Side
 from app.execution.staleness import Clocks
 from app.execution.trade_state import PrearmRejected
-from app.execution.broker_base import OStatus, Side
 
 
 def _iso(dt=None):

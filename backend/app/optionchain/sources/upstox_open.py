@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from ..chain import OptionChain, StrikeRow, OptionLeg
+from ..chain import OptionChain, OptionLeg, StrikeRow
 
 _BASE = "https://service.upstox.com/option-analytics-tool/open/v1"
 _ASSET_KEY = {

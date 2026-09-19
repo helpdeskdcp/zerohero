@@ -30,7 +30,9 @@ import os
 import sqlite3
 from dataclasses import asdict, dataclass
 
-from . import engine, indicators as indicators_mod, probability as probability_mod, resample
+from . import engine, resample
+from . import indicators as indicators_mod
+from . import probability as probability_mod
 
 KAGGLE_DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "data", "historical", "kaggle", "research_historical.db")

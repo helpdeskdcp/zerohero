@@ -9,8 +9,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge.conditions import (  # noqa: E402
-    CONDITIONS, condition_fn, condition_labels,
+from app.institutional_edge.conditions import (
+    CONDITIONS,
+    condition_fn,
+    condition_labels,
 )
 
 

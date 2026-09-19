@@ -43,9 +43,9 @@ import pandas as pd
 import pyotp
 
 try:
-    from SmartApi import SmartConnect            # pip install smartapi-python
+    from SmartApi import SmartConnect  # pip install smartapi-python
 except ImportError:
-    from smartapi import SmartConnect            # type: ignore
+    from smartapi import SmartConnect  # type: ignore
 
 
 API_KEY = os.getenv("ANGEL_API_KEY", "")
@@ -97,7 +97,7 @@ class AngelSession:
                 self.smart = smart
                 print(f"[login] ok as {self._client_code} (attempt {attempt})")
                 return smart
-            except Exception as exc:                       # noqa: BLE001
+            except Exception as exc:
                 last_err = exc
                 print(f"[login] attempt {attempt} failed: {exc}", file=sys.stderr)
                 time.sleep(2 * attempt)
@@ -132,7 +132,7 @@ class AngelSession:
                         self.login()
                         continue
                     raise RuntimeError(f"getMarketData not ok: {resp}")
-                except Exception as exc:                   # noqa: BLE001
+                except Exception as exc:
                     print(f"[market_data] chunk {i//TOKENS_PER_CALL} attempt {attempt} "
                           f"failed: {exc}", file=sys.stderr)
                     time.sleep(1.5 * attempt)
@@ -202,7 +202,7 @@ def main() -> None:
 
     try:
         fetched = session.market_data_full("BFO", tokens)      # <-- "BFO", not "BSE"
-    except Exception as exc:                                    # noqa: BLE001
+    except Exception as exc:
         raise SystemExit(f"could not fetch BFO market data: {exc}")
 
     df = build_dataframe(fetched)

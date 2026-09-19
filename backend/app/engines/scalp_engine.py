@@ -16,10 +16,18 @@ through the risk engine and the NO-TRADE gate, plus a few scalp-only keys:
 """
 import math
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .signal_engine import (
-    _num, _round, _now_iso, _sma, _ema_series, _rsi, _atr, _vwap, _macd,
+    _atr,
+    _ema_series,
+    _macd,
+    _now_iso,
+    _num,
+    _round,
+    _rsi,
+    _sma,
+    _vwap,
 )
 
 MODEL_VERSION = "scalp-engine-rule-based-v1"

@@ -4,8 +4,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.engines.option_engine import (analyse_leg, ce_pe_confirmation,
-                                       ev_gate, select_option)
+from app.engines.option_engine import (
+    analyse_leg,
+    ce_pe_confirmation,
+    ev_gate,
+    select_option,
+)
 
 
 def bars(closes, wick=0.6, vol=5000):

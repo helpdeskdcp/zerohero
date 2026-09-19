@@ -1,7 +1,7 @@
 """The canonical, source-agnostic option-chain shape + small helpers."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, time, timedelta, timezone
 
 _IST = timezone(timedelta(hours=5, minutes=30))
@@ -104,15 +104,15 @@ class OptionChain:
     available_expiries: list = field(default_factory=list)  # other captured/known expiries for this underlying
 
     # -------- helpers --------
-    def sort(self) -> "OptionChain":
+    def sort(self) -> OptionChain:
         self.rows.sort(key=lambda r: r.strike)
         return self
 
-    def with_expiry_ctx(self) -> "OptionChain":
+    def with_expiry_ctx(self) -> OptionChain:
         self.expiry_ctx = expiry_phase(self.expiry)
         return self
 
-    def compute_atm(self) -> "OptionChain":
+    def compute_atm(self) -> OptionChain:
         if not self.rows:
             return self
         if self.spot is None:

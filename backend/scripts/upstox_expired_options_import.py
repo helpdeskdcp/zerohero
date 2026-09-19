@@ -202,7 +202,7 @@ def run(underlyings, dfrom, dto, interval, max_exp, max_ct, dry, big_ok, out, at
                 time.sleep(PER_CALL_SLEEP)
                 try:
                     hr = U.get_expired_historical_candles(eik, interval, expiry, dfrom or "2020-01-01")
-                except Exception as e:  # noqa
+                except Exception as e:
                     p(f"    {eik}: candle error {type(e).__name__}"); totals["errors"] += 1; continue
                 _preserve_raw(con, hr)
                 if hr["http_status"] != 200 or not hr.get("json"):
@@ -259,7 +259,7 @@ def _spot_on(con_read_db, symbol, expiry):
             (symbol, expiry)).fetchone()
         c.close()
         return float(row[0]) if row else None
-    except Exception:  # noqa
+    except Exception:
         return None
 
 

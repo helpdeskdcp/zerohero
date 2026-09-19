@@ -12,8 +12,8 @@ change (needs a minimum sample; never tune on 1-2 trades).
 Usage:  ./venv/bin/python data/analyze_holdtime.py [SYMBOL] [--since YYYY-MM-DD]
 """
 import os
-import sys
 import sqlite3
+import sys
 from collections import defaultdict
 
 DB = os.environ.get("CHANAKYA_DB_PATH") or os.path.join(

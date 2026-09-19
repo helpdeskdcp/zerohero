@@ -17,11 +17,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from .broker_base import OStatus, Side, BrokerBase
-from .trade_state import TradeState
-from .trade_monitor import TradeMonitor
-from . import idempotency as idem
 from . import audit
+from . import idempotency as idem
+from .broker_base import BrokerBase, OStatus, Side
+from .trade_monitor import TradeMonitor
+from .trade_state import TradeState
 
 
 def _now():
@@ -33,7 +33,7 @@ class ReconResult:
     action: str                      # OK | FILLED | PARTIAL | DEAD | FREEZE
     order_status: str = OStatus.UNKNOWN
     filled_qty: float = 0.0
-    avg_price: Optional[float] = None
+    avg_price: float | None = None
     position_match: str = "UNCHECKED"   # MATCH | MISMATCH | FLAT | UNCHECKED
     reasons: list = field(default_factory=list)
     exit_decision: object = None        # ExitDecision if the monitor was closed here
@@ -57,7 +57,7 @@ class Reconciler:
         try:
             osr = self.broker.get_order_status(broker_order_id=boid, unique_order_id=uoid,
                                                client_tag=tag)
-        except Exception as e:                       # noqa: BLE001
+        except Exception as e:
             reasons.append(f"order-status call failed: {type(e).__name__}: {str(e)[:60]}")
             return ReconResult("FREEZE", OStatus.UNKNOWN, reasons=reasons)
 
@@ -116,7 +116,7 @@ class Reconciler:
             return "UNCHECKED"
         try:
             snap = self.broker.get_positions()
-        except Exception as e:                       # noqa: BLE001
+        except Exception as e:
             reasons.append(f"position check failed: {type(e).__name__}")
             return "UNCHECKED"
         if not getattr(snap, "ok", False):

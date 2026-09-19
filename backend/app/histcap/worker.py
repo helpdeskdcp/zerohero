@@ -196,7 +196,7 @@ class CaptureWorker:
         if not (sdk and auth_ok):
             self.store.finish_run(rid, counts=counts, integrity=integ,
                                   errors=[{"stage": "auth", "status": "AUTH_UNAVAILABLE",
-                                           "message": str((getattr(sdk, "last_auth", {}) or {}))}],
+                                           "message": str(getattr(sdk, "last_auth", {}) or {})}],
                                   notes="ANGEL_* credentials unavailable -> no market rows written")
             self.last_run = {"run_id": rid, "auth_ok": False, **counts}
             return self.last_run

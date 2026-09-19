@@ -20,8 +20,7 @@ import os
 
 from fastapi import WebSocket
 
-from . import instruments
-from . import market_hub
+from . import instruments, market_hub
 from .scalper import ScalpRunner
 
 _log = logging.getLogger(__name__)
@@ -57,6 +56,7 @@ scalp_runner = ScalpRunner(broadcast=manager.broadcast)
 # Publish the shared WS feed so read-only consumers (mathematical_confluence,
 # the ranking scanner) pull live index spot from it instead of REST get_quote.
 from .feed_registry import set_feed as _set_feed
+
 _set_feed(scalp_runner.feed)
 
 # --- Autonomous PAPER scalper (P7). Shares the ScalpRunner's WS feed; a live

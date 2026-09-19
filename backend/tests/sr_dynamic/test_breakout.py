@@ -2,8 +2,14 @@
 failed), and support<->resistance flip. Requirement 12/13: never repaint,
 no future candles."""
 from app.sr_dynamic.breakout import (
-    analyze_breakout_retest_flip, NONE, CONFIRMED, SUCCESSFUL, FAILED, PENDING,
-    RESISTANCE_TO_SUPPORT, SUPPORT_TO_RESISTANCE,
+    CONFIRMED,
+    FAILED,
+    NONE,
+    PENDING,
+    RESISTANCE_TO_SUPPORT,
+    SUCCESSFUL,
+    SUPPORT_TO_RESISTANCE,
+    analyze_breakout_retest_flip,
 )
 
 ZONE_LOW, ZONE_HIGH, ATR = 100.0, 101.0, 1.0

@@ -25,11 +25,11 @@ Run from /opt/chanakya-app/backend with the venv python and .env loaded, e.g.
 """
 from __future__ import annotations
 
+import argparse
+import json
 import os
 import sys
-import json
 import time
-import argparse
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -40,10 +40,16 @@ try:
 except Exception:
     pass
 
-from app import db, instruments                       # noqa: E402
-from app.execution import make_broker, OrderManager    # noqa: E402
-from app.execution.broker_base import OrderReq, OStatus, Side, OrderType, Leg  # noqa: E402
-from app.execution import idempotency as idem, audit   # noqa: E402
+from app import db, instruments
+from app.execution import OrderManager, audit, make_broker
+from app.execution import idempotency as idem
+from app.execution.broker_base import (
+    Leg,
+    OrderReq,
+    OrderType,
+    OStatus,
+    Side,
+)
 
 
 def _p(tag, obj):

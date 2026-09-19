@@ -7,8 +7,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.shadow import (  # noqa: E402
-    MIN_SHADOW_N, ShadowValidator, compare,
+from app.structural_break.shadow import (
+    MIN_SHADOW_N,
+    ShadowValidator,
+    compare,
 )
 
 _OLD = {"status": "OK", "n": 60, "win_rate": 0.50, "expectancy_points": 1.0,

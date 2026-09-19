@@ -33,7 +33,9 @@ import calendar
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from ..liquidity_sweep.resample import _parse_ts    # UTC -> IST wall-clock parse, already tested
+from ..liquidity_sweep.resample import (
+    _parse_ts,  # UTC -> IST wall-clock parse, already tested
+)
 
 TIMEFRAMES = ("5m", "15m", "30m", "1h", "1d", "1w", "1mo")
 _INTRADAY_MINUTES = {"5m": 5, "15m": 15, "30m": 30, "1h": 60}
@@ -56,7 +58,7 @@ class HTFBar:
 class HTFSeries:
     tf: str
     confirmed: list = field(default_factory=list)     # list[HTFBar], oldest..newest, all CLOSED
-    developing: "HTFBar | None" = None                 # the current, still-forming bucket, or None
+    developing: HTFBar | None = None                 # the current, still-forming bucket, or None
 
 
 def _intraday_bucket_bounds(dt: datetime, minutes: int) -> tuple[datetime, datetime]:

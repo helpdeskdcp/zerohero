@@ -42,9 +42,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import market_hub
-from app.orderflow.smart_money import _clean
 from app.orderflow import premium_walk as _pw
 from app.orderflow import profile as _prof
+from app.orderflow.smart_money import _clean
 
 # ----------------------------------------------------------------- config grids
 SPIKE_DEFS = {                       # name -> (kind, param)
@@ -67,8 +67,17 @@ SLIP_TICKS = 0.0                    # index-point slippage assumption (reported)
 
 # ================================================================ per session
 class Sess:
-    __slots__ = ("sym", "date", "clean", "regime", "base", "avgvol", "va",
-                 "frac_lo", "frac_hi")
+    __slots__ = (
+        "avgvol",
+        "base",
+        "clean",
+        "date",
+        "frac_hi",
+        "frac_lo",
+        "regime",
+        "sym",
+        "va",
+    )
 
     def __init__(self, sym, date):
         self.sym = sym
@@ -525,7 +534,7 @@ def _row(tag, m):
     if not m["n"]:
         return f"{tag:<26} n=0"
     return (f"{tag:<26} n={m['n']:>4} ses={m['sessions']} win%={m['win_rate']*100:>4.0f} "
-            f"exp={m['expectancy']:>7} PF={str(m['profit_factor']):>6} net={m['net']:>8} "
+            f"exp={m['expectancy']:>7} PF={m['profit_factor']!s:>6} net={m['net']:>8} "
             f"mDD={m['max_dd']:>8} | mfe={m['prem_mfe']:>6} mae={m['prem_mae']:>6} "
             f"maxR~{m['med_maxR']:>4} Rcap={m['avg_Rcap']:>6} "
             f"3R={m['p3R']*100:>3.0f}% 5R={m['p5R']*100:>3.0f}% 8R={m['p8R']*100:>3.0f}% "
@@ -701,13 +710,13 @@ def main():
               f"{'REJECTION ENTRY BETTER' if b_better else 'not comparable / not better on this sample'}.")
         print(f"  Q5 confirmation (E/S3): n={mE['n']}  -> "
               f"{'kills the sample; cannot justify' if mE['n'] < 5 else 'see E row'}.")
-        print(f"  Q6 stop structure: P6 study 0 trades (compression gate) -> inconclusive.")
+        print("  Q6 stop structure: P6 study 0 trades (compression gate) -> inconclusive.")
         print(f"  Q7 R-reach (variant {rich}): 3R+={m['p3R']*100:.0f}%  5R+={m['p5R']*100:.0f}%  "
               f"8R+={m['p8R']*100:.0f}%  10R+={m['p10R']*100:.0f}%  median maxR={m['med_maxR']} "
               f"-> fixed 3R is {'TOO AMBITIOUS (lower target / partial+runner)' if m['p3R'] < 0.35 else 'plausible'}.")
         print(f"  Q8 runner vs fix3R: I n={abl['I'][1]['n']} / E n={mE['n']} -> "
               f"inconclusive (gated to ~0 by compression).")
-        print(f"  Q9 profile context: P4 modes all 0 trades (gated) -> inconclusive on this data.")
+        print("  Q9 profile context: P4 modes all 0 trades (gated) -> inconclusive on this data.")
         print(f"  Q10 highest OOS-expectancy sequence: "
               f"{'B: spike -> rejection candle (S2), no pre-compression' if b_better else 'A: spike-only, S0'} "
               f"-- < 10 sessions, LOSO session-dependent; NOT operationally convincing.")

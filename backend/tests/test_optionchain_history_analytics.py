@@ -10,7 +10,12 @@ import sqlite3
 import pytest
 
 import app.optionchain.api as OCAPI
-from app.optionchain.history_analytics import oi_profile, straddle_pnl, vol_surface, volume_spike_ratio
+from app.optionchain.history_analytics import (
+    oi_profile,
+    straddle_pnl,
+    vol_surface,
+    volume_spike_ratio,
+)
 
 
 @pytest.fixture

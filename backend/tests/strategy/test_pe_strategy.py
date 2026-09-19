@@ -8,9 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy.base_strategy import MarketFeatures  # noqa: E402
-from app.strategy.config import StrategyConfig  # noqa: E402
-from app.strategy.pe_strategy import evaluate_pe  # noqa: E402
+from app.strategy.base_strategy import MarketFeatures
+from app.strategy.config import StrategyConfig
+from app.strategy.pe_strategy import evaluate_pe
 
 
 def _bar(i, o, h, l, c, v=1000):

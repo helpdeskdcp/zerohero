@@ -7,9 +7,10 @@ breakeven + trailing-stop ratchet, and a hard time-in-trade stop so a
 scalp is flattened when max_hold_sec elapses regardless of price.
 """
 from __future__ import annotations
-import time
-import random
+
 import math
+import random
+import time
 from datetime import datetime, timezone
 
 from .. import db

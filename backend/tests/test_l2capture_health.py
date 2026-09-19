@@ -10,10 +10,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app import instruments as INS                              # noqa: E402
-from app.l2capture.worker import _validate_packet               # noqa: E402
-from app.l2capture import health as H                           # noqa: E402
-
+from app import instruments as INS
+from app.l2capture import health as H
+from app.l2capture.worker import _validate_packet
 
 # ---- MCX front-month resolution ----
 

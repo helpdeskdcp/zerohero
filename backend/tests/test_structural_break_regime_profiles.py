@@ -9,8 +9,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.regime_profiles import (  # noqa: E402
-    REGIME_NAMES, RegimeProfile, RegimeProfileRegistry, scope_key,
+from app.structural_break.regime_profiles import (
+    REGIME_NAMES,
+    RegimeProfile,
+    RegimeProfileRegistry,
+    scope_key,
 )
 
 

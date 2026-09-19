@@ -18,11 +18,12 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 
-from .engine import A_PLUS, evaluate_one
-
 # DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
 # read the live data/chanakya.db (reads here are mode=ro regardless).
-from app.db import _resolve_db_path as _resolve_db_path  # noqa: E402
+from app.db import _resolve_db_path as _resolve_db_path
+
+from .engine import A_PLUS, evaluate_one
+
 _DB = _resolve_db_path()
 _LOG = os.path.join(os.path.dirname(_DB), "hcs_forward_test.jsonl")
 

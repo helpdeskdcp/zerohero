@@ -4,8 +4,8 @@ insert-or-ignore, and the lifecycle transitions never let a submitted order
 look re-sendable. Offline: fresh temp DB per test.
 """
 import os
-import tempfile
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
@@ -15,6 +15,7 @@ def _fresh(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "t.db"))
     import importlib
+
     import app.db as db
     importlib.reload(db)
     db.init_db()
@@ -22,8 +23,8 @@ def _fresh(monkeypatch):
 
 
 def _req(trade_id="T1", leg="ENTRY", **over):
-    from app.execution.broker_base import OrderReq
     from app.execution import idempotency
+    from app.execution.broker_base import OrderReq
     base = dict(client_tag=idempotency.tag(trade_id, leg), trade_id=trade_id, leg=leg,
                 side="BUY", order_type="MARKET", symbol="NIFTY", symboltoken="123",
                 exchange="NFO", quantity=50, tradingsymbol="NIFTY24SEP25000CE")
@@ -50,7 +51,7 @@ def test_prearm_is_idempotent_on_client_tag(monkeypatch):
 def test_is_live_and_is_terminal_track_lifecycle(monkeypatch):
     _fresh(monkeypatch)
     from app.execution import idempotency
-    from app.execution.broker_base import OStatus, OrderAck
+    from app.execution.broker_base import OrderAck, OStatus
     req = _req()
     idempotency.prearm(req, mode="PAPER")
     assert idempotency.is_live(req.client_tag) is False
@@ -73,7 +74,7 @@ def test_is_live_and_is_terminal_track_lifecycle(monkeypatch):
 def test_mark_ambiguous_never_reverts_to_prearmed(monkeypatch):
     _fresh(monkeypatch)
     from app.execution import idempotency
-    from app.execution.broker_base import OStatus, OrderAck
+    from app.execution.broker_base import OrderAck, OStatus
     req = _req()
     idempotency.prearm(req, mode="PAPER")
     ack = OrderAck(ok=False, client_tag=req.client_tag, ambiguous=True, error="timeout")

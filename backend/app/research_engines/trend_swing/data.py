@@ -6,7 +6,7 @@ from __future__ import annotations
 import csv
 import os
 import pickle
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 _KAGGLE = os.path.join(_ROOT, "data", "historical", "kaggle")

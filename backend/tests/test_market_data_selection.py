@@ -92,6 +92,7 @@ def test_missing_quote_is_controlled_data_unavailable():
 
 def test_run_pipeline_boundary_converts_market_exception_to_data_unavailable(monkeypatch):
     import asyncio
+
     from app import main
     from app.api import engines_routes
     # api_run_pipeline lives in app.api.engines_routes and calls its own

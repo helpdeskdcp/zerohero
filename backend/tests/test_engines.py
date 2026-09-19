@@ -1,13 +1,12 @@
 """Deterministic engine behaviour — signal / scalp / risk / reversal / OI."""
 
 import pytest
-
 from conftest import candles
 
-from app.engines.signal_engine import run_signal_engine
-from app.engines.scalp_engine import run_scalp_engine
-from app.engines.risk_engine import run_risk_engine
 from app.engines.oi_options_engine import run_oi_options_engine
+from app.engines.risk_engine import run_risk_engine
+from app.engines.scalp_engine import run_scalp_engine
+from app.engines.signal_engine import run_signal_engine
 from app.reversal import detect_reversal
 
 

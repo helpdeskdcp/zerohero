@@ -10,8 +10,8 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from . import MathematicalConfluenceEngine
-from .levels import classical_pivots, gann_levels, normalized_levels
 from .confluence import cluster_levels
+from .levels import classical_pivots, gann_levels, normalized_levels
 from .oi_confluence import oi_matrix
 
 router = APIRouter(prefix="/api/mathematics", tags=["mathematical-confluence"])
@@ -89,7 +89,7 @@ def api_market_map(symbols: str = Query(
 
 
 @router.get("/signal")
-def api_signal(symbol: str = "NIFTY", weights: Optional[str] = None):
+def api_signal(symbol: str = "NIFTY", weights: str | None = None):
     c = _context(symbol)
     pd = c.get("prev_day") or {}
     out = _engine.evaluate(

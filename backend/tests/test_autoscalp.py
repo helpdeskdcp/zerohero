@@ -9,9 +9,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
+from app.autoscalp import runner as ascr
 from app.autoscalp.aggregator import CandleAggregator
 from app.autoscalp.safeguards import Safeguards
-from app.autoscalp import runner as ascr
 from app.execution import killswitch
 
 
@@ -680,7 +680,7 @@ def test_expiry_day_entry_cutoff_blocks_new_scalp(fresh_db, monkeypatch):
 # --------------------------------------------------------------------------- #
 def test_session_report_rolls_up_per_symbol(fresh_db, monkeypatch):
     from app.autoscalp import report
-    from app.engines.paper_trading import open_trade, close_trade
+    from app.engines.paper_trading import close_trade, open_trade
     day = report._ist_today()
     for res, pnl, reason in (("WIN", 6.0, "TARGET"), ("LOSS", -3.0, "STOP"), ("FLAT", 0.0, "TIME")):
         row = open_trade({"signal_id": "ASC-" + res, "market": "NSE", "underlying": "NIFTY",
@@ -716,8 +716,8 @@ def fresh_db_now():
 
 
 def test_self_check_reports_readiness(fresh_db, monkeypatch):
-    from app.autoscalp import report
     from app import market_calendar
+    from app.autoscalp import report
     sig = dict(_EXP_SIG)
     r, feed = _runner(monkeypatch, sig)
     sc = report.self_check(r)

@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.engines.oi_math import max_pain_strike   # noqa: E402
+from app.engines.oi_math import max_pain_strike
 
 
 def _reference_dict_form(rows):

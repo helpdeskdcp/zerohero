@@ -11,10 +11,10 @@ from fastapi import APIRouter, HTTPException
 from .. import db
 from .. import instrument_profiles as _ip
 from .. import regime_profiles as _rp
-from ..effective_profile import select_effective_profile
-from ..ai import openrouter_client as _client
 from ..ai import metrics as _ai_metrics
+from ..ai import openrouter_client as _client
 from ..autoscalp import trade_contamination as _contam
+from ..effective_profile import select_effective_profile
 
 router = APIRouter(prefix="/api", tags=["profiles"])
 

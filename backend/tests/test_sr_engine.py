@@ -306,7 +306,12 @@ def test_vwap_status_present_on_every_ok_return():
 # --------------------------------------------------------------------------- #
 # GEX (gamma exposure) v1a — read-only diagnostic (GEX_SR_SPEC.md phase A)
 # --------------------------------------------------------------------------- #
-from app.engines.sr_engine import _bs_gamma, _bs_price, _solve_iv, _gex_profile  # noqa: E402
+from app.engines.sr_engine import (
+    _bs_gamma,
+    _bs_price,
+    _gex_profile,
+    _solve_iv,
+)
 
 _T = 7.0 / 365.0
 

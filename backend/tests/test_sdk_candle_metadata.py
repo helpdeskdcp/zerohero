@@ -252,7 +252,7 @@ def test_market_sdk_concurrent_access_is_consistent(monkeypatch):
         try:
             for _ in range(25):
                 assert angelone._market_sdk() is not None
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             errors.append(repr(e))
 
     threads = [threading.Thread(target=worker) for _ in range(24)]

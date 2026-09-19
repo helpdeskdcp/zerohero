@@ -20,7 +20,6 @@ from dataclasses import dataclass
 
 from .instrument_profiles import Param, ParamStatus
 
-
 REGIMES = ("TRENDING_UP", "TRENDING_DOWN", "RANGE", "HIGH_VOLATILITY",
           "LOW_VOLATILITY", "EXPIRY_DAY", "NORMAL_DAY")
 

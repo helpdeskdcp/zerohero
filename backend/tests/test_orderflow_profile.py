@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.orderflow import profile as P   # noqa: E402
+from app.orderflow import profile as P
 
 
 def _bar(bs, o, h, l, c, v):

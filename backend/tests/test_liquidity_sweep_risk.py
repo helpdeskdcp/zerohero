@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.risk import MIN_RR, build_plan, size_position  # noqa: E402
+from app.liquidity_sweep.risk import MIN_RR, build_plan, size_position
 
 
 def test_bullish_plan_sl_below_sweep_extreme_and_2r_target():

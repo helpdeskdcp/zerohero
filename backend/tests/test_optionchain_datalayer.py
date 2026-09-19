@@ -17,9 +17,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.optionchain import get_chain
-from app.optionchain.chain import OptionChain, StrikeRow, OptionLeg
+from app.optionchain.chain import OptionChain, OptionLeg, StrikeRow
 from app.optionchain.quality import score as dq_score
-from app.optionchain.sources import angelone_chain, upstox_open, nse_v3
+from app.optionchain.sources import angelone_chain, nse_v3, upstox_open
 
 
 # --------------------------------------------------------------------------- #

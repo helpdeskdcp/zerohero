@@ -13,10 +13,10 @@ rows in -> same folds out.
 """
 from __future__ import annotations
 
-from .config import merged
 from .calibrate import IsotonicMulticlass
-from .metrics import classification, per_class_reliability
+from .config import merged
 from .labels import CLASSES
+from .metrics import classification, per_class_reliability
 
 
 def _session_spans(dates: list[str]) -> list[tuple[int, int]]:

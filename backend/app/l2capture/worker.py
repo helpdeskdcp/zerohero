@@ -206,7 +206,7 @@ class L2CaptureWorker:
 
     async def _loop(self):
         try:
-            import websockets  # noqa: F401
+            import websockets
         except Exception as e:  # pragma: no cover
             self.last_error = f"websockets import failed: {e}"
             _log.error("l2capture: %s", self.last_error)

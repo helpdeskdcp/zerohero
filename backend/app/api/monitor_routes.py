@@ -9,9 +9,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter
 
-from .. import combos
-from .. import db
-from .. import runtime
+from .. import combos, db, runtime
 from ..connectors.angel_ws import LTP_MAX_AGE_SEC, is_ltp_fresh
 
 router = APIRouter()

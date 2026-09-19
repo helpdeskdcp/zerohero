@@ -33,7 +33,7 @@ _DEFAULT_TICK = {
 }
 
 
-def _num(x) -> Optional[float]:
+def _num(x) -> float | None:
     try:
         f = float(x)
         return f if f == f and abs(f) != float("inf") else None
@@ -41,7 +41,7 @@ def _num(x) -> Optional[float]:
         return None
 
 
-def _tick_for(symbol: str, bars: list, override: Optional[float]) -> float:
+def _tick_for(symbol: str, bars: list, override: float | None) -> float:
     if override and override > 0:
         return float(override)
     t = _DEFAULT_TICK.get(str(symbol or "").upper())
@@ -99,7 +99,7 @@ def _value_area(rows: list, value_key: str, value_pct: float) -> tuple:
     return (rows[poc_i]["price"], rows[hi_i]["price"], rows[lo_i]["price"])
 
 
-def _grid(bars: list, symbol: str, tick_override: Optional[float]):
+def _grid(bars: list, symbol: str, tick_override: float | None):
     clean = []
     for b in bars:
         h, l, c, v = (_num(b.get("h")), _num(b.get("l")), _num(b.get("c")), _num(b.get("v")))
@@ -119,7 +119,7 @@ def _grid(bars: list, symbol: str, tick_override: Optional[float]):
             "session_high": hi, "session_low": lo}
 
 
-def volume_profile(bars: list, *, symbol: str = "", tick_size: Optional[float] = None,
+def volume_profile(bars: list, *, symbol: str = "", tick_size: float | None = None,
                    value_pct: float = 0.70) -> dict:
     """Volume distributed across each bar's [low, high] range (uniform split)."""
     g = _grid(bars, symbol, tick_size)
@@ -152,7 +152,7 @@ def volume_profile(bars: list, *, symbol: str = "", tick_size: Optional[float] =
     }
 
 
-def market_profile(bars: list, *, symbol: str = "", tick_size: Optional[float] = None,
+def market_profile(bars: list, *, symbol: str = "", tick_size: float | None = None,
                    tpo_minutes: int = 30, value_pct: float = 0.70) -> dict:
     """TPO count per price bin: for each `tpo_minutes` bracket, +1 for every
     price bin the bracket's combined [low, high] range touched. Exact from bars

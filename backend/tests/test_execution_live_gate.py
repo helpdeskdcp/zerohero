@@ -11,8 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.execution.broker_base import LiveDisabled, OrderReq  # noqa: E402
-from app.execution.angelone_broker import AngelOneBroker       # noqa: E402
+from app.execution.angelone_broker import AngelOneBroker
+from app.execution.broker_base import LiveDisabled, OrderReq
 
 
 def _req():

@@ -749,7 +749,7 @@ def _verdict(ev, p):
     fsess = sorted({r["session"] for r in fut})
     pb = [r for r in fut if r["proxy"] == "passive_book"]
     pbsess = sorted({r["session"] for r in pb})
-    p(f"  N. GENUINE L2?  NO. No aggressor-side data exists (tick / trade-side / delta / book-event).")
+    p("  N. GENUINE L2?  NO. No aggressor-side data exists (tick / trade-side / delta / book-event).")
     p(f"     => NOT VALIDATED -- GENUINE L2 REQUIRED.  The closest proxy (passive_book) has "
       f"{len(pb)} events over {len(pbsess)} sessions {pbsess} -- one week, one regime, ~30s snapshots.")
     p(f"  L. OOS sample size (futures proxy): TRAIN/VAL/OOS split over {len(fsess)} sessions is degenerate; "

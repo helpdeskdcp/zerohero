@@ -1,7 +1,12 @@
 """Live-wiring spec sections 8-10 + test list items 12,13 (BUY_CE/BUY_PE SR
 confirmation) and 12 (room-to-move)."""
 from app.sr_dynamic.live_state import LiveSRState
-from app.sr_dynamic.signal_confirm import evaluate_sr_confirmation, INSUFFICIENT, CONFIRM, CONTRADICT
+from app.sr_dynamic.signal_confirm import (
+    CONFIRM,
+    CONTRADICT,
+    INSUFFICIENT,
+    evaluate_sr_confirmation,
+)
 
 
 def _state(**kw) -> LiveSRState:

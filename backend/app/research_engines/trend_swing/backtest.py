@@ -21,10 +21,10 @@ import sys
 import time
 from datetime import datetime, timezone
 
+from . import benchmark as BM
 from . import data as D
 from . import engine as E
 from . import harness as HN
-from . import benchmark as BM
 from . import metrics as MT
 from .config import merged
 
@@ -130,7 +130,7 @@ def _verdict(all_t, oos_t, oos_d, tr_d, yr_tbl, wf, bh_oos_sharpe, crisis, cfg) 
         (f"all-period expectancy {exp_all} <= 0", exp_all <= 0),
         (f"positive WF folds {pos_wf}/{len(wf)} < {cfg['verdict_min_pos_wf_folds']}",
          pos_wf < cfg["verdict_min_pos_wf_folds"]),
-        (f"does not beat buy&hold OOS", not beats_bh),
+        ("does not beat buy&hold OOS", not beats_bh),
         ("crisis-alpha not positive", not crisis_pos)):
         if bad:
             why.append(label)
@@ -292,7 +292,7 @@ def _md(r):
           f"- {cr['n_windows']} peak->trough index declines >= "
           f"{int(r['config']['crisis_min_decline_pct']*100)}% within "
           f"{r['config']['crisis_max_days']} days",
-          f"- worst: " + json.dumps(cr["worst_windows"]),
+          "- worst: " + json.dumps(cr["worst_windows"]),
           f"- **E1 combined R during crises: {cr['R_during_crises']}** "
           f"(outside: {cr['R_outside_crises']}) -> crisis-alpha positive: {cr['crisis_alpha_positive']}",
           f"- buy&hold R during those same windows: {cr['buy_and_hold_R_during_crises']}",

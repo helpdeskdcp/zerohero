@@ -8,7 +8,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.smart_index_scalper import (
-    SmartIndexScalper, resolve_universe, index_meta, eligibility, selection_score,
+    SmartIndexScalper,
+    eligibility,
+    index_meta,
+    resolve_universe,
+    selection_score,
 )
 
 

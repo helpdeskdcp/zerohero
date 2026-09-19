@@ -14,6 +14,6 @@ per-component + per-veto reasons.
 Emits no order, no live signal. Not imported by autoscalp. `live_trading` stays
 false. See backend/HCS_ENGINE.md.
 """
-from .engine import evaluate  # noqa: F401
+from .engine import evaluate
 
 __all__ = ["evaluate"]

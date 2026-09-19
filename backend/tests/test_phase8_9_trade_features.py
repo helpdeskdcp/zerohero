@@ -1,13 +1,18 @@
 """PHASE 8/9 — immutable entry-feature snapshot + outcome record."""
-import sys, os, tempfile
+import os
+import sys
+import tempfile
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 
 def _fresh_db(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "t.db"))
-    import importlib, app.db as db
+    import importlib
+
+    import app.db as db
     importlib.reload(db)
     db.init_db()
     return db
@@ -38,8 +43,8 @@ CHAIN = [{"strike": k, "ce": _leg(2850000 if k == 24000.0 else 900000, 0.55),
 
 def test_entry_features_written_once_and_immutable(monkeypatch):
     db = _fresh_db(monkeypatch)
-    from app.autoscalp.trade_features import build_entry_features
     from app.autoscalp.runner import _chain_oi_quality
+    from app.autoscalp.trade_features import build_entry_features
     oiq = _chain_oi_quality(CHAIN)
     feat = build_entry_features(sig=SIG, chain=CHAIN, sym="NIFTY", market="NSE",
                                 trade_id="TRD-1", signal_id="ASC-1", underlying_ltp=24010.0,
@@ -82,8 +87,8 @@ def test_entry_features_mcx_greeks_null_not_zero(monkeypatch):
 
 def test_exit_outcome_and_training_join(monkeypatch):
     db = _fresh_db(monkeypatch)
-    from app.autoscalp.trade_features import build_entry_features, build_exit_outcome
     from app.autoscalp.runner import _chain_oi_quality
+    from app.autoscalp.trade_features import build_entry_features, build_exit_outcome
     feat = build_entry_features(sig=SIG, chain=CHAIN, sym="NIFTY", market="NSE",
                                 trade_id="TRD-9", signal_id="ASC-9", underlying_ltp=24010.0,
                                 oi_quality=_chain_oi_quality(CHAIN), data_quality={"groups": {}, "score": 0.9})

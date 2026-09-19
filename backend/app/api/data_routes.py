@@ -8,8 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from .. import db
-from .. import runtime
+from .. import db, runtime
 from ..engines.paper_trading import close_trade, update_trade_price
 from ..research import aggregate_research
 from .schemas import CloseTradeRequest, MarkPriceRequest
@@ -23,7 +22,7 @@ def api_signals(limit: int = Query(200, le=2000)):
 
 
 @router.get("/api/trades")
-def api_trades(status: Optional[str] = None, limit: int = Query(200, le=2000)):
+def api_trades(status: str | None = None, limit: int = Query(200, le=2000)):
     return db.list_trades(status=status, limit=limit)
 
 

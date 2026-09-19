@@ -8,8 +8,8 @@ pipeline keeps its own connector step, engine calls, gate logic and contract
 dict — those genuinely differ (OI stage, reason ordering, scalp extras) and
 the audit says orchestrator must keep its 1:1 n8n semantics.
 """
-import time
 import random
+import time
 
 from . import db, telegram_dispatcher
 from .connectors import telegram

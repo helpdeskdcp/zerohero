@@ -3,8 +3,8 @@ Global kill switch (app/execution/killswitch.py) — the emergency stop that
 OrderManager.prearm/submit must honour. Offline: fresh temp DB per test.
 """
 import os
-import tempfile
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
@@ -14,6 +14,7 @@ def _fresh(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "t.db"))
     import importlib
+
     import app.db as db
     importlib.reload(db)
     db.init_db()

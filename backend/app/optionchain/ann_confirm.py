@@ -105,7 +105,7 @@ class OcAnnConfirm:
         self.n_train = 0
         self.train_base = None
 
-    def fit(self, train: list[dict]) -> "OcAnnConfirm":
+    def fit(self, train: list[dict]) -> OcAnnConfirm:
         self.n_train = len(train)
         if self.n_train < self.c["min_train"]:
             self.status = "INSUFFICIENT"

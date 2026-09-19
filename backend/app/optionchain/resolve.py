@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from .chain import OptionChain
 from .quality import score as _quality
-from .sources import angelone_chain, upstox_open, nse_v3
+from .sources import angelone_chain, nse_v3, upstox_open
 
 _ORDER = ("angelone_captured", "upstox_open", "nse_v3")
 _FETCH = {

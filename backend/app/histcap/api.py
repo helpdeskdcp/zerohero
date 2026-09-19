@@ -31,22 +31,22 @@ def runs(limit: int = Query(50, le=500)):
 
 @router.get("/candles")
 def candles(symbol: str, tf: str = "5m", kind: str = "FUTURE",
-            as_of: Optional[str] = None, limit: int = Query(2000, le=20000)):
+            as_of: str | None = None, limit: int = Query(2000, le=20000)):
     """Look-ahead-safe: rows with bar_start <= as_of (UTC ISO), oldest first."""
     return hist_store().get_candles(symbol, tf, as_of=as_of, kind=kind, limit=limit)
 
 
 @router.get("/quotes")
-def quotes(symbol: str, kind: Optional[str] = None, expiry: Optional[str] = None,
-           strike: Optional[float] = None, option_type: Optional[str] = None,
-           as_of: Optional[str] = None, limit: int = Query(2000, le=20000)):
+def quotes(symbol: str, kind: str | None = None, expiry: str | None = None,
+           strike: float | None = None, option_type: str | None = None,
+           as_of: str | None = None, limit: int = Query(2000, le=20000)):
     return hist_store().get_quotes(symbol, as_of=as_of, kind=kind, expiry=expiry,
                                    strike=strike, option_type=option_type, limit=limit)
 
 
 @router.get("/greeks")
-def greeks(underlying: str, expiry: Optional[str] = None, strike: Optional[float] = None,
-           option_type: Optional[str] = None, as_of: Optional[str] = None,
+def greeks(underlying: str, expiry: str | None = None, strike: float | None = None,
+           option_type: str | None = None, as_of: str | None = None,
            limit: int = Query(2000, le=20000)):
     return hist_store().get_greeks(underlying, as_of=as_of, expiry=expiry,
                                    strike=strike, option_type=option_type, limit=limit)

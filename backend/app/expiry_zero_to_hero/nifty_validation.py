@@ -39,7 +39,7 @@ def last_valid_nifty_expiry(sdk) -> dict:
             "NO_RESOLVABLE_COMPLETED_NIFTY_EXPIRY — expired weekly contracts are "
             "purged from the AngelOne master, and histcap's earliest NIFTY option "
             "data (%s) is for a not-yet-expired contract." % (
-                (hist[0]["date"] if hist else "none"))
+                hist[0]["date"] if hist else "none")
         ) if not past and not hist_completed else "resolvable",
     }
 

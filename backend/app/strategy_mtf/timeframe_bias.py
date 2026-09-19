@@ -12,7 +12,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from ..strategy.base_strategy import IndicatorSnapshot, MarketFeatures, build_indicator_snapshot
+from ..strategy.base_strategy import (
+    IndicatorSnapshot,
+    MarketFeatures,
+    build_indicator_snapshot,
+)
 from ..strategy.config import StrategyConfig
 from .htf_resample import HTFSeries, resample_confirmed
 

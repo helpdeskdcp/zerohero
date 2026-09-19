@@ -9,9 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from .. import db
-from .. import instruments
-from .. import runtime
+from .. import db, instruments, runtime
 from .schemas import KillSwitchRequest
 
 router = APIRouter()
@@ -24,13 +22,13 @@ def api_autoscalp_status(compact: bool = False):
 
 
 @router.get("/api/autoscalp/signals")
-def api_autoscalp_signals(status: Optional[str] = None, symbol: Optional[str] = None,
+def api_autoscalp_signals(status: str | None = None, symbol: str | None = None,
                           limit: int = Query(200, le=2000)):
     return db.list_scalp_signals(source="LIVE", status=status, symbol=symbol, limit=limit)
 
 
 @router.get("/api/signals/debug")
-def api_signals_debug(status: Optional[str] = None, symbol: Optional[str] = None,
+def api_signals_debug(status: str | None = None, symbol: str | None = None,
                       limit: int = Query(200, le=2000)):
     """Every raw candidate this engine has evaluated (LIVE source), including
     ones the final signal gate would WAIT/REJECT/COOLDOWN -- for research and
@@ -72,12 +70,12 @@ def api_signals_final():
 
 
 @router.get("/api/autoscalp/snapshots")
-def api_autoscalp_snapshots(symbol: Optional[str] = None, limit: int = Query(200, le=2000)):
+def api_autoscalp_snapshots(symbol: str | None = None, limit: int = Query(200, le=2000)):
     return db.list_live_snapshots(symbol=symbol, limit=limit)
 
 
 @router.get("/api/autoscalp/report")
-def api_autoscalp_report(day: Optional[str] = None):
+def api_autoscalp_report(day: str | None = None):
     """Per-symbol rollup of an IST trading day (default today): trades, W/L,
     net points, avg R, exit-reason / decision / regime distribution, ZTH legs,
     and why entries were refused."""

@@ -10,8 +10,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge import evaluator  # noqa: E402
-from app.institutional_edge.store import EdgeStore  # noqa: E402
+from app.institutional_edge import evaluator
+from app.institutional_edge.store import EdgeStore
 
 
 def _seed(db, n, *, win_rate=0.5, symbol="NATURALGAS", regime="TRENDING_UP",

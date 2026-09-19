@@ -61,7 +61,7 @@ class AnnConfirm:
         self.status = "UNFIT"
         self.n_train = 0
 
-    def fit(self, train_trades: list[dict]) -> "AnnConfirm":
+    def fit(self, train_trades: list[dict]) -> AnnConfirm:
         self.n_train = len(train_trades)
         if self.n_train < self.c["min_train_trades"]:
             self.status = "INSUFFICIENT"

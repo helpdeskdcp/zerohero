@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep import engine  # noqa: E402
+from app.liquidity_sweep import engine
 
 PKG_DIR = Path(__file__).resolve().parents[1] / "app" / "liquidity_sweep"
 FORBIDDEN_IMPORT_SUBSTRINGS = ("db", "market_hub", "requests", "connectors", "histcap", "runtime")

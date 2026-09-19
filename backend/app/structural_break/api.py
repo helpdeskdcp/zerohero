@@ -26,12 +26,12 @@ def status():
 
 
 @router.get("/status/{symbol}")
-def status_symbol(symbol: str, regime: Optional[str] = None, source: str = "LIVE"):
+def status_symbol(symbol: str, regime: str | None = None, source: str = "LIVE"):
     return evaluator.evaluate_now(symbol, regime=regime, source=source)
 
 
 @router.get("/history")
-def history(symbol: Optional[str] = None, state_to: Optional[str] = None,
+def history(symbol: str | None = None, state_to: str | None = None,
             limit: int = Query(200, le=2000)):
     return {"events": audit_log().history(symbol, state_to=state_to, limit=limit)}
 

@@ -7,9 +7,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.break_score import (  # noqa: E402
-    ADAPTATION_MIN_OBSERVATIONS, VALIDATION_MAX_ATTEMPTS,
-    StructuralBreakStateMachine, compute_evidence,
+from app.structural_break.break_score import (
+    ADAPTATION_MIN_OBSERVATIONS,
+    VALIDATION_MAX_ATTEMPTS,
+    StructuralBreakStateMachine,
+    compute_evidence,
 )
 
 HEALTHY_PERF = {

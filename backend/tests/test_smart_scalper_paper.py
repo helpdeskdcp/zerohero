@@ -17,6 +17,7 @@ def _fresh(monkeypatch):
     d = tempfile.mkdtemp()
     monkeypatch.setenv("CHANAKYA_DB_PATH", os.path.join(d, "t.db"))
     import importlib
+
     import app.db as db
     importlib.reload(db)
     db.init_db()
@@ -107,7 +108,7 @@ def test_smart_scalper_db_helpers_roundtrip(monkeypatch):
 
 def test_journal_metrics_from_closed_paper_trades(monkeypatch):
     db = _fresh(monkeypatch)
-    from app.engines.paper_trading import open_trade, close_trade
+    from app.engines.paper_trading import close_trade, open_trade
     for i, (entry, exitp) in enumerate([(100, 140), (100, 80), (100, 130), (100, 82)]):
         sid = f"SS-{i}"
         db.insert_smart_scalper_signal({"signal_id": sid, "created_ts": "t", "instrument": "NIFTY",

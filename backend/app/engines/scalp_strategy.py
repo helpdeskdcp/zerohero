@@ -13,13 +13,12 @@ a NO_TRADE / WATCH dict.
 """
 from __future__ import annotations
 
-
-from .sr_engine import compute_sr
-from .state_classifier import classify, BULLISH
-from .regime_mtf import detect_regime, mtf_alignment
-from .option_engine import analyse_leg, ce_pe_confirmation, ev_gate, select_option
 from ..sr_dynamic.live_state import refresh_and_store
 from ..sr_dynamic.signal_confirm import evaluate_sr_confirmation
+from .option_engine import analyse_leg, ce_pe_confirmation, ev_gate, select_option
+from .regime_mtf import detect_regime, mtf_alignment
+from .sr_engine import compute_sr
+from .state_classifier import BULLISH, classify
 
 MODEL_VERSION = "scalp-strategy-v1"
 
@@ -291,9 +290,9 @@ def decide_from_context(bars_by_tf: dict, chain: list | None, *,
     tod_bucket: OPEN/MORNING/MIDDAY/AFTERNOON/CLOSE for the time-of-day filter."""
     cfg = config or {}
     flt = _filters(cfg)
-    out_none = lambda why, extra=None: {**({"decision": "NO_TRADE", "signal_type": "NONE",
+    out_none = lambda why, extra=None: {"decision": "NO_TRADE", "signal_type": "NONE",
                                             "direction": "NONE", "reason": why,
-                                            "model_version": MODEL_VERSION}), **(extra or {})}
+                                            "model_version": MODEL_VERSION, **(extra or {})}
 
     sr = compute_sr(bars_by_tf, chain=chain, mode="index",
                     symbol=cfg.get("symbol"), config=cfg.get("sr") or {})

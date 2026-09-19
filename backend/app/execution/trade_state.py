@@ -14,11 +14,11 @@ fill price.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from .broker_base import Side, OrderType, OStatus, OrderReq
+from .broker_base import OrderReq, OrderType, OStatus, Side
 from .idempotency import tag as _tag
 
 
@@ -43,20 +43,20 @@ class PrearmRejected(ValueError):
 class StopPlan:
     price: float
     kind: str = "FIXED"                 # FIXED | ATR | TRAIL
-    distance: Optional[float] = None    # absolute points from reference (for TRAIL / re-anchor)
-    atr: Optional[float] = None
-    atr_mult: Optional[float] = None
-    trail_trigger: Optional[float] = None   # arm the trail once favourable excursion >= this
-    breakeven_trigger: Optional[float] = None
-    profit_lock: Optional[float] = None     # once armed, keep locking (excursion - this)
+    distance: float | None = None    # absolute points from reference (for TRAIL / re-anchor)
+    atr: float | None = None
+    atr_mult: float | None = None
+    trail_trigger: float | None = None   # arm the trail once favourable excursion >= this
+    breakeven_trigger: float | None = None
+    profit_lock: float | None = None     # once armed, keep locking (excursion - this)
 
 
 @dataclass
 class TargetPlan:
     price: float
-    distance: Optional[float] = None
-    price_2: Optional[float] = None
-    rr: Optional[float] = None
+    distance: float | None = None
+    price_2: float | None = None
+    rr: float | None = None
 
 
 @dataclass
@@ -71,28 +71,28 @@ class TradeState:
     tradingsymbol: str = ""
     product: str = "INTRADAY"
     option_type: str = ""
-    strike: Optional[float] = None
+    strike: float | None = None
     expiry: str = ""
     underlying: str = ""
     # -- order --
     side: str = Side.BUY               # BUY | SELL
     quantity: float = 0.0
     entry_type: str = OrderType.MARKET  # MARKET | LIMIT
-    limit_price: Optional[float] = None
-    expected_entry_price: Optional[float] = None
+    limit_price: float | None = None
+    expected_entry_price: float | None = None
     # -- pre-calculated plan --
-    target: Optional[TargetPlan] = None
-    stop: Optional[StopPlan] = None
-    max_hold_sec: Optional[float] = None
+    target: TargetPlan | None = None
+    stop: StopPlan | None = None
+    max_hold_sec: float | None = None
     # -- provenance --
-    signal_confidence: Optional[float] = None
-    signal_ts: Optional[str] = None
-    market_data_ts: Optional[str] = None
+    signal_confidence: float | None = None
+    signal_ts: str | None = None
+    market_data_ts: str | None = None
     prearm_ts: str = field(default_factory=_now)
     # -- mutable fill state (broker is source of truth) --
     status: str = OStatus.PREARMED
     filled_qty: float = 0.0
-    avg_fill_price: Optional[float] = None
+    avg_fill_price: float | None = None
     broker_order_id: str = ""
     unique_order_id: str = ""
 
@@ -101,7 +101,7 @@ class TradeState:
     def from_contract(cls, contract: dict, *, instrument: dict | None = None,
                       quantity: float | None = None,
                       default_stop_pct: float = 0.35,
-                      default_target_rr: float = 1.6) -> "TradeState":
+                      default_target_rr: float = 1.6) -> TradeState:
         """Turn a Signal/Scalp pipeline contract into a validated TradeState.
 
         The contract already carries entry_ref / target_1 / target_2 / stop_loss
@@ -186,7 +186,7 @@ class TradeState:
         )
 
     # ------------------------------------------------------------------ fills
-    def apply_fill(self, filled_qty: float, avg_price: Optional[float], *, complete: bool):
+    def apply_fill(self, filled_qty: float, avg_price: float | None, *, complete: bool):
         """Broker fill info arrived. Re-anchor target & stop distances to the
         ACTUAL average fill price (spec §7) and switch quantity to what was
         really filled (spec §5). No-op if we get nothing usable."""

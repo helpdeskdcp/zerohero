@@ -57,24 +57,24 @@ class MonitorState:
     state: str = "PROVISIONAL"          # PROVISIONAL | CONFIRMED | PARTIAL | CLOSED
     entry_ref: float = 0.0
     quantity: float = 0.0
-    target: Optional[float] = None
-    target_2: Optional[float] = None
-    stop: Optional[float] = None
-    trail_distance: Optional[float] = None
-    trail_trigger: Optional[float] = None
-    breakeven_trigger: Optional[float] = None
-    profit_lock: Optional[float] = None
+    target: float | None = None
+    target_2: float | None = None
+    stop: float | None = None
+    trail_distance: float | None = None
+    trail_trigger: float | None = None
+    breakeven_trigger: float | None = None
+    profit_lock: float | None = None
     opened_ts: str = field(default_factory=lambda: _now().isoformat())
-    max_hold_sec: Optional[float] = None
-    last_ltp: Optional[float] = None
-    last_ltp_ts: Optional[str] = None
+    max_hold_sec: float | None = None
+    last_ltp: float | None = None
+    last_ltp_ts: str | None = None
     mfe: float = 0.0                    # max favourable excursion, points
     mae: float = 0.0                    # max adverse excursion, points
-    live_pnl: Optional[float] = None
+    live_pnl: float | None = None
     trail_armed: bool = False
-    exit_reason: Optional[str] = None
-    exit_price: Optional[float] = None
-    closed_ts: Optional[str] = None
+    exit_reason: str | None = None
+    exit_price: float | None = None
+    closed_ts: str | None = None
 
 
 class TradeMonitor:
@@ -101,7 +101,7 @@ class TradeMonitor:
         self._closed = False
 
     # ------------------------------------------------------------- fills
-    def on_fill(self, filled_qty: float, avg_price: Optional[float], *, complete: bool):
+    def on_fill(self, filled_qty: float, avg_price: float | None, *, complete: bool):
         fq = _f(filled_qty)
         ap = _f(avg_price)
         if ap and ap > 0:
@@ -127,7 +127,7 @@ class TradeMonitor:
         return ExitDecision("CANCELLED", self.st.entry_ref, 0.0, provisional=False, note=note)
 
     # ------------------------------------------------------------- tick
-    def step(self, ltp: float, now: Optional[datetime] = None) -> Optional[ExitDecision]:
+    def step(self, ltp: float, now: datetime | None = None) -> ExitDecision | None:
         """Mark to `ltp`; update excursions; ratchet the trail (never loosen);
         return an ExitDecision if a level is breached."""
         if self._closed:

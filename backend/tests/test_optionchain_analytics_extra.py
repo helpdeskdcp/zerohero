@@ -11,11 +11,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.optionchain.analytics import (  # noqa: E402
-    FLAT_OI, LONG_BUILDUP, LONG_UNWINDING, SHORT_BUILDUP, SHORT_COVERING,
-    oi_buildup_regime, weighted_chain_iv,
+from app.optionchain.analytics import (
+    FLAT_OI,
+    LONG_BUILDUP,
+    LONG_UNWINDING,
+    SHORT_BUILDUP,
+    SHORT_COVERING,
+    oi_buildup_regime,
+    weighted_chain_iv,
 )
-from app.optionchain.chain import OptionChain, OptionLeg, StrikeRow  # noqa: E402
+from app.optionchain.chain import OptionChain, OptionLeg, StrikeRow
 
 
 def _chain(spot, oi_by_strike, iv=0.12, ts="2026-09-09T10:00:00Z"):

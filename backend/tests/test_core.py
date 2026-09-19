@@ -183,8 +183,8 @@ def test_autoscalp_notifier_is_isolated_from_legacy_telegram_path():
 
 # ---------------------------------------------------------------- combos
 def test_combo_stop_alerts_once(fresh_db):
-    from app.engines.paper_trading import open_trade
     from app import combos
+    from app.engines.paper_trading import open_trade
     ce = open_trade({"underlying": "NG", "option_type": "CE", "strike": 275,
                      "direction": "BUY", "entry": 16.0, "quantity": 100, "strategy": "MANUAL"})
     pe = open_trade({"underlying": "NG", "option_type": "PE", "strike": 280,
@@ -200,8 +200,8 @@ def test_combo_stop_alerts_once(fresh_db):
 
 
 def test_combo_breaks_when_a_leg_closes(fresh_db):
-    from app.engines.paper_trading import open_trade, close_trade
     from app import combos
+    from app.engines.paper_trading import close_trade, open_trade
     ce = open_trade({"underlying": "NG", "option_type": "CE", "strike": 275,
                      "direction": "BUY", "entry": 16.0, "quantity": 100, "strategy": "MANUAL"})
     pe = open_trade({"underlying": "NG", "option_type": "PE", "strike": 280,

@@ -39,9 +39,9 @@ import pandas as pd
 import pyotp
 
 try:
-    from SmartApi import SmartConnect            # pip install smartapi-python
+    from SmartApi import SmartConnect  # pip install smartapi-python
 except ImportError:  # some builds expose it as smartapi
-    from smartapi import SmartConnect            # type: ignore
+    from smartapi import SmartConnect  # type: ignore
 
 
 # --------------------------------------------------------------------------- config
@@ -98,7 +98,7 @@ class AngelSession:
                 self.smart = smart
                 print(f"[login] ok as {self._client_code} (attempt {attempt})")
                 return smart
-            except Exception as exc:                       # noqa: BLE001
+            except Exception as exc:
                 last_err = exc
                 print(f"[login] attempt {attempt} failed: {exc}", file=sys.stderr)
                 time.sleep(2 * attempt)
@@ -126,7 +126,7 @@ class AngelSession:
                     self.login()
                     continue
                 raise RuntimeError(f"getMarketData not ok: {resp}")
-            except Exception as exc:                       # noqa: BLE001
+            except Exception as exc:
                 print(f"[market_data] attempt {attempt} failed: {exc}", file=sys.stderr)
                 time.sleep(1.5 * attempt)
         raise RuntimeError("getMarketData failed after 3 attempts")
@@ -203,7 +203,7 @@ def main() -> None:
 
     try:
         resp = session.market_data_full({"MCX": list(tokens)})   # <-- "MCX" is the key
-    except Exception as exc:                                       # noqa: BLE001
+    except Exception as exc:
         raise SystemExit(f"could not fetch MCX market data: {exc}")
 
     df = build_dataframe(resp, PREVIOUS_SNAPSHOT)

@@ -9,9 +9,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.drift import (  # noqa: E402
-    CusumDetector, PageHinkleyDetector, PsiTracker, RollingKS, RollingZScore,
-    fit_baseline, ks_2sample,
+from app.structural_break.drift import (
+    CusumDetector,
+    PageHinkleyDetector,
+    PsiTracker,
+    RollingKS,
+    RollingZScore,
+    fit_baseline,
+    ks_2sample,
 )
 
 random.seed(7)

@@ -7,11 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge.conditional_edge import ConditionalEdgeResult  # noqa: E402
-from app.institutional_edge.edge_score import (  # noqa: E402
-    EdgeStateMachine, compute_evidence,
+from app.institutional_edge.conditional_edge import ConditionalEdgeResult
+from app.institutional_edge.edge_score import (
+    EdgeStateMachine,
+    compute_evidence,
 )
-from app.institutional_edge.ev import EVResult  # noqa: E402
+from app.institutional_edge.ev import EVResult
 
 HEALTHY_COND = ConditionalEdgeResult(
     status="OK", condition_label="x", n_condition=250, n_baseline=500,

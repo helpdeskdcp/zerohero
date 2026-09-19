@@ -11,9 +11,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.liquidity_sweep.backtest import (  # noqa: E402
-    Stage1FeatureSample, Stage1Sample, _accuracy, _build_bars_by_tf_at,
-    _split_chronological, _walk_raw_signals, _walk_raw_signals_with_features,
+from app.liquidity_sweep.backtest import (
+    Stage1FeatureSample,
+    Stage1Sample,
+    _accuracy,
+    _build_bars_by_tf_at,
+    _split_chronological,
+    _walk_raw_signals,
+    _walk_raw_signals_with_features,
 )
 
 
@@ -26,7 +31,7 @@ def test_split_chronological_never_shuffles_and_respects_fractions():
     samples = [_sample(i) for i in range(100)]
     train, val, oos = _split_chronological(samples, train_frac=0.5, val_frac=0.25)
     assert len(train) == 50 and len(val) == 25 and len(oos) == 25
-    assert [s.index for s in train] == list(range(0, 50))
+    assert [s.index for s in train] == list(range(50))
     assert [s.index for s in val] == list(range(50, 75))
     assert [s.index for s in oos] == list(range(75, 100))
 

@@ -13,9 +13,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
-from app.strategy.base_strategy import MarketFeatures  # noqa: E402
-from app.strategy.config import StrategyConfig  # noqa: E402
-from app.strategy.strategy_verifier import StrategyVerifier  # noqa: E402
+from app.strategy.base_strategy import MarketFeatures
+from app.strategy.config import StrategyConfig
+from app.strategy.strategy_verifier import StrategyVerifier
 
 
 def _bar(i, o, h, l, c, v=1000):

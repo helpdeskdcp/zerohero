@@ -43,9 +43,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import market_hub
 from scripts.orderflow_continuation_trap import (
-    Sess, _atr_series, _classify_spike, _levels, _level_interaction, _prof_loc,
-    _oi_ctx, _oi_class, _load_opt_ctx, _walk, _broken_level, _held_beyond,
-    _outcome, _struct_sl, _avail_R,
+    Sess,
+    _atr_series,
+    _avail_R,
+    _broken_level,
+    _classify_spike,
+    _held_beyond,
+    _level_interaction,
+    _levels,
+    _load_opt_ctx,
+    _oi_class,
+    _oi_ctx,
+    _outcome,
+    _prof_loc,
+    _struct_sl,
+    _walk,
 )
 
 RL = (1, 2, 3, 4, 5, 6, 8, 10)
@@ -284,7 +296,7 @@ def report(sym, ev, out):
             continue
         p(f"    {names[k]:<24} {a['n']:>4} {a['cont']*100:>5.0f}% {a['trap']*100:>5.0f}% "
           f"{a['medMAE_R']:>7} {a['medMFE_R']:>7} {a['P3R']*100:>4.0f}% {a['P5R']*100:>4.0f}% "
-          f"{a['P8R']*100:>4.0f}% {str(a['med_availR']):>11} {a['med_R_pts']:>7}")
+          f"{a['P8R']*100:>4.0f}% {a['med_availR']!s:>11} {a['med_R_pts']:>7}")
 
     p("\n[§9 ACCURACY vs ENTRY QUALITY]")
     for k in ("A", "B", "C", "D"):

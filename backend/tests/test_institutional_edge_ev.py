@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge.ev import compute_ev  # noqa: E402
+from app.institutional_edge.ev import compute_ev
 
 
 def _rows(n, *, win_rate=0.5, points_win=10.0, points_loss=-8.0, start=0):

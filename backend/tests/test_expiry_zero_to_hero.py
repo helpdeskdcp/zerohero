@@ -9,12 +9,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.expiry_zero_to_hero import bs
-from app.expiry_zero_to_hero.support_detector import PremiumSupportDetector
-from app.expiry_zero_to_hero.labeler import ZeroToHeroLabeler
-from app.expiry_zero_to_hero.features import ExpiryFeatureEngine
-from app.expiry_zero_to_hero.probability import ZeroToHeroProbabilityEngine
-from app.expiry_zero_to_hero.signal import ZeroToHeroSignalEngine, ExpiryZeroToHeroReporter
 from app.expiry_zero_to_hero.backtester import ExpiryZeroToHeroBacktester
+from app.expiry_zero_to_hero.features import ExpiryFeatureEngine
+from app.expiry_zero_to_hero.labeler import ZeroToHeroLabeler
+from app.expiry_zero_to_hero.probability import ZeroToHeroProbabilityEngine
+from app.expiry_zero_to_hero.signal import (
+    ExpiryZeroToHeroReporter,
+    ZeroToHeroSignalEngine,
+)
+from app.expiry_zero_to_hero.support_detector import PremiumSupportDetector
 
 
 # ---------------------------------------------------------------- bs.py
@@ -85,7 +88,7 @@ def test_features_are_causal_and_tag_model_greeks():
     out = ExpiryFeatureEngine().build(opt, idx)
     f5 = out[5]["features"]
     # 3-min premium return at minute 5 uses minutes 2..5 only
-    assert f5["prem_ret_3m"] == round((65 - 62), 2)
+    assert f5["prem_ret_3m"] == (65 - 62)
     assert out[0]["features"]["prem_ret_10m"] is None      # not enough history yet
     assert out[-1]["delta"] == -0.4                        # model greek carried, not recomputed as broker
 

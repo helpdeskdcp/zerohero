@@ -194,7 +194,7 @@ def ce_pe_confirmation(direction: str, ce: dict | None, pe: dict | None) -> dict
 
 
 def select_option(candidates: list[dict], direction: str, *, atm: float,
-                  config: dict | None = None) -> Optional[dict]:
+                  config: dict | None = None) -> dict | None:
     """spec-9: choose the single best-quality contract, not merely the right side.
     `candidates` = list of analyse_leg() results for the wanted side."""
     cfg = config or {}

@@ -16,9 +16,9 @@ from dataclasses import asdict, dataclass
 
 from .base_strategy import MarketFeatures, build_indicator_snapshot
 from .ce_strategy import evaluate_ce
-from .conflict import resolve
-from .confirmation import check_confirmation
 from .config import StrategyConfig
+from .confirmation import check_confirmation
+from .conflict import resolve
 from .pe_strategy import evaluate_pe
 from .state_machine import StrategyStateMachine
 

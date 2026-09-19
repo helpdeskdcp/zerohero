@@ -14,8 +14,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from .. import db
-from .. import runtime
+from .. import db, runtime
 
 router = APIRouter()
 
@@ -29,14 +28,14 @@ def api_health():
 def api_diag():
     """Read-only runtime diagnostic (PHASE 0): worker_count, leader_state,
     feed_state, last_tick/snapshot/candle/persist times. No side effects."""
-    from .. import main as _main    # histcap_worker is wired in main.py, not runtime.py
+    from .. import main as _main  # histcap_worker is wired in main.py, not runtime.py
     from ..diagnostics import runtime_diag
     return runtime_diag(scalp_runner=runtime.scalp_runner, autoscalp=runtime.autoscalp,
                         histcap_worker=_main.histcap_worker)
 
 
 @router.get("/api/autoscalp/trade-features")
-def api_trade_features(trade_id: Optional[str] = None, limit: int = Query(50, le=500)):
+def api_trade_features(trade_id: str | None = None, limit: int = Query(50, le=500)):
     """PHASE 8/9 — the immutable entry snapshot for one trade, or the most
     recent N (joined with outcome when resolved)."""
     with db.db() as conn:

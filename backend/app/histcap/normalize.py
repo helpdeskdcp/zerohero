@@ -8,11 +8,11 @@ estimated, never back-filled. Greeks are delegated to
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from broker.angelone.greeks import normalize_greek_row  # noqa: E402
+from broker.angelone.greeks import normalize_greek_row
 
 _IST = timezone(timedelta(hours=5, minutes=30))
 

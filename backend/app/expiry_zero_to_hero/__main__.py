@@ -31,8 +31,8 @@ def main(argv):
         print(json.dumps(out["meta"], indent=1, default=str))
         print(f"index_bars={len(out['index_bars'])} option_bars={len(out['option_bars'])}")
     elif cmd == "collect-store" and len(argv) >= 4:
-        from .data_collector import ExpiryDataCollector
         from . import store
+        from .data_collector import ExpiryDataCollector
         idx, exp, date = argv[1], argv[2], argv[3]
         out = ExpiryDataCollector(_sdk()).collect_window(idx, exp, date)
         ins = store.save_window(out)

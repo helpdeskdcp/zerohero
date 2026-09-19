@@ -57,7 +57,7 @@ class RegimeProfile:
         return asdict(self)
 
 
-DEFAULT_PROFILE_FOR = lambda regime: RegimeProfile(regime=regime)  # noqa: E731 -- trivial, no need for a def
+DEFAULT_PROFILE_FOR = lambda regime: RegimeProfile(regime=regime)
 
 
 class RegimeProfileRegistry:

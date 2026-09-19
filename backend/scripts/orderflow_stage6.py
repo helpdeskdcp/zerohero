@@ -38,11 +38,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts import orderflow_histsrc as HS
 from scripts.orderflow_stage3_validation import (
-    HSess, _levels, _broken_level, _reclaimed_by, _n1, _acc_entry_bar,
-    _entry_stops, _classify_spike, spike_percentile, _avail_R,
+    HSess,
+    _acc_entry_bar,
+    _avail_R,
+    _broken_level,
+    _classify_spike,
+    _entry_stops,
+    _levels,
+    _n1,
+    _reclaimed_by,
+    spike_percentile,
 )
-from scripts.orderflow_stage5 import uwalk, _vwap_proxy
-from scripts.orderflow_stage4 import day_regime, balance_features, profile_context
+from scripts.orderflow_stage4 import balance_features, day_regime, profile_context
+from scripts.orderflow_stage5 import _vwap_proxy, uwalk
 
 SPIKE_PCTL = 0.90
 BODY_BETA = 0.55            # "strong body" threshold (tested on TRAIN, frozen)

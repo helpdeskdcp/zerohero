@@ -12,7 +12,7 @@ from pathlib import Path
 from statistics import mean
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
-import scripts.natgas_futures_backtest as ngb  # noqa: E402
+import scripts.natgas_futures_backtest as ngb
 
 OUT_DIR = ngb.OUT_DIR
 

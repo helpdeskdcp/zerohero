@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.execution.staleness import Clocks, assess, age_sec   # noqa: E402
+from app.execution.staleness import Clocks, age_sec, assess
 
 NOW = datetime(2026, 9, 4, 10, 0, 0, tzinfo=timezone.utc)
 

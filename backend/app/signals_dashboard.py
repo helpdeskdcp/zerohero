@@ -88,8 +88,8 @@ def _confluence_by_symbol(symbols: list[str]) -> dict:
 
 def _orderflow_state(sym: str) -> dict:
     try:
-        from .orderflow import service as _of
         from . import market_hub
+        from .orderflow import service as _of
         dates = market_hub.session_dates(sym, tf="5m", limit=1)
         if not dates:
             return {"status": "no_session"}

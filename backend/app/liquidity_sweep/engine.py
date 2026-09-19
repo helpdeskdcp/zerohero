@@ -12,7 +12,8 @@ does strike selection / option entry actually run.
 """
 from __future__ import annotations
 
-from . import confirmation, indicators, probability as probability_mod, risk, setup_score, strikes, structure, sweep
+from . import confirmation, indicators, risk, setup_score, strikes, structure, sweep
+from . import probability as probability_mod
 
 DEFAULT_CONFIG = {
     "execution_tf": "5m",

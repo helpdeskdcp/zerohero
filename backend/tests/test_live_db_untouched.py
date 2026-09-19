@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app import db as DB                                   # noqa: E402
+from app import db as DB
 
 _BACKEND = Path(__file__).parents[1]
 _LIVE_DB = (_BACKEND / "data" / "chanakya.db").resolve()

@@ -2,10 +2,10 @@
 SQLite persistence layer.
 Tables mirror the n8n Data Tables: ai_signals_log, ai_paper_trades.
 """
-import sqlite3
-import os
-import threading
 import logging
+import os
+import sqlite3
+import threading
 from contextlib import contextmanager
 
 _log = logging.getLogger(__name__)
@@ -578,7 +578,7 @@ def update_trade(trade_id: str, fields: dict):
         bad = set(fields) - have
         if bad:
             raise ValueError(f"update_trade: unknown column(s) {sorted(bad)}")
-        sets = ",".join([f"{k}=?" for k in fields.keys()])
+        sets = ",".join([f"{k}=?" for k in fields])
         vals = list(fields.values()) + [trade_id]
         conn.execute(f"UPDATE ai_paper_trades SET {sets} WHERE trade_id=?", vals)
 
@@ -596,7 +596,8 @@ def insert_paper_trade_event(trade_id: str, event_type: str, detail: dict | None
     if not trade_id or not event_type:
         return
     import json as _json
-    from datetime import datetime as _dt, timezone as _tz
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
     with db() as conn:
         conn.execute(
             "INSERT INTO paper_trade_events (trade_id, ts, event_type, detail) VALUES (?,?,?,?)",
@@ -794,8 +795,8 @@ def set_setting(key, value):
 # no matter how many uvicorn workers are launched. `_lock` above only guards
 # threads within one process; this uses SQLite's own write lock (BEGIN IMMEDIATE)
 # which IS honoured across processes.
-import time as _time  # noqa: E402
-import json as _json  # noqa: E402
+import json as _json
+import time as _time
 
 
 def lease_acquire(key: str, owner: str, ttl_sec: int = 30) -> bool:
@@ -931,7 +932,8 @@ def list_broker_orders(trade_id: str | None = None, status=None, limit: int = 50
 
 
 def insert_order_event(trade_id, client_tag, kind, detail_json):
-    from datetime import datetime as _dt, timezone as _tz
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
     with db() as conn:
         conn.execute(
             "INSERT INTO order_events (ts, trade_id, client_tag, kind, detail) VALUES (?,?,?,?,?)",

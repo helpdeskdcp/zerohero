@@ -14,12 +14,12 @@ import json
 import pytest
 
 from app import instrument_profiles as ip
-from app.effective_profile import select_effective_profile
-from app.behavior_engine import analyze_behavior
-from app.ai import openrouter_client as oc
 from app.ai import behavior_ai
 from app.ai import fusion as _fusion
+from app.ai import openrouter_client as oc
 from app.ai import shadow as sh
+from app.behavior_engine import analyze_behavior
+from app.effective_profile import select_effective_profile
 
 _SYMBOLS = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL")
 

@@ -23,7 +23,7 @@ from __future__ import annotations
 from typing import Iterable, Optional, Tuple
 
 
-def max_pain_strike(rows: Iterable[Tuple[float, float, float]]) -> Optional[float]:
+def max_pain_strike(rows: Iterable[tuple[float, float, float]]) -> float | None:
     """`rows`: iterable of (strike, ce_oi, pe_oi) tuples (OI already resolved
     to a float -- callers should turn a missing/None OI into 0.0 first, as
     all three original call sites did). Returns the strike that minimizes
@@ -32,7 +32,7 @@ def max_pain_strike(rows: Iterable[Tuple[float, float, float]]) -> Optional[floa
     encountered in `rows` order, matching all three original implementations.
     """
     rows = list(rows)
-    best_k: Optional[float] = None
+    best_k: float | None = None
     best_pain = float("inf")
     for k, _ce, _pe in rows:
         pain = sum(max(0.0, k - ki) * ce + max(0.0, ki - k) * pe for ki, ce, pe in rows)

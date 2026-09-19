@@ -8,7 +8,7 @@ BrokerBase. Swapping PAPER / SHADOW / LIVE swaps only the BrokerBase impl.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -86,12 +86,12 @@ class OrderReq:
     tradingsymbol: str = ""
     product: str = "INTRADAY"
     variety: str = "NORMAL"
-    limit_price: Optional[float] = None
-    trigger_price: Optional[float] = None
+    limit_price: float | None = None
+    trigger_price: float | None = None
     # provenance (audit / staleness only — never affects routing)
-    signal_confidence: Optional[float] = None
-    signal_ts: Optional[str] = None
-    market_data_ts: Optional[str] = None
+    signal_confidence: float | None = None
+    signal_ts: str | None = None
+    market_data_ts: str | None = None
 
     def to_dict(self):
         return asdict(self)
@@ -118,8 +118,8 @@ class OrderAck:
 class OrderStatusResult:
     status: str = OStatus.UNKNOWN          # OStatus.*
     filled_qty: float = 0.0
-    pending_qty: Optional[float] = None
-    avg_price: Optional[float] = None
+    pending_qty: float | None = None
+    avg_price: float | None = None
     broker_order_id: str = ""
     unique_order_id: str = ""
     text: str = ""                          # broker status/rejection text
@@ -133,10 +133,10 @@ class BrokerPosition:
     symboltoken: str
     exchange: str
     net_qty: float               # signed
-    avg_price: Optional[float]
-    ltp: Optional[float] = None
+    avg_price: float | None
+    ltp: float | None = None
     option_type: str = ""
-    strike: Optional[float] = None
+    strike: float | None = None
     product: str = ""
 
 
@@ -147,7 +147,7 @@ class PositionSnapshot:
     error: str = ""
     ts: str = field(default_factory=_now_iso)
 
-    def by_token(self, token: str) -> Optional[BrokerPosition]:
+    def by_token(self, token: str) -> BrokerPosition | None:
         for p in self.positions:
             if str(p.symboltoken) == str(token):
                 return p
@@ -242,6 +242,6 @@ class BrokerBase:
     def get_positions(self) -> PositionSnapshot:
         raise NotImplementedError
 
-    def reconcile_position(self, symboltoken: str) -> Optional[BrokerPosition]:
+    def reconcile_position(self, symboltoken: str) -> BrokerPosition | None:
         snap = self.get_positions()
         return snap.by_token(symboltoken) if snap.ok else None

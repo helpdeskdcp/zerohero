@@ -19,6 +19,10 @@ from __future__ import annotations
 
 import sqlite3
 
+# DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
+# read the live data/chanakya.db (reads here are mode=ro regardless).
+from app.db import _resolve_db_path as _resolve_db_path
+
 from . import adaptive as _adp
 from . import adaptive_mc as _adp_mc
 from . import evidence as _ev
@@ -26,9 +30,6 @@ from . import filters as _flt
 from . import memory as _mem
 from . import score as _sc
 
-# DB path honours TEST_DATABASE_URL / CHANAKYA_DB_PATH so tests never even
-# read the live data/chanakya.db (reads here are mode=ro regardless).
-from app.db import _resolve_db_path as _resolve_db_path  # noqa: E402
 _DB = _resolve_db_path()
 
 A_PLUS = {

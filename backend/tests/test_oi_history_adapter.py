@@ -11,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.backtest import oi_history_adapter as ad
 
-
 # --- minimal real-schema slices -------------------------------------------------
 _CYCLES_DDL = """
 CREATE TABLE cycles (

@@ -1,7 +1,7 @@
 """Requirement 10-11: 0-100 strength score (never called a probability),
 weighted with renormalization over missing components."""
 
-from app.sr_dynamic.scoring import score_zone, WEIGHTS
+from app.sr_dynamic.scoring import WEIGHTS, score_zone
 
 
 def test_weights_sum_to_one():

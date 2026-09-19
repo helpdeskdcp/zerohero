@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from .. import db
-from .broker_base import OStatus, OrderReq
+from .broker_base import OrderReq, OStatus
 
 
 def tag(trade_id: str, leg: str) -> str:

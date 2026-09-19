@@ -28,8 +28,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, Optional
 
-from . import oi_history_adapter as ad
 from .. import db
+from . import oi_history_adapter as ad
 
 # NSE cash session, IST minute-of-day.
 SESSION_START = 9 * 60 + 15
@@ -38,7 +38,7 @@ _HARNESS_TFS = ("1m", "3m", "5m", "15m", "30m")
 _TF_MIN = {"1m": 1, "3m": 3, "5m": 5, "15m": 15, "30m": 30, "1h": 60}
 
 
-def _mod(ts: str) -> Optional[int]:
+def _mod(ts: str) -> int | None:
     try:
         dt = datetime.fromisoformat(ts)
     except (TypeError, ValueError):
@@ -46,7 +46,7 @@ def _mod(ts: str) -> Optional[int]:
     return dt.hour * 60 + dt.minute
 
 
-def _tod_bucket(minute: Optional[int]) -> str:
+def _tod_bucket(minute: int | None) -> str:
     if minute is None:
         return "UNKNOWN"
     if minute < 9 * 60 + 30:
@@ -60,7 +60,7 @@ def _tod_bucket(minute: Optional[int]) -> str:
     return "CLOSE"
 
 
-def _leg(state: dict, strike, opt_type: str) -> Optional[dict]:
+def _leg(state: dict, strike, opt_type: str) -> dict | None:
     st = str(opt_type or "").lower()
     for row in state.get("chain") or []:
         if row.get("strike") == strike:
@@ -76,16 +76,16 @@ class SimTrade:
     direction: str
     opt_type: str
     strike: float
-    expiry: Optional[str]
-    token: Optional[str]
-    tradingsymbol: Optional[str]
+    expiry: str | None
+    token: str | None
+    tradingsymbol: str | None
     entry: float
     entry_ts: str
     stop_loss: float
     target_1: float
-    target_2: Optional[float]
+    target_2: float | None
     trailing_stop: float
-    max_hold_sec: Optional[float]
+    max_hold_sec: float | None
     # runtime
     cur_sl: float = 0.0
     peak: float = 0.0
@@ -93,13 +93,13 @@ class SimTrade:
     mfe: float = 0.0
     mae: float = 0.0
     status: str = "OPEN"
-    exit_price: Optional[float] = None
-    exit_ts: Optional[str] = None
-    exit_reason: Optional[str] = None
-    points: Optional[float] = None
-    r_multiple: Optional[float] = None
-    outcome: Optional[str] = None
-    holding_sec: Optional[float] = None
+    exit_price: float | None = None
+    exit_ts: str | None = None
+    exit_reason: str | None = None
+    points: float | None = None
+    r_multiple: float | None = None
+    outcome: str | None = None
+    holding_sec: float | None = None
 
     def __post_init__(self):
         self.cur_sl = self.stop_loss
@@ -125,10 +125,9 @@ class SimTrade:
         self.peak = max(self.peak, ltp)
         if self.trailing_stop and self.trailing_stop > 0:
             cand = round(self.peak - self.trailing_stop, 2)
-            if cand > self.cur_sl:
-                self.cur_sl = cand
+            self.cur_sl = max(self.cur_sl, cand)
 
-    def check_exit(self, ltp: float, ts: str) -> Optional[str]:
+    def check_exit(self, ltp: float, ts: str) -> str | None:
         if ltp <= self.cur_sl:
             return "TRAIL" if self.cur_sl > self.stop_loss else "STOP"
         if ltp >= self.target_1:
@@ -184,8 +183,8 @@ class ReplayContext:
 class ReplayResult:
     run_id: str
     symbol: str
-    start: Optional[str]
-    end: Optional[str]
+    start: str | None
+    end: str | None
     states_seen: int = 0
     decisions: int = 0
     entries: int = 0
@@ -249,7 +248,7 @@ class ReplayHarness:
             pass
 
     # -- main loop -------------------------------------------------------- #
-    def run(self, decide: Callable[[dict, ReplayContext], Optional[dict]]) -> ReplayResult:
+    def run(self, decide: Callable[[dict, ReplayContext], dict | None]) -> ReplayResult:
         res = ReplayResult(self.run_id, self.symbol, self.start, self.end)
         res.manifest = ad.data_quality_manifest(self.symbol)
 
@@ -259,7 +258,7 @@ class ReplayHarness:
         ctx = ReplayContext(series)
 
         open_trades: list[SimTrade] = []
-        cur_date: Optional[str] = None
+        cur_date: str | None = None
         _last_decide_ts = None
 
         for state in ad.iter_market_states(self.symbol, self.start, self.end):
@@ -373,7 +372,7 @@ class ReplayHarness:
         self._persist_signal(row)
         res.signals.append(row)
 
-    def _open(self, sig, state, ts, minute, res: ReplayResult) -> Optional[SimTrade]:
+    def _open(self, sig, state, ts, minute, res: ReplayResult) -> SimTrade | None:
         opt_type = "CE" if sig["decision"] == "BUY_CE" else "PE"
         strike = sig.get("strike")
         leg = _leg(state, strike, opt_type)

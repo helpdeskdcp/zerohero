@@ -6,6 +6,7 @@ statistically calibrated.
 """
 import time as _time
 from datetime import datetime, timezone
+
 from . import db
 
 # /api/research is polled by up to 4 pages and does two full-table scans + a

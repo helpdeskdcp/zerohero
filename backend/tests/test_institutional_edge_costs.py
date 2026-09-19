@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.institutional_edge.costs import estimate_cost, known_profiles  # noqa: E402
+from app.institutional_edge.costs import estimate_cost, known_profiles
 
 
 def test_naturalgas_round_trip_matches_the_validated_audit_number():
@@ -56,4 +56,4 @@ def test_known_profiles_lists_exactly_the_validated_instruments():
     assert keys == {("MCX", "NATURALGAS_OPTION"), ("MCX", "CRUDEOIL_OPTION")}
     for p in profiles:
         assert p["round_trip_total"] > 0
-        assert "validated_note" in p and p["validated_note"]
+        assert p.get("validated_note")

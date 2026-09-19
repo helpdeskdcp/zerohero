@@ -13,7 +13,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.connectors import upstox as U   # noqa: E402
+from app.connectors import upstox as U
 
 
 class _Resp:

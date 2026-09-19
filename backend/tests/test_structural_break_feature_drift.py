@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.structural_break.feature_drift import evaluate_feature_drift  # noqa: E402
+from app.structural_break.feature_drift import evaluate_feature_drift
 
 random.seed(11)
 
