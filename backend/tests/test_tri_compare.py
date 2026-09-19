@@ -7,7 +7,6 @@ mathematical RR gate, ANN no-future-leak + TRAIN-only fit, composite
 sample-sufficiency, and no live-app imports.
 """
 import ast
-import os
 import sys
 from pathlib import Path
 
@@ -29,9 +28,16 @@ CFG = merged({"tf_min": 15})
 
 # See tests/test_trend_swing.py for the same rationale: these tests need the
 # real NIFTY historical data (Kaggle CSV / market_history.db), correctly
-# gitignored and absent from a fresh CI checkout. Skip gracefully there.
-_HAS_REAL_DATA = (any(os.path.exists(p) for p, _ in D._KAGGLE_1M.get("NIFTY", []))
-                  or os.path.exists(D._MH_DB))
+# gitignored and absent from a fresh CI checkout. A path-existence check is
+# NOT reliable here -- some other test's import chain can create an empty
+# market_history.db as a side effect (e.g. a dormant CaptureWorker opening a
+# sqlite3.connect() just to check the schema), so the file "exists" while
+# still holding zero usable rows. Probe with a real, cheap load instead.
+try:
+    _probe_bars, _ = D.load("NIFTY", tf_min=15, start="2019-01-02", end="2019-01-04")
+    _HAS_REAL_DATA = len(_probe_bars) > 0
+except Exception:
+    _HAS_REAL_DATA = False
 pytestmark = pytest.mark.skipif(
     not _HAS_REAL_DATA,
     reason="real NIFTY historical data (Kaggle CSV / market_history.db) not present in this environment")
