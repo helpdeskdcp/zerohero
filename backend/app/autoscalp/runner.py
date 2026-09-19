@@ -21,6 +21,9 @@ import traceback
 from datetime import date, datetime, timedelta, timezone
 
 from .. import db
+from .. import instrument_profiles
+from ..effective_profile import select_effective_profile
+from ..ai import shadow as _ai_shadow
 
 _log = logging.getLogger(__name__)
 from .aggregator import CandleAggregator
@@ -225,6 +228,13 @@ DEFAULT_CONFIG = {
     # and every audit row above it are unaffected either way, so research/
     # calibration sample generation never changes.
     "final_signal_gate": {"enabled": False},
+    # Phase 12 -- OpenRouter/profile-behavior-engine shadow comparison.
+    # Opt-in, default OFF. Even when on, purely observational: writes to
+    # shadow_decisions, never touches sig/decision/paper-trade-opening.
+    # Requires OPENROUTER_API_KEY to actually call AI; with no key
+    # configured the behavior-engine classification still runs and logs,
+    # just with ai_status="UNAVAILABLE" every time.
+    "ai_shadow_mode": {"enabled": False},
     # Per-symbol strategy overrides, merged over `strategy`. NIFTY is DELIBERATELY
     # absent -> it runs on the P6-validated defaults and must stay that way
     # (best live win-rate). MCX commodities move slower and trend longer, so
@@ -242,14 +252,14 @@ DEFAULT_CONFIG = {
     # NIFTY / BANKNIFTY / SENSEX untouched: NIFTY is the P6-validated default
     # (see the comment above — must stay that way); BANKNIFTY (n=6) / SENSEX
     # (n=2) are too thin a sample to calibrate individually yet.
-    "symbol_profiles": {
-        "NATURALGAS": {"max_hold_sec": 1800, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
-                       "est_cost_r": 0.10,          # ~0.1R round-trip on the NG option spread
-                       "trail_atr": 1.6},
-        "CRUDEOIL":   {"max_hold_sec": 2400, "ev": {"min_ev_r": 0.15, "rr_min": 1.4},
-                       "sl_atr": 1.2, "t1_atr": 1.9, "est_cost_r": 0.10,
-                       "trail_atr": 1.6},
-    },
+    #
+    # Phase F (ZEROHERO_PHASE_F_INSTRUMENT_PROFILES.md): this dict is now
+    # GENERATED from app.instrument_profiles.REGISTRY instead of being a
+    # second, independent hardcoded copy of the same numbers -- single
+    # source of truth, prevents the two from silently drifting apart.
+    # Verified byte-identical to the previous literal
+    # (tests/test_instrument_profiles.py::test_build_symbol_profiles_config_matches_prior_literal).
+    "symbol_profiles": instrument_profiles.build_symbol_profiles_config(),
     "safeguards": {},
     "auto_arm": False,
     # ---- expiry-day (0-DTE) trading ----------------------------------------
@@ -664,19 +674,44 @@ class AutoScalpRunner:
         # forming-bar information (ZEROHERO_TRADING_EDGE_VALIDATION_2026-09-19.md
         # Phase C, item 1).
         _wl = await asyncio.to_thread(db.get_recent_win_loss_stats, "AUTOSCALP", sym.upper(), 100)
-        if _wl["n"] >= 30 and _wl["avg_win"] is not None and _wl["avg_loss"] is not None:
-            _avg_win, _avg_loss = _wl["avg_win"], _wl["avg_loss"]
-            _ev_mode = f"EMPIRICAL(n={_wl['n']})"
-        else:
+        # Phase F (ZEROHERO_PHASE_F_INSTRUMENT_PROFILES.md): n>=30 alone is a
+        # sample-size floor, not proof of profitability -- distinguish
+        # EMPIRICAL (real win/loss stats, but this symbol's cost model is
+        # still UNCALIBRATED) from VALIDATED (real win/loss stats AND a
+        # validated per-instrument cost model, so get_recent_win_loss_stats'
+        # net_pnl preference is actually backing the numbers used).
+        if _wl["n"] < 30 or _wl["avg_win"] is None or _wl["avg_loss"] is None:
             _avg_win, _avg_loss = None, None
-            _ev_mode = f"IDEALIZED(n={_wl['n']})"
+            _ev_mode = f"INSUFFICIENT_SAMPLE(n={_wl['n']},fallback=IDEALIZED)"
+        else:
+            _avg_win, _avg_loss = _wl["avg_win"], _wl["avg_loss"]
+            _cost_status = instrument_profiles.get_instrument_profile(sym).cost_model_status
+            _ev_mode = (f"VALIDATED(n={_wl['n']})" if _cost_status == "OK"
+                       else f"EMPIRICAL(n={_wl['n']},cost=UNCALIBRATED)")
         sig = await asyncio.to_thread(
             decide_from_context, bars, chain, atm=atm, calib=self.calibration(),
             avg_win=_avg_win, avg_loss=_avg_loss, leg_bars_fn=_leg_fn,
             tod_bucket=tod, config=strat_cfg)
         sig["ev_mode"] = _ev_mode
+        # Phase F: deterministic, auditable effective-profile line -- pure
+        # function of (symbol, regime, is_expiry_day), all already known at
+        # this point, so this cannot introduce any look-ahead.
+        _eff = select_effective_profile(sym, sig.get("regime") or "NORMAL_DAY", is_expiry_day)
+        sig["effective_profile"] = _eff.audit_line()
         if sig.get("reason"):
-            sig["reason"] = f"{sig['reason']} | ev_mode={_ev_mode}"
+            sig["reason"] = f"{sig['reason']} | ev_mode={_ev_mode} | {_eff.audit_line()}"
+
+        # Phase 12 (OpenRouter/profile-behavior-engine): shadow-mode only,
+        # opt-in, default OFF. NEVER influences sig/decision -- purely
+        # observational, exactly like the existing final_signal_gate
+        # shadow_mode. Runs off the event loop; any internal failure is
+        # already caught inside run_shadow_decision and is a no-op here too.
+        if (cfg.get("ai_shadow_mode") or {}).get("enabled", False):
+            try:
+                await asyncio.to_thread(_ai_shadow.run_shadow_decision, sym.upper(), sig,
+                                        _eff.to_dict())
+            except Exception as e:
+                self.last_error = f"ai_shadow: {type(e).__name__}: {e}"
 
         # NSE cash index has no volume of its own -> borrow a VWAP from its
         # front-month FUTURE for the snapshot + dashboard. Decision is already

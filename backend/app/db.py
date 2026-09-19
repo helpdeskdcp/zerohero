@@ -137,6 +137,27 @@ CREATE TABLE IF NOT EXISTS paper_trade_events (
 );
 CREATE INDEX IF NOT EXISTS idx_paper_trade_events_trade_id ON paper_trade_events(trade_id);
 
+-- Phase F / OpenRouter (ZEROHERO_PHASE_F_INSTRUMENT_PROFILES.md): shadow-mode
+-- comparison log. Opt-in, default OFF -- see app.autoscalp.runner's
+-- ai_shadow_mode config gate. NEVER read by the live decision path; this is
+-- observation-only, exactly like fsg_shadow_log for the signal gate.
+CREATE TABLE IF NOT EXISTS shadow_decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    profile TEXT,
+    regime TEXT,
+    deterministic_decision TEXT,
+    deterministic_score REAL,
+    behavior_json TEXT,
+    ai_status TEXT,
+    ai_json TEXT,
+    fused_final_state TEXT,
+    fused_confidence REAL,
+    reason_codes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_shadow_decisions_symbol_ts ON shadow_decisions(symbol, ts);
+
 -- Turning-Point Engine predictions, resolved against future OHLC for
 -- deterministic closed-form calibration (no ML).
 CREATE TABLE IF NOT EXISTS tp_predictions (
@@ -587,6 +608,29 @@ def list_paper_trade_events(trade_id: str) -> list:
     with db() as conn:
         return [dict(r) for r in conn.execute(
             "SELECT * FROM paper_trade_events WHERE trade_id=? ORDER BY id ASC", (trade_id,))]
+
+
+def insert_shadow_decision(row: dict):
+    cols = ["ts", "symbol", "profile", "regime", "deterministic_decision",
+            "deterministic_score", "behavior_json", "ai_status", "ai_json",
+            "fused_final_state", "fused_confidence", "reason_codes"]
+    vals = [row.get(c) for c in cols]
+    placeholders = ",".join(["?"] * len(cols))
+    with db() as conn:
+        conn.execute(
+            f"INSERT INTO shadow_decisions ({','.join(cols)}) VALUES ({placeholders})", vals)
+
+
+def list_shadow_decisions(symbol: str | None = None, limit: int = 200) -> list:
+    clauses, params = [], []
+    if symbol:
+        clauses.append("symbol=?")
+        params.append(symbol.upper())
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with db() as conn:
+        return [dict(r) for r in conn.execute(
+            f"SELECT * FROM shadow_decisions{where} ORDER BY id DESC LIMIT ?", params)]
 
 
 def get_recent_win_loss_stats(strategy: str, underlying: str, limit: int = 100) -> dict:

@@ -801,6 +801,42 @@ def test_runner_stamps_ev_mode_onto_persisted_trade(fresh_db, monkeypatch):
     asyncio.run(r.tick_once())
     trades = fresh_db.list_trades(strategy="AUTOSCALP")
     assert len(trades) == 1
-    assert trades[0]["ev_mode"] == "IDEALIZED(n=0)"          # no prior NIFTY history in fresh_db
+    # no prior NIFTY history in fresh_db -> INSUFFICIENT_SAMPLE, falls back
+    # to the idealized geometry (Phase F terminology, see instrument_profiles.py)
+    assert trades[0]["ev_mode"] == "INSUFFICIENT_SAMPLE(n=0,fallback=IDEALIZED)"
     sigs = fresh_db.list_scalp_signals(source="LIVE")
-    assert "ev_mode=IDEALIZED(n=0)" in sigs[0]["reason"]
+    assert "ev_mode=INSUFFICIENT_SAMPLE(n=0,fallback=IDEALIZED)" in sigs[0]["reason"]
+    assert "PROFILE=NIFTY" in sigs[0]["reason"] and "REGIME=TRENDING_DOWN" in sigs[0]["reason"]
+
+
+def test_ai_shadow_mode_default_off_writes_no_shadow_row(fresh_db, monkeypatch):
+    sig = dict(_EXP_SIG)
+    r, _feed = _runner(monkeypatch, sig)
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert fresh_db.list_shadow_decisions() == []
+
+
+def test_ai_shadow_mode_enabled_logs_without_altering_the_trade(fresh_db, monkeypatch):
+    """Shadow mode ON must still open the exact same paper trade -- it is
+    purely observational."""
+    sig = {"decision": "BUY_PE", "signal_type": "SUPPORT_BREAKDOWN", "direction": "BEARISH",
+           "strike": 24100, "token": "PE24100", "tradingsymbol": "NIFTY24100PE",
+           "expiry": "2026-09-03", "entry": 95.0, "stop_loss": 83.0, "target_1": 116.0,
+           "target_2": 128.0, "trailing_stop": 8.0, "max_hold_sec": 1500,
+           "probability": 0.58, "confidence": "MEDIUM", "ev": 6.0, "rr": 1.6,
+           "regime": "TRENDING_DOWN", "mtf_alignment": -30.0, "signal_score": 63.0,
+           "momentum": -0.42, "state_score": 71.0,
+           "component_scores": {"x": 1}, "reason": "test", "support": 24080,
+           "resistance": 24150, "support_strength": 60, "resistance_strength": 62,
+           "sr_level": 24085, "sr_side": "SUPPORT", "atr": 11.0, "vwap": 24110.0}
+    r, _feed = _runner(monkeypatch, sig)
+    r.set_config({"ai_shadow_mode": {"enabled": True}})
+    r.arm()
+    asyncio.run(r.tick_once())
+    trades = fresh_db.list_trades(strategy="AUTOSCALP")
+    assert len(trades) == 1 and trades[0]["direction"] == "BUY"   # unaffected by shadow mode
+    shadow = fresh_db.list_shadow_decisions(symbol="NIFTY")
+    assert len(shadow) == 1
+    assert shadow[0]["ai_status"] == "UNAVAILABLE"    # no OPENROUTER_API_KEY in test env
+    assert shadow[0]["fused_final_state"] in ("SELL", "WEAK_SELL", "STRONG_SELL")

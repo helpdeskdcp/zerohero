@@ -291,6 +291,14 @@ try:
 except Exception as _e:
     print(f"[sr_dynamic] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Instrument profile / calibration / AI diagnostics (Phase F). Read-only,
+# no broker calls, no secrets exposed. ------------------------------------
+try:
+    from .api import profile_routes as _profile_routes
+    app.include_router(_profile_routes.router)
+except Exception as _e:
+    print(f"[profiles] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Smart Scalper paper-trade scheduler (spec section 48). PAPER only, DISARMED
 # by default — wiring it in does not start opening positions on its own.
 try:
