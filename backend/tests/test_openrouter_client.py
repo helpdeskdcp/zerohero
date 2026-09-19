@@ -178,6 +178,7 @@ def test_smoke_test_skipped_when_no_key(monkeypatch):
     out = oc.run_smoke_test()
     assert out["status"] == "SKIPPED"
     assert out["reason"] == "API_KEY_NOT_CONFIGURED"
+    assert out["retry_count"] == 0 and out["http_status"] is None
 
 
 def test_smoke_test_skipped_when_key_but_no_model(monkeypatch):
@@ -200,3 +201,15 @@ def test_smoke_test_runs_real_call_path_when_configured(monkeypatch):
     assert out["status"] == "OK"
     assert out["model"] == "test/model-a"
     assert out["latency_ms"] is not None
+    assert out["retry_count"] == 0
+    assert out["http_status"] is None    # only set on a real HTTP-error attempt
+
+
+def test_smoke_test_reports_retry_count_and_http_status_on_failure(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
+    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    monkeypatch.setattr(oc.requests, "post", lambda *a, **k: _FakeResp(503, {}))
+    out = oc.run_smoke_test()
+    assert out["status"] == "ERROR"
+    assert out["http_status"] == 503
+    assert out["retry_count"] >= 0

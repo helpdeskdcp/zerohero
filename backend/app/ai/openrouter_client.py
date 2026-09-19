@@ -205,10 +205,17 @@ def run_smoke_test() -> dict:
     as having run when it didn't."""
     if not is_available():
         return {"status": "SKIPPED", "reason": "API_KEY_NOT_CONFIGURED" if not _config()["api_key"]
-                else "MODEL_NOT_CONFIGURED", "model": None, "latency_ms": None}
+                else "MODEL_NOT_CONFIGURED", "model": None, "latency_ms": None,
+                "retry_count": 0, "http_status": None}
     result = chat_completion_json(
         messages=[{"role": "system", "content": "Respond with only this JSON object, nothing else."},
                  {"role": "user", "content": '{"ping": "pong"}'}],
         max_tokens=20)
+    http_status = None
+    for a in reversed(result.attempts):
+        if a["status"].startswith("HTTP_"):
+            http_status = int(a["status"].split("_", 1)[1])
+            break
     return {"status": result.status, "reason": result.error, "model": result.model_used,
-           "latency_ms": result.latency_ms}
+           "latency_ms": result.latency_ms, "retry_count": max(0, len(result.attempts) - 1),
+           "http_status": http_status}
