@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from . import openrouter_client as _client
+from . import groq_client as _client
 
 _SYSTEM_PROMPT = (
     "You are a market-regime classification assistant for an options scalping "
@@ -86,7 +86,7 @@ def analyze_with_ai(context: dict, *, model: str | None = None) -> AIBehaviorRes
     result = _client.chat_completion_json(
         messages=[{"role": "system", "content": _SYSTEM_PROMPT},
                  {"role": "user", "content": str(context)}],
-        model=model)
+        model=model, max_tokens=1500)
     if result.status != "OK":
         return _unavailable(result.status, result.error)
 

@@ -12,7 +12,7 @@ from .. import db
 from .. import instrument_profiles as _ip
 from .. import regime_profiles as _rp
 from ..ai import metrics as _ai_metrics
-from ..ai import openrouter_client as _client
+from ..ai import groq_client as _client
 from ..autoscalp import trade_contamination as _contam
 from ..effective_profile import select_effective_profile
 
@@ -76,8 +76,9 @@ def api_ai_status():
     diag = _client.diagnostics()
     m = _ai_metrics.snapshot()
     return {
-        "available": diag["openrouter_available"],
-        "openrouter_model": diag["openrouter_model"],
+        "available": diag["groq_available"],
+        "ai_provider": "groq",
+        "ai_model": diag["groq_model"],
         "ai_config_status": diag["ai_config_status"],
         "ai_request_count": m["ai_requests"],
         "ai_success_count": m["ai_success"],

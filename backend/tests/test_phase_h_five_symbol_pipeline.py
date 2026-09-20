@@ -2,12 +2,12 @@
 Phase H -- end-to-end pipeline validation for all 5 watchlist instruments:
 
     InstrumentProfile -> RegimeProfile -> select_effective_profile()
-    -> behavior_ai -> openrouter_client -> fusion -> shadow decision
+    -> behavior_ai -> groq_client -> fusion -> shadow decision
 
-No real network call (no OPENROUTER_API_KEY exists in this environment --
-verified separately in the Phase H report); AI-configured paths are
-exercised via a mocked openrouter_client so the FUSION/SHADOW wiring is
-proven end-to-end without a real API key.
+No real network call in this test; AI-configured paths are exercised via a
+mocked groq_client so the FUSION/SHADOW wiring is proven end-to-end without
+a real API key (a real GROQ_API_KEY is configured in production .env and
+was separately verified working via a real smoke test).
 """
 import json
 
@@ -16,7 +16,7 @@ import pytest
 from app import instrument_profiles as ip
 from app.ai import behavior_ai
 from app.ai import fusion as _fusion
-from app.ai import openrouter_client as oc
+from app.ai import groq_client as oc
 from app.ai import shadow as sh
 from app.behavior_engine import analyze_behavior
 from app.effective_profile import select_effective_profile
@@ -65,10 +65,10 @@ def test_behavior_engine_produces_sane_output_for_every_symbol(symbol):
 
 @pytest.mark.parametrize("symbol", _SYMBOLS)
 def test_full_pipeline_config_required_when_ai_unconfigured(symbol, fresh_db, monkeypatch):
-    """No OPENROUTER_API_KEY exists in this environment -- the full chain
+    """No GROQ_API_KEY exists in this environment -- the full chain
     must still complete and log a shadow decision, with ai_status
     reflecting the real config state, never a fabricated success."""
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     eff = select_effective_profile(symbol, "TRENDING_UP", False)
     result = sh.run_shadow_decision(symbol, _sig_for(symbol), eff.to_dict())
     assert result is not None
@@ -80,11 +80,11 @@ def test_full_pipeline_config_required_when_ai_unconfigured(symbol, fresh_db, mo
 
 @pytest.mark.parametrize("symbol", _SYMBOLS)
 def test_full_pipeline_with_mocked_ai_success_for_every_symbol(symbol, fresh_db, monkeypatch):
-    """Proves the complete chain -- including a real (mocked) OpenRouter
+    """Proves the complete chain -- including a real (mocked) Groq
     round trip through behavior_ai -- reaches fusion and shadow correctly
     for every instrument, not just NIFTY."""
-    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake-test-only")
-    monkeypatch.setenv("OPENROUTER_MODEL", "test/phase-h-model")
+    monkeypatch.setenv("GROQ_API_KEY", "sk-fake-test-only")
+    monkeypatch.setenv("GROQ_MODEL", "test/phase-h-model")
     ok_data = {"regime": "TREND", "profile_match": True, "profile_match_confidence": 70,
               "signal_validation": "PASS", "confidence": 65, "risk": "LOW",
               "warnings": [], "reason_codes": []}
@@ -103,8 +103,8 @@ def test_ai_failure_never_blocks_the_deterministic_pipeline(fresh_db, monkeypatc
     """AI timeout/error must never propagate -- the shadow decision still
     gets written with a real failure status, not silently skipped, and
     never raises into the caller."""
-    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
-    monkeypatch.setenv("OPENROUTER_MODEL", "test/model")
+    monkeypatch.setenv("GROQ_API_KEY", "sk-fake")
+    monkeypatch.setenv("GROQ_MODEL", "test/model")
 
     def _timeout(**k):
         return oc.AIResult(status="TIMEOUT", data=None, model_used=None, latency_ms=None,

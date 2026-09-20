@@ -2,7 +2,7 @@
 Real DB writes (fresh_db, isolated), mocked AI calls only -- no network."""
 import json
 
-from app.ai import openrouter_client as oc
+from app.ai import groq_client as oc
 from app.ai import shadow as sh
 
 
@@ -20,7 +20,7 @@ def _eff(cost_status="UNCALIBRATED"):
 
 
 def test_config_required_when_no_key_configured(fresh_db, monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     result = sh.run_shadow_decision("NIFTY", _sig(signal_type="RESISTANCE_BREAKOUT"), _eff())
     assert result is not None
     rows = fresh_db.list_shadow_decisions(symbol="NIFTY")
@@ -29,8 +29,8 @@ def test_config_required_when_no_key_configured(fresh_db, monkeypatch):
 
 
 def test_skipped_not_required_when_ai_configured_but_not_needed(fresh_db, monkeypatch):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
-    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    monkeypatch.setenv("GROQ_API_KEY", "sk-fake")
+    monkeypatch.setenv("GROQ_MODEL", "test/model-a")
     # RANGE regime, mtf_alignment=20 (outside the 35-65 ambiguous band) -> not ai_required
     sh.run_shadow_decision("NIFTY", _sig(regime="RANGE", signal_type="NONE", mtf_alignment=20.0), _eff())
     rows = fresh_db.list_shadow_decisions(symbol="NIFTY")
@@ -38,8 +38,8 @@ def test_skipped_not_required_when_ai_configured_but_not_needed(fresh_db, monkey
 
 
 def test_ai_called_and_persisted_when_required_and_configured(fresh_db, monkeypatch):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
-    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    monkeypatch.setenv("GROQ_API_KEY", "sk-fake")
+    monkeypatch.setenv("GROQ_MODEL", "test/model-a")
     ok_data = {"regime": "TREND", "profile_match": True, "profile_match_confidence": 80,
               "signal_validation": "PASS", "confidence": 75, "risk": "LOW",
               "warnings": [], "reason_codes": []}
@@ -55,8 +55,8 @@ def test_ai_called_and_persisted_when_required_and_configured(fresh_db, monkeypa
 
 
 def test_never_raises_when_ai_call_itself_errors(fresh_db, monkeypatch):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-fake")
-    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    monkeypatch.setenv("GROQ_API_KEY", "sk-fake")
+    monkeypatch.setenv("GROQ_MODEL", "test/model-a")
 
     def _boom(**k):
         raise RuntimeError("simulated internal failure")
@@ -67,7 +67,7 @@ def test_never_raises_when_ai_call_itself_errors(fresh_db, monkeypatch):
 
 
 def test_deterministic_no_trade_still_recorded_in_shadow_log(fresh_db, monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     sh.run_shadow_decision("NIFTY", _sig(decision="NO_TRADE"), _eff())
     rows = fresh_db.list_shadow_decisions(symbol="NIFTY")
     assert rows[0]["fused_final_state"] == "NO_TRADE"

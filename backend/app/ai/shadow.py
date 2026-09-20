@@ -17,7 +17,7 @@ from ..behavior_engine import analyze_behavior
 from . import behavior_ai
 from . import fusion as _fusion
 from . import metrics as _metrics
-from . import openrouter_client as _client
+from . import groq_client as _client
 
 _log = logging.getLogger("chanakya.ai.shadow")
 

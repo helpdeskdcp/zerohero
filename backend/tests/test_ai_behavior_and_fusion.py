@@ -2,7 +2,7 @@
 rules) -- all pure/mocked, no real network calls."""
 from app.ai import behavior_ai
 from app.ai.fusion import fuse_decision
-from app.ai.openrouter_client import AIResult
+from app.ai.groq_client import AIResult
 
 # ---------------------------------------------------------------- behavior_ai
 

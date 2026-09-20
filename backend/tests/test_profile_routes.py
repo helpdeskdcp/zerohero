@@ -45,22 +45,23 @@ def test_api_calibration_status_distinguishes_calibrated_and_uncalibrated():
 
 
 def test_api_ai_status_never_exposes_a_key(monkeypatch):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-should-never-appear")
-    monkeypatch.setenv("OPENROUTER_MODEL", "test/model-a")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-should-never-appear")
+    monkeypatch.setenv("GROQ_MODEL", "test/model-a")
     out = pr.api_ai_status()
     assert out["available"] is True
-    assert out["openrouter_model"] == "test/model-a"
+    assert out["ai_provider"] == "groq"
+    assert out["ai_model"] == "test/model-a"
     assert out["ai_config_status"] == "OK"
-    assert "sk-should-never-appear" not in str(out)
+    assert "gsk-should-never-appear" not in str(out)
     assert "metrics" in out
 
 
 def test_api_ai_status_unavailable_when_no_key(monkeypatch):
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     out = pr.api_ai_status()
     assert out["available"] is False
     assert out["ai_config_status"] == "CONFIG_REQUIRED"
-    assert out["openrouter_model"] is None
+    assert out["ai_model"] is None
 
 
 def test_api_data_quality_empty_symbol_returns_zero_report(fresh_db):

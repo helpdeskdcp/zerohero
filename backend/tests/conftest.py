@@ -118,6 +118,10 @@ for _k in ("OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_FAST_MODEL",
           "OPENROUTER_REASONING_MODEL", "OPENROUTER_FALLBACK_MODELS"):
     os.environ.pop(_k, None)
 
+# HARD GUARD #4: same reasoning as #3, for app/ai/groq_client.py.
+for _k in ("GROQ_API_KEY", "GROQ_MODEL", "GROQ_FALLBACK_MODELS"):
+    os.environ.pop(_k, None)
+
 
 @pytest.fixture(autouse=True)
 def _no_real_telegram(monkeypatch):

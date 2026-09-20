@@ -838,5 +838,5 @@ def test_ai_shadow_mode_enabled_logs_without_altering_the_trade(fresh_db, monkey
     assert len(trades) == 1 and trades[0]["direction"] == "BUY"   # unaffected by shadow mode
     shadow = fresh_db.list_shadow_decisions(symbol="NIFTY")
     assert len(shadow) == 1
-    assert shadow[0]["ai_status"] == "CONFIG_REQUIRED"    # no OPENROUTER_API_KEY in test env
+    assert shadow[0]["ai_status"] == "CONFIG_REQUIRED"    # no GROQ_API_KEY in test env
     assert shadow[0]["fused_final_state"] in ("SELL", "WEAK_SELL", "STRONG_SELL")
