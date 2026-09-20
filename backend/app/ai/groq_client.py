@@ -1,9 +1,9 @@
 """
 Groq adapter -- the ONLY place in this codebase that talks to Groq.
-Mirrors app/ai/openrouter_client.py's shape and safety contract exactly
-(Groq's API is OpenAI-compatible: same /chat/completions shape).
+Centralized so no second, independent client ever gets built. Groq's API
+is OpenAI-compatible (same /chat/completions shape).
 
-SAFETY CONTRACT (non-negotiable, mirrors openrouter_client.py):
+SAFETY CONTRACT (non-negotiable, tested in tests/test_groq_client.py):
   - No API key hardcoded anywhere. Read only from environment.
   - This module NEVER raises out of chat_completion_json(). Every failure
     mode (no key configured, network error, timeout, non-2xx, malformed
@@ -178,11 +178,10 @@ def chat_completion_json(messages: list[dict], *, model: str | None = None,
 
 
 def run_smoke_test() -> dict:
-    """ONE minimal, harmless real network call -- mirrors
-    openrouter_client.run_smoke_test(). Never touches the network if
-    unconfigured; never stores the raw model response.
+    """ONE minimal, harmless real network call. Never touches the network
+    if unconfigured; never stores the raw model response.
 
-    max_tokens=500 (not openrouter_client's 20): Groq's available models
+    max_tokens=500 (not a small value like 20): Groq's available models
     (the openai/gpt-oss-* family) are reasoning models that spend a
     *variable*, non-deterministic amount of the completion budget on hidden
     reasoning_tokens before the visible JSON content -- confirmed via real

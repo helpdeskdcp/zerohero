@@ -109,16 +109,9 @@ def _live_db_never_opened_rw():
 for _k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_SIGNALS_CHANNEL_ID"):
     os.environ.pop(_k, None)
 
-# HARD GUARD #3: a test must never hit the real OpenRouter API with the real
-# key, and OPENROUTER_MODEL leaking in breaks any test that assumes it is
-# unset (openrouter_client.selected_model() prioritises OPENROUTER_MODEL over
-# a test's monkeypatched OPENROUTER_FAST_MODEL). Individual tests still
-# monkeypatch.setenv() the specific vars they need.
-for _k in ("OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_FAST_MODEL",
-          "OPENROUTER_REASONING_MODEL", "OPENROUTER_FALLBACK_MODELS"):
-    os.environ.pop(_k, None)
-
-# HARD GUARD #4: same reasoning as #3, for app/ai/groq_client.py.
+# HARD GUARD #3: a test must never hit the real Groq API with the real key,
+# and GROQ_MODEL leaking in breaks any test that assumes it is unset.
+# Individual tests still monkeypatch.setenv() the specific vars they need.
 for _k in ("GROQ_API_KEY", "GROQ_MODEL", "GROQ_FALLBACK_MODELS"):
     os.environ.pop(_k, None)
 

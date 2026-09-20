@@ -227,10 +227,10 @@ DEFAULT_CONFIG = {
     # and every audit row above it are unaffected either way, so research/
     # calibration sample generation never changes.
     "final_signal_gate": {"enabled": False},
-    # Phase 12 -- OpenRouter/profile-behavior-engine shadow comparison.
+    # Phase 12 -- Groq/profile-behavior-engine shadow comparison.
     # Opt-in, default OFF. Even when on, purely observational: writes to
     # shadow_decisions, never touches sig/decision/paper-trade-opening.
-    # Requires OPENROUTER_API_KEY to actually call AI; with no key
+    # Requires GROQ_API_KEY to actually call AI; with no key
     # configured the behavior-engine classification still runs and logs,
     # just with ai_status="UNAVAILABLE" every time.
     "ai_shadow_mode": {"enabled": False},

@@ -1,6 +1,6 @@
 """app.ai.groq_client -- every test here either has no API key configured
 (real UNAVAILABLE path, no network) or mocks requests.post directly. No real
-network call is ever made. Mirrors tests/test_openrouter_client.py."""
+network call is ever made."""
 import json
 
 import pytest
