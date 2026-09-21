@@ -83,6 +83,45 @@ def test_target_exit_and_signal_row(fresh_db, tmp_path, monkeypatch):
     assert rows[0]["signal_id"].startswith("SCS-")
 
 
+def test_target_exit_applies_real_naturalgas_cost_not_nifty(fresh_db, tmp_path, monkeypatch):
+    """Real incident (2026-09-21): backtest reported gross-only PF for every
+    symbol -- no cost model at all -- while the live paper-trade close path
+    already applies a real, contract-note-validated cost for NATURALGAS/
+    CRUDEOIL. SimTrade.close() must now reuse that same cost model: OK (a
+    real, non-zero cost) for NATURALGAS, honestly UNCALIBRATED (never a
+    fabricated cost) for NIFTY."""
+    _mkdb(tmp_path, monkeypatch, [
+        ("09:16", 24000, 24000, CH(100.0, 80.0)),
+        ("09:17", 24010, 24000, CH(105.0, 76.0)),
+        ("09:18", 24025, 24000, CH(115.0, 70.0)),
+    ], symbol="NATURALGAS")
+    res = rp.run_replay("NATURALGAS", _enter_once("09:17"), start="2026-08-27", end="2026-08-27")
+    t = res.trades[0]
+    assert t.points == 10.0                          # gross unchanged
+    assert t.cost_model_status == "OK"
+    assert t.trading_cost_points is not None and t.trading_cost_points > 0
+    assert t.net_of_cost_points == round(t.points - t.trading_cost_points, 4)
+
+    s = res.summary()
+    assert s["cost_model_status"] == "OK"
+    assert s["net_of_cost_total_points"] == round(t.net_of_cost_points, 2)
+
+
+def test_nifty_backtest_cost_stays_honestly_uncalibrated(fresh_db, tmp_path, monkeypatch):
+    _mkdb(tmp_path, monkeypatch, [
+        ("09:16", 24000, 24000, CH(100.0, 80.0)),
+        ("09:17", 24010, 24000, CH(105.0, 76.0)),
+        ("09:18", 24025, 24000, CH(115.0, 70.0)),
+    ])
+    res = rp.run_replay("NIFTY", _enter_once("09:17"), start="2026-08-27", end="2026-08-27")
+    t = res.trades[0]
+    assert t.cost_model_status == "UNCALIBRATED"
+    assert t.trading_cost_points is None and t.net_of_cost_points is None
+    s = res.summary()
+    assert s["cost_model_status"] == "UNCALIBRATED"
+    assert s["net_of_cost_total_points"] is None and s["net_of_cost_profit_factor"] is None
+
+
 def test_stop_exit(fresh_db, tmp_path, monkeypatch):
     _mkdb(tmp_path, monkeypatch, [
         ("09:16", 24000, 24000, CH(100.0, 80.0)),

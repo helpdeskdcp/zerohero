@@ -29,7 +29,25 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from .. import db
+from ..institutional_edge import costs as _costs
 from . import oi_history_adapter as ad
+
+# The only two (exchange, segment) keys app.institutional_edge.costs has a
+# REAL, contract-note-validated profile for (see that module's own
+# docstring) -- everything else (NIFTY/BANKNIFTY/SENSEX included)
+# legitimately returns UNCALIBRATED rather than a fabricated cost, exactly
+# as it already does for the live paper-trade close path
+# (app/engines/paper_trading.py::close_trade(), which this mirrors). This
+# set exists only to route the (exchange, segment) lookup correctly; it is
+# NOT a general MCX-symbol registry (that already exists, narrower in scope
+# here on purpose, in app/l2capture/worker.py).
+_COST_MODEL_MCX_SYMBOLS = {"NATURALGAS", "CRUDEOIL"}
+
+
+def _cost_estimate_for(symbol: str):
+    exchange = "MCX" if symbol.upper() in _COST_MODEL_MCX_SYMBOLS else "NFO"
+    segment = f"{symbol.upper()}_OPTION"
+    return _costs.estimate_cost(exchange, segment)
 
 # NSE cash session, IST minute-of-day.
 SESSION_START = 9 * 60 + 15
@@ -96,10 +114,17 @@ class SimTrade:
     exit_price: float | None = None
     exit_ts: str | None = None
     exit_reason: str | None = None
-    points: float | None = None
+    points: float | None = None          # gross -- unchanged meaning, existing callers/tests rely on this
     r_multiple: float | None = None
-    outcome: str | None = None
+    outcome: str | None = None           # gross-based, same design choice as paper_trading.py::close_trade()
     holding_sec: float | None = None
+    # Real, calibrated per-lot cost reuse (app.institutional_edge.costs --
+    # the SAME module the live paper-trade close path already applies).
+    # UNCALIBRATED (never a fabricated cost) for any symbol without a real
+    # contract-note-validated profile -- currently NIFTY/BANKNIFTY/SENSEX.
+    cost_model_status: str = "UNCALIBRATED"
+    trading_cost_points: float | None = None
+    net_of_cost_points: float | None = None
 
     def __post_init__(self):
         self.cur_sl = self.stop_loss
@@ -145,6 +170,14 @@ class SimTrade:
         self.r_multiple = round((price - self.entry) / self.risk, 3)
         self.holding_sec = round(self._hold_sec(ts), 1)
         self.outcome = "WIN" if self.points > 0 else ("LOSS" if self.points < 0 else "FLAT")
+        try:
+            est = _cost_estimate_for(self.symbol)
+            if est.status == "OK":
+                self.cost_model_status = "OK"
+                self.trading_cost_points = est.total_cost_points
+                self.net_of_cost_points = round(self.points - est.total_cost_points, 4)
+        except Exception:
+            pass   # cost lookup must never block a backtest close, same contract as paper_trading.py
 
 
 # --------------------------------------------------------------------------- #
@@ -199,6 +232,27 @@ class ReplayResult:
         losses = [t for t in closed if t.outcome == "LOSS"]
         gross_win = sum(t.points for t in wins)
         gross_loss = -sum(t.points for t in losses)
+
+        # Real, calibrated per-lot cost reuse (see _cost_estimate_for above) --
+        # honestly UNCALIBRATED (None fields, never a fabricated number) for
+        # any symbol without a real contract-note-validated profile.
+        cost_rows = [t for t in closed if t.cost_model_status == "OK"]
+        if cost_rows:
+            net_of_cost_total = round(sum(t.net_of_cost_points for t in cost_rows), 2)
+            net_pos = sum(p for t in cost_rows if (p := t.net_of_cost_points) > 0)
+            net_neg = -sum(p for t in cost_rows if (p := t.net_of_cost_points) < 0)
+            net_of_cost = {
+                "cost_model_status": "OK",
+                "total_cost_points": round(sum(t.trading_cost_points for t in cost_rows), 2),
+                "net_of_cost_total_points": net_of_cost_total,
+                "net_of_cost_expectancy_points": round(net_of_cost_total / len(cost_rows), 4),
+                "net_of_cost_profit_factor": round(net_pos / net_neg, 2) if net_neg else None,
+            }
+        else:
+            net_of_cost = {"cost_model_status": "UNCALIBRATED", "total_cost_points": None,
+                          "net_of_cost_total_points": None, "net_of_cost_expectancy_points": None,
+                          "net_of_cost_profit_factor": None}
+
         return {
             "run_id": self.run_id, "symbol": self.symbol,
             "states_seen": self.states_seen, "decisions": self.decisions,
@@ -210,6 +264,7 @@ class ReplayResult:
             "avg_win": round(gross_win / len(wins), 2) if wins else None,
             "avg_loss": round(-gross_loss / len(losses), 2) if losses else None,
             "exit_reasons": self.counts,
+            **net_of_cost,
         }
 
 

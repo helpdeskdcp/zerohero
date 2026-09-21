@@ -128,8 +128,35 @@ def _metrics(res, calib, label):
             fb_loss += (not win)
 
     n = len(trades)
+
+    # Real, calibrated per-lot cost reuse (app.institutional_edge.costs via
+    # SimTrade.close() -- the SAME module the live paper-trade close path
+    # already applies, see app/engines/paper_trading.py::close_trade()).
+    # Backtest previously reported gross-only PF/expectancy for every
+    # symbol, with no cost model at all -- honestly UNCALIBRATED (None
+    # fields, never fabricated) for any symbol without a real
+    # contract-note-validated profile (currently NIFTY/BANKNIFTY/SENSEX;
+    # NATURALGAS/CRUDEOIL are calibrated).
+    cost_rows = [t for t in trades if t.cost_model_status == "OK"]
+    if cost_rows:
+        net_of_cost_total = round(sum(t.net_of_cost_points for t in cost_rows), 2)
+        net_pos = sum(p for t in cost_rows if (p := t.net_of_cost_points) > 0)
+        net_neg = -sum(p for t in cost_rows if (p := t.net_of_cost_points) < 0)
+        net_of_cost = {
+            "cost_model_status": "OK",
+            "total_cost_points": round(sum(t.trading_cost_points for t in cost_rows), 2),
+            "net_of_cost_total_points": net_of_cost_total,
+            "net_of_cost_expectancy_points": round(net_of_cost_total / len(cost_rows), 4),
+            "net_of_cost_profit_factor": round(net_pos / net_neg, 2) if net_neg else None,
+        }
+    else:
+        net_of_cost = {"cost_model_status": "UNCALIBRATED", "total_cost_points": None,
+                       "net_of_cost_total_points": None, "net_of_cost_expectancy_points": None,
+                       "net_of_cost_profit_factor": None}
+
     return {
         "label": label,
+        **net_of_cost,
         "decisions": res.decisions, "entries": res.entries,
         "buy_ce": sum(1 for s in res.signals if s.get("decision") == "BUY_CE"),
         "buy_pe": sum(1 for s in res.signals if s.get("decision") == "BUY_PE"),
