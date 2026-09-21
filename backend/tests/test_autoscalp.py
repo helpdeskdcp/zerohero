@@ -356,6 +356,24 @@ def test_resolve_index_future_picks_front_month_nfo_token():
     assert nxt["status"] == "OK" and nxt["expiry"] != r["expiry"]
 
 
+def test_resolve_index_future_finds_sensex_on_bfo_not_nfo():
+    """Real bug (2026-09-21): resolve_index_future only ever looked at NFO
+    rows and hardcoded "exchange": "NFO" on its return, so SENSEX (a BSE
+    underlying -- its futures list on BFO, not NFO) always came back
+    DATA_UNAVAILABLE, and even a caller working around that would have been
+    told the wrong exchange. This blocked l2capture from ever subscribing to
+    SENSEX at all."""
+    from app import instruments
+    r = instruments.resolve_index_future("SENSEX", "AUTO")
+    assert r["status"] == "OK"
+    assert r["exchange"] == "BFO", "must report the REAL exchange, not a hardcoded NFO"
+    assert str(r["instrumenttype"]).upper() == "FUTIDX" and r["symboltoken"]
+    # NIFTY/BANKNIFTY must still resolve on NFO -- widening the filter to
+    # include BFO must not change what a real NSE underlying finds.
+    n = instruments.resolve_index_future("BANKNIFTY", "AUTO")
+    assert n["status"] == "OK" and n["exchange"] == "NFO"
+
+
 def test_nifty_snapshot_vwap_borrowed_from_index_future(fresh_db, monkeypatch):
     # index has no volume -> decide_from_context returns vwap None; the runner
     # backfills it from the front-month future for the snapshot only.

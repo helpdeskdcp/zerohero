@@ -258,21 +258,25 @@ def resolve_mcx_future(symbol: str, expiry: str = "AUTO") -> dict:
 
 
 def resolve_index_future(symbol: str, expiry: str = "AUTO") -> dict:
-    """Nearest non-expired NFO index/stock FUTURE for an NSE underlying.
+    """Nearest non-expired index/stock FUTURE for an underlying, on whichever
+    exchange actually lists it (NFO for NSE underlyings like NIFTY/BANKNIFTY,
+    BFO for BSE underlyings like SENSEX -- both real futures segments with
+    real traded volume; there is no single "the" exchange for this across
+    every symbol this function is called with).
 
-    An NSE cash index (NIFTY, BANKNIFTY, …) has no traded volume, so its own
-    candles cannot yield VWAP / volume. The front-month FUTURE does trade with
-    real volume — this resolves its token so a volume-bearing series is
-    available for VWAP and display. Read-only; nothing here feeds an order.
+    A cash index has no traded volume, so its own candles cannot yield VWAP /
+    volume. The front-month FUTURE does trade with real volume -- this
+    resolves its token so a volume-bearing series is available for VWAP and
+    display. Read-only; nothing here feeds an order.
     """
     u = canonical(symbol)
     rows = [_master_meta(r) for r in master_rows()]
-    rows = [r for r in rows if r["exchange"] == "NFO"
+    rows = [r for r in rows if r["exchange"] in ("NFO", "BFO")
             and r["underlying"] == u
             and str(r["instrumenttype"]).upper() in ("FUTIDX", "FUTSTK")
             and r["symboltoken"]]
     if not rows:
-        return {"status": "DATA_UNAVAILABLE", "reason": "no NFO future in instrument master"}
+        return {"status": "DATA_UNAVAILABLE", "reason": "no NFO/BFO future in instrument master"}
 
     def _d(x):
         for f in ("%d%b%Y", "%d-%b-%Y", "%Y-%m-%d"):
@@ -290,7 +294,12 @@ def resolve_index_future(symbol: str, expiry: str = "AUTO") -> dict:
     order = [r for _, r in dated]
     mode = str(expiry or "AUTO").upper()
     row = order[1] if mode == "NEXT" and len(order) > 1 else order[-1] if mode == "LATEST" else order[0]
-    return {**row, "status": "OK", "exchange": "NFO",
+    # `row["exchange"]` is already the real exchange (NFO or BFO) from
+    # _master_meta -- previously hardcoded to "NFO" here, which would have
+    # mislabeled a real BFO future (e.g. SENSEX) as NFO, sending the wrong
+    # AngelOne exchange_type to every downstream caller (l2capture's
+    # websocket subscribe, histcap's candle/quote fetch, ...).
+    return {**row, "status": "OK",
             "available_expiries": [d.isoformat() for d, _ in dated],
             "expiry_selection_mode": mode}
 
