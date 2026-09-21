@@ -20,6 +20,22 @@ def test_analyze_with_ai_valid_response(monkeypatch):
     assert r.status == "OK"
     assert r.confidence == 75.0
     assert r.signal_validation == "PASS"
+    assert r.orderflow_conflict is False   # _ok_client_result's data doesn't set it -> default False
+
+
+def test_analyze_with_ai_parses_real_orderflow_conflict_flag(monkeypatch):
+    monkeypatch.setattr(behavior_ai._client, "chat_completion_json",
+                        lambda **k: _ok_client_result(orderflow_conflict=True))
+    r = behavior_ai.analyze_with_ai({"symbol": "NIFTY"})
+    assert r.orderflow_conflict is True
+
+
+def test_analyze_with_ai_ignores_non_bool_orderflow_conflict(monkeypatch):
+    monkeypatch.setattr(behavior_ai._client, "chat_completion_json",
+                        lambda **k: _ok_client_result(orderflow_conflict="yes"))
+    r = behavior_ai.analyze_with_ai({"symbol": "NIFTY"})
+    assert r.status == "OK"          # not a schema failure -- just defaults False
+    assert r.orderflow_conflict is False
 
 
 def test_analyze_with_ai_unavailable_passthrough(monkeypatch):
@@ -63,8 +79,20 @@ def test_build_ai_context_is_compact_not_a_raw_dump():
     assert set(ctx.keys()) == {"symbol", "behavior_regime", "trend", "volatility",
                                "behavior_confidence", "signal_quality", "risk_state",
                                "deterministic_signal_type", "deterministic_direction",
-                               "deterministic_score", "cost_model_status",
-                               "instrument_validation_status", "regime_profile"}
+                               "deterministic_score", "deterministic_decision", "cost_model_status",
+                               "instrument_validation_status", "regime_profile",
+                               "support", "resistance", "vwap", "atr", "mtf_alignment",
+                               "option_ltp", "option_strike", "option_expiry"}
+    # spot/orderflow are optional -- omitted entirely (not sent as null) when
+    # the caller doesn't have them, e.g. this test's call site.
+    assert "spot" not in ctx and "orderflow" not in ctx
+
+
+def test_build_ai_context_includes_spot_and_orderflow_when_provided():
+    ctx = behavior_ai.build_ai_context("NIFTY", {"regime": "TREND"}, {}, {},
+                                       spot=24500.5, orderflow={"orderflow_state": "BULLISH"})
+    assert ctx["spot"] == 24500.5
+    assert ctx["orderflow"] == {"orderflow_state": "BULLISH"}
 
 
 # ---------------------------------------------------------------- fusion
@@ -119,6 +147,52 @@ def test_sell_side_downgrade_never_crosses_into_buy():
                                 "risk": "HIGH", "profile_match": True, "warnings": []},
                       cost_model_status="OK")
     assert d.final_state == "WEAK_SELL"
+
+
+def test_orderflow_conflict_weakens_one_step():
+    d = fuse_decision(deterministic_decision="BUY_CE", deterministic_score=70,
+                      behavior={"regime": "TREND", "profile": "NIFTY", "risk_state": "NORMAL",
+                               "signal_quality": 70},
+                      ai_result={"status": "OK", "signal_validation": "PASS", "confidence": 80,
+                                "risk": "LOW", "profile_match": True, "warnings": [],
+                                "orderflow_conflict": True},
+                      cost_model_status="OK")
+    assert d.final_state == "WEAK_BUY"
+    assert "ai_orderflow_conflict" in d.reason_codes
+
+
+def test_orderflow_conflict_stacks_with_high_risk_to_reach_no_trade():
+    """Two independent red flags (HIGH risk AND orderflow_conflict) together
+    weaken by 2 steps -- BUY (index 5) -> WEAK_BUY (4) -> NO_TRADE (3)."""
+    d = fuse_decision(deterministic_decision="BUY_CE", deterministic_score=70,
+                      behavior={"regime": "TREND", "profile": "NIFTY", "risk_state": "NORMAL",
+                               "signal_quality": 70},
+                      ai_result={"status": "OK", "signal_validation": "PASS", "confidence": 50,
+                                "risk": "HIGH", "profile_match": True, "warnings": [],
+                                "orderflow_conflict": True},
+                      cost_model_status="OK")
+    assert d.final_state == "NO_TRADE"
+    assert "ai_flagged_high_risk" in d.reason_codes
+    assert "ai_orderflow_conflict" in d.reason_codes
+
+
+def test_orderflow_conflict_false_or_absent_never_weakens():
+    baseline = fuse_decision(deterministic_decision="BUY_CE", deterministic_score=70,
+                             behavior={"regime": "TREND", "profile": "NIFTY", "risk_state": "NORMAL",
+                                      "signal_quality": 70},
+                             ai_result={"status": "OK", "signal_validation": "PASS", "confidence": 80,
+                                       "risk": "LOW", "profile_match": True, "warnings": []},
+                             cost_model_status="OK")
+    explicit_false = fuse_decision(deterministic_decision="BUY_CE", deterministic_score=70,
+                                   behavior={"regime": "TREND", "profile": "NIFTY", "risk_state": "NORMAL",
+                                            "signal_quality": 70},
+                                   ai_result={"status": "OK", "signal_validation": "PASS", "confidence": 80,
+                                             "risk": "LOW", "profile_match": True, "warnings": [],
+                                             "orderflow_conflict": False},
+                                   cost_model_status="OK")
+    assert baseline.final_state == explicit_false.final_state == "BUY"
+    assert "ai_orderflow_conflict" not in baseline.reason_codes
+    assert "ai_orderflow_conflict" not in explicit_false.reason_codes
 
 
 def test_ai_cannot_upgrade_a_downgraded_state_past_strong():

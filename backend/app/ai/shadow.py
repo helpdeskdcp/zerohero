@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from .. import db
 from ..behavior_engine import analyze_behavior
+from ..orderflow import depth as _depth
 from . import behavior_ai
 from . import fusion as _fusion
 from . import metrics as _metrics
@@ -41,7 +42,17 @@ def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict, *,
         ai_result = ({"status": "CONFIG_REQUIRED"} if not _client.is_available()
                     else {"status": "SKIPPED_NOT_REQUIRED"})
         if behavior.ai_required and _client.is_available():
-            ctx = behavior_ai.build_ai_context(symbol, behavior.to_dict(), effective_profile, sig)
+            # Real spot (same bars decide_from_context already saw -- no
+            # fresh read) + a real resting order-book snapshot (informational
+            # only, see app.orderflow.depth's own module docstring for why
+            # this is labeled honestly as "resting", not "orderflow delta").
+            # This is called from the LIVE runner only (never the backtest/
+            # replay harness -- ai_shadow_mode is never enabled there), so
+            # "latest available" is the correct, non-look-ahead cutoff here.
+            spot = _notify.extract_spot(bars_by_tf)
+            orderflow = _depth.snapshot_for_symbol(symbol)
+            ctx = behavior_ai.build_ai_context(symbol, behavior.to_dict(), effective_profile, sig,
+                                               spot=spot, orderflow=orderflow)
             ai_result = behavior_ai.analyze_with_ai(ctx).to_dict()
 
         fused = _fusion.fuse_decision(

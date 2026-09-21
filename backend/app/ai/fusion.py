@@ -111,6 +111,18 @@ def fuse_decision(*, deterministic_decision: str, deterministic_score: float | N
         elif ai_result.get("profile_match") is False:
             state = _weaken(state, 1)
             reason_codes.append("ai_profile_mismatch")
+        # Independent of the elif chain above (not mutually exclusive with
+        # it) -- spec section 9's orderflow-conflict rule. A field that
+        # never existed before this addition, so this can only ever add new
+        # weakening, never change any pre-existing test's expected outcome.
+        # Stacking with an existing HIGH-risk/profile-mismatch weaken is the
+        # intended "if the conflict persists alongside another red flag,
+        # weaken further (naturally reaching NO_TRADE for an already-WEAK
+        # signal)" behavior -- not a special-cased force-NO_TRADE, which
+        # would risk being a second, inconsistent downgrade rule.
+        if ai_result.get("orderflow_conflict") is True:
+            state = _weaken(state, 1)
+            reason_codes.append("ai_orderflow_conflict")
         for w in (ai_result.get("warnings") or []):
             reason_codes.append(f"ai_warning:{w}")
         if ai_score is not None:
