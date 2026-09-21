@@ -19,6 +19,7 @@ new here is opt-in, default OFF" convention used throughout app/ai/.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 from .. import telegram_dispatcher
@@ -159,9 +160,10 @@ def maybe_notify(symbol: str, sig: dict, ai_result: dict, fused: dict, *,
         sid = signal_id or build_signal_id(symbol, sig)
 
         text = format_message(symbol, sig, ai_result, fused, spot=extract_spot(bars_by_tf))
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
         rec = telegram_dispatcher.dispatch(
             source_engine="zerohero_shadow", underlying=symbol, direction=direction,
-            text=text, signal_id=sid)
+            text=text, chat_id=chat_id, signal_id=sid)
         rec["signal_id"] = sid
         return rec
     except Exception:

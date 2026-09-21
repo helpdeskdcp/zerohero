@@ -38,6 +38,12 @@ def _sent_capture(monkeypatch):
         sent.append({"text": text, "chat_id": chat_id})
         return {"ok": True, "status_code": 200, "message_id": 4242}
     monkeypatch.setattr(sn.telegram_dispatcher.dispatcher(), "_send_fn", fake_send)
+    # A real chat_id must reach the send call -- maybe_notify() once omitted
+    # this entirely, so every real send silently hit app.connectors.telegram
+    # ._send's TELEGRAM_NOT_CONFIGURED guard despite telegram_enabled=True
+    # (caught via a manual production smoke test, not by any prior test here,
+    # since fake_send above accepts a None chat_id just as happily).
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "test-chat-id")
     return sent
 
 
@@ -64,6 +70,9 @@ def test_pass_sends_telegram_for_both_sides(fresh_db, monkeypatch, decision, sid
     assert f"BUY {side}" in sent[0]["text"]
     assert "ZEROHERO SHADOW SIGNAL" in sent[0]["text"]
     assert "NO LIVE BROKER ORDER WAS PLACED" in sent[0]["text"]
+    # Regression: maybe_notify() must pass the real chat_id through to
+    # dispatch() -- see _sent_capture's comment above.
+    assert sent[0]["chat_id"] == "test-chat-id"
     row = fresh_db.list_shadow_decisions(symbol="NIFTY")[0]
     assert row["telegram_status"] == "SENT"
     assert row["telegram_message_id"] == 4242
