@@ -1,0 +1,142 @@
+[
+  {
+    "symbol": "NIFTY",
+    "label": "forward",
+    "train": [
+      "2026-07-13",
+      "2026-08-03"
+    ],
+    "test": [
+      "2026-08-04",
+      "2026-08-28"
+    ],
+    "iv_rv_threshold": 192.8081101389692,
+    "baseline": {
+      "n": 124,
+      "wins": 44,
+      "losses": 77,
+      "win_rate": 0.355,
+      "net_points": 85.2,
+      "expectancy_points": 0.687,
+      "profit_factor": 1.309
+    },
+    "bollinger_breakout": {
+      "n": 18,
+      "wins": 12,
+      "losses": 4,
+      "win_rate": 0.667,
+      "net_points": 90.2,
+      "expectancy_points": 5.011,
+      "profit_factor": 5.579
+    },
+    "iv_rv_cheap": {
+      "n": 67,
+      "wins": 23,
+      "losses": 43,
+      "win_rate": 0.343,
+      "net_points": 36.2,
+      "expectancy_points": 0.54,
+      "profit_factor": 1.232
+    },
+    "iv_rv_ratio_samples": 107
+  },
+  {
+    "symbol": "NIFTY",
+    "label": "swapped",
+    "train": [
+      "2026-08-04",
+      "2026-08-28"
+    ],
+    "test": [
+      "2026-07-13",
+      "2026-08-03"
+    ],
+    "iv_rv_threshold": 172.48302726890026,
+    "baseline": {
+      "n": 62,
+      "wins": 20,
+      "losses": 40,
+      "win_rate": 0.323,
+      "net_points": 2.55,
+      "expectancy_points": 0.041,
+      "profit_factor": 1.013
+    },
+    "bollinger_breakout": {
+      "n": 16,
+      "wins": 9,
+      "losses": 7,
+      "win_rate": 0.562,
+      "net_points": 64.8,
+      "expectancy_points": 4.05,
+      "profit_factor": 2.813
+    },
+    "iv_rv_cheap": {
+      "n": 6,
+      "wins": 2,
+      "losses": 4,
+      "win_rate": 0.333,
+      "net_points": 0.75,
+      "expectancy_points": 0.125,
+      "profit_factor": 1.038
+    },
+    "iv_rv_ratio_samples": 15
+  },
+  {
+    "symbol": "NATURALGAS",
+    "label": "forward",
+    "train": [
+      "2026-07-13",
+      "2026-08-03"
+    ],
+    "test": [
+      "2026-08-04",
+      "2026-08-26"
+    ],
+    "iv_rv_threshold": null,
+    "baseline": {
+      "n": 0
+    },
+    "bollinger_breakout": {
+      "n": 0
+    },
+    "iv_rv_cheap": {
+      "n": 0
+    },
+    "iv_rv_ratio_samples": 0
+  },
+  {
+    "symbol": "NATURALGAS",
+    "label": "swapped",
+    "train": [
+      "2026-08-04",
+      "2026-08-26"
+    ],
+    "test": [
+      "2026-07-13",
+      "2026-08-03"
+    ],
+    "iv_rv_threshold": null,
+    "baseline": {
+      "n": 66,
+      "wins": 27,
+      "losses": 30,
+      "win_rate": 0.409,
+      "net_points": 0.55,
+      "expectancy_points": 0.008,
+      "profit_factor": 1.07
+    },
+    "bollinger_breakout": {
+      "n": 18,
+      "wins": 11,
+      "losses": 3,
+      "win_rate": 0.611,
+      "net_points": 1.95,
+      "expectancy_points": 0.108,
+      "profit_factor": 7.5
+    },
+    "iv_rv_cheap": {
+      "n": 0
+    },
+    "iv_rv_ratio_samples": 0
+  }
+]
