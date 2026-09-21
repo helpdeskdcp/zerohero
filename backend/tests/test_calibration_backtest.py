@@ -56,6 +56,77 @@ def test_calibration_deterministic():
     assert cal.fit(s) == cal.fit(s)
 
 
+# ---- K8 regression: a near-zero/thin real-world relationship must not be
+# forced into a confidently-sloped, overconfident curve. Real production
+# symptom (2026-09-21): live calibration's fitted k sat exactly at the old
+# _K_LO=1.0 FLOOR (not a value the data itself produced), and the
+# reliability table INVERTED at high predicted-probability bins (0.8-0.9
+# predicted a win rate ~30pp higher than actually observed, n=17-68 per
+# bin -- not noise). See data/research/calibration_fix_2026-09/.
+def test_weak_real_relationship_is_not_forced_to_a_confident_slope():
+    """~50% win rate at every score bucket (no real signal) must fit a near-
+    flat curve, not a floor-clamped confident one."""
+    import random
+    rnd = random.Random(7)
+    samples = [{"score": rnd.uniform(0, 100), "regime": "R", "signal_type": "T",
+               "win": rnd.random() < 0.5} for _ in range(500)]
+    c = cal.fit(samples)
+    k = c["global"]["k"]
+    assert k < 0.5, f"a coin-flip relationship must not fit a confident slope, got k={k}"
+
+
+def test_thin_bucket_spread_falls_back_to_flat_not_extrapolated_line():
+    """Only 3 distinct score-buckets (the exact shape of the real K8 curve,
+    'spread: 3') must NOT produce a fitted slope -- too few points to trust
+    a line, let alone extrapolate it elsewhere."""
+    samples = []
+    for s, win_rate in ((55, 0.5), (65, 0.6), (75, 0.5)):
+        for i in range(20):
+            samples.append({"score": s, "regime": "R", "signal_type": "T", "win": i < win_rate * 20})
+    c = cal.fit(samples)
+    curve = c["curves"].get("R|T")
+    assert curve is not None
+    assert curve["k"] == 0.0, "3-bucket spread must fall back to a flat curve, not a fitted slope"
+
+
+def test_predict_never_extrapolates_beyond_observed_score_range():
+    """A curve fit from buckets in [0.5, 0.7] must give the SAME prediction
+    at s=0.95 as at its own x_hi=0.7 -- never extrapolate the line further,
+    which is exactly how the real K8 curve produced an unsupported, large
+    predicted probability at high scores."""
+    samples = []
+    # scores land on exact 0.1-scale bucket boundaries (round(s,1) in
+    # _fit_logistic) so they don't collide into fewer than 5 buckets.
+    for s, win_rate in ((0.30, 0.35), (0.40, 0.45), (0.50, 0.55), (0.60, 0.65), (0.70, 0.75)):
+        for i in range(20):
+            samples.append({"score": s * 100, "regime": "R", "signal_type": "T",
+                            "win": i < win_rate * 20})
+    c = cal.fit(samples)
+    curve = c["curves"]["R|T"]
+    assert curve["k"] > 0   # a real, sufficiently-spread relationship this time
+    p_at_boundary = cal.predict(c, curve["x_hi"] * 100, regime="R", signal_type="T")
+    p_beyond = cal.predict(c, 95, regime="R", signal_type="T")
+    assert p_beyond == p_at_boundary, "prediction must clamp at x_hi, not extrapolate past it"
+
+
+def test_shrinkage_pulls_thin_sample_slope_toward_flat():
+    """The SAME clean, strongly-sloped relationship must produce a smaller
+    |k| when fit from a thin sample than from a large one -- shrinkage by
+    sample size, the direct fix for a small live sample producing an
+    overconfident curve."""
+    def _samples(n_per_bucket):
+        out = []
+        # exact 0.1-scale bucket boundaries -- see comment in the extrapolation test above.
+        for s, win_rate in ((0.30, 0.30), (0.40, 0.45), (0.50, 0.60), (0.60, 0.75), (0.70, 0.90)):
+            for i in range(n_per_bucket):
+                out.append({"score": s * 100, "regime": "R", "signal_type": "T",
+                           "win": i < win_rate * n_per_bucket})
+        return out
+    k_thin = cal.fit(_samples(10))["curves"]["R|T"]["k"]     # n=50, just above _MIN_ROWS
+    k_thick = cal.fit(_samples(100))["curves"]["R|T"]["k"]   # n=500
+    assert 0.0 <= k_thin < k_thick, (k_thin, k_thick)
+
+
 # ---------------- P6 backtest runner ----------------
 _DDL = """
 CREATE TABLE cycles (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, ts TEXT, date TEXT,

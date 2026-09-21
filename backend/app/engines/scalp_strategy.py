@@ -13,6 +13,7 @@ a NO_TRADE / WATCH dict.
 """
 from __future__ import annotations
 
+from ..backtest import calibration as _cal
 from ..sr_dynamic.live_state import refresh_and_store
 from ..sr_dynamic.signal_confirm import evaluate_sr_confirmation
 from .option_engine import analyse_leg, ce_pe_confirmation, ev_gate, select_option
@@ -172,20 +173,13 @@ def _num(x):
 def _score_to_prob(signal_score, calib, *, regime, signal_type):
     """Raw 0-100 signal score -> probability of a winning trade.
 
-    P5 calibration table (regime|signal_type curve -> signal_type -> global);
-    a missing or degenerate (k==0,b==0) curve falls back to a conservative
-    logistic prior, never to a flat 0.5."""
-    import math
-    s = max(0.0, min(100.0, float(signal_score or 0))) / 100.0
-    prior = 1.0 / (1.0 + math.exp(-(2.3 * (s - 0.58))))
-    curve = None
-    if isinstance(calib, dict):
-        curves = calib.get("curves") or {}
-        curve = (curves.get(f"{regime}|{signal_type}") or curves.get(f"*|{signal_type}")
-                 or calib.get("global"))
-    if not curve or (curve.get("k", 0.0) == 0.0 and curve.get("b", 0.0) == 0.0):
-        return prior
-    return 1.0 / (1.0 + math.exp(-(curve["k"] * (s - 0.5) + curve.get("b", 0.0))))
+    Delegates to app.backtest.calibration.predict() -- this used to be a
+    hand-duplicated copy of that function's logic (same prior, same curve
+    lookup, same sigmoid), which is exactly the kind of two-places-to-fix
+    trap that let the K8 overconfidence defect (ECE 0.21, reliability
+    inverted at high predicted-probability bins) go unfixed here after
+    being fixed there. One implementation now."""
+    return _cal.predict(calib, signal_score, regime=regime, signal_type=signal_type)
 
 
 def _confidence(prob, false_verdict, mtf_conflict):
