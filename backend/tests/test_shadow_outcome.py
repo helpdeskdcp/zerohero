@@ -3,6 +3,7 @@ Real option-premium snapshots only, via an isolated HistStore (tmp_path,
 never the live market_history.db). No fabricated data, no look-ahead
 (only rows with ts strictly after the signal are ever considered)."""
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 
@@ -132,3 +133,118 @@ def test_outcomes_report_skips_rows_without_recorded_levels(monkeypatch, store):
     assert len(out) == 1
     assert out[0]["symbol"] == "NATURALGAS"
     assert out[0]["status"] == "INSUFFICIENT_DATA"
+
+
+# ---- group_into_setups / setups_report: real incident (2026-09-21) -- one
+# continuing NATURALGAS move was re-evaluated every ~30s and a naive per-tick
+# or per-(entry,stop_loss,target_1)-tuple count reported 7-16 "distinct
+# setups" for what was really ONE opportunity.
+
+def _tick(ts, **over):
+    row = {"ts": ts, "symbol": "NATURALGAS", "deterministic_decision": "BUY_PE",
+          "strike": 275.0, "expiry": "23SEP2026", "option_token": "578349",
+          "entry": 4.1, "stop_loss": 3.7, "target_1": 4.7, "max_hold_sec": 1800}
+    row.update(over)
+    return row
+
+
+def test_group_into_setups_collapses_a_continuing_move_into_one_setup():
+    rows = [_tick(f"2026-09-21T09:5{i}:00+00:00", entry=4.0 + i * 0.02) for i in range(9)]
+    groups = so.group_into_setups(rows)
+    assert len(groups) == 1
+    assert groups[0]["evaluation_count"] == 9
+    assert groups[0]["first_seen"] == rows[0]["ts"]
+    assert groups[0]["last_seen"] == rows[-1]["ts"]
+
+
+def test_group_into_setups_fused_state_oscillation_does_not_break_the_chain():
+    """AI confidence wavering between NO_TRADE/WEAK_SELL on the SAME leg
+    (fused_final_state) must not split the run -- only the deterministic
+    engine's own decision/leg identity does."""
+    rows = [_tick("2026-09-21T09:50:00+00:00", fused_final_state="WEAK_SELL"),
+           _tick("2026-09-21T09:50:30+00:00", fused_final_state="NO_TRADE"),
+           _tick("2026-09-21T09:51:00+00:00", fused_final_state="WEAK_SELL")]
+    groups = so.group_into_setups(rows)
+    assert len(groups) == 1 and groups[0]["evaluation_count"] == 3
+
+
+def test_group_into_setups_real_no_trade_tick_breaks_the_chain():
+    rows = [_tick("2026-09-21T09:50:00+00:00"),
+           {"ts": "2026-09-21T09:50:30+00:00", "symbol": "NATURALGAS",
+            "deterministic_decision": "NO_TRADE", "entry": None},
+           _tick("2026-09-21T09:51:00+00:00")]
+    groups = so.group_into_setups(rows)
+    assert len(groups) == 2
+    assert all(g["evaluation_count"] == 1 for g in groups)
+
+
+def test_group_into_setups_opposite_direction_breaks_the_chain():
+    rows = [_tick("2026-09-21T09:50:00+00:00", deterministic_decision="BUY_PE"),
+           _tick("2026-09-21T09:50:30+00:00", deterministic_decision="BUY_CE",
+                strike=280.0, option_token="999999")]
+    groups = so.group_into_setups(rows)
+    assert len(groups) == 2
+
+
+def test_group_into_setups_different_leg_breaks_the_chain():
+    """Same direction, but the engine rolled to a different strike -- a
+    genuinely new opportunity, not a continuation."""
+    rows = [_tick("2026-09-21T09:50:00+00:00", strike=275.0, option_token="578349"),
+           _tick("2026-09-21T09:50:30+00:00", strike=280.0, option_token="999999")]
+    groups = so.group_into_setups(rows)
+    assert len(groups) == 2
+
+
+def test_group_into_setups_large_gap_breaks_the_chain():
+    rows = [_tick("2026-09-21T09:50:00+00:00"),
+           _tick("2026-09-21T09:55:00+00:00")]   # 5 min gap > _MAX_SETUP_GAP_SEC
+    groups = so.group_into_setups(rows)
+    assert len(groups) == 2
+
+
+def test_setups_report_uses_first_tick_for_outcome_not_a_later_drifted_one(store, fresh_db):
+    """The setup's outcome must be evaluated from the FIRST tick's entry/SL/
+    target (the moment the opportunity was actually detected), not a later
+    tick's drifted levels."""
+    rows = [_tick("2026-09-21T09:50:00+00:00", entry=4.0, stop_loss=3.6, target_1=4.6),
+           _tick("2026-09-21T09:50:30+00:00", entry=4.2, stop_loss=3.8, target_1=4.9)]
+    _seed_quote(store, symbol="NATURALGAS", strike=275.0, option_type="PE", expiry="23SEP2026",
+               ts="2026-09-21T09:51:00+00:00", ltp=4.6)   # hits the FIRST tick's target (4.6), not the second's (4.9)
+    import app.db as _db_mod
+    with patch.object(_db_mod, "list_shadow_decisions", lambda symbol=None, limit=200: rows):
+        out = so.setups_report(symbol="NATURALGAS", store=store)
+    assert len(out) == 1
+    assert out[0]["entry"] == 4.0 and out[0]["target_1"] == 4.6
+    assert out[0]["status"] == "TARGET_HIT"
+    assert out[0]["evaluation_count"] == 2
+
+
+def test_real_trade_match_finds_a_real_trade_in_window():
+    real_rows = [{"decision": "BUY_PE", "created_ts": "2026-09-21T09:48:30+00:00",
+                 "status": "CLOSED", "outcome": "WIN", "entry": 719.4,
+                 "exit_reason": "TARGET", "points": 7.4}]
+    match = so._real_trade_match("CRUDEOIL", "BUY_PE", "2026-09-21T09:48:08+00:00",
+                                 "2026-09-21T09:49:12+00:00",
+                                 list_scalp_signals=lambda symbol=None, limit=200: real_rows)
+    assert match is not None and match["outcome"] == "WIN"
+
+
+def test_real_trade_match_none_when_no_real_trade_exists():
+    match = so._real_trade_match("NATURALGAS", "BUY_PE", "2026-09-21T09:50:00+00:00",
+                                 "2026-09-21T09:59:58+00:00",
+                                 list_scalp_signals=lambda symbol=None, limit=200: [])
+    assert match is None
+
+
+def test_setups_report_flags_real_trade_when_one_matches(store):
+    rows = [_tick("2026-09-21T09:48:00+00:00", symbol="CRUDEOIL", strike=720.0,
+                 option_token="T720", entry=719.4, stop_loss=715.8, target_1=726.43)]
+    real_rows = [{"decision": "BUY_PE", "created_ts": "2026-09-21T09:48:08+00:00",
+                 "status": "CLOSED", "outcome": "WIN", "entry": 719.4,
+                 "exit_reason": "TARGET", "points": 7.4}]
+    import app.db as _db_mod
+    with patch.object(_db_mod, "list_shadow_decisions", lambda symbol=None, limit=200: rows), \
+        patch.object(_db_mod, "list_scalp_signals", lambda **k: real_rows):
+        out = so.setups_report(symbol="CRUDEOIL", store=store)
+    assert len(out) == 1
+    assert out[0]["real_trade"] is not None and out[0]["real_trade"]["outcome"] == "WIN"
