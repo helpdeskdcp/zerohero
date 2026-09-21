@@ -445,6 +445,16 @@ def db():
 # Columns added after the initial release — applied idempotently on every boot
 # so an existing chanakya.db picks them up without a manual migration.
 _MIGRATIONS = {
+    "shadow_decisions": {
+        # ZEROHERO spec section 24/25 (Telegram + dedup audit trail) --
+        # populated by app.ai.shadow_notify.maybe_notify(), NULL when
+        # telegram_enabled is off (the default) or the decision was gated
+        # out (NO_TRADE, etc.) -- never fabricated.
+        "signal_id": "TEXT",
+        "telegram_status": "TEXT",         # SENT | SUPPRESSED_DUPLICATE | FAILED | None
+        "telegram_message_id": "INTEGER",  # real Telegram message_id, NULL if unavailable
+        "sent_at": "TEXT",
+    },
     "ai_paper_trades": {
         "strategy": "TEXT DEFAULT 'CORE'",
         "setup": "TEXT",
@@ -515,6 +525,10 @@ _MIGRATIONS = {
 
 def _migrate(conn):
     for table, cols in _MIGRATIONS.items():
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+        if not exists:
+            continue   # a caller migrating a partial/synthetic DB may not have created it
         have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
         for name, decl in cols.items():
             if name not in have:
@@ -614,12 +628,26 @@ def list_paper_trade_events(trade_id: str) -> list:
 def insert_shadow_decision(row: dict):
     cols = ["ts", "symbol", "profile", "regime", "deterministic_decision",
             "deterministic_score", "behavior_json", "ai_status", "ai_json",
-            "fused_final_state", "fused_confidence", "reason_codes"]
+            "fused_final_state", "fused_confidence", "reason_codes",
+            "signal_id", "telegram_status", "telegram_message_id", "sent_at"]
     vals = [row.get(c) for c in cols]
     placeholders = ",".join(["?"] * len(cols))
     with db() as conn:
         conn.execute(
             f"INSERT INTO shadow_decisions ({','.join(cols)}) VALUES ({placeholders})", vals)
+
+
+def shadow_signal_already_sent(signal_id: str) -> bool:
+    """Restart-safe dedup check for app.ai.shadow_notify -- reads the
+    PERSISTED shadow_decisions table (unlike telegram_dispatcher's own
+    in-memory-only recent-signal registry, which loses its history on every
+    process restart). True only if a row with this exact signal_id already
+    has telegram_status='SENT'."""
+    with db() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM shadow_decisions WHERE signal_id=? AND telegram_status='SENT' LIMIT 1",
+            (signal_id,)).fetchone()
+    return row is not None
 
 
 def list_shadow_decisions(symbol: str | None = None, limit: int = 200) -> list:

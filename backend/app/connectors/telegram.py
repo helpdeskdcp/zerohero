@@ -20,7 +20,13 @@ def _send(text, chat_id):
             json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
             timeout=8,
         )
-        return {"ok": resp.ok, "status_code": resp.status_code}
+        message_id = None
+        if resp.ok:
+            try:
+                message_id = resp.json().get("result", {}).get("message_id")
+            except (ValueError, AttributeError):
+                pass
+        return {"ok": resp.ok, "status_code": resp.status_code, "message_id": message_id}
     except Exception as e:
         return {"ok": False, "reason": str(e)}
 

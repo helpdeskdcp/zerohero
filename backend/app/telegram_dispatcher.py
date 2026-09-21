@@ -102,10 +102,11 @@ class DispatchRecord:
     direction: str
     source_engine: str
     signal_id: str | None
-    status: str             # SENT | SUPPRESSED_DUPLICATE
+    status: str             # SENT | SUPPRESSED_DUPLICATE | FAILED
     agreement: str          # NONE | CONFIRMED | CONFLICT
     structural_break_state: str | None
     model_health: str | None
+    message_id: int | None = None      # real Telegram message_id, None if unavailable/failed
     edge_score: None = None            # Phase 9 -- not built yet, never fabricated
     microstructure: None = None        # Phase 10 -- not built yet, never fabricated
 
@@ -197,14 +198,15 @@ class TelegramDispatcher:
         if sb_state:
             final_text = f"{final_text}\nStructural Break: {sb_state}  |  Model Health: {health}"
 
-        self._send_fn(final_text, chat_id)
+        send_result = self._send_fn(final_text, chat_id) or {}
         self._recent.setdefault(underlying, []).append(
             {"ts": now, "direction": norm_dir, "source_engine": source_engine})
 
         rec = DispatchRecord(
             ts=now, underlying=underlying, direction=norm_dir, source_engine=source_engine,
-            signal_id=signal_id, status="SENT", agreement=agreement,
-            structural_break_state=sb_state, model_health=health)
+            signal_id=signal_id, status="SENT" if send_result.get("ok") else "FAILED",
+            agreement=agreement, structural_break_state=sb_state, model_health=health,
+            message_id=send_result.get("message_id"))
         self.history.append(rec)
         return rec
 

@@ -233,7 +233,16 @@ DEFAULT_CONFIG = {
     # Requires GROQ_API_KEY to actually call AI; with no key
     # configured the behavior-engine classification still runs and logs,
     # just with ai_status="UNAVAILABLE" every time.
-    "ai_shadow_mode": {"enabled": False},
+    # telegram_enabled: a SECOND opt-in inside this opt-in -- shadow logging
+    # to shadow_decisions works identically whether this is on or off; only
+    # controls whether app.ai.shadow_notify also sends a Telegram message,
+    # and only ever for a final fused BUY/STRONG_BUY/SELL/STRONG_SELL (never
+    # NO_TRADE, never an intermediate AI/behavior state).
+    # telegram_include_weak: also send for WEAK_BUY/WEAK_SELL (default off --
+    # those are exactly the states AI already downgraded to, so treating
+    # them as a strong enough signal to alert on needs an explicit choice).
+    "ai_shadow_mode": {"enabled": False, "telegram_enabled": False,
+                       "telegram_include_weak": False},
     # Per-symbol strategy overrides, merged over `strategy`. NIFTY is DELIBERATELY
     # absent -> it runs on the P6-validated defaults and must stay that way
     # (best live win-rate). MCX commodities move slower and trend longer, so
@@ -700,15 +709,19 @@ class AutoScalpRunner:
         if sig.get("reason"):
             sig["reason"] = f"{sig['reason']} | ev_mode={_ev_mode} | {_eff.audit_line()}"
 
-        # Phase 12 (OpenRouter/profile-behavior-engine): shadow-mode only,
+        # Phase 12 (Groq/profile-behavior-engine): shadow-mode only,
         # opt-in, default OFF. NEVER influences sig/decision -- purely
         # observational, exactly like the existing final_signal_gate
         # shadow_mode. Runs off the event loop; any internal failure is
         # already caught inside run_shadow_decision and is a no-op here too.
-        if (cfg.get("ai_shadow_mode") or {}).get("enabled", False):
+        # Telegram notification (also opt-in, default OFF within
+        # ai_shadow_mode itself -- see shadow_notify.py) only fires AFTER
+        # fusion has fully run, from inside run_shadow_decision.
+        _shadow_cfg = cfg.get("ai_shadow_mode") or {}
+        if _shadow_cfg.get("enabled", False):
             try:
                 await asyncio.to_thread(_ai_shadow.run_shadow_decision, sym.upper(), sig,
-                                        _eff.to_dict())
+                                        _eff.to_dict(), telegram_cfg=_shadow_cfg, bars_by_tf=bars)
             except Exception as e:
                 self.last_error = f"ai_shadow: {type(e).__name__}: {e}"
 

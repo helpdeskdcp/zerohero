@@ -18,11 +18,14 @@ from . import behavior_ai
 from . import fusion as _fusion
 from . import metrics as _metrics
 from . import groq_client as _client
+from . import shadow_notify as _notify
 
 _log = logging.getLogger("chanakya.ai.shadow")
 
 
-def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict) -> dict | None:
+def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict, *,
+                        telegram_cfg: dict | None = None,
+                        bars_by_tf: dict | None = None) -> dict | None:
     """Best-effort. Returns the fused decision dict for callers that want
     it (e.g. tests), or None on any internal failure -- but a failure here
     must NEVER propagate to the caller's own decision flow."""
@@ -52,6 +55,23 @@ def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict) -> dict
             is_no_trade=(fused.final_state == "NO_TRADE"),
             ai_rejected=(ai_result.get("signal_validation") == "FAIL"))
 
+        # Telegram happens AFTER fusion is fully computed, never before --
+        # the whole point of shadow mode is that nothing gets announced
+        # until the deterministic decision, behavior, AI, and fusion have
+        # all already run. Opt-in (telegram_cfg=None / disabled -> no-op,
+        # never raises -- see shadow_notify.maybe_notify's own contract).
+        # Dedup is checked against the PERSISTED table (db.shadow_signal_
+        # already_sent), not just telegram_dispatcher's in-memory registry,
+        # so a duplicate is still caught across a process restart.
+        tg = None
+        fused_dict = fused.to_dict()
+        if _notify.should_notify(sig, fused_dict, telegram_cfg):
+            sid = _notify.build_signal_id(symbol, sig)
+            if not db.shadow_signal_already_sent(sid):
+                tg = _notify.maybe_notify(symbol, sig, ai_result, fused_dict,
+                                          cfg=telegram_cfg, bars_by_tf=bars_by_tf,
+                                          signal_id=sid)
+
         db.insert_shadow_decision({
             "ts": datetime.now(timezone.utc).isoformat(), "symbol": symbol,
             "profile": behavior.profile, "regime": behavior.regime,
@@ -63,6 +83,10 @@ def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict) -> dict
             "fused_final_state": fused.final_state,
             "fused_confidence": fused.final_confidence,
             "reason_codes": json.dumps(fused.reason_codes),
+            "signal_id": tg.get("signal_id") if tg else None,
+            "telegram_status": tg.get("status") if tg else None,
+            "telegram_message_id": tg.get("message_id") if tg else None,
+            "sent_at": datetime.now(timezone.utc).isoformat() if tg else None,
         })
         return fused.to_dict()
     except Exception as e:
