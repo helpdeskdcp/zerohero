@@ -98,6 +98,14 @@ def run_shadow_decision(symbol: str, sig: dict, effective_profile: dict, *,
             "telegram_status": tg.get("status") if tg else None,
             "telegram_message_id": tg.get("message_id") if tg else None,
             "sent_at": datetime.now(timezone.utc).isoformat() if tg else None,
+            # Forward-outcome tracking (app.ai.shadow_outcome) -- captured
+            # verbatim from sig, exactly as decide_from_context() planned it
+            # at this tick, never recomputed later.
+            "entry": sig.get("entry"), "stop_loss": sig.get("stop_loss"),
+            "target_1": sig.get("target_1"), "target_2": sig.get("target_2"),
+            "option_token": sig.get("token"), "tradingsymbol": sig.get("tradingsymbol"),
+            "strike": sig.get("strike"), "expiry": sig.get("expiry"),
+            "max_hold_sec": sig.get("max_hold_sec"),
         })
         return fused.to_dict()
     except Exception as e:

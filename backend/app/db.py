@@ -454,6 +454,15 @@ _MIGRATIONS = {
         "telegram_status": "TEXT",         # SENT | SUPPRESSED_DUPLICATE | FAILED | None
         "telegram_message_id": "INTEGER",  # real Telegram message_id, NULL if unavailable
         "sent_at": "TEXT",
+        # Forward-outcome tracking (app.ai.shadow_outcome) -- the exact
+        # OPTION PREMIUM levels the deterministic engine planned at signal
+        # time, captured verbatim from sig (never recomputed later, so a
+        # later re-run of the same tick can't retroactively change what
+        # "the plan" was). NULL for a decision that never reached a
+        # tradeable state (NO_TRADE) or whose sig lacked a resolved leg.
+        "entry": "REAL", "stop_loss": "REAL", "target_1": "REAL", "target_2": "REAL",
+        "option_token": "TEXT", "tradingsymbol": "TEXT", "strike": "REAL", "expiry": "TEXT",
+        "max_hold_sec": "REAL",
     },
     "ai_paper_trades": {
         "strategy": "TEXT DEFAULT 'CORE'",
@@ -629,7 +638,9 @@ def insert_shadow_decision(row: dict):
     cols = ["ts", "symbol", "profile", "regime", "deterministic_decision",
             "deterministic_score", "behavior_json", "ai_status", "ai_json",
             "fused_final_state", "fused_confidence", "reason_codes",
-            "signal_id", "telegram_status", "telegram_message_id", "sent_at"]
+            "signal_id", "telegram_status", "telegram_message_id", "sent_at",
+            "entry", "stop_loss", "target_1", "target_2",
+            "option_token", "tradingsymbol", "strike", "expiry", "max_hold_sec"]
     vals = [row.get(c) for c in cols]
     placeholders = ",".join(["?"] * len(cols))
     with db() as conn:

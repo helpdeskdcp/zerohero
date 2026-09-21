@@ -13,6 +13,7 @@ from .. import instrument_profiles as _ip
 from .. import regime_profiles as _rp
 from ..ai import metrics as _ai_metrics
 from ..ai import ai_client as _client
+from ..ai import shadow_outcome as _shadow_outcome
 from ..autoscalp import trade_contamination as _contam
 from ..effective_profile import select_effective_profile
 
@@ -89,3 +90,12 @@ def api_ai_status():
         "ai_avg_latency_ms": m["ai_avg_latency_ms"],
         "metrics": m,
     }
+
+
+@router.get("/ai/shadow-outcomes")
+def api_ai_shadow_outcomes(symbol: str | None = None, limit: int = 200):
+    """Real forward-outcome check (TARGET_HIT/SL_HIT/OPEN/TIMED_OUT_NO_HIT/
+    INSUFFICIENT_DATA) for every shadow decision that actually planned a leg,
+    using only real captured option-premium snapshots -- see
+    app.ai.shadow_outcome's module docstring. Read-only, no side effects."""
+    return {"outcomes": _shadow_outcome.outcomes_report(symbol=symbol, limit=limit)}
