@@ -1,0 +1,934 @@
+{
+  "events_captured": 0,
+  "events_verified": 0,
+  "events_insufficient": 0,
+  "missing_fields_summary": {},
+  "note_on_events_captured": "research_events.db is queried live here; the 5 known signals from PHASE0_PHASE1_REPORT.md are recorded there as a markdown table only and have not been loaded into this store via schema.insert_event -- this count reflects the store's real current contents, not that report.",
+  "data_coverage": {
+    "available": true,
+    "by_symbol_kind": [
+      {
+        "symbol": "BANKEX",
+        "kind": "INDEX",
+        "first_date": "2026-09-04",
+        "last_date": "2026-09-18",
+        "n": 5758
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "kind": "FUTURE",
+        "first_date": "2026-09-04",
+        "last_date": "2026-09-18",
+        "n": 6119
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "kind": "INDEX",
+        "first_date": "2026-09-03",
+        "last_date": "2026-09-18",
+        "n": 5910
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "kind": "FUTURE",
+        "first_date": "2026-09-01",
+        "last_date": "2026-09-18",
+        "n": 17469
+      },
+      {
+        "symbol": "FINNIFTY",
+        "kind": "FUTURE",
+        "first_date": "2026-09-04",
+        "last_date": "2026-09-18",
+        "n": 1589
+      },
+      {
+        "symbol": "FINNIFTY",
+        "kind": "INDEX",
+        "first_date": "2026-09-03",
+        "last_date": "2026-09-18",
+        "n": 5875
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "kind": "FUTURE",
+        "first_date": "2026-09-04",
+        "last_date": "2026-09-18",
+        "n": 5246
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "kind": "INDEX",
+        "first_date": "2026-09-03",
+        "last_date": "2026-09-18",
+        "n": 5868
+      },
+      {
+        "symbol": "NATURALGAS",
+        "kind": "FUTURE",
+        "first_date": "2026-09-01",
+        "last_date": "2026-09-18",
+        "n": 17433
+      },
+      {
+        "symbol": "NIFTY",
+        "kind": "FUTURE",
+        "first_date": "2026-09-01",
+        "last_date": "2026-09-18",
+        "n": 7533
+      },
+      {
+        "symbol": "NIFTY",
+        "kind": "INDEX",
+        "first_date": "2026-09-01",
+        "last_date": "2026-09-18",
+        "n": 7203
+      },
+      {
+        "symbol": "SENSEX",
+        "kind": "INDEX",
+        "first_date": "2026-09-03",
+        "last_date": "2026-09-18",
+        "n": 6322
+      }
+    ]
+  },
+  "option_chain_density": {
+    "available": true,
+    "per_session": [
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2025-01-16",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-08-31",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-01",
+        "n_snapshots": 3,
+        "n_strikes": 3,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-02",
+        "n_snapshots": 5,
+        "n_strikes": 4,
+        "snapshots_per_strike": 1.25
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 8,
+        "n_strikes": 8,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 14607,
+        "n_strikes": 32,
+        "snapshots_per_strike": 456.47
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 27824,
+        "n_strikes": 35,
+        "snapshots_per_strike": 794.97
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 27096,
+        "n_strikes": 36,
+        "snapshots_per_strike": 752.67
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 35113,
+        "n_strikes": 49,
+        "snapshots_per_strike": 716.59
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 56086,
+        "n_strikes": 68,
+        "snapshots_per_strike": 824.79
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 50064,
+        "n_strikes": 61,
+        "snapshots_per_strike": 820.72
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-14",
+        "n_snapshots": 50505,
+        "n_strikes": 25,
+        "snapshots_per_strike": 2020.2
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 40022,
+        "n_strikes": 62,
+        "snapshots_per_strike": 645.52
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 45788,
+        "n_strikes": 56,
+        "snapshots_per_strike": 817.64
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 29029,
+        "n_strikes": 55,
+        "snapshots_per_strike": 527.8
+      },
+      {
+        "symbol": "BANKEX",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 20194,
+        "n_strikes": 54,
+        "snapshots_per_strike": 373.96
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 4,
+        "n_strikes": 4,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 12365,
+        "n_strikes": 33,
+        "snapshots_per_strike": 374.7
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 25632,
+        "n_strikes": 39,
+        "snapshots_per_strike": 657.23
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 23906,
+        "n_strikes": 46,
+        "snapshots_per_strike": 519.7
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 26470,
+        "n_strikes": 36,
+        "snapshots_per_strike": 735.28
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 25330,
+        "n_strikes": 38,
+        "snapshots_per_strike": 666.58
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 27634,
+        "n_strikes": 41,
+        "snapshots_per_strike": 674.0
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 26321,
+        "n_strikes": 41,
+        "snapshots_per_strike": 641.98
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 25780,
+        "n_strikes": 34,
+        "snapshots_per_strike": 758.24
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 20744,
+        "n_strikes": 34,
+        "snapshots_per_strike": 610.12
+      },
+      {
+        "symbol": "BANKNIFTY",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 13883,
+        "n_strikes": 34,
+        "snapshots_per_strike": 408.32
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-08-19",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-08-26",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-01",
+        "n_snapshots": 16,
+        "n_strikes": 15,
+        "snapshots_per_strike": 1.07
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-02",
+        "n_snapshots": 54962,
+        "n_strikes": 34,
+        "snapshots_per_strike": 1616.53
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 62418,
+        "n_strikes": 37,
+        "snapshots_per_strike": 1686.97
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 42327,
+        "n_strikes": 38,
+        "snapshots_per_strike": 1113.87
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 48853,
+        "n_strikes": 35,
+        "snapshots_per_strike": 1395.8
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 47554,
+        "n_strikes": 36,
+        "snapshots_per_strike": 1320.94
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 50291,
+        "n_strikes": 36,
+        "snapshots_per_strike": 1396.97
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 53451,
+        "n_strikes": 45,
+        "snapshots_per_strike": 1187.8
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 51075,
+        "n_strikes": 40,
+        "snapshots_per_strike": 1276.88
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-14",
+        "n_snapshots": 30084,
+        "n_strikes": 39,
+        "snapshots_per_strike": 771.38
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 42094,
+        "n_strikes": 39,
+        "snapshots_per_strike": 1079.33
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 49964,
+        "n_strikes": 38,
+        "snapshots_per_strike": 1314.84
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 34842,
+        "n_strikes": 36,
+        "snapshots_per_strike": 967.83
+      },
+      {
+        "symbol": "CRUDEOIL",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 19086,
+        "n_strikes": 37,
+        "snapshots_per_strike": 515.84
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2023-02-23",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2023-06-22",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2024-05-30",
+        "n_snapshots": 2,
+        "n_strikes": 2,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-08-26",
+        "n_snapshots": 2,
+        "n_strikes": 2,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-08-27",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-08-28",
+        "n_snapshots": 3,
+        "n_strikes": 3,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-08-31",
+        "n_snapshots": 2,
+        "n_strikes": 2,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-02",
+        "n_snapshots": 2,
+        "n_strikes": 2,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 2,
+        "n_strikes": 2,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 17385,
+        "n_strikes": 33,
+        "snapshots_per_strike": 526.82
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 24397,
+        "n_strikes": 39,
+        "snapshots_per_strike": 625.56
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 23472,
+        "n_strikes": 41,
+        "snapshots_per_strike": 572.49
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 30548,
+        "n_strikes": 50,
+        "snapshots_per_strike": 610.96
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 51370,
+        "n_strikes": 55,
+        "snapshots_per_strike": 934.0
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 39523,
+        "n_strikes": 58,
+        "snapshots_per_strike": 681.43
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-14",
+        "n_snapshots": 38850,
+        "n_strikes": 20,
+        "snapshots_per_strike": 1942.5
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 33055,
+        "n_strikes": 60,
+        "snapshots_per_strike": 550.92
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 33391,
+        "n_strikes": 53,
+        "snapshots_per_strike": 630.02
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 24714,
+        "n_strikes": 53,
+        "snapshots_per_strike": 466.3
+      },
+      {
+        "symbol": "FINNIFTY",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 18181,
+        "n_strikes": 54,
+        "snapshots_per_strike": 336.69
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-08-25",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-01",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-02",
+        "n_snapshots": 5,
+        "n_strikes": 5,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 4,
+        "n_strikes": 4,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 9418,
+        "n_strikes": 34,
+        "snapshots_per_strike": 277.0
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 17478,
+        "n_strikes": 38,
+        "snapshots_per_strike": 459.95
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 14859,
+        "n_strikes": 34,
+        "snapshots_per_strike": 437.03
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 19092,
+        "n_strikes": 34,
+        "snapshots_per_strike": 561.53
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 18003,
+        "n_strikes": 35,
+        "snapshots_per_strike": 514.37
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 13487,
+        "n_strikes": 44,
+        "snapshots_per_strike": 306.52
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 13428,
+        "n_strikes": 46,
+        "snapshots_per_strike": 291.91
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 13848,
+        "n_strikes": 39,
+        "snapshots_per_strike": 355.08
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 11814,
+        "n_strikes": 35,
+        "snapshots_per_strike": 337.54
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 9003,
+        "n_strikes": 33,
+        "snapshots_per_strike": 272.82
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-08-28",
+        "n_snapshots": 3,
+        "n_strikes": 3,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-08-31",
+        "n_snapshots": 1,
+        "n_strikes": 1,
+        "snapshots_per_strike": 1.0
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-01",
+        "n_snapshots": 18,
+        "n_strikes": 17,
+        "snapshots_per_strike": 1.06
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-02",
+        "n_snapshots": 43288,
+        "n_strikes": 31,
+        "snapshots_per_strike": 1396.39
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 53488,
+        "n_strikes": 33,
+        "snapshots_per_strike": 1620.85
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 34845,
+        "n_strikes": 32,
+        "snapshots_per_strike": 1088.91
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 29882,
+        "n_strikes": 32,
+        "snapshots_per_strike": 933.81
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 32478,
+        "n_strikes": 33,
+        "snapshots_per_strike": 984.18
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 31465,
+        "n_strikes": 32,
+        "snapshots_per_strike": 983.28
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 34264,
+        "n_strikes": 33,
+        "snapshots_per_strike": 1038.3
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 31764,
+        "n_strikes": 32,
+        "snapshots_per_strike": 992.62
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-14",
+        "n_snapshots": 24633,
+        "n_strikes": 33,
+        "snapshots_per_strike": 746.45
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 23866,
+        "n_strikes": 33,
+        "snapshots_per_strike": 723.21
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 27774,
+        "n_strikes": 32,
+        "snapshots_per_strike": 867.94
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 19565,
+        "n_strikes": 32,
+        "snapshots_per_strike": 611.41
+      },
+      {
+        "symbol": "NATURALGAS",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 15307,
+        "n_strikes": 32,
+        "snapshots_per_strike": 478.34
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-01",
+        "n_snapshots": 60,
+        "n_strikes": 31,
+        "snapshots_per_strike": 1.94
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-02",
+        "n_snapshots": 32694,
+        "n_strikes": 33,
+        "snapshots_per_strike": 990.73
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 41685,
+        "n_strikes": 35,
+        "snapshots_per_strike": 1191.0
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 32598,
+        "n_strikes": 34,
+        "snapshots_per_strike": 958.76
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 29958,
+        "n_strikes": 40,
+        "snapshots_per_strike": 748.95
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 27486,
+        "n_strikes": 47,
+        "snapshots_per_strike": 584.81
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 30791,
+        "n_strikes": 36,
+        "snapshots_per_strike": 855.31
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 29713,
+        "n_strikes": 37,
+        "snapshots_per_strike": 803.05
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 31073,
+        "n_strikes": 43,
+        "snapshots_per_strike": 722.63
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 32265,
+        "n_strikes": 46,
+        "snapshots_per_strike": 701.41
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 29750,
+        "n_strikes": 34,
+        "snapshots_per_strike": 875.0
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 23423,
+        "n_strikes": 34,
+        "snapshots_per_strike": 688.91
+      },
+      {
+        "symbol": "NIFTY",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 14908,
+        "n_strikes": 33,
+        "snapshots_per_strike": 451.76
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-03",
+        "n_snapshots": 122,
+        "n_strikes": 43,
+        "snapshots_per_strike": 2.84
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-04",
+        "n_snapshots": 24331,
+        "n_strikes": 43,
+        "snapshots_per_strike": 565.84
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-07",
+        "n_snapshots": 29039,
+        "n_strikes": 39,
+        "snapshots_per_strike": 744.59
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-08",
+        "n_snapshots": 29756,
+        "n_strikes": 39,
+        "snapshots_per_strike": 762.97
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-09",
+        "n_snapshots": 31405,
+        "n_strikes": 45,
+        "snapshots_per_strike": 697.89
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-10",
+        "n_snapshots": 30292,
+        "n_strikes": 42,
+        "snapshots_per_strike": 721.24
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-11",
+        "n_snapshots": 28837,
+        "n_strikes": 41,
+        "snapshots_per_strike": 703.34
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-15",
+        "n_snapshots": 30135,
+        "n_strikes": 43,
+        "snapshots_per_strike": 700.81
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-16",
+        "n_snapshots": 30662,
+        "n_strikes": 35,
+        "snapshots_per_strike": 876.06
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-17",
+        "n_snapshots": 24038,
+        "n_strikes": 38,
+        "snapshots_per_strike": 632.58
+      },
+      {
+        "symbol": "SENSEX",
+        "session_date_ist": "2026-09-18",
+        "n_snapshots": 13145,
+        "n_strikes": 36,
+        "snapshots_per_strike": 365.14
+      }
+    ]
+  },
+  "orderflow_availability": {
+    "NIFTY": true,
+    "note": "resting order-book aggregate (SnapQuote best-5, front-month FUTURE), not trade-level aggressor flow -- a passive-book imbalance gate was already tested and rejected at feasibility earlier this session; this is an informational field only, not a signal."
+  },
+  "model_readiness": {
+    "model_status": "NOT_READY",
+    "reason": "INSUFFICIENT_SAMPLE",
+    "n_events": 0,
+    "required": 100
+  },
+  "confirmation_engine_readiness": {
+    "status": "BUILT_SHADOW_ONLY",
+    "note": "app.reverse_engineering.confirmation is implemented and unit-tested; not wired into any live/paper decision path."
+  }
+}
