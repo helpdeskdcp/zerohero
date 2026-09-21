@@ -56,10 +56,14 @@ def check_outcome(row: dict, *, store: HistStore | None = None,
         return {"status": "NO_LEG_RECORDED",
                "reason": "no resolved option leg (strike/CE-PE) on this decision"}
 
-    quotes = store.get_quotes(symbol, kind="OPTION", strike=strike, option_type=option_type,
-                              expiry=row.get("expiry") or None)
     signal_ts = row.get("ts") or ""
-    forward = [q for q in quotes if (q.get("exch_ts") or q.get("received_ts") or "") > signal_ts]
+    # `since=signal_ts` pushes the lower bound into the query itself -- get_quotes'
+    # default ASC+LIMIT ordering otherwise returns a long-lived strike/expiry
+    # combo's OLDEST rows, silently missing everything from today (see the
+    # `since` param's own docstring in app.histcap.store for the real
+    # incident this fixes).
+    forward = store.get_quotes(symbol, kind="OPTION", strike=strike, option_type=option_type,
+                               expiry=row.get("expiry") or None, since=signal_ts)
     if not forward:
         return {"status": "INSUFFICIENT_DATA", "snapshot_count": 0,
                "entry": entry, "stop_loss": stop_loss, "target_1": target_1}

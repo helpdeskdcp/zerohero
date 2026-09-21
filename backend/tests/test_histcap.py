@@ -353,6 +353,35 @@ def test_get_quotes_as_of_filters_on_exchange_ts(store, monkeypatch):
     assert store.get_quotes("NATURALGAS", kind="OPTION", as_of=future)
 
 
+def test_get_quotes_since_finds_recent_rows_behind_a_long_history(store):
+    """Real incident (2026-09-21): a strike/expiry combo with more than
+    `limit` total historical rows returns its OLDEST rows under the
+    default ASC+LIMIT ordering, silently missing today's data entirely --
+    app.ai.shadow_outcome queried a NATURALGAS strike with dense same-day
+    coverage and got 0 real rows back, misreporting INSUFFICIENT_DATA.
+    `since` must find the recent row even when far more than `limit` older
+    rows exist ahead of it in ascending order."""
+    with store.transaction() as conn:
+        for i in range(20):     # 20 old rows, well before `since` (with a tiny limit below)
+            ts = f"2000-01-01T00:{i:02d}:00Z"
+            conn.execute(
+                "INSERT INTO quote_snapshots(received_ts,exch_ts,snap_key,instrument_key,symbol,kind,"
+                "exchange,token,expiry,strike,option_type,session_date_ist,ltp,source) "
+                "VALUES(?,?,?,?, 'NATURALGAS','OPTION','MCX','T275PE','23SEP2026',275.0,'PE',?,?,'seed')",
+                (ts, ts, ts[:19], "MCX:T275PE", ts[:10], 5.0 + i))
+        recent = "2026-09-21T10:02:31Z"
+        conn.execute(
+            "INSERT INTO quote_snapshots(received_ts,exch_ts,snap_key,instrument_key,symbol,kind,"
+            "exchange,token,expiry,strike,option_type,session_date_ist,ltp,source) "
+            "VALUES(?,?,?,?, 'NATURALGAS','OPTION','MCX','T275PE','23SEP2026',275.0,'PE',?,?,'seed')",
+            (recent, recent, recent[:19], "MCX:T275PE", recent[:10], 4.35))
+    # limit=5 is smaller than the 20 old rows -- without `since`, ASC+LIMIT
+    # would return only the oldest 5 and never reach the recent row at all.
+    rows = store.get_quotes("NATURALGAS", kind="OPTION", strike=275.0, option_type="PE",
+                            expiry="23SEP2026", since="2026-09-21T09:59:58Z", limit=5)
+    assert len(rows) == 1 and rows[0]["ltp"] == 4.35
+
+
 def test_schema_init_is_idempotent(tmp_path):
     p = str(tmp_path / "x.db")
     HistStore(p)

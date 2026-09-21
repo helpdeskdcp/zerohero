@@ -160,9 +160,16 @@ class HistStore:
         with self._conn() as c:
             return [dict(r) for r in c.execute(q, p).fetchall()]
 
-    def get_quotes(self, symbol: str, *, as_of: str | None = None, kind: str | None = None,
-                   expiry: str | None = None, strike: float | None = None,
+    def get_quotes(self, symbol: str, *, as_of: str | None = None, since: str | None = None,
+                   kind: str | None = None, expiry: str | None = None, strike: float | None = None,
                    option_type: str | None = None, limit: int = 5000) -> list[dict]:
+        """`since`: only rows at/after this timestamp (the ASC+LIMIT ordering
+        below means a long-lived strike/expiry combo with >`limit` total
+        historical rows otherwise silently returns its OLDEST rows, not its
+        most recent -- a real bug found 2026-09-21 (app.ai.shadow_outcome
+        querying "since the signal" got 5000 rows from 3 weeks earlier and
+        reported INSUFFICIENT_DATA for a strike with dense same-day
+        coverage). Existing callers that omit `since` are unaffected."""
         clauses, p = ["symbol=?"], [symbol.upper()]
         for col, val in (("kind", kind), ("expiry", expiry), ("option_type", option_type)):
             if val is not None:
@@ -171,6 +178,8 @@ class HistStore:
             clauses.append("strike=?"); p.append(float(strike))
         if as_of:
             clauses.append("COALESCE(exch_ts, received_ts) <= ?"); p.append(as_of)
+        if since:
+            clauses.append("COALESCE(exch_ts, received_ts) > ?"); p.append(since)
         p.append(limit)
         with self._conn() as c:
             return [dict(r) for r in c.execute(
