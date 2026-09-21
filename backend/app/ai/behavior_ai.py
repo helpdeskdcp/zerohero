@@ -23,7 +23,14 @@ _SYSTEM_PROMPT = (
     '{"regime": "TREND|RANGE|BREAKOUT|REVERSAL|CHOP", "profile_match": true|false, '
     '"profile_match_confidence": 0-100, "signal_validation": "PASS|FAIL|UNCERTAIN", '
     '"confidence": 0-100, "risk": "LOW|MEDIUM|HIGH", "orderflow_conflict": true|false, '
-    '"warnings": [string,...], "reason_codes": [string,...]}'
+    '"warnings": [string,...], "reason_codes": [string,...]} '
+    "STRICT ENUM RULES (a response using any other word for these fields is "
+    "invalid and will be discarded, wasting the call): "
+    '"risk" must be EXACTLY one of LOW, MEDIUM, HIGH -- never NORMAL, ELEVATED, '
+    'MODERATE, or any other synonym. "regime" must be EXACTLY one of TREND, '
+    'RANGE, BREAKOUT, REVERSAL, CHOP. "signal_validation" must be EXACTLY one '
+    "of PASS, FAIL, UNCERTAIN. Use these exact uppercase strings with no "
+    "variation."
 )
 
 _REQUIRED_KEYS = {"regime", "profile_match", "profile_match_confidence",
