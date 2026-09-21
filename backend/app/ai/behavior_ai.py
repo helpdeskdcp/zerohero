@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from . import groq_client as _client
+from . import ai_client as _client
 
 _SYSTEM_PROMPT = (
     "You are a market-regime classification assistant for an options scalping "

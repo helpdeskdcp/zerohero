@@ -18,7 +18,7 @@ from ..orderflow import depth as _depth
 from . import behavior_ai
 from . import fusion as _fusion
 from . import metrics as _metrics
-from . import groq_client as _client
+from . import ai_client as _client
 from . import shadow_notify as _notify
 
 _log = logging.getLogger("chanakya.ai.shadow")

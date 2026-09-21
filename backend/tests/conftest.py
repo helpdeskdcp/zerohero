@@ -109,10 +109,11 @@ def _live_db_never_opened_rw():
 for _k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_SIGNALS_CHANNEL_ID"):
     os.environ.pop(_k, None)
 
-# HARD GUARD #3: a test must never hit the real Groq API with the real key,
-# and GROQ_MODEL leaking in breaks any test that assumes it is unset.
+# HARD GUARD #3: a test must never hit the real Groq/OpenAI API with the
+# real key, and a leaked *_MODEL breaks any test that assumes it is unset.
 # Individual tests still monkeypatch.setenv() the specific vars they need.
-for _k in ("GROQ_API_KEY", "GROQ_MODEL", "GROQ_FALLBACK_MODELS"):
+for _k in ("GROQ_API_KEY", "GROQ_MODEL", "GROQ_FALLBACK_MODELS",
+          "OPENAI_API_KEY", "OPENAI_MODEL"):
     os.environ.pop(_k, None)
 
 
