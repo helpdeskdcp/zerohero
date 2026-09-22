@@ -147,6 +147,34 @@ def test_session_bars_prefers_future_over_index(monkeypatch, tmp_path):
     assert rows[0]["v"] == 12345      # FUTURE row, not the volumeless INDEX row
 
 
+def test_session_bars_dedups_a_contract_rollover_duplicate(monkeypatch, tmp_path):
+    """Real incident (2026-09-22): market_candles' real UNIQUE constraint is
+    (instrument_key, tf, bar_start), not (symbol, kind, tf, bar_start) -- a
+    contract rollover let a historical date's FUTURE bars get re-captured
+    under a NEW instrument_key after the original contract expired,
+    doubling real bars for the same timestamp. session_bars() must keep
+    exactly one row per bar_start (the earliest insert)."""
+    db = tmp_path / "mh.db"
+    con = sqlite3.connect(db)
+    con.executescript(
+        "CREATE TABLE market_candles (symbol TEXT, kind TEXT, tf TEXT, "
+        "session_date_ist TEXT, bar_start TEXT, o REAL, h REAL, l REAL, c REAL, v REAL, "
+        "instrument_key TEXT);")
+    # original live capture (older contract, inserted first -> lower rowid)
+    con.execute("INSERT INTO market_candles VALUES ('CRUDEOIL','FUTURE','5m','2026-09-21',"
+                "'2026-09-21T08:20:00Z',9417,9417,9380,9380,168,'MCX:565899')")
+    # later backfill duplicate under the rolled-over contract's new token
+    con.execute("INSERT INTO market_candles VALUES ('CRUDEOIL','FUTURE','5m','2026-09-21',"
+                "'2026-09-21T08:20:00Z',9417,9417,9380,9380,168,'MCX:569900')")
+    con.commit(); con.close()
+
+    import app.market_hub as mh
+    monkeypatch.setattr(mh, "_HDB", str(db))
+    rows = mh.session_bars("CRUDEOIL", "2026-09-21", tf="5m")
+    assert len(rows) == 1              # not 2 -- the duplicate is collapsed
+    assert rows[0]["bar_start"] == "2026-09-21T08:20:00Z"
+
+
 def test_session_bars_empty_when_nothing_captured(monkeypatch, tmp_path):
     db = tmp_path / "mh2.db"
     con = sqlite3.connect(db)

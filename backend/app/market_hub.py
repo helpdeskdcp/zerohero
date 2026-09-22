@@ -150,14 +150,29 @@ def session_bars(sym: str, session_date: str, *, tf: str = "5m") -> list:
 
     Rows: {"bar_start", "o", "h", "l", "c", "v"}. This is the one place
     order-flow profiling reads market_history.db from -- it does not open its
-    own connection (keeps market_hub the single owner of that DB path)."""
+    own connection (keeps market_hub the single owner of that DB path).
+
+    Deduplicated by `bar_start` (one row per timestamp): market_candles'
+    real UNIQUE constraint is (instrument_key, tf, bar_start), not
+    (symbol, kind, tf, bar_start) -- a contract rollover means a HISTORICAL
+    date's front-month FUTURE can get re-captured/backfilled under a NEW
+    instrument_key after the original contract expires, inserting a second,
+    genuine-duplicate copy of the same real bar under a different contract
+    identity (found 2026-09-22: CRUDEOIL 2026-09-21 had ~2h of bars doubled
+    this way after its 21-Sep contract expired). Keep the lowest `rowid` per
+    bar_start -- the earliest insert, i.e. the original live capture, not a
+    later backfill's stale-contract duplicate. `rowid` (not the `id` column
+    name) so this works on any rowid table regardless of whether it names
+    an explicit INTEGER PRIMARY KEY column `id`."""
     sym = sym.upper()
     try:
         with _ro() as c:
             for kind in ("FUTURE", "INDEX"):
                 rows = c.execute(
                     "SELECT bar_start, o, h, l, c, v FROM market_candles "
-                    "WHERE symbol=? AND kind=? AND tf=? AND session_date_ist=? "
+                    "WHERE rowid IN (SELECT MIN(rowid) FROM market_candles "
+                    "                WHERE symbol=? AND kind=? AND tf=? AND session_date_ist=? "
+                    "                GROUP BY bar_start) "
                     "ORDER BY bar_start ASC", (sym, kind, tf, session_date)).fetchall()
                 if rows:
                     return [{"bar_start": r["bar_start"], "o": r["o"], "h": r["h"],
