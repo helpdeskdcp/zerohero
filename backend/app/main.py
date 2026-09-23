@@ -119,6 +119,7 @@ from .api import (
     data_routes,
     engines_routes,
     execution_routes,
+    hedging_routes,
     instruments_routes,
     monitor_routes,
     positions_routes,
@@ -128,7 +129,7 @@ from .api import (
 
 for _mod in (engines_routes, instruments_routes, analysis_routes, scalp_routes,
             execution_routes, monitor_routes, autoscalp_routes, positions_routes,
-            data_routes, system_routes):
+            data_routes, system_routes, hedging_routes):
     app.include_router(_mod.router)
 
 # Re-exports for backward compatibility: a handful of tests call these route
