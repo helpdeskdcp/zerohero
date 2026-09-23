@@ -1,6 +1,6 @@
 // Chanakya AI — dashboard client. No build step; vanilla JS.
 (() => {
-  const state = { view: "signalshub", tradeFilter: "" };
+  const state = { view: "signalshub", tradeFilter: "", hedgePositionFilter: "" };
 
   // ---------------- View routing (shared by sidebar nav + bottom tab bar) ----------------
   function setView(view) {
@@ -20,6 +20,7 @@
     if (view === "mathscalp") loadMathScalp();
     if (view === "orderflow") loadOrderflow();
     if (view === "optionchain") loadOptionchain();
+    if (view === "hedging") loadHedging();
     if (view === "runner") { try { refreshRunSelection(); } catch (e) {} }
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
@@ -307,6 +308,62 @@
       state.tradeFilter = btn.dataset.status;
       loadTrades();
     });
+  });
+
+  // ---------------- Hedging Engine (Phase 1+2a: paper capital + hedge selection) ----------------
+  async function loadHedging() {
+    try {
+      const status = await api("/api/hedging/status");
+      $("#hedgeAvailCap").textContent = fmt(status.capital.available_capital, 2);
+      $("#hedgeMargin").textContent = fmt(status.capital.allocated_margin, 2);
+      const pnlEl = $("#hedgeRealizedPnl");
+      pnlEl.textContent = fmtSigned(status.capital.realized_pnl, 2);
+      pnlEl.className = "stat-value " + (status.capital.realized_pnl > 0 ? "pos" : status.capital.realized_pnl < 0 ? "neg" : "");
+      $("#hedgeOpenCount").textContent = status.open_position_count;
+      $("#hedgeClosedCount").textContent = status.closed_position_count;
+
+      const q = state.hedgePositionFilter ? `?status=${state.hedgePositionFilter}` : "";
+      const posOut = await api(`/api/hedging/positions${q}`);
+      const tbody = $("#hedgePositionsTable tbody");
+      tbody.innerHTML = posOut.positions.map(p => `
+        <tr>
+          <td>${timeStr(p.opened_at)}</td>
+          <td>${text(p.symbol)}</td>
+          <td>${fmt(p.primary_strike, 0)} ${text(p.primary_option_type)} @ ${fmt(p.primary_entry_premium, 2)}</td>
+          <td>${fmt(p.hedge_strike, 0)} @ ${fmt(p.hedge_entry_premium, 2)}</td>
+          <td>${fmt(p.lots, 0)}</td>
+          <td>${fmt(p.max_loss_per_lot * p.lots, 2)}</td>
+          <td>${p.profit_target === null || p.profit_target === undefined ? "—" : fmt(p.profit_target, 2)}</td>
+          <td><span class="badge ${esc(p.status)}">${text(p.status)}</span></td>
+          <td>${text(p.exit_reason, "—")}</td>
+          <td class="${(p.gross_pnl || 0) > 0 ? 'stat-value pos' : (p.gross_pnl || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${p.gross_pnl === null || p.gross_pnl === undefined ? "—" : fmtSigned(p.gross_pnl, 2)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="10" class="hint">No positions yet.</td></tr>`;
+      $("#hedgeErr").hidden = true;
+    } catch (e) {
+      const box = $("#hedgeErr");
+      if (box) { box.hidden = false; box.textContent = (e && e.message) || String(e); }
+      showError("hedging", e);
+    }
+  }
+  document.querySelectorAll("#hedgePositionFilter .seg-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#hedgePositionFilter .seg-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.hedgePositionFilter = btn.dataset.status;
+      loadHedging();
+    });
+  });
+  const hedgeEmergencyBtn = $("#hedgeEmergencyExitBtn");
+  if (hedgeEmergencyBtn) hedgeEmergencyBtn.addEventListener("click", async () => {
+    if (!confirm("Emergency EXIT ALL open hedge positions (PAPER only)? This cannot be undone.")) return;
+    try {
+      const out = await api("/api/hedging/emergency-exit-all", { method: "POST" });
+      const closed = out.results.filter(r => r.status === "CLOSED").length;
+      const unresolved = out.results.filter(r => r.status === "UNRESOLVED").length;
+      alert(`Closed ${closed} position(s).` + (unresolved ? ` ${unresolved} UNRESOLVED (no current quote available).` : ""));
+      loadHedging();
+    } catch (e) { showError("hedging emergency exit", e); }
   });
 
   // ---------------- Run Pipeline (read-only AngelOne market-data snapshot) ----------------

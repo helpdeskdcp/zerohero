@@ -41,6 +41,7 @@
       <button class="nav-item" data-view="orderflow">Order Flow</button>
       <button class="nav-item" data-view="optionchain">Option Chain</button>
       <button class="nav-item" data-view="research">Research</button>
+      <button class="nav-item" data-view="hedging">Hedging</button>
       <button class="nav-item" data-view="scalp">Scalping</button>
       <button class="nav-item" data-view="runner">Run Pipeline</button>
     </nav>
@@ -961,6 +962,46 @@
           <div class="panel-head"><h2>System Status</h2></div>
           <div class="sysgrid" id="sysGrid"></div>
           <p class="hint">Credential presence only — values are never sent to the browser.</p>
+        </div>
+      </section>
+
+      <!-- ===== HEDGING ENGINE (Phase 1+2a: paper capital, hedge selection, exit rules) ===== -->
+      <section class="view" id="view-hedging">
+        <p class="hint">PAPER only — no live order of any kind. Position quantity is derived from
+          available capital + risk limits, never hard-coded. <span class="pill pill--paper">PAPER</span></p>
+
+        <div class="stat-grid" id="hedgeStatGrid">
+          <div class="stat-card"><span class="stat-label">Available Capital</span><span class="stat-value" id="hedgeAvailCap">—</span></div>
+          <div class="stat-card"><span class="stat-label">Allocated Margin</span><span class="stat-value" id="hedgeMargin">—</span></div>
+          <div class="stat-card"><span class="stat-label">Realized PnL</span><span class="stat-value" id="hedgeRealizedPnl">—</span></div>
+          <div class="stat-card"><span class="stat-label">Open Positions</span><span class="stat-value" id="hedgeOpenCount">—</span></div>
+          <div class="stat-card"><span class="stat-label">Closed Positions</span><span class="stat-value" id="hedgeClosedCount">—</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Positions</h2>
+            <div class="seg" id="hedgePositionFilter">
+              <button class="seg-btn active" data-status="">All</button>
+              <button class="seg-btn" data-status="OPEN">Open</button>
+              <button class="seg-btn" data-status="CLOSED">Closed</button>
+            </div>
+            <button class="btn btn-ghost" id="hedgeEmergencyExitBtn" type="button">Emergency EXIT ALL</button>
+          </div>
+          <p class="scalp-err" id="hedgeErr" hidden></p>
+          <div class="table-wrap">
+            <table class="ledger" id="hedgePositionsTable">
+              <thead>
+                <tr>
+                  <th scope="col">Opened</th><th scope="col">Symbol</th><th scope="col">Primary</th>
+                  <th scope="col">Hedge</th><th scope="col">Lots</th><th scope="col">Max Loss</th>
+                  <th scope="col">Profit Target</th><th scope="col">Status</th><th scope="col">Exit Reason</th>
+                  <th scope="col">PnL</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
