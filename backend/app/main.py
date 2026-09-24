@@ -252,6 +252,27 @@ try:
 except Exception as _e:
     print(f"[optionchain] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Premium-vs-Spot Decoupling (read-only, shadow: classifies observed
+# spot-move vs ATM CE/PE-premium-move sign relationship over a window, e.g.
+# "index up but CE premium also falling"; computed from already-captured
+# quote_snapshots, logged to its own db; no order path, no gating, nothing
+# else in the app consults this) ----
+try:
+    from .api import premium_decoupling_routes as _decoupling_api
+    app.include_router(_decoupling_api.router)
+except Exception as _e:
+    print(f"[premium_decoupling] router disabled: {type(_e).__name__}: {_e}")
+
+# ---- Stop-Loss Hit Analysis (read-only, shadow: groups already-closed
+# ai_paper_trades by underlying/regime/strategy/hour, checks mae-vs-planned-
+# risk overshoot and stated-probability-vs-actual-stop-rate; descriptive
+# only, no order path, no gating) ----
+try:
+    from .api import sl_hit_analysis_routes as _sl_hit_api
+    app.include_router(_sl_hit_api.router)
+except Exception as _e:
+    print(f"[sl_hit_analysis] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Structural Break / Adaptive Model layer (read-only: on-demand
 # performance/drift re-scoring + durable transition audit log; no order
 # path, no live_trading, never auto-wired into Safeguards from here) ----
