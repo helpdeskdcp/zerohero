@@ -322,6 +322,17 @@
       $("#hedgeOpenCount").textContent = status.open_position_count;
       $("#hedgeClosedCount").textContent = status.closed_position_count;
 
+      const armedPill = $("#hedgeArmedPill");
+      if (armedPill) {
+        armedPill.textContent = status.armed ? "ARMED" : "DISARMED";
+        armedPill.className = "pill " + (status.armed ? "pill--online" : "pill--paper");
+      }
+      const cfgSummary = $("#hedgeConfigSummary");
+      if (cfgSummary && status.config) {
+        const c = status.config;
+        cfgSummary.textContent = `${(c.symbols || []).join(", ")} · max ${c.max_concurrent_positions} concurrent · ${(c.max_risk_pct * 100).toFixed(1)}% risk/trade`;
+      }
+
       const q = state.hedgePositionFilter ? `?status=${state.hedgePositionFilter}` : "";
       const posOut = await api(`/api/hedging/positions${q}`);
       const tbody = $("#hedgePositionsTable tbody");
@@ -364,6 +375,27 @@
       alert(`Closed ${closed} position(s).` + (unresolved ? ` ${unresolved} UNRESOLVED (no current quote available).` : ""));
       loadHedging();
     } catch (e) { showError("hedging emergency exit", e); }
+  });
+  const hedgeArmErr = $("#hedgeArmErr");
+  const hedgeArmBtn = $("#hedgeArmBtn");
+  if (hedgeArmBtn) hedgeArmBtn.addEventListener("click", async () => {
+    if (!confirm("Arm the autonomous Hedging Engine? It will start opening PAPER positions on its own every ~5 min (cron) when it finds a qualifying setup. No live order, ever.")) return;
+    try { await api("/api/hedging/arm", { method: "POST" }); if (hedgeArmErr) hedgeArmErr.hidden = true; loadHedging(); }
+    catch (e) { if (hedgeArmErr) { hedgeArmErr.hidden = false; hedgeArmErr.textContent = (e && e.message) || String(e); } }
+  });
+  const hedgeDisarmBtn = $("#hedgeDisarmBtn");
+  if (hedgeDisarmBtn) hedgeDisarmBtn.addEventListener("click", async () => {
+    try { await api("/api/hedging/disarm", { method: "POST" }); if (hedgeArmErr) hedgeArmErr.hidden = true; loadHedging(); }
+    catch (e) { if (hedgeArmErr) { hedgeArmErr.hidden = false; hedgeArmErr.textContent = (e && e.message) || String(e); } }
+  });
+  const hedgeScanNowBtn = $("#hedgeScanNowBtn");
+  if (hedgeScanNowBtn) hedgeScanNowBtn.addEventListener("click", async () => {
+    try {
+      const out = await api("/api/hedging/scan-now", { method: "POST" });
+      if (hedgeArmErr) hedgeArmErr.hidden = true;
+      alert(out.armed ? `Scan done. ${(out.entries||[]).length} symbol(s) evaluated, ${(out.exits||[]).length} exit check(s).` : "Scan done (disarmed -- exits monitored only, no new entries).");
+      loadHedging();
+    } catch (e) { if (hedgeArmErr) { hedgeArmErr.hidden = false; hedgeArmErr.textContent = (e && e.message) || String(e); } }
   });
 
   // ---------------- Run Pipeline (read-only AngelOne market-data snapshot) ----------------

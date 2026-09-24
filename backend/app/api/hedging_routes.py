@@ -1,19 +1,35 @@
 """
-Hedging Engine API -- Phase 2a. Read-only status/positions + emergency
-EXIT ALL. No broker call anywhere in this file: emergency-exit-all closes
-PAPER positions using real current chain quotes (app.optionchain.resolve),
-never places or cancels a real order. Live trading is untouched by this
-router entirely -- this engine has no live-execution path yet.
+Hedging Engine API -- Phase 2a + autonomous Phase 3. Read-only status/
+positions + emergency EXIT ALL, plus arm/disarm/config for the autonomous
+scan (app.hedging.runner, run on a cron -- see scripts/hedging_scan.py).
+No broker call anywhere in this file: emergency-exit-all and the
+autonomous scan both close/open PAPER positions using real current chain
+quotes (app.optionchain.resolve), never a real order. Live trading is
+untouched by this router entirely -- this engine has no live-execution
+path yet. Autonomous entries stay OFF (disarmed) until POST /arm.
 """
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from ..hedging import capital as _capital
 from ..hedging import position as _position
+from ..hedging import runner as _runner
 from ..optionchain import resolve as _chain_resolve
 
 router = APIRouter(prefix="/api/hedging", tags=["hedging"])
+
+
+class HedgingConfigPatch(BaseModel):
+    symbols: list[str] | None = None
+    min_distance_pct: float | None = None
+    min_oi: float | None = None
+    max_spread_pct: float | None = None
+    max_hedge_cost_pct_of_credit: float | None = None
+    max_risk_pct: float | None = None
+    max_concurrent_positions: int | None = None
+    max_positions_per_symbol: int | None = None
 
 
 @router.get("/status")
@@ -26,9 +42,43 @@ def api_hedging_status():
         "capital": cap.to_dict(),
         "open_position_count": len(open_positions),
         "closed_position_count": len(closed_positions),
+        "armed": _runner.is_armed(),
+        "config": _runner.get_config(),
         "live_trading": False,
         "paper_mode": True,
     }
+
+
+@router.post("/arm")
+def api_hedging_arm():
+    _runner.arm()
+    return {"armed": True}
+
+
+@router.post("/disarm")
+def api_hedging_disarm():
+    _runner.disarm()
+    return {"armed": False}
+
+
+@router.get("/config")
+def api_hedging_get_config():
+    return _runner.get_config()
+
+
+@router.post("/config")
+def api_hedging_set_config(patch: HedgingConfigPatch):
+    try:
+        return _runner.set_config({k: v for k, v in patch.model_dump().items() if v is not None})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/scan-now")
+def api_hedging_scan_now():
+    """Manual trigger for one scan tick (same code the cron runs) -- for
+    testing/visibility without waiting for the next cron fire."""
+    return _runner.scan()
 
 
 @router.get("/positions")

@@ -980,6 +980,24 @@
 
         <div class="panel">
           <div class="panel-head">
+            <h2>Autonomous Engine</h2>
+            <span class="pill" id="hedgeArmedPill">—</span>
+          </div>
+          <p class="hint">Scans every 5 min (market hours, cron) for a full-chain OI-wall
+            primary leg + best-protective hedge, sizes by capital/risk caps, opens PAPER-only,
+            alerts Telegram on open/close. Existing open positions are always monitored for
+            exit rules regardless of armed state. Disarmed = no new entries.</p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="hedgeArmBtn" type="button">Arm</button>
+            <button class="btn btn-ghost" id="hedgeDisarmBtn" type="button">Disarm</button>
+            <button class="btn btn-ghost" id="hedgeScanNowBtn" type="button">Scan now</button>
+            <span class="hint" id="hedgeConfigSummary"></span>
+          </div>
+          <p class="scalp-err" id="hedgeArmErr" hidden></p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
             <h2>Positions</h2>
             <div class="seg" id="hedgePositionFilter">
               <button class="seg-btn active" data-status="">All</button>
