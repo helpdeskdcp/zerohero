@@ -11,7 +11,7 @@ the audit says orchestrator must keep its 1:1 n8n semantics.
 import random
 import time
 
-from . import db, telegram_dispatcher
+from . import db, instruments, telegram_dispatcher
 from .connectors import telegram
 from .engines.paper_trading import open_trade
 
@@ -60,6 +60,32 @@ def log_and_notify(contract: dict) -> None:
         pass
 
 
+def _resolve_symboltoken(contract: dict) -> str:
+    """Real incident (2026-09-24): this function never set symboltoken on
+    the trades it opens, so app.scalper.py::ScalpRunner's price-monitor
+    loop (which prices via a DIRECT token->live-feed lookup first, falling
+    back to a fragile in-memory watchlist-name match that resets on every
+    restart) had no reliable way to mark these positions -- 2 real paper
+    trades sat OPEN for 3 days, never hitting their own target/stop.
+    app.autoscalp.runner.py already resolves+stores a real symboltoken at
+    open time; this mirrors that for the INDEX/FUTURE (spot-level scalp)
+    case, which is the confirmed-broken one. OPTION-leg contracts are left
+    as before (empty symboltoken) -- no evidence they're broken the same
+    way, and resolving an option leg's token needs strike/expiry/type
+    matching this module has never done; guessing at that here risks a
+    WRONG token (pricing a different contract) being worse than none."""
+    tok = contract.get("symboltoken") or contract.get("token")
+    if tok:
+        return str(tok)
+    if str(contract.get("instrument") or "").upper() not in ("INDEX", "FUTURE"):
+        return ""
+    try:
+        resolved = instruments.resolve(contract.get("underlying") or "")
+        return str((resolved or {}).get("symboltoken") or "")
+    except Exception:
+        return ""
+
+
 def open_from_contract(contract: dict, *, reason: str, extra: dict | None = None) -> dict:
     row = {
         "signal_id": contract["signal_id"],
@@ -74,6 +100,7 @@ def open_from_contract(contract: dict, *, reason: str, extra: dict | None = None
         "market_regime": contract["market_regime"],
         "oi_evidence": contract.get("oi_evidence", ""),
         "reason": reason,
+        "symboltoken": _resolve_symboltoken(contract),
     }
     if extra:
         row.update(extra)
