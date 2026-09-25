@@ -391,10 +391,22 @@
   const hedgeScanNowBtn = $("#hedgeScanNowBtn");
   if (hedgeScanNowBtn) hedgeScanNowBtn.addEventListener("click", async () => {
     try {
-      const out = await api("/api/hedging/scan-now", { method: "POST" });
+      await api("/api/hedging/scan-now", { method: "POST" });
       if (hedgeArmErr) hedgeArmErr.hidden = true;
-      alert(out.armed ? `Scan done. ${(out.entries||[]).length} symbol(s) evaluated, ${(out.exits||[]).length} exit check(s).` : "Scan done (disarmed -- exits monitored only, no new entries).");
-      loadHedging();
+      // scanning every symbol's full chain can take tens of seconds -- runs
+      // in the background server-side; poll instead of waiting on one slow
+      // request (that's what was timing out on mobile networks).
+      hedgeScanNowBtn.disabled = true;
+      hedgeScanNowBtn.textContent = "Scanning...";
+      setTimeout(async () => {
+        try {
+          const out = await api("/api/hedging/last-scan");
+          alert(out.armed ? `Scan done. ${(out.entries||[]).length} symbol(s) evaluated, ${(out.exits||[]).length} exit check(s).` : (out.note || "Scan done."));
+        } catch (e) { /* ignore -- next manual check or cron will show it */ }
+        hedgeScanNowBtn.disabled = false;
+        hedgeScanNowBtn.textContent = "Scan now";
+        loadHedging();
+      }, 15000);
     } catch (e) { if (hedgeArmErr) { hedgeArmErr.hidden = false; hedgeArmErr.textContent = (e && e.message) || String(e); } }
   });
 

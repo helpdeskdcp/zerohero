@@ -140,3 +140,22 @@ def test_bad_symbol_evaluation_is_error_not_crash(fresh_db, monkeypatch):
     runner.arm()
     out = runner.scan()
     assert out["entries"][0]["status"] == "ERROR"
+
+
+def test_scan_and_record_persists_result_for_polling(fresh_db, monkeypatch):
+    _patch_common(monkeypatch)
+    assert runner.last_scan_result() is None
+    runner.scan_and_record(now=_MID_SESSION_IST)
+    result = runner.last_scan_result()
+    assert result is not None
+    assert result["armed"] is False
+    assert "recorded_at" in result
+
+
+def test_scan_and_record_never_raises_on_internal_error(fresh_db, monkeypatch):
+    def _boom():
+        raise RuntimeError("boom")
+    monkeypatch.setattr(runner, "is_armed", _boom)
+    runner.scan_and_record()  # must not raise
+    result = runner.last_scan_result()
+    assert "error" in result

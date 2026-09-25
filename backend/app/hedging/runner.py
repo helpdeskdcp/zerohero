@@ -33,6 +33,7 @@ _log = logging.getLogger(__name__)
 
 ARMED_KEY = "hedging_armed"
 CONFIG_KEY = "hedging_config"
+LAST_SCAN_KEY = "hedging_last_scan"
 
 DEFAULT_CONFIG = {
     "symbols": ["NIFTY", "BANKNIFTY", "SENSEX"],
@@ -226,3 +227,29 @@ def scan(now=None) -> dict:
     entries = [evaluate_symbol(sym, cfg) for sym in cfg["symbols"]]
     return {"armed": True, "exits": exits, "entries": entries,
             "ts": datetime.now(timezone.utc).isoformat()}
+
+
+def scan_and_record(now=None) -> None:
+    """Runs scan() and persists the result for polling -- the multi-symbol
+    chain fetch inside scan() can legitimately take tens of seconds
+    (real, measured latency on app.optionchain.resolve.get_chain, not a
+    bug), long enough that a mobile client's connection gets dropped
+    mid-request (seen live: nginx 499s on /scan-now). The API route backs
+    this with a background task and returns immediately instead."""
+    try:
+        result = scan(now=now)
+    except Exception as e:
+        result = {"error": f"{type(e).__name__}: {e}"}
+    result["recorded_at"] = datetime.now(timezone.utc).isoformat()
+    db.set_setting(LAST_SCAN_KEY, json.dumps(result, default=str))
+
+
+def last_scan_result() -> dict | None:
+    raw = db.get_setting(LAST_SCAN_KEY)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception as e:
+        _log.warning("last_scan_result: corrupt hedging_last_scan value: %r", e)
+        return None

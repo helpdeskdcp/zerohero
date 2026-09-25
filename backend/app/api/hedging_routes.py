@@ -10,6 +10,8 @@ path yet. Autonomous entries stay OFF (disarmed) until POST /arm.
 """
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -19,6 +21,11 @@ from ..hedging import runner as _runner
 from ..optionchain import resolve as _chain_resolve
 
 router = APIRouter(prefix="/api/hedging", tags=["hedging"])
+
+# strong refs to keep in-flight background scans alive -- asyncio only holds
+# a weak ref to a bare create_task() result, so an unreferenced task can be
+# garbage-collected mid-run
+_bg_tasks: set = set()
 
 
 class HedgingConfigPatch(BaseModel):
@@ -75,10 +82,32 @@ def api_hedging_set_config(patch: HedgingConfigPatch):
 
 
 @router.post("/scan-now")
-def api_hedging_scan_now():
-    """Manual trigger for one scan tick (same code the cron runs) -- for
-    testing/visibility without waiting for the next cron fire."""
-    return _runner.scan()
+async def api_hedging_scan_now():
+    """Manual trigger for one scan tick (same code the cron runs), run in
+    the background -- scanning every configured symbol's full option chain
+    can take tens of seconds (real measured latency, not a bug), long
+    enough that a mobile client's connection drops mid-request before the
+    server responds (confirmed live: nginx 499s here from an Android
+    client). Returns immediately; poll GET /last-scan for the result.
+
+    Uses asyncio.create_task(), not FastAPI's BackgroundTasks -- this app's
+    own auth-gate @app.middleware("http") wraps every response through
+    Starlette's BaseHTTPMiddleware, which is documented to silently drop a
+    response's attached BackgroundTasks (confirmed live: the task never ran
+    via that path). create_task() schedules independently of the response
+    object entirely, so it isn't affected."""
+    task = asyncio.create_task(asyncio.to_thread(_runner.scan_and_record))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+    return {"queued": True, "note": "scan running in background -- poll GET /api/hedging/last-scan"}
+
+
+@router.get("/last-scan")
+def api_hedging_last_scan():
+    result = _runner.last_scan_result()
+    if result is None:
+        return {"status": "NONE", "note": "no scan has completed yet"}
+    return result
 
 
 @router.get("/positions")
