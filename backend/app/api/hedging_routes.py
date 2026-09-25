@@ -68,6 +68,24 @@ def api_hedging_disarm():
     return {"armed": False}
 
 
+class CapitalResetRequest(BaseModel):
+    starting_capital: float
+
+
+@router.post("/capital/reset")
+def api_hedging_capital_reset(req: CapitalResetRequest):
+    """PAPER capital only -- never touches a real account. Refuses while
+    any position is OPEN so the reset ledger never desyncs from
+    already-locked margin (close/emergency-exit-all first)."""
+    if req.starting_capital <= 0:
+        raise HTTPException(status_code=400, detail="starting_capital must be positive")
+    open_positions = [p for p in _position.load_all().values() if p.status == "OPEN"]
+    if open_positions:
+        raise HTTPException(status_code=400,
+                            detail=f"{len(open_positions)} open position(s) -- close or emergency-exit-all first")
+    return _capital.reset(req.starting_capital).to_dict()
+
+
 @router.get("/config")
 def api_hedging_get_config():
     return _runner.get_config()
