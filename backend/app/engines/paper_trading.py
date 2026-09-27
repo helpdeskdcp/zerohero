@@ -32,6 +32,24 @@ def _parse_ts(s):
 
 
 def open_trade(signal: dict) -> dict:
+    """Real gap, confirmed: /api/positions (MANUAL track-position entry,
+    the path real broker-mirrored trades use) has no >0 constraint on its
+    lots/lot_size fields, so a negative `lots` survives its `(req.lots or 1)`
+    default (only 0/None get replaced) and would reach here as a negative
+    quantity, silently flipping PnL sign. This is the shared choke point
+    every open_trade() caller funnels through, so the guard lives here
+    once rather than duplicated per caller."""
+    # stop_loss is deliberately NOT required here: app.combos tracks legs
+    # with no per-leg stop by design (the combo enforces a combined exit
+    # via stop_combined/target_combined instead) -- confirmed by real,
+    # already-passing tests (test_combo_stop_alerts_once etc).
+    qty = signal.get("quantity")
+    entry = signal.get("entry")
+    if qty is None or qty <= 0:
+        raise ValueError(f"open_trade: quantity must be > 0 (got {qty!r})")
+    if entry is None or entry <= 0:
+        raise ValueError(f"open_trade: entry must be > 0 (got {entry!r})")
+
     trade_id = _new_trade_id()
     now = datetime.now(timezone.utc).isoformat()
     row = {

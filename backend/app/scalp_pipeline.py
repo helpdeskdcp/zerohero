@@ -95,6 +95,10 @@ def run_scalp_pipeline(req: dict) -> dict:
             "direction": sig.get("direction") or "NONE",
             "entry_ref": risk_entry,
             "stop_loss": risk_stop,
+            # risk_engine's own R:R-minimum gate (rr_min) reads target_1 and
+            # silently no-ops when it's None -- this call never passed it,
+            # so that gate has never actually evaluated a scalp signal.
+            "target_1": sig.get("target_1"),
         },
         "account": req.get("account") or {},
         "instrument": req.get("risk_instrument") or {},
