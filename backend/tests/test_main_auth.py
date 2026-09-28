@@ -17,6 +17,11 @@ the FastAPI lifecycle for unit-level checks).
 """
 import base64
 
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+from starlette.testclient import TestClient
+
 from app import main
 
 
@@ -76,3 +81,81 @@ def test_no_hardcoded_default_credential_in_source():
     a literal fallback in app/main.py again."""
     src = (main.__file__ and __import__("pathlib").Path(main.__file__).read_text()) or ""
     assert "admin@1234" not in src
+
+
+# ---------------------------------------------------------------------------
+# _AuthGateMiddleware -- ASGI-level behavior (2026-09-28 rewrite: replaced
+# @app.middleware("http")/BaseHTTPMiddleware, which was confirmed live to
+# silently drop a route's BackgroundTasks, with a plain ASGI middleware that
+# never touches the response object at all). Tested against a tiny throwaway
+# Starlette app wrapping the real _AuthGateMiddleware class -- never boots
+# the real app (no DB/broker dependencies pulled in for a unit test).
+# ---------------------------------------------------------------------------
+def _dummy_client(monkeypatch, *, username="opuser", password="strongpw", api_token=""):
+    monkeypatch.setattr(main, "ADMIN_USERNAME", username)
+    monkeypatch.setattr(main, "ADMIN_PASSWORD", password)
+    monkeypatch.setattr(main, "API_TOKEN", api_token)
+
+    async def ok(request):
+        return JSONResponse({"ok": True})
+
+    inner = Starlette(routes=[Route("/api/health", ok), Route("/api/whoami", ok)])
+    wrapped = main._AuthGateMiddleware(inner)
+    return TestClient(wrapped)
+
+
+def test_health_is_open_without_any_credential(monkeypatch):
+    client = _dummy_client(monkeypatch)
+    resp = client.get("/api/health")
+    assert resp.status_code == 200
+
+
+def test_protected_route_denies_with_no_credential(monkeypatch):
+    client = _dummy_client(monkeypatch)
+    resp = client.get("/api/whoami")
+    assert resp.status_code == 401
+    assert resp.headers.get("www-authenticate", "").lower().startswith("basic")
+
+
+def test_protected_route_allows_correct_basic_auth(monkeypatch):
+    client = _dummy_client(monkeypatch)
+    resp = client.get("/api/whoami", auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+
+
+def test_protected_route_rejects_wrong_basic_auth(monkeypatch):
+    client = _dummy_client(monkeypatch)
+    resp = client.get("/api/whoami", auth=("opuser", "wrongpw"))
+    assert resp.status_code == 401
+
+
+def test_protected_route_allows_correct_bearer_token(monkeypatch):
+    client = _dummy_client(monkeypatch, api_token="secret-tok")
+    resp = client.get("/api/whoami", headers={"Authorization": "Bearer secret-tok"})
+    assert resp.status_code == 200
+
+
+def test_protected_route_rejects_wrong_bearer_token(monkeypatch):
+    client = _dummy_client(monkeypatch, api_token="secret-tok")
+    resp = client.get("/api/whoami", headers={"Authorization": "Bearer wrong-tok"})
+    assert resp.status_code == 401
+
+
+def test_non_http_scope_passes_through_untouched(monkeypatch):
+    """websocket/lifespan scopes must never hit the auth check -- the old
+    @app.middleware("http") decorator only ever applied to http scopes by
+    construction; the rewrite must preserve that exactly, or /ws breaks."""
+    import asyncio
+
+    monkeypatch.setattr(main, "ADMIN_USERNAME", "opuser")
+    monkeypatch.setattr(main, "ADMIN_PASSWORD", "strongpw")
+    monkeypatch.setattr(main, "API_TOKEN", "")
+
+    calls = []
+
+    async def inner_app(scope, receive, send):
+        calls.append(scope["type"])
+
+    mw = main._AuthGateMiddleware(inner_app)
+    asyncio.run(mw({"type": "websocket"}, None, None))
+    assert calls == ["websocket"]

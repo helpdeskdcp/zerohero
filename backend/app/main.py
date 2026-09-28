@@ -17,7 +17,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -100,29 +100,40 @@ def _basic_ok(value: str) -> bool:
     return hmac.compare_digest(user, ADMIN_USERNAME) and hmac.compare_digest(password, ADMIN_PASSWORD)
 
 
-@app.middleware("http")
-async def _auth_gate(request, call_next):
-    # WARNING -- FastAPI BackgroundTasks silently DO NOT RUN through this
-    # middleware. @app.middleware("http") compiles to Starlette's
-    # BaseHTTPMiddleware, which reconstructs the downstream response as a
-    # new StreamingResponse and does not carry over the original response's
-    # `.background` attribute -- a route's `background_tasks.add_task(...)`
-    # is silently dropped, no error, no log. Confirmed live 2026-09-24:
-    # POST /api/hedging/scan-now returned 200 but its background scan never
-    # ran until switched to asyncio.create_task(...) instead (which doesn't
-    # go through the response object at all, so this middleware can't touch
-    # it). Any NEW route needing background work must use
-    # asyncio.create_task(...) (keep a strong ref -- see
-    # app/api/hedging_routes.py's `_bg_tasks` set) or a real task queue,
-    # never FastAPI's BackgroundTasks, as long as this middleware exists.
-    p = request.url.path
-    if p != "/api/health":
-        basic = request.headers.get("authorization", "")
-        token_ok = API_TOKEN and _token_from(request) == API_TOKEN
-        if not token_ok and not (basic.lower().startswith("basic ") and _basic_ok(basic)):
-            return JSONResponse({"detail": "unauthorized"}, status_code=401,
-                                headers={"WWW-Authenticate": 'Basic realm="Chanakya AI"'})
-    return await call_next(request)
+class _AuthGateMiddleware:
+    """Pure ASGI middleware -- deliberately NOT @app.middleware("http")/
+    BaseHTTPMiddleware. BaseHTTPMiddleware reconstructs the downstream
+    response as a new StreamingResponse and does not carry over the
+    original response's `.background` attribute, so any route's
+    `background_tasks.add_task(...)` is silently dropped -- no error, no
+    log. Confirmed live 2026-09-24: POST /api/hedging/scan-now returned 200
+    but its background scan never ran under the old decorator-based version
+    until routed around it via asyncio.create_task(...) instead. A plain
+    ASGI middleware never touches the response object at all -- it can't
+    have this failure mode -- so this replaces the old version for every
+    route, current and future, instead of relying on each new route
+    remembering to avoid FastAPI's BackgroundTasks."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        request = Request(scope, receive=receive)
+        if request.url.path != "/api/health":
+            basic = request.headers.get("authorization", "")
+            token_ok = API_TOKEN and _token_from(request) == API_TOKEN
+            if not token_ok and not (basic.lower().startswith("basic ") and _basic_ok(basic)):
+                response = JSONResponse({"detail": "unauthorized"}, status_code=401,
+                                        headers={"WWW-Authenticate": 'Basic realm="Chanakya AI"'})
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_AuthGateMiddleware)
 
 
 # ---------------------------------------------------------------- route modules
