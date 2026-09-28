@@ -21,14 +21,15 @@ contract notes while killing two prior strategy hypotheses (see memory
                           [0.01% sell-side value] + SEBI+stamp Rs16.44 +
                           GST Rs14.46)
 
-For every OTHER (exchange, segment) combination -- NSE/BSE index options
-included -- this module deliberately does NOT fabricate a brokerage/STT/GST
-formula it hasn't verified against a real contract note. `estimate_cost()`
-returns status="UNCALIBRATED" for those rather than guessing: an itemized
-"realistic cost" section that quietly includes made-up numbers for the
-instruments that matter most (NIFTY/BANKNIFTY) would be worse than an
-honest gap, since the whole point of this layer is trustworthy net-of-cost
-numbers.
+For every OTHER (exchange, segment) combination -- `estimate_cost()` returns
+status="UNCALIBRATED" rather than guessing, UNLESS it's an NSE index option
+(NIFTY/BANKNIFTY/FINNIFTY), where `estimate_index_option_cost()` (bottom of
+this file) computes a genuine formula from published, currently-verified
+NSE/Angel One regulatory rates instead -- status "FORMULA_ESTIMATE", a
+distinct, explicitly lower-confidence tier than "OK", never conflated with
+a real observed contract note. See that function's docstring for the full
+reasoning (index-option premiums span too wide a range for one flat
+rupee number the way MCX's do).
 """
 from __future__ import annotations
 
@@ -122,3 +123,88 @@ def estimate_cost(exchange: str, segment: str, *, slippage_points: float = 0.0) 
 
 def known_profiles() -> list[dict]:
     return [p.to_dict() for p in KNOWN_COST_PROFILES.values()]
+
+
+# ---------------------------------------------------------------------------
+# NSE index options (NIFTY / BANKNIFTY / FINNIFTY) -- FORMULA_ESTIMATE, never
+# "OK". The MCX profiles above are flat rupee amounts because they were read
+# straight off one real contract note at one observed premium -- appropriate
+# there since MCX_NATURALGAS/CRUDEOIL trade in a narrow premium band. NSE
+# index options don't: STT/exchange-txn/stamp-duty/SEBI-fee are all ad
+# valorem (a % of premium value), and a NIFTY/BANKNIFTY premium can be Rs5 or
+# Rs500 depending on strike/expiry -- forcing that into one flat number would
+# either pick an arbitrary reference premium or be wrong across the range.
+# So this is a genuine formula over the trade's ACTUAL entry/exit premium,
+# built from PUBLISHED, verifiable NSE/Angel One regulatory rates (verified
+# live 2026-09-28, sources in RegulatoryRateCard.source below) -- not from an
+# observed contract note the way the MCX numbers are. Never claims "OK"
+# status; a caller must not treat this the same as a contract-note-validated
+# profile.
+# ---------------------------------------------------------------------------
+@dataclass
+class RegulatoryRateCard:
+    """Published NSE F&O regulatory + Angel One brokerage rates for equity
+    index options, current as of the verification date below. These rates
+    DO change -- e.g. Budget 2026-27 raised options STT (sell side) from
+    0.10% to 0.15% of premium, effective 2026-04-01 -- re-verify against
+    Angel One's live rate card (angelone.in/exchange-transaction-charges)
+    before trusting this for a real capital decision."""
+    brokerage_per_order: float = 20.0            # flat, Rs, per executed order (both legs)
+    exchange_txn_pct: float = 0.0355299 / 100    # both buy+sell, on premium value
+    stt_sell_pct: float = 0.15 / 100             # SELL side only, on premium value (post 2026-04-01)
+    stamp_duty_buy_pct: float = 0.003 / 100      # BUY side only, on premium value
+    sebi_turnover_pct: float = 0.0001 / 100      # both sides, on premium value (Rs10/crore)
+    gst_pct: float = 0.18                        # on (brokerage + exchange_txn + sebi_fee) only --
+                                                  # STT and stamp duty are themselves taxes, GST does not stack on them
+    verified_on: str = "2026-09-28"
+    source: str = ("Angel One official rate card (angelone.in/exchange-transaction-charges) "
+                   "for brokerage/exchange-txn/SEBI-fee/stamp-duty; ICICI Direct STT FAQ for the "
+                   "Budget 2026-27 options-STT revision (0.10%->0.15% sell-side, eff. 2026-04-01). "
+                   "Verified via live web search, NOT a real observed contract note -- see module "
+                   "docstring for why this is FORMULA_ESTIMATE, not OK/validated.")
+
+
+def estimate_index_option_cost(entry_premium: float, exit_premium: float, lot_size: int, *,
+                               lots: int = 1, slippage_points: float = 0.75,
+                               rates: RegulatoryRateCard | None = None) -> dict:
+    """Round-trip cost for one BUY-then-SELL index-option trade (the only
+    path this system's paper trades take -- long CE/PE, never a naked
+    short), computed from real premiums, not a flat reference number.
+
+    `slippage_points` defaults to 0.75 -- the midpoint of the disclosed
+    0.5-1.0 point/leg range this was asked to use, since this system has no
+    real fill-vs-quote execution data of its own for NIFTY/BANKNIFTY yet to
+    derive a better number from (same "caller's responsibility" stance as
+    estimate_cost() above).
+
+    Works for NIFTY, BANKNIFTY, FINNIFTY, or any other NSE index option --
+    the regulatory rate structure is segment-wide, not index-specific; only
+    lot_size/premium differ, and the caller supplies those. FINNIFTY has no
+    VERIFIED lot size in app.instrument_profiles yet -- pass a real one, do
+    not guess."""
+    rates = rates or RegulatoryRateCard()
+    entry_value = entry_premium * lot_size * lots
+    exit_value = exit_premium * lot_size * lots
+
+    brokerage = rates.brokerage_per_order * 2  # one order to open, one to close
+    exchange_txn = (entry_value + exit_value) * rates.exchange_txn_pct
+    stt = exit_value * rates.stt_sell_pct
+    stamp_duty = entry_value * rates.stamp_duty_buy_pct
+    sebi_fee = (entry_value + exit_value) * rates.sebi_turnover_pct
+    gst = (brokerage + exchange_txn + sebi_fee) * rates.gst_pct
+    slippage_cost = slippage_points * lot_size * lots
+
+    total = round(brokerage + exchange_txn + stt + stamp_duty + sebi_fee + gst + slippage_cost, 2)
+    denom = lot_size * lots
+    return {
+        "status": "FORMULA_ESTIMATE",
+        "exchange": "NSE", "segment": "INDEX_OPTION",
+        "entry_premium": entry_premium, "exit_premium": exit_premium,
+        "lot_size": lot_size, "lots": lots,
+        "brokerage": round(brokerage, 2), "exchange_txn": round(exchange_txn, 2),
+        "stt": round(stt, 2), "stamp_duty": round(stamp_duty, 2), "sebi_fee": round(sebi_fee, 2),
+        "gst": round(gst, 2), "slippage_points": slippage_points, "slippage_cost": round(slippage_cost, 2),
+        "total_cost": total,
+        "total_cost_points": round(total / denom, 4) if denom else None,
+        "note": rates.source,
+    }
