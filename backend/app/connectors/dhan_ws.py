@@ -22,6 +22,16 @@ matching this codebase's fail-closed convention. Dhan's access token is
 short-lived (~24h) -- once it expires the worker starts failing closed again
 until the user re-completes the OAuth login.
 
+Instruments: DHAN_ORDERFLOW_AUTO_SYMBOLS="NIFTY,BANKNIFTY" gets each
+symbol's front-month future + nearest-expiry ATM CE/PE re-resolved once per
+IST calendar day (app.connectors.dhan_instruments) against Dhan's own
+instrument master + this app's live spot -- a hand-picked security_id would
+otherwise go dead at that contract's next expiry (NIFTY/BANKNIFTY weekly
+options can expire within days of being picked). DHAN_ORDERFLOW_INSTRUMENTS
+is for anything NOT auto-resolved (e.g. an MCX commodity future, which rolls
+monthly and has no ATM-options need here) -- explicit "SEGMENT:security_id"
+pairs, always included alongside the auto-resolved set.
+
 Protocol (https://dhanhq.co/docs/v2/live-market-feed/ + .../annexure/,
 verified live 2026-09-28):
   * wss://api-feed.dhan.co?version=2&token={accessToken}&clientId={clientId}&authType=2
@@ -43,13 +53,31 @@ import logging
 import os
 import time
 
-from . import dhan_parser
+from . import dhan_instruments, dhan_parser
 
 _log = logging.getLogger("dhan_ws")
 
 WS_URL_FMT = "wss://api-feed.dhan.co?version=2&token={token}&clientId={client_id}&authType=2"
 _SUBSCRIBE_FULL = 21
 _MAX_INSTRUMENTS_PER_MSG = 100
+
+
+def _auto_symbols() -> list[str]:
+    """DHAN_ORDERFLOW_AUTO_SYMBOLS="NIFTY,BANKNIFTY" -- symbols whose
+    front-month future + nearest-expiry ATM CE/PE get re-resolved once per
+    IST calendar day (app.connectors.dhan_instruments), instead of a fixed
+    security_id that goes stale at the next expiry."""
+    raw = _env("DHAN_ORDERFLOW_AUTO_SYMBOLS")
+    return [s.strip().upper() for s in raw.split(",") if s.strip()]
+
+
+def _get_spot(symbol: str) -> float | None:
+    try:
+        from ..mathematical_confluence import context as _ctx
+        return _ctx.market_context(symbol).get("spot")
+    except Exception as e:
+        _log.warning("dhan_ws: spot lookup failed for %s: %s: %s", symbol, type(e).__name__, e)
+        return None
 
 
 def _env(name: str, default: str = "") -> str:
@@ -81,7 +109,15 @@ def instruments_from_env() -> list[dict]:
 
 class DhanOrderflowWorker:
     """Owns the WS connection lifecycle + feeds a queue for
-    app.engines.orderflow_engine to consume."""
+    app.engines.orderflow_engine to consume.
+
+    Instrument resolution: pass `instruments` explicitly for a fixed list
+    (used by tests, or a manual override) -- no daily re-resolution happens.
+    Leave it None (the default/production path) to get DHAN_ORDERFLOW_INSTRUMENTS
+    (static extras, e.g. an MCX future) merged with DHAN_ORDERFLOW_AUTO_SYMBOLS
+    (front-month future + ATM CE/PE, re-resolved once per IST day via
+    app.connectors.dhan_instruments -- see that module's docstring for why a
+    fixed security_id would otherwise go stale at the next expiry)."""
 
     def __init__(self, instruments: list[dict] | None = None, queue_maxsize: int = 10_000):
         self._task: asyncio.Task | None = None
@@ -91,7 +127,11 @@ class DhanOrderflowWorker:
         self.last_error: str | None = None
         self.last_msg_ts: float | None = None
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=queue_maxsize)
-        self._instruments = instruments if instruments is not None else instruments_from_env()
+        self._explicit_instruments = instruments
+        self._auto_syms = _auto_symbols() if instruments is None else []
+        self._instruments = list(instruments) if instruments is not None else list(instruments_from_env())
+        self._instruments_day = None
+        self._instrument_meta: dict = {}
         self._n_frames = 0
         self._n_ticks = 0
         self._n_dropped = 0
@@ -100,13 +140,45 @@ class DhanOrderflowWorker:
         if not self.enabled:
             self.last_error = "disabled (DHAN_ORDERFLOW_ENABLED=0)"
             return
-        if not self._instruments:
-            self.last_error = "no instruments configured (DHAN_ORDERFLOW_INSTRUMENTS)"
+        if not self._instruments and not self._auto_syms:
+            self.last_error = "no instruments configured (DHAN_ORDERFLOW_INSTRUMENTS / DHAN_ORDERFLOW_AUTO_SYMBOLS)"
             return
         if self._task and not self._task.done():
             return
         self._stop.clear()
         self._task = asyncio.create_task(self._loop())
+
+    async def _refresh_instruments(self):
+        """No-op when constructed with an explicit instrument list (tests /
+        manual override). Otherwise re-resolves self._auto_syms once per IST
+        calendar day and merges with the static DHAN_ORDERFLOW_INSTRUMENTS
+        extras -- mirrors app.l2capture.worker's day-cached _refresh_tokens()."""
+        if self._explicit_instruments is not None or not self._auto_syms:
+            return
+        today = dhan_instruments.today_ist()
+        if self._instruments_day == today:
+            return
+        try:
+            auto, meta, incomplete = await asyncio.to_thread(
+                dhan_instruments.resolve_daily_instruments, self._auto_syms, _get_spot)
+        except Exception as e:
+            self.last_error = f"instrument resolution: {type(e).__name__}: {e}"
+            _log.warning("dhan_ws: %s", self.last_error)
+            return
+        static = instruments_from_env()
+        self._instruments = auto + static
+        self._instrument_meta = meta
+        if incomplete:
+            # Don't lock in a partial result for the rest of the day (e.g. a
+            # transient spot-lookup failure) -- keep whatever DID resolve so
+            # the feed can still run, but retry the missing symbols on the
+            # next loop iteration instead of waiting for tomorrow's refresh.
+            self.last_error = f"instrument resolution incomplete, retrying: {incomplete}"
+            _log.warning("dhan_ws: %s", self.last_error)
+        else:
+            self._instruments_day = today
+        _log.info("dhan_ws: instruments refreshed for %s: auto=%s static=%s incomplete=%s",
+                  today, {sid: m.get("trading_symbol") for sid, m in meta.items()}, static, incomplete)
 
     async def stop(self):
         self._stop.set()
@@ -125,6 +197,8 @@ class DhanOrderflowWorker:
             "instruments": len(self._instruments), "frames": self._n_frames,
             "ticks_enqueued": self._n_ticks, "ticks_dropped_queue_full": self._n_dropped,
             "queue_depth": self.queue.qsize(),
+            "instruments_day": self._instruments_day.isoformat() if self._instruments_day else None,
+            "instrument_meta": self._instrument_meta,
         }
 
     async def _loop(self):
@@ -136,6 +210,11 @@ class DhanOrderflowWorker:
             return
         backoff = 2
         while not self._stop.is_set():
+            await self._refresh_instruments()
+            if not self._instruments:
+                self.last_error = "no instruments resolved yet"
+                await self._sleep(15)
+                continue
             from .. import dhan_client  # local: avoids a hard import cycle at module load
             token = dhan_client.get_access_token()
             client_id = _env("DHAN_CLIENT_ID")

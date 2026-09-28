@@ -193,6 +193,75 @@ def test_worker_refuses_to_start_with_no_instruments(monkeypatch):
     assert "no instruments" in w.last_error
 
 
+def test_worker_with_explicit_instruments_never_auto_refreshes(monkeypatch):
+    """A fixed instrument list (tests, or a manual override) must never be
+    silently replaced by daily auto-resolution -- that only applies to the
+    default/production construction path (instruments=None)."""
+    fixed = [{"exchange_segment": "NSE_FNO", "security_id": "42"}]
+    w = dhan_ws.DhanOrderflowWorker(instruments=fixed)
+    asyncio.run(w._refresh_instruments())
+    assert w._instruments == fixed
+    assert w._instruments_day is None
+
+
+def test_worker_default_construction_reads_auto_symbols_from_env(monkeypatch):
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_SYMBOLS", "NIFTY, BANKNIFTY")
+    monkeypatch.delenv("DHAN_ORDERFLOW_INSTRUMENTS", raising=False)
+    w = dhan_ws.DhanOrderflowWorker()
+    assert w._auto_syms == ["NIFTY", "BANKNIFTY"]
+    assert w._explicit_instruments is None
+
+
+def test_worker_refresh_instruments_merges_auto_and_static(monkeypatch):
+    from app.connectors import dhan_instruments as di
+    monkeypatch.setenv("DHAN_ORDERFLOW_INSTRUMENTS", "MCX_COMM:570750")
+    w = dhan_ws.DhanOrderflowWorker()
+    w._auto_syms = ["NIFTY"]
+
+    monkeypatch.setattr(di, "resolve_daily_instruments", lambda symbols, get_spot: (
+        [{"exchange_segment": "NSE_FNO", "security_id": "100"}],
+        {"100": {"symbol": "NIFTY", "kind": "FUTURE"}}, []))  # fully resolved -- incomplete=[]
+    asyncio.run(w._refresh_instruments())
+    assert {i["security_id"] for i in w._instruments} == {"100", "570750"}
+    assert w._instruments_day == di.today_ist()
+
+
+def test_worker_refresh_instruments_is_a_noop_within_the_same_day(monkeypatch):
+    from app.connectors import dhan_instruments as di
+    w = dhan_ws.DhanOrderflowWorker()
+    w._auto_syms = ["NIFTY"]
+    calls = []
+    monkeypatch.setattr(di, "resolve_daily_instruments",
+                        lambda symbols, get_spot: (calls.append(1), ([], {}, []))[1])
+    asyncio.run(w._refresh_instruments())
+    asyncio.run(w._refresh_instruments())
+    assert len(calls) == 1  # second call short-circuits on the unchanged day
+
+
+def test_worker_refresh_instruments_retries_on_next_call_when_incomplete(monkeypatch):
+    """A partial resolution (e.g. one symbol's spot lookup failed) must NOT
+    lock in _instruments_day -- the next refresh call should try again
+    instead of waiting until tomorrow."""
+    from app.connectors import dhan_instruments as di
+    w = dhan_ws.DhanOrderflowWorker()
+    w._auto_syms = ["NIFTY", "BANKNIFTY"]
+    calls = []
+
+    def flaky(symbols, get_spot):
+        calls.append(1)
+        if len(calls) == 1:
+            return ([{"exchange_segment": "NSE_FNO", "security_id": "100"}],
+                    {"100": {"symbol": "NIFTY", "kind": "FUTURE"}}, ["BANKNIFTY"])
+        return ([{"exchange_segment": "NSE_FNO", "security_id": "100"}],
+                {"100": {"symbol": "NIFTY", "kind": "FUTURE"}}, [])
+
+    monkeypatch.setattr(di, "resolve_daily_instruments", flaky)
+    asyncio.run(w._refresh_instruments())
+    assert w._instruments_day is None and w.last_error and "incomplete" in w.last_error
+    asyncio.run(w._refresh_instruments())
+    assert len(calls) == 2 and w._instruments_day == di.today_ist()
+
+
 # ---------------------------------------------------------------------------
 # app.engines.orderflow_engine -- footprint bars / CVD / stacked imbalance
 # ---------------------------------------------------------------------------
