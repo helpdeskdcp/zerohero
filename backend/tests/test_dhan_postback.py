@@ -91,7 +91,7 @@ def test_postbacks_listing_route_works_with_correct_auth(fresh_db, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Partner OAuth flow (generate-consent / redirect / connection-status).
+# App-based OAuth flow (generate-consent / redirect / connection-status).
 # dhan_client's actual Dhan API calls are stubbed -- never hits the real
 # auth.dhan.co in tests.
 # ---------------------------------------------------------------------------
@@ -129,8 +129,9 @@ def test_generate_consent_requires_normal_auth(monkeypatch):
 
 
 def test_generate_consent_fails_closed_when_not_configured(monkeypatch):
-    monkeypatch.delenv("DHAN_PARTNER_ID", raising=False)
-    monkeypatch.delenv("DHAN_PARTNER_SECRET", raising=False)
+    monkeypatch.delenv("DHAN_APP_ID", raising=False)
+    monkeypatch.delenv("DHAN_APP_SECRET", raising=False)
+    monkeypatch.delenv("DHAN_CLIENT_ID", raising=False)
     client = _client(monkeypatch)
     resp = client.post("/api/dhan/generate-consent", auth=("opuser", "strongpw"))
     assert resp.status_code == 200

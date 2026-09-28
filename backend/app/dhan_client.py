@@ -1,11 +1,18 @@
-"""Dhan Partner OAuth consent flow (https://dhanhq.co/docs/v2/authentication/,
-verified live 2026-09-28) -- generates a login consent, and exchanges the
-tokenId Dhan's redirect sends back for a real access token.
+"""Dhan App-Based OAuth consent flow (https://dhanhq.co/docs/v2/authentication/,
+verified live 2026-09-28) -- for an individual trader's self-generated
+app_id/app_secret (Dhan web interface "Access DhanHQ APIs" page), NOT the
+separate Partner flow (partner_id/partner_secret, requires Dhan's direct
+approval as a third-party platform). The user's credentials here are the
+App-scheme kind -- confirmed after /partner/generate-consent returned a real
+401 against Dhan's server, then verifying via Dhan's own docs that App and
+Partner are two independent schemes with different endpoints and headers.
 
-DHAN_PARTNER_ID / DHAN_PARTNER_SECRET are read fresh from the environment on
-every call (not cached at import time) so a .env update takes effect on the
-next call, no restart needed for this specific piece. Never logged, never
-included in an API response body.
+DHAN_APP_ID / DHAN_APP_SECRET / DHAN_CLIENT_ID are read fresh from the
+environment on every call (not cached at import time) so a .env update takes
+effect on the next call, no restart needed for this specific piece. Never
+logged, never included in an API response body. DHAN_CLIENT_ID is the user's
+OWN Dhan account client ID / UCC (required as a query param on step 1 --
+Dhan needs to know which account the app is requesting consent for).
 
 The resulting access token IS a real credential (can place real orders on
 Dhan) -- stored via app.db.get_setting/set_setting like everything else in
@@ -18,39 +25,49 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import requests
 
 from . import db
 
 _SETTINGS_KEY = "dhan_access_token"
-_CONSENT_URL = "https://auth.dhan.co/partner/generate-consent"
-_LOGIN_URL_FMT = "https://auth.dhan.co/consent-login?consentId={consent_id}"
-_CONSUME_URL_FMT = "https://auth.dhan.co/partner/consume-consent?tokenId={token_id}"
+_CONSENT_URL_FMT = "https://auth.dhan.co/app/generate-consent?client_id={client_id}"
+_LOGIN_URL_FMT = "https://auth.dhan.co/login/consentApp-login?consentAppId={consent_app_id}"
+_CONSUME_URL_FMT = "https://auth.dhan.co/app/consumeApp-consent?tokenId={token_id}"
 
 
-def _partner_headers() -> dict:
-    partner_id = (os.environ.get("DHAN_PARTNER_ID") or "").strip()
-    partner_secret = (os.environ.get("DHAN_PARTNER_SECRET") or "").strip()
-    if not partner_id or not partner_secret:
+def _app_headers() -> dict:
+    app_id = (os.environ.get("DHAN_APP_ID") or "").strip()
+    app_secret = (os.environ.get("DHAN_APP_SECRET") or "").strip()
+    if not app_id or not app_secret:
         return {}
-    return {"partner_id": partner_id, "partner_secret": partner_secret}
+    return {"app_id": app_id, "app_secret": app_secret}
+
+
+def _client_id() -> str:
+    return (os.environ.get("DHAN_CLIENT_ID") or "").strip()
 
 
 def generate_consent() -> dict:
-    """Step 1. Returns {"status": "NOT_CONFIGURED"} if DHAN_PARTNER_ID/
-    DHAN_PARTNER_SECRET aren't set -- fails closed, never guesses."""
-    headers = _partner_headers()
-    if not headers:
+    """Step 1. Returns {"status": "NOT_CONFIGURED"} if DHAN_APP_ID/
+    DHAN_APP_SECRET/DHAN_CLIENT_ID aren't all set -- fails closed, never
+    guesses. DHAN_CLIENT_ID is the user's own Dhan account client ID (UCC),
+    required as a query param so Dhan knows which account to ask consent
+    for."""
+    headers = _app_headers()
+    client_id = _client_id()
+    if not headers or not client_id:
         return {"status": "NOT_CONFIGURED",
-                "note": "DHAN_PARTNER_ID / DHAN_PARTNER_SECRET not set in .env"}
-    resp = requests.post(_CONSENT_URL, headers=headers, timeout=10)
+                "note": "DHAN_APP_ID / DHAN_APP_SECRET / DHAN_CLIENT_ID not all set in .env"}
+    url = _CONSENT_URL_FMT.format(client_id=quote(client_id, safe=""))
+    resp = requests.post(url, headers=headers, timeout=10)
     if resp.status_code != 200:
         return {"status": "ERROR", "http_status": resp.status_code, "detail": resp.text[:500]}
     body = resp.json()
-    consent_id = body.get("consentId")
-    return {"status": "OK", "consent_id": consent_id,
-            "login_url": _LOGIN_URL_FMT.format(consent_id=consent_id)}
+    consent_app_id = body.get("consentAppId")
+    return {"status": "OK", "consent_app_id": consent_app_id,
+            "login_url": _LOGIN_URL_FMT.format(consent_app_id=quote(consent_app_id or "", safe=""))}
 
 
 def consume_consent(token_id: str) -> dict:
@@ -58,10 +75,11 @@ def consume_consent(token_id: str) -> dict:
     resulting access token (app_settings) on success -- never returns the
     raw accessToken value to a casual status-check caller (see
     connection_status() below), only this function's own direct return."""
-    headers = _partner_headers()
+    headers = _app_headers()
     if not headers:
         return {"status": "NOT_CONFIGURED"}
-    resp = requests.post(_CONSUME_URL_FMT.format(token_id=token_id), headers=headers, timeout=10)
+    resp = requests.post(_CONSUME_URL_FMT.format(token_id=quote(token_id, safe="")),
+                         headers=headers, timeout=10)
     if resp.status_code != 200:
         return {"status": "ERROR", "http_status": resp.status_code, "detail": resp.text[:500]}
     body = resp.json()

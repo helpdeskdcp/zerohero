@@ -1,6 +1,8 @@
 """
-Dhan broker integration -- postback receiver (READ-ONLY LOGGING) + Partner
-OAuth consent flow (app/dhan_client.py does the actual Dhan API calls).
+Dhan broker integration -- postback receiver (READ-ONLY LOGGING) + App-based
+OAuth consent flow (app/dhan_client.py does the actual Dhan API calls; this
+is the self-service "app_id/app_secret" scheme for an individual trader, NOT
+the separate Partner scheme which needs Dhan's direct approval).
 
 Dhan's postback mechanism has NO signature/secret verification of its own
 (confirmed against the official v2 API docs, 2026-09-28: the JSON payload is
@@ -18,9 +20,9 @@ servers/redirects can't send our Basic/Bearer credentials:
   - POST /postback/{secret}: compensating control is the long random secret
     in the path itself (DHAN_POSTBACK_SECRET), checked with
     hmac.compare_digest, fails closed if unconfigured.
-  - GET /redirect: Dhan's browser-redirect callback (Partner OAuth step 2)
+  - GET /redirect: Dhan's browser-redirect callback (App OAuth step 2)
     carries a one-time tokenId that's useless without OUR
-    DHAN_PARTNER_ID/SECRET to exchange it (app/dhan_client.py) -- an
+    DHAN_APP_ID/SECRET to exchange it (app/dhan_client.py) -- an
     attacker hitting this path with a guessed/fake tokenId gets nothing
     without those, which live only in .env, never in this URL.
 """
@@ -73,7 +75,7 @@ def api_dhan_postback_log(limit: int = 200):
 
 @router.post("/generate-consent")
 def api_dhan_generate_consent():
-    """Protected by the normal auth gate -- step 1 of the Partner OAuth
+    """Protected by the normal auth gate -- step 1 of the App-based OAuth
     flow. Returns a login_url for the USER to open in their own browser and
     log into Dhan directly (their credentials go to Dhan, never through
     this app)."""
@@ -82,7 +84,7 @@ def api_dhan_generate_consent():
 
 @router.get("/redirect")
 async def api_dhan_redirect(tokenId: str | None = None):
-    """Dhan's Partner OAuth step-2 callback -- the exact URL to register as
+    """Dhan's App OAuth step-2 callback -- the exact URL to register as
     the app's "Redirect URL" in Dhan's developer console. Exchanges tokenId
     for a real access token (step 3) and shows a plain human-readable
     result; never returns the raw access token in this response."""
