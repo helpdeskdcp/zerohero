@@ -401,6 +401,21 @@ CREATE TABLE IF NOT EXISTS smart_scalper_states (
     spot REAL, option_mark REAL, pnl REAL, mfe REAL, mae REAL
 );
 
+-- Raw Dhan postback log. Append-only, read-only from the rest of this app --
+-- Dhan's postback has NO signature/secret verification of its own (confirmed
+-- against their v2 API docs, 2026-09-28), so every row here is UNTRUSTED
+-- external input, kept deliberately separate from broker_orders/order_events
+-- (this system's own verified order-lifecycle tables) rather than merged
+-- into them. Nothing reads this table to make a trading decision.
+CREATE TABLE IF NOT EXISTS dhan_postback_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    received_ts TEXT NOT NULL,
+    dhan_client_id TEXT,
+    order_id TEXT,
+    order_status TEXT,
+    raw_json TEXT NOT NULL
+);
+
 """
 
 # Indexes are created AFTER _migrate() runs, because some of them
@@ -632,6 +647,28 @@ def list_paper_trade_events(trade_id: str) -> list:
     with db() as conn:
         return [dict(r) for r in conn.execute(
             "SELECT * FROM paper_trade_events WHERE trade_id=? ORDER BY id ASC", (trade_id,))]
+
+
+def insert_dhan_postback(payload: dict) -> int:
+    """Raw, UNTRUSTED external Dhan postback -- append-only, never parsed
+    into a trading decision. See dhan_postback_log's own schema comment."""
+    import json as _json
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO dhan_postback_log (received_ts, dhan_client_id, order_id, order_status, raw_json) "
+            "VALUES (?,?,?,?,?)",
+            (_dt.now(_tz.utc).isoformat(), str(payload.get("dhanClientId") or ""),
+             str(payload.get("orderId") or ""), str(payload.get("orderStatus") or ""),
+             _json.dumps(payload, default=str)))
+        return cur.lastrowid
+
+
+def list_dhan_postbacks(limit: int = 200) -> list:
+    with db() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM dhan_postback_log ORDER BY id DESC LIMIT ?", (limit,))]
 
 
 def insert_shadow_decision(row: dict):

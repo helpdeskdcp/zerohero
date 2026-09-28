@@ -112,7 +112,13 @@ class _AuthGateMiddleware:
     ASGI middleware never touches the response object at all -- it can't
     have this failure mode -- so this replaces the old version for every
     route, current and future, instead of relying on each new route
-    remembering to avoid FastAPI's BackgroundTasks."""
+    remembering to avoid FastAPI's BackgroundTasks.
+
+    /api/health and Dhan's postback path (app/api/dhan_routes.py --
+    is_postback_path()) are the only two exemptions: Dhan's own servers
+    can't send our Basic/Bearer credentials, so that one route carries its
+    own long random secret in the URL path instead (DHAN_POSTBACK_SECRET),
+    checked inside the route itself, fail-closed."""
 
     def __init__(self, app):
         self.app = app
@@ -122,7 +128,9 @@ class _AuthGateMiddleware:
             await self.app(scope, receive, send)
             return
         request = Request(scope, receive=receive)
-        if request.url.path != "/api/health":
+        path = request.url.path
+        from .api.dhan_routes import is_postback_path  # local: avoids reordering the file's route-module imports
+        if path != "/api/health" and not is_postback_path(path):
             basic = request.headers.get("authorization", "")
             token_ok = API_TOKEN and _token_from(request) == API_TOKEN
             if not token_ok and not (basic.lower().startswith("basic ") and _basic_ok(basic)):
@@ -141,6 +149,7 @@ from .api import (
     analysis_routes,
     autoscalp_routes,
     data_routes,
+    dhan_routes,
     engines_routes,
     execution_routes,
     hedging_routes,
@@ -153,7 +162,7 @@ from .api import (
 
 for _mod in (engines_routes, instruments_routes, analysis_routes, scalp_routes,
             execution_routes, monitor_routes, autoscalp_routes, positions_routes,
-            data_routes, system_routes, hedging_routes):
+            data_routes, system_routes, hedging_routes, dhan_routes):
     app.include_router(_mod.router)
 
 # Re-exports for backward compatibility: a handful of tests call these route
