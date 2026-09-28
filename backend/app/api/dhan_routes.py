@@ -115,3 +115,19 @@ def api_dhan_orderflow_status():
     if worker is None or engine is None:
         return {"status": "DISABLED", "note": "dhan orderflow wiring failed at startup"}
     return {"status": "OK", "worker": worker.status(), "engine": engine.status()}
+
+
+@router.get("/orderflow-snapshot")
+def api_dhan_orderflow_snapshot(security_id: int):
+    """Protected by the normal auth gate. Read-only footprint/CVD/stacked-
+    imbalance snapshot for one Dhan security_id currently being tracked by
+    the orderflow engine. Classification is INFERRED (quote rule / tick
+    rule), not broker-confirmed -- see dhan_parser.py."""
+    from .. import main as _main
+    engine = _main.dhan_orderflow_engine
+    if engine is None:
+        return {"status": "DISABLED"}
+    snap = engine.snapshot(security_id)
+    if snap is None:
+        return {"status": "NOT_TRACKED", "security_id": security_id}
+    return {"status": "OK", **snap}

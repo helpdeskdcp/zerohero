@@ -14,10 +14,13 @@ reconnect with backoff) but is a SEPARATE worker/socket/data path -- it
 never touches the L2 capture DB, the scalp runner's feed, or app/execution/
 (LIVE order path). RESEARCH DATA PATH ONLY, gated OFF by default.
 
-Auth: DHAN_ACCESS_TOKEN (stored by app.dhan_client's App-OAuth consent flow
--- see app.dhan_client.get_access_token()) and DHAN_CLIENT_ID (the same
-account id used for that consent flow). Both required; the worker is inert
-without them, matching this codebase's fail-closed convention.
+Auth: the access token comes from app.dhan_client.get_access_token() (stored
+by the App-OAuth consent flow in app/dhan_client.py -- never read from
+.env), plus DHAN_CLIENT_ID (the same account id used for that consent flow,
+set once in .env). Both required; the worker is inert without them,
+matching this codebase's fail-closed convention. Dhan's access token is
+short-lived (~24h) -- once it expires the worker starts failing closed again
+until the user re-completes the OAuth login.
 
 Protocol (https://dhanhq.co/docs/v2/live-market-feed/ + .../annexure/,
 verified live 2026-09-28):
@@ -133,10 +136,11 @@ class DhanOrderflowWorker:
             return
         backoff = 2
         while not self._stop.is_set():
-            token = _env("DHAN_ACCESS_TOKEN")
+            from .. import dhan_client  # local: avoids a hard import cycle at module load
+            token = dhan_client.get_access_token()
             client_id = _env("DHAN_CLIENT_ID")
             if not token or not client_id:
-                self.last_error = "DHAN_ACCESS_TOKEN / DHAN_CLIENT_ID not set"
+                self.last_error = "not connected -- complete the Dhan OAuth login (DHAN_CLIENT_ID not set, or no stored access token)"
                 await self._sleep(15)
                 continue
             try:

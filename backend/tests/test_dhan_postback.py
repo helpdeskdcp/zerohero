@@ -155,3 +155,38 @@ def test_connection_status_never_leaks_the_raw_access_token(fresh_db, monkeypatc
     assert resp.status_code == 200
     assert "super-secret-real-token" not in resp.text
     assert resp.json()["connected"] is True and resp.json()["dhan_client_name"] == "JOHN DOE"
+
+
+def test_orderflow_status_requires_normal_auth(monkeypatch):
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/orderflow-status")
+    assert resp.status_code == 401
+
+
+def test_orderflow_status_reports_the_real_worker_and_engine(monkeypatch):
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/orderflow-status", auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "OK"
+    assert "enabled" in body["worker"] and "symbols_tracked" in body["engine"]
+
+
+def test_orderflow_snapshot_not_tracked_for_an_unknown_security_id(monkeypatch):
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/orderflow-snapshot", params={"security_id": 999999}, auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "NOT_TRACKED"
+
+
+def test_orderflow_snapshot_reports_ingested_ticks(monkeypatch):
+    from app import main as _main
+    client = _client(monkeypatch)
+    from app.connectors import dhan_parser
+    from tests.test_dhan_connector import _pack_full
+    packet = dhan_parser.parse_frame(_pack_full(security_id=555, ltp=101.0, ltq=10, ltt=1))[0]
+    _main.dhan_orderflow_engine.ingest(packet)
+    resp = client.get("/api/dhan/orderflow-snapshot", params={"security_id": 555}, auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "OK" and body["security_id"] == 555 and body["cvd"] == 10
