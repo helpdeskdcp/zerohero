@@ -49,6 +49,17 @@ _DEPTH_LEVEL_SIZE = 20
 _DEPTH_LEVELS = 5
 _DEPTH_OFFSET = 62  # inside a Full(8) packet, immediately after the day OHLC fields
 
+# Full(8)'s "Last Trade Time" field is IST wall-clock time misencoded as a
+# UTC epoch (verified live 2026-09-28 by cross-checking against two
+# independent sources: a NIFTY tick's ltt, read naively as UTC, landed 5:30
+# ahead of that same trade's real UTC time in Dhan's own historical REST
+# data -- which IS genuine UTC, see dhan_historical.py; and a live
+# currently-trading NaturalGas tick's ltt, read naively, landed 5:30 ahead
+# of the actual current wall-clock time). Every ltt is corrected to real UTC
+# at parse time so nothing downstream (bar bucketing, the orderflow-snapshot
+# API's bar_start) has to know about this.
+_IST_OFFSET_SEC = 19800
+
 
 def parse_frame(payload: bytes) -> list[dict]:
     """Split one WS binary frame into packet dicts. Tolerates concatenated
@@ -79,7 +90,8 @@ def parse_frame(payload: bytes) -> list[dict]:
 def _parse_full(payload: bytes, off: int, exchange_segment: int, security_id: int) -> dict:
     ltp, = struct.unpack_from("<f", payload, off + 8)
     ltq, = struct.unpack_from("<h", payload, off + 12)
-    ltt, = struct.unpack_from("<i", payload, off + 14)
+    ltt_raw, = struct.unpack_from("<i", payload, off + 14)
+    ltt = ltt_raw - _IST_OFFSET_SEC  # see _IST_OFFSET_SEC's comment
     atp, = struct.unpack_from("<f", payload, off + 18)
     volume, = struct.unpack_from("<i", payload, off + 22)
     total_sell_qty, = struct.unpack_from("<i", payload, off + 26)

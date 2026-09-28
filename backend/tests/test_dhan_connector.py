@@ -70,12 +70,29 @@ def _pack_disconnect(security_id=101, reason_code=805) -> bytes:
 # dhan_parser.parse_frame
 # ---------------------------------------------------------------------------
 
+def test_parse_full_corrects_the_ist_misencoded_ltt_to_real_utc():
+    """Regression, locked in against real live values: on 2026-09-28 the
+    actual wall-clock time was 2026-09-28 17:43:17 UTC when a live
+    NaturalGas tick's raw ltt (naive-decoded) read as 2026-09-28 23:13:00
+    UTC -- 5:30 in the future. Corrected (raw - _IST_OFFSET_SEC), it decodes
+    to 2026-09-28 17:43:00 UTC, matching the real time to the second."""
+    from datetime import datetime, timezone
+    raw_ltt = 1790637180
+    packet = dhan_parser.parse_frame(_pack_full(ltt=raw_ltt))[0]
+    assert packet["ltt"] == raw_ltt - dhan_parser._IST_OFFSET_SEC
+    assert datetime.fromtimestamp(packet["ltt"], tz=timezone.utc) == datetime(2026, 9, 28, 17, 43, tzinfo=timezone.utc)
+
+
 def test_parse_frame_decodes_a_single_full_packet():
     out = dhan_parser.parse_frame(_pack_full(security_id=42, ltp=250.5, ltq=10, ltt=1_700_000_100))
     assert len(out) == 1
     p = out[0]
     assert p["type"] == "FULL" and p["security_id"] == 42
-    assert p["ltp"] == 250.5 and p["ltq"] == 10 and p["ltt"] == 1_700_000_100
+    assert p["ltp"] == 250.5 and p["ltq"] == 10
+    # ltt is corrected by -_IST_OFFSET_SEC at parse time (Dhan's Full packet
+    # sends IST wall-clock time misencoded as a UTC epoch -- see
+    # dhan_parser._IST_OFFSET_SEC's comment).
+    assert p["ltt"] == 1_700_000_100 - dhan_parser._IST_OFFSET_SEC
     assert len(p["depth"]) == 5
     assert p["depth"][0]["bid_price"] == 100.0 and p["depth"][0]["ask_price"] == 101.0
 
@@ -115,7 +132,7 @@ def test_classify_tick_quote_rule_buy_when_trade_at_or_above_best_ask():
     packet = dhan_parser.parse_frame(_pack_full(ltp=101.0, ltt=1))[0]  # best_ask=101.0
     tick, state = dhan_parser.classify_tick(packet, None)
     assert tick["side"] == "BUY_AGGRESSOR" and tick["classification_method"] == "QUOTE_RULE"
-    assert state == {"ltt": 1, "ltp": 101.0}
+    assert state == {"ltt": 1 - dhan_parser._IST_OFFSET_SEC, "ltp": 101.0}
 
 
 def test_classify_tick_quote_rule_sell_when_trade_at_or_below_best_bid():
@@ -155,9 +172,10 @@ def test_classify_tick_returns_none_when_last_trade_time_is_unchanged():
     """A repeated depth-only snapshot (same ltt) must not be double-counted
     as a new trade."""
     packet = dhan_parser.parse_frame(_pack_full(ltp=101.0, ltt=5))[0]
-    tick, state = dhan_parser.classify_tick(packet, {"ltt": 5, "ltp": 101.0})
+    corrected_ltt = 5 - dhan_parser._IST_OFFSET_SEC
+    tick, state = dhan_parser.classify_tick(packet, {"ltt": corrected_ltt, "ltp": 101.0})
     assert tick is None
-    assert state == {"ltt": 5, "ltp": 101.0}  # state still refreshed
+    assert state == {"ltt": corrected_ltt, "ltp": 101.0}  # state still refreshed
 
 
 # ---------------------------------------------------------------------------
