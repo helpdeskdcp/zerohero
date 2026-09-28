@@ -39,7 +39,16 @@ import requests
 _log = logging.getLogger("dhan_instruments")
 
 MASTER_URL = "https://images.dhan.co/api-data/api-scrip-master.csv"
-STRIKE_STEP = {"NIFTY": 50, "BANKNIFTY": 100}
+STRIKE_STEP = {"NIFTY": 50, "BANKNIFTY": 100, "SENSEX": 100}
+
+# symbol -> (SEM_EXM_EXCH_ID, SEM_SEGMENT, WS exchange_segment string). NIFTY/
+# BANKNIFTY derivatives list under NSE; SENSEX lists under BSE -- same "D"
+# SEM_SEGMENT code on both exchanges, but a different WS subscription segment
+# string (per Dhan's annexure: NSE_FNO vs BSE_FNO).
+SYMBOL_EXCHANGE = {
+    "NIFTY": ("NSE", "D", "NSE_FNO"), "BANKNIFTY": ("NSE", "D", "NSE_FNO"),
+    "SENSEX": ("BSE", "D", "BSE_FNO"),
+}
 
 _cache: dict = {"day": None, "rows": None}
 
@@ -167,21 +176,22 @@ def resolve_daily_instruments(symbols: list[str], get_spot) -> tuple[list[dict],
     incomplete: list[str] = []
     for sym in symbols:
         ok = True
+        exch_id, segment, ws_segment = SYMBOL_EXCHANGE.get(sym, ("NSE", "D", "NSE_FNO"))
         try:
-            fut = resolve_front_month_future(sym, rows=rows)
+            fut = resolve_front_month_future(sym, exch_id=exch_id, segment=segment, rows=rows)
             if fut:
-                out.append({"exchange_segment": "NSE_FNO", "security_id": fut["security_id"]})
+                out.append({"exchange_segment": ws_segment, "security_id": fut["security_id"]})
                 meta[fut["security_id"]] = {"symbol": sym, "kind": "FUTURE", "expiry": fut["expiry"],
                                             "trading_symbol": fut["trading_symbol"]}
             else:
                 _log.warning("dhan_instruments: no front-month future resolved for %s", sym)
                 ok = False
             spot = get_spot(sym)
-            atm = resolve_atm_options(sym, spot, rows=rows) if spot else None
+            atm = resolve_atm_options(sym, spot, exch_id=exch_id, segment=segment, rows=rows) if spot else None
             if atm:
                 for leg in ("ce", "pe"):
                     r = atm[leg]
-                    out.append({"exchange_segment": "NSE_FNO", "security_id": r["security_id"]})
+                    out.append({"exchange_segment": ws_segment, "security_id": r["security_id"]})
                     meta[r["security_id"]] = {"symbol": sym, "kind": f"OPTION_{leg.upper()}",
                                               "expiry": atm["expiry"], "strike": atm["strike"],
                                               "trading_symbol": r["trading_symbol"]}

@@ -71,13 +71,51 @@ def _auto_symbols() -> list[str]:
     return [s.strip().upper() for s in raw.split(",") if s.strip()]
 
 
+_SPOT_STALE_SEC = 1800  # 30min -- stale enough to reject for a same-day ATM pick
+
+
+def _histcap_latest_index_spot(symbol: str) -> float | None:
+    """Fallback for a symbol app.mathematical_confluence.context doesn't
+    resolve (e.g. SENSEX -- a BSE index the shared hub's WS/REST spot path
+    doesn't cover, even though histcap's own capture DB has it, verified
+    live 2026-09-28). Reads the capture DB directly, read-only, own
+    short-lived connection -- never writes, never touches the hub's cache."""
+    import sqlite3
+    from datetime import datetime, timezone
+    from ..histcap.store import DB_PATH
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=5)
+        try:
+            row = conn.execute(
+                "SELECT ltp, received_ts FROM quote_snapshots WHERE symbol=? AND kind='INDEX' "
+                "ORDER BY received_ts DESC LIMIT 1", (symbol.upper(),)).fetchone()
+        finally:
+            conn.close()
+    except Exception as e:
+        _log.warning("dhan_ws: histcap spot fallback failed for %s: %s: %s", symbol, type(e).__name__, e)
+        return None
+    if not row or not row[0]:
+        return None
+    try:
+        ts = datetime.fromisoformat(row[1].replace("Z", "+00:00"))
+        age_sec = (datetime.now(timezone.utc) - ts).total_seconds()
+    except (ValueError, TypeError):
+        return None
+    if age_sec > _SPOT_STALE_SEC:
+        _log.warning("dhan_ws: histcap spot fallback for %s is stale (%.0fs old), rejecting", symbol, age_sec)
+        return None
+    return float(row[0])
+
+
 def _get_spot(symbol: str) -> float | None:
     try:
         from ..mathematical_confluence import context as _ctx
-        return _ctx.market_context(symbol).get("spot")
+        spot = _ctx.market_context(symbol).get("spot")
+        if spot:
+            return spot
     except Exception as e:
         _log.warning("dhan_ws: spot lookup failed for %s: %s: %s", symbol, type(e).__name__, e)
-        return None
+    return _histcap_latest_index_spot(symbol)
 
 
 def _env(name: str, default: str = "") -> str:

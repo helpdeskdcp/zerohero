@@ -165,3 +165,26 @@ def test_resolve_daily_instruments_one_bad_symbol_does_not_block_the_rest(monkey
 
 def test_today_ist_is_a_date_object():
     assert isinstance(di.today_ist(), date)
+
+
+# ---------------------------------------------------------------------------
+# SENSEX -- lists on BSE, not NSE; must route to the BSE_FNO ws segment
+# ---------------------------------------------------------------------------
+
+def test_resolve_daily_instruments_routes_sensex_to_bse_not_nse(monkeypatch):
+    rows = [
+        _fut_row("SENSEX", "900", NEXT_WEEK, exch="BSE"),
+        _opt_row("SENSEX", "901", NEXT_WEEK, 82500, "CE", exch="BSE"),
+        _opt_row("SENSEX", "902", NEXT_WEEK, 82500, "PE", exch="BSE"),
+    ]
+    monkeypatch.setattr(di, "_load_master", lambda force=False: rows)
+    out, meta, incomplete = di.resolve_daily_instruments(["SENSEX"], lambda sym: 82480.0)
+    assert incomplete == []
+    assert all(i["exchange_segment"] == "BSE_FNO" for i in out)
+    assert {i["security_id"] for i in out} == {"900", "901", "902"}
+
+
+def test_resolve_front_month_future_sensex_needs_bse_exch_id_not_nse():
+    rows = [_fut_row("SENSEX", "900", NEXT_WEEK, exch="BSE")]
+    assert di.resolve_front_month_future("SENSEX", exch_id="NSE", rows=rows) is None
+    assert di.resolve_front_month_future("SENSEX", exch_id="BSE", rows=rows)["security_id"] == "900"

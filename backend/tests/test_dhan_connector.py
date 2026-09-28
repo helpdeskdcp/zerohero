@@ -164,6 +164,55 @@ def test_classify_tick_returns_none_when_last_trade_time_is_unchanged():
 # dhan_ws instrument-list env parsing
 # ---------------------------------------------------------------------------
 
+def test_get_spot_uses_market_context_when_it_has_a_value(monkeypatch):
+    from app.mathematical_confluence import context as _ctx
+    monkeypatch.setattr(dhan_ws, "_histcap_latest_index_spot", lambda sym: 999.0)  # must NOT be used
+    monkeypatch.setattr(_ctx, "market_context", lambda sym: {"spot": 22780.25})
+    assert dhan_ws._get_spot("NIFTY") == 22780.25
+
+
+def test_get_spot_falls_back_to_histcap_when_market_context_has_none(monkeypatch):
+    from app.mathematical_confluence import context as _ctx
+    monkeypatch.setattr(_ctx, "market_context", lambda sym: {"spot": None})
+    monkeypatch.setattr(dhan_ws, "_histcap_latest_index_spot", lambda sym: 72771.72)
+    assert dhan_ws._get_spot("SENSEX") == 72771.72
+
+
+def test_histcap_latest_index_spot_reads_the_newest_row(tmp_path, monkeypatch):
+    import sqlite3
+    from datetime import datetime, timezone
+    db_path = str(tmp_path / "market_history.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE quote_snapshots (symbol TEXT, kind TEXT, ltp REAL, received_ts TEXT)")
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute("INSERT INTO quote_snapshots VALUES ('SENSEX','INDEX',72000.0,'2020-01-01T00:00:00+00:00')")
+    conn.execute("INSERT INTO quote_snapshots VALUES ('SENSEX','INDEX',72771.72,?)", (now,))
+    conn.commit(); conn.close()
+    monkeypatch.setattr("app.histcap.store.DB_PATH", db_path)
+    assert dhan_ws._histcap_latest_index_spot("SENSEX") == 72771.72
+
+
+def test_histcap_latest_index_spot_rejects_a_stale_row(tmp_path, monkeypatch):
+    import sqlite3
+    db_path = str(tmp_path / "market_history.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE quote_snapshots (symbol TEXT, kind TEXT, ltp REAL, received_ts TEXT)")
+    conn.execute("INSERT INTO quote_snapshots VALUES ('SENSEX','INDEX',72000.0,'2020-01-01T00:00:00+00:00')")
+    conn.commit(); conn.close()
+    monkeypatch.setattr("app.histcap.store.DB_PATH", db_path)
+    assert dhan_ws._histcap_latest_index_spot("SENSEX") is None
+
+
+def test_histcap_latest_index_spot_none_when_symbol_never_captured(tmp_path, monkeypatch):
+    import sqlite3
+    db_path = str(tmp_path / "market_history.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE quote_snapshots (symbol TEXT, kind TEXT, ltp REAL, received_ts TEXT)")
+    conn.commit(); conn.close()
+    monkeypatch.setattr("app.histcap.store.DB_PATH", db_path)
+    assert dhan_ws._histcap_latest_index_spot("SENSEX") is None
+
+
 def test_instruments_from_env_parses_segment_security_id_pairs(monkeypatch):
     monkeypatch.setenv("DHAN_ORDERFLOW_INSTRUMENTS", "NSE_FNO:49081, NSE_FNO:49082 ,BAD_ENTRY")
     out = dhan_ws.instruments_from_env()
