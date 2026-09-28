@@ -223,6 +223,19 @@ except Exception as _e:  # never let capture wiring break the app
     l2_capture_worker = None
     print(f"[l2capture] disabled: {type(_e).__name__}: {_e}")
 
+# ---- Dhan orderflow feed (own WS + in-memory footprint/CVD engine; research
+# data path only; OFF unless DHAN_ORDERFLOW_ENABLED=1; no trading / signal
+# path -- see app/connectors/dhan_ws.py + app/engines/orderflow_engine.py) ----
+try:
+    from .connectors.dhan_ws import DhanOrderflowWorker as _DhanOrderflowWorker
+    from .engines.orderflow_engine import OrderflowEngine as _OrderflowEngine
+    dhan_orderflow_worker = _DhanOrderflowWorker()
+    dhan_orderflow_engine = _OrderflowEngine(dhan_orderflow_worker.queue)
+except Exception as _e:  # never let orderflow wiring break the app
+    dhan_orderflow_worker = None
+    dhan_orderflow_engine = None
+    print(f"[dhan_orderflow] disabled: {type(_e).__name__}: {_e}")
+
 # ---- Option Greeks Engine (derived exposure over captured broker Greeks; read-only) ----
 try:
     from .greeks_engine import api as _greeks_api
@@ -391,6 +404,12 @@ async def _lifespan(_app: FastAPI):
             smart_scalper_scheduler.start()
         except Exception as e:
             print(f"[smart_scalper_scheduler] start failed: {type(e).__name__}: {e}")
+    if dhan_orderflow_worker is not None:
+        try:
+            dhan_orderflow_worker.start()      # no-op unless DHAN_ORDERFLOW_ENABLED=1
+            dhan_orderflow_engine.start()
+        except Exception as e:
+            print(f"[dhan_orderflow] start failed: {type(e).__name__}: {e}")
 
     yield
 
@@ -409,6 +428,12 @@ async def _lifespan(_app: FastAPI):
     if smart_scalper_scheduler is not None:
         try:
             await smart_scalper_scheduler.stop()
+        except Exception:
+            pass
+    if dhan_orderflow_worker is not None:
+        try:
+            await dhan_orderflow_engine.stop()
+            await dhan_orderflow_worker.stop()
         except Exception:
             pass
 

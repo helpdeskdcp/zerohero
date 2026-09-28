@@ -102,3 +102,16 @@ async def api_dhan_redirect(tokenId: str | None = None):
 @router.get("/connection-status")
 def api_dhan_connection_status():
     return dhan_client.connection_status()
+
+
+@router.get("/orderflow-status")
+def api_dhan_orderflow_status():
+    """Protected by the normal auth gate. Read-only health check for the
+    dhan_ws/orderflow_engine worker pair -- main.py still owns their
+    wiring/lifecycle (same reach-back pattern as api_diag() in
+    system_routes.py), this route just reports it."""
+    from .. import main as _main
+    worker, engine = _main.dhan_orderflow_worker, _main.dhan_orderflow_engine
+    if worker is None or engine is None:
+        return {"status": "DISABLED", "note": "dhan orderflow wiring failed at startup"}
+    return {"status": "OK", "worker": worker.status(), "engine": engine.status()}
