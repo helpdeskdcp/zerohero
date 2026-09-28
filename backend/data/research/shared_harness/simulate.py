@@ -33,18 +33,20 @@ def simulate_trade(bars: pd.DataFrame, entry_idx: int, direction: str, entry: fl
     for k in range(1, max_bars + 1):
         j = entry_idx + k
         if j >= n or dates[j] != entry_date:
-            return {**base, "exit": closes[min(j - 1, n - 1)], "reason": "EOD"}
+            j_final = min(j - 1, n - 1)
+            return {**base, "exit": closes[j_final], "exit_ts": bars.index[j_final], "reason": "EOD"}
         if long_:
             if lows[j] <= stop:
-                return {**base, "exit": stop, "reason": "SL"}
+                return {**base, "exit": stop, "exit_ts": bars.index[j], "reason": "SL"}
             if highs[j] >= target:
-                return {**base, "exit": target, "reason": "TP"}
+                return {**base, "exit": target, "exit_ts": bars.index[j], "reason": "TP"}
         else:
             if highs[j] >= stop:
-                return {**base, "exit": stop, "reason": "SL"}
+                return {**base, "exit": stop, "exit_ts": bars.index[j], "reason": "SL"}
             if lows[j] <= target:
-                return {**base, "exit": target, "reason": "TP"}
-    return {**base, "exit": closes[min(entry_idx + max_bars, n - 1)], "reason": "MAXBARS"}
+                return {**base, "exit": target, "exit_ts": bars.index[j], "reason": "TP"}
+    j_final = min(entry_idx + max_bars, n - 1)
+    return {**base, "exit": closes[j_final], "exit_ts": bars.index[j_final], "reason": "MAXBARS"}
 
 
 def pnl_points(trade: dict) -> float:

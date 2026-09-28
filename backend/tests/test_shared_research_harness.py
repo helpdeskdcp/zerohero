@@ -75,6 +75,7 @@ def test_simulate_trade_long_hits_target():
                   ("2026-01-05 09:17", 105, 108, 104, 107)])
     t = simulate.simulate_trade(bars, 0, "LONG", entry=100, stop=95, target=105, max_bars=5)
     assert t["reason"] == "TP" and t["exit"] == 105
+    assert t["exit_ts"] == bars.index[1]  # the bar where TP actually hit, not entry_ts
 
 
 def test_simulate_trade_short_hits_stop():
