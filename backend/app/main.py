@@ -114,11 +114,13 @@ class _AuthGateMiddleware:
     route, current and future, instead of relying on each new route
     remembering to avoid FastAPI's BackgroundTasks.
 
-    /api/health and Dhan's postback path (app/api/dhan_routes.py --
-    is_postback_path()) are the only two exemptions: Dhan's own servers
-    can't send our Basic/Bearer credentials, so that one route carries its
-    own long random secret in the URL path instead (DHAN_POSTBACK_SECRET),
-    checked inside the route itself, fail-closed."""
+    /api/health and Dhan's postback + OAuth-redirect paths
+    (app/api/dhan_routes.py -- is_auth_exempt_path()) are the exemptions:
+    Dhan's own servers/browser-redirects can't send our Basic/Bearer
+    credentials, so those routes carry their own secret (the postback path)
+    or a one-time Dhan-issued tokenId useless without our own partner
+    secret (the redirect callback) instead, checked inside the route
+    itself, fail-closed."""
 
     def __init__(self, app):
         self.app = app
@@ -129,8 +131,8 @@ class _AuthGateMiddleware:
             return
         request = Request(scope, receive=receive)
         path = request.url.path
-        from .api.dhan_routes import is_postback_path  # local: avoids reordering the file's route-module imports
-        if path != "/api/health" and not is_postback_path(path):
+        from .api.dhan_routes import is_auth_exempt_path  # local: avoids reordering the file's route-module imports
+        if path != "/api/health" and not is_auth_exempt_path(path):
             basic = request.headers.get("authorization", "")
             token_ok = API_TOKEN and _token_from(request) == API_TOKEN
             if not token_ok and not (basic.lower().startswith("basic ") and _basic_ok(basic)):

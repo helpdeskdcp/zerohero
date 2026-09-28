@@ -1,5 +1,6 @@
 """
-Dhan postback receiver -- READ-ONLY LOGGING, nothing else.
+Dhan broker integration -- postback receiver (READ-ONLY LOGGING) + Partner
+OAuth consent flow (app/dhan_client.py does the actual Dhan API calls).
 
 Dhan's postback mechanism has NO signature/secret verification of its own
 (confirmed against the official v2 API docs, 2026-09-28: the JSON payload is
@@ -12,12 +13,16 @@ visible (dhan_postback_log, app.db.list_dhan_postbacks) for the user's own
 review, matching this codebase's PAPER-only, "never fabricate, never
 silently trust external input" discipline.
 
-Since Dhan can't send our HTTP-Basic/Bearer credentials, this ONE route is
-the only one in the app exempted from _AuthGateMiddleware (app/main.py) --
-compensating control: the path itself carries a long random secret
-(DHAN_POSTBACK_SECRET) that must match exactly, fails closed (401) if that
-env var isn't configured, and a wrong/missing secret is logged nowhere
-(no payload is read/stored on a secret mismatch).
+Two routes are exempted from _AuthGateMiddleware (app/main.py) -- Dhan's own
+servers/redirects can't send our Basic/Bearer credentials:
+  - POST /postback/{secret}: compensating control is the long random secret
+    in the path itself (DHAN_POSTBACK_SECRET), checked with
+    hmac.compare_digest, fails closed if unconfigured.
+  - GET /redirect: Dhan's browser-redirect callback (Partner OAuth step 2)
+    carries a one-time tokenId that's useless without OUR
+    DHAN_PARTNER_ID/SECRET to exchange it (app/dhan_client.py) -- an
+    attacker hitting this path with a guessed/fake tokenId gets nothing
+    without those, which live only in .env, never in this URL.
 """
 from __future__ import annotations
 
@@ -25,19 +30,21 @@ import hmac
 import os
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse
 
-from .. import db
+from .. import db, dhan_client
 
 router = APIRouter(prefix="/api/dhan", tags=["dhan"])
 
 POSTBACK_SECRET = (os.environ.get("DHAN_POSTBACK_SECRET") or "").strip()
 
 
-def is_postback_path(path: str) -> bool:
-    """Used by app/main.py's _AuthGateMiddleware to recognize this one
-    exempted route by path shape alone (before any DB/route-matching) --
-    kept here, next to the route it protects, not duplicated in main.py."""
-    return path.startswith("/api/dhan/postback/")
+def is_auth_exempt_path(path: str) -> bool:
+    """Used by app/main.py's _AuthGateMiddleware to recognize the two
+    Dhan-facing routes that can't carry our credentials, by path shape
+    alone -- kept here, next to the routes they protect, not duplicated in
+    main.py."""
+    return path.startswith("/api/dhan/postback/") or path == "/api/dhan/redirect"
 
 
 @router.post("/postback/{secret}")
@@ -57,8 +64,39 @@ async def api_dhan_postback(secret: str, request: Request):
 @router.get("/postbacks")
 def api_dhan_postback_log(limit: int = 200):
     """Protected by the normal auth gate. Deliberately named "/postbacks"
-    (plural), NOT under "/postback/..." -- is_postback_path() does a plain
+    (plural), NOT under "/postback/..." -- is_auth_exempt_path() does a plain
     startswith("/api/dhan/postback/") match, and a same-prefix path here
     (e.g. "/postback/log") would have been silently swept into the same
     auth-exempt bypass meant only for Dhan's own webhook call."""
     return {"rows": db.list_dhan_postbacks(limit=limit)}
+
+
+@router.post("/generate-consent")
+def api_dhan_generate_consent():
+    """Protected by the normal auth gate -- step 1 of the Partner OAuth
+    flow. Returns a login_url for the USER to open in their own browser and
+    log into Dhan directly (their credentials go to Dhan, never through
+    this app)."""
+    return dhan_client.generate_consent()
+
+
+@router.get("/redirect")
+async def api_dhan_redirect(tokenId: str | None = None):
+    """Dhan's Partner OAuth step-2 callback -- the exact URL to register as
+    the app's "Redirect URL" in Dhan's developer console. Exchanges tokenId
+    for a real access token (step 3) and shows a plain human-readable
+    result; never returns the raw access token in this response."""
+    if not tokenId:
+        return HTMLResponse("<p>No tokenId received from Dhan.</p>", status_code=400)
+    result = dhan_client.consume_consent(tokenId)
+    if result.get("status") != "OK":
+        return HTMLResponse(f"<p>Dhan connection failed: {result}</p>", status_code=502)
+    return HTMLResponse(
+        f"<p>Dhan connected: {result.get('dhan_client_name')} "
+        f"(client {result.get('dhan_client_id')}), token valid until {result.get('expiry_time')}. "
+        f"You can close this tab.</p>")
+
+
+@router.get("/connection-status")
+def api_dhan_connection_status():
+    return dhan_client.connection_status()

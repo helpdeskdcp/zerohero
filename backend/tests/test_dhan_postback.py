@@ -25,11 +25,13 @@ def _client(monkeypatch, secret="real-secret-value"):
     return TestClient(wrapped)
 
 
-def test_is_postback_path_matches_only_the_webhook_shape():
-    assert dhan_routes.is_postback_path("/api/dhan/postback/anything-here") is True
-    assert dhan_routes.is_postback_path("/api/dhan/postbacks") is False
-    assert dhan_routes.is_postback_path("/api/dhan/postback") is False  # no trailing segment
-    assert dhan_routes.is_postback_path("/api/hedging/status") is False
+def test_is_auth_exempt_path_matches_only_the_two_dhan_facing_shapes():
+    assert dhan_routes.is_auth_exempt_path("/api/dhan/postback/anything-here") is True
+    assert dhan_routes.is_auth_exempt_path("/api/dhan/redirect") is True
+    assert dhan_routes.is_auth_exempt_path("/api/dhan/postbacks") is False
+    assert dhan_routes.is_auth_exempt_path("/api/dhan/postback") is False  # no trailing segment
+    assert dhan_routes.is_auth_exempt_path("/api/dhan/connection-status") is False
+    assert dhan_routes.is_auth_exempt_path("/api/hedging/status") is False
 
 
 def test_correct_secret_is_logged_and_needs_no_basic_auth(fresh_db, monkeypatch):
@@ -86,3 +88,69 @@ def test_postbacks_listing_route_works_with_correct_auth(fresh_db, monkeypatch):
     resp = client.get("/api/dhan/postbacks", auth=("opuser", "strongpw"))
     assert resp.status_code == 200
     assert resp.json()["rows"][0]["order_status"] == "PENDING"
+
+
+# ---------------------------------------------------------------------------
+# Partner OAuth flow (generate-consent / redirect / connection-status).
+# dhan_client's actual Dhan API calls are stubbed -- never hits the real
+# auth.dhan.co in tests.
+# ---------------------------------------------------------------------------
+from app import dhan_client  # noqa: E402
+
+
+def test_redirect_needs_no_basic_auth_but_requires_a_tokenid(fresh_db, monkeypatch):
+    monkeypatch.setattr(dhan_client, "consume_consent",
+                        lambda token_id: {"status": "OK", "dhan_client_id": "1000000001",
+                                          "dhan_client_name": "JOHN DOE", "expiry_time": "2026-10-01T00:00:00"})
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/redirect", params={"tokenId": "real-token-from-dhan"})
+    assert resp.status_code == 200
+    assert "JOHN DOE" in resp.text
+
+
+def test_redirect_without_tokenid_is_a_clean_400_not_a_crash(fresh_db, monkeypatch):
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/redirect")
+    assert resp.status_code == 400
+
+
+def test_redirect_surfaces_a_failed_consent_exchange(fresh_db, monkeypatch):
+    monkeypatch.setattr(dhan_client, "consume_consent",
+                        lambda token_id: {"status": "ERROR", "http_status": 400, "detail": "expired tokenId"})
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/redirect", params={"tokenId": "expired-token"})
+    assert resp.status_code == 502
+
+
+def test_generate_consent_requires_normal_auth(monkeypatch):
+    client = _client(monkeypatch)
+    resp = client.post("/api/dhan/generate-consent")
+    assert resp.status_code == 401
+
+
+def test_generate_consent_fails_closed_when_not_configured(monkeypatch):
+    monkeypatch.delenv("DHAN_PARTNER_ID", raising=False)
+    monkeypatch.delenv("DHAN_PARTNER_SECRET", raising=False)
+    client = _client(monkeypatch)
+    resp = client.post("/api/dhan/generate-consent", auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "NOT_CONFIGURED"
+
+
+def test_connection_status_reports_disconnected_by_default(fresh_db, monkeypatch):
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/connection-status", auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+    assert resp.json()["connected"] is False
+
+
+def test_connection_status_never_leaks_the_raw_access_token(fresh_db, monkeypatch):
+    import json as _json
+    db.set_setting("dhan_access_token", _json.dumps({
+        "dhanClientId": "1000000001", "dhanClientName": "JOHN DOE",
+        "accessToken": "super-secret-real-token", "expiryTime": "2026-10-01T00:00:00"}))
+    client = _client(monkeypatch)
+    resp = client.get("/api/dhan/connection-status", auth=("opuser", "strongpw"))
+    assert resp.status_code == 200
+    assert "super-secret-real-token" not in resp.text
+    assert resp.json()["connected"] is True and resp.json()["dhan_client_name"] == "JOHN DOE"
