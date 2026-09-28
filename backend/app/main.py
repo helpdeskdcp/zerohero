@@ -102,6 +102,19 @@ def _basic_ok(value: str) -> bool:
 
 @app.middleware("http")
 async def _auth_gate(request, call_next):
+    # WARNING -- FastAPI BackgroundTasks silently DO NOT RUN through this
+    # middleware. @app.middleware("http") compiles to Starlette's
+    # BaseHTTPMiddleware, which reconstructs the downstream response as a
+    # new StreamingResponse and does not carry over the original response's
+    # `.background` attribute -- a route's `background_tasks.add_task(...)`
+    # is silently dropped, no error, no log. Confirmed live 2026-09-24:
+    # POST /api/hedging/scan-now returned 200 but its background scan never
+    # ran until switched to asyncio.create_task(...) instead (which doesn't
+    # go through the response object at all, so this middleware can't touch
+    # it). Any NEW route needing background work must use
+    # asyncio.create_task(...) (keep a strong ref -- see
+    # app/api/hedging_routes.py's `_bg_tasks` set) or a real task queue,
+    # never FastAPI's BackgroundTasks, as long as this middleware exists.
     p = request.url.path
     if p != "/api/health":
         basic = request.headers.get("authorization", "")
