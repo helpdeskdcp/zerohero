@@ -47,6 +47,29 @@ def load_captured_index_ticks(db_path: str, symbol: str, resample_rule: str = "1
                      axis=1, keys=["open", "high", "low", "close"]).dropna()
 
 
+def load_market_candles(db_path: str, symbol: str, tf: str, *, kind: str = "INDEX",
+                        source: str | None = None) -> pd.DataFrame:
+    """Pre-aggregated OHLCV bars from market_candles (app/histcap/store.py's
+    schema) -- real broker/API-sourced candles (AngelOne live capture,
+    Dhan REST historical backfill, ...), never resampled/synthesized here.
+    Index returned in IST (bar_start is stored as UTC ISO)."""
+    conn = sqlite3.connect(db_path)
+    try:
+        q = "SELECT bar_start, o, h, l, c, v, oi FROM market_candles WHERE symbol=? AND kind=? AND tf=?"
+        params = [symbol, kind, tf]
+        if source:
+            q += " AND source=?"
+            params.append(source)
+        q += " ORDER BY bar_start"
+        df = pd.read_sql_query(q, conn, params=params)
+    finally:
+        conn.close()
+    df["datetime"] = pd.to_datetime(df["bar_start"], utc=True).dt.tz_convert("Asia/Kolkata")
+    df = df.set_index("datetime").sort_index()
+    return df[~df.index.duplicated(keep="first")][["o", "h", "l", "c", "v", "oi"]].rename(
+        columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
+
+
 def load_captured_option_ticks(db_path: str, symbol: str) -> pd.DataFrame:
     """Real broker-captured option premium ticks for `symbol`, all
     expiries/strikes/types, sorted chronologically. Callers filter by
