@@ -305,6 +305,45 @@ def test_worker_refresh_instruments_is_a_noop_within_the_same_day(monkeypatch):
     assert len(calls) == 1  # second call short-circuits on the unchanged day
 
 
+def test_session_reconnects_when_the_ist_day_changes_mid_session(monkeypatch):
+    """Regression: a long-lived, stable session never re-enters _loop()'s
+    outer while, so it would otherwise track yesterday's (possibly now
+    expired) contracts forever across a midnight IST rollover. _session()
+    must notice the day change itself and return (forcing a reconnect that
+    re-triggers _refresh_instruments())."""
+    from app.connectors import dhan_instruments as di
+    import datetime as _dt
+
+    w = dhan_ws.DhanOrderflowWorker(instruments=[{"exchange_segment": "NSE_FNO", "security_id": "1"}])
+    w._instruments_day = _dt.date(2026, 9, 28)  # "yesterday"
+    monkeypatch.setattr(di, "today_ist", lambda: _dt.date(2026, 9, 29))  # "today"
+
+    class _FakeWS:
+        async def send(self, msg):
+            pass
+
+        async def recv(self):
+            raise asyncio.TimeoutError
+
+    class _FakeConnectCM:
+        async def __aenter__(self):
+            return _FakeWS()
+
+        async def __aexit__(self, *a):
+            return False
+
+    class _FakeWebsockets:
+        @staticmethod
+        def connect(url, **kw):
+            return _FakeConnectCM()
+
+    # If the day-change check didn't fire, this would hang forever on
+    # recv()'s TimeoutError -> continue loop -- so a bounded wait_for proves
+    # _session() actually returned promptly instead of looping.
+    await_result = asyncio.run(asyncio.wait_for(w._session(_FakeWebsockets, "tok", "cid"), timeout=2))
+    assert await_result is None  # _session() returned cleanly (reconnect path), not a hang/timeout
+
+
 def test_worker_refresh_instruments_retries_on_next_call_when_incomplete(monkeypatch):
     """A partial resolution (e.g. one symbol's spot lookup failed) must NOT
     lock in _instruments_day -- the next refresh call should try again

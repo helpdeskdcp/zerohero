@@ -274,6 +274,7 @@ class DhanOrderflowWorker:
 
     async def _session(self, websockets, token: str, client_id: str):
         url = WS_URL_FMT.format(token=token, client_id=client_id)
+        session_day = self._instruments_day
         async with websockets.connect(url, ping_interval=None, max_size=None) as ws:
             self.connected = True
             self.last_error = None
@@ -286,6 +287,16 @@ class DhanOrderflowWorker:
                                         "SecurityId": str(b["security_id"])} for b in batch],
                 }))
             while not self._stop.is_set():
+                # _refresh_instruments() only runs at the top of _loop()'s outer
+                # reconnect cycle -- a long-lived, stable session (the normal
+                # case) would otherwise never notice the IST day rolling over
+                # and keep tracking yesterday's (possibly now-expired)
+                # contracts indefinitely. Force a clean reconnect on day
+                # change so the outer loop re-resolves and re-subscribes.
+                if dhan_instruments.today_ist() != session_day:
+                    _log.info("dhan_ws: IST day changed (%s -> %s), reconnecting to re-resolve instruments",
+                             session_day, dhan_instruments.today_ist())
+                    return
                 try:
                     raw = await asyncio.wait_for(ws.recv(), timeout=15)
                 except asyncio.TimeoutError:
