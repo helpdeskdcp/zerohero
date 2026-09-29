@@ -22,6 +22,7 @@
     if (view === "optionchain") loadOptionchain();
     if (view === "hedging") loadHedging();
     if (view === "runner") { try { refreshRunSelection(); } catch (e) {} }
+    try { _hedgeAutoRefresh(view === "hedging"); } catch (e) {}
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
     btn.addEventListener("click", () => setView(btn.dataset.view));
@@ -336,26 +337,50 @@
       const q = state.hedgePositionFilter ? `?status=${state.hedgePositionFilter}` : "";
       const posOut = await api(`/api/hedging/positions${q}`);
       const tbody = $("#hedgePositionsTable tbody");
-      tbody.innerHTML = posOut.positions.map(p => `
+      tbody.innerHTML = posOut.positions.map(p => {
+        // OPEN: show the live unrealized PnL (app.hedging.runner._current_quotes(),
+        // live-quote-first, refreshed every loadHedging() poll -- see the
+        // setInterval below). CLOSED: show the final gross_pnl once, unchanging.
+        // Found 2026-09-29 (user report: no live data on this table) -- this
+        // used to show "—" for every OPEN row since gross_pnl is only ever
+        // set at close.
+        const isOpen = p.status === "OPEN";
+        const pnl = isOpen ? p.unrealized_pnl : p.gross_pnl;
+        const pnlLabel = pnl === null || pnl === undefined
+          ? (isOpen ? "unresolved" : "—")
+          : fmtSigned(pnl, 2) + (isOpen ? " (live)" : "");
+        return `
         <tr>
           <td>${timeStr(p.opened_at)}</td>
           <td>${text(p.symbol)}</td>
-          <td>${fmt(p.primary_strike, 0)} ${text(p.primary_option_type)} @ ${fmt(p.primary_entry_premium, 2)}</td>
-          <td>${fmt(p.hedge_strike, 0)} @ ${fmt(p.hedge_entry_premium, 2)}</td>
+          <td>${fmt(p.primary_strike, 0)} ${text(p.primary_option_type)} @ ${fmt(p.primary_entry_premium, 2)}${isOpen && p.current_primary_premium != null ? ` <small class="hint">now ${fmt(p.current_primary_premium, 2)}</small>` : ""}</td>
+          <td>${fmt(p.hedge_strike, 0)} @ ${fmt(p.hedge_entry_premium, 2)}${isOpen && p.current_hedge_premium != null ? ` <small class="hint">now ${fmt(p.current_hedge_premium, 2)}</small>` : ""}</td>
           <td>${fmt(p.lots, 0)}</td>
+          <td>${p.max_profit_per_lot == null ? "—" : fmt(p.max_profit_per_lot * p.lots, 2)}</td>
           <td>${fmt(p.max_loss_per_lot * p.lots, 2)}</td>
           <td>${p.profit_target === null || p.profit_target === undefined ? "—" : fmt(p.profit_target, 2)}</td>
           <td><span class="badge ${esc(p.status)}">${text(p.status)}</span></td>
           <td>${text(p.exit_reason, "—")}</td>
-          <td class="${(p.gross_pnl || 0) > 0 ? 'stat-value pos' : (p.gross_pnl || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${p.gross_pnl === null || p.gross_pnl === undefined ? "—" : fmtSigned(p.gross_pnl, 2)}</td>
+          <td class="${(pnl || 0) > 0 ? 'stat-value pos' : (pnl || 0) < 0 ? 'stat-value neg' : ''}" style="font-size:12px">${pnlLabel}</td>
         </tr>
-      `).join("") || `<tr><td colspan="10" class="hint">No positions yet.</td></tr>`;
+      `;
+      }).join("") || `<tr><td colspan="11" class="hint">No positions yet.</td></tr>`;
       $("#hedgeErr").hidden = true;
     } catch (e) {
       const box = $("#hedgeErr");
       if (box) { box.hidden = false; box.textContent = (e && e.message) || String(e); }
       showError("hedging", e);
     }
+  }
+  // Auto-refresh while the hedging view is open, so OPEN positions' live
+  // premium/PnL actually update without a manual reload -- the "live data
+  // stream" the positions table itself was missing. 20s: fast enough to
+  // feel live, slow enough not to hammer the broker quote endpoint for
+  // every open leg on every tick.
+  let _hedgeRefreshTimer = null;
+  function _hedgeAutoRefresh(on) {
+    if (_hedgeRefreshTimer) { clearInterval(_hedgeRefreshTimer); _hedgeRefreshTimer = null; }
+    if (on) _hedgeRefreshTimer = setInterval(() => { if (state.view === "hedging") loadHedging(); }, 20000);
   }
   document.querySelectorAll("#hedgePositionFilter .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {

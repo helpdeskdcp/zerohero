@@ -38,9 +38,16 @@ def test_emergency_exit_all_reports_unresolved_when_chain_lookup_fails(fresh_db,
                     lots=1, lot_size=65, max_loss_per_lot=10400.0,
                     margin_locked=10400.0, cost_paid=1300.0)
 
-    def _boom(symbol, expiry):
+    def _boom(symbol, expiry, **kw):
         raise RuntimeError("no live chain available in this test")
-    monkeypatch.setattr(hr._chain_resolve, "get_chain", _boom)
+    # hr.api_hedging_emergency_exit_all() now shares app.hedging.runner.
+    # _current_quotes() with GET /positions (was its own, near-duplicate
+    # captured-chain-only copy -- see DUPLICATE_LOGIC.md). That function
+    # tries a live per-leg quote first (app.hedging.runner._live_leg_premium,
+    # itself a no-op here since this position has no primary_token/
+    # hedge_token) then falls back to the captured chain via the SAME
+    # get_chain import runner.py itself uses.
+    monkeypatch.setattr(hr._runner, "get_chain", _boom)
 
     out = hr.api_hedging_emergency_exit_all()
     assert out["live_trading"] is False

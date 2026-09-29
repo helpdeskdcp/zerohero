@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from ..hedging import capital as _capital
 from ..hedging import position as _position
 from ..hedging import runner as _runner
-from ..optionchain import resolve as _chain_resolve
 
 router = APIRouter(prefix="/api/hedging", tags=["hedging"])
 
@@ -130,47 +129,51 @@ def api_hedging_last_scan():
 
 @router.get("/positions")
 def api_hedging_positions(status: str | None = None):
+    """Attaches LIVE (not <=5-min-stale-captured) current premiums + a
+    live unrealized P&L to every OPEN position, using the same
+    live-quote-first path app.hedging.runner's own exit-checks use
+    (app.hedging.runner._current_quotes(), which tries a genuinely live
+    broker LTP per leg before falling back to the captured chain). Found
+    2026-09-29 (user report: no live data on the positions table): this
+    route previously returned only the position's own stored fields --
+    entry premiums, max_loss, and a gross_pnl that stays null until the
+    position actually closes -- with nothing showing what an OPEN
+    position is worth right now."""
     positions = _position.load_all()
-    rows = [p.to_dict() for p in positions.values()
-           if status is None or p.status.upper() == status.upper()]
+    quotes = _runner._current_quotes(positions)
+    rows = []
+    for p in positions.values():
+        if status is not None and p.status.upper() != status.upper():
+            continue
+        d = p.to_dict()
+        if p.status == "OPEN":
+            q = quotes.get(p.position_id)
+            if q is not None:
+                cur_primary, cur_hedge = q
+                d["current_primary_premium"] = cur_primary
+                d["current_hedge_premium"] = cur_hedge
+                d["unrealized_pnl"] = _position.combined_pnl(
+                    p, current_primary_premium=cur_primary, current_hedge_premium=cur_hedge)
+            else:
+                d["current_primary_premium"] = None
+                d["current_hedge_premium"] = None
+                d["unrealized_pnl"] = None
+        rows.append(d)
     return {"positions": rows, "count": len(rows)}
-
-
-def _real_quotes_for_open_positions(positions: dict) -> dict:
-    """Real current (primary_premium, hedge_premium) per open position id,
-    from the live-captured chain -- never a fabricated/last-known-stale
-    price presented as current. A position whose symbol/strike can't be
-    resolved right now is simply absent from the returned dict (the caller
-    then reports it UNRESOLVED rather than closing it blind)."""
-    quotes = {}
-    chains_by_symbol: dict = {}
-    for pid, pos in positions.items():
-        if pos.status != "OPEN":
-            continue
-        if pos.symbol not in chains_by_symbol:
-            try:
-                chains_by_symbol[pos.symbol] = _chain_resolve.get_chain(pos.symbol, "AUTO")
-            except Exception:
-                chains_by_symbol[pos.symbol] = None
-        chain = chains_by_symbol[pos.symbol]
-        if chain is None:
-            continue
-        side = "ce" if pos.primary_option_type == "CE" else "pe"
-        primary_leg = next((getattr(r, side) for r in chain.rows
-                            if r.strike == pos.primary_strike and getattr(r, side)), None)
-        hedge_leg = next((getattr(r, side) for r in chain.rows
-                          if r.strike == pos.hedge_strike and getattr(r, side)), None)
-        if primary_leg and primary_leg.ltp is not None and hedge_leg and hedge_leg.ltp is not None:
-            quotes[pid] = (primary_leg.ltp, hedge_leg.ltp)
-    return quotes
 
 
 @router.post("/emergency-exit-all")
 def api_hedging_emergency_exit_all():
     """EXIT ALL, regardless of P&L/time -- PAPER close only, no broker
     order. A position whose current premium can't be resolved right now is
-    reported UNRESOLVED, never closed at a fabricated price."""
+    reported UNRESOLVED, never closed at a fabricated price.
+
+    Shares app.hedging.runner._current_quotes() (live-quote-first, falls
+    back to the captured chain) with GET /positions above -- this route
+    used to have its own, near-identical captured-chain-only copy
+    (DUPLICATE_LOGIC.md item to watch for: this is exactly the pattern
+    that let the K8 calibration fix miss a duplicate elsewhere)."""
     positions = _position.load_all()
-    quotes = _real_quotes_for_open_positions(positions)
+    quotes = _runner._current_quotes(positions)
     results = _position.emergency_exit_all(current_prices=quotes)
     return {"results": results, "live_trading": False}
