@@ -1,0 +1,29 @@
+# v4 -- CHALLENGER. SM-gated variant (Section 4's require_sm_alignment),
+# built ON TOP OF v3 rather than v1.
+#
+# SCOPE NOTE, disclosed: the spec's own ablation asks for A=v1-baseline vs
+# B=SM-gated. v1 produces ~0 trades (see CHANGELOG v1/v3 entries) -- gating
+# an already-empty baseline would compare two INSUFFICIENT_SAMPLE results,
+# telling us nothing about whether SM alignment helps. v3 is the first
+# config with a decidable sample (n=363 IS). This file's real comparison is
+# v3 (A, no SM gate) vs v4 (B, v3 + SM gate) -- does adding the SM
+# pre-condition to an otherwise-identical, already-testable setup improve
+# it? Setup3/4 are left ungated (they produce 0 trades regardless of any
+# gate, per the funnel diagnostic -- gating an empty set stays empty).
+version: v4
+notes: >
+  v3 + require_sm_alignment for setup1/2 only (setup3/4 unaffected -- 0
+  trades either way per the funnel diagnostic). Real comparison is v3 (A)
+  vs v4 (B), not v1 vs v4 -- see this file's header for why. Champion is
+  still v1. See CHANGELOG.md.
+
+setup1_bull_breakout:
+  min_confirmations: 3
+  require_sm_alignment: true
+setup2_bear_breakout:
+  min_confirmations: 3
+  require_sm_alignment: true
+setup3_bull_reversal:
+  min_confirmations: 3
+setup4_bear_reversal:
+  min_confirmations: 3

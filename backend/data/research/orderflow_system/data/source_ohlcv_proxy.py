@@ -80,17 +80,30 @@ class OhlcvProxyDataSource(DataSource):
         else:
             cvd_proxy = delta_proxy.cumsum()
 
+        # Dhan attaches a volume figure to INDEX candles sparsely, not
+        # continuously (see DataSource.coverage_report()'s nonzero_volume_pct
+        # -- for NIFTY INDEX, real volume only appears from 2022-04-09
+        # onward, ~8% of bars even within that window). Wherever volume AND
+        # its own rolling baseline are both exactly zero, "volume >=
+        # mult * baseline" degenerates to the trivially-true "0 >= 0" --
+        # confirmed live 2026-09-29: a 2017 bar with volume=delta=vol_ma=0
+        # still passed delta_ok/vol_ok/absorption_ok this way, corrupting
+        # confirm() with fake signal from a zero-volume desert, not real
+        # order flow. has_real_volume gates both flags to False wherever
+        # there's no real recent baseline to compare against at all.
         vol_ma_abs = df["volume"].rolling(cfg["absorption_vol_lookback"],
                                           min_periods=cfg["absorption_vol_lookback"]).mean()
         atr = _atr(df, cfg["absorption_atr_lookback"])
-        is_absorption = (df["volume"] >= cfg["absorption_vol_mult"] * vol_ma_abs) & \
+        has_real_volume_abs = vol_ma_abs > 0
+        is_absorption = has_real_volume_abs & (df["volume"] >= cfg["absorption_vol_mult"] * vol_ma_abs) & \
                         ((df["high"] - df["low"]) <= cfg["absorption_range_max_atr_mult"] * atr)
 
         body = (df["close"] - df["open"]).abs()
         rng = (df["high"] - df["low"]).replace(0, np.nan)
         vol_ma_imb = df["volume"].rolling(cfg["imbalance_vol_lookback"],
                                           min_periods=cfg["imbalance_vol_lookback"]).mean()
-        is_imbalance = ((body / rng) >= cfg["imbalance_body_ratio_min"]) & \
+        has_real_volume_imb = vol_ma_imb > 0
+        is_imbalance = has_real_volume_imb & ((body / rng) >= cfg["imbalance_body_ratio_min"]) & \
                        (df["volume"] >= cfg["imbalance_vol_mult"] * vol_ma_imb)
 
         out = df.copy()

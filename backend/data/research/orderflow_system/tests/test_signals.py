@@ -137,3 +137,35 @@ def test_apply_partial_booking_shape():
     assert plan["tp1"] == 110.0 and plan["tp1_fraction"] == 0.5
     assert plan["tp2"] == 115.0 and plan["tp2_fraction"] == 0.5
     assert plan["breakeven_after_tp1"] is True and plan["breakeven_price"] == 100.0
+
+
+# ---------------------------------------------------------------------------
+# V-a structural variant: min_confirmations score-based confirm()
+# ---------------------------------------------------------------------------
+
+def test_confirm_is_strict_and_when_min_confirmations_is_unset():
+    import copy
+    cfg = copy.deepcopy(BASE_CFG)
+    assert cfg["setup1_bull_breakout"]["min_confirmations"] is None
+    s = BreakoutSetup(cfg, "setup1_bull_breakout", "bull", "T")
+    # monkeypatch confirm_breakdown to a known 3-of-4-true breakdown
+    s.confirm_breakdown = lambda df, i: {"delta_ok": True, "cvd_ok": True, "absorption_ok": True, "vol_ok": False}
+    assert s.confirm(None, 0) is False  # strict AND -- 3/4 is not enough
+
+
+def test_confirm_score_based_when_min_confirmations_set():
+    import copy
+    cfg = copy.deepcopy(BASE_CFG)
+    cfg["setup1_bull_breakout"]["min_confirmations"] = 3
+    s = BreakoutSetup(cfg, "setup1_bull_breakout", "bull", "T")
+    s.confirm_breakdown = lambda df, i: {"delta_ok": True, "cvd_ok": True, "absorption_ok": True, "vol_ok": False}
+    assert s.confirm(None, 0) is True  # 3/4 >= min_confirmations=3
+
+
+def test_confirm_score_based_rejects_below_threshold():
+    import copy
+    cfg = copy.deepcopy(BASE_CFG)
+    cfg["setup1_bull_breakout"]["min_confirmations"] = 3
+    s = BreakoutSetup(cfg, "setup1_bull_breakout", "bull", "T")
+    s.confirm_breakdown = lambda df, i: {"delta_ok": True, "cvd_ok": False, "absorption_ok": True, "vol_ok": False}
+    assert s.confirm(None, 0) is False  # only 2/4

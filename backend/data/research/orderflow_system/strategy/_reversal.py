@@ -37,7 +37,10 @@ class ReversalSetup(SetupBase):
                     else df["close"].iloc[i] < extreme - c["reclaim_ticks"])
         return bool(reclaimed)
 
-    def confirm(self, df, i, candidate_i) -> bool:
+    def confirm_breakdown(self, df, i, candidate_i) -> dict:
+        """Each confirmation sub-condition, individually -- see
+        _breakout.py's confirm_breakdown() for why this shape exists
+        (shared by confirm() and metrics/funnel.py's diagnostic)."""
         c = self.cfg
         absorption_ok = bool(df["is_absorption"].iloc[candidate_i])
         lb = c["divergence_lookback"]
@@ -49,8 +52,26 @@ class ReversalSetup(SetupBase):
                          else cvd_extreme_now < window.max()) if len(window) else False
         flip_window = df["delta"].iloc[max(0, i - c["lt_delta_flip_bars"]):i + 1]
         delta_flip_ok = bool((flip_window > 0).all()) if self.bull else bool((flip_window < 0).all())
-        vol_ok = df["volume"].iloc[i] >= c["reclaim_vol_mult"] * df["vol_ma_setup"].iloc[i]
-        return absorption_ok and bool(divergence_ok) and delta_flip_ok and bool(vol_ok)
+        # has_real_volume guard -- see _breakout.py's confirm_breakdown() for
+        # why (same zero-volume-desert degenerate-comparison bug, same fix).
+        vol_ma = df["vol_ma_setup"].iloc[i]
+        vol_ok = bool(vol_ma > 0 and df["volume"].iloc[i] >= c["reclaim_vol_mult"] * vol_ma)
+        return {"absorption_ok": absorption_ok, "divergence_ok": bool(divergence_ok),
+               "delta_flip_ok": delta_flip_ok, "vol_ok": vol_ok}
+
+    def confirm(self, df, i, candidate_i) -> bool:
+        b = self.confirm_breakdown(df, i, candidate_i)
+        min_conf = self.cfg.get("min_confirmations")
+        if min_conf is None:
+            return b["absorption_ok"] and b["divergence_ok"] and b["delta_flip_ok"] and b["vol_ok"]
+        # V-a structural variant -- see _breakout.py's confirm() for why.
+        # Here the funnel finding is even starker: delta_flip_ok (ALL of the
+        # last lt_delta_flip_bars+1 bars same-signed) fired on 0/150-211
+        # reclaims in 3 of 4 setup/timeframe combinations (2026-09-29 funnel
+        # diagnostic) -- an "ALL of N" requirement is inherently brittle to
+        # a single noise bar; score-based confirmation is the structural fix,
+        # not a further loosening of delta_flip's own window/threshold.
+        return sum(b.values()) >= min_conf
 
     def scan(self, df, i, state) -> dict | None:
         c = self.cfg
@@ -66,7 +87,7 @@ class ReversalSetup(SetupBase):
             if still_extreme:
                 state["candidate"] = {"i": i}  # a deeper overshoot supersedes the earlier one
                 return None
-            if self.is_reclaim(df, i, candidate_i) and self.confirm(df, i, candidate_i):
+            if self.is_reclaim(df, i, candidate_i) and self.confirm(df, i, candidate_i) and self.sm_gate_ok(df, i):
                 if i + 1 >= len(df):
                     return None
                 entry = df["open"].iloc[i + 1]

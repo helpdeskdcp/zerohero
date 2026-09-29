@@ -17,7 +17,8 @@ class BreakoutSetup(SetupBase):
         row = df.iloc[i]
         want_trend = "bullish" if self.bull else "bearish"
         return (row["htf_trend"] == want_trend and
-                row["range_height_pct"] <= self.structure_cfg["range_max_height_pct"])
+                row["range_height_pct"] <= self.structure_cfg["range_max_height_pct"] and
+                self.sm_gate_ok(df, i))
 
     def detect_trigger(self, df, i) -> bool:
         row = df.iloc[i]
@@ -25,7 +26,10 @@ class BreakoutSetup(SetupBase):
         level = df["range_high"].iloc[i - 1] if self.bull else df["range_low"].iloc[i - 1]
         return row["close"] > level + buf if self.bull else row["close"] < level - buf
 
-    def confirm(self, df, i) -> bool:
+    def confirm_breakdown(self, df, i) -> dict:
+        """Each confirmation sub-condition, individually -- used both by
+        confirm() (ANDs them) and by metrics/funnel.py's diagnostic (reports
+        each condition's own fire rate, not just the conjunction)."""
         c = self.cfg
         row = df.iloc[i]
         # delta is checked on the trigger bar itself -- the rulebook's own
@@ -37,8 +41,17 @@ class BreakoutSetup(SetupBase):
         # -- both checked instead over the approach window (retest_bars back
         # through the trigger), matching "confirmed near the breakout", not
         # "confirmed on the literal breakout tick".
-        delta_ok = (row["delta"] >= c["delta_mult"] * row["avg_delta_abs"] if self.bull
-                   else row["delta"] <= -c["delta_mult"] * row["avg_delta_abs"])
+        # has_real_volume guards: with volume attached sparsely (not
+        # continuously) to Dhan's INDEX candles, a stretch of genuinely zero
+        # volume makes avg_delta_abs/vol_ma_setup zero too, and
+        # "delta >= mult * 0" / "volume >= mult * 0" both degenerate to a
+        # trivially-true "0 >= 0" -- confirmed live 2026-09-29: a 2017 bar
+        # with volume=delta=baseline=0 still passed both checks, confirming
+        # a "signal" out of a data desert, not real order flow. Both are
+        # forced False wherever there's no real recent baseline at all.
+        has_real_volume = row["vol_ma_setup"] > 0
+        delta_ok = has_real_volume and (row["delta"] >= c["delta_mult"] * row["avg_delta_abs"] if self.bull
+                                        else row["delta"] <= -c["delta_mult"] * row["avg_delta_abs"])
         lb = c["cvd_new_high_lookback"] if self.bull else c["cvd_new_low_lookback"]
         cvd_ok = False
         for j in range(max(0, i - c["retest_bars"]), i + 1):
@@ -48,8 +61,22 @@ class BreakoutSetup(SetupBase):
                 break
         absorption_window = df["is_absorption"].iloc[max(0, i - c["retest_bars"]):i + 1]
         absorption_ok = bool(absorption_window.any())
-        vol_ok = row["volume"] >= c["vol_mult"] * row["vol_ma_setup"]
-        return bool(delta_ok) and bool(cvd_ok) and absorption_ok and bool(vol_ok)
+        vol_ok = bool(has_real_volume and row["volume"] >= c["vol_mult"] * row["vol_ma_setup"])
+        return {"delta_ok": bool(delta_ok), "cvd_ok": bool(cvd_ok),
+               "absorption_ok": absorption_ok, "vol_ok": vol_ok}
+
+    def confirm(self, df, i) -> bool:
+        b = self.confirm_breakdown(df, i)
+        min_conf = self.cfg.get("min_confirmations")
+        if min_conf is None:
+            return b["delta_ok"] and b["cvd_ok"] and b["absorption_ok"] and b["vol_ok"]
+        # V-a structural variant (spec Track 2): score-based, >= N of 4
+        # conditions, not a strict AND -- direct fix for the funnel finding
+        # that CVD-new-high alone gates out ~93-94% of otherwise-qualifying
+        # trigger bars (2026-09-29 funnel diagnostic), which a same-bar or
+        # window-widened AND requirement can't fix without pathologically
+        # loosening CVD specifically (already tried once as v2, rejected).
+        return sum(b.values()) >= min_conf
 
     def invalidated(self, df, i, trigger_i, level) -> bool:
         c = self.cfg

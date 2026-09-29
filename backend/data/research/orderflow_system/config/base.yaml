@@ -16,7 +16,17 @@ data:
   kind: INDEX                    # INDEX | FUTURE | OPTION
   source: DHAN_HISTORICAL
   timeframe: 5m                  # resample target; base captured tf is 1m
-  start_date: "2021-09-29"
+  # Price history goes back to 2017-06-01 (Dhan's real 1-min depth, verified
+  # live), but REAL (nonzero) volume on NIFTY INDEX candles only starts
+  # 2022-04-09 -- confirmed live 2026-09-29 via DataSource.coverage_report()'s
+  # nonzero_volume_first. Every setup1-4 confirmation this project runs
+  # depends on delta/cvd/absorption/volume, all of which are meaningless (and,
+  # before the 2026-09-29 has_real_volume fix, were silently producing FAKE
+  # confirmations via "0 >= mult*0") before that date. start_date is pinned
+  # to the real usable floor, not the price-only floor -- scanning
+  # 2017-2022 now correctly produces zero confirmations anyway, so excluding
+  # it is a pure efficiency win, not a behavior change.
+  start_date: "2022-04-09"
   end_date: "2026-09-28"
   oos_holdout_days: 180          # final N days reserved, untouched until the OOS run
 
@@ -54,6 +64,7 @@ structure:
   min_decline_pct: 3.0               # min % move over trend_bars to call it "extended"
   volume_profile_lookback: 60        # bars used to estimate VAH/VAL/POC (volume-weighted)
   value_area_pct: 0.70               # standard 70% value-area definition
+  atr_lookback: 14                   # shared ATR, used by several SM detectors (fvg, wyckoff, sweep)
 
 # ---------------------------------------------------------------------------
 # Setup 1 -- Bullish breakout
@@ -82,6 +93,10 @@ setup1_bull_breakout:
   fakeout_bars: 3                   # invalidate if price closes back inside range within this many bars
   vol_mult: 1.2
   vol_lookback: 20
+  min_confirmations: null           # null = strict AND (all 4); an int N = V-a score-based confirm (>= N of 4)
+  require_sm_alignment: false       # V-b/Stage-0 gate: require sm_context.py's bias to agree with this setup's direction before detect_context/entry
+  sm_min_bias: 0.5                  # minimum bias_score (0..1) to pass the gate, when enabled
+  sm_required_events: []            # e.g. ["liquidity_sweep", "structure_shift"] -- ALL must have fired this bar, when enabled
 
 # ---------------------------------------------------------------------------
 # Setup 2 -- Bearish breakout (mirror of setup 1)
@@ -104,6 +119,10 @@ setup2_bear_breakout:
   vol_mult: 1.2
   vol_lookback: 20
   wick_threshold: 0.4               # bear-trap: lower wick / range ratio that invalidates a breakdown
+  min_confirmations: null
+  require_sm_alignment: false       # V-b/Stage-0 gate: require sm_context.py's bias to agree with this setup's direction before detect_context/entry
+  sm_min_bias: 0.5                  # minimum bias_score (0..1) to pass the gate, when enabled
+  sm_required_events: []            # e.g. ["liquidity_sweep", "structure_shift"] -- ALL must have fired this bar, when enabled
 
 # ---------------------------------------------------------------------------
 # Setup 3 -- Bullish reversal
@@ -121,6 +140,10 @@ setup3_bull_reversal:
   reclaim_max_bars: 10          # give up on a candidate overshoot if no valid reclaim within this many bars
   reversal_stop_ticks: 10.0
   rr_targets: [2.0, 3.0]
+  min_confirmations: null
+  require_sm_alignment: false       # V-b/Stage-0 gate: require sm_context.py's bias to agree with this setup's direction before detect_context/entry
+  sm_min_bias: 0.5                  # minimum bias_score (0..1) to pass the gate, when enabled
+  sm_required_events: []            # e.g. ["liquidity_sweep", "structure_shift"] -- ALL must have fired this bar, when enabled
 
 # ---------------------------------------------------------------------------
 # Setup 4 -- Bearish reversal (mirror of setup 3)
@@ -136,6 +159,10 @@ setup4_bear_reversal:
   reclaim_vol_lookback: 20
   reclaim_max_bars: 10
   reversal_stop_ticks: 10.0
+  min_confirmations: null
+  require_sm_alignment: false       # V-b/Stage-0 gate: require sm_context.py's bias to agree with this setup's direction before detect_context/entry
+  sm_min_bias: 0.5                  # minimum bias_score (0..1) to pass the gate, when enabled
+  sm_required_events: []            # e.g. ["liquidity_sweep", "structure_shift"] -- ALL must have fired this bar, when enabled
   rr_targets: [2.0, 3.0]
 
 # ---------------------------------------------------------------------------
@@ -158,6 +185,29 @@ costs:
   slippage_points: 0.75
   lots: 1
   lot_size: 65                      # NIFTY, VERIFIED per app/instrument_profiles.py
+
+# ---------------------------------------------------------------------------
+# Smart-money detectors (strategy/smartmoney/) -- Stage 0 CONTEXT, never an
+# entry on its own. Every detector's own thresholds live here, named, per
+# spec C3 -- no bare .get(key, default) fallbacks in the detector modules.
+# ---------------------------------------------------------------------------
+smartmoney:
+  fvg_min_gap_atr_mult: 0.1          # SM-6: gap must be >= this fraction of ATR to count (not noise)
+  sweep_swing_lookback: 20           # SM-7: bars used to define the "prior swing" high/low to sweep
+  sweep_close_back_pct: 0.5          # SM-7: close must retrace back >= this fraction of the wick to count as swept
+  structure_swing_lookback: 10       # SM-8: bars each side used to confirm a swing pivot (lagged, no look-ahead)
+  wyckoff_range_lookback: 20         # SM-4: bars used to detect a trading range (reuses range_height_pct's window conceptually, own param so it can be tuned independently)
+  wyckoff_range_max_height_pct: 2.0  # SM-4: range must span <= this % to count as a Wyckoff trading range
+  wyckoff_min_range_bars: 10         # SM-4: minimum bars a range must hold before a spring/UTAD inside it counts
+  ofi_proxy_lookback: 20             # SM-1 (proxy): same shape as proxy.absorption/imbalance -- lookback for the rolling baseline
+  divergence_lookback: 20            # SM-3: bars used to check for a NOT-also-new-extreme in cvd
+  value_migration_lookback: 20       # SM-9: bars back to compare current POC against
+  # Stage-0 gate (strategy/sm_context.py, wired into setups 1-4). Weights sum
+  # to 1.0; real (non-proxy) detectors weighted higher than proxy ones --
+  # disclosed judgment call, not fit to any backtest result.
+  sm_weights: {structure_shift: 0.25, liquidity_sweep: 0.2, wyckoff: 0.2, fvg: 0.1,
+              absorption: 0.1, ofi: 0.05, divergence: 0.05, value_migration: 0.05}
+  bias_direction_agree_only: true    # bias_score only counts events agreeing with the queried direction
 
 # ---------------------------------------------------------------------------
 # Backtest engine

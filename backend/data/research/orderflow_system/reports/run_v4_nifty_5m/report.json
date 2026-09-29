@@ -1,0 +1,377 @@
+{
+  "warning_banner": "WARNING: OHLCV PROXY MODE -- order-flow values (delta/cvd/absorption/imbalance) are APPROXIMATIONS derived from price+volume shape, NOT true bid/ask aggressor data. See data/source_ohlcv_proxy.py's module docstring for the exact formulas.",
+  "manifest": {
+    "generated_at": "2026-09-29T09:21:44.657314+00:00",
+    "git_commit": "1960b387496c683f058af939c3514fc8d6e7b1b9",
+    "config_version": "v4",
+    "data_mode": "ohlcv_proxy",
+    "is_proxy": true,
+    "symbol": "NIFTY",
+    "timeframe": "5m",
+    "date_range": [
+      "2022-04-09",
+      "2026-09-28"
+    ],
+    "seed": 42,
+    "in_sample_range": [
+      "2022-04-09 11:20:00+05:30",
+      "2026-03-30 15:25:00+05:30"
+    ],
+    "oos_range": [
+      "2026-04-01 09:15:00+05:30",
+      "2026-09-28 15:25:00+05:30"
+    ]
+  },
+  "global": {
+    "n": 24,
+    "verdict": "INSUFFICIENT_SAMPLE",
+    "win_rate": 0.25,
+    "expectancy_r": -1.1878,
+    "profit_factor_gross": 0.722,
+    "profit_factor_net": 0.196,
+    "max_drawdown_r": 28.431,
+    "sharpe": -0.758,
+    "sortino": -1.574,
+    "avg_win_r": 1.1568,
+    "avg_loss_r": -1.9694,
+    "avg_mfe_r": 1.385,
+    "avg_mae_r": 1.5619,
+    "avg_holding_bars": 2.79,
+    "total_r_gross": -4.696,
+    "total_r_net": -28.508
+  },
+  "by_setup": {
+    "SETUP1_BULL_BREAKOUT": {
+      "n": 19,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.2105,
+      "expectancy_r": -1.3593,
+      "profit_factor_gross": 0.652,
+      "profit_factor_net": 0.148,
+      "max_drawdown_r": 25.29,
+      "sharpe": -0.89,
+      "sortino": -1.673,
+      "avg_win_r": 1.1189,
+      "avg_loss_r": -2.0201,
+      "avg_mfe_r": 1.3806,
+      "avg_mae_r": 1.5689,
+      "avg_holding_bars": 2.47,
+      "total_r_gross": -4.82,
+      "total_r_net": -25.826
+    },
+    "SETUP2_BEAR_BREAKOUT": {
+      "n": 5,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.4,
+      "expectancy_r": -0.5364,
+      "profit_factor_gross": 1.041,
+      "profit_factor_net": 0.479,
+      "max_drawdown_r": 1.989,
+      "sharpe": -0.347,
+      "sortino": -2.737,
+      "avg_win_r": 1.2324,
+      "avg_loss_r": -1.7156,
+      "avg_mfe_r": 1.4021,
+      "avg_mae_r": 1.5352,
+      "avg_holding_bars": 4.0,
+      "total_r_gross": 0.123,
+      "total_r_net": -2.682
+    }
+  },
+  "by_direction": {
+    "LONG": {
+      "n": 19,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.2105,
+      "expectancy_r": -1.3593,
+      "profit_factor_gross": 0.652,
+      "profit_factor_net": 0.148,
+      "max_drawdown_r": 25.29,
+      "sharpe": -0.89,
+      "sortino": -1.673,
+      "avg_win_r": 1.1189,
+      "avg_loss_r": -2.0201,
+      "avg_mfe_r": 1.3806,
+      "avg_mae_r": 1.5689,
+      "avg_holding_bars": 2.47,
+      "total_r_gross": -4.82,
+      "total_r_net": -25.826
+    },
+    "SHORT": {
+      "n": 5,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.4,
+      "expectancy_r": -0.5364,
+      "profit_factor_gross": 1.041,
+      "profit_factor_net": 0.479,
+      "max_drawdown_r": 1.989,
+      "sharpe": -0.347,
+      "sortino": -2.737,
+      "avg_win_r": 1.2324,
+      "avg_loss_r": -1.7156,
+      "avg_mfe_r": 1.4021,
+      "avg_mae_r": 1.5352,
+      "avg_holding_bars": 4.0,
+      "total_r_gross": 0.123,
+      "total_r_net": -2.682
+    }
+  },
+  "breakeven_table": {
+    "SETUP1_BULL_BREAKOUT": {
+      "2.0": {
+        "n": 19,
+        "rr": 2.0,
+        "actual_win_rate": 0.2105,
+        "pure_breakeven_wr": 0.3333,
+        "avg_cost_r": 1.1056,
+        "cost_adjusted_breakeven_wr": 0.7019,
+        "margin": -0.4914,
+        "result": "FAIL"
+      },
+      "3.0": {
+        "n": 19,
+        "rr": 3.0,
+        "actual_win_rate": 0.2105,
+        "pure_breakeven_wr": 0.25,
+        "avg_cost_r": 1.1056,
+        "cost_adjusted_breakeven_wr": 0.5264,
+        "margin": -0.3159,
+        "result": "FAIL"
+      }
+    },
+    "SETUP2_BEAR_BREAKOUT": {
+      "2.0": {
+        "n": 5,
+        "rr": 2.0,
+        "actual_win_rate": 0.4,
+        "pure_breakeven_wr": 0.3333,
+        "avg_cost_r": 0.561,
+        "cost_adjusted_breakeven_wr": 0.5203,
+        "margin": -0.1203,
+        "result": "FAIL"
+      },
+      "3.0": {
+        "n": 5,
+        "rr": 3.0,
+        "actual_win_rate": 0.4,
+        "pure_breakeven_wr": 0.25,
+        "avg_cost_r": 0.561,
+        "cost_adjusted_breakeven_wr": 0.3903,
+        "margin": 0.0097,
+        "result": "PASS"
+      }
+    }
+  },
+  "sub_period_monthly": {
+    "2022-04": {
+      "n": 2,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.0,
+      "expectancy_r": -1.6567,
+      "profit_factor_gross": 0.0,
+      "profit_factor_net": 0.0,
+      "max_drawdown_r": 1.539,
+      "sharpe": -14.058,
+      "sortino": -14.058,
+      "avg_win_r": null,
+      "avg_loss_r": -1.6567,
+      "avg_mfe_r": 0.6968,
+      "avg_mae_r": 1.227,
+      "avg_holding_bars": 1.0,
+      "total_r_gross": -2.0,
+      "total_r_net": -3.313
+    },
+    "2022-05": {
+      "n": 4,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.75,
+      "expectancy_r": 0.4061,
+      "profit_factor_gross": 5.623,
+      "profit_factor_net": 1.582,
+      "max_drawdown_r": 0.0,
+      "sharpe": 0.207,
+      "sortino": null,
+      "avg_win_r": 1.4713,
+      "avg_loss_r": -2.7895,
+      "avg_mfe_r": 2.2895,
+      "avg_mae_r": 1.4284,
+      "avg_holding_bars": 7.75,
+      "total_r_gross": 4.623,
+      "total_r_net": 1.624
+    },
+    "2025-12": {
+      "n": 1,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.0,
+      "expectancy_r": -1.8532,
+      "profit_factor_gross": 0.0,
+      "profit_factor_net": 0.0,
+      "max_drawdown_r": 0.0,
+      "sharpe": null,
+      "sortino": null,
+      "avg_win_r": null,
+      "avg_loss_r": -1.8532,
+      "avg_mfe_r": 0.3717,
+      "avg_mae_r": 1.4215,
+      "avg_holding_bars": 1.0,
+      "total_r_gross": -1.0,
+      "total_r_net": -1.853
+    },
+    "2026-01": {
+      "n": 5,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.2,
+      "expectancy_r": -1.2482,
+      "profit_factor_gross": 0.516,
+      "profit_factor_net": 0.053,
+      "max_drawdown_r": 4.474,
+      "sharpe": -1.087,
+      "sortino": -1.357,
+      "avg_win_r": 0.3522,
+      "avg_loss_r": -1.6483,
+      "avg_mfe_r": 0.9903,
+      "avg_mae_r": 1.7356,
+      "avg_holding_bars": 1.4,
+      "total_r_gross": -1.451,
+      "total_r_net": -6.241
+    },
+    "2026-02": {
+      "n": 7,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.2857,
+      "expectancy_r": -1.5317,
+      "profit_factor_gross": 1.027,
+      "profit_factor_net": 0.169,
+      "max_drawdown_r": 9.329,
+      "sharpe": -0.828,
+      "sortino": -2.059,
+      "avg_win_r": 1.0873,
+      "avg_loss_r": -2.5792,
+      "avg_mfe_r": 1.7999,
+      "avg_mae_r": 1.3169,
+      "avg_holding_bars": 2.43,
+      "total_r_gross": 0.131,
+      "total_r_net": -10.722
+    },
+    "2026-03": {
+      "n": 5,
+      "verdict": "INSUFFICIENT_SAMPLE",
+      "win_rate": 0.0,
+      "expectancy_r": -1.6007,
+      "profit_factor_gross": 0.0,
+      "profit_factor_net": 0.0,
+      "max_drawdown_r": 6.592,
+      "sharpe": -7.323,
+      "sortino": -7.323,
+      "avg_win_r": null,
+      "avg_loss_r": -1.6007,
+      "avg_mfe_r": 0.9534,
+      "avg_mae_r": 2.0,
+      "avg_holding_bars": 1.8,
+      "total_r_gross": -5.0,
+      "total_r_net": -8.003
+    }
+  },
+  "walk_forward_folds": [
+    {
+      "train_start": "2022-04-09",
+      "train_end": "2023-04-17",
+      "test_start": "2023-04-18",
+      "test_end": "2023-07-17",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2022-07-08",
+      "train_end": "2023-07-17",
+      "test_start": "2023-07-18",
+      "test_end": "2023-10-17",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2022-10-11",
+      "train_end": "2023-10-17",
+      "test_start": "2023-10-18",
+      "test_end": "2024-01-18",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-01-11",
+      "train_end": "2024-01-18",
+      "test_start": "2024-01-19",
+      "test_end": "2024-04-23",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-04-18",
+      "train_end": "2024-04-23",
+      "test_start": "2024-04-24",
+      "test_end": "2024-07-24",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-07-18",
+      "train_end": "2024-07-24",
+      "test_start": "2024-07-25",
+      "test_end": "2024-10-23",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-10-18",
+      "train_end": "2024-10-23",
+      "test_start": "2024-10-24",
+      "test_end": "2025-01-24",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-01-19",
+      "train_end": "2025-01-24",
+      "test_start": "2025-01-27",
+      "test_end": "2025-04-30",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-04-24",
+      "train_end": "2025-04-30",
+      "test_start": "2025-05-02",
+      "test_end": "2025-07-29",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-07-25",
+      "train_end": "2025-07-29",
+      "test_start": "2025-07-30",
+      "test_end": "2025-10-30",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-10-24",
+      "train_end": "2025-10-30",
+      "test_start": "2025-10-31",
+      "test_end": "2026-02-01",
+      "n_trades": 7,
+      "expectancy_r": -0.8594,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    }
+  ],
+  "disclaimer": "This system is for RESEARCH and EDUCATION only. Backtested results are historical and do NOT guarantee future performance. Order-flow data on NSE for retail traders is often delayed or proxy-based; OHLCV proxy mode produces APPROXIMATIONS, not true order flow. All performance figures are net of modelled costs but real slippage may differ. This is NOT investment advice. Consult a SEBI-registered advisor before trading real capital. Risk is the user's own."
+}

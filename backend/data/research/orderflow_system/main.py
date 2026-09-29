@@ -32,9 +32,14 @@ def _key_for(cls) -> str:
 
 
 def _load_and_prep(cfg, db_path, tick_db_path, symbol, kind, timeframe, start, end):
+    from strategy.smartmoney import structure_shift
     ds = build_data_source(cfg, db_path, tick_db_path)
     df = ds.load(symbol=symbol, kind=kind, timeframe=timeframe, start=start, end=end)
     df = compute_context_columns(df, cfg)
+    # Always precomputed (not gated by require_sm_alignment) so a baseline
+    # (A) and SM-gated (B) run share byte-identical underlying data -- any
+    # difference between them is then only ever the SM gate itself.
+    df = structure_shift.precompute_swings(df, cfg["smartmoney"])
     return ds, df
 
 

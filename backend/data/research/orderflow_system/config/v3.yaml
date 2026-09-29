@@ -1,0 +1,38 @@
+# v3 -- CHALLENGER. Structural variant V-a (score-based confirmation,
+# min_confirmations >= N of 4) for ALL FOUR setups, chosen directly from the
+# 2026-09-29 funnel/ablation diagnostic (reports/funnel_diagnostic.json),
+# not a blind widen:
+#
+#   - Breakout setups (1/2): CVD-new-high/low fires on only 6.3%/8.9-9.4%
+#     of trigger bars (already tried loosening this exact condition in v2 --
+#     REJECTED). Absorption is ALSO individually rare (9.9-13.8%). delta_ok
+#     and vol_ok are both individually common (~89-96%). A strict AND of all
+#     4 is why v1/v2 found ~0 trades: it needs BOTH rare conditions to align
+#     on the same trigger bar. min_confirmations=3 only requires ONE of the
+#     two rare conditions (cvd_ok, absorption_ok) alongside the two common
+#     ones -- a structural relaxation of the CONJUNCTION, not of any single
+#     threshold.
+#   - Reversal setups (3/4): delta_flip_ok (ALL of lt_delta_flip_bars+1 bars
+#     same-signed) fired on 0/150-211 reclaims in 3 of 4 combinations -- an
+#     "ALL of N" requirement is structurally brittle to a single noise bar.
+#     min_confirmations=3 effectively becomes "absorption AND divergence AND
+#     vol" (delta_flip's near-zero contribution is no longer a hard gate).
+#
+# This is the user's own spec's V-a menu item, applied where the funnel
+# itself points -- per spec Section 9 point 5, setup2/3/4 deliberately do
+# NOT get the identical mechanical widening v2 already had rejected.
+version: v3
+notes: >
+  V-a structural variant: score-based confirm() (min_confirmations=3 of 4)
+  for all 4 setups, chosen from the funnel diagnostic's per-condition fire
+  rates, not a blind repeat of v2's rejected widening. Champion is still
+  v1 (config/v1.yaml). See CHANGELOG.md.
+
+setup1_bull_breakout:
+  min_confirmations: 3
+setup2_bear_breakout:
+  min_confirmations: 3
+setup3_bull_reversal:
+  min_confirmations: 3
+setup4_bear_reversal:
+  min_confirmations: 3

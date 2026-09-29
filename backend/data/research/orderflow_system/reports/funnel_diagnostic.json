@@ -1,0 +1,278 @@
+{
+  "5m_SETUP1_BULL_BREAKOUT": {
+    "setup": "SETUP1_BULL_BREAKOUT",
+    "n_bars": 82804,
+    "context_ok": 43569,
+    "trigger_ok_given_context": 2468,
+    "condition_individual_fire_rate_given_trigger": {
+      "delta_ok": {
+        "n": 111,
+        "rate": 0.045
+      },
+      "cvd_ok": {
+        "n": 278,
+        "rate": 0.1126
+      },
+      "absorption_ok": {
+        "n": 3,
+        "rate": 0.0012
+      },
+      "vol_ok": {
+        "n": 207,
+        "rate": 0.0839
+      }
+    },
+    "sequential_and_narrowing_from_trigger": {
+      "trigger": 2468,
+      "+delta": 111,
+      "+cvd": 89,
+      "+absorption": 1,
+      "+vol(confirmed)": 1
+    },
+    "confirmed_count": 1,
+    "entries": 0,
+    "invalidated_after_confirm": 1,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "5m_SETUP2_BEAR_BREAKOUT": {
+    "setup": "SETUP2_BEAR_BREAKOUT",
+    "n_bars": 82804,
+    "context_ok": 37429,
+    "trigger_ok_given_context": 2355,
+    "condition_individual_fire_rate_given_trigger": {
+      "delta_ok": {
+        "n": 131,
+        "rate": 0.0556
+      },
+      "cvd_ok": {
+        "n": 377,
+        "rate": 0.1601
+      },
+      "absorption_ok": {
+        "n": 2,
+        "rate": 0.0008
+      },
+      "vol_ok": {
+        "n": 225,
+        "rate": 0.0955
+      }
+    },
+    "sequential_and_narrowing_from_trigger": {
+      "trigger": 2355,
+      "+delta": 131,
+      "+cvd": 114,
+      "+absorption": 0,
+      "+vol(confirmed)": 0
+    },
+    "confirmed_count": 0,
+    "entries": 0,
+    "invalidated_after_confirm": 0,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "5m_SETUP3_BULL_REVERSAL": {
+    "setup": "SETUP3_BULL_REVERSAL",
+    "n_bars": 82804,
+    "extended_trend_ok": 151,
+    "overshoot_given_trend": 21,
+    "reclaim_ok_given_overshoot": 20,
+    "condition_individual_fire_rate_given_reclaim": {
+      "absorption_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "divergence_ok": {
+        "n": 5,
+        "rate": 0.25
+      },
+      "delta_flip_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "vol_ok": {
+        "n": 3,
+        "rate": 0.15
+      }
+    },
+    "sequential_and_narrowing_from_overshoot": {
+      "overshoot": 21,
+      "+reclaim": 20,
+      "+absorption": 0,
+      "+divergence": 0,
+      "+delta_flip(confirmed)": 0
+    },
+    "confirmed_count": 0,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "5m_SETUP4_BEAR_REVERSAL": {
+    "setup": "SETUP4_BEAR_REVERSAL",
+    "n_bars": 82804,
+    "extended_trend_ok": 109,
+    "overshoot_given_trend": 12,
+    "reclaim_ok_given_overshoot": 12,
+    "condition_individual_fire_rate_given_reclaim": {
+      "absorption_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "divergence_ok": {
+        "n": 7,
+        "rate": 0.5833
+      },
+      "delta_flip_ok": {
+        "n": 1,
+        "rate": 0.0833
+      },
+      "vol_ok": {
+        "n": 2,
+        "rate": 0.1667
+      }
+    },
+    "sequential_and_narrowing_from_overshoot": {
+      "overshoot": 12,
+      "+reclaim": 12,
+      "+absorption": 0,
+      "+divergence": 0,
+      "+delta_flip(confirmed)": 0
+    },
+    "confirmed_count": 0,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "15m_SETUP1_BULL_BREAKOUT": {
+    "setup": "SETUP1_BULL_BREAKOUT",
+    "n_bars": 27604,
+    "context_ok": 13575,
+    "trigger_ok_given_context": 973,
+    "condition_individual_fire_rate_given_trigger": {
+      "delta_ok": {
+        "n": 34,
+        "rate": 0.0349
+      },
+      "cvd_ok": {
+        "n": 83,
+        "rate": 0.0853
+      },
+      "absorption_ok": {
+        "n": 2,
+        "rate": 0.0021
+      },
+      "vol_ok": {
+        "n": 58,
+        "rate": 0.0596
+      }
+    },
+    "sequential_and_narrowing_from_trigger": {
+      "trigger": 973,
+      "+delta": 34,
+      "+cvd": 29,
+      "+absorption": 1,
+      "+vol(confirmed)": 1
+    },
+    "confirmed_count": 1,
+    "entries": 0,
+    "invalidated_after_confirm": 1,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "15m_SETUP2_BEAR_BREAKOUT": {
+    "setup": "SETUP2_BEAR_BREAKOUT",
+    "n_bars": 27604,
+    "context_ok": 10685,
+    "trigger_ok_given_context": 762,
+    "condition_individual_fire_rate_given_trigger": {
+      "delta_ok": {
+        "n": 56,
+        "rate": 0.0735
+      },
+      "cvd_ok": {
+        "n": 121,
+        "rate": 0.1588
+      },
+      "absorption_ok": {
+        "n": 4,
+        "rate": 0.0052
+      },
+      "vol_ok": {
+        "n": 78,
+        "rate": 0.1024
+      }
+    },
+    "sequential_and_narrowing_from_trigger": {
+      "trigger": 762,
+      "+delta": 56,
+      "+cvd": 45,
+      "+absorption": 2,
+      "+vol(confirmed)": 2
+    },
+    "confirmed_count": 2,
+    "entries": 0,
+    "invalidated_after_confirm": 2,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "15m_SETUP3_BULL_REVERSAL": {
+    "setup": "SETUP3_BULL_REVERSAL",
+    "n_bars": 27604,
+    "extended_trend_ok": 223,
+    "overshoot_given_trend": 53,
+    "reclaim_ok_given_overshoot": 51,
+    "condition_individual_fire_rate_given_reclaim": {
+      "absorption_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "divergence_ok": {
+        "n": 19,
+        "rate": 0.3725
+      },
+      "delta_flip_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "vol_ok": {
+        "n": 7,
+        "rate": 0.1373
+      }
+    },
+    "sequential_and_narrowing_from_overshoot": {
+      "overshoot": 53,
+      "+reclaim": 51,
+      "+absorption": 0,
+      "+divergence": 0,
+      "+delta_flip(confirmed)": 0
+    },
+    "confirmed_count": 0,
+    "bottleneck_condition": "absorption_ok"
+  },
+  "15m_SETUP4_BEAR_REVERSAL": {
+    "setup": "SETUP4_BEAR_REVERSAL",
+    "n_bars": 27604,
+    "extended_trend_ok": 251,
+    "overshoot_given_trend": 75,
+    "reclaim_ok_given_overshoot": 61,
+    "condition_individual_fire_rate_given_reclaim": {
+      "absorption_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "divergence_ok": {
+        "n": 18,
+        "rate": 0.2951
+      },
+      "delta_flip_ok": {
+        "n": 0,
+        "rate": 0.0
+      },
+      "vol_ok": {
+        "n": 5,
+        "rate": 0.082
+      }
+    },
+    "sequential_and_narrowing_from_overshoot": {
+      "overshoot": 75,
+      "+reclaim": 61,
+      "+absorption": 0,
+      "+divergence": 0,
+      "+delta_flip(confirmed)": 0
+    },
+    "confirmed_count": 0,
+    "bottleneck_condition": "absorption_ok"
+  }
+}

@@ -45,6 +45,11 @@ def compute_context_columns(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
     out["avg_volume"] = out["volume"].rolling(20).mean()
 
+    prior_close = out["close"].shift(1)
+    true_range = pd.concat([out["high"] - out["low"], (out["high"] - prior_close).abs(),
+                            (out["low"] - prior_close).abs()], axis=1).max(axis=1)
+    out["atr"] = true_range.rolling(s["atr_lookback"]).mean()
+
     # volume-weighted "value area" proxy over volume_profile_lookback bars --
     # POC = the close price bucket with the most volume; VAH/VAL = the
     # narrowest price band containing value_area_pct of that volume. A real
@@ -105,9 +110,23 @@ class SetupBase:
     def __init__(self, full_cfg: dict, setup_key: str, direction: str, name_tag: str):
         self.cfg = full_cfg[setup_key]
         self.structure_cfg = full_cfg["structure"]
+        self.full_cfg = full_cfg  # needed for sm_context.compute_context (cfg["smartmoney"])
         self.direction = direction
         self.bull = direction == "bull"
         self.name_tag = name_tag
+
+    def sm_gate_ok(self, df, i: int) -> bool:
+        """Stage-0 smart-money gate (spec Section 4). Disabled by default
+        (require_sm_alignment: false) -- returns True (no-op) unless a
+        challenger config explicitly turns it on. When enabled, this is a
+        PRE-CONDITION checked before detect_context/detect_trigger -- it
+        never generates an entry on its own (spec Section 3: "SM context
+        MUST NOT itself generate entries")."""
+        if not self.cfg.get("require_sm_alignment"):
+            return True
+        from . import sm_context  # local: avoids a hard import cycle at module load
+        ctx = sm_context.compute_context(df, i, self.full_cfg)
+        return sm_context.sm_gate_ok(ctx, self.direction, self.cfg)
 
     def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError
