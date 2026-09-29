@@ -9,6 +9,7 @@ __pycache__/
 
 # runtime / job artefacts
 backend/data/*.log
+backend/data/.*.lock
 *.zip
 .claude/
 .aider*
