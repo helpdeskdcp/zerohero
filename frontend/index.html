@@ -971,6 +971,7 @@
           available capital + risk limits, never hard-coded. <span class="pill pill--paper">PAPER</span></p>
 
         <div class="stat-grid" id="hedgeStatGrid">
+          <div class="stat-card"><span class="stat-label">Starting Capital</span><span class="stat-value" id="hedgeStartCap">—</span></div>
           <div class="stat-card"><span class="stat-label">Available Capital</span><span class="stat-value" id="hedgeAvailCap">—</span></div>
           <div class="stat-card"><span class="stat-label">Allocated Margin</span><span class="stat-value" id="hedgeMargin">—</span></div>
           <div class="stat-card"><span class="stat-label">Realized PnL</span><span class="stat-value" id="hedgeRealizedPnl">—</span></div>
@@ -1011,8 +1012,8 @@
             <table class="ledger" id="hedgePositionsTable">
               <thead>
                 <tr>
-                  <th scope="col">Opened</th><th scope="col">Symbol</th><th scope="col">Primary</th>
-                  <th scope="col">Hedge</th><th scope="col">Lots</th><th scope="col">Max Profit</th>
+                  <th scope="col">Opened</th><th scope="col">Symbol</th><th scope="col">Primary (SELL)</th>
+                  <th scope="col">Hedge (BUY)</th><th scope="col">Lots</th><th scope="col">Max Profit</th>
                   <th scope="col">Max Loss</th>
                   <th scope="col">Profit Target</th><th scope="col">Status</th><th scope="col">Exit Reason</th>
                   <th scope="col">PnL (live/final)</th>

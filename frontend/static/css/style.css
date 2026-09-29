@@ -198,6 +198,8 @@ table.ledger tbody tr:hover { background: rgba(201,162,39,0.04); }
 .badge.TRADE, .badge.APPROVED, .badge.WIN, .badge.OK { color: var(--teal); background: rgba(79,184,163,0.12); }
 .badge.NO_TRADE, .badge.REJECTED, .badge.LOSS { color: var(--ember); background: rgba(217,97,79,0.12); }
 .badge.DATA_UNAVAILABLE, .badge.OPEN, .badge.UNKNOWN { color: var(--gold-soft); background: rgba(201,162,39,0.1); }
+.badge.SELL { color: var(--ember); background: rgba(217,97,79,0.12); }
+.badge.BUY { color: var(--teal); background: rgba(79,184,163,0.12); }
 .reason-cell { max-width: 320px; color: var(--ink-dim); white-space: normal; }
 
 /* ---------------- Segmented control ---------------- */

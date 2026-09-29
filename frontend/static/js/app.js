@@ -315,6 +315,8 @@
   async function loadHedging() {
     try {
       const status = await api("/api/hedging/status");
+      const startCap = status.capital.starting_capital;
+      $("#hedgeStartCap").textContent = fmt(startCap, 2);
       $("#hedgeAvailCap").textContent = fmt(status.capital.available_capital, 2);
       $("#hedgeMargin").textContent = fmt(status.capital.allocated_margin, 2);
       const pnlEl = $("#hedgeRealizedPnl");
@@ -349,15 +351,25 @@
         const pnlLabel = pnl === null || pnl === undefined
           ? (isOpen ? "unresolved" : "—")
           : fmtSigned(pnl, 2) + (isOpen ? " (live)" : "");
+        // Max Loss is per-POSITION, not the account's total capital --
+        // shown here as a % of starting capital so it reads as "a small
+        // slice of the account", not an alarming raw rupee figure on its
+        // own. Found 2026-09-29 (user confusion: "max loss purna capital
+        // disat aahe" -- looked like the whole account was at risk,
+        // because nothing on this page showed what the FULL starting
+        // capital actually was to compare against -- only "Available
+        // Capital" was shown, post-deduction).
+        const maxLossTotal = p.max_loss_per_lot * p.lots;
+        const maxLossPct = startCap ? ` <small class="hint">(${(maxLossTotal / startCap * 100).toFixed(2)}% of capital)</small>` : "";
         return `
         <tr>
           <td>${timeStr(p.opened_at)}</td>
           <td>${text(p.symbol)}</td>
-          <td>${fmt(p.primary_strike, 0)} ${text(p.primary_option_type)} @ ${fmt(p.primary_entry_premium, 2)}${isOpen && p.current_primary_premium != null ? ` <small class="hint">now ${fmt(p.current_primary_premium, 2)}</small>` : ""}</td>
-          <td>${fmt(p.hedge_strike, 0)} @ ${fmt(p.hedge_entry_premium, 2)}${isOpen && p.current_hedge_premium != null ? ` <small class="hint">now ${fmt(p.current_hedge_premium, 2)}</small>` : ""}</td>
+          <td><span class="badge SELL" style="font-size:10px">SELL</span> ${fmt(p.primary_strike, 0)} ${text(p.primary_option_type)} @ ${fmt(p.primary_entry_premium, 2)}${isOpen && p.current_primary_premium != null ? ` <small class="hint">now ${fmt(p.current_primary_premium, 2)}</small>` : ""}</td>
+          <td><span class="badge BUY" style="font-size:10px">BUY</span> ${fmt(p.hedge_strike, 0)} ${text(p.primary_option_type)} @ ${fmt(p.hedge_entry_premium, 2)}${isOpen && p.current_hedge_premium != null ? ` <small class="hint">now ${fmt(p.current_hedge_premium, 2)}</small>` : ""}</td>
           <td>${fmt(p.lots, 0)}</td>
           <td>${p.max_profit_per_lot == null ? "—" : fmt(p.max_profit_per_lot * p.lots, 2)}</td>
-          <td>${fmt(p.max_loss_per_lot * p.lots, 2)}</td>
+          <td>${fmt(maxLossTotal, 2)}${maxLossPct}</td>
           <td>${p.profit_target === null || p.profit_target === undefined ? "—" : fmt(p.profit_target, 2)}</td>
           <td><span class="badge ${esc(p.status)}">${text(p.status)}</span></td>
           <td>${text(p.exit_reason, "—")}</td>
