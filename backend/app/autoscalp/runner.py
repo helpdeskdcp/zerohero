@@ -955,6 +955,13 @@ class AutoScalpRunner:
             "confidence": sig.get("confidence"), "ev": sig.get("ev"), "ev_r": sig.get("ev_r"), "rr": sig.get("rr"),
             "expected_premium_move": sig.get("expected_premium_move"), "epm_method": sig.get("epm_method"),
             "decision": sig["decision"], "reason": sig.get("reason"),
+            # Was silently dropped here (present on `sig` from decide_from_context,
+            # never copied into this hand-mapped insert dict) -- every stored
+            # signal's calib_version was NULL regardless of which calibration
+            # model actually computed its probability, making it impossible to
+            # tell pre-fix from post-fix predictions without a manual
+            # created_ts split. Found 2026-09-29 while validating the K8 fix.
+            "calib_version": sig.get("calib_version"),
             "support": sig.get("support"), "resistance": sig.get("resistance"),
             "support_strength": sig.get("support_strength"),
             "resistance_strength": sig.get("resistance_strength"),
