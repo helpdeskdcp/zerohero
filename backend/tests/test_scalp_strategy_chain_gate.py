@@ -87,11 +87,18 @@ def _stub_qualified_buy(monkeypatch, *, state_score=72.0):
         "support": {"level": 96.0, "strength": 0.6},
         "resistance": {"level": 108.0, "strength": 0.6}})
     monkeypatch.setattr(ss, "detect_regime", lambda *a, **k: {
-        "regime": "TRENDING_UP", "confidence": 0.6})
+        # TRENDING_UP is now in _DEFAULT_FILTERS' block_regimes (2026-09-29,
+        # walk-forward validated real-loss finding) -- this fixture isn't
+        # testing regime filtering, it needs a regime that stays open.
+        "regime": "TRENDING_DOWN", "confidence": 0.6})
     monkeypatch.setattr(ss, "mtf_alignment", lambda *a, **k: {
         "alignment": 0.5, "magnitude": 40.0, "conflict": False, "htf_dominant": False})
     monkeypatch.setattr(ss, "classify", lambda *a, **k: {
-        "state": "SUPPORT_REVERSAL", "direction": "BULLISH", "state_score": state_score,
+        # SUPPORT_REVERSAL is now in _DEFAULT_FILTERS' block_signal_types
+        # (2026-09-29, walk-forward validated real-loss finding) -- this
+        # fixture isn't testing signal-type filtering, it needs a type that
+        # stays open.
+        "state": "SUPPORT_BREAKDOWN", "direction": "BEARISH", "state_score": state_score,
         "anchor": {"level": 96.0, "side": "SUPPORT"}, "components": {},
         "false_risk": {"verdict": "CLEAN", "score": 100.0}, "reason": ["stub"], "roc_pct": 0.2})
     leg = {"opt_type": "CE", "ltp": 90.0, "strike": 100.0, "token": "T1", "tradingsymbol": "X",
@@ -122,22 +129,25 @@ def test_gate_off_is_a_noop(monkeypatch):
     ch = _chain("CALL_HEAVY")                              # would contradict a bullish setup
     base = _run(monkeypatch, ch, {"filters": {}})          # no chain_gates key
     off = _run(monkeypatch, ch, {"filters": {}, "chain_gates": {"enabled": False}})
-    assert base["decision"] == off["decision"] == "BUY_CE"
+    assert base["decision"] == off["decision"] == "BUY_PE"
     assert off.get("chain_bias") is None
     assert {k: base.get(k) for k in _PLAN_KEYS} == {k: off.get(k) for k in _PLAN_KEYS}
 
 
 def test_gate_on_confirm_keeps_buy_and_attaches_bias(monkeypatch):
-    d = _run(monkeypatch, _chain("PUT_HEAVY"), {"filters": {}, "chain_gates": {"enabled": True}})
-    assert d["decision"] == "BUY_CE"
+    # want is now PE (SUPPORT_BREAKDOWN, bearish) -- _chain_bias's CONFIRM
+    # condition for PE is LOW pcr / CALL_WRITE (see _chain_bias's bull=False
+    # branch), i.e. CALL_HEAVY, the mirror of the old CE/PUT_HEAVY case.
+    d = _run(monkeypatch, _chain("CALL_HEAVY"), {"filters": {}, "chain_gates": {"enabled": True}})
+    assert d["decision"] == "BUY_PE"
     assert d["chain_bias"]["verdict"] == "CONFIRM"
-    d_off = _run(monkeypatch, _chain("PUT_HEAVY"), {"filters": {}})
+    d_off = _run(monkeypatch, _chain("CALL_HEAVY"), {"filters": {}})
     assert {k: d.get(k) for k in _PLAN_KEYS} == {k: d_off.get(k) for k in _PLAN_KEYS}  # plan untouched
 
 
 def test_gate_on_confirm_can_bump_confidence_when_opted_in(monkeypatch):
-    base = _run(monkeypatch, _chain("PUT_HEAVY"), {"filters": {}})
-    up = _run(monkeypatch, _chain("PUT_HEAVY"),
+    base = _run(monkeypatch, _chain("CALL_HEAVY"), {"filters": {}})
+    up = _run(monkeypatch, _chain("CALL_HEAVY"),
               {"filters": {}, "chain_gates": {"enabled": True, "confirm_bumps_confidence": True}})
     order = ["LOW", "MEDIUM", "HIGH"]
     assert order.index(up["confidence"]) >= order.index(base["confidence"])
@@ -145,8 +155,10 @@ def test_gate_on_confirm_can_bump_confidence_when_opted_in(monkeypatch):
 
 
 def test_gate_on_contradiction_vetoes_a_marginal_setup(monkeypatch):
-    # marginal: force the score below the veto threshold via config
-    d = _run(monkeypatch, _chain("CALL_HEAVY"),
+    # marginal: force the score below the veto threshold via config.
+    # want=PE's CONTRADICT condition is HIGH pcr (PUT_HEAVY) -- mirror of
+    # the old CE/CALL_HEAVY case.
+    d = _run(monkeypatch, _chain("PUT_HEAVY"),
              {"filters": {}, "chain_gates": {"enabled": True, "marginal_score": 95.0}})
     assert d["decision"] == "NO_TRADE"
     assert "option-chain bias contradicts" in d["reason"]
@@ -154,13 +166,14 @@ def test_gate_on_contradiction_vetoes_a_marginal_setup(monkeypatch):
 
 
 def test_gate_on_contradiction_only_haircuts_a_strong_setup(monkeypatch):
-    # strong: default marginal_score 55 ; blended ~75 -> not vetoed, confidence -1
-    base = _run(monkeypatch, _chain("CALL_HEAVY"), {"filters": {}})
-    d = _run(monkeypatch, _chain("CALL_HEAVY"), {"filters": {}, "chain_gates": {"enabled": True}})
-    assert d["decision"] in ("BUY_CE", "WATCH")            # kept (or watch if it was already LOW)
+    # strong: default marginal_score 55 ; blended ~75 -> not vetoed, confidence -1.
+    # want=PE's CONTRADICT is PUT_HEAVY (see test_gate_on_contradiction_vetoes_a_marginal_setup).
+    base = _run(monkeypatch, _chain("PUT_HEAVY"), {"filters": {}})
+    d = _run(monkeypatch, _chain("PUT_HEAVY"), {"filters": {}, "chain_gates": {"enabled": True}})
+    assert d["decision"] in ("BUY_PE", "WATCH")            # kept (or watch if it was already LOW)
     order = ["LOW", "MEDIUM", "HIGH"]
     assert order.index(d["confidence"]) <= order.index(base["confidence"])
-    if d["decision"] == "BUY_CE":
+    if d["decision"] == "BUY_PE":
         assert {k: base.get(k) for k in _PLAN_KEYS} == {k: d.get(k) for k in _PLAN_KEYS}
 
 
@@ -168,7 +181,7 @@ def test_gate_on_insufficient_chain_is_a_noop(monkeypatch):
     base = _run(monkeypatch, _chain("CALL_HEAVY", cover=False), {"filters": {}})
     d = _run(monkeypatch, _chain("CALL_HEAVY", cover=False),
              {"filters": {}, "chain_gates": {"enabled": True, "marginal_score": 95.0}})
-    assert d["decision"] == base["decision"] == "BUY_CE"   # thin OI -> gate did nothing
+    assert d["decision"] == base["decision"] == "BUY_PE"   # thin OI -> gate did nothing
     assert d["chain_bias"]["verdict"] == "INSUFFICIENT"
 
 

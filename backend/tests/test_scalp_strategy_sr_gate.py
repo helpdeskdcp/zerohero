@@ -31,11 +31,18 @@ def _stub_qualified_buy(monkeypatch, *, state_score=72.0):
         "support": {"level": 96.0, "strength": 0.6},
         "resistance": {"level": 108.0, "strength": 0.6}})
     monkeypatch.setattr(ss, "detect_regime", lambda *a, **k: {
-        "regime": "TRENDING_UP", "confidence": 0.6})
+        # TRENDING_UP is now in _DEFAULT_FILTERS' block_regimes (2026-09-29,
+        # walk-forward validated real-loss finding) -- this fixture isn't
+        # testing regime filtering, it needs a regime that stays open.
+        "regime": "TRENDING_DOWN", "confidence": 0.6})
     monkeypatch.setattr(ss, "mtf_alignment", lambda *a, **k: {
         "alignment": 0.5, "magnitude": 40.0, "conflict": False, "htf_dominant": False})
     monkeypatch.setattr(ss, "classify", lambda *a, **k: {
-        "state": "SUPPORT_REVERSAL", "direction": "BULLISH", "state_score": state_score,
+        # SUPPORT_REVERSAL is now in _DEFAULT_FILTERS' block_signal_types
+        # (2026-09-29, walk-forward validated real-loss finding) -- this
+        # fixture isn't testing signal-type filtering, it needs a type that
+        # stays open.
+        "state": "SUPPORT_BREAKDOWN", "direction": "BEARISH", "state_score": state_score,
         "anchor": {"level": 96.0, "side": "SUPPORT"}, "components": {},
         "false_risk": {"verdict": "CLEAN", "score": 100.0}, "reason": ["stub"], "roc_pct": 0.2})
     leg = {"opt_type": "CE", "ltp": 90.0, "strike": 100.0, "token": "T1", "tradingsymbol": "X",
@@ -82,7 +89,7 @@ _PLAN_KEYS = ("entry", "stop_loss", "target_1", "target_2", "probability", "ev",
 def test_gate_off_is_a_noop(monkeypatch):
     base = _run(monkeypatch, {"filters": {}}, sr_verdict="CONTRADICT")
     off = _run(monkeypatch, {"filters": {}, "sr_gates": {"enabled": False}}, sr_verdict="CONTRADICT")
-    assert base["decision"] == off["decision"] == "BUY_CE"
+    assert base["decision"] == off["decision"] == "BUY_PE"
     assert off.get("sr_confirmation") is None
     assert {k: base.get(k) for k in _PLAN_KEYS} == {k: off.get(k) for k in _PLAN_KEYS}
 
@@ -95,7 +102,7 @@ def test_live_sr_attached_even_when_gate_disabled(monkeypatch):
 
 def test_gate_on_confirm_keeps_buy_and_attaches_verdict(monkeypatch):
     d = _run(monkeypatch, {"filters": {}, "sr_gates": {"enabled": True}}, sr_verdict="CONFIRM")
-    assert d["decision"] == "BUY_CE"
+    assert d["decision"] == "BUY_PE"
     assert d["sr_confirmation"]["verdict"] == "CONFIRM"
     d_off = _run(monkeypatch, {"filters": {}}, sr_verdict="CONFIRM")
     assert {k: d.get(k) for k in _PLAN_KEYS} == {k: d_off.get(k) for k in _PLAN_KEYS}
@@ -121,15 +128,15 @@ def test_gate_on_contradiction_vetoes_a_marginal_setup(monkeypatch):
 def test_gate_on_contradiction_only_haircuts_a_strong_setup(monkeypatch):
     base = _run(monkeypatch, {"filters": {}}, sr_verdict="CONTRADICT")
     d = _run(monkeypatch, {"filters": {}, "sr_gates": {"enabled": True}}, sr_verdict="CONTRADICT")
-    assert d["decision"] in ("BUY_CE", "WATCH")
+    assert d["decision"] in ("BUY_PE", "WATCH")
     order = ["LOW", "MEDIUM", "HIGH"]
     assert order.index(d["confidence"]) <= order.index(base["confidence"])
-    if d["decision"] == "BUY_CE":
+    if d["decision"] == "BUY_PE":
         assert {k: base.get(k) for k in _PLAN_KEYS} == {k: d.get(k) for k in _PLAN_KEYS}
 
 
 def test_gate_on_insufficient_sr_is_a_noop(monkeypatch):
     base = _run(monkeypatch, {"filters": {}}, sr_verdict="INSUFFICIENT")
     d = _run(monkeypatch, {"filters": {}, "sr_gates": {"enabled": True}}, sr_verdict="INSUFFICIENT")
-    assert d["decision"] == base["decision"] == "BUY_CE"
+    assert d["decision"] == base["decision"] == "BUY_PE"
     assert {k: base.get(k) for k in _PLAN_KEYS} == {k: d.get(k) for k in _PLAN_KEYS}

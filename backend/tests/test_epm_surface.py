@@ -20,11 +20,15 @@ def _stub_engines(monkeypatch, *, epm=12.5, method="greeks"):
         "support": {"level": 96.0, "strength": 0.6},
         "resistance": {"level": 108.0, "strength": 0.6}})
     monkeypatch.setattr(ss, "detect_regime", lambda *a, **k: {
-        "regime": "TRENDING_UP", "confidence": 0.6})
+        # TRENDING_UP/SUPPORT_REVERSAL are now in _DEFAULT_FILTERS' blocks
+        # (2026-09-29, walk-forward validated real-loss finding) -- this
+        # fixture isn't testing regime/signal-type filtering, it needs
+        # values that stay open.
+        "regime": "TRENDING_DOWN", "confidence": 0.6})
     monkeypatch.setattr(ss, "mtf_alignment", lambda *a, **k: {
         "alignment": 0.5, "magnitude": 40.0, "conflict": False, "htf_dominant": False})
     monkeypatch.setattr(ss, "classify", lambda *a, **k: {
-        "state": "SUPPORT_REVERSAL", "direction": "BULLISH", "state_score": 72.0,
+        "state": "SUPPORT_BREAKDOWN", "direction": "BEARISH", "state_score": 72.0,
         "anchor": {"level": 96.0, "side": "SUPPORT"}, "components": {},
         "false_risk": {"verdict": "CLEAN", "score": 100.0}, "reason": ["stub"],
         "roc_pct": 0.2})

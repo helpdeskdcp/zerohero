@@ -30,15 +30,41 @@ MODEL_VERSION = "scalp-strategy-v1"
 #     (P6: -17.5 / n11 ; P6.1: -17.5 / n11) -> blocked. Removing it ~doubled
 #     win rate & PF and dropped ECE from 0.14 to 0.09.
 #   * AFTERNOON underperformed in both slices -> blocked.
-#   * RANGE was only marginally negative and blocking it cost a lot of sample
-#     -> down-weighted (0.7), not blocked.
+#   * RANGE was only marginally negative on that earlier, thinner sample and
+#     blocking it cost a lot of sample -> down-weighted (0.7), not blocked.
 #   block_*      -> the signal is dropped to NO_TRADE
 #   *_score_mult -> the blended score is multiplied (down-weight, not drop)
+#
+# 2026-09-29 update, pooled real LIVE outcomes (all symbols incl. NIFTY,
+# n=167 resolved, 2026-08-31..2026-09-29) -- a real chronological
+# train/test split (first half derives the filter, second half is
+# genuinely unseen), not the in-sample correlation the RANGE 0.7 weight
+# above was set from:
+#   TRAIN half (n=83): TRENDING_UP -30.2pts/n20, RANGE -10.3pts/n19,
+#   SUPPORT_REVERSAL -43.1pts/n25, RESISTANCE_REVERSAL -47.4pts/n13 --
+#   all net losers despite mixed win rates (poor R:R, not just low
+#   win-rate: e.g. SUPPORT_REVERSAL alone was 56% win rate and STILL
+#   net-negative on the full pool).
+#   Applying (regime in {TRENDING_UP, RANGE} or signal_type in
+#   {SUPPORT_REVERSAL, RESISTANCE_REVERSAL}) => block to the TEST half
+#   (n=84, never seen when the rule was derived): unfiltered was
+#   +67.9pts/n84 (+0.81/trade); filtered was +196.0pts/n58 (+3.38/trade,
+#   4x); the 26 dropped trades were -128.2pts (-4.93/trade) on their own
+#   -- the pattern held forward, not just backward. RANGE's old 0.7
+#   down-weight is superseded by an outright block: on this larger,
+#   more recent pool it's no longer "only marginally negative"
+#   (-101.2pts/n33 pooled). NIFTY was NOT excluded this time (unlike the
+#   2026-09-07 TRENDING_UP-haircut decision, which deliberately left
+#   NIFTY unprofiled) -- NIFTY's own breakdown shows the identical
+#   pattern (TRENDING_UP -45.1pts/n10, SUPPORT_REVERSAL -51.8pts/n6
+#   account for essentially all of NIFTY's net loss), and this rule is
+#   walk-forward validated rather than a single-slice correlation, so
+#   there is no longer a stated reason to carve NIFTY out of it.
 _DEFAULT_FILTERS = {
-    "block_regimes": ["UNSTABLE"],
-    "block_signal_types": ["RESISTANCE_BREAKOUT"],
+    "block_regimes": ["UNSTABLE", "TRENDING_UP", "RANGE"],
+    "block_signal_types": ["RESISTANCE_BREAKOUT", "SUPPORT_REVERSAL", "RESISTANCE_REVERSAL"],
     "block_tod": ["AFTERNOON"],
-    "regime_score_mult": {"RANGE": 0.7},
+    "regime_score_mult": {},
     "signal_type_score_mult": {},
     "tod_score_mult": {},
 }

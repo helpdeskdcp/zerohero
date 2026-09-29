@@ -19,11 +19,16 @@ def test_filters_merge_defaults_and_overrides():
     assert f["block_regimes"] == ["UNSTABLE", "RANGE"]      # override wins
     assert f["regime_score_mult"] == {"RANGE": 0.5}         # override wins
     assert f["block_tod"] == ["AFTERNOON"]                  # non-overridden default preserved
-    # validated defaults (P6.1 ablation): breakout + afternoon blocked, range down-weighted
+    # validated defaults: P6.1 ablation (breakout + afternoon blocked) plus
+    # the 2026-09-29 walk-forward-validated real-loss finding (TRENDING_UP +
+    # RANGE regime, SUPPORT_REVERSAL + RESISTANCE_REVERSAL signal type now
+    # hard-blocked, superseding RANGE's old 0.7 down-weight -- see
+    # scalp_strategy.py's _DEFAULT_FILTERS comment for the full evidence).
     d = ss._filters({})
-    assert d["block_signal_types"] == ["RESISTANCE_BREAKOUT"]
+    assert d["block_regimes"] == ["UNSTABLE", "TRENDING_UP", "RANGE"]
+    assert d["block_signal_types"] == ["RESISTANCE_BREAKOUT", "SUPPORT_REVERSAL", "RESISTANCE_REVERSAL"]
     assert d["block_tod"] == ["AFTERNOON"]
-    assert d["regime_score_mult"] == {"RANGE": 0.7}
+    assert d["regime_score_mult"] == {}
     # every default is still overridable to empty
     assert ss._filters({"filters": {"block_signal_types": []}})["block_signal_types"] == []
 
@@ -45,12 +50,18 @@ def test_block_regime_short_circuits(monkeypatch):
                                config={"filters": {"block_regimes": ["RANGE"]}})
     assert d["decision"] == "NO_TRADE" and d["filtered"] == "regime"
 
+    # mocked regime is RANGE (now in _DEFAULT_FILTERS' block_regimes,
+    # 2026-09-29) -- d2/d3 isolate signal_type/tod blocking specifically,
+    # so they clear block_regimes rather than let the regime check fire
+    # first and mask the thing actually under test.
     d2 = ss.decide_from_context({"5m": []}, [], atm=100.0,
-                                config={"filters": {"block_signal_types": ["RESISTANCE_BREAKOUT"]}})
+                                config={"filters": {"block_regimes": [],
+                                                    "block_signal_types": ["RESISTANCE_BREAKOUT"]}})
     assert d2["decision"] == "NO_TRADE" and d2["filtered"] == "signal_type"
 
     d3 = ss.decide_from_context({"5m": []}, [], atm=100.0, tod_bucket="AFTERNOON",
-                                config={"filters": {"block_signal_types": [],
+                                config={"filters": {"block_regimes": [],
+                                                    "block_signal_types": [],
                                                     "block_tod": ["AFTERNOON"]}})
     assert d3["decision"] == "NO_TRADE" and d3["filtered"] == "tod"
 
