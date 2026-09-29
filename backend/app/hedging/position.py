@@ -56,6 +56,16 @@ class HedgePosition:
     # to the captured-chain path, same as before.
     primary_token: str | None = None
     hedge_token: str | None = None
+    # The rest of app.hedging.risk.credit_spread_economics()'s real output
+    # -- computed at open time (same SpreadEconomics object max_loss_per_lot
+    # already comes from) but never persisted until now, so a position
+    # showed its max LOSS but never its max PROFIT, net credit, or strike
+    # width anywhere in the API/frontend. Found 2026-09-29 (user report:
+    # "max profit... by sell disat nahi" -- the SELL/credit side's own
+    # payoff numbers were silently dropped between computation and storage).
+    max_profit_per_lot: float | None = None
+    net_credit_per_lot: float | None = None
+    strike_width: float | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -86,7 +96,9 @@ def open_position(*, symbol: str, primary_strike: float, primary_option_type: st
                   primary_entry_premium: float, hedge_strike: float, hedge_entry_premium: float,
                   lots: int, lot_size: int, max_loss_per_lot: float, margin_locked: float,
                   cost_paid: float, profit_target: float | None = None,
-                  primary_token: str | None = None, hedge_token: str | None = None) -> HedgePosition:
+                  primary_token: str | None = None, hedge_token: str | None = None,
+                  max_profit_per_lot: float | None = None, net_credit_per_lot: float | None = None,
+                  strike_width: float | None = None) -> HedgePosition:
     """Opens a PAPER position -- locks margin + spends premium cost against
     the capital ledger via app.hedging.capital (raises the same ValueError
     that module raises if capital doesn't actually cover it; this function
@@ -102,7 +114,9 @@ def open_position(*, symbol: str, primary_strike: float, primary_option_type: st
         hedge_entry_premium=hedge_entry_premium, lots=lots, lot_size=lot_size,
         max_loss_per_lot=max_loss_per_lot, opened_at=_now_iso(),
         margin_locked=margin_locked, cost_paid=cost_paid, profit_target=profit_target,
-        primary_token=primary_token, hedge_token=hedge_token)
+        primary_token=primary_token, hedge_token=hedge_token,
+        max_profit_per_lot=max_profit_per_lot, net_credit_per_lot=net_credit_per_lot,
+        strike_width=strike_width)
 
     positions = load_all()
     positions[pos.position_id] = pos

@@ -108,3 +108,29 @@ def release(state: PaperCapitalState, *, margin: float, realized_pnl: float) -> 
     state.available_capital = round(state.available_capital + margin + realized_pnl, 2)
     state.realized_pnl = round(state.realized_pnl + realized_pnl, 2)
     return state
+
+
+def reconcile(open_positions_margin: float, state: PaperCapitalState) -> dict:
+    """Compares the ledger's own allocate/release-tracked allocated_margin
+    against the INDEPENDENTLY computed sum of currently-OPEN positions'
+    margin_locked (the real source of truth -- positions are what actually
+    happened; the ledger is derived bookkeeping on top of them). Found
+    2026-09-29: a position-store race (see app.hedging.runner.scan()'s
+    docstring) silently dropped a position record while its margin stayed
+    locked in the ledger -- allocated_margin was exactly 2x the one real
+    open position's margin, undetected until a manual inspection. This is
+    the automated version of that same manual check."""
+    diff = round(state.allocated_margin - open_positions_margin, 2)
+    return {"ok": abs(diff) < 0.01, "expected_allocated_margin": round(open_positions_margin, 2),
+           "actual_allocated_margin": state.allocated_margin, "diff": diff}
+
+
+def resync(state: PaperCapitalState, open_positions_margin: float) -> PaperCapitalState:
+    """Self-heal a detected mismatch: treat the position store as
+    authoritative and shift the difference to/from available_capital so
+    the (available + allocated) total is unchanged -- a reconciliation
+    correction, not a P&L event. Never touches realized_pnl."""
+    diff = round(state.allocated_margin - open_positions_margin, 2)
+    state.allocated_margin = round(open_positions_margin, 2)
+    state.available_capital = round(state.available_capital + diff, 2)
+    return state

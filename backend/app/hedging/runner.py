@@ -186,13 +186,18 @@ def evaluate_symbol(symbol: str, cfg: dict) -> dict:
             max_loss_per_lot=cand.economics.max_loss_per_lot,
             margin_locked=cand.economics.max_loss_per_lot * decision.lots,
             cost_paid=cand.premium * lot_size * decision.lots,
-            primary_token=primary_token, hedge_token=hedge_token)
+            primary_token=primary_token, hedge_token=hedge_token,
+            max_profit_per_lot=cand.economics.max_profit_per_lot,
+            net_credit_per_lot=round(cand.economics.net_credit_per_unit * lot_size, 2),
+            strike_width=cand.economics.strike_width)
 
         _notify("OPEN", symbol,
                f"HEDGING OPEN -- {symbol}\n"
                f"SELL {primary_sel.leg.option_type} {primary_sel.leg.strike} @ {primary_sel.leg.premium}\n"
                f"BUY  {primary_sel.leg.option_type} {cand.strike} @ {cand.premium}\n"
-               f"lots: {decision.lots} x {lot_size}  max_loss/lot: {cand.economics.max_loss_per_lot}\n"
+               f"lots: {decision.lots} x {lot_size}  "
+               f"max_profit/lot: {cand.economics.max_profit_per_lot}  "
+               f"max_loss/lot: {cand.economics.max_loss_per_lot}\n"
                f"reason: {primary_sel.reason}\n"
                f"PAPER only, not a live order.")
         return {"symbol": symbol, "status": "OPENED", "position_id": pos.position_id,
@@ -297,49 +302,92 @@ def check_exits(now=None) -> list[dict]:
     return results
 
 
-def scan(now=None) -> dict:
+def _reconcile_capital() -> dict | None:
+    """Self-healing capital/position reconciliation, run every scan tick
+    (see capital.reconcile()'s docstring for why this exists). Returns the
+    reconcile report only when a mismatch was found and corrected --
+    None on a clean reconcile, so scan()'s result stays uncluttered on the
+    common (healthy) path."""
+    positions = _position.load_all()
+    open_margin = sum(p.margin_locked for p in positions.values() if p.status == "OPEN")
+    cap = _capital.load()
+    check = _capital.reconcile(open_margin, cap)
+    if check["ok"]:
+        return None
+    _log.warning("hedging capital ledger desync: expected allocated_margin=%.2f actual=%.2f diff=%.2f -- resyncing",
+                check["expected_allocated_margin"], check["actual_allocated_margin"], check["diff"])
+    _capital.save(_capital.resync(cap, open_margin))
+    _notify("RECONCILE", "SYSTEM",
+           f"HEDGING capital ledger desync detected and auto-corrected.\n"
+           f"expected margin (from open positions): {check['expected_allocated_margin']:.2f}\n"
+           f"ledger had: {check['actual_allocated_margin']:.2f}  (diff {check['diff']:.2f})\n"
+           f"Investigate root cause if this recurs -- a healthy ledger should never desync.")
+    return check
+
+
+def _scan_unlocked(now=None) -> dict:
     """One full cron tick: exits first (never let a stale-priced position
-    sit past its rule because a new one was being evaluated), then new-entry
-    evaluation per configured symbol -- only if armed. `now` defaults to
-    real IST time; pass it explicitly in tests."""
+    sit past its rule because a new one was being evaluated), then a
+    capital/position reconciliation check, then new-entry evaluation per
+    configured symbol -- only if armed. `now` defaults to real IST time;
+    pass it explicitly in tests."""
     if not is_armed():
         return {"armed": False, "note": "hedging is disarmed -- no entries evaluated, exits still monitored",
                 "exits": check_exits(now=now)}
     exits = check_exits(now=now)
+    reconciliation = _reconcile_capital()
     cfg = get_config()
     entries = [evaluate_symbol(sym, cfg) for sym in cfg["symbols"]]
-    return {"armed": True, "exits": exits, "entries": entries,
-            "ts": datetime.now(timezone.utc).isoformat()}
+    out = {"armed": True, "exits": exits, "entries": entries,
+          "ts": datetime.now(timezone.utc).isoformat()}
+    if reconciliation is not None:
+        out["reconciliation"] = reconciliation
+    return out
 
 
-def scan_and_record(now=None) -> None:
-    """Runs scan() and persists the result for polling -- the multi-symbol
-    chain fetch inside scan() can legitimately take tens of seconds
-    (real, measured latency on app.optionchain.resolve.get_chain, not a
-    bug), long enough that a mobile client's connection gets dropped
-    mid-request (seen live: nginx 499s on /scan-now). The API route backs
-    this with a background task and returns immediately instead.
-
-    Non-blocking file lock (see _LOCK_PATH's comment) -- an overlapping
-    call (cron vs. a manual /scan-now, or two manual triggers close
-    together) skips silently rather than racing scan()'s open-position
-    decisions."""
+def scan(now=None) -> dict:
+    """Locked entry point for one full cron tick -- see _LOCK_PATH's
+    comment for why this needs to be a FILE lock and why it must live
+    here, not only in scan_and_record(). Found 2026-09-29: the actual
+    cron entry point (scripts/hedging_scan.py) imports and calls scan()
+    directly, never scan_and_record() -- a lock placed only on
+    scan_and_record() left the real cron path completely unprotected,
+    and a scan_and_record()-triggered call (e.g. POST /scan-now) could
+    still race a concurrent cron-triggered scan() past the open-position
+    checks. This cost a real (paper) position record and left the
+    capital ledger double-locking margin for a position that no longer
+    existed -- found, and the ledger manually recomputed from the actual
+    position-store state, the same day this lock was first added (in the
+    wrong place). Skips (returns a SKIPPED marker) rather than blocking
+    when another scan is already in flight -- a scan that's still
+    running is stale data anyway, not worth waiting on."""
     os.makedirs(os.path.dirname(_LOCK_PATH), exist_ok=True)
     with open(_LOCK_PATH, "w") as lock_f:
         try:
             fcntl.flock(lock_f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
-            _log.info("scan_and_record: another scan is already running, skipping")
-            return
+            _log.info("scan: another scan is already running, skipping")
+            return {"status": "SKIPPED", "note": "another scan is already running"}
         try:
-            try:
-                result = scan(now=now)
-            except Exception as e:
-                result = {"error": f"{type(e).__name__}: {e}"}
-            result["recorded_at"] = datetime.now(timezone.utc).isoformat()
-            db.set_setting(LAST_SCAN_KEY, json.dumps(result, default=str))
+            return _scan_unlocked(now=now)
         finally:
             fcntl.flock(lock_f, fcntl.LOCK_UN)
+
+
+def scan_and_record(now=None) -> None:
+    """Runs scan() (locked, see its own docstring) and persists the result
+    for polling -- the multi-symbol chain fetch inside scan() can
+    legitimately take tens of seconds (real, measured latency on
+    app.optionchain.resolve.get_chain, not a bug), long enough that a
+    mobile client's connection gets dropped mid-request (seen live: nginx
+    499s on /scan-now). The API route backs this with a background task
+    and returns immediately instead."""
+    try:
+        result = scan(now=now)
+    except Exception as e:
+        result = {"error": f"{type(e).__name__}: {e}"}
+    result["recorded_at"] = datetime.now(timezone.utc).isoformat()
+    db.set_setting(LAST_SCAN_KEY, json.dumps(result, default=str))
 
 
 def last_scan_result() -> dict | None:
