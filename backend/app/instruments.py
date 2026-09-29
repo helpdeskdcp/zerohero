@@ -216,6 +216,43 @@ def resolve_nse_option(underlying: str, expiry: str = "AUTO", strike="ATM", opti
             "current_expiry": valid[0], "next_expiry": valid[1] if len(valid) > 1 else None, "latest_expiry": valid[-1]}
 
 
+def list_nse_option_expiries(underlying: str) -> dict:
+    """Just the non-expired expiry list from the official instrument master --
+    the expiry-list half of resolve_nse_option() without its strike/spot
+    resolution (which requires a spot price the caller may not have yet, e.g.
+    when the caller's whole job IS to figure out which expiry to fetch a
+    chain/spot for in the first place -- a chicken-and-egg resolve_nse_option
+    can't solve on its own since its ATM branch returns DATA_UNAVAILABLE
+    without a spot before it ever reaches its available_expiries computation).
+    Used by app.optionchain to translate an abstract AUTO/NEXT/LATEST token
+    into a real expiry date string BEFORE calling any chain source, so the
+    resolution is authoritative (live broker instrument master) and uniform
+    across angelone_captured/upstox_open/nse_v3 rather than each source
+    guessing independently from whatever it happens to have captured/parsed."""
+    u = canonical(underlying)
+    rows = [_master_meta(r) for r in master_rows()]
+    rows = [r for r in rows if r["exchange"] == "NFO" and r["underlying"] == u and r["symboltoken"]]
+    if not rows:
+        return {"status": "DATA_UNAVAILABLE", "reason": "no NFO contracts in instrument master"}
+    now = datetime.now(_IST).date()
+
+    def key(x):
+        for f in ("%d%b%Y", "%Y-%m-%d", "%d-%b-%Y"):
+            try:
+                return datetime.strptime(x.upper(), f).date()
+            except ValueError:
+                pass
+        return None
+
+    valid = sorted({r["expiry"] for r in rows if r["expiry"]},
+                   key=lambda x: key(x) or datetime.max.date())
+    valid = [x for x in valid if key(x) and key(x) >= now]
+    if not valid:
+        return {"status": "CONTRACT_INVALID", "reason": "no non-expired expiry"}
+    return {"status": "OK", "available_expiries": valid, "current_expiry": valid[0],
+            "next_expiry": valid[1] if len(valid) > 1 else None, "latest_expiry": valid[-1]}
+
+
 def _expiry_date(x):
     """Parse an Angel expiry string ('25SEP2026', '25-SEP-2026', '2026-09-25')
     to a date, else None."""

@@ -80,6 +80,27 @@ def api_optionchain(underlying: str, expiry: str = "AUTO", live: int = 1,
     except (TypeError, ValueError):
         atm_window = 12
     realized_vol = _f(realized_vol)
+
+    # Resolve an abstract AUTO/NEXT/LATEST/CURRENT token to a real expiry date
+    # from the live broker instrument master BEFORE calling any chain source,
+    # for NSE-index underlyings only (NFO instrument master -- SENSEX/BANKEX
+    # are BFO, MCX symbols aren't in this master at all, both untouched).
+    # Found 2026-09-29: without this, "NEXT" fell through to each source's
+    # own limited view -- angelone_captured only knows expiries it has
+    # actually captured (silently returning the SAME, already-expired
+    # current expiry when no next one had been captured yet), and the live
+    # keyless sources (upstox_open/nse_v3) don't understand the literal
+    # string "NEXT" at all. One authoritative resolution here fixes both.
+    if exp in ("AUTO", "NEXT", "LATEST", "CURRENT") and u in _GROUPS["NSE"]:
+        from ..instruments import list_nse_option_expiries
+        info = list_nse_option_expiries(u)
+        if info.get("status") == "OK":
+            resolved = {"AUTO": info["current_expiry"], "CURRENT": info["current_expiry"],
+                       "NEXT": info.get("next_expiry") or info["current_expiry"],
+                       "LATEST": info["latest_expiry"]}[exp]
+            if resolved:
+                exp = resolved
+
     key = (u, exp, int(allow_net), atm_window, realized_vol)
     now = time.time()
 

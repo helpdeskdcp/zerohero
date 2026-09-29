@@ -110,13 +110,30 @@ def _pick_expiry(con, underlying: str, want: str) -> str | None:
     if w in ("AUTO", "CURRENT"):
         return dated[0][1]
     if w == "NEXT":
-        return dated[1][1] if len(dated) > 1 else dated[0][1]
+        # None (not dated[0]) when there's no genuinely later expiry captured
+        # yet -- silently falling back to the current/expired one here made
+        # fetch() return a "successful" chain for the wrong expiry, which
+        # made get_chain()'s first-non-empty-source-wins resolver treat this
+        # as a win and never fall through to the live network sources
+        # (upstox_open/nse_v3) -- exactly the ones the frontend's "View next
+        # expiry" button sets live=1 to reach. Found 2026-09-29: the capture
+        # worker only ever subscribes to the current AUTO expiry's strikes
+        # (histcap/worker.py), so a genuine next-expiry capture gap exists by
+        # design right up to rollover -- this is a real data gap, not
+        # something to paper over here.
+        return dated[1][1] if len(dated) > 1 else None
     if w == "LATEST":
         return dated[-1][1]
     for _, e in dated:
         if e.upper() == w:
             return e
-    return dated[0][1]
+    # A specific literal expiry that isn't captured at all -- e.g. resolved
+    # from the live instrument master upstream (app.optionchain.api) to a
+    # real date this source has never subscribed to yet. Same reasoning as
+    # the NEXT branch above: None lets get_chain() try the live network
+    # sources for that actual date instead of silently substituting whatever
+    # IS captured.
+    return None
 
 
 # --------------------------------------------------------------------------- #
