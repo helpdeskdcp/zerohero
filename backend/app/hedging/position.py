@@ -48,6 +48,14 @@ class HedgePosition:
     closed_at: str | None = None
     exit_reason: str | None = None        # STOP_LOSS | PROFIT_TARGET | TIME_CUTOFF | EMERGENCY | MANUAL
     gross_pnl: float | None = None
+    # Broker symboltoken per leg, resolved once at open time -- lets
+    # exit-checks fetch a genuinely LIVE quote (app.connectors.angelone.
+    # fetch_market_quote) instead of only the <=5-min-stale captured chain.
+    # Optional/defaulted so a position opened before this field existed
+    # still deserializes via from_dict() -- its exit-checks just fall back
+    # to the captured-chain path, same as before.
+    primary_token: str | None = None
+    hedge_token: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -77,7 +85,8 @@ def _save_all(positions: dict[str, HedgePosition]) -> None:
 def open_position(*, symbol: str, primary_strike: float, primary_option_type: str,
                   primary_entry_premium: float, hedge_strike: float, hedge_entry_premium: float,
                   lots: int, lot_size: int, max_loss_per_lot: float, margin_locked: float,
-                  cost_paid: float, profit_target: float | None = None) -> HedgePosition:
+                  cost_paid: float, profit_target: float | None = None,
+                  primary_token: str | None = None, hedge_token: str | None = None) -> HedgePosition:
     """Opens a PAPER position -- locks margin + spends premium cost against
     the capital ledger via app.hedging.capital (raises the same ValueError
     that module raises if capital doesn't actually cover it; this function
@@ -92,7 +101,8 @@ def open_position(*, symbol: str, primary_strike: float, primary_option_type: st
         primary_entry_premium=primary_entry_premium, hedge_strike=hedge_strike,
         hedge_entry_premium=hedge_entry_premium, lots=lots, lot_size=lot_size,
         max_loss_per_lot=max_loss_per_lot, opened_at=_now_iso(),
-        margin_locked=margin_locked, cost_paid=cost_paid, profit_target=profit_target)
+        margin_locked=margin_locked, cost_paid=cost_paid, profit_target=profit_target,
+        primary_token=primary_token, hedge_token=hedge_token)
 
     positions = load_all()
     positions[pos.position_id] = pos

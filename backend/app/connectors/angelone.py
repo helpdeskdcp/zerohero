@@ -453,7 +453,12 @@ def fetch_positions() -> dict:
 def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> dict:
     """Read-only SmartAPI quote/OI snapshot; never calls an order endpoint."""
     exchange, token = str(exchange or "").upper(), str(symboltoken or "")
-    if exchange not in ("NSE", "NFO", "MCX", "BSE") or not token:
+    # BFO (BSE options, e.g. SENSEX/BANKEX) was missing -- found 2026-09-29
+    # while wiring live hedging quotes: the instrument master itself uses
+    # "BFO" as SENSEX/BANKEX options' own exch_seg (distinct from "BSE",
+    # the cash/index segment), so a BFO options quote request was always
+    # rejected as INSTRUMENT_INVALID before reaching the broker at all.
+    if exchange not in ("NSE", "NFO", "MCX", "BSE", "BFO") or not token:
         return {"status": "INSTRUMENT_INVALID", "data_status": "DATA_UNAVAILABLE"}
     try:
         sdk = _market_sdk()

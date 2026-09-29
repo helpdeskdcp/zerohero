@@ -172,7 +172,17 @@ def master_rows(*, refresh: bool = False) -> list[dict]:
 def _master_meta(r: dict) -> dict:
     exch = str(r.get("exch_seg") or r.get("exchange") or "").upper()
     raw_strike = r.get("strike")
-    try: strike = float(raw_strike) / 100 if float(raw_strike) > 100000 else float(raw_strike)
+    # AngelOne's raw master ALWAYS stores strike * 100, regardless of
+    # exchange or instrument (verified live 2026-09-29: MCX NATURALGAS
+    # "...140CE" has raw_strike=14000, BANKNIFTY "...51600CE" has
+    # raw_strike=5160000 -- both exactly *100, neither is a coincidence of
+    # magnitude). The old `> 100000` conditional divide happened to always
+    # be true for NFO index strikes (4-5 digits * 100 always exceeds
+    # 100000) but silently left MCX/commodity-scale strikes un-divided
+    # (raw 14000 stayed 14000 instead of becoming 140) -- found while
+    # adding resolve_mcx_option(), which returned a wildly wrong ATM
+    # strike (8000 instead of ~300) until this was unconditional.
+    try: strike = float(raw_strike) / 100
     except (TypeError, ValueError): strike = None
     return {"exchange": exch, "symbol": r.get("symbol") or "", "symboltoken": str(r.get("token") or r.get("symboltoken") or ""),
             "underlying": str(r.get("name") or "").upper(), "expiry": r.get("expiry") or "", "strike": strike,
@@ -182,10 +192,32 @@ def _master_meta(r: dict) -> dict:
 
 def resolve_nse_option(underlying: str, expiry: str = "AUTO", strike="ATM", option_type: str = "CE", *, spot: float | None = None) -> dict:
     """Resolve an NFO option solely from the current official master."""
+    return _resolve_option("NFO", underlying, expiry, strike, option_type, spot=spot)
+
+
+def resolve_mcx_option(underlying: str, expiry: str = "AUTO", strike="ATM", option_type: str = "CE", *, spot: float | None = None) -> dict:
+    """Resolve an MCX option (e.g. NATURALGAS/CRUDEOIL) solely from the
+    current official master -- same logic as resolve_nse_option, just a
+    different exchange segment. _master_meta()'s option_type is derived
+    from the symbol string's own CE/PE suffix, which already excludes MCX
+    FUTCOM futures rows for the same underlying (their symbol ends "FUT",
+    not CE/PE) without needing a separate instrumenttype filter."""
+    return _resolve_option("MCX", underlying, expiry, strike, option_type, spot=spot)
+
+
+def resolve_bse_option(underlying: str, expiry: str = "AUTO", strike="ATM", option_type: str = "CE", *, spot: float | None = None) -> dict:
+    """Resolve a BSE index option (SENSEX/BANKEX) -- these live under the
+    "BFO" exch_seg in the instrument master (distinct from "BSE", the
+    cash/index segment itself), same logic otherwise."""
+    return _resolve_option("BFO", underlying, expiry, strike, option_type, spot=spot)
+
+
+def _resolve_option(exchange: str, underlying: str, expiry: str, strike, option_type: str, *,
+                    spot: float | None) -> dict:
     u = canonical(underlying); typ = str(option_type or "").upper()
     rows = [_master_meta(r) for r in master_rows()]
-    rows = [r for r in rows if r["exchange"] == "NFO" and r["underlying"] == u and r["option_type"] == typ and r["symboltoken"]]
-    if not rows: return {"status": "DATA_UNAVAILABLE", "reason": "no NFO contracts in instrument master"}
+    rows = [r for r in rows if r["exchange"] == exchange and r["underlying"] == u and r["option_type"] == typ and r["symboltoken"]]
+    if not rows: return {"status": "DATA_UNAVAILABLE", "reason": f"no {exchange} contracts in instrument master"}
     now = datetime.now(_IST).date()
     def key(x):
         for f in ("%d%b%Y", "%Y-%m-%d", "%d-%b-%Y"):

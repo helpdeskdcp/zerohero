@@ -24,7 +24,8 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from .. import db, instrument_profiles, telegram_dispatcher
+from .. import db, instrument_profiles, instruments, telegram_dispatcher
+from ..connectors.angelone import fetch_market_quote
 from ..optionchain.resolve import get_chain
 from . import capital as _capital
 from . import position as _position
@@ -113,6 +114,31 @@ def _lot_size(symbol: str) -> int | None:
     return int(val) if val else None
 
 
+_OPTION_RESOLVER = {
+    "NIFTY": instruments.resolve_nse_option, "BANKNIFTY": instruments.resolve_nse_option,
+    "FINNIFTY": instruments.resolve_nse_option, "MIDCPNIFTY": instruments.resolve_nse_option,
+    "SENSEX": instruments.resolve_bse_option, "BANKEX": instruments.resolve_bse_option,
+    "CRUDEOIL": instruments.resolve_mcx_option, "NATURALGAS": instruments.resolve_mcx_option,
+}
+
+
+def _leg_token(symbol: str, expiry: str, strike: float, option_type: str) -> str | None:
+    """Resolve a leg's broker symboltoken for live-quote lookups (see
+    _current_quotes()). Best-effort: returns None on anything unexpected
+    rather than blocking the (already-decided, already-selected) trade --
+    a missing token just means that leg's exit-checks fall back to the
+    captured-chain path, same as before this existed."""
+    fn = _OPTION_RESOLVER.get(symbol.upper())
+    if fn is None:
+        return None
+    try:
+        r = fn(symbol, expiry, strike=strike, option_type=option_type)
+        return r.get("symboltoken") if r.get("status") == "OK" else None
+    except Exception as e:
+        _log.debug("_leg_token(%s %s %s%s): %r", symbol, expiry, strike, option_type, e)
+        return None
+
+
 def evaluate_symbol(symbol: str, cfg: dict) -> dict:
     """One symbol's evaluate-and-maybe-open pass. Never raises -- a bad
     symbol/chain/lot-size is a NO_TRADE result, not a crash that stops the
@@ -149,6 +175,8 @@ def evaluate_symbol(symbol: str, cfg: dict) -> dict:
             return {"symbol": symbol, "status": "NO_TRADE", "reason": f"hedge: {decision.reason}"}
 
         cand = decision.candidate
+        primary_token = _leg_token(symbol, chain.expiry, primary_sel.leg.strike, primary_sel.leg.option_type)
+        hedge_token = _leg_token(symbol, chain.expiry, cand.strike, cand.option_type)
         pos = _position.open_position(
             symbol=symbol, primary_strike=primary_sel.leg.strike,
             primary_option_type=primary_sel.leg.option_type,
@@ -157,7 +185,8 @@ def evaluate_symbol(symbol: str, cfg: dict) -> dict:
             lots=decision.lots, lot_size=lot_size,
             max_loss_per_lot=cand.economics.max_loss_per_lot,
             margin_locked=cand.economics.max_loss_per_lot * decision.lots,
-            cost_paid=cand.premium * lot_size * decision.lots)
+            cost_paid=cand.premium * lot_size * decision.lots,
+            primary_token=primary_token, hedge_token=hedge_token)
 
         _notify("OPEN", symbol,
                f"HEDGING OPEN -- {symbol}\n"
@@ -173,11 +202,47 @@ def evaluate_symbol(symbol: str, cfg: dict) -> dict:
         return {"symbol": symbol, "status": "ERROR", "reason": f"{type(e).__name__}: {e}"}
 
 
+_SYMBOL_EXCHANGE = {
+    "NIFTY": "NFO", "BANKNIFTY": "NFO", "FINNIFTY": "NFO", "MIDCPNIFTY": "NFO",
+    "SENSEX": "BFO", "BANKEX": "BFO",
+    "CRUDEOIL": "MCX", "NATURALGAS": "MCX",
+}
+
+
+def _live_leg_premium(symbol: str, token: str | None) -> float | None:
+    """A genuinely live (seconds-fresh, not <=5-min-stale-captured) LTP for
+    one leg, via the same broker quote endpoint app.connectors.angelone
+    already exposes for read-only use elsewhere. None on anything short of
+    a clean OK -- never a stale/fabricated number -- so the caller falls
+    back to the captured-chain path."""
+    if not token:
+        return None
+    exch = _SYMBOL_EXCHANGE.get(symbol.upper())
+    if not exch:
+        return None
+    try:
+        q = fetch_market_quote(exch, token)
+        if q.get("status") == "OK" and q.get("ltp") is not None:
+            return float(q["ltp"])
+    except Exception as e:
+        _log.debug("_live_leg_premium(%s, %s): %r", symbol, token, e)
+    return None
+
+
 def _current_quotes(positions: dict) -> dict:
     quotes = {}
     chains: dict = {}
     for pid, pos in positions.items():
         if pos.status != "OPEN":
+            continue
+        # Live quote first -- falls through to the captured-chain path
+        # below when a leg has no stored token (a position opened before
+        # this existed) or the live call fails for any reason (auth,
+        # network, broker-side issue). Never blocks or raises either way.
+        cur_primary = _live_leg_premium(pos.symbol, pos.primary_token)
+        cur_hedge = _live_leg_premium(pos.symbol, pos.hedge_token)
+        if cur_primary is not None and cur_hedge is not None:
+            quotes[pid] = (cur_primary, cur_hedge)
             continue
         if pos.symbol not in chains:
             try:
