@@ -18,8 +18,10 @@ and notify.
 """
 from __future__ import annotations
 
+import fcntl
 import json
 import logging
+import os
 from datetime import datetime, timezone
 
 from .. import db, instrument_profiles, telegram_dispatcher
@@ -30,6 +32,22 @@ from . import primary_selector as _primary
 from . import selector as _selector
 
 _log = logging.getLogger(__name__)
+
+# File lock, not an in-process one: scan_and_record() is called both from
+# this API server process (POST /scan-now) and from a separate OS process
+# every 5 min (scripts/hedging_scan_cron.sh -> scripts/hedging_scan.py,
+# which imports and calls this same function) -- an in-process lock
+# (threading.Lock) would only guard the former. Found 2026-09-29: an
+# API-triggered scan and a near-simultaneous second trigger raced each
+# other past the (lock-free) "is there already an open NATURALGAS
+# position?" check in scan(), each independently deciding to open one --
+# TWO real positions opened 211ms apart, doubling the intended capital
+# exposure. Non-blocking: an overlapping call skips instead of queuing,
+# same semantics as the cron wrapper's own flock (scripts/hedging_scan_
+# cron.sh) -- a hedge scan that's still running is stale data anyway, not
+# worth waiting on.
+_LOCK_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                          "data", ".hedging_runner_scan.lock")
 
 ARMED_KEY = "hedging_armed"
 CONFIG_KEY = "hedging_config"
@@ -235,13 +253,28 @@ def scan_and_record(now=None) -> None:
     (real, measured latency on app.optionchain.resolve.get_chain, not a
     bug), long enough that a mobile client's connection gets dropped
     mid-request (seen live: nginx 499s on /scan-now). The API route backs
-    this with a background task and returns immediately instead."""
-    try:
-        result = scan(now=now)
-    except Exception as e:
-        result = {"error": f"{type(e).__name__}: {e}"}
-    result["recorded_at"] = datetime.now(timezone.utc).isoformat()
-    db.set_setting(LAST_SCAN_KEY, json.dumps(result, default=str))
+    this with a background task and returns immediately instead.
+
+    Non-blocking file lock (see _LOCK_PATH's comment) -- an overlapping
+    call (cron vs. a manual /scan-now, or two manual triggers close
+    together) skips silently rather than racing scan()'s open-position
+    decisions."""
+    os.makedirs(os.path.dirname(_LOCK_PATH), exist_ok=True)
+    with open(_LOCK_PATH, "w") as lock_f:
+        try:
+            fcntl.flock(lock_f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            _log.info("scan_and_record: another scan is already running, skipping")
+            return
+        try:
+            try:
+                result = scan(now=now)
+            except Exception as e:
+                result = {"error": f"{type(e).__name__}: {e}"}
+            result["recorded_at"] = datetime.now(timezone.utc).isoformat()
+            db.set_setting(LAST_SCAN_KEY, json.dumps(result, default=str))
+        finally:
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 def last_scan_result() -> dict | None:
