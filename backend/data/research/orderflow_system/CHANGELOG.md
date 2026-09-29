@@ -372,3 +372,54 @@ structural fix itself (window absorption + net-delta-flip) is still kept
 -- it remains a more honest confirmation mechanism than what it replaced --
 but nothing in this project's data supports a live reversal edge on NIFTY
 at either timeframe. Champion remains v1.
+
+## v6 -- 2026-09-29 (DIAGNOSTIC ONLY -- confirmation-off isolation, never a deployment candidate)
+
+**Purpose (user request):** with the v5 structural fix's numbers looking
+thin either way, isolate whether the order-flow CONFIRMATION layer is the
+bottleneck (raw price pattern is fine, confirmation throws away good
+trades / lets bad ones through) or whether the raw pattern itself has
+little edge regardless of confirmation. `config/v6.yaml`:
+`min_confirmations: 0` for setup3/4 -- `sum(b.values()) >= 0` is always
+true, so all four order-flow sub-conditions (absorption/divergence/
+delta-flip/volume) are bypassed entirely; every overshoot+reclaim becomes
+a trade on price structure alone.
+
+**Result (NIFTY 5m):** n=8 (vs v5's n=3), expectancy **+0.076R** -- far
+smaller than v5's +1.14R, PF_net just 1.13 (barely above breakeven). BUT:
+**2 OOS trades** (+0.31R avg) where v5 had zero, and **3/11 walk-forward
+folds have a trade at all** (v5: 0/11) -- mixed (-1.09R, +0.25R, +0.22R).
+SETUP3 n=7 (expectancy +0.056R), SETUP4 n=1 (a single winning trade,
++0.22R, not informative alone).
+
+**What this isolates:** the confirmation layer selected 3 of these 8 raw
+events (the ones that happened to look best in-sample) and their average
+expectancy went UP roughly 15x (+0.076R pool average -> +1.14R for the
+selected 3) -- but ALL forward-looking (OOS) presence disappeared in the
+process (2 raw OOS trades -> 0 confirmed OOS trades). That is the
+signature of **overfitting to a thin in-sample pool**, not evidence that
+confirmation is correctly separating good setups from bad ones: a
+selection rule that improves the in-sample average while erasing 100% of
+out-of-sample hits on a pool this small is far more consistent with
+picking up in-sample noise than with capturing real, generalizable signal.
+
+**Where the real problem sits:** NOT primarily in the confirmation logic
+itself (v5's structural fix already made it materially less brittle, see
+above). The raw, unconfirmed price pattern (climactic overshoot beyond a
+trend extreme + a reclaim) is *itself* only marginally profitable on NIFTY
+5m -- PF_net 1.13 on n=8 is not a real edge, it is statistical noise
+sitting slightly on the positive side of a coin flip. With a pool this
+thin and a base rate this close to breakeven, no confirmation rule --
+whatever its own internal quality -- can produce a decidable result,
+because there are not enough raw events for any subset of them to mean
+anything. This reframes the whole reversal-setup question: it was never
+really "is the confirmation logic good enough," it is "does this price
+pattern have enough real, frequent edge on this symbol/timeframe to be
+worth confirming in the first place" -- and the honest answer from both
+v5 and v6 together is: not decidably, not yet, maybe not ever at 5m/15m on
+NIFTY specifically.
+
+**Status:** DIAGNOSTIC, not a candidate for adoption or further tuning.
+Champion remains v1. Do not build a "v7 with looser confirmation" chasing
+this -- the diagnostic's own conclusion is that confirmation strictness is
+not the lever that matters here.

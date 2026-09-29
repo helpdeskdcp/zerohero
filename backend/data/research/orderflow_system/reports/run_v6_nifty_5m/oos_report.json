@@ -1,0 +1,22 @@
+{
+  "performance": {
+    "n": 2,
+    "verdict": "INSUFFICIENT_SAMPLE",
+    "win_rate": 0.5,
+    "expectancy_r": 0.3073,
+    "profit_factor_gross": 2.5,
+    "profit_factor_net": 1.509,
+    "max_drawdown_r": 0.0,
+    "sharpe": 0.203,
+    "sortino": null,
+    "avg_win_r": 1.8221,
+    "avg_loss_r": -1.2075,
+    "avg_mfe_r": 1.8223,
+    "avg_mae_r": 0.5622,
+    "avg_holding_bars": 7.5,
+    "total_r_gross": 1.5,
+    "total_r_net": 0.615
+  },
+  "n_trades": 2,
+  "warning_banner": "WARNING: OHLCV PROXY MODE -- order-flow values (delta/cvd/absorption/imbalance) are APPROXIMATIONS derived from price+volume shape, NOT true bid/ask aggressor data. See data/source_ohlcv_proxy.py's module docstring for the exact formulas."
+}

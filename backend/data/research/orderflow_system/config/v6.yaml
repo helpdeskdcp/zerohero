@@ -1,0 +1,24 @@
+# v6 -- DIAGNOSTIC, not a candidate for adoption. min_confirmations=0 for
+# setup3/4 bypasses ALL FOUR order-flow confirmation sub-conditions
+# (absorption_ok/divergence_ok/delta_flip_ok/vol_ok) -- every overshoot+
+# reclaim pattern becomes a trade regardless of order-flow confirmation.
+#
+# Purpose (user request, 2026-09-29): isolate whether the raw PRICE pattern
+# (climactic overshoot beyond a trend_bars extreme, then a reclaim past it)
+# has any edge on its own, separate from the order-flow confirmation layer
+# -- i.e. is confirmation the bottleneck (raw pattern is fine, confirmation
+# logic is throwing away good trades or letting through bad ones), or is
+# the raw pattern itself unprofitable regardless of any confirmation
+# (confirmation was never the problem -- the setup's core definition is)?
+# setup1/2 left at base.yaml defaults (untouched) -- this isolates setup3/4.
+version: v6
+notes: >
+  DIAGNOSTIC ONLY -- min_confirmations=0 for setup3/4 (all 4 order-flow
+  confirmations bypassed, every overshoot+reclaim is a trade). Never a
+  deployment candidate; purpose is to see the raw price pattern's own
+  performance in isolation. See CHANGELOG.md.
+
+setup3_bull_reversal:
+  min_confirmations: 0
+setup4_bear_reversal:
+  min_confirmations: 0
