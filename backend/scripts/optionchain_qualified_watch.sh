@@ -8,6 +8,14 @@
 #   */5 8-15 * * 1-5
 set -u
 cd "$(dirname "$0")/.." || exit 1
+# Non-blocking lock: if a previous run is still going (e.g. the host is
+# CPU-starved and a normally-sub-second scan takes minutes), skip this
+# invocation instead of stacking another one on top -- found 2026-09-29,
+# 38 stacked instances of this exact script piled up over 3+ hours once the
+# host got CPU-starved, none making progress, each new cron firing before
+# the last one exited.
+exec 200>"data/.optionchain_qualified_watch.lock"
+flock -n 200 || exit 0
 set -a; . ./.env 2>/dev/null; set +a
 export TZ=Asia/Kolkata
 LOG="data/optionchain_qualified_watch.log"

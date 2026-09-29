@@ -8,6 +8,11 @@
 #   */5 8-15 * * 1-5
 set -u
 cd "$(dirname "$0")/.." || exit 1
+# Non-blocking lock -- see optionchain_qualified_watch.sh's comment for why
+# (same 2026-09-29 incident: this script's instances stacked up too, 24 of
+# them, once the host got CPU-starved).
+exec 200>"data/.hedging_scan.lock"
+flock -n 200 || exit 0
 set -a; . ./.env 2>/dev/null; set +a
 export TZ=Asia/Kolkata
 LOG="data/hedging_scan.log"

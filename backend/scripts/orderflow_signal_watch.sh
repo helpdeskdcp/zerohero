@@ -13,6 +13,12 @@
 # Symbols: $ORDERFLOW_WATCH_SYMBOLS (comma list) or the default core set.
 set -u
 cd "$(dirname "$0")/.." || exit 1
+# Non-blocking lock -- see optionchain_qualified_watch.sh's comment for why
+# (2026-09-29 incident: sibling 5-min cron scripts stacked dozens of
+# instances once the host got CPU-starved; this one wasn't caught stuck at
+# the time but shares the exact same gap, so it gets the same fix).
+exec 200>"data/.orderflow_signal_watch.lock"
+flock -n 200 || exit 0
 set -a; . ./.env 2>/dev/null; set +a
 export TZ=Asia/Kolkata
 LOG="data/orderflow_signal_watch.log"
