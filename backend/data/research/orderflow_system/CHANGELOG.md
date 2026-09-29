@@ -339,3 +339,36 @@ than the AND-of-single-bar-conditions it replaced, and imposes no cost on
 setup1/2 (untouched). Re-run this exact config as more real sessions
 accumulate; do not re-litigate the window/net-sum logic itself without new
 evidence it's still the bottleneck.
+
+**15-minute cross-check (`reports/run_v5_nifty_15m/`), same v5 config,
+same fix, same day:** this is the project's own mandated cross-timeframe
+check (spec: NIFTY 5-min official + 15-min cross-check), and it does NOT
+confirm the 5m result -- it contradicts it. n=14 in-sample (a larger sample
+than 5m's n=3), expectancy **-0.24R net** (negative). Broken down:
+SETUP3_BULL_REVERSAL -- the ONLY setup that was positive on 5m -- is
+**negative here** (n=11, expectancy -0.34R). SETUP4_BEAR_REVERSAL is
+mildly positive (n=3, +0.14R) but too thin to weight (fails breakeven at
+RR=2, passes at RR=3 -- inconsistent). n=1 OOS, that trade lost (-1.52R).
+0/11 walk-forward folds have any trade at all, same as 5m.
+`champion_vs_challenger`: `adopted=False` on BOTH checks this time (100%
+OOS expectancy drop, 0/11 positive folds) -- more decisive than 5m's
+result.
+
+One genuine subtlety surfaced here: SETUP3's 15m breakeven table shows
+**PASS** at both RR levels (45.5% actual win rate clears the cost-adjusted
+breakeven requirement) *despite* the setup's overall net expectancy being
+negative. This isn't a contradiction in the numbers -- the breakeven table
+assumes a win realizes the full nominal RR target, but the setup's actual
+`avg_win_r` (0.58) is far short of that (partial exits / early stop-outs
+cut real wins short of the 2R/3R target the breakeven math assumes) --
+a real reminder that the breakeven-WR check alone doesn't substitute for
+looking at realized expectancy directly.
+
+**Combined verdict across both timeframes:** the 5m result (n=3, +1.14R)
+was almost certainly the small-sample noise it looked thin enough to be --
+exactly what a dual-timeframe cross-check exists to catch. **NOT ADOPTED**
+stands, now on stronger evidence than the 5m result alone provided. The
+structural fix itself (window absorption + net-delta-flip) is still kept
+-- it remains a more honest confirmation mechanism than what it replaced --
+but nothing in this project's data supports a live reversal edge on NIFTY
+at either timeframe. Champion remains v1.
