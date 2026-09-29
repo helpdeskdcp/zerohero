@@ -40,9 +40,27 @@ class ReversalSetup(SetupBase):
     def confirm_breakdown(self, df, i, candidate_i) -> dict:
         """Each confirmation sub-condition, individually -- see
         _breakout.py's confirm_breakdown() for why this shape exists
-        (shared by confirm() and metrics/funnel.py's diagnostic)."""
+        (shared by confirm() and metrics/funnel.py's diagnostic).
+
+        V-b structural variant (2026-09-29 funnel diagnostic, post zero-
+        volume-bug-fix data): absorption_ok was checked on the single
+        candidate_i (overshoot) bar alone and fired on literally 0/12-61
+        reclaims in ALL FOUR setup/timeframe combinations -- an "exactly on
+        this one tick" requirement for a condition that is itself an AND of
+        two sub-conditions (volume spike + tight range) is the same
+        same-bar-rarity problem _breakout.py's confirm_breakdown() already
+        hit and fixed by widening to a window; reversal never got the
+        equivalent fix. delta_flip_ok separately requires ALL of
+        lt_delta_flip_bars+1 bars to be same-signed, which is brittle to a
+        single noise bar (documented in confirm()'s V-a comment) and still
+        fired on only 0-8% of reclaims even after V-a's outer score gate.
+        Both are now checked as a WINDOW/NET condition instead of a single-
+        bar / ALL-of-N one -- a genuine change to what each sub-condition
+        MEANS, not another threshold widen on the same brittle shape."""
         c = self.cfg
-        absorption_ok = bool(df["is_absorption"].iloc[candidate_i])
+        # was: df["is_absorption"].iloc[candidate_i] alone.
+        absorption_window = df["is_absorption"].iloc[candidate_i:i + 1]
+        absorption_ok = bool(absorption_window.any())
         lb = c["divergence_lookback"]
         window = df["cvd"].iloc[max(0, candidate_i - lb):candidate_i]
         cvd_extreme_now = df["cvd"].iloc[candidate_i]
@@ -50,8 +68,12 @@ class ReversalSetup(SetupBase):
         # (selling pressure petering out even as price still fell -- the classic divergence)
         divergence_ok = (cvd_extreme_now > window.min() if self.bull
                          else cvd_extreme_now < window.max()) if len(window) else False
+        # was: (flip_window > 0).all() / (flip_window < 0).all() -- ALL bars
+        # same-signed. Now: the WINDOW'S NET delta is in the expected
+        # direction -- one noise bar of the wrong sign no longer zeroes out
+        # an otherwise-real flip the way a strict AND did.
         flip_window = df["delta"].iloc[max(0, i - c["lt_delta_flip_bars"]):i + 1]
-        delta_flip_ok = bool((flip_window > 0).all()) if self.bull else bool((flip_window < 0).all())
+        delta_flip_ok = bool(flip_window.sum() > 0) if self.bull else bool(flip_window.sum() < 0)
         # has_real_volume guard -- see _breakout.py's confirm_breakdown() for
         # why (same zero-volume-desert degenerate-comparison bug, same fix).
         vol_ma = df["vol_ma_setup"].iloc[i]

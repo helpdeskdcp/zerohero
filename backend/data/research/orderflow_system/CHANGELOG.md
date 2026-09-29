@@ -268,3 +268,74 @@ ablation through gates" is now closed: A vs B ran to a decisive verdict on
 real, bug-fixed data; C was scoped down to a disclosed non-empirical
 judgment call rather than a fourth multi-hour run on a resource-constrained
 host, for the reasons above.
+
+## v5 -- 2026-09-29 (CHALLENGER, NOT ADOPTED -- reversal structural fix, real but too thin to call)
+
+**Change:** structural (not threshold) fix to `strategy/_reversal.py`'s
+`confirm_breakdown()`, targeted directly at the 2026-09-29 post-fix funnel
+diagnostic's finding that reversal's confirmation conditions were
+essentially unfireable:
+- `absorption_ok` was checked on the single `candidate_i` (overshoot) bar
+  alone -- fired on **0 of 12-61 reclaims in all four setup/timeframe
+  combinations**. Same same-bar-rarity problem `_breakout.py` already hit
+  and fixed by widening to a window; reversal never got the equivalent fix.
+  Now checks `candidate_i..i` (mirrors breakout's retest-window approach).
+- `delta_flip_ok` required ALL of `lt_delta_flip_bars+1` bars to be
+  same-signed -- fired on only 0-8% of reclaims, brittle to one noise bar
+  (documented in the V-a comment as needing a structural fix, not another
+  threshold tweak). Now checks the window's NET delta sign instead.
+
+A quick pre-flight check (`confirm_breakdown()` tallied over real reclaims,
+not the full engine) showed this makes score>=3 reachable for
+SETUP4_BEAR_REVERSAL for the first time -- previously structurally
+impossible regardless of `min_confirmations` since the two rarest
+conditions were both near-zero. `min_confirmations` set per-setup from that
+evidence (`config/v5.yaml`: setup3=2, setup4=3), not a shared guess.
+setup1/2 left at `base.yaml` defaults (strict AND / v1-equivalent) so this
+run isolates the reversal change.
+
+**Backtest result:** `reports/run_v5_nifty_5m/`. **n=3 in-sample, all from
+SETUP3_BULL_REVERSAL** (SETUP4_BEAR_REVERSAL produced 0 despite the
+pre-flight check finding one qualifying reclaim event -- the full engine's
+exact FSM sequencing differs subtly from that quick tally; not
+investigated further given n=3 is already far below any decidable
+threshold). Win rate 66.7%, expectancy **+1.14R net**, PF_net 3.5,
+max_drawdown 1.36R. Breakeven table: **PASSES at both RR=2 (66.7% actual vs
+39.9% required) and RR=3 (66.7% vs 29.9%)** -- the first time any reversal
+configuration has cleared this bar in this entire project. **n=0 OOS** (the
+untouched 2026-04-01..2026-09-28 holdout) and **0/11 walk-forward folds
+have any trade at all** -- every one of the 3 trades sits inside the older
+in-sample window; the setup hasn't fired even once in the most recent 6
+months.
+
+**Acceptance check:** `champion_vs_challenger(0.0, 0.0, folds, cfg)` ->
+`adopted=False` (`walkforward_consistency_ok=False`, 0/11 positive folds --
+`oos_expectancy_drop_ok` is trivially true only because both champion and
+challenger OOS expectancy are 0.0, not because anything was actually
+compared). **NOT ADOPTED.**
+
+**Interpretation:** this is real, measurable progress, not noise dressed
+up -- the structural fix did what it was designed to do (made a previously
+mathematically-impossible confirmation reachable, with a genuinely positive
+and cost-surviving result once it fires). But n=3, zero OOS presence, and
+zero walk-forward folds mean there is nothing here to distinguish from
+chance; three trades is an anecdote, not an edge, regardless of how good
+those three trades looked. The honest reading: reversal's confirmation
+*mechanism* is less broken than it was, but the underlying event (a
+genuine climactic overshoot + reclaim + real order-flow confirmation, on
+this timeframe, on this symbol) remains rare enough that even a correctly
+un-brittle confirmation logic doesn't produce a decidable sample. More real
+trading days accumulating is the only path to a real verdict here, not
+further logic changes -- see `ENGINE_CALIBRATION_SWEEP_2026-09-29.md`'s
+liquidity_sweep entry for why "just add more data" doesn't help a truly
+zero-signal setup, but this one is different: it's not zero-signal, it's
+rare-signal, which more real sessions genuinely can resolve one way or the
+other over time. **Champion remains v1.**
+
+**Status:** NOT ADOPTED (sample far too thin to decide). The reversal
+setup's structural confirmation logic (this entry's fix) should be kept
+going forward regardless of adoption status -- it is strictly more honest
+than the AND-of-single-bar-conditions it replaced, and imposes no cost on
+setup1/2 (untouched). Re-run this exact config as more real sessions
+accumulate; do not re-litigate the window/net-sum logic itself without new
+evidence it's still the bottleneck.

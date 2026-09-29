@@ -1,0 +1,32 @@
+# v5 -- CHALLENGER. Reversal (setup3/4) STRUCTURAL fix, isolated from
+# setup1/2 (left at base.yaml defaults / strict-AND, i.e. v1-equivalent for
+# breakout, so this run tests ONLY the reversal change).
+#
+# Change (in strategy/_reversal.py, not a config value -- see that file's
+# confirm_breakdown() docstring for the full reasoning): the 2026-09-29
+# funnel diagnostic (post zero-volume-bug-fix) showed absorption_ok fired on
+# literally 0/12-61 reclaims in ALL FOUR setup/timeframe combos (checked on
+# the single candidate_i bar alone -- the exact same-bar-rarity problem
+# _breakout.py already hit and fixed by widening to a window) and
+# delta_flip_ok (ALL of lt_delta_flip_bars+1 bars same-signed) fired on only
+# 0-8%. Both are now window/net conditions instead of single-bar/ALL-of-N:
+# absorption_ok checks candidate_i..i (mirrors breakout's retest window),
+# delta_flip_ok checks the window's NET delta sign instead of requiring
+# every bar to agree. A quick pre-flight score-distribution check (not the
+# full engine, just confirm_breakdown() tallied over real reclaims) showed
+# this makes score>=3 reachable at all for SETUP4_BEAR_REVERSAL for the
+# first time (was structurally impossible pre-fix); SETUP3_BULL_REVERSAL
+# reaches at most 2. min_confirmations set per-setup from that evidence,
+# not a single shared guess.
+version: v5
+notes: >
+  Reversal-only structural fix (window absorption + net-delta-flip in
+  strategy/_reversal.py) + per-setup min_confirmations set from a
+  score-distribution pre-check, not guessed. setup1/2 left at base.yaml
+  defaults (strict AND, v1-equivalent) -- this run isolates the reversal
+  change. Champion is still v1. See CHANGELOG.md.
+
+setup3_bull_reversal:
+  min_confirmations: 2
+setup4_bear_reversal:
+  min_confirmations: 3
