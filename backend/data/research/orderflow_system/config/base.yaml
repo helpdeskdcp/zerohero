@@ -141,6 +141,7 @@ setup3_bull_reversal:
   reversal_stop_ticks: 10.0
   rr_targets: [2.0, 3.0]
   min_confirmations: null
+  trigger_mode: rolling_extreme     # V-c: "rolling_extreme" = original N-bar overshoot+reclaim-ticks heuristic; "liquidity_sweep" = SM-7 sweep candidate + SM-8 CHoCH confirm (real, is_proxy=False structure detectors used as the TRIGGER, not just a gate)
   require_sm_alignment: false       # V-b/Stage-0 gate: require sm_context.py's bias to agree with this setup's direction before detect_context/entry
   sm_min_bias: 0.5                  # minimum bias_score (0..1) to pass the gate, when enabled
   sm_required_events: []            # e.g. ["liquidity_sweep", "structure_shift"] -- ALL must have fired this bar, when enabled
@@ -160,6 +161,7 @@ setup4_bear_reversal:
   reclaim_max_bars: 10
   reversal_stop_ticks: 10.0
   min_confirmations: null
+  trigger_mode: rolling_extreme     # see setup3's comment
   require_sm_alignment: false       # V-b/Stage-0 gate: require sm_context.py's bias to agree with this setup's direction before detect_context/entry
   sm_min_bias: 0.5                  # minimum bias_score (0..1) to pass the gate, when enabled
   sm_required_events: []            # e.g. ["liquidity_sweep", "structure_shift"] -- ALL must have fired this bar, when enabled

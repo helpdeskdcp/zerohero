@@ -1,0 +1,27 @@
+# v8 -- CHALLENGER. v7's liquidity-sweep+CHoCH trigger + V-a score-based
+# order-flow confirm (min_confirmations=2), chosen from a real score
+# distribution over the new trigger's candidate pool (2026-09-29,
+# tallied directly): with strict AND (v7), absorption_ok's near-total
+# absence (1/147 setup3, 4/154 setup4) crushed the pool to n=0 despite
+# 147-154 raw sweep+CHoCH events. Score distribution:
+#   setup3: {0:107, 1:6, 2:17, 3:16, 4:1}  -> min_conf=2 keeps 34
+#   setup4: {0:122, 1:8, 2:11, 3:12, 4:1}  -> min_conf=2 keeps 24
+# min_confirmations=2 is the first threshold that yields a potentially
+# decidable sample for setup3 (>=30) and a close one for setup4, without
+# dropping to the near-arbitrary min_conf=1 (which would admit events
+# where only ONE of four independent order-flow reads agrees). setup1/2
+# untouched (base.yaml defaults).
+version: v8
+notes: >
+  v7's real-structure reversal trigger (SM-7 sweep + SM-8 CHoCH) + a
+  score-based order-flow confirm threshold chosen from this trigger's own
+  score distribution, not carried over from v5's (different pool, so a
+  different threshold is the right comparison, not a shortcut). Champion
+  is still v1. See CHANGELOG.md.
+
+setup3_bull_reversal:
+  trigger_mode: liquidity_sweep
+  min_confirmations: 2
+setup4_bear_reversal:
+  trigger_mode: liquidity_sweep
+  min_confirmations: 2

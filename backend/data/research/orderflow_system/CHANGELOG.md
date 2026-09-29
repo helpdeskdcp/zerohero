@@ -423,3 +423,74 @@ NIFTY specifically.
 Champion remains v1. Do not build a "v7 with looser confirmation" chasing
 this -- the diagnostic's own conclusion is that confirmation strictness is
 not the lever that matters here.
+
+## v7/v8 -- 2026-09-29 (CHALLENGER, NOT ADOPTED -- new trigger, same verdict)
+
+**Change (user request, following v6's diagnostic):** v6 concluded the
+lever that mattered was never confirmation strictness -- it was the raw
+price PATTERN itself (N-bar rolling extreme + reclaim) being too rare and
+too marginal. This entry replaces that trigger, not its confirmation,
+with the real (is_proxy=False) SM-7/SM-8 structure detectors already built
+for the v4 smart-money gate but never used as a trigger in their own
+right: candidate = a liquidity sweep (wick beyond a prior swing + close
+retraces back), confirm-to-entry = a CHoCH (structural break AGAINST the
+prior trend) in the reversal direction within `reclaim_max_bars`. New
+methods `is_sweep_candidate()`/`is_choch_confirm()` in `_reversal.py`,
+opt-in via `trigger_mode: liquidity_sweep` (default stays
+`rolling_extreme` -- every existing config/backtest/test unaffected
+unless explicitly opted in).
+
+**This worked exactly as intended at the trigger level:** 1794/1819 raw
+sweep candidates (setup3/4) vs the old trigger's ~20 events total in 4.5
+years -- roughly 90x more common, because a local liquidity sweep is a
+fundamentally more frequent event than "a climactic reversal off a
+multi-bar trend." 147/154 of those get CHoCH-confirmed within the reclaim
+window.
+
+**v7 (strict-AND order-flow confirm, unchanged from v1's default):
+n=0.** Even 147-154 raw structurally-confirmed events get crushed to zero
+by requiring `absorption_ok` (fires on 1/147 and 4/154 -- still
+essentially dead) in a strict AND with three other conditions. Same
+lesson as breakout/v3: strict AND across one near-dead condition and
+three live ones is definitionally near-empty regardless of pool size.
+
+**v8 (score-based confirm, `min_confirmations=2`, chosen from this
+trigger's own score distribution -- setup3 `{0:107,1:6,2:17,3:16,4:1}`,
+setup4 `{0:122,1:8,2:11,3:12,4:1}`, so min_conf=2 keeps 34/24 raw):**
+finally a real, decidable-attempt sample. **5m: n=17 IS** (expectancy
++0.118R, barely positive) **but n=16 OOS at -0.359R** (win rate 18.75%,
+clearly negative) -- the same in-sample-looks-fine/OOS-goes-negative
+pattern seen throughout this whole project. Per-setup: SETUP3 (n=12) is
+itself already negative in-sample (-0.126R, fails breakeven at RR=2);
+SETUP4's apparent +0.70R rests on **5 trades**, nowhere near enough to
+trust despite passing breakeven at both RR. Only 1/11 walk-forward folds
+has any trade at all. `champion_vs_challenger`: **adopted=False** (100%
+OOS expectancy drop). **15m cross-check: n=2 IS (-0.72R), n=3 OOS
+(-0.06R)** -- both negative, consistent with 5m's OOS lean.
+`adopted=False` on both checks.
+
+**Interpretation:** the new trigger is a genuine structural upgrade --
+it's built on real market-structure primitives instead of an arbitrary
+rolling-window heuristic, and it does what v6's diagnostic asked for: it
+produces a real, order-of-magnitude larger raw candidate pool. But more
+raw candidates did not translate into a real edge once the same honest
+order-flow confirmation layer (already fixed for brittleness in v5) was
+applied and the result was checked out-of-sample: negative OOS at both
+timeframes, and the one setup (SETUP4 on 5m) that looked good rests on a
+sample too thin to mean anything. This is a different, better-founded
+negative result than v1-v6's, not a contradiction of them -- reversal
+setups on NIFTY, defined multiple different structurally-sound ways now
+(naive extreme+reclaim, then real sweep+CHoCH), consistently fail to show
+a stable, OOS-surviving edge. **Champion remains v1.**
+
+**Status:** NOT ADOPTED at both timeframes. The `trigger_mode` config
+option and `is_sweep_candidate()`/`is_choch_confirm()` methods are kept
+(opt-in, zero cost to existing configs) since they are a real, reusable,
+well-tested capability -- useful groundwork if a future hypothesis wants
+real sweep/CHoCH-based triggers for a DIFFERENT symbol, timeframe, or
+setup family, even though this specific application (NIFTY reversal) did
+not produce an edge. This closes the reversal-setup investigation line
+for now: three independent angles (confirmation-tuning in v5, raw-pattern
+diagnostic in v6, trigger-redesign in v7/v8) all converge on the same
+honest conclusion -- no decidable reversal edge on NIFTY at 5m or 15m with
+the data and detectors this project has access to.

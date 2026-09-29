@@ -1,0 +1,136 @@
+{
+  "warning_banner": "WARNING: OHLCV PROXY MODE -- order-flow values (delta/cvd/absorption/imbalance) are APPROXIMATIONS derived from price+volume shape, NOT true bid/ask aggressor data. See data/source_ohlcv_proxy.py's module docstring for the exact formulas.",
+  "manifest": {
+    "generated_at": "2026-09-29T12:52:22.184888+00:00",
+    "git_commit": "65f6ba99222af1d8a3d85b453c67ae57a0b80e2a",
+    "config_version": "v7",
+    "data_mode": "ohlcv_proxy",
+    "is_proxy": true,
+    "symbol": "NIFTY",
+    "timeframe": "5m",
+    "date_range": [
+      "2022-04-09",
+      "2026-09-28"
+    ],
+    "seed": 42,
+    "in_sample_range": [
+      "2022-04-09 11:20:00+05:30",
+      "2026-03-30 15:25:00+05:30"
+    ],
+    "oos_range": [
+      "2026-04-01 09:15:00+05:30",
+      "2026-09-28 15:25:00+05:30"
+    ]
+  },
+  "global": {
+    "n": 0,
+    "verdict": "INSUFFICIENT_SAMPLE",
+    "expectancy_r": 0.0
+  },
+  "by_setup": {},
+  "by_direction": {},
+  "breakeven_table": {},
+  "sub_period_monthly": {},
+  "walk_forward_folds": [
+    {
+      "train_start": "2022-04-09",
+      "train_end": "2023-04-17",
+      "test_start": "2023-04-18",
+      "test_end": "2023-07-17",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2022-07-08",
+      "train_end": "2023-07-17",
+      "test_start": "2023-07-18",
+      "test_end": "2023-10-17",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2022-10-11",
+      "train_end": "2023-10-17",
+      "test_start": "2023-10-18",
+      "test_end": "2024-01-18",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-01-11",
+      "train_end": "2024-01-18",
+      "test_start": "2024-01-19",
+      "test_end": "2024-04-23",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-04-18",
+      "train_end": "2024-04-23",
+      "test_start": "2024-04-24",
+      "test_end": "2024-07-24",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-07-18",
+      "train_end": "2024-07-24",
+      "test_start": "2024-07-25",
+      "test_end": "2024-10-23",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2023-10-18",
+      "train_end": "2024-10-23",
+      "test_start": "2024-10-24",
+      "test_end": "2025-01-24",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-01-19",
+      "train_end": "2025-01-24",
+      "test_start": "2025-01-27",
+      "test_end": "2025-04-30",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-04-24",
+      "train_end": "2025-04-30",
+      "test_start": "2025-05-02",
+      "test_end": "2025-07-29",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-07-25",
+      "train_end": "2025-07-29",
+      "test_start": "2025-07-30",
+      "test_end": "2025-10-30",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "train_start": "2024-10-24",
+      "train_end": "2025-10-30",
+      "test_start": "2025-10-31",
+      "test_end": "2026-02-01",
+      "n_trades": 0,
+      "expectancy_r": 0.0,
+      "verdict": "INSUFFICIENT_SAMPLE"
+    }
+  ],
+  "disclaimer": "This system is for RESEARCH and EDUCATION only. Backtested results are historical and do NOT guarantee future performance. Order-flow data on NSE for retail traders is often delayed or proxy-based; OHLCV proxy mode produces APPROXIMATIONS, not true order flow. All performance figures are net of modelled costs but real slippage may differ. This is NOT investment advice. Consult a SEBI-registered advisor before trading real capital. Risk is the user's own."
+}

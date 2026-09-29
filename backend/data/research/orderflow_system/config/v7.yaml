@@ -1,0 +1,32 @@
+# v7 -- CHALLENGER. Reversal (setup3/4) TRIGGER replaced with real
+# market-structure primitives (V-c, see strategy/_reversal.py's
+# is_sweep_candidate/is_choch_confirm docstrings), not just a confirmation
+# tweak. candidate = SM-7 liquidity sweep (wick beyond a prior swing +
+# close retraces back); confirm-to-entry = SM-8 CHoCH in the reversal
+# direction, within reclaim_max_bars. Order-flow confirm_breakdown() (the
+# same V-b window/net-sum logic from v5) still gates the final entry via
+# min_confirmations, unchanged.
+#
+# Pre-flight check (2026-09-29, tallied directly, not the full engine):
+# 1794/1819 raw sweep candidates (setup3/4) vs the OLD rolling-extreme
+# trigger's ~20 events total in 4.5 years -- CHoCH confirms 147/154 of
+# those within the reclaim window. This is a fundamentally more common
+# event (any local liquidity sweep + structural reversal) than the old
+# trigger's "climactic reversal off a multi-bar trend", not a tuned
+# version of the same thing. Started at min_confirmations=null (strict
+# AND of the 4 order-flow conditions) to see the full-requirement baseline
+# against this much larger raw pool before considering any relaxation.
+# setup1/2 untouched (base.yaml defaults).
+version: v7
+notes: >
+  Reversal TRIGGER rebuilt on real SM-7/SM-8 structure detectors instead
+  of the naive rolling-extreme heuristic. Order-flow confirm unchanged
+  (strict AND, min_confirmations=null) -- first run tests whether the new,
+  much larger raw candidate pool (147-154 vs ~20) survives the SAME
+  confirmation bar the old trigger could never even reach in volume.
+  Champion is still v1. See CHANGELOG.md.
+
+setup3_bull_reversal:
+  trigger_mode: liquidity_sweep
+setup4_bear_reversal:
+  trigger_mode: liquidity_sweep

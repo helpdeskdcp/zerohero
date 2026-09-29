@@ -37,6 +37,29 @@ class ReversalSetup(SetupBase):
                     else df["close"].iloc[i] < extreme - c["reclaim_ticks"])
         return bool(reclaimed)
 
+    # -- V-c structural variant (2026-09-29, user request): replace the
+    # TRIGGER itself, not just its confirmation. is_overshoot/is_reclaim's
+    # "N-bar rolling extreme, then a later close crosses back past it" is a
+    # naive heuristic with no real market-structure meaning behind either
+    # half. SM-7 (liquidity_sweep) and SM-8 (structure_shift) are REAL
+    # (is_proxy=False) price-structure detectors already built for the
+    # smart-money gate (v4) but only ever used there as a GATE on top of
+    # this same naive trigger -- never as the trigger's own definition.
+    # Opt-in via cfg["trigger_mode"]=="liquidity_sweep" (default stays
+    # "rolling_extreme", i.e. every existing config/test/backtest is
+    # unchanged unless explicitly opted in). See config/v7.yaml.
+    def is_sweep_candidate(self, df, i) -> bool:
+        from .smartmoney import liquidity_sweep
+        r = liquidity_sweep.detect(df, i, self.full_cfg["smartmoney"])
+        want_event = "swept_lows" if self.bull else "swept_highs"
+        return bool(r.present and r.detail.get("event") == want_event)
+
+    def is_choch_confirm(self, df, i) -> bool:
+        from .smartmoney import structure_shift
+        r = structure_shift.detect(df, i, self.full_cfg["smartmoney"])
+        want_dir = "bull" if self.bull else "bear"
+        return bool(r.present and r.direction == want_dir and r.detail.get("event") == "CHoCH")
+
     def confirm_breakdown(self, df, i, candidate_i) -> dict:
         """Each confirmation sub-condition, individually -- see
         _breakout.py's confirm_breakdown() for why this shape exists
@@ -95,7 +118,24 @@ class ReversalSetup(SetupBase):
         # not a further loosening of delta_flip's own window/threshold.
         return sum(b.values()) >= min_conf
 
+    def _build_reversal_entry(self, df, i, candidate_i):
+        c = self.cfg
+        entry = df["open"].iloc[i + 1]
+        extreme = df["low"].iloc[candidate_i] if self.bull else df["high"].iloc[candidate_i]
+        stop = extreme - c["reversal_stop_ticks"] if self.bull else extreme + c["reversal_stop_ticks"]
+        r = abs(entry - stop)
+        rr = c["rr_targets"]
+        targets = ([entry + rr[0] * r, entry + rr[1] * r] if self.bull
+                  else [entry - rr[0] * r, entry - rr[1] * r])
+        return {"entry_i": i + 1, "entry": entry, "stop": stop, "targets": targets,
+               "direction": "LONG" if self.bull else "SHORT", "tag": self.name_tag}
+
     def scan(self, df, i, state) -> dict | None:
+        if str(self.cfg.get("trigger_mode", "rolling_extreme")) == "liquidity_sweep":
+            return self._scan_liquidity_sweep(df, i, state)
+        return self._scan_rolling_extreme(df, i, state)
+
+    def _scan_rolling_extreme(self, df, i, state) -> dict | None:
         c = self.cfg
         candidate = state.get("candidate")
 
@@ -112,20 +152,46 @@ class ReversalSetup(SetupBase):
             if self.is_reclaim(df, i, candidate_i) and self.confirm(df, i, candidate_i) and self.sm_gate_ok(df, i):
                 if i + 1 >= len(df):
                     return None
-                entry = df["open"].iloc[i + 1]
-                extreme = df["low"].iloc[candidate_i] if self.bull else df["high"].iloc[candidate_i]
-                stop = extreme - c["reversal_stop_ticks"] if self.bull else extreme + c["reversal_stop_ticks"]
-                r = abs(entry - stop)
-                rr = c["rr_targets"]
-                targets = ([entry + rr[0] * r, entry + rr[1] * r] if self.bull
-                          else [entry - rr[0] * r, entry - rr[1] * r])
                 state["candidate"] = None
-                return {"entry_i": i + 1, "entry": entry, "stop": stop, "targets": targets,
-                        "direction": "LONG" if self.bull else "SHORT", "tag": self.name_tag}
+                return self._build_reversal_entry(df, i, candidate_i)
             return None
 
         if i < self.structure_cfg["trend_bars"] + 1:
             return None
         if self.is_overshoot(df, i):
+            state["candidate"] = {"i": i}
+        return None
+
+    def _scan_liquidity_sweep(self, df, i, state) -> dict | None:
+        """V-c: candidate = a real SM-7 sweep (wick beyond a prior swing +
+        close retraces back), confirm = a real SM-8 CHoCH in the reversal
+        direction -- replaces the naive rolling-extreme/reclaim-ticks pair.
+        candidate_i is still "the bar the extreme/sweep happened on", so
+        _build_reversal_entry's low/high[candidate_i] stop reference is
+        unchanged and correct for both trigger modes."""
+        c = self.cfg
+        candidate = state.get("candidate")
+
+        if candidate is not None:
+            candidate_i = candidate["i"]
+            if i - candidate_i > c["reclaim_max_bars"]:
+                state["candidate"] = None
+                return None
+            if self.is_sweep_candidate(df, i):
+                still_deeper = (df["low"].iloc[i] < df["low"].iloc[candidate_i] if self.bull
+                               else df["high"].iloc[i] > df["high"].iloc[candidate_i])
+                if still_deeper:
+                    state["candidate"] = {"i": i}  # a deeper sweep supersedes the earlier one
+                    return None
+            if self.is_choch_confirm(df, i) and self.confirm(df, i, candidate_i) and self.sm_gate_ok(df, i):
+                if i + 1 >= len(df):
+                    return None
+                state["candidate"] = None
+                return self._build_reversal_entry(df, i, candidate_i)
+            return None
+
+        if i < self.structure_cfg["trend_bars"] + 1:
+            return None
+        if self.is_sweep_candidate(df, i):
             state["candidate"] = {"i": i}
         return None
