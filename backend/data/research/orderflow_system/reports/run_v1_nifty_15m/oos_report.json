@@ -1,0 +1,9 @@
+{
+  "performance": {
+    "n": 0,
+    "verdict": "INSUFFICIENT_SAMPLE",
+    "expectancy_r": 0.0
+  },
+  "n_trades": 0,
+  "warning_banner": "WARNING: OHLCV PROXY MODE -- order-flow values (delta/cvd/absorption/imbalance) are APPROXIMATIONS derived from price+volume shape, NOT true bid/ask aggressor data. See data/source_ohlcv_proxy.py's module docstring for the exact formulas."
+}

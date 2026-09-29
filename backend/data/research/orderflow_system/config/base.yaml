@@ -1,0 +1,187 @@
+# orderflow_system base config -- every threshold used anywhere in strategy/
+# or engine/ MUST appear here as a named parameter. Nothing hard-coded.
+#
+# version: identifies this config for reproducibility (dumped into every
+# result file alongside the git commit hash -- spec B9).
+version: v1
+
+# ---------------------------------------------------------------------------
+# Data layer
+# ---------------------------------------------------------------------------
+data:
+  mode: ohlcv_proxy              # one of: tick | broker_api | ohlcv_proxy
+  db_path: ../../market_history.db   # relative to config_loader.py's directory (orderflow_system/), not this file's
+  tick_db_path: ../../dhan_orderflow_ticks.db
+  symbol: NIFTY
+  kind: INDEX                    # INDEX | FUTURE | OPTION
+  source: DHAN_HISTORICAL
+  timeframe: 5m                  # resample target; base captured tf is 1m
+  start_date: "2021-09-29"
+  end_date: "2026-09-28"
+  oos_holdout_days: 180          # final N days reserved, untouched until the OOS run
+
+# ---------------------------------------------------------------------------
+# OHLCV-proxy formulas (Mode C only -- see data/source_ohlcv_proxy.py).
+# These are DISCLOSED APPROXIMATIONS, not true order flow (spec C4).
+# ---------------------------------------------------------------------------
+proxy:
+  # delta_proxy_i = volume_i * sign(close_i - open_i), 0 if close==open
+  # cvd_proxy = cumulative(delta_proxy), reset every session
+  cvd_session_reset: true
+  # absorption_proxy: bar i is "absorption" if volume_i >= absorption_vol_mult *
+  # rolling_mean(volume, absorption_vol_lookback) AND
+  # (high_i - low_i) <= absorption_range_max_atr_mult * ATR(absorption_atr_lookback)
+  absorption_vol_mult: 2.0
+  absorption_vol_lookback: 20
+  absorption_range_max_atr_mult: 0.5
+  absorption_atr_lookback: 14
+  # imbalance_proxy: |close_i - open_i| / (high_i - low_i) >= imbalance_body_ratio_min
+  # AND volume_i >= imbalance_vol_mult * rolling_mean(volume, imbalance_vol_lookback)
+  imbalance_body_ratio_min: 0.6
+  imbalance_vol_mult: 1.5
+  imbalance_vol_lookback: 20
+
+# ---------------------------------------------------------------------------
+# Shared context / structure
+# ---------------------------------------------------------------------------
+structure:
+  htf_trend_rule: ema_slope          # higher-timeframe trend classifier
+  htf_ema_period: 50
+  htf_slope_lookback: 10             # bars over which the EMA slope sign is read
+  range_lookback: 20                 # bars used to define the pre-breakout range
+  range_max_height_pct: 1.5          # range high/low must span <= this % for a "tight" range
+  trend_bars: 40                     # bars of decline/advance required before a reversal setup arms
+  min_decline_pct: 3.0               # min % move over trend_bars to call it "extended"
+  volume_profile_lookback: 60        # bars used to estimate VAH/VAL/POC (volume-weighted)
+  value_area_pct: 0.70               # standard 70% value-area definition
+
+# ---------------------------------------------------------------------------
+# Setup 1 -- Bullish breakout
+# ---------------------------------------------------------------------------
+setup1_bull_breakout:
+  enabled: true
+  # "_ticks" here means NIFTY index POINTS, not a generic instrument tick --
+  # rescaled from the rulebook's literal 1-2 suggested default after
+  # verifying live (2026-09-29) that real 5-min NIFTY bars average ~22.8
+  # points of range; a 2.0-point retest tolerance is smaller than typical
+  # single-bar noise and made retest_hold structurally unable to ever fire
+  # (0/2217 triggers converted to an entry). Order-of-magnitude fix, not a
+  # profitability-seeking tune -- still a first-pass estimate, a genuine
+  # candidate for the sensitivity sweep (engine/sensitivity.py).
+  breakout_buffer_ticks: 5.0
+  delta_mult: 1.5
+  avg_delta_lookback: 20
+  cvd_new_high_lookback: 20
+  absorption_side_required: sell_absorbed
+  retest_bars: 3
+  retest_tol_ticks: 15.0
+  entry_mode: retest_hold           # retest_hold | breakout_close
+  stop_buffer_ticks: 5.0
+  rr_targets: [2.0, 3.0]            # tp1 = entry + rr[0]*R, tp2 = entry + rr[1]*R
+  use_structure_targets: true
+  fakeout_bars: 3                   # invalidate if price closes back inside range within this many bars
+  vol_mult: 1.2
+  vol_lookback: 20
+
+# ---------------------------------------------------------------------------
+# Setup 2 -- Bearish breakout (mirror of setup 1)
+# ---------------------------------------------------------------------------
+setup2_bear_breakout:
+  enabled: true
+  # see setup1's comment -- same NIFTY-points rescaling, mirrored.
+  breakdown_buffer_ticks: 5.0
+  delta_mult: 1.5
+  avg_delta_lookback: 20
+  cvd_new_low_lookback: 20
+  absorption_side_required: buy_absorbed
+  retest_bars: 3
+  retest_tol_ticks: 15.0
+  entry_mode: retest_hold
+  stop_buffer_ticks: 5.0
+  rr_targets: [2.0, 3.0]
+  use_structure_targets: true
+  fakeout_bars: 3
+  vol_mult: 1.2
+  vol_lookback: 20
+  wick_threshold: 0.4               # bear-trap: lower wick / range ratio that invalidates a breakdown
+
+# ---------------------------------------------------------------------------
+# Setup 3 -- Bullish reversal
+# ---------------------------------------------------------------------------
+setup3_bull_reversal:
+  enabled: true
+  # see setup1's comment on the NIFTY-points rescaling.
+  reclaim_ticks: 5.0
+  absorption_vol_mult: 2.0
+  absorption_range_max_atr_mult: 0.5
+  divergence_lookback: 20
+  lt_delta_flip_bars: 3
+  reclaim_vol_mult: 1.3
+  reclaim_vol_lookback: 20
+  reclaim_max_bars: 10          # give up on a candidate overshoot if no valid reclaim within this many bars
+  reversal_stop_ticks: 10.0
+  rr_targets: [2.0, 3.0]
+
+# ---------------------------------------------------------------------------
+# Setup 4 -- Bearish reversal (mirror of setup 3)
+# ---------------------------------------------------------------------------
+setup4_bear_reversal:
+  enabled: true
+  reclaim_ticks: 5.0
+  absorption_vol_mult: 2.0
+  absorption_range_max_atr_mult: 0.5
+  divergence_lookback: 20
+  lt_delta_flip_bars: 3
+  reclaim_vol_mult: 1.3
+  reclaim_vol_lookback: 20
+  reclaim_max_bars: 10
+  reversal_stop_ticks: 10.0
+  rr_targets: [2.0, 3.0]
+
+# ---------------------------------------------------------------------------
+# Risk engine
+# ---------------------------------------------------------------------------
+risk:
+  account_equity: 1000000.0
+  risk_pct: 0.005                   # 0.5% of equity risked per trade (R)
+  partial_pct: 0.5                  # fraction booked at tp1
+  move_stop_to_breakeven_on_partial: true
+  news_blackout_mins: 15            # skip entries within this many minutes of session open
+  max_concurrent_positions: 3
+  max_daily_loss_r: 3.0             # stop taking new entries after losing this many R in a day
+
+# ---------------------------------------------------------------------------
+# Costs (reuses app.institutional_edge.costs.estimate_index_option_cost's
+# real published-rate formula -- see engine/costs.py)
+# ---------------------------------------------------------------------------
+costs:
+  slippage_points: 0.75
+  lots: 1
+  lot_size: 65                      # NIFTY, VERIFIED per app/instrument_profiles.py
+
+# ---------------------------------------------------------------------------
+# Backtest engine
+# ---------------------------------------------------------------------------
+backtest:
+  engine: event_driven              # official numbers ALWAYS come from this, never the screening pass
+  min_sample_for_verdict: 30
+  seed: 42
+  max_hold_bars: 100                # safety cap on any single trade's duration (bars), all setups
+
+# ---------------------------------------------------------------------------
+# Walk-forward
+# ---------------------------------------------------------------------------
+walkforward:
+  train_days: 252                   # ~1 trading year
+  test_days: 63                     # ~1 trading quarter
+  step_days: 63                     # roll forward by one test window each fold
+  min_windows_positive_of_total: [1, 1]  # [N, M]: require >= N of the last M windows expectancy > 0
+
+# ---------------------------------------------------------------------------
+# Acceptance criteria for adopting a rule change (spec U4) -- checked by
+# engine/walkforward.py's champion-vs-challenger comparison, never by hand.
+# ---------------------------------------------------------------------------
+acceptance:
+  oos_expectancy_drop_max_pct: 25.0  # challenger's OOS expectancy may not fall more than this vs champion
+  max_dd_limit_r: 10.0
+  sensitivity_robustness_min: 0.5    # fraction of perturbed param sets that stay expectancy > 0

@@ -1,0 +1,9 @@
+# v1 -- initial ruleset, straight from the manual rulebook as given, no
+# tuning applied yet. This file only overrides base.yaml where v1 actually
+# differs; loader.py deep-merges this over base.yaml. For v1, that's just
+# the version tag -- every threshold below is exactly the SUGGESTED default
+# from the rulebook, unchanged.
+version: v1
+notes: >
+  Initial version. Thresholds are the rulebook's own suggested defaults,
+  not yet tuned or walk-forward-validated. See CHANGELOG.md.
