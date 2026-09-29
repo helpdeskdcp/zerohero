@@ -15,7 +15,7 @@ import asyncio
 import struct
 
 from app.connectors import dhan_parser, dhan_ws
-from app.engines import orderflow_engine
+from app.engines import orderflow_engine, orderflow_store
 
 
 def _pack_full(security_id=101, ltp=100.5, ltq=25, ltt=1_700_000_000, atp=100.0,
@@ -441,3 +441,82 @@ def test_stacked_imbalance_requires_the_ratio_not_just_a_majority():
         bar.add({"ltp": price, "ltq": 20, "side": "BUY_AGGRESSOR", "classification_method": "QUOTE_RULE"})
         bar.add({"ltp": price, "ltq": 10, "side": "SELL_AGGRESSOR", "classification_method": "QUOTE_RULE"})
     assert bar.stacked_imbalances() == []
+
+
+# ---------------------------------------------------------------------------
+# OrderflowEngine tick persistence (app.engines.orderflow_store.TickStore)
+# ---------------------------------------------------------------------------
+
+def test_ingest_without_a_tick_store_never_buffers_anything():
+    """Default construction (no tick_store) -- existing in-memory-only
+    behavior must be completely unaffected."""
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue())
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    assert eng._pending == [] and eng.n_ticks_persisted == 0
+
+
+def test_ingest_with_a_tick_store_buffers_a_persistable_row(tmp_path):
+    store = orderflow_store.TickStore(str(tmp_path / "ticks.db"))
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store,
+                                           meta_provider=lambda: {1: {"symbol": "NIFTY", "kind": "FUTURE"}})
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    assert len(eng._pending) == 1
+    row = eng._pending[0]
+    assert row["security_id"] == 1 and row["symbol"] == "NIFTY" and row["kind"] == "FUTURE"
+    assert row["side"] == "BUY_AGGRESSOR" and row["classification_method"] == "QUOTE_RULE"
+    assert row["ltp"] == 101.0 and row["cvd"] == 10
+
+
+def test_ingest_buffers_without_a_meta_provider_leaving_symbol_kind_none(tmp_path):
+    store = orderflow_store.TickStore(str(tmp_path / "ticks.db"))
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store)
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    assert eng._pending[0]["symbol"] is None and eng._pending[0]["kind"] is None
+
+
+def test_flush_writes_pending_rows_and_clears_the_buffer(tmp_path):
+    store = orderflow_store.TickStore(str(tmp_path / "ticks.db"))
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store)
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    eng.ingest(_full_packet(security_id=1, ltp=100.0, ltq=5, ltt=2))
+    assert len(eng._pending) == 2
+    asyncio.run(eng._flush())
+    assert eng._pending == [] and eng.n_ticks_persisted == 2
+    assert store.count() == 2
+
+
+def test_flush_is_a_noop_without_a_tick_store():
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue())
+    asyncio.run(eng._flush())  # must not raise
+    assert eng.n_ticks_persisted == 0
+
+
+def test_maybe_flush_triggers_on_the_tick_count_threshold(tmp_path, monkeypatch):
+    store = orderflow_store.TickStore(str(tmp_path / "ticks.db"))
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store)
+    monkeypatch.setattr(orderflow_engine, "_FLUSH_EVERY_TICKS", 2)
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    asyncio.run(eng._maybe_flush())
+    assert len(eng._pending) == 1 and store.count() == 0  # below threshold -- not flushed yet
+    eng.ingest(_full_packet(security_id=1, ltp=100.0, ltq=5, ltt=2))
+    asyncio.run(eng._maybe_flush())
+    assert eng._pending == [] and store.count() == 2  # threshold reached -- flushed
+
+
+def test_status_reports_persisted_and_pending_counts(tmp_path):
+    store = orderflow_store.TickStore(str(tmp_path / "ticks.db"))
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store)
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    s = eng.status()
+    assert s["ticks_pending_flush"] == 1 and s["ticks_persisted"] == 0
+    asyncio.run(eng._flush())
+    assert eng.status()["ticks_persisted"] == 1 and eng.status()["ticks_pending_flush"] == 0
+
+
+def test_flush_survives_a_tick_store_failure_without_losing_status_consistency(tmp_path, monkeypatch):
+    store = orderflow_store.TickStore(str(tmp_path / "ticks.db"))
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store)
+    eng.ingest(_full_packet(security_id=1, ltp=101.0, ltq=10, ltt=1))
+    monkeypatch.setattr(store, "insert_many", lambda rows: (_ for _ in ()).throw(RuntimeError("db locked")))
+    asyncio.run(eng._flush())  # must not raise
+    assert eng.n_ticks_persisted == 0  # failed batch never counted as persisted

@@ -15,12 +15,19 @@ ground truth.
 RESEARCH/OBSERVABILITY ONLY: this module computes bars in memory and exposes
 them via .snapshot()/.status(); it emits no BUY/SELL/order/signal and is not
 wired to app/execution/ (LIVE order path) or any scalp/autoscalp decision.
+Optionally persists every classified tick via app.engines.orderflow_store
+so the real (quote-rule) signal can eventually be backtested -- historical
+OHLCV data has no bid/ask depth, so that backtest is only possible against
+ticks captured going forward (see the [[nifty-tick-rule-cvd-nogo]] research
+memory for what had to be tested instead, and why).
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections import defaultdict
+from datetime import datetime, timezone
 
 from ..connectors import dhan_parser
 
@@ -137,17 +144,37 @@ class SymbolState:
         return tick
 
 
+_FLUSH_EVERY_TICKS = 50
+_FLUSH_EVERY_SEC = 5.0
+
+
 class OrderflowEngine:
     """Consumes app.connectors.dhan_ws's queue. .start()/.stop() mirror the
-    rest of this codebase's background-worker shape."""
+    rest of this codebase's background-worker shape.
 
-    def __init__(self, queue: asyncio.Queue):
+    tick_store (app.engines.orderflow_store.TickStore), when given, gets
+    every classified tick batched (by count or time, whichever first) and
+    flushed via a thread -- persistence must never block the consumer loop.
+    meta_provider, when given, is called once per flush to look up each
+    tracked security_id's {"symbol", "kind"} for the persisted rows (e.g.
+    dhan_ws.DhanOrderflowWorker's own resolved instrument_meta -- avoids
+    keeping a second, potentially-stale copy in the engine itself)."""
+
+    def __init__(self, queue: asyncio.Queue, tick_store=None, meta_provider=None):
         self.queue = queue
         self._symbols: dict[int, SymbolState] = {}
         self._stop = asyncio.Event()
         self._task: asyncio.Task | None = None
         self.n_ticks_classified = 0
         self.n_ticks_unknown = 0
+        self.tick_store = tick_store
+        self._meta_provider = meta_provider or (lambda: {})
+        self._pending: list[dict] = []
+        # NOT 0.0 -- time.time() - 0.0 is always >= _FLUSH_EVERY_SEC (any real
+        # epoch is already huge), which would force an immediate flush on the
+        # very first tick regardless of the count threshold, defeating batching.
+        self._last_flush = time.time()
+        self.n_ticks_persisted = 0
 
     def start(self):
         if self._task and not self._task.done():
@@ -168,11 +195,14 @@ class OrderflowEngine:
             try:
                 packet = await asyncio.wait_for(self.queue.get(), timeout=1)
             except asyncio.TimeoutError:
+                await self._maybe_flush()
                 continue
             try:
                 self.ingest(packet)
             except Exception as e:
                 _log.warning("orderflow_engine: ingest failed: %s: %s", type(e).__name__, e)
+            await self._maybe_flush()
+        await self._flush()  # drain whatever's left on a clean stop
 
     def ingest(self, packet: dict) -> dict | None:
         sid = packet["security_id"]
@@ -183,7 +213,33 @@ class OrderflowEngine:
         self.n_ticks_classified += 1
         if tick["side"] == "UNKNOWN":
             self.n_ticks_unknown += 1
+        if self.tick_store is not None:
+            meta = self._meta_provider().get(sid, {})
+            self._pending.append({
+                "received_ts": datetime.now(timezone.utc).isoformat(),
+                "security_id": sid, "symbol": meta.get("symbol"), "kind": meta.get("kind"),
+                "ltp": tick["ltp"], "ltq": tick["ltq"], "ltt": tick["ltt"],
+                "side": tick["side"], "classification_method": tick["classification_method"],
+                "best_bid": tick["best_bid"], "best_ask": tick["best_ask"], "cvd": tick["cvd"],
+            })
         return tick
+
+    async def _maybe_flush(self):
+        if self.tick_store is None or not self._pending:
+            return
+        if len(self._pending) >= _FLUSH_EVERY_TICKS or (time.time() - self._last_flush) >= _FLUSH_EVERY_SEC:
+            await self._flush()
+
+    async def _flush(self):
+        if self.tick_store is None or not self._pending:
+            return
+        batch, self._pending = self._pending, []
+        self._last_flush = time.time()
+        try:
+            n = await asyncio.to_thread(self.tick_store.insert_many, batch)
+            self.n_ticks_persisted += n
+        except Exception as e:
+            _log.warning("orderflow_engine: tick persistence failed: %s: %s", type(e).__name__, e)
 
     def snapshot(self, security_id: int) -> dict | None:
         state = self._symbols.get(security_id)
@@ -197,4 +253,5 @@ class OrderflowEngine:
 
     def status(self) -> dict:
         return {"symbols_tracked": len(self._symbols), "ticks_classified": self.n_ticks_classified,
-                "ticks_unknown": self.n_ticks_unknown, "queue_depth": self.queue.qsize()}
+                "ticks_unknown": self.n_ticks_unknown, "queue_depth": self.queue.qsize(),
+                "ticks_persisted": self.n_ticks_persisted, "ticks_pending_flush": len(self._pending)}

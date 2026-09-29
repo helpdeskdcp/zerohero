@@ -229,8 +229,11 @@ except Exception as _e:  # never let capture wiring break the app
 try:
     from .connectors.dhan_ws import DhanOrderflowWorker as _DhanOrderflowWorker
     from .engines.orderflow_engine import OrderflowEngine as _OrderflowEngine
+    from .engines.orderflow_store import TickStore as _TickStore
     dhan_orderflow_worker = _DhanOrderflowWorker()
-    dhan_orderflow_engine = _OrderflowEngine(dhan_orderflow_worker.queue)
+    dhan_orderflow_engine = _OrderflowEngine(
+        dhan_orderflow_worker.queue, tick_store=_TickStore(),
+        meta_provider=lambda: dhan_orderflow_worker._instrument_meta)
 except Exception as _e:  # never let orderflow wiring break the app
     dhan_orderflow_worker = None
     dhan_orderflow_engine = None
