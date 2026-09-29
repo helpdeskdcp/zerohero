@@ -59,3 +59,36 @@ Hybrid, liquidity-sweep SMC -- all separately NO-GO on NIFTY/BANKNIFTY).
 
 **Status:** CHAMPION (first version; nothing to compare against yet; not
 "adopted" in any profitability sense -- there is no sample to adopt).
+
+## v2 -- 2026-09-29 (CHALLENGER, REJECTED)
+
+**Change:** widened setup1's confirmed bottleneck only (not a blind global
+loosening, and not `delta_mult` -- v1's own sensitivity sweep already
+proved delta_mult irrelevant, n=2 at every value tested):
+- `setup1_bull_breakout.retest_bars`: 3 -> 6
+- `setup1_bull_breakout.cvd_new_high_lookback`: 20 -> 10
+- `proxy.absorption_vol_mult`: 2.0 -> 1.5 (data-layer, affects all setups)
+
+**Rationale:** v1's funnel analysis found the real bottleneck was
+CVD-new-high and absorption almost never co-occurring even within the
+approach window -- these three parameters directly target that, and only
+that.
+
+**Backtest result:** `reports/run_v2_nifty_5m/`. In-sample: n=2 (unchanged
+from v1 -- same 2 trades). OOS (untouched holdout): n=1 (up from v1's n=0),
+expectancy -1.12R net (a loser). 13 walk-forward folds, 0 positive.
+
+**Acceptance check** (`engine.walkforward.champion_vs_challenger`):
+`adopted=False`. OOS expectancy dropped 100% vs champion (0 -> negative,
+worse than the `oos_expectancy_drop_max_pct=25.0` limit); 0/13 folds
+positive vs the required minimum. **REJECTED** -- v1 remains champion.
+
+**Interpretation:** even a principled widening aimed directly at the
+confirmed bottleneck only surfaced ONE additional trade across 9+ years of
+data (in-sample was completely unaffected), and it lost. This is not
+"the widening was wrong" -- it's further evidence that the rulebook's
+four-condition conjunction is structurally too rare on NIFTY 5-min to ever
+reach a decidable sample within a reasonable parameter range, not a
+threshold-calibration problem.
+
+**Status:** REJECTED. Champion remains v1.

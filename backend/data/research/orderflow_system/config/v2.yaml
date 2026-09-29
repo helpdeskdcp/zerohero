@@ -1,0 +1,37 @@
+# v2 -- CHALLENGER. Widens setup1's confirmed bottleneck, not the parameter
+# that was already proven irrelevant.
+#
+# v1's sensitivity sweep (delta_mult x stop_buffer_ticks, 9-point grid) found
+# n=2 trades at EVERY delta_mult value tested (1.0/1.5/2.0) -- delta_mult was
+# never the constraint. Direct funnel inspection (this session, 2026-09-29)
+# found the real bottleneck: CVD-new-high and absorption, even checked over
+# the retest_bars approach window (v1's own fix), co-occur on almost no
+# bars (raw same-bar overlap was 7/50832; window-widened to a handful more).
+# v2 widens exactly the three parameters that target that specific,
+# confirmed bottleneck -- not a blind global loosening, and NOT delta_mult
+# (already shown not to matter, so touching it again would just be noise):
+#
+#   - setup1.retest_bars: 3 -> 6 (doubles the approach window CVD-new-high
+#     and absorption are allowed to be confirmed within)
+#   - setup1.cvd_new_high_lookback: 20 -> 10 (a shorter lookback makes "new
+#     high" a lower bar to clear, so it co-occurs with absorption more often)
+#   - proxy.absorption_vol_mult: 2.0 -> 1.5 (absorption itself -- a
+#     data-layer proxy shared by all setups -- becomes less rare)
+#
+# Per spec U4, this is a CHALLENGER: it must clear
+# engine.walkforward.champion_vs_challenger's acceptance criteria on its own
+# OOS run before being adopted. A change that only improves in-sample is
+# rejected by that function, not by hand.
+version: v2
+notes: >
+  Widens setup1's confirmed CVD+absorption co-occurrence bottleneck
+  (retest_bars, cvd_new_high_lookback, proxy.absorption_vol_mult) --
+  see this file's header comment for why these three and not others.
+  Champion is v1 (config/v1.yaml). See CHANGELOG.md.
+
+proxy:
+  absorption_vol_mult: 1.5
+
+setup1_bull_breakout:
+  retest_bars: 6
+  cvd_new_high_lookback: 10
