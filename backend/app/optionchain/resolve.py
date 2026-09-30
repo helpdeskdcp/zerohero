@@ -17,14 +17,25 @@ from datetime import datetime, timezone
 
 from .chain import OptionChain
 from .quality import score as _quality
-from .sources import angelone_chain, nse_v3, upstox_open
+from .sources import angelone_chain, dhan_chain, nse_v3, upstox_open
 
-_ORDER = ("angelone_captured", "upstox_open", "nse_v3")
+# dhan_chain is last in the default order deliberately -- verified live
+# 2026-09-30 (real 238-strike NIFTY chain, 100% Greek coverage, real
+# bid/ask), but brand-new: angelone_captured has run continuously for
+# weeks and is the thing that is NOT broken, so it keeps default priority.
+# dhan_chain is a real, equally-capable (arguably richer -- one call gets
+# bid/ask+OI+previous_oi+volume+IV+all 4 Greeks, vs AngelOne's separate
+# quote+greek endpoints) source, reachable today via prefer="dhan_chain"
+# for anyone who wants to compare or explicitly prioritise it, and as a
+# last-resort fallback if every existing source fails. Promoting it ahead
+# of angelone_captured is a real, separate decision -- not made here.
+_ORDER = ("angelone_captured", "upstox_open", "nse_v3", "dhan_chain")
 _FETCH = {
     "angelone_captured": lambda u, e, kw: angelone_chain.fetch(u, e, db_path=kw.get("db_path"),
                                                                at_ts=kw.get("at_ts")),
     "upstox_open": lambda u, e, kw: upstox_open.fetch(u, e, session=kw.get("session")),
     "nse_v3": lambda u, e, kw: nse_v3.fetch(u, e, session=kw.get("session")),
+    "dhan_chain": lambda u, e, kw: dhan_chain.fetch(u, e),
 }
 
 
