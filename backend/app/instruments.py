@@ -32,6 +32,11 @@ _SEED = {
     "MIDCPNIFTY": {"exchange": "NSE", "symboltoken": "99926074", "market": "NSE", "aliases": ["MIDCAPNIFTY", "NIFTYMIDSELECT"]},
     "SENSEX":     {"exchange": "BSE", "symboltoken": "99919000", "market": "BSE", "aliases": []},
     "BANKEX":     {"exchange": "BSE", "symboltoken": "99919012", "market": "BSE", "aliases": []},
+    # Volatility index, not a tradable underlying -- no option chain/futures of
+    # its own captured for it (MCP 3.3: VIX is a regime input, never a
+    # standalone BUY/SELL signal). Token verified against the cached AngelOne
+    # instrument master (data/instrument_master.json): "India VIX"/AMXIDX/NSE.
+    "INDIAVIX":   {"exchange": "NSE", "symboltoken": "99926017", "market": "NSE", "aliases": ["INDIA VIX", "NIFTY VIX"]},
     # MCX commodity FUTURES tokens are expiry-dated — the values below are the
     # front-month contract and MUST be rolled (POST /api/instruments) each expiry.
     # NATURALGAS front month: 25SEP2026 (roll after ~25 Sep 2026 to 27OCT2026 = 570750).
