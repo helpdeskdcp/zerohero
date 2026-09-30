@@ -101,6 +101,49 @@ def test_fetch_returns_none_without_credentials(monkeypatch):
     assert dc.fetch("NIFTY", "06OCT2026") is None
 
 
+def test_fetch_raw_returns_none_without_credentials(monkeypatch):
+    monkeypatch.setattr(dc, "_headers", lambda: None)
+    assert dc.fetch_raw("NIFTY", "06OCT2026") is None
+
+
+def test_fetch_uses_fetch_raw_for_a_single_network_call(monkeypatch):
+    calls = {"n": 0}
+
+    def _fake_raw(u, e, **kw):
+        calls["n"] += 1
+        return _REAL_SHAPED
+
+    monkeypatch.setattr(dc, "fetch_raw", _fake_raw)
+    c = dc.fetch("NIFTY", "06OCT2026")
+    assert c is not None and calls["n"] == 1     # exactly one raw call, not two
+
+
+def test_fetch_raw_response_never_contains_request_auth_headers(monkeypatch):
+    # Sanitization guarantee (MCP 3.3 continuation item 11): fetch_raw()
+    # returns ONLY the response body -- the request's auth headers
+    # (access-token/client-id) are never passed back to any caller, so
+    # anything archived from this function's return value can never leak
+    # a credential, by construction, not by a filter that could miss one.
+    class _FakeResp:
+        status_code = 200
+
+        def json(self):
+            return _REAL_SHAPED
+
+    class _FakeSession:
+        def post(self, url, json, headers, timeout):
+            # capture what fetch_raw sent us, to prove it never returns it
+            self.sent_headers = headers
+            return _FakeResp()
+
+    monkeypatch.setattr(dc, "_headers", lambda: {"access-token": "SECRET_TOKEN", "client-id": "SECRET_CID"})
+    sess = _FakeSession()
+    raw = dc.fetch_raw("NIFTY", "06OCT2026", session=sess)
+    dumped = str(raw)
+    assert "SECRET_TOKEN" not in dumped and "SECRET_CID" not in dumped
+    assert sess.sent_headers == {"access-token": "SECRET_TOKEN", "client-id": "SECRET_CID"}  # sent, never returned
+
+
 def test_to_iso_date_accepts_canonical_and_iso():
     assert dc._to_iso_date("06OCT2026") == "2026-10-06"
     assert dc._to_iso_date("2026-10-06") == "2026-10-06"

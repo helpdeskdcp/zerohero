@@ -147,6 +147,41 @@ def test_write_candles_rejects_hard_bad_row(store):
     assert n == 0 and integ["rejected"] and "HARD:h<l" in integ["rejected"][0]["reason"]
 
 
+# ------------------------------------------------------------------ raw_responses retention (MCP 3.3 continuation item 12)
+def test_rotate_raw_responses_deletes_only_old_rows_never_the_research_tables(store):
+    old_ts = "2000-01-01T00:00:00Z"
+    with store.transaction() as c:
+        old_id = store.put_raw(c, endpoint="v2/optionchain", request={}, http_status=None,
+                               status="OK", payload={"old": True}, server_ts=None, run_id=1)
+        c.execute("UPDATE raw_responses SET received_ts=? WHERE id=?", (old_ts, old_id))
+        new_id = store.put_raw(c, endpoint="v2/optionchain", request={"x": 1}, http_status=None,
+                               status="OK", payload={"new": True}, server_ts=None, run_id=1)
+        # a quote row still referencing the OLD raw_id -- must survive rotation,
+        # only its raw_id back-reference is nulled.
+        row = {"received_ts": N.now_utc_iso(), "exch_ts": None, "snap_key": "k1",
+               "instrument_key": "DHAN:1", "symbol": "NIFTY", "kind": "OPTION", "exchange": "NFO",
+               "token": "1", "expiry": "06OCT2026", "strike": 100.0, "option_type": "CE",
+               "session_date_ist": "2026-09-30", "ltp": 1.0, "source": "DHAN_CHAIN", "raw_id": old_id}
+        store.write_quotes(c, [row], 1, {})
+    assert store.summary()["raw"] == 2
+    n = store.rotate_raw_responses(days_to_keep=14)
+    assert n == 1                                         # only the old one deleted
+    assert store.summary()["raw"] == 1
+    with store._conn() as c:
+        remaining = [r["id"] for r in c.execute("SELECT id FROM raw_responses").fetchall()]
+    assert remaining == [new_id]
+    q = store.get_quotes("NIFTY", kind="OPTION")[0]
+    assert q["ltp"] == 1.0 and q["raw_id"] is None        # research row kept, only provenance nulled
+
+
+def test_rotate_raw_responses_is_a_noop_when_nothing_is_old(store):
+    with store.transaction() as c:
+        store.put_raw(c, endpoint="x", request={}, http_status=None, status="OK",
+                      payload={"k": "v"}, server_ts=None, run_id=1)
+    assert store.rotate_raw_responses(days_to_keep=14) == 0
+    assert store.summary()["raw"] == 1
+
+
 # ------------------------------------------------------------------ full cycle (mocked SDK)
 class _FakeSDK:
     last_auth = {"status": "OK"}
@@ -217,7 +252,13 @@ class _FakeSDK:
 def _worker(store, monkeypatch, sdk):
     monkeypatch.setattr(market_calendar, "status_all",
                         lambda *a, **k: {"segments": {"MCX": "OPEN", "NSE": "CLOSED"}})
-    w = CaptureWorker(sdk_provider=lambda: sdk, store=store)
+    # dhan_auth_checker defaults to True so _capture_dhan_all() (now called
+    # unconditionally from run_once()) never touches the real app.db-backed
+    # Dhan token store in tests that don't care about Dhan at all -- those
+    # tests use a Dhan-unsupported symbol (NATURALGAS) so capture_dhan_chain
+    # is still never actually invoked. Tests exercising Dhan auth failure
+    # override w._dhan_auth_checker explicitly.
+    w = CaptureWorker(sdk_provider=lambda: sdk, store=store, dhan_auth_checker=lambda: True)
     w.cfg = {**w.cfg, "symbols": ["NATURALGAS"], "chain_window": 2, "tfs": ["5m"], "option_candles": False}
     return w
 
@@ -303,37 +344,41 @@ def test_run_once_captures_quotes_greeks_candles(store, monkeypatch):
     assert g["delta"] in (0.6, -0.4) and g["iv"] == 0.43 and g["source"] == "ANGELONE_OPTION_GREEK"
 
 
-# ---------------------------------------------------------------- Dhan parallel capture (MCP 3.3 #5)
+# ---------------------------------------------------------------- Dhan parallel capture (MCP 3.3 #5 + continuation)
+_DHAN_FAKE_OUT = {
+    "quote_rows": [{"received_ts": "2026-09-30T09:00:00Z", "exch_ts": "2026-09-30T09:00:00Z",
+                    "snap_key": "k1", "instrument_key": "DHAN:1",
+                    "symbol": "NIFTY", "kind": "OPTION", "exchange": "NFO", "token": "1",
+                    "expiry": "06OCT2026", "strike": 22750.0, "option_type": "CE",
+                    "session_date_ist": "2026-09-30", "ltp": 166.95, "bid": 166.9, "ask": 167.0,
+                    "oi": 5000.0, "source": "DHAN_CHAIN"}],
+    "greek_rows": [{"received_ts": "2026-09-30T09:00:00Z", "snap_key": "k1", "underlying": "NIFTY",
+                    "expiry": "06OCT2026", "strike": 22750.0, "option_type": "CE",
+                    "session_date_ist": "2026-09-30", "delta": 0.5, "broker_status": "OK",
+                    "source": "DHAN_OPTION_GREEK"}],
+    "spot": 22763.9, "exch_ts": "2026-09-30T09:00:00Z", "raw": {"status": "success", "data": {}},
+}
+
+
 def test_capture_dhan_skips_unsupported_symbol(store, monkeypatch):
     called = {"n": 0}
     monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
     w = _worker(store, monkeypatch, _FakeSDK())   # _worker's symbol is NATURALGAS -- not Dhan-supported
-    with store.transaction() as conn:
-        w._capture_dhan(conn, "NATURALGAS", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, {}, {}, [])
+    w._capture_dhan_all(N.now_utc_iso(), 1, {"raw": 0}, {}, [])
     assert called["n"] == 0
 
 
 def test_capture_dhan_writes_rows_for_a_supported_symbol(store, monkeypatch):
-    fake_out = {
-        "quote_rows": [{"received_ts": N.now_utc_iso(), "snap_key": "k1", "instrument_key": "DHAN:1",
-                        "symbol": "NIFTY", "kind": "OPTION", "exchange": "NFO", "token": "1",
-                        "expiry": "06OCT2026", "strike": 22750.0, "option_type": "CE",
-                        "session_date_ist": "2026-09-30", "ltp": 166.95, "bid": 166.9, "ask": 167.0,
-                        "oi": 5000.0, "source": "DHAN_CHAIN"}],
-        "greek_rows": [{"received_ts": N.now_utc_iso(), "snap_key": "k1", "underlying": "NIFTY",
-                        "expiry": "06OCT2026", "strike": 22750.0, "option_type": "CE",
-                        "session_date_ist": "2026-09-30", "delta": 0.5, "broker_status": "OK",
-                        "source": "DHAN_OPTION_GREEK"}],
-        "spot": 22763.9, "exch_ts": N.now_utc_iso(),
-    }
-    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: fake_out)
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: _DHAN_FAKE_OUT)
     w = _worker(store, monkeypatch, _FakeSDK())
-    counts, integ, errors = {}, {"issues": [], "rejected": [], "flagged": 0}, []
-    with store.transaction() as conn:
-        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, counts, integ, errors)
-    assert counts["dhan_quotes"] == 1 and counts["dhan_greeks"] == 1
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    counts, integ, errors = {"raw": 0}, {"issues": [], "rejected": [], "flagged": 0}, []
+    w._capture_dhan_all(N.now_utc_iso(), 1, counts, integ, errors)
+    assert counts["dhan_quotes"] == 1 and counts["dhan_greeks"] == 1 and counts["raw"] == 1
     row = store.get_quotes("NIFTY", kind="OPTION")[0]
     assert row["source"] == "DHAN_CHAIN" and row["ltp"] == 166.95
+    assert row["raw_id"]                             # archived (item 10)
 
 
 def test_capture_dhan_failure_is_soft_never_raises(store, monkeypatch):
@@ -341,18 +386,21 @@ def test_capture_dhan_failure_is_soft_never_raises(store, monkeypatch):
         raise RuntimeError("Dhan session expired")
     monkeypatch.setattr(WK, "capture_dhan_chain", _boom)
     w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
     errors = []
-    with store.transaction() as conn:
-        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, {}, {}, errors)
+    w._capture_dhan_all(N.now_utc_iso(), 1, {"raw": 0}, {}, errors)
     assert errors and errors[0]["stage"] == "dhan_chain"
+    assert errors[0]["status"] == "RuntimeError"
 
 
 def test_capture_dhan_none_result_counts_as_unavailable_not_error(store, monkeypatch):
     monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: None)
     w = _worker(store, monkeypatch, _FakeSDK())
-    counts, errors = {}, []
-    with store.transaction() as conn:
-        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, counts, {}, errors)
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    counts, errors = {"raw": 0}, []
+    w._capture_dhan_all(N.now_utc_iso(), 1, counts, {}, errors)
     assert counts["dhan_unavailable"] == 1 and errors == []
 
 
@@ -360,9 +408,8 @@ def test_capture_dhan_respects_the_kill_switch(store, monkeypatch):
     called = {"n": 0}
     monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
     w = _worker(store, monkeypatch, _FakeSDK())
-    w.cfg = {**w.cfg, "dhan_capture": False}
-    with store.transaction() as conn:
-        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, {}, {}, [])
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"], "dhan_capture": False}
+    w._capture_dhan_all(N.now_utc_iso(), 1, {"raw": 0}, {}, [])
     assert called["n"] == 0
 
 
@@ -374,6 +421,118 @@ def test_capture_dhan_never_runs_via_run_once_for_natural_gas_symbol(store, monk
     w = _worker(store, monkeypatch, _FakeSDK())
     w.run_once("POLL_ONCE", do_candles=False)
     assert called["n"] == 0
+
+
+# ---------------------------------- MCP 3.3 continuation: Dhan/AngelOne auth independence
+def test_dhan_capture_authentication_failure_is_sanitized_soft_skip(store, monkeypatch):
+    """Dhan auth failure must never surface a token/session value -- only
+    that a session is unavailable."""
+    called = {"n": 0}
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    w._dhan_auth_checker = lambda: False
+    errors = []
+    w._capture_dhan_all(N.now_utc_iso(), 1, {"raw": 0}, {}, errors)
+    assert called["n"] == 0                          # never even attempts the chain fetch
+    assert errors == [{"stage": "dhan_auth", "status": "AUTH_UNAVAILABLE", "message": "no valid Dhan session"}]
+
+
+def test_dhan_capture_runs_when_angelone_auth_is_unavailable(store, monkeypatch):
+    """Core fix: Dhan capture must NOT require AngelOne to be logged in.
+    AngelOne down (auth=False) must not block Dhan from capturing at all."""
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: _DHAN_FAKE_OUT)
+    w = _worker(store, monkeypatch, _FakeSDK(auth=False))
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    r = w.run_once("POLL_ONCE", do_candles=False)
+    assert r["auth_ok"] is False                     # AngelOne genuinely unavailable
+    assert r["dhan_quotes"] == 1 and r["dhan_greeks"] == 1     # Dhan captured anyway
+    row = store.get_quotes("NIFTY", kind="OPTION")[0]
+    assert row["source"] == "DHAN_CHAIN"
+
+
+def test_dhan_capture_also_runs_when_angelone_is_available(store, monkeypatch):
+    """Dhan and AngelOne captures coexist in the same cycle -- Dhan being
+    wired independently must never disable or replace the AngelOne path."""
+    import app.instruments as instruments_mod
+    monkeypatch.setattr(instruments_mod, "resolve", lambda sym: None)
+    monkeypatch.setattr(instruments_mod, "resolve_index_future", lambda sym, expiry="AUTO": {"status": "NOT_FOUND"})
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: _DHAN_FAKE_OUT)
+    w = _worker(store, monkeypatch, _FakeSDK(auth=True))
+    w.cfg = {**w.cfg, "symbols": ["NATURALGAS", "NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    r = w.run_once("POLL_ONCE", do_candles=False)
+    assert r["auth_ok"] is True
+    assert r["quotes"] > 0                            # AngelOne (NATURALGAS) still captured
+    assert r["dhan_quotes"] == 1                      # Dhan (NIFTY) captured too, same cycle
+    assert store.get_quotes("NATURALGAS", kind="OPTION")
+    assert store.get_quotes("NIFTY", kind="OPTION")[0]["source"] == "DHAN_CHAIN"
+
+
+def test_dhan_capture_duplicate_snapshot_is_a_noop(store, monkeypatch):
+    """Re-capturing the same Dhan snapshot (same snap_key) must not create a
+    second row -- the same UNIQUE(token, snap_key) append-only guarantee
+    AngelOne's own rows already rely on."""
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: _DHAN_FAKE_OUT)
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    counts1, counts2 = {"raw": 0}, {"raw": 0}
+    w._capture_dhan_all(N.now_utc_iso(), 1, counts1, {"issues": [], "rejected": [], "flagged": 0}, [])
+    w._capture_dhan_all(N.now_utc_iso(), 2, counts2, {"issues": [], "rejected": [], "flagged": 0}, [])
+    assert counts1["dhan_quotes"] == 1 and counts2["dhan_quotes"] == 0   # second write is ignored
+    assert len(store.get_quotes("NIFTY", kind="OPTION")) == 1
+
+
+def test_dhan_capture_missing_greeks_and_oi_are_preserved_as_none(store, monkeypatch):
+    """A leg with no Greeks/OI (e.g. Dhan's real disclosed PE gap) must
+    write a quote row with oi=None, and contribute nothing to greek_rows --
+    never a fabricated 0."""
+    out = {
+        "quote_rows": [{"received_ts": "2026-09-30T09:00:00Z", "snap_key": "k2", "instrument_key": "DHAN:2",
+                        "symbol": "NIFTY", "kind": "OPTION", "exchange": "NFO", "token": "2",
+                        "expiry": "06OCT2026", "strike": 22750.0, "option_type": "PE",
+                        "session_date_ist": "2026-09-30", "ltp": 148.3, "oi": None, "source": "DHAN_CHAIN"}],
+        "greek_rows": [], "spot": 22763.9, "exch_ts": "2026-09-30T09:00:00Z",
+        "raw": {"status": "success", "data": {}},
+    }
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: out)
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "symbols": ["NIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    counts = {"raw": 0}
+    w._capture_dhan_all(N.now_utc_iso(), 1, counts, {"issues": [], "rejected": [], "flagged": 0}, [])
+    assert counts["dhan_quotes"] == 1 and counts.get("dhan_greeks", 0) == 0
+    row = store.get_quotes("NIFTY", kind="OPTION")[0]
+    assert row["oi"] is None                          # never fabricated as 0
+
+
+def test_dhan_capture_timestamp_mismatch_between_symbols_is_independent(store, monkeypatch):
+    """Each symbol's Dhan capture stamps its own exch_ts -- one stale/lagging
+    symbol must not affect another symbol's timestamp in the same cycle."""
+    outs = {
+        "NIFTY": {**_DHAN_FAKE_OUT, "exch_ts": "2026-09-30T09:00:00Z"},
+        "BANKNIFTY": {
+            "quote_rows": [{"received_ts": "2026-09-30T08:45:00Z", "exch_ts": "2026-09-30T08:45:00Z", "snap_key": "k3",
+                            "instrument_key": "DHAN:3",
+                            "symbol": "BANKNIFTY", "kind": "OPTION", "exchange": "NFO", "token": "3",
+                            "expiry": "06OCT2026", "strike": 51000.0, "option_type": "CE",
+                            "session_date_ist": "2026-09-30", "ltp": 200.0, "oi": 100.0, "source": "DHAN_CHAIN"}],
+            "greek_rows": [], "spot": 51010.0, "exch_ts": "2026-09-30T08:45:00Z",   # 15 min behind NIFTY
+            "raw": {"status": "success", "data": {}},
+        },
+    }
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: outs[sym])
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "symbols": ["NIFTY", "BANKNIFTY"]}
+    monkeypatch.setattr(w, "_dhan_nearest_expiry", lambda sym: "06OCT2026")
+    counts = {"raw": 0}
+    w._capture_dhan_all(N.now_utc_iso(), 1, counts, {"issues": [], "rejected": [], "flagged": 0}, [])
+    assert counts["dhan_quotes"] == 2
+    nifty_row = store.get_quotes("NIFTY", kind="OPTION")[0]
+    bn_row = store.get_quotes("BANKNIFTY", kind="OPTION")[0]
+    assert nifty_row["exch_ts"] != bn_row["exch_ts"]  # independent, no cross-symbol contamination
 
 
 def test_run_once_is_idempotent_second_cycle_adds_nothing(store, monkeypatch):

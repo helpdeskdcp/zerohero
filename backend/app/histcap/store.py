@@ -14,7 +14,7 @@ import json
 import os
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from . import schema
 from .integrity import candle_check, greek_check, quote_check
@@ -149,6 +149,26 @@ class HistStore:
 
     def transaction(self):
         return _Txn(self)
+
+    # -------------------------------------------------- raw archive retention
+    def rotate_raw_responses(self, *, days_to_keep: int = 14) -> int:
+        """Deletes raw_responses rows older than `days_to_keep` -- the
+        verbatim-payload archive only (a reproducibility/debugging aid,
+        bounded by design). NEVER touches market_candles/quote_snapshots/
+        option_greeks, the actual append-only research dataset, which is
+        meant to accumulate indefinitely. Any now-dangling raw_id
+        back-reference in those tables is nulled out first (foreign_keys=ON
+        would otherwise reject the delete) -- this only forgets *which*
+        archived response produced an old row, never the parsed row itself.
+        Returns the number of raw_responses rows deleted."""
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).isoformat().replace("+00:00", "Z")
+        with self._lock, self._conn() as c:
+            for tbl in ("market_candles", "quote_snapshots", "option_greeks"):
+                c.execute(f"UPDATE {tbl} SET raw_id=NULL WHERE raw_id IN "
+                          f"(SELECT id FROM raw_responses WHERE received_ts < ?)", (cutoff,))
+            cur = c.execute("DELETE FROM raw_responses WHERE received_ts < ?", (cutoff,))
+            c.commit()
+            return cur.rowcount or 0
 
     # -------------------------------------------------- look-ahead-safe reads
     def get_candles(self, symbol: str, tf: str, *, as_of: str | None = None,

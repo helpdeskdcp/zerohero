@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from .. import db, instruments, market_calendar
+from ..optionchain.sources import dhan_chain as _dhan
 from ..optionchain.sources.dhan_chain import SUPPORTED as _DHAN_SUPPORTED
 from . import normalize as N
 from .dhan_capture import capture_dhan_chain
@@ -89,21 +90,34 @@ def _cfg() -> dict:
         # DHAN_ORDERFLOW_ENABLED's own convention, in case the parallel
         # load or an OAuth lapse needs it off quickly without a code change.
         "dhan_capture": _env("CHANAKYA_HIST_DHAN_ENABLED", "1") in ("1", "true", "yes"),
+        # MCP 3.3 continuation -- raw_responses archive retention (item 12).
+        # Bounded so the verbatim-payload table doesn't grow unbounded; the
+        # parsed research tables (market_candles/quote_snapshots/
+        # option_greeks) are never touched by this and keep accumulating.
+        "raw_retention_days": int(_env("CHANAKYA_HIST_RAW_RETENTION_DAYS", "14")),
     }
 
 
 class CaptureWorker:
-    def __init__(self, sdk_provider=None, store: HistStore | None = None):
+    def __init__(self, sdk_provider=None, store: HistStore | None = None, dhan_auth_checker=None):
         # sdk_provider() -> a broker.angelone.AngelOneClient (or None). Default:
         # the shared read-only market SDK (same JWT as the rest of the app; NO
         # second login, NO websocket).
         self._sdk_provider = sdk_provider or self._default_sdk
+        # dhan_auth_checker() -> bool, whether Dhan has a currently-stored
+        # server-side session. Same injectable-dependency pattern as
+        # sdk_provider above, specifically so Dhan's capture pass (see
+        # _capture_dhan_all()) is independently testable without touching
+        # the real app.db-backed token store, and so it never depends on
+        # AngelOne's own sdk/auth_ok at all.
+        self._dhan_auth_checker = dhan_auth_checker or self._default_dhan_auth_check
         self.store = store or hist_store()
         self.cfg = _cfg()
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._ref_cache: dict = {}      # sym -> (expires_epoch, refs)
         self._oi_base_cache: dict = {}  # sym -> (expires_epoch, {(expiry,strike,ot): prev-session oi})
+        self._dhan_expiry_cache: dict = {}  # sym -> (expires_epoch, nearest ISO expiry) -- Dhan's own, independent of AngelOne refs
         self.last_run: dict | None = None
         self.last_error: str | None = None
         self.started_at: str | None = None
@@ -117,6 +131,18 @@ class CaptureWorker:
             return _market_sdk(require_auth=False)
         except Exception:
             return None
+
+    @staticmethod
+    def _default_dhan_auth_check() -> bool:
+        """Whether Dhan has a currently-stored server-side session -- reads
+        the same app.db-backed token store dhan_chain._headers() itself
+        reads for the real API call. Deliberately independent of
+        AngelOne's own sdk/auth_ok (see _capture_dhan_all())."""
+        try:
+            from .. import dhan_client
+            return bool(dhan_client.get_access_token())
+        except Exception:
+            return False
 
     def _win_for(self, sym: str) -> int:
         """strikes each side of ATM for this symbol (per-symbol override -> global)."""
@@ -149,6 +175,7 @@ class CaptureWorker:
     async def _loop(self):
         last_candle = 0.0
         last_hb = 0.0
+        last_rotate = 0.0
         while not self._stop.is_set():
             try:
                 self.is_leader = bool(await asyncio.to_thread(
@@ -156,6 +183,9 @@ class CaptureWorker:
                 if not self.is_leader:
                     await self._sleep(15)
                     continue
+                if (time.time() - last_rotate) >= 86400:
+                    await asyncio.to_thread(self._rotate_raw)
+                    last_rotate = time.time()
                 state = market_calendar.status_all()
                 open_now = any(v == "OPEN" for v in (state.get("segments") or {}).values())
                 if open_now:
@@ -185,6 +215,18 @@ class CaptureWorker:
         rid = self.store.start_run("HEARTBEAT", state.get("segments", {}), auth_ok=self._auth_ok())
         self.store.finish_run(rid, notes="markets closed")
 
+    def _rotate_raw(self):
+        """Daily raw_responses archive rotation (MCP 3.3 continuation item
+        12) -- runs regardless of market/auth state, independent of the
+        open/closed heartbeat cadence above. Bounded to the auxiliary
+        verbatim-payload table only; see HistStore.rotate_raw_responses()."""
+        try:
+            n = self.store.rotate_raw_responses(days_to_keep=self.cfg.get("raw_retention_days", 14))
+            if n:
+                print(f"[histcap] rotated {n} raw_responses rows past the retention window")
+        except Exception as e:
+            self.last_error = f"rotate_raw: {type(e).__name__}: {e}"
+
     def _auth_ok(self) -> bool:
         sdk = self._sdk_provider()
         try:
@@ -192,7 +234,21 @@ class CaptureWorker:
         except Exception:
             return False
 
+    def _safe_dhan_auth_ok(self) -> bool:
+        try:
+            return bool(self._dhan_auth_checker())
+        except Exception:
+            return False
+
     def run_once(self, mode: str = "POLL_ONCE", do_candles: bool = True) -> dict:
+        # MCP 3.3 continuation -- Dhan capture must NOT require AngelOne to
+        # be logged in (previously _capture_dhan() lived inside the
+        # AngelOne-gated loop below and used refs["opt_expiry"], so it never
+        # ran at all on an AngelOne auth failure). AngelOne's own auth check
+        # now only gates the AngelOne capture path; _capture_dhan_all() runs
+        # unconditionally afterward, gated solely by Dhan's own session via
+        # self._dhan_auth_checker(). AngelOne remains the unchanged fallback
+        # -- its capture logic below is untouched.
         state = market_calendar.status_all().get("segments", {})
         sdk = self._sdk_provider()
         auth_ok = self._auth_ok()
@@ -203,35 +259,34 @@ class CaptureWorker:
         n_instr = 0
 
         if not (sdk and auth_ok):
-            self.store.finish_run(rid, counts=counts, integrity=integ,
-                                  errors=[{"stage": "auth", "status": "AUTH_UNAVAILABLE",
-                                           "message": str(getattr(sdk, "last_auth", {}) or {})}],
-                                  notes="ANGEL_* credentials unavailable -> no market rows written")
-            self.last_run = {"run_id": rid, "auth_ok": False, **counts}
-            return self.last_run
+            errors.append({"stage": "auth", "status": "AUTH_UNAVAILABLE",
+                           "message": str(getattr(sdk, "last_auth", {}) or {})})
+        else:
+            recv = N.now_utc_iso()
+            for sym in self.cfg["symbols"]:
+                try:
+                    refs = self._refs(sdk, sym)
+                    if not refs:
+                        errors.append({"symbol": sym, "stage": "resolve", "status": "NO_REFS"})
+                        continue
+                    n_instr += len(refs["tokens_meta"])
+                    with self.store.transaction() as conn:
+                        self._capture_quotes(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
+                        self._capture_greeks(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
+                        if do_candles:
+                            self._capture_candles(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
+                except Exception as e:
+                    errors.append({"symbol": sym, "stage": "cycle", "status": type(e).__name__,
+                                   "message": str(e)[:200]})
+                    traceback.print_exc()
 
-        recv = N.now_utc_iso()
-        for sym in self.cfg["symbols"]:
-            try:
-                refs = self._refs(sdk, sym)
-                if not refs:
-                    errors.append({"symbol": sym, "stage": "resolve", "status": "NO_REFS"})
-                    continue
-                n_instr += len(refs["tokens_meta"])
-                with self.store.transaction() as conn:
-                    self._capture_quotes(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
-                    self._capture_greeks(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
-                    if do_candles:
-                        self._capture_candles(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
-                    self._capture_dhan(conn, sym, refs, recv, rid, counts, integ, errors)
-            except Exception as e:
-                errors.append({"symbol": sym, "stage": "cycle", "status": type(e).__name__,
-                               "message": str(e)[:200]})
-                traceback.print_exc()
+        self._capture_dhan_all(N.now_utc_iso(), rid, counts, integ, errors)
 
+        notes = (f"symbols={','.join(self.cfg['symbols'])}" if (sdk and auth_ok) else
+                 "ANGEL_* credentials unavailable -> no AngelOne market rows written")
         self.store.finish_run(rid, instruments_n=n_instr, counts=counts, integrity=integ,
-                              errors=errors, notes=f"symbols={','.join(self.cfg['symbols'])}")
-        self.last_run = {"run_id": rid, "auth_ok": True, "instruments": n_instr, **counts,
+                              errors=errors, notes=notes)
+        self.last_run = {"run_id": rid, "auth_ok": bool(sdk and auth_ok), "instruments": n_instr, **counts,
                          "flagged": integ.get("flagged", 0), "rejected": len(integ.get("rejected", [])),
                          "errors": len(errors)}
 
@@ -459,31 +514,93 @@ class CaptureWorker:
                     r["raw_id"] = raw_id
                 counts["candles"] += self.store.write_candles(conn, rows, rid, integ)
 
-    def _capture_dhan(self, conn, sym, refs, recv, rid, counts, integ, errors):
-        """Parallel Dhan chain capture (MCP 3.3 priority #5) -- runs
-        alongside, never instead of, the AngelOne capture above. Fully
-        isolated: any Dhan failure (expired OAuth session, network error,
-        unsupported symbol) is a soft per-symbol skip here, exactly like
+    def _dhan_nearest_expiry(self, sym: str) -> str | None:
+        """Dhan's own nearest live expiry (dhan_chain.expiry_list), fully
+        independent of AngelOne's refs["opt_expiry"] -- this is the crux of
+        MCP 3.3 continuation's fix: Dhan capture must resolve its own
+        expiry, not borrow AngelOne's. Returned in this codebase's canonical
+        'DDMMMYYYY' form (dhan_chain's own _to_canonical_expiry) -- NOT
+        Dhan's raw ISO 'YYYY-MM-DD' -- so quote_snapshots/option_greeks'
+        `expiry` column stays one consistent format regardless of source,
+        exactly like AngelOne's refs["opt_expiry"] already is. Cached ~1h
+        (an options expiry doesn't change intraday). None if Dhan has
+        nothing (expired session, network failure, unsupported symbol)."""
+        hit = self._dhan_expiry_cache.get(sym)
+        if hit and time.time() < hit[0]:
+            return hit[1]
+        dates = _dhan.expiry_list(sym)
+        if not dates:
+            return None
+        today = N.ist_date(N.now_utc_iso())
+        future = sorted(d for d in dates if d >= today)
+        iso = future[0] if future else sorted(dates)[-1]
+        chosen = _dhan._to_canonical_expiry(iso)
+        self._dhan_expiry_cache[sym] = (time.time() + 3600, chosen)
+        return chosen
+
+    def _capture_dhan_all(self, recv, rid, counts, integ, errors):
+        """Independent Dhan chain capture (MCP 3.3 continuation) -- runs
+        alongside, never instead of, the AngelOne capture in run_once()
+        above, and regardless of AngelOne's own sdk/auth_ok: gated solely by
+        Dhan's own session (self._dhan_auth_checker()) and its own expiry
+        resolution (_dhan_nearest_expiry(), never refs["opt_expiry"]). Any
+        Dhan failure (expired OAuth session, network error, unsupported
+        symbol, malformed response) is a soft per-symbol skip, exactly like
         every AngelOne capture step already treats its own failures --
-        never blocks, slows, or affects the rest of this cycle."""
+        never blocks, slows, or affects anything else in this cycle."""
         if not self.cfg.get("dhan_capture", True):
             return
-        expiry = refs.get("opt_expiry")
-        if not expiry or sym.upper() not in _DHAN_SUPPORTED:
-            return
         try:
-            out = capture_dhan_chain(sym, expiry, received_ts=recv)
-        except Exception as e:
-            errors.append({"symbol": sym, "stage": "dhan_chain", "status": type(e).__name__,
-                           "message": str(e)[:160]})
+            dhan_ok = bool(self._dhan_auth_checker())
+        except Exception:
+            dhan_ok = False
+        if not dhan_ok:
+            # sanitized: never the token/session value itself, only its absence.
+            errors.append({"stage": "dhan_auth", "status": "AUTH_UNAVAILABLE",
+                           "message": "no valid Dhan session"})
             return
-        if out is None:
-            counts["dhan_unavailable"] = counts.get("dhan_unavailable", 0) + 1
-            return
-        counts["dhan_quotes"] = counts.get("dhan_quotes", 0) + \
-            self.store.write_quotes(conn, out["quote_rows"], rid, integ)
-        counts["dhan_greeks"] = counts.get("dhan_greeks", 0) + \
-            self.store.write_greeks(conn, out["greek_rows"], rid, integ)
+
+        for sym in self.cfg["symbols"]:
+            su = sym.upper()
+            if su not in _DHAN_SUPPORTED:
+                counts["dhan_unsupported"] = counts.get("dhan_unsupported", 0) + 1
+                continue
+            try:
+                expiry = self._dhan_nearest_expiry(su)
+                if not expiry:
+                    errors.append({"symbol": sym, "stage": "dhan_expiry", "status": "NO_EXPIRY"})
+                    continue
+                out = capture_dhan_chain(su, expiry, received_ts=recv)
+            except Exception as e:
+                errors.append({"symbol": sym, "stage": "dhan_chain", "status": type(e).__name__,
+                               "message": str(e)[:160]})
+                continue
+            if out is None:
+                counts["dhan_unavailable"] = counts.get("dhan_unavailable", 0) + 1
+                continue
+            try:
+                with self.store.transaction() as conn:
+                    # archive the exact raw response (MCP 3.3 continuation
+                    # item 10) -- request params only (no auth headers, see
+                    # dhan_chain.fetch_raw()'s own docstring for why the
+                    # response body structurally can't carry a credential).
+                    raw_id = self.store.put_raw(
+                        conn, endpoint="v2/optionchain",
+                        request={"UnderlyingScrip": su, "UnderlyingSeg": "IDX_I", "Expiry": expiry},
+                        http_status=None, status="OK", payload=out["raw"],
+                        server_ts=out.get("exch_ts"), run_id=rid)
+                    counts["raw"] += 1
+                    for r in out["quote_rows"]:
+                        r["raw_id"] = raw_id
+                    for r in out["greek_rows"]:
+                        r["raw_id"] = raw_id
+                    counts["dhan_quotes"] = counts.get("dhan_quotes", 0) + \
+                        self.store.write_quotes(conn, out["quote_rows"], rid, integ)
+                    counts["dhan_greeks"] = counts.get("dhan_greeks", 0) + \
+                        self.store.write_greeks(conn, out["greek_rows"], rid, integ)
+            except Exception as e:
+                errors.append({"symbol": sym, "stage": "dhan_write", "status": type(e).__name__,
+                               "message": str(e)[:160]})
 
     # ---------------------------------------------------------------- status
     def status(self) -> dict:
@@ -493,7 +610,8 @@ class CaptureWorker:
             "started_at": self.started_at, "last_error": self.last_error,
             "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "chain_window_by_sym",
                                                 "tfs", "quote_sec", "candle_sec", "candle_delay_sec",
-                                                "option_candles", "dhan_capture")},
+                                                "option_candles", "dhan_capture", "raw_retention_days")},
+            "dhan_auth_ok": self._safe_dhan_auth_ok(),
             "last_run": self.last_run, "store": self.store.summary(),
         }
 

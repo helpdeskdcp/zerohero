@@ -31,14 +31,23 @@ from .normalize import ist_date, now_utc_iso, snap_key
 def capture_dhan_chain(sym: str, expiry: str, *, received_ts: str | None = None) -> dict | None:
     """Fetch Dhan's CURRENT live chain for sym/expiry and return
     {"quote_rows": [...], "greek_rows": [...], "spot": float|None,
-    "exch_ts": str} in the exact shapes HistStore.write_quotes/write_greeks
-    expect -- or None if Dhan has nothing right now (expired OAuth session,
-    network failure, unsupported symbol/expiry). Never raises; the caller
-    treats None exactly like any other soft per-symbol capture miss, same
-    discipline as every AngelOne capture step in worker.py."""
+    "exch_ts": str, "raw": dict|None} in the exact shapes HistStore.
+    write_quotes/write_greeks expect -- or None if Dhan has nothing right
+    now (expired OAuth session, network failure, unsupported symbol/
+    expiry). Never raises; the caller treats None exactly like any other
+    soft per-symbol capture miss, same discipline as every AngelOne
+    capture step in worker.py.
+
+    "raw" is the exact response body from ONE network call
+    (dhan_chain.fetch_raw(), then parsed locally -- never a second HTTP
+    request just to get the raw copy) -- market data only, never contains
+    the request's auth headers (see fetch_raw()'s own docstring for why
+    that's a structural guarantee, not a filter). None when Dhan returned
+    nothing (nothing to archive)."""
     recv = received_ts or now_utc_iso()
     try:
-        chain = _dhan.fetch(sym, expiry)
+        raw = _dhan.fetch_raw(sym, expiry)
+        chain = _dhan.parse(raw, sym, expiry) if raw is not None else None
     except Exception:
         return None
     if chain is None or not chain.rows:
@@ -89,4 +98,5 @@ def capture_dhan_chain(sym: str, expiry: str, *, received_ts: str | None = None)
                     "broker_status": "OK", "source": "DHAN_OPTION_GREEK",
                 })
 
-    return {"quote_rows": quote_rows, "greek_rows": greek_rows, "spot": chain.spot, "exch_ts": exch_ts}
+    return {"quote_rows": quote_rows, "greek_rows": greek_rows, "spot": chain.spot,
+           "exch_ts": exch_ts, "raw": raw}

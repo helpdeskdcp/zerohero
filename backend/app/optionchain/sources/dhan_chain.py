@@ -175,11 +175,17 @@ def parse(obj: dict, underlying: str, expiry: str, *, ts: str | None = None) -> 
     return ch.sort().compute_atm().with_expiry_ctx()
 
 
-def fetch(underlying: str, expiry: str, *, timeout: float = 15.0, session=None) -> OptionChain | None:
-    """`expiry`: this codebase's canonical 'DDMMMYYYY' (e.g. '06OCT2026') or
-    an already-ISO date. None on any auth/network/shape failure -- a
-    source must never fabricate a chain, matching every other source
-    here (angelone_chain/upstox_open/nse_v3)."""
+def fetch_raw(underlying: str, expiry: str, *, timeout: float = 15.0, session=None) -> dict | None:
+    """The exact JSON-decoded response body from POST /v2/optionchain, with
+    NO parsing/normalization -- None on any auth/network/shape failure.
+    Exists so capture archival (app.histcap.dhan_capture) can store the
+    real raw response for reproducibility (MCP 3.3 continuation item 10)
+    from the SAME network call fetch() below uses, never a second one.
+    Contains only market data (spot/strikes/oi/greeks/etc) -- Dhan's
+    option-chain response never echoes back the request's auth headers or
+    any credential, so this body is inherently safe to archive as-is; the
+    request's own headers (access-token/client-id) are never passed to
+    the caller and never archived by anything in this codebase."""
     u = str(underlying or "").upper()
     if u not in _UNDERLYING_SCRIP:
         return None
@@ -196,6 +202,21 @@ def fetch(underlying: str, expiry: str, *, timeout: float = 15.0, session=None) 
                   headers=headers, timeout=timeout)
         if r.status_code != 200:
             return None
-        return parse(r.json(), u, _to_canonical_expiry(iso))
+        return r.json()
     except Exception:
         return None
+
+
+def fetch(underlying: str, expiry: str, *, timeout: float = 15.0, session=None) -> OptionChain | None:
+    """`expiry`: this codebase's canonical 'DDMMMYYYY' (e.g. '06OCT2026') or
+    an already-ISO date. None on any auth/network/shape failure -- a
+    source must never fabricate a chain, matching every other source
+    here (angelone_chain/upstox_open/nse_v3)."""
+    u = str(underlying or "").upper()
+    iso = _to_iso_date(expiry)
+    if not iso:
+        return None
+    raw = fetch_raw(underlying, expiry, timeout=timeout, session=session)
+    if raw is None:
+        return None
+    return parse(raw, u, _to_canonical_expiry(iso))
