@@ -156,8 +156,11 @@ def test_rotate_raw_responses_deletes_only_old_rows_never_the_research_tables(st
         c.execute("UPDATE raw_responses SET received_ts=? WHERE id=?", (old_ts, old_id))
         new_id = store.put_raw(c, endpoint="v2/optionchain", request={"x": 1}, http_status=None,
                                status="OK", payload={"new": True}, server_ts=None, run_id=1)
-        # a quote row still referencing the OLD raw_id -- must survive rotation,
-        # only its raw_id back-reference is nulled.
+        # a quote row still referencing the OLD raw_id must survive rotation
+        # unmodified -- rotation never touches the research tables (a
+        # dangling raw_id is harmless: nothing here joins against
+        # raw_responses, see rotate_raw_responses()'s own docstring for why
+        # nulling it out is deliberately NOT done).
         row = {"received_ts": N.now_utc_iso(), "exch_ts": None, "snap_key": "k1",
                "instrument_key": "DHAN:1", "symbol": "NIFTY", "kind": "OPTION", "exchange": "NFO",
                "token": "1", "expiry": "06OCT2026", "strike": 100.0, "option_type": "CE",
@@ -171,7 +174,7 @@ def test_rotate_raw_responses_deletes_only_old_rows_never_the_research_tables(st
         remaining = [r["id"] for r in c.execute("SELECT id FROM raw_responses").fetchall()]
     assert remaining == [new_id]
     q = store.get_quotes("NIFTY", kind="OPTION")[0]
-    assert q["ltp"] == 1.0 and q["raw_id"] is None        # research row kept, only provenance nulled
+    assert q["ltp"] == 1.0 and q["raw_id"] == old_id      # research row untouched, dangling pointer left as-is
 
 
 def test_rotate_raw_responses_is_a_noop_when_nothing_is_old(store):

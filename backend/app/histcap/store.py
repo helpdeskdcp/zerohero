@@ -156,16 +156,23 @@ class HistStore:
         verbatim-payload archive only (a reproducibility/debugging aid,
         bounded by design). NEVER touches market_candles/quote_snapshots/
         option_greeks, the actual append-only research dataset, which is
-        meant to accumulate indefinitely. Any now-dangling raw_id
-        back-reference in those tables is nulled out first (foreign_keys=ON
-        would otherwise reject the delete) -- this only forgets *which*
-        archived response produced an old row, never the parsed row itself.
+        meant to accumulate indefinitely and is never scanned here.
+
+        A now-dangling raw_id in those tables (pointing at a since-rotated
+        response) is left as-is rather than nulled out: none of this
+        codebase's reads join against raw_responses, so a dangling pointer
+        is inert, and nulling it out would require an UPDATE keyed on
+        raw_id across three multi-million-row tables with no index on that
+        column -- confirmed live 2026-09-30 to run for 15+ minutes while
+        holding this store's single global lock, stalling every capture
+        cycle (AngelOne and Dhan alike) for the duration. FK enforcement is
+        turned off for this connection so the DELETE isn't rejected by the
+        now-dangling references. Cost here is bounded by raw_responses'
+        own (typically much smaller, received_ts-indexed) row count only.
         Returns the number of raw_responses rows deleted."""
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).isoformat().replace("+00:00", "Z")
         with self._lock, self._conn() as c:
-            for tbl in ("market_candles", "quote_snapshots", "option_greeks"):
-                c.execute(f"UPDATE {tbl} SET raw_id=NULL WHERE raw_id IN "
-                          f"(SELECT id FROM raw_responses WHERE received_ts < ?)", (cutoff,))
+            c.execute("PRAGMA foreign_keys=OFF")
             cur = c.execute("DELETE FROM raw_responses WHERE received_ts < ?", (cutoff,))
             c.commit()
             return cur.rowcount or 0

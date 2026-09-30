@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS raw_responses (
     gzip_b64      TEXT NOT NULL,               -- base64(gzip(response_json))
     run_id        INTEGER
 );
+CREATE INDEX IF NOT EXISTS ix_raw_received ON raw_responses(received_ts);
 
 -- one row per (instrument, timeframe, closed bar). Re-fetching a day is a no-op.
 CREATE TABLE IF NOT EXISTS market_candles (
