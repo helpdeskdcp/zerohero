@@ -22,9 +22,9 @@ import fcntl
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from .. import db, instrument_profiles, instruments, telegram_dispatcher
+from .. import db, instrument_profiles, instruments, market_calendar, telegram_dispatcher
 from ..connectors.angelone import fetch_market_quote
 from ..optionchain.resolve import get_chain
 from . import capital as _capital
@@ -139,11 +139,17 @@ def _leg_token(symbol: str, expiry: str, strike: float, option_type: str) -> str
         return None
 
 
-def evaluate_symbol(symbol: str, cfg: dict) -> dict:
+def evaluate_symbol(symbol: str, cfg: dict, now=None) -> dict:
     """One symbol's evaluate-and-maybe-open pass. Never raises -- a bad
     symbol/chain/lot-size is a NO_TRADE result, not a crash that stops the
-    rest of the scan."""
+    rest of the scan. `now` defaults to real IST time; pass it explicitly in
+    tests (mirrors position.check_exit's own convention) so the session gate
+    doesn't depend on the wall clock at whatever moment the suite runs."""
     try:
+        session_ok, session_reason = _session_open(symbol, now=now)
+        if not session_ok:
+            return {"symbol": symbol, "status": "NO_TRADE", "reason": session_reason}
+
         positions = _position.load_all()
         open_for_symbol = [p for p in positions.values() if p.status == "OPEN" and p.symbol == symbol]
         open_total = [p for p in positions.values() if p.status == "OPEN"]
@@ -212,6 +218,48 @@ _SYMBOL_EXCHANGE = {
     "SENSEX": "BFO", "BANKEX": "BFO",
     "CRUDEOIL": "MCX", "NATURALGAS": "MCX",
 }
+
+# app.market_calendar's window table is keyed by cash-segment name
+# (NSE/BSE/MCX -- see its own _DEFAULT_WINDOWS), not the broker
+# order-routing segment (_SYMBOL_EXCHANGE's NFO/BFO/MCX) used for quote
+# fetches -- NFO/BFO share their cash market's session, so this is a pure
+# rename, not a second/duplicated calendar.
+_CALENDAR_EXCHANGE = {"NFO": "NSE", "BFO": "BSE", "MCX": "MCX"}
+
+# Exit cutoff = the instrument's real session close minus this buffer, so a
+# position is unwound with room to spare rather than racing the close.
+_EXIT_CUTOFF_BUFFER_MIN = 15
+
+
+def _session_open(symbol: str, now=None) -> tuple[bool, str | None]:
+    """Entry-gate check (MCP 3.1.1 spec section 3/6): a symbol whose exchange
+    can't be resolved fails OPEN so a bad/unmapped symbol can't silently
+    bypass the gate. Exits are never gated this way -- check_exits() must
+    keep monitoring/closing an already-open position regardless of session,
+    only new entries are blocked here."""
+    exch = _SYMBOL_EXCHANGE.get(symbol.upper())
+    if not exch:
+        return False, f"no exchange mapping for {symbol} -- cannot verify session"
+    cal_exch = _CALENDAR_EXCHANGE.get(exch, exch)
+    if not market_calendar.is_trading(cal_exch, now, instrument=symbol):
+        return False, f"{cal_exch} session not open ({market_calendar.segment_status(cal_exch, now)})"
+    return True, None
+
+
+def _exit_cutoff_for(symbol: str):
+    """Per-instrument TIME_CUTOFF (MCP 3.1.1 spec section 3/4): a single
+    generic cutoff for every symbol either force-exits MCX positions hours
+    before their real 23:30 close or leaves NSE/BSE positions open past
+    theirs. Falls back to position.py's DEFAULT_EXIT_CUTOFF_IST (15:15) if
+    the exchange can't be resolved or the calendar has no window for it --
+    the previous, symbol-blind behaviour, not a new failure mode."""
+    exch = _SYMBOL_EXCHANGE.get(symbol.upper())
+    close = market_calendar.session_close(_CALENDAR_EXCHANGE.get(exch, exch), instrument=symbol) if exch else None
+    if close is None:
+        return _position.DEFAULT_EXIT_CUTOFF_IST
+    close_dt = datetime(2000, 1, 1, close.hour, close.minute)
+    cutoff_dt = close_dt - timedelta(minutes=_EXIT_CUTOFF_BUFFER_MIN)
+    return cutoff_dt.time()
 
 
 def _live_leg_premium(symbol: str, token: str | None) -> float | None:
@@ -285,7 +333,8 @@ def check_exits(now=None) -> list[dict]:
             continue
         cur_primary, cur_hedge = quote
         decision = _position.check_exit(pos, current_primary_premium=cur_primary,
-                                        current_hedge_premium=cur_hedge, now=now)
+                                        current_hedge_premium=cur_hedge, now=now,
+                                        cutoff=_exit_cutoff_for(pos.symbol))
         if not decision["should_exit"]:
             results.append({"position_id": pid, "symbol": pos.symbol, "status": "OPEN",
                             "pnl": decision["pnl"]})
@@ -337,7 +386,7 @@ def _scan_unlocked(now=None) -> dict:
     exits = check_exits(now=now)
     reconciliation = _reconcile_capital()
     cfg = get_config()
-    entries = [evaluate_symbol(sym, cfg) for sym in cfg["symbols"]]
+    entries = [evaluate_symbol(sym, cfg, now=now) for sym in cfg["symbols"]]
     out = {"armed": True, "exits": exits, "entries": entries,
           "ts": datetime.now(timezone.utc).isoformat()}
     if reconciliation is not None:

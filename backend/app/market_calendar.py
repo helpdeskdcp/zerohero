@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time as dtime, timedelta, timezone
 
 _IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -141,6 +141,30 @@ def market_open_flag(exchange: str, now: datetime | None = None) -> bool | None:
     if ex not in _windows():
         return None
     return segment_status(ex, now) == "OPEN"
+
+
+def session_close(exchange: str, *, instrument: str | None = None) -> dtime | None:
+    """The exchange's regular-session close time (IST), e.g. NSE/BSE 15:30,
+    MCX (non-agri) 23:30 -- None for an unconfigured exchange. For callers
+    that need an actual close-of-day rather than an OPEN/CLOSED boolean,
+    e.g. a per-instrument TIME_CUTOFF: a single generic cutoff applied to
+    every exchange either force-exits MCX positions hours too early or
+    leaves NSE/BSE positions open well past their real close."""
+    ex = (exchange or "").upper()
+    wins = _windows().get(ex)
+    if not wins:
+        return None
+    inst = (instrument or "").upper()
+    open_key = "open"
+    if ex == "MCX" and "AGRI" in inst:
+        open_key = "open_agri"
+    elif ex == "NSE" and ("OPT" in inst or "FUT" in inst or "FNO" in inst):
+        open_key = "open_fno"
+    win = wins.get(open_key) or wins.get("open")
+    if not win:
+        return None
+    end_minute = win[1]
+    return dtime(end_minute // 60, end_minute % 60)
 
 
 def closed_regime(exchange: str, now: datetime | None = None, *, instrument: str | None = None) -> str | None:

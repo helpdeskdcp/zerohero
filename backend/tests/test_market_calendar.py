@@ -62,3 +62,12 @@ def test_windows_override_env(monkeypatch):
     monkeypatch.setenv("CHANAKYA_MARKET_WINDOWS",
                        '{"MCX": {"open": [540, 1435]}}')          # evening to 23:55
     assert mc.segment_status("MCX", _t(23, 50)) == "OPEN"
+
+
+def test_session_close():
+    from datetime import time as dtime
+    assert mc.session_close("NSE") == dtime(15, 30)
+    assert mc.session_close("BSE") == dtime(15, 30)
+    assert mc.session_close("MCX") == dtime(23, 30)
+    assert mc.session_close("MCX", instrument="AGRI_FUT") == dtime(21, 0)
+    assert mc.session_close("FOREX") is None                       # no window table

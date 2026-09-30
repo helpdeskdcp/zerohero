@@ -59,7 +59,7 @@ def test_armed_scan_opens_a_position_and_notifies(fresh_db, monkeypatch):
     runner.set_config({"symbols": ["NIFTY"], "min_oi": 500, "min_distance_pct": 1.0})
     runner.arm()
 
-    out = runner.scan()
+    out = runner.scan(now=_MID_SESSION_IST)
     assert out["armed"] is True
     entry = out["entries"][0]
     assert entry["status"] == "OPENED"
@@ -87,7 +87,7 @@ def test_no_verified_lot_size_is_no_trade_not_fabricated(fresh_db, monkeypatch):
     _patch_common(monkeypatch, lot_size=None)
     runner.set_config({"symbols": ["NIFTY"]})
     runner.arm()
-    out = runner.scan()
+    out = runner.scan(now=_MID_SESSION_IST)
     assert out["entries"][0]["status"] == "NO_TRADE"
     assert "lot size" in out["entries"][0]["reason"]
 
@@ -138,7 +138,7 @@ def test_bad_symbol_evaluation_is_error_not_crash(fresh_db, monkeypatch):
                         lambda sym: _FakeProfile(65))
     runner.set_config({"symbols": ["NIFTY"]})
     runner.arm()
-    out = runner.scan()
+    out = runner.scan(now=_MID_SESSION_IST)
     assert out["entries"][0]["status"] == "ERROR"
 
 
@@ -150,6 +150,48 @@ def test_scan_and_record_persists_result_for_polling(fresh_db, monkeypatch):
     assert result is not None
     assert result["armed"] is False
     assert "recorded_at" in result
+
+
+def test_entry_gate_blocks_new_positions_outside_session(fresh_db, monkeypatch):
+    _patch_common(monkeypatch)
+    _capital.reset(500000.0)
+    runner.set_config({"symbols": ["NIFTY"], "min_distance_pct": 1.0})
+    runner.arm()
+
+    after_close = datetime(2026, 9, 24, 20, 0, 0, tzinfo=runner._position._IST)
+    out = runner.scan(now=after_close)
+    assert out["entries"][0]["status"] == "NO_TRADE"
+    assert "session not open" in out["entries"][0]["reason"]
+    assert _position.load_all() == {}
+
+
+def test_check_exits_ignores_session_gate_for_open_positions(fresh_db, monkeypatch):
+    # An already-open position must still be monitored/closeable after the
+    # entry session has ended -- the session gate is entry-only.
+    sent = _patch_common(monkeypatch)
+    _capital.reset(50000.0)
+    _position.open_position(symbol="NIFTY", primary_strike=23400, primary_option_type="CE",
+                            primary_entry_premium=30.0, hedge_strike=23600, hedge_entry_premium=10.0,
+                            lots=1, lot_size=65, max_loss_per_lot=1300.0,
+                            margin_locked=1300.0, cost_paid=650.0)
+    blown = OptionChain(underlying="NIFTY", expiry="29SEP2026", ts="t", source="test", spot=23000, rows=[
+        StrikeRow(strike=23400, ce=OptionLeg(ltp=60.0, oi=5000), pe=None),
+        StrikeRow(strike=23600, ce=OptionLeg(ltp=12.0, oi=2000), pe=None),
+    ])
+    monkeypatch.setattr(runner, "get_chain", lambda sym, exp, allow_network: blown)
+
+    after_close = datetime(2026, 9, 24, 20, 0, 0, tzinfo=runner._position._IST)
+    results = runner.check_exits(now=after_close)
+    assert results[0]["status"] == "CLOSED" and results[0]["reason"] == "STOP_LOSS"
+    assert sent and sent[0]["direction"] == "CLOSE"
+
+
+def test_exit_cutoff_is_per_instrument_not_one_generic_time():
+    from datetime import time as dtime
+    assert runner._exit_cutoff_for("NIFTY") == dtime(15, 15)      # NFO -> NSE close 15:30 - 15min
+    assert runner._exit_cutoff_for("SENSEX") == dtime(15, 15)     # BFO -> BSE close 15:30 - 15min
+    assert runner._exit_cutoff_for("NATURALGAS") == dtime(23, 15)  # MCX close 23:30 - 15min
+    assert runner._exit_cutoff_for("UNKNOWN_SYMBOL") == _position.DEFAULT_EXIT_CUTOFF_IST
 
 
 def test_scan_and_record_never_raises_on_internal_error(fresh_db, monkeypatch):
