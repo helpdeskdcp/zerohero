@@ -36,3 +36,14 @@ def test_data_conflict_route_passes_through_tolerance(monkeypatch):
     out = R.api_market_data_conflict("NIFTY", tolerance_pct=0.25)
     assert out == {"status": "OK"}
     assert seen == {"underlying": "NIFTY", "tolerance_pct": 0.25}
+
+
+def test_regime_route_delegates_to_get_regime(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(R._snap, "get_regime",
+                        lambda underlying, session_date=None: seen.update(
+                            underlying=underlying, session_date=session_date) or
+                        {"regime": {"regime": "RANGE"}})
+    out = R.api_market_regime("NIFTY", session_date="2026-09-30")
+    assert out == {"regime": {"regime": "RANGE"}}
+    assert seen == {"underlying": "NIFTY", "session_date": "2026-09-30"}

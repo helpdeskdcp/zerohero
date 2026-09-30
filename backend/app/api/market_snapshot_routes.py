@@ -39,3 +39,13 @@ def api_market_data_conflict(underlying: str, tolerance_pct: float = 0.5):
     for `underlying`. On-demand, read-only -- not called from any hot
     decision path (see check_data_conflict()'s own docstring for why)."""
     return _check_conflict(underlying, tolerance_pct=tolerance_pct)
+
+
+@router.get("/regime")
+def api_market_regime(underlying: str, session_date: str | None = None):
+    """MCP 3.3 section 12/20: TRENDING_UP/TRENDING_DOWN/RANGE/
+    HIGH_VOLATILITY/LOW_VOLATILITY/BREAKOUT_REGIME/REVERSAL_REGIME/
+    UNSTABLE + MTF alignment for `underlying`, right now -- the same
+    deterministic classifier already running inside AutoScalp, exposed as
+    a standalone read (see get_regime()'s own docstring)."""
+    return _snap.get_regime(underlying, session_date=session_date)

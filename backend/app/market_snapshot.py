@@ -15,12 +15,13 @@ only the atomicity/coherence layer on top of data that was already being
 read separately.
 
 Provenance today: every field this module can populate currently traces
-back to AngelOne (app.connectors.angelone / app.histcap) -- Dhan is not yet
-a verified option-chain/quote source (see MCP_3_3_STATUS.md: Dhan has no
-option-chain capture built, and the stored OAuth token requires an
-interactive human re-consent to refresh, which this module will never
-attempt on its own). When Dhan is verified, it plugs into market_hub's own
-fallback chain as an additional source, not a rewrite of this module.
+back to AngelOne (app.connectors.angelone / app.histcap). Dhan is now a
+verified option-chain source (app.optionchain.sources.dhan_chain,
+verified live 2026-09-30 -- see check_data_conflict() in
+app.optionchain.resolve for the cross-source agreement check), but this
+module's own build_snapshot() still reads only the AngelOne-backed
+get_chain() default order -- promoting Dhan to a snapshot input is a
+separate decision, not made here.
 """
 from __future__ import annotations
 
@@ -159,3 +160,46 @@ def build_snapshot(underlying: str, *, allow_network: bool = False,
         chain_rows=chain_rows, chain_expiry=chain_expiry, chain_source=chain_source,
         chain_quality=chain_quality, india_vix=vix,
         data_quality=ctx.get("data_quality", {}), conflicts=conflicts)
+
+
+_REGIME_TFS = ("1m", "3m", "5m", "15m", "30m")
+
+
+def get_regime(underlying: str, *, session_date: str | None = None) -> dict:
+    """Read-only market regime classification (MCP 3.3 section 12/20):
+    TRENDING_UP/TRENDING_DOWN/RANGE/HIGH_VOLATILITY/LOW_VOLATILITY/
+    BREAKOUT_REGIME/REVERSAL_REGIME/UNSTABLE, plus multi-timeframe
+    alignment.
+
+    Not a new classifier -- app.engines.regime_mtf.detect_regime() already
+    exists, is deterministic, and already runs live inside AutoScalp's own
+    decision path (app/engines/scalp_strategy.py). But there was no
+    standalone way to ask "what regime is X in right now" independent of
+    whether AutoScalp happens to be evaluating that symbol -- this wires
+    the exact same function to market_hub.session_bars() (the same
+    historical-bar reader order-flow profiling already uses) so any
+    symbol can be asked directly. No new math, no new trading signal.
+
+    `session_date` defaults to today (IST) -- classification is TODAY-
+    session-only; detect_regime() itself reports UNSTABLE with n<20 bars
+    on its chosen timeframe rather than fabricate a read from too little
+    data (e.g. genuinely early in the session)."""
+    from . import market_hub
+    from .engines import regime_mtf
+
+    u = str(underlying or "").upper()
+    sess = session_date or market_hub._now_ist_date()
+    bars_by_tf: dict[str, list] = {}
+    for tf in _REGIME_TFS:
+        try:
+            bars_by_tf[tf] = market_hub.session_bars(u, sess, tf=tf)
+        except Exception:
+            bars_by_tf[tf] = []
+
+    regime = regime_mtf.detect_regime(bars_by_tf)
+    alignment = regime_mtf.mtf_alignment(bars_by_tf)
+    return {
+        "underlying": u, "session_date": sess,
+        "regime": regime, "mtf_alignment": alignment,
+        "bars_available": {tf: len(bars_by_tf[tf]) for tf in _REGIME_TFS},
+    }
