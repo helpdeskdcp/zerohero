@@ -16,13 +16,9 @@ Auth: app.dhan_client.get_access_token() (the same stored App-OAuth token
 app/connectors/dhan_historical.py already uses) + DHAN_CLIENT_ID, as the
 access-token/client-id headers Dhan's v2 API requires.
 
-Scope, deliberately: NSE/BSE INDEX underlyings only (NIFTY/BANKNIFTY/
-FINNIFTY/MIDCPNIFTY/SENSEX/BANKEX) -- their security_id is a fixed index
-scrip. MCX commodity option chains resolve against the front-month
-FUTURE's security_id, which rolls monthly and needs its own resolution
-(app.connectors.dhan_instruments.resolve_front_month_future already does
-this for the orderflow WS feed) -- not wired here yet, a real follow-up,
-not attempted in this pass.
+Scope: NSE/BSE INDEX underlyings (fixed index scrips) plus MCX CRUDEOIL and
+NATURALGAS (underlying = front-month future's security_id, segment MCX_COMM,
+verified live 2026-09-30).
 
 Wired as get_chain()'s PRIMARY source for live (allow_network=True) reads
 as of 2026-09-30 (see resolve.py's own module docstring) -- an
@@ -54,7 +50,29 @@ _UNDERLYING_SCRIP = {
     "NIFTY": 13, "BANKNIFTY": 25, "FINNIFTY": 27, "MIDCPNIFTY": 442,
     "SENSEX": 51, "BANKEX": 69,
 }
-SUPPORTED = set(_UNDERLYING_SCRIP)
+# MCX commodity option chains (verified live 2026-09-30: CRUDEOIL 207 strikes,
+# NATURALGAS 90, with bid/ask/OI/previous_oi/IV/Greeks). Unlike the fixed index
+# scrips above, the underlying is the FRONT-MONTH FUTURE's security_id (rolls
+# monthly), segment MCX_COMM -- resolved from Dhan's own instrument master.
+_MCX_SYMBOLS = {"CRUDEOIL", "NATURALGAS"}
+SUPPORTED = set(_UNDERLYING_SCRIP) | _MCX_SYMBOLS
+
+
+def _underlying(u: str):
+    """(UnderlyingScrip, UnderlyingSeg) for a supported symbol, else None
+    (including when the MCX front-month future cannot be resolved -- never a
+    guessed id)."""
+    if u in _UNDERLYING_SCRIP:
+        return _UNDERLYING_SCRIP[u], "IDX_I"
+    if u in _MCX_SYMBOLS:
+        try:
+            from ...connectors import dhan_instruments as _di
+            fut = _di.resolve_front_month_future(u, exch_id="MCX", segment="M")
+        except Exception:
+            return None
+        if fut and fut.get("security_id"):
+            return int(fut["security_id"]), "MCX_COMM"
+    return None
 
 
 def _num(v):
@@ -105,16 +123,17 @@ def expiry_list(underlying: str, *, timeout: float = 10.0, session=None) -> list
     """Real, live expiry dates for `underlying` ('YYYY-MM-DD' as Dhan sends
     them). None on any auth/network/shape failure -- never a fabricated list."""
     u = str(underlying or "").upper()
-    scrip = _UNDERLYING_SCRIP.get(u)
-    if scrip is None:
+    und = _underlying(u)
+    if und is None:
         return None
+    scrip, seg = und
     headers = _headers()
     if headers is None:
         return None
     s = session or requests.Session()
     try:
         r = s.post(f"{_BASE}/optionchain/expirylist",
-                  json={"UnderlyingScrip": scrip, "UnderlyingSeg": "IDX_I"},
+                  json={"UnderlyingScrip": scrip, "UnderlyingSeg": seg},
                   headers=headers, timeout=timeout)
         if r.status_code != 200:
             return None
@@ -187,7 +206,8 @@ def fetch_raw(underlying: str, expiry: str, *, timeout: float = 15.0, session=No
     request's own headers (access-token/client-id) are never passed to
     the caller and never archived by anything in this codebase."""
     u = str(underlying or "").upper()
-    if u not in _UNDERLYING_SCRIP:
+    und = _underlying(u)
+    if und is None:
         return None
     iso = _to_iso_date(expiry)
     if not iso:
@@ -198,7 +218,7 @@ def fetch_raw(underlying: str, expiry: str, *, timeout: float = 15.0, session=No
     s = session or requests.Session()
     try:
         r = s.post(f"{_BASE}/optionchain",
-                  json={"UnderlyingScrip": _UNDERLYING_SCRIP[u], "UnderlyingSeg": "IDX_I", "Expiry": iso},
+                  json={"UnderlyingScrip": und[0], "UnderlyingSeg": und[1], "Expiry": iso},
                   headers=headers, timeout=timeout)
         if r.status_code != 200:
             return None

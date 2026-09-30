@@ -28,6 +28,13 @@ from ..optionchain.sources import dhan_chain as _dhan
 from .normalize import ist_date, now_utc_iso, snap_key
 
 
+def _exchange(sym: str) -> str:
+    u = sym.upper()
+    if u in _dhan._MCX_SYMBOLS:
+        return "MCX"
+    return "BFO" if u in ("SENSEX", "BANKEX") else "NFO"
+
+
 def capture_dhan_chain(sym: str, expiry: str, *, received_ts: str | None = None) -> dict | None:
     """Fetch Dhan's CURRENT live chain for sym/expiry and return
     {"quote_rows": [...], "greek_rows": [...], "spot": float|None,
@@ -74,7 +81,7 @@ def capture_dhan_chain(sym: str, expiry: str, *, received_ts: str | None = None)
             quote_rows.append({
                 "received_ts": recv, "server_ts": None, "exch_ts": exch_ts, "snap_key": key,
                 "instrument_key": f"DHAN:{tok}", "symbol": sym, "kind": "OPTION",
-                "exchange": "NFO" if sym.upper() not in ("SENSEX", "BANKEX") else "BFO",
+                "exchange": _exchange(sym),
                 "token": tok, "expiry": expiry, "strike": row.strike, "option_type": ot,
                 "session_date_ist": sd, "ltp": leg.ltp,
                 "open": None, "high": None, "low": None, "close": None,

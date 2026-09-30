@@ -93,7 +93,7 @@ def test_underlying_scrip_ids_are_from_the_real_dhan_master():
 
 
 def test_fetch_returns_none_for_unsupported_underlying():
-    assert dc.fetch("CRUDEOIL", "06OCT2026") is None    # MCX not wired -- see module docstring
+    assert dc.fetch("GOLD", "06OCT2026") is None    # not a Dhan-chain underlying we support
 
 
 def test_fetch_returns_none_without_credentials(monkeypatch):
@@ -152,3 +152,20 @@ def test_to_iso_date_accepts_canonical_and_iso():
 
 def test_to_canonical_expiry_round_trips():
     assert dc._to_canonical_expiry("2026-10-06") == "06OCT2026"
+
+
+def test_mcx_underlying_resolves_front_month_future(monkeypatch):
+    from app.connectors import dhan_instruments as di
+    monkeypatch.setattr(di, "resolve_front_month_future",
+                        lambda sym, **k: {"security_id": "569900", "expiry": "2026-10-19"})
+    assert dc._underlying("CRUDEOIL") == (569900, "MCX_COMM")
+    assert dc._underlying("NIFTY") == (13, "IDX_I")
+    assert "CRUDEOIL" in dc.SUPPORTED and "NATURALGAS" in dc.SUPPORTED
+
+
+def test_mcx_underlying_unresolvable_is_none_never_guessed(monkeypatch):
+    from app.connectors import dhan_instruments as di
+    monkeypatch.setattr(di, "resolve_front_month_future", lambda sym, **k: None)
+    assert dc._underlying("NATURALGAS") is None
+    monkeypatch.setattr(dc, "_headers", lambda: {"x": "y"})
+    assert dc.fetch_raw("NATURALGAS", "23OCT2026") is None

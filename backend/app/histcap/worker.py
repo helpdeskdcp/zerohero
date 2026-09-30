@@ -580,7 +580,8 @@ class CaptureWorker:
                     # response body structurally can't carry a credential).
                     raw_id = self.store.put_raw(
                         conn, endpoint="v2/optionchain",
-                        request={"UnderlyingScrip": su, "UnderlyingSeg": "IDX_I", "Expiry": expiry},
+                        request={"Underlying": su, "UnderlyingSeg": "MCX_COMM" if su in _dhan._MCX_SYMBOLS else "IDX_I",
+                                 "Expiry": expiry},
                         http_status=None, status="OK", payload=out["raw"],
                         server_ts=out.get("exch_ts"), run_id=rid)
                     counts["raw"] += 1
