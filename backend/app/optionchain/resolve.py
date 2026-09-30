@@ -100,3 +100,48 @@ def get_chain(underlying: str, expiry: str = "AUTO", *, prefer: str | None = Non
     chain.quality = _quality(chain, atm_window=atm_window)
     chain.notes.append(f"resolved @ {datetime.now(timezone.utc).isoformat()}")
     return chain
+
+
+DEFAULT_CONFLICT_TOLERANCE_PCT = 0.5
+
+
+def check_data_conflict(underlying: str, *, tolerance_pct: float = DEFAULT_CONFLICT_TOLERANCE_PCT) -> dict:
+    """MCP 3.3 section 2/3: "If Dhan and Angel One conflict: DATA_CONFLICT =
+    TRUE. Block new entry until resolved." Compares angelone_captured's
+    spot against a genuinely independent live source (dhan_chain) for the
+    SAME resolved expiry -- becomes possible only now that dhan_chain is a
+    real, verified source (2026-09-30); previously there was no second
+    live chain source to compare against at all.
+
+    Deliberately an on-demand, read-only spot-check -- NOT called from any
+    hot decision path. app.hedging.runner uses only the offline captured
+    chain by design (its own docstring: a <=5-min-stale captured chain is
+    an acceptable, deliberately conservative tradeoff against the
+    complexity of a new live feed dependency); wiring a live Dhan round-
+    trip into that path would add latency and a new failure mode to
+    something that already works, which is a separate decision from
+    exposing this check as a real, available capability."""
+    u = str(underlying or "").upper()
+    ang = get_chain(u, "AUTO", allow_network=False)
+    if ang is None or not ang.rows or ang.spot is None:
+        return {"status": "UNAVAILABLE", "reason": "no angelone_captured chain (or no spot)"}
+
+    from .sources import dhan_chain as _dhan
+    try:
+        dhan = _dhan.fetch(u, ang.expiry)
+    except Exception as e:
+        return {"status": "UNAVAILABLE", "reason": f"dhan_chain fetch failed: {type(e).__name__}: {e}",
+               "angelone_expiry": ang.expiry}
+    if dhan is None or not dhan.rows or dhan.spot is None:
+        return {"status": "UNAVAILABLE", "reason": "no dhan_chain data (or no spot) for this expiry",
+               "angelone_expiry": ang.expiry}
+
+    diff_pct = round(abs(ang.spot - dhan.spot) / ang.spot * 100.0, 4) if ang.spot else None
+    conflict = diff_pct is not None and diff_pct > tolerance_pct
+    return {
+        "status": "CONFLICT" if conflict else "OK",
+        "underlying": u, "expiry": ang.expiry,
+        "angelone_spot": ang.spot, "angelone_ts": ang.ts,
+        "dhan_spot": dhan.spot, "dhan_ts": dhan.ts,
+        "diff_pct": diff_pct, "tolerance_pct": tolerance_pct,
+    }
