@@ -24,12 +24,13 @@ FUTURE's security_id, which rolls monthly and needs its own resolution
 this for the orderflow WS feed) -- not wired here yet, a real follow-up,
 not attempted in this pass.
 
-NOT yet wired into get_chain()'s default failover order or into histcap's
-periodic background capture -- this is the connector, proven against real
-API responses, available via `prefer="dhan_chain"`. Whether Dhan should
-become histcap's primary capture source (vs. AngelOne, which already runs
-continuously and is the thing NOT broken) is a separate operational
-decision this file does not make.
+Wired as get_chain()'s PRIMARY source for live (allow_network=True) reads
+as of 2026-09-30 (see resolve.py's own module docstring) -- an
+expired/invalid Dhan session fails closed (returns None) and falls
+through to angelone_captured exactly as before, never breaking anything.
+NOT wired into histcap's periodic background CAPTURE (the continuous,
+offline-served path hedging/allow_network=False callers use) -- that is a
+separate operational decision this file does not make.
 """
 from __future__ import annotations
 

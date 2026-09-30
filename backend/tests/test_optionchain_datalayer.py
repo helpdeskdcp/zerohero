@@ -188,6 +188,30 @@ def test_resolve_offline_uses_primary_only(hist_db, monkeypatch):
     assert c.quality["verdict"] in ("PASS", "WARN", "FAIL")
 
 
+def test_resolve_live_tries_dhan_first(hist_db, monkeypatch):
+    # Dhan promoted to PRIMARY 2026-09-30 (MCP 3.3 section 2). allow_network
+    # is irrelevant to this order -- allow_network=False's angelone-only
+    # restriction (tested above) is unaffected either way.
+    from app.optionchain.sources import dhan_chain as _dhan
+    dhan_chain_result = OptionChain(underlying="NIFTY", expiry="15SEP2026", ts="t",
+                                    source="dhan_chain", spot=23500.0,
+                                    rows=[StrikeRow(strike=23500, ce=OptionLeg(ltp=100, delta=0.5))],
+                                    capability={"has_greeks": True, "greek_coverage": 1.0})
+    monkeypatch.setattr(_dhan, "fetch", lambda u, e: dhan_chain_result)
+    c = get_chain("NIFTY", "AUTO", allow_network=True, db_path=hist_db)
+    assert c is not None and c.source == "dhan_chain"
+
+
+def test_resolve_falls_through_to_angelone_when_dhan_session_invalid(hist_db, monkeypatch):
+    # A lapsed/invalid Dhan OAuth session must degrade to the previous,
+    # still fully working behavior -- never a hard failure, never a
+    # fabricated chain.
+    from app.optionchain.sources import dhan_chain as _dhan
+    monkeypatch.setattr(_dhan, "fetch", lambda u, e: None)
+    c = get_chain("NIFTY", "AUTO", allow_network=True, db_path=hist_db)
+    assert c is not None and c.source == "angelone_captured"
+
+
 # --------------------------------------------------------------------------- #
 #  secondary / tertiary parsers -- pure, canned JSON, no HTTP                   #
 # --------------------------------------------------------------------------- #

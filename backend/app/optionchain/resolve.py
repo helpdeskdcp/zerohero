@@ -1,16 +1,30 @@
 """
 Source ordering + failover + Greek-merge.
 
-`get_chain(underlying, expiry="AUTO")`:
-  1. try angelone_captured (offline, from the capture DB)   -- PRIMARY
-  2. try upstox_open  (keyless HTTP)                         -- SECONDARY
-  3. try nse_v3       (keyless HTTP, cookie-primed)          -- TERTIARY
+`get_chain(underlying, expiry="AUTO")` -- live (allow_network=True) order:
+  1. try dhan_chain        (live HTTP, OAuth)                  -- PRIMARY
+  2. try angelone_captured (offline, from the capture DB)      -- FALLBACK
+  3. try upstox_open       (keyless HTTP)                      -- further fallback
+  4. try nse_v3            (keyless HTTP, cookie-primed)       -- further fallback
 First non-empty chain wins. If the winner lacks Greeks and a later source has
 them, Greeks are merged onto the winner's rows by (strike, side).
 
-`allow_network=False` restricts to angelone_captured -> deterministic + offline
-(what tests and cron use).
-"""
+Dhan promoted to PRIMARY 2026-09-30 (explicit decision, MCP 3.3 section 2:
+"Dhan is the preferred primary market-data provider... Angel One is
+FALLBACK only"), after dhan_chain was verified live end-to-end (real
+238-strike NIFTY chain, 100% Greek coverage, real bid/ask -- see
+sources/dhan_chain.py's own docstring). Dhan's OAuth token expires
+~24-30h and needs a human reconnect (app.dhan_client) -- when it's
+expired/invalid, dhan_chain.fetch() returns None (fails closed, never
+fabricates) and this immediately falls through to angelone_captured, so a
+lapsed Dhan session degrades to the previous (still fully working)
+behavior rather than breaking anything.
+
+`allow_network=False` restricts to angelone_captured -> deterministic +
+offline (what hedging/tests/cron use, unchanged by the primary/fallback
+reorder above -- that flag is specifically for callers that want a
+same-answer-every-time captured read, never a live network round-trip
+regardless of which source would otherwise be tried first)."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -19,23 +33,13 @@ from .chain import OptionChain
 from .quality import score as _quality
 from .sources import angelone_chain, dhan_chain, nse_v3, upstox_open
 
-# dhan_chain is last in the default order deliberately -- verified live
-# 2026-09-30 (real 238-strike NIFTY chain, 100% Greek coverage, real
-# bid/ask), but brand-new: angelone_captured has run continuously for
-# weeks and is the thing that is NOT broken, so it keeps default priority.
-# dhan_chain is a real, equally-capable (arguably richer -- one call gets
-# bid/ask+OI+previous_oi+volume+IV+all 4 Greeks, vs AngelOne's separate
-# quote+greek endpoints) source, reachable today via prefer="dhan_chain"
-# for anyone who wants to compare or explicitly prioritise it, and as a
-# last-resort fallback if every existing source fails. Promoting it ahead
-# of angelone_captured is a real, separate decision -- not made here.
-_ORDER = ("angelone_captured", "upstox_open", "nse_v3", "dhan_chain")
+_ORDER = ("dhan_chain", "angelone_captured", "upstox_open", "nse_v3")
 _FETCH = {
+    "dhan_chain": lambda u, e, kw: dhan_chain.fetch(u, e),
     "angelone_captured": lambda u, e, kw: angelone_chain.fetch(u, e, db_path=kw.get("db_path"),
                                                                at_ts=kw.get("at_ts")),
     "upstox_open": lambda u, e, kw: upstox_open.fetch(u, e, session=kw.get("session")),
     "nse_v3": lambda u, e, kw: nse_v3.fetch(u, e, session=kw.get("session")),
-    "dhan_chain": lambda u, e, kw: dhan_chain.fetch(u, e),
 }
 
 
