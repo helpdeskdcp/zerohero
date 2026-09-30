@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
+from .cross_broker import compare_captured_quotes
 from .store import hist_store
 
 router = APIRouter(prefix="/api/histcap", tags=["histcap"])
@@ -50,3 +51,13 @@ def greeks(underlying: str, expiry: str | None = None, strike: float | None = No
            limit: int = Query(2000, le=20000)):
     return hist_store().get_greeks(underlying, as_of=as_of, expiry=expiry,
                                    strike=strike, option_type=option_type, limit=limit)
+
+
+@router.get("/cross-broker")
+def cross_broker(symbol: str, expiry: str, since: str | None = None,
+                 limit: int = Query(5000, le=20000)):
+    """MCP 3.3 priority #5, item 4: real, measured agreement between the
+    most-recently-captured ANGELONE_QUOTE_FULL and DHAN_CHAIN rows for
+    `symbol`/`expiry` -- never manufactured equivalence (see
+    compare_captured_quotes()'s own docstring)."""
+    return compare_captured_quotes(symbol, expiry, since=since, limit=limit)

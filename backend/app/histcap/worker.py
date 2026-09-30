@@ -19,7 +19,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from .. import db, instruments, market_calendar
+from ..optionchain.sources.dhan_chain import SUPPORTED as _DHAN_SUPPORTED
 from . import normalize as N
+from .dhan_capture import capture_dhan_chain
 from .store import HistStore, hist_store
 
 _IST = timezone(timedelta(hours=5, minutes=30))
@@ -80,6 +82,13 @@ def _cfg() -> dict:
         "candle_delay_sec": float(_env("CHANAKYA_HIST_CANDLE_DELAY_SEC", "1.0")),
         "heartbeat_sec": float(_env("CHANAKYA_HIST_HEARTBEAT_SEC", "300")),
         "option_candles": _env("CHANAKYA_HIST_OPTION_CANDLES", "0") in ("1", "true", "yes"),
+        # MCP 3.3 priority #5 -- parallel Dhan capture, PARALLEL to (never
+        # instead of) the AngelOne capture above. On by default now that
+        # Dhan is verified live and PRIMARY for on-demand reads
+        # (app.optionchain.resolve) -- a same-day kill switch, matching
+        # DHAN_ORDERFLOW_ENABLED's own convention, in case the parallel
+        # load or an OAuth lapse needs it off quickly without a code change.
+        "dhan_capture": _env("CHANAKYA_HIST_DHAN_ENABLED", "1") in ("1", "true", "yes"),
     }
 
 
@@ -214,6 +223,7 @@ class CaptureWorker:
                     self._capture_greeks(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
                     if do_candles:
                         self._capture_candles(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
+                    self._capture_dhan(conn, sym, refs, recv, rid, counts, integ, errors)
             except Exception as e:
                 errors.append({"symbol": sym, "stage": "cycle", "status": type(e).__name__,
                                "message": str(e)[:200]})
@@ -448,6 +458,32 @@ class CaptureWorker:
                 for r in rows:
                     r["raw_id"] = raw_id
                 counts["candles"] += self.store.write_candles(conn, rows, rid, integ)
+
+    def _capture_dhan(self, conn, sym, refs, recv, rid, counts, integ, errors):
+        """Parallel Dhan chain capture (MCP 3.3 priority #5) -- runs
+        alongside, never instead of, the AngelOne capture above. Fully
+        isolated: any Dhan failure (expired OAuth session, network error,
+        unsupported symbol) is a soft per-symbol skip here, exactly like
+        every AngelOne capture step already treats its own failures --
+        never blocks, slows, or affects the rest of this cycle."""
+        if not self.cfg.get("dhan_capture", True):
+            return
+        expiry = refs.get("opt_expiry")
+        if not expiry or sym.upper() not in _DHAN_SUPPORTED:
+            return
+        try:
+            out = capture_dhan_chain(sym, expiry, received_ts=recv)
+        except Exception as e:
+            errors.append({"symbol": sym, "stage": "dhan_chain", "status": type(e).__name__,
+                           "message": str(e)[:160]})
+            return
+        if out is None:
+            counts["dhan_unavailable"] = counts.get("dhan_unavailable", 0) + 1
+            return
+        counts["dhan_quotes"] = counts.get("dhan_quotes", 0) + \
+            self.store.write_quotes(conn, out["quote_rows"], rid, integ)
+        counts["dhan_greeks"] = counts.get("dhan_greeks", 0) + \
+            self.store.write_greeks(conn, out["greek_rows"], rid, integ)
 
     # ---------------------------------------------------------------- status
     def status(self) -> dict:

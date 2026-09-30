@@ -31,7 +31,7 @@ _REAL_SHAPED = {
                 "ce": {"last_price": 7.25, "oi": 5167305, "previous_oi": 3463070,
                       "volume": 16329430, "top_bid_price": 7.2, "top_ask_price": 7.3,
                       "top_bid_quantity": 44200, "top_ask_quantity": 41080,
-                      "implied_volatility": 12.249246498755785,
+                      "implied_volatility": 12.249246498755785, "security_id": 40755,
                       "greeks": {"delta": 0.0478, "gamma": 0.00027, "theta": -3.16948, "vega": 2.98735}},
                 "pe": {"last_price": 644.0, "oi": 658970, "previous_oi": 672295,
                       "volume": 159380, "top_bid_price": 641.4, "top_ask_price": 644.15,
@@ -57,6 +57,12 @@ def test_parse_real_shaped_response():
     assert ce.iv == pytest.approx(0.12249246498755785)      # normalised from percent
     assert ce.delta == pytest.approx(0.0478) and ce.gamma == pytest.approx(0.00027)
     assert ce.theta == pytest.approx(-3.16948) and ce.vega == pytest.approx(2.98735)
+    assert ce.security_id == "40755"      # real instrument identity, for capture dedup/order-routing
+
+
+def test_parse_security_id_is_none_when_absent():
+    pe = dc.parse(_REAL_SHAPED, "NIFTY", "06OCT2026").leg(23400, "PE")
+    assert pe.security_id is None    # fixture's PE leg has no security_id -- never fabricated
 
 
 def test_parse_has_full_greek_coverage_capability():

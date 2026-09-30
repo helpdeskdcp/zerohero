@@ -150,7 +150,8 @@ def parse(obj: dict, underlying: str, expiry: str, *, ts: str | None = None) -> 
             volume=_num(node.get("volume")),
             iv=_iv(node.get("implied_volatility")),
             delta=_num(greeks.get("delta")), gamma=_num(greeks.get("gamma")),
-            theta=_num(greeks.get("theta")), vega=_num(greeks.get("vega")))
+            theta=_num(greeks.get("theta")), vega=_num(greeks.get("vega")),
+            security_id=(str(node["security_id"]) if node.get("security_id") is not None else None))
 
     rows = []
     for k, node in oc.items():

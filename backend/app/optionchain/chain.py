@@ -71,6 +71,11 @@ class OptionLeg:
     gamma: float | None = None
     theta: float | None = None
     vega: float | None = None
+    # Provider-specific instrument identity, when the source actually gives
+    # one (Dhan's /v2/optionchain does -- "security_id" per leg). None for
+    # sources that don't (AngelOne's captured chain resolves its own token
+    # separately, via app.instruments; upstox_open/nse_v3 don't expose one).
+    security_id: str | None = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in asdict(self).items() if v is not None}

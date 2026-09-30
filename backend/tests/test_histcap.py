@@ -303,6 +303,79 @@ def test_run_once_captures_quotes_greeks_candles(store, monkeypatch):
     assert g["delta"] in (0.6, -0.4) and g["iv"] == 0.43 and g["source"] == "ANGELONE_OPTION_GREEK"
 
 
+# ---------------------------------------------------------------- Dhan parallel capture (MCP 3.3 #5)
+def test_capture_dhan_skips_unsupported_symbol(store, monkeypatch):
+    called = {"n": 0}
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
+    w = _worker(store, monkeypatch, _FakeSDK())   # _worker's symbol is NATURALGAS -- not Dhan-supported
+    with store.transaction() as conn:
+        w._capture_dhan(conn, "NATURALGAS", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, {}, {}, [])
+    assert called["n"] == 0
+
+
+def test_capture_dhan_writes_rows_for_a_supported_symbol(store, monkeypatch):
+    fake_out = {
+        "quote_rows": [{"received_ts": N.now_utc_iso(), "snap_key": "k1", "instrument_key": "DHAN:1",
+                        "symbol": "NIFTY", "kind": "OPTION", "exchange": "NFO", "token": "1",
+                        "expiry": "06OCT2026", "strike": 22750.0, "option_type": "CE",
+                        "session_date_ist": "2026-09-30", "ltp": 166.95, "bid": 166.9, "ask": 167.0,
+                        "oi": 5000.0, "source": "DHAN_CHAIN"}],
+        "greek_rows": [{"received_ts": N.now_utc_iso(), "snap_key": "k1", "underlying": "NIFTY",
+                        "expiry": "06OCT2026", "strike": 22750.0, "option_type": "CE",
+                        "session_date_ist": "2026-09-30", "delta": 0.5, "broker_status": "OK",
+                        "source": "DHAN_OPTION_GREEK"}],
+        "spot": 22763.9, "exch_ts": N.now_utc_iso(),
+    }
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda sym, expiry, received_ts=None: fake_out)
+    w = _worker(store, monkeypatch, _FakeSDK())
+    counts, integ, errors = {}, {"issues": [], "rejected": [], "flagged": 0}, []
+    with store.transaction() as conn:
+        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, counts, integ, errors)
+    assert counts["dhan_quotes"] == 1 and counts["dhan_greeks"] == 1
+    row = store.get_quotes("NIFTY", kind="OPTION")[0]
+    assert row["source"] == "DHAN_CHAIN" and row["ltp"] == 166.95
+
+
+def test_capture_dhan_failure_is_soft_never_raises(store, monkeypatch):
+    def _boom(*a, **k):
+        raise RuntimeError("Dhan session expired")
+    monkeypatch.setattr(WK, "capture_dhan_chain", _boom)
+    w = _worker(store, monkeypatch, _FakeSDK())
+    errors = []
+    with store.transaction() as conn:
+        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, {}, {}, errors)
+    assert errors and errors[0]["stage"] == "dhan_chain"
+
+
+def test_capture_dhan_none_result_counts_as_unavailable_not_error(store, monkeypatch):
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: None)
+    w = _worker(store, monkeypatch, _FakeSDK())
+    counts, errors = {}, []
+    with store.transaction() as conn:
+        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, counts, {}, errors)
+    assert counts["dhan_unavailable"] == 1 and errors == []
+
+
+def test_capture_dhan_respects_the_kill_switch(store, monkeypatch):
+    called = {"n": 0}
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "dhan_capture": False}
+    with store.transaction() as conn:
+        w._capture_dhan(conn, "NIFTY", {"opt_expiry": "06OCT2026"}, N.now_utc_iso(), 1, {}, {}, [])
+    assert called["n"] == 0
+
+
+def test_capture_dhan_never_runs_via_run_once_for_natural_gas_symbol(store, monkeypatch):
+    # end-to-end: run_once() with the real per-symbol loop must not attempt
+    # Dhan at all for a symbol Dhan doesn't support (no accidental network call).
+    called = {"n": 0}
+    monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.run_once("POLL_ONCE", do_candles=False)
+    assert called["n"] == 0
+
+
 def test_run_once_is_idempotent_second_cycle_adds_nothing(store, monkeypatch):
     sdk = _FakeSDK()
     w = _worker(store, monkeypatch, sdk)
