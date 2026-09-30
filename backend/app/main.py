@@ -303,6 +303,14 @@ try:
 except Exception as _e:
     print(f"[optionchain] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Atomic Market Snapshot (read-only: spot + chain + India VIX tied to one
+# snapshot_id, MCP 3.3 section 4/48; no new capture path, composes existing reads) ----
+try:
+    from .api import market_snapshot_routes as _market_snapshot_api
+    app.include_router(_market_snapshot_api.router)
+except Exception as _e:
+    print(f"[market_snapshot] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Premium-vs-Spot Decoupling (read-only, shadow: classifies observed
 # spot-move vs ATM CE/PE-premium-move sign relationship over a window, e.g.
 # "index up but CE premium also falling"; computed from already-captured
