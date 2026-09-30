@@ -493,7 +493,7 @@ class CaptureWorker:
             "started_at": self.started_at, "last_error": self.last_error,
             "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "chain_window_by_sym",
                                                 "tfs", "quote_sec", "candle_sec", "candle_delay_sec",
-                                                "option_candles")},
+                                                "option_candles", "dhan_capture")},
             "last_run": self.last_run, "store": self.store.summary(),
         }
 
