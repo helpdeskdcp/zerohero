@@ -121,3 +121,27 @@ def test_store_is_append_only_idempotent_and_roundtrips_provenance(tmp_path):
     got = st.read("NIFTY", "CE")
     assert len(got) == 4 and got[0]["greek_inputs"]["expiry_date"] == "2026-09-08"
     assert got[0]["source"] == "DHAN_ROLLING" and got[0]["greek_source"] == "RECONSTRUCTED"
+
+
+def test_normalize_with_verified_resolver_records_expiry_provenance():
+    ef = rolling.resolver_expiry_for("NIFTY")
+    rows = rolling.normalize(_side(), underlying="NIFTY", option_type="CE", expiry_for=ef)
+    assert rows[0]["expiry"] == "2026-09-01"          # 01-Sep-2026 is itself a listed Tuesday expiry
+    gi = rows[0]["greek_inputs"]
+    assert gi["expiry_status"] == "VERIFIED" and gi["expiry_source"] == "BROKER_METADATA"
+    assert rows[0]["greek_source"] == "RECONSTRUCTED"
+
+
+def test_normalize_with_unresolvable_expiry_keeps_greeks_unavailable():
+    from app.hist_options.expiry import ExpiryResolver
+    ef = rolling.resolver_expiry_for("NIFTY", resolver=ExpiryResolver(metadata={}, calendars={}))
+    rows = rolling.normalize(_side(), underlying="NIFTY", option_type="CE", expiry_for=ef)
+    assert all(r["expiry"] is None and r["greek_source"] == "UNAVAILABLE" and r["delta"] is None for r in rows)
+
+
+def test_raw_values_are_not_overwritten_by_reconstruction():
+    side = _side()
+    rows = rolling.normalize(side, underlying="NIFTY", option_type="CE", expiry_for=rolling.resolver_expiry_for("NIFTY"))
+    assert [r["iv"] * 100 for r in rows[:2]] == pytest.approx(side["iv"][:2])       # direct IV untouched
+    assert [r["oi"] for r in rows] == side["oi"] and [r["spot"] for r in rows] == side["spot"]
+    assert all(r["iv_source"] in ("DIRECT", "UNAVAILABLE") for r in rows)          # never RECONSTRUCTED here

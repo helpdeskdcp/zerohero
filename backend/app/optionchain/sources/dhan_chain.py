@@ -54,7 +54,7 @@ _UNDERLYING_SCRIP = {
 # NATURALGAS 90, with bid/ask/OI/previous_oi/IV/Greeks). Unlike the fixed index
 # scrips above, the underlying is the FRONT-MONTH FUTURE's security_id (rolls
 # monthly), segment MCX_COMM -- resolved from Dhan's own instrument master.
-_MCX_SYMBOLS = {"CRUDEOIL", "NATURALGAS"}
+_MCX_SYMBOLS = {"CRUDEOIL", "NATURALGAS", "CRUDEOILM", "NATGASMINI"}   # minis: separate contracts (own security ids/OI), verified live 2026-09-30
 SUPPORTED = set(_UNDERLYING_SCRIP) | _MCX_SYMBOLS
 
 

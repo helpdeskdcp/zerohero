@@ -12,7 +12,7 @@ the caller supplies an expiry date; otherwise UNAVAILABLE(NO_EXPIRY_DATE).
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable
 
 import requests
@@ -25,6 +25,7 @@ _SEG = {"NIFTY": "NSE_FNO", "BANKNIFTY": "NSE_FNO", "FINNIFTY": "NSE_FNO", "MIDC
         "SENSEX": "BSE_FNO", "BANKEX": "BSE_FNO"}
 _EXCH = {"NSE_FNO": "NFO", "BSE_FNO": "BFO"}
 UNSUPPORTED_BY_DHAN = "UNSUPPORTED_BY_DHAN"
+_IST = timezone(timedelta(hours=5, minutes=30))
 
 
 def support_status(underlying: str) -> str:
@@ -62,6 +63,25 @@ def fetch_side(underlying: str, option_type: str, from_date: str, to_date: str, 
         return None
 
 
+def resolver_expiry_for(underlying: str, *, flag: str = "WEEK", code: int = 1, resolver=None, audit=None):
+    """expiry_for adapter over ExpiryResolver: returns a date only for VERIFIED /
+    RECONSTRUCTED results (RECONSTRUCTED only when the resolver allowed it), else
+    None so Greeks stay UNAVAILABLE. Each distinct resolution can be audited."""
+    from .expiry import ExpiryResolver, UNAVAILABLE
+    res = resolver or ExpiryResolver()
+    cache: dict = {}
+
+    def f(bar_date: date):
+        if bar_date not in cache:
+            cache[bar_date] = res.resolve(underlying, bar_date, flag=flag, code=code)
+            if audit is not None:
+                audit.log(bar_date, cache[bar_date])
+        r = cache[bar_date]
+        return None if r.expiry_status == UNAVAILABLE else date.fromisoformat(r.expiry_date)
+    f.results = cache
+    return f
+
+
 def normalize(side: dict, *, underlying: str, option_type: str, interval_min: int = 1,
               expiry_for: Callable[[date], date | None] | None = None,
               r: float = 0.0, q: float = 0.0) -> list[dict]:
@@ -85,13 +105,18 @@ def normalize(side: dict, *, underlying: str, option_type: str, interval_min: in
         prev = prev_oi if key == prev_key else None
         prev_oi, prev_key = cur_oi, key
         ivd = (iv[i] / 100.0) if iv[i] not in (None, 0) else None
-        exp = expiry_for(ts_utc.date()) if expiry_for else None
+        bdate = ts_utc.astimezone(_IST).date()          # trading date is the IST date
+        exp = expiry_for(bdate) if expiry_for else None
         if exp is not None and ivd and spot[i] and strike:
             T = max(1e-6, (datetime(exp.year, exp.month, exp.day, 10, 0, tzinfo=timezone.utc) - ts_utc)
                     .total_seconds() / (365.0 * 86400.0))       # 15:30 IST = 10:00 UTC
             g = gm.reconstruct(spot[i], strike, T, ivd, option_type == "CE", model="BS_CARRY", r=r, q=q,
                                iv_source="DIRECT")
             g["inputs"]["expiry_date"] = exp.isoformat()
+            er = getattr(expiry_for, "results", {}).get(bdate)
+            if er is not None:
+                g["inputs"].update(expiry_status=er.expiry_status, expiry_source=er.expiry_source,
+                                   expiry_rule_version=er.rule_version)
         else:
             g = gm._unavailable("NO_EXPIRY_DATE" if exp is None else "MISSING_IV_OR_SPOT",
                                 {"iv": ivd, "spot": spot[i], "strike": strike})
