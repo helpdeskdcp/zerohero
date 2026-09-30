@@ -58,6 +58,25 @@ def test_emergency_exit_all_reports_unresolved_when_chain_lookup_fails(fresh_db,
     assert list(remaining.values())[0].status == "OPEN"
 
 
+def test_emergency_exit_all_disarms_the_engine(fresh_db, monkeypatch):
+    # MCP 3.1.2 hard-safety-state requirement: EXIT ALL must freeze new
+    # entries and require a manual re-arm, never auto-re-arm.
+    C.reset(50000.0)
+    P.open_position(symbol="NIFTY", primary_strike=24500, primary_option_type="CE",
+                    primary_entry_premium=60.0, hedge_strike=24700, hedge_entry_premium=20.0,
+                    lots=1, lot_size=65, max_loss_per_lot=10400.0,
+                    margin_locked=10400.0, cost_paid=1300.0)
+    hr._runner.arm()
+    assert hr._runner.is_armed() is True
+
+    monkeypatch.setattr(hr._runner, "_current_quotes", lambda positions: {})
+    out = hr.api_hedging_emergency_exit_all()
+
+    assert out["armed"] is False
+    assert hr._runner.is_armed() is False
+    assert out["state"] == "RECONCILIATION_REQUIRED"   # no quote -> UNRESOLVED, not silently closed
+
+
 def test_capital_reset_updates_starting_and_available(fresh_db):
     out = hr.api_hedging_capital_reset(hr.CapitalResetRequest(starting_capital=100000.0))
     assert out["starting_capital"] == 100000.0

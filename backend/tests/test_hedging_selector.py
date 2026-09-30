@@ -50,7 +50,9 @@ def test_evaluate_candidates_computes_real_economics_for_accepted_ones():
     cands = S.evaluate_candidates(_ce_chain(), _primary_ce())
     c700 = next(c for c in cands if c.strike == 24700)
     assert c700.accepted
-    assert c700.economics.max_loss_per_lot == (200 * 65 - (60.0 - 20.0) * 65)
+    hedge_ask = 20.0 * 1.02   # _leg()'s default ask markup -- the realistic BUY fill, not ltp
+    assert c700.premium == pytest.approx(hedge_ask)
+    assert c700.economics.max_loss_per_lot == pytest.approx(200 * 65 - (60.0 - hedge_ask) * 65)
 
 
 def test_select_hedge_picks_cheapest_accepted_candidate():
@@ -81,17 +83,44 @@ def test_select_hedge_rejects_hedge_that_eats_too_much_credit():
 
 
 def test_select_hedge_sizes_the_position_from_capital():
-    # best candidate's max_loss_per_lot is 10400 (see the economics test above);
-    # 2,000,000 * 2% = 40,000 risk budget -> 3 lots.
+    # best candidate's max_loss_per_lot is 10426 (see the economics test above,
+    # using the realistic ask fill 20.4, not ltp 20.0);
+    # 2,000,000 * 2% = 40,000 risk budget -> floor(40000/10426) = 3 lots.
     dec = S.select_hedge(_ce_chain(), _primary_ce(), available_capital=2_000_000, max_risk_pct=0.02)
     assert dec.status == "SELECTED"
     assert dec.lots == 3
+
+
+def test_select_hedge_exposes_all_evaluated_candidates_for_audit():
+    dec = S.select_hedge(_ce_chain(), _primary_ce())
+    assert dec.status == "SELECTED"
+    assert {c.strike for c in dec.all_candidates} == {24600, 24700, 24800}
+    rejected = [c for c in dec.all_candidates if not c.accepted]
+    assert len(rejected) == 1 and rejected[0].strike == 24800
 
 
 def test_select_hedge_no_trade_when_capital_too_small_for_one_lot():
     dec = S.select_hedge(_ce_chain(), _primary_ce(), available_capital=100, max_risk_pct=0.02)
     assert dec.status == "NO_TRADE"
     assert "sizing rejected" in dec.reason
+
+
+def test_hedge_leg_fills_at_ask_not_ltp():
+    # The hedge leg is BOUGHT -- MCP 3.1.2 gap: paper execution must not
+    # silently fill at LTP.
+    chain = _chain([StrikeRow(strike=24700, ce=_leg(20.0, bid=19.5, ask=20.6))])
+    cands = S.evaluate_candidates(chain, _primary_ce())
+    c = cands[0]
+    assert c.premium == 20.6 and c.premium != 20.0
+
+
+def test_hedge_leg_rejected_when_ask_missing():
+    chain = _chain([StrikeRow(strike=24700, ce=OptionLeg(ltp=20.0, bid=19.5, ask=None,
+                                                          oi=1000, volume=500))])
+    cands = S.evaluate_candidates(chain, _primary_ce())
+    c = cands[0]
+    assert not c.accepted
+    assert any("bid/ask UNAVAILABLE" in r for r in c.reject_reasons)
 
 
 def test_pe_side_only_considers_lower_strikes():

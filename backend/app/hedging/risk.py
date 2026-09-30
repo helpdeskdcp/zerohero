@@ -15,6 +15,7 @@ class SpreadEconomics:
     max_loss_per_lot: float         # strike_width * lot_size - net_credit*lot_size, floored at 0
     max_profit_per_lot: float       # net_credit * lot_size, floored at 0
     strike_width: float
+    breakeven: float                # the underlying price where combined P&L crosses zero at expiry
     margin_status: str = "APPROXIMATED_AS_MAX_LOSS"
     margin_note: str = (
         "no broker SPAN margin-calculator API is wired in this codebase -- "
@@ -47,10 +48,27 @@ def credit_spread_economics(*, primary_premium: float, hedge_premium: float,
     net_credit = primary_premium - hedge_premium
     max_loss = max(0.0, width * lot_size - net_credit * lot_size)
     max_profit = max(0.0, net_credit * lot_size)
+    # Credit spread breakeven: the sold strike offset by the net credit
+    # received, in the direction risk accrues -- CE (bear call spread) loses
+    # as spot rises past primary_strike, so the credit buys room above it;
+    # PE (bull put spread) loses as spot falls, so the credit buys room below.
+    breakeven = primary_strike + net_credit if ot == "CE" else primary_strike - net_credit
     return SpreadEconomics(net_credit_per_unit=round(net_credit, 4),
                            max_loss_per_lot=round(max_loss, 2),
                            max_profit_per_lot=round(max_profit, 2),
-                           strike_width=width)
+                           strike_width=width,
+                           breakeven=round(breakeven, 2))
+
+
+def spread_pct(bid: float | None, ask: float | None) -> float | None:
+    """(ask-bid)/mid, or None when either side is missing/invalid -- shared
+    by both leg validators (selector.py's hedge-leg check and
+    primary_selector.py's sold-leg check) so there is exactly one
+    definition of "spread", not two that could quietly drift apart."""
+    if bid is None or ask is None or bid <= 0 or ask <= 0 or ask < bid:
+        return None
+    mid = (bid + ask) / 2.0
+    return round((ask - bid) / mid, 4) if mid > 0 else None
 
 
 def net_delta_exposure(*, primary_delta: float | None, hedge_delta: float | None,

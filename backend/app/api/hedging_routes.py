@@ -31,11 +31,13 @@ class HedgingConfigPatch(BaseModel):
     symbols: list[str] | None = None
     min_distance_pct: float | None = None
     min_oi: float | None = None
+    min_volume: float | None = None
     max_spread_pct: float | None = None
     max_hedge_cost_pct_of_credit: float | None = None
     max_risk_pct: float | None = None
     max_concurrent_positions: int | None = None
     max_positions_per_symbol: int | None = None
+    max_portfolio_margin_pct: float | None = None
 
 
 @router.get("/status")
@@ -172,8 +174,23 @@ def api_hedging_emergency_exit_all():
     back to the captured chain) with GET /positions above -- this route
     used to have its own, near-identical captured-chain-only copy
     (DUPLICATE_LOGIC.md item to watch for: this is exactly the pattern
-    that let the K8 calibration fix miss a duplicate elsewhere)."""
+    that let the K8 calibration fix miss a duplicate elsewhere).
+
+    MCP 3.1.2 hard-safety-state requirement: EMERGENCY EXIT ALL must
+    freeze new entries and never auto-re-arm. Disarmed FIRST, before any
+    exit is attempted, so a scan racing this call can't open a new
+    position while the emergency exit is still in flight -- and because
+    arm() is only ever called from the explicit POST /arm route, disarming
+    here already guarantees the "manual re-arm required" requirement with
+    no further state machine needed. A ledger reconcile runs after, same
+    as every routine scan tick, so a partial/UNRESOLVED exit can never
+    leave the capital ledger silently desynced from the position store."""
+    _runner.disarm()
     positions = _position.load_all()
     quotes = _runner._current_quotes(positions)
     results = _position.emergency_exit_all(current_prices=quotes)
-    return {"results": results, "live_trading": False}
+    reconciliation = _runner._reconcile_capital()
+    unresolved = [r for r in results if r["status"] == "UNRESOLVED"]
+    return {"results": results, "live_trading": False, "armed": _runner.is_armed(),
+           "state": "RECONCILIATION_REQUIRED" if unresolved else "EMERGENCY_MODE",
+           "reconciliation": reconciliation}

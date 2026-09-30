@@ -28,6 +28,7 @@ from .. import db, instrument_profiles, instruments, market_calendar, telegram_d
 from ..connectors.angelone import fetch_market_quote
 from ..optionchain.resolve import get_chain
 from . import capital as _capital
+from . import decision_log as _decision_log
 from . import position as _position
 from . import primary_selector as _primary
 from . import selector as _selector
@@ -58,11 +59,17 @@ DEFAULT_CONFIG = {
     "symbols": ["NIFTY", "BANKNIFTY", "SENSEX"],
     "min_distance_pct": 1.5,
     "min_oi": 500,
+    "min_volume": 100,
     "max_spread_pct": 0.15,
     "max_hedge_cost_pct_of_credit": 0.60,
     "max_risk_pct": 0.02,
     "max_concurrent_positions": 3,
     "max_positions_per_symbol": 1,
+    # Portfolio-level cap (MCP 3.1.2 gap: per-trade risk% alone doesn't stop
+    # several max-sized positions from collectively over-using the account) --
+    # checked against starting_capital, not the shrinking available_capital,
+    # so the ceiling is a stable fraction of the account, not a moving target.
+    "max_portfolio_margin_pct": 0.50,
 }
 
 
@@ -167,7 +174,9 @@ def evaluate_symbol(symbol: str, cfg: dict, now=None) -> dict:
             return {"symbol": symbol, "status": "NO_DATA", "reason": "no captured chain"}
 
         primary_sel = _primary.select_primary(
-            chain, min_distance_pct=cfg["min_distance_pct"], min_oi=cfg["min_oi"], lot_size=lot_size)
+            chain, min_distance_pct=cfg["min_distance_pct"], min_oi=cfg["min_oi"], lot_size=lot_size,
+            min_volume=cfg.get("min_volume", _primary.DEFAULT_MIN_VOLUME),
+            max_spread_pct=cfg["max_spread_pct"])
         if primary_sel.status != "SELECTED":
             return {"symbol": symbol, "status": "NO_TRADE", "reason": f"primary: {primary_sel.reason}"}
 
@@ -181,6 +190,16 @@ def evaluate_symbol(symbol: str, cfg: dict, now=None) -> dict:
             return {"symbol": symbol, "status": "NO_TRADE", "reason": f"hedge: {decision.reason}"}
 
         cand = decision.candidate
+        new_margin = cand.economics.max_loss_per_lot * decision.lots
+        existing_margin = sum(p.margin_locked for p in positions.values() if p.status == "OPEN")
+        margin_ceiling = cap.starting_capital * cfg.get("max_portfolio_margin_pct", 0.50)
+        projected_margin = existing_margin + new_margin
+        if projected_margin > margin_ceiling:
+            return {"symbol": symbol, "status": "NO_TRADE",
+                    "reason": f"PORTFOLIO_MARGIN_LIMIT: projected margin {projected_margin:.2f} "
+                              f"> ceiling {margin_ceiling:.2f} ({cfg.get('max_portfolio_margin_pct', 0.50):.0%} "
+                              f"of starting capital {cap.starting_capital:.2f})"}
+
         primary_token = _leg_token(symbol, chain.expiry, primary_sel.leg.strike, primary_sel.leg.option_type)
         hedge_token = _leg_token(symbol, chain.expiry, cand.strike, cand.option_type)
         pos = _position.open_position(
@@ -190,12 +209,34 @@ def evaluate_symbol(symbol: str, cfg: dict, now=None) -> dict:
             hedge_strike=cand.strike, hedge_entry_premium=cand.premium,
             lots=decision.lots, lot_size=lot_size,
             max_loss_per_lot=cand.economics.max_loss_per_lot,
-            margin_locked=cand.economics.max_loss_per_lot * decision.lots,
+            margin_locked=new_margin,
             cost_paid=cand.premium * lot_size * decision.lots,
             primary_token=primary_token, hedge_token=hedge_token,
             max_profit_per_lot=cand.economics.max_profit_per_lot,
             net_credit_per_lot=round(cand.economics.net_credit_per_unit * lot_size, 2),
             strike_width=cand.economics.strike_width)
+
+        decision_id = _decision_log.record({
+            "position_id": pos.position_id, "symbol": symbol, "config": cfg,
+            "market": {"spot": chain.spot, "expiry": chain.expiry, "chain_ts": chain.ts},
+            "primary_leg": {"strike": primary_sel.leg.strike, "option_type": primary_sel.leg.option_type,
+                            "fill_price": primary_sel.leg.premium, "ltp": primary_sel.leg.ltp,
+                            "bid": primary_sel.leg.bid, "ask": primary_sel.leg.ask,
+                            "reason": primary_sel.reason},
+            "hedge_leg": {"strike": cand.strike, "option_type": cand.option_type,
+                         "fill_price": cand.premium, "ltp": cand.ltp, "bid": cand.bid, "ask": cand.ask,
+                         "spread_pct": cand.spread_pct},
+            "rejected_candidates": [
+                {"strike": c.strike, "premium": c.premium, "reasons": c.reject_reasons}
+                for c in decision.all_candidates if not c.accepted],
+            "economics": {"net_credit_per_lot": round(cand.economics.net_credit_per_unit * lot_size, 2),
+                         "max_profit_per_lot": cand.economics.max_profit_per_lot,
+                         "max_loss_per_lot": cand.economics.max_loss_per_lot,
+                         "breakeven": cand.economics.breakeven, "strike_width": cand.economics.strike_width},
+            "portfolio": {"existing_margin": existing_margin, "new_margin": new_margin,
+                         "margin_ceiling": margin_ceiling},
+            "lots": decision.lots, "lot_size": lot_size,
+        })
 
         _notify("OPEN", symbol,
                f"HEDGING OPEN -- {symbol}\n"
@@ -203,10 +244,12 @@ def evaluate_symbol(symbol: str, cfg: dict, now=None) -> dict:
                f"BUY  {primary_sel.leg.option_type} {cand.strike} @ {cand.premium}\n"
                f"lots: {decision.lots} x {lot_size}  "
                f"max_profit/lot: {cand.economics.max_profit_per_lot}  "
-               f"max_loss/lot: {cand.economics.max_loss_per_lot}\n"
+               f"max_loss/lot: {cand.economics.max_loss_per_lot}  "
+               f"breakeven: {cand.economics.breakeven}\n"
                f"reason: {primary_sel.reason}\n"
                f"PAPER only, not a live order.")
         return {"symbol": symbol, "status": "OPENED", "position_id": pos.position_id,
+                "decision_id": decision_id,
                 "primary": primary_sel.leg.__dict__, "hedge_strike": cand.strike, "lots": decision.lots}
     except Exception as e:
         _log.warning("evaluate_symbol(%s): %r", symbol, e)

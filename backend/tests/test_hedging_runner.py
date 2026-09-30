@@ -72,6 +72,27 @@ def test_armed_scan_opens_a_position_and_notifies(fresh_db, monkeypatch):
     assert pos.primary_option_type == "CE" and pos.primary_strike == 23400
     assert pos.hedge_strike == 23500
 
+    # MCP 3.1.2: every OPEN persists a reconstructable decision snapshot
+    from app.hedging import decision_log as _dlog
+    snap = _dlog.get(entry["decision_id"])
+    assert snap is not None and snap["position_id"] == pos.position_id
+    assert snap["primary_leg"]["strike"] == 23400 and snap["hedge_leg"]["strike"] == 23500
+    assert snap["economics"]["breakeven"] is not None
+
+
+def test_portfolio_margin_ceiling_blocks_new_entry(fresh_db, monkeypatch):
+    _patch_common(monkeypatch)
+    _capital.reset(500000.0)
+    runner.set_config({"symbols": ["NIFTY"], "min_distance_pct": 1.0,
+                       "max_portfolio_margin_pct": 0.001})   # far below this trade's real margin
+    runner.arm()
+
+    out = runner.scan(now=_MID_SESSION_IST)
+    entry = out["entries"][0]
+    assert entry["status"] == "NO_TRADE"
+    assert "PORTFOLIO_MARGIN_LIMIT" in entry["reason"]
+    assert _position.load_all() == {}
+
 
 def test_armed_scan_respects_max_positions_per_symbol(fresh_db, monkeypatch):
     _patch_common(monkeypatch)

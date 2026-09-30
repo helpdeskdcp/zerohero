@@ -42,22 +42,29 @@ class HedgeConfig:
 class PrimaryLeg:
     strike: float
     option_type: str            # "CE" | "PE"
-    premium: float
+    premium: float              # the realistic SELL fill (bid), not ltp
     delta: float | None = None
     lot_size: int = 1
+    ltp: float | None = None
+    bid: float | None = None
+    ask: float | None = None
 
 
 @dataclass
 class HedgeCandidate:
     strike: float
     option_type: str
-    premium: float
+    premium: float              # the realistic BUY fill (ask) for an accepted candidate;
+                                 # ltp only as a diagnostic reference when ask is unavailable
     liquidity_ok: bool
     spread_ok: bool
     spread_pct: float | None
     economics: "_risk.SpreadEconomics | None"
     net_delta: dict
     risk_reduction: dict
+    ltp: float | None = None
+    bid: float | None = None
+    ask: float | None = None
     reject_reasons: list = field(default_factory=list)
 
     @property
@@ -73,13 +80,8 @@ class HedgeDecision:
     evaluated: int
     accepted: int
     reason: str
-
-
-def _spread_pct(bid: float | None, ask: float | None) -> float | None:
-    if bid is None or ask is None or bid <= 0 or ask <= 0 or ask < bid:
-        return None
-    mid = (bid + ask) / 2.0
-    return round((ask - bid) / mid, 4) if mid > 0 else None
+    all_candidates: list = field(default_factory=list)   # every evaluated candidate, accepted or
+                                                          # not -- for decision-snapshot/audit visibility
 
 
 def evaluate_candidates(chain, primary: PrimaryLeg, cfg: HedgeConfig | None = None) -> list[HedgeCandidate]:
@@ -113,24 +115,35 @@ def evaluate_candidates(chain, primary: PrimaryLeg, cfg: HedgeConfig | None = No
             reasons.append(f"volume below minimum ({leg.volume} < {cfg.min_volume})" if leg.volume is not None
                           else "volume UNAVAILABLE")
 
-        sp = _spread_pct(leg.bid, leg.ask)
+        sp = _risk.spread_pct(leg.bid, leg.ask)
         spread_ok = sp is not None and sp <= cfg.max_spread_pct
         if not spread_ok:
             reasons.append(f"spread too wide ({sp})" if sp is not None else "bid/ask UNAVAILABLE")
 
-        econ = _risk.credit_spread_economics(
-            primary_premium=primary.premium, hedge_premium=leg.ltp,
-            primary_strike=primary.strike, hedge_strike=strike,
-            option_type=ot, lot_size=primary.lot_size)
-        if econ is None:
-            reasons.append("hedge strike is not further OTM than the primary -- not a valid protective leg")
+        # This leg is BOUGHT -- the realistic executable fill is the ASK,
+        # never the LTP (which can be stale or print at a price nobody can
+        # actually transact at). spread_ok already requires both bid and
+        # ask to be present and sane, so any candidate that reaches
+        # `.accepted` always has a real ask here; a missing ask only ever
+        # shows up on an already-rejected candidate, where leg.ltp is kept
+        # purely as a diagnostic reference, never as a tradable price.
+        fill_price = leg.ask
+        if fill_price is None:
+            econ = None
         else:
-            credit_at_risk = primary.premium * primary.lot_size
-            hedge_cost = leg.ltp * primary.lot_size
-            if credit_at_risk > 0 and hedge_cost / credit_at_risk > cfg.max_hedge_cost_pct_of_credit:
-                reasons.append(
-                    f"hedge cost eats too much of the credit ({hedge_cost}/{credit_at_risk} "
-                    f"> {cfg.max_hedge_cost_pct_of_credit:.0%})")
+            econ = _risk.credit_spread_economics(
+                primary_premium=primary.premium, hedge_premium=fill_price,
+                primary_strike=primary.strike, hedge_strike=strike,
+                option_type=ot, lot_size=primary.lot_size)
+            if econ is None:
+                reasons.append("hedge strike is not further OTM than the primary -- not a valid protective leg")
+            else:
+                credit_at_risk = primary.premium * primary.lot_size
+                hedge_cost = fill_price * primary.lot_size
+                if credit_at_risk > 0 and hedge_cost / credit_at_risk > cfg.max_hedge_cost_pct_of_credit:
+                    reasons.append(
+                        f"hedge cost eats too much of the credit ({hedge_cost}/{credit_at_risk} "
+                        f"> {cfg.max_hedge_cost_pct_of_credit:.0%})")
 
         nd = _risk.net_delta_exposure(
             primary_delta=primary.delta, hedge_delta=leg.delta, primary_side="SELL",
@@ -144,9 +157,10 @@ def evaluate_candidates(chain, primary: PrimaryLeg, cfg: HedgeConfig | None = No
             reasons.append(f"risk reduction below minimum ({rr['pct']}% < {cfg.min_risk_reduction_pct}%)")
 
         out.append(HedgeCandidate(
-            strike=strike, option_type=ot, premium=leg.ltp,
+            strike=strike, option_type=ot, premium=fill_price if fill_price is not None else leg.ltp,
             liquidity_ok=oi_ok and vol_ok, spread_ok=spread_ok, spread_pct=sp,
-            economics=econ, net_delta=nd, risk_reduction=rr, reject_reasons=reasons))
+            economics=econ, net_delta=nd, risk_reduction=rr,
+            ltp=leg.ltp, bid=leg.bid, ask=leg.ask, reject_reasons=reasons))
 
     return out
 
@@ -164,7 +178,8 @@ def select_hedge(chain, primary: PrimaryLeg, cfg: HedgeConfig | None = None,
     if not accepted:
         return HedgeDecision(status="NO_TRADE", candidate=None, lots=0,
                              evaluated=len(candidates), accepted=0,
-                             reason="no candidate cleared liquidity/spread/cost/risk-reduction limits")
+                             reason="no candidate cleared liquidity/spread/cost/risk-reduction limits",
+                             all_candidates=candidates)
 
     # Phase 1 selection rule, documented and simple: cheapest accepted
     # protective candidate wins (lowest hedge cost among everything that
@@ -183,8 +198,10 @@ def select_hedge(chain, primary: PrimaryLeg, cfg: HedgeConfig | None = None,
         if lots <= 0:
             return HedgeDecision(status="NO_TRADE", candidate=best, lots=0,
                                  evaluated=len(candidates), accepted=len(accepted),
-                                 reason=f"sizing rejected: {sized['reason']}")
+                                 reason=f"sizing rejected: {sized['reason']}",
+                                 all_candidates=candidates)
 
     return HedgeDecision(status="SELECTED", candidate=best, lots=lots,
                          evaluated=len(candidates), accepted=len(accepted),
-                         reason="cheapest accepted protective candidate")
+                         reason="cheapest accepted protective candidate",
+                         all_candidates=candidates)
