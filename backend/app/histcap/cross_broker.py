@@ -46,15 +46,31 @@ def _ts_drift_sec(a_ts, d_ts):
     return round((d_dt - a_dt).total_seconds(), 1)
 
 
+DEFAULT_LOOKBACK_MIN = 15.0
+
+
 def compare_captured_quotes(symbol: str, expiry: str, *, since: str | None = None,
                             limit: int = 5000, store: HistStore | None = None) -> dict:
     """{"matched": N, "angelone_only": N, "dhan_only": N, "pairs": [...],
     "summary": {avg/max abs diffs for ltp/oi/volume/bid/ask, avg/max
     timestamp drift}} -- every number here is a real measurement of rows
     already in quote_snapshots, or None when there's nothing to measure
-    (never a fabricated 0)."""
+    (never a fabricated 0).
+
+    `since` defaults to DEFAULT_LOOKBACK_MIN minutes ago, not "all
+    history" -- HistStore.get_quotes()'s own docstring already documents
+    why an unbounded query is wrong here: it orders ASC and applies
+    `limit`, so a long-lived strike/expiry with more history than `limit`
+    silently returns its OLDEST rows, not its most recent (the exact same
+    bug class found 2026-09-21 elsewhere in this codebase). A "cross-
+    broker agreement" check is inherently about recent capture cycles, so
+    an unbounded default would silently compare stale, pre-Dhan-capture
+    AngelOne history against nothing."""
     store = store or hist_store()
     u = str(symbol or "").upper()
+    if since is None:
+        from datetime import datetime, timedelta, timezone
+        since = (datetime.now(timezone.utc) - timedelta(minutes=DEFAULT_LOOKBACK_MIN)).isoformat()
     rows = store.get_quotes(u, kind="OPTION", expiry=expiry, since=since, limit=limit)
 
     latest: dict[tuple, dict] = {}

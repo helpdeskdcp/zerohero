@@ -41,7 +41,7 @@ def _seed_pair(store, *, strike=22750.0, ot="CE", a_ltp=166.95, d_ltp=167.10,
 
 def test_compare_matches_a_real_pair_and_computes_real_diffs(store):
     _seed_pair(store)
-    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
     assert out["matched"] == 1 and out["angelone_only"] == 0 and out["dhan_only"] == 0
     p = out["pairs"][0]
     assert p["angelone_ltp"] == 166.95 and p["dhan_ltp"] == 167.10
@@ -56,7 +56,7 @@ def test_compare_reports_angelone_only_strike(store):
            token="1", expiry="06OCT2026", strike=23000.0, option_type="CE",
            session_date_ist="2026-09-30", ltp=50.0, oi=1000.0, volume=10.0, bid=49.5, ask=50.5,
            source="ANGELONE_QUOTE_FULL")
-    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
     assert out["matched"] == 0 and out["angelone_only"] == 1 and out["dhan_only"] == 0
     assert out["angelone_only_strikes"] == [{"strike": 23000.0, "option_type": "CE"}]
 
@@ -67,7 +67,7 @@ def test_compare_reports_dhan_only_strike(store):
            token="2", expiry="06OCT2026", strike=23050.0, option_type="PE",
            session_date_ist="2026-09-30", ltp=60.0, oi=2000.0, volume=20.0, bid=59.5, ask=60.5,
            source="DHAN_CHAIN")
-    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
     assert out["matched"] == 0 and out["dhan_only"] == 1
     assert out["dhan_only_strikes"] == [{"strike": 23050.0, "option_type": "PE"}]
 
@@ -75,14 +75,14 @@ def test_compare_reports_dhan_only_strike(store):
 def test_compare_summary_stats_are_real_not_fabricated(store):
     _seed_pair(store, strike=22750.0, a_ltp=100.0, d_ltp=101.0)
     _seed_pair(store, strike=22800.0, a_ltp=50.0, d_ltp=50.0, d_ts="2026-09-30T10:45:00Z")
-    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
     assert out["matched"] == 2
     s = out["summary"]["ltp_diff_pct"]
     assert s["n"] == 2 and s["max_abs"] == pytest.approx(1.0, abs=1e-2)
 
 
 def test_compare_returns_all_none_stats_when_nothing_captured_yet(store):
-    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
     assert out["matched"] == 0 and out["angelone_only"] == 0 and out["dhan_only"] == 0
     assert out["summary"]["ltp_diff_pct"] == {"avg": None, "max_abs": None, "n": 0}
 
@@ -93,5 +93,19 @@ def test_compare_ignores_other_sources(store):
            token="9", expiry="06OCT2026", strike=22900.0, option_type="CE",
            session_date_ist="2026-09-30", ltp=10.0, oi=1.0, volume=1.0, bid=9.5, ask=10.5,
            source="UPSTOX_OPEN")
-    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
+    assert out["matched"] == 0 and out["angelone_only"] == 0 and out["dhan_only"] == 0
+
+
+def test_default_since_excludes_stale_history_not_just_all_time(store):
+    # Real incident found live 2026-09-30 while verifying this feature:
+    # get_quotes() orders ASC + LIMIT (its own documented footgun -- a
+    # long-lived strike/expiry with more history than `limit` silently
+    # returns its OLDEST rows). Without a sensible default `since`, this
+    # function would have compared ancient AngelOne history against
+    # nothing, reporting a false "no overlap" even when both providers
+    # currently agree perfectly. A fixed 2026-01-01 row must NOT appear
+    # in a call that omits `since` (today's real wall-clock default).
+    _seed_pair(store, a_ts="2026-01-01T09:00:00Z", d_ts="2026-01-01T09:00:05Z")
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store)   # no since= -> real default
     assert out["matched"] == 0 and out["angelone_only"] == 0 and out["dhan_only"] == 0
