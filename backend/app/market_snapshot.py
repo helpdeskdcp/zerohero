@@ -32,11 +32,31 @@ from . import market_hub
 from .histcap.store import HistStore
 from .optionchain.resolve import get_chain as _get_chain
 
-DEFAULT_MAX_AGE_SEC = 180.0
+DEFAULT_MAX_AGE_SEC = 420.0
+# Calibrated against real observed capture cadence, not guessed: INDIAVIX
+# is one of 9 symbols histcap captures sequentially every ~20s-quote_sec
+# cycle, and live testing 2026-09-30 (market open) showed real gaps up to
+# ~4m40s between successive INDIAVIX rows under normal, healthy operation
+# (histcap/worker.py processes symbols in sequence, not in parallel). A
+# tighter threshold (180s was the first guess, copied from
+# mathematical_confluence.context._spot_from_histcap's WS-fed-spot
+# default) flagged UNAVAILABLE on a perfectly healthy capture -- confirmed
+# live via GET /api/market/vix mid-testing. 420s gives headroom above the
+# observed worst case while still catching a genuinely stalled capture
+# (worker crashed, symbol dropped from config, etc.).
+
 # Two components captured further apart than this are never silently
 # treated as "the same moment" -- the more-stale one is kept (never
-# dropped) but flagged in `conflicts`.
-DEFAULT_COHERENCE_TOLERANCE_SEC = 60.0
+# dropped) but flagged in `conflicts`. Same 2026-09-30 live evidence as
+# DEFAULT_MAX_AGE_SEC above: a 60s tolerance flagged INDIAVIX as a
+# conflict on essentially every snapshot even under healthy operation,
+# since spot refreshes every second (WS feed) but VIX only every
+# ~20s-4m40s (sequential REST capture) -- making `conflicts` permanently
+# noisy defeats its purpose as a real signal. 300s (comfortably inside
+# DEFAULT_MAX_AGE_SEC's 420s ceiling) still catches a VIX read that's
+# stale relative to a fresh snapshot without flagging normal capture
+# cadence as if it were a data problem.
+DEFAULT_COHERENCE_TOLERANCE_SEC = 300.0
 
 
 def _now_iso() -> str:
