@@ -83,6 +83,37 @@ def test_target_exit_and_signal_row(fresh_db, tmp_path, monkeypatch):
     assert rows[0]["signal_id"].startswith("SCS-")
 
 
+def test_slippage_pct_defaults_to_zero_backward_compatible(fresh_db, tmp_path, monkeypatch):
+    # oi_history_adapter's source has no bid/ask column at all -- slippage
+    # is a MODELED assumption, off by default so every pre-existing test
+    # that asserts an exact LTP-based fill price is unaffected.
+    _mkdb(tmp_path, monkeypatch, [
+        ("09:16", 24000, 24000, CH(100.0, 80.0)),
+        ("09:17", 24010, 24000, CH(105.0, 76.0)),
+        ("09:18", 24025, 24000, CH(115.0, 70.0)),
+    ])
+    res = rp.run_replay("NIFTY", _enter_once("09:17"), start="2026-08-27", end="2026-08-27")
+    t = res.trades[0]
+    assert t.entry == 105.0 and t.exit_price == 115.0    # exact LTP, no slippage applied
+
+
+def test_slippage_pct_makes_buy_and_sell_fills_worse_than_ltp(fresh_db, tmp_path, monkeypatch):
+    _mkdb(tmp_path, monkeypatch, [
+        ("09:16", 24000, 24000, CH(100.0, 80.0)),
+        ("09:17", 24010, 24000, CH(105.0, 76.0)),    # entry tick, raw ltp 105.0
+        ("09:18", 24025, 24000, CH(115.0, 70.0)),    # target tick, raw ltp 115.0 >= t1 110
+    ])
+    res = rp.run_replay("NIFTY", _enter_once("09:17"), start="2026-08-27", end="2026-08-27",
+                        slippage_pct=0.01)
+    t = res.trades[0]
+    # BUY fill worse (higher) than the raw 105.0 entry LTP
+    assert t.entry == round(105.0 * 1.01, 2) == 106.05
+    # SELL-to-close fill worse (lower) than the raw 115.0 trigger LTP
+    assert t.exit_price == round(115.0 * 0.99, 2) == 113.85
+    assert t.exit_reason == "TARGET"                     # trigger detection still uses raw LTP
+    assert t.points == round(113.85 - 106.05, 2)          # real edge net of modeled slippage
+
+
 def test_target_exit_applies_real_naturalgas_cost_not_nifty(fresh_db, tmp_path, monkeypatch):
     """Real incident (2026-09-21): backtest reported gross-only PF for every
     symbol -- no cost model at all -- while the live paper-trade close path

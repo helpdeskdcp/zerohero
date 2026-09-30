@@ -190,7 +190,8 @@ def _train_samples(sym, train, cfg, decide_every_sec, persist):
     cache = _LegCache(sym, train[0], train[1])
     res = ReplayHarness(sym, train[0], train[1], source="BACKTEST", persist=persist,
                         max_concurrent=cfg.get("max_concurrent", 1),
-                        decide_every_sec=decide_every_sec).run(_build_decide(None, None, None, cfg, cache))
+                        decide_every_sec=decide_every_sec,
+                        slippage_pct=cfg.get("slippage_pct", 0.01)).run(_build_decide(None, None, None, cfg, cache))
     closed = [t for t in res.trades if t.status == "CLOSED"]
     by_id = {s["signal_id"]: s for s in res.signals}
     samples = []
@@ -234,7 +235,9 @@ def run_backtest(symbol: str, *, train: tuple, test: tuple,
     te_cache = _LegCache(sym, test[0], test[1])
     res_te = ReplayHarness(sym, test[0], test[1], source="BACKTEST", persist=persist,
                            max_concurrent=cfg.get("max_concurrent", 1),
-                           decide_every_sec=decide_every_sec).run(_build_decide(calib, avg_win, avg_loss, cfg, te_cache))
+                           decide_every_sec=decide_every_sec,
+                           slippage_pct=cfg.get("slippage_pct", 0.01)).run(
+                               _build_decide(calib, avg_win, avg_loss, cfg, te_cache))
 
     return {
         "symbol": sym,

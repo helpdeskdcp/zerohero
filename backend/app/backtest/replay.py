@@ -273,7 +273,7 @@ class ReplayHarness:
     def __init__(self, symbol: str, start: str | None = None, end: str | None = None, *,
                  source: str = "BACKTEST", max_concurrent: int = 1,
                  persist: bool = True, log_all_decisions: bool = False,
-                 decide_every_sec: float = 30.0):
+                 decide_every_sec: float = 30.0, slippage_pct: float = 0.0):
         self.symbol = str(symbol).upper()
         self.start, self.end = start, end
         self.source = source
@@ -283,6 +283,17 @@ class ReplayHarness:
         # throttle: run decide() at most once per this many seconds of tape time
         # (open trades are still marked every cycle). 0 = every cycle.
         self.decide_every_sec = float(decide_every_sec or 0)
+        # MODELED, not measured: oi_history_adapter's source tables have no
+        # bid/ask column at all (see its own docstring -- confirmed by
+        # inspection, not a null-percentage gap), so there is no real
+        # spread to read the way histcap's captured chains have. Every
+        # entry/exit fill is nudged against the position by this fraction
+        # of the raw LTP (BUY worse=higher, SELL-to-close worse=lower) --
+        # a conservative assumption, not a fabricated bid/ask. Defaults to
+        # 0 (off) so existing callers/tests that assert exact LTP-based
+        # fill prices are unaffected; run_backtest() (the "official"
+        # evaluation path) opts a nonzero default in explicitly.
+        self.slippage_pct = max(0.0, float(slippage_pct or 0))
         self.run_id = uuid.uuid4().hex[:12]
 
     # -- persistence -------------------------------------------------------- #
@@ -434,6 +445,12 @@ class ReplayHarness:
         if not leg or leg.get("ltp") is None or float(leg["ltp"]) <= 0:
             return None                                  # fail closed: no real fill price
         entry = float(sig.get("entry") or leg["ltp"])
+        # BUY fill is realistically worse (higher) than the observed LTP --
+        # see __init__'s slippage_pct docstring. sl/t1 are left exactly as
+        # the strategy computed them (against the raw LTP it observed), so
+        # a real fill correctly eats into the intended risk:reward rather
+        # than silently being given the strategy's own idealized entry.
+        entry = round(entry * (1 + self.slippage_pct), 2)
         sl = float(sig["stop_loss"]); t1 = float(sig["target_1"])
         if not (sl < entry < t1):
             return None
@@ -468,7 +485,12 @@ class ReplayHarness:
     def _flatten(self, t: SimTrade, price: float, ts: str, reason: str, res: ReplayResult) -> None:
         if t.status == "CLOSED":
             return
-        t.close(price, ts, reason)
+        # SELL-to-close fill is realistically worse (lower) than the raw
+        # trigger price -- see __init__'s slippage_pct docstring. Applied
+        # once here (every exit path routes through _flatten), not at each
+        # of the 5 call sites, so none can be missed.
+        fill = round(price * (1 - self.slippage_pct), 2) if self.slippage_pct else price
+        t.close(fill, ts, reason)
         res.trades.append(t)
         res.counts[reason] = res.counts.get(reason, 0) + 1
         self._update_signal(t.signal_id, {

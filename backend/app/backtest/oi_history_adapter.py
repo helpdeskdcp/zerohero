@@ -370,6 +370,11 @@ def data_quality_manifest(symbol: str | None = None) -> dict:
             "poll cadence changed: ~7-11s (2026-07-13..08-07) then ~45s "
             "(2026-08-10..08-28); segment backtests accordingly",
             "chain is ATM +/-4 strikes only",
+            "NO bid/ask columns exist in this source at all (not a null-"
+            "percentage gap -- the strikes table has no such column). "
+            "replay.py's slippage_pct is therefore a MODELED assumption "
+            "applied to LTP, never a measured spread -- treat any backtest "
+            "P&L run with slippage_pct=0 as gross/optimistic.",
         ]
         return out
     finally:
