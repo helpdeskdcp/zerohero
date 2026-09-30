@@ -963,6 +963,21 @@
           <div class="sysgrid" id="sysGrid"></div>
           <p class="hint">Credential presence only — values are never sent to the browser.</p>
         </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Dhan Connection</h2>
+            <span class="pill" id="dhanStatusPill">—</span>
+          </div>
+          <p class="hint">Research/data feed only — no live order ever goes through this connection.
+            The token expires roughly every 24–30h and must be renewed by logging into Dhan
+            directly (your credentials go to Dhan's own page, never through this app).</p>
+          <div class="health-sub" id="dhanDetail"></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+            <button class="btn btn-primary" id="dhanConnectBtn" type="button">Connect / Reconnect Dhan</button>
+          </div>
+          <p class="scalp-err" id="dhanErr" hidden></p>
+        </div>
       </section>
 
       <!-- ===== HEDGING ENGINE (Phase 1+2a: paper capital, hedge selection, exit rules) ===== -->

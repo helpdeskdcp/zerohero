@@ -1404,7 +1404,74 @@
     } catch (e) {
       const el = $("#healthErr"); el.hidden = false; el.textContent = "selfcheck: " + e.message;
     }
+    loadDhanStatus();
   }
+
+  // ---------------- Dhan connection (research/data feed only, no live order) ----------------
+  async function loadDhanStatus() {
+    const pill = $("#dhanStatusPill");
+    const detail = $("#dhanDetail");
+    if (!pill || !detail) return;
+    try {
+      const s = await api("/api/dhan/connection-status");
+      if (!s.connected) {
+        pill.textContent = "NOT CONNECTED";
+        pill.className = "pill pill--warn";
+        detail.innerHTML = `<div class="kv"><span>status</span><b class="hc-err">no token stored — press Connect</b></div>`;
+        return;
+      }
+      const expiry = s.expiry_time ? new Date(s.expiry_time + "Z") : null;
+      const expired = expiry ? expiry.getTime() < Date.now() : false;
+      pill.textContent = expired ? "EXPIRED" : "CONNECTED";
+      pill.className = "pill " + (expired ? "pill--warn" : "pill--paper");
+      detail.innerHTML =
+        `<div class="kv"><span>client</span><b>${text(s.dhan_client_name)} (${text(s.dhan_client_id)})</b></div>` +
+        `<div class="kv"><span>token expiry</span><b class="${expired ? "hc-err" : "hc-ok"}">${s.expiry_time ? timeStr(s.expiry_time) : "—"}${expired ? " (expired)" : ""}</b></div>` +
+        `<div class="kv"><span>connected since</span><b>${s.stored_at ? timeStr(s.stored_at) : "—"}</b></div>`;
+    } catch (e) {
+      pill.textContent = "?"; pill.className = "pill";
+      detail.innerHTML = `<span class="hint">status: ${esc((e && e.message) || String(e))}</span>`;
+    }
+  }
+  const dhanConnectBtn = $("#dhanConnectBtn");
+  if (dhanConnectBtn) dhanConnectBtn.addEventListener("click", async () => {
+    const err = $("#dhanErr");
+    if (err) err.hidden = true;
+    try {
+      const r = await api("/api/dhan/generate-consent", { method: "POST" });
+      if (r.status !== "OK" || !r.login_url) {
+        throw new Error(r.note || r.detail || "could not get a Dhan login link");
+      }
+      window.open(r.login_url, "_blank", "noopener");
+      dhanConnectBtn.disabled = true;
+      dhanConnectBtn.textContent = "Waiting for Dhan login…";
+      // Dhan's redirect callback stores the token server-side the moment the
+      // user finishes logging in on Dhan's own page (a new tab, not this
+      // one) -- poll instead of expecting any signal back in this tab.
+      let tries = 0;
+      const poll = setInterval(async () => {
+        tries += 1;
+        try {
+          const s = await api("/api/dhan/connection-status");
+          const fresh = s.connected && s.expiry_time && new Date(s.expiry_time + "Z").getTime() > Date.now();
+          if (fresh) {
+            clearInterval(poll);
+            dhanConnectBtn.disabled = false;
+            dhanConnectBtn.textContent = "Connect / Reconnect Dhan";
+            loadDhanStatus();
+          }
+        } catch (e) { /* keep polling */ }
+        if (tries >= 40) {   // ~2 min at 3s
+          clearInterval(poll);
+          dhanConnectBtn.disabled = false;
+          dhanConnectBtn.textContent = "Connect / Reconnect Dhan";
+          loadDhanStatus();
+        }
+      }, 3000);
+    } catch (e) {
+      if (err) { err.hidden = false; err.textContent = (e && e.message) || String(e); }
+    }
+  });
 
   // ---------------- Session Report ----------------
   function _istToday() {
