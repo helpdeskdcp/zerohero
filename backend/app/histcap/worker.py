@@ -234,12 +234,6 @@ class CaptureWorker:
         except Exception:
             return False
 
-    def _safe_dhan_auth_ok(self) -> bool:
-        try:
-            return bool(self._dhan_auth_checker())
-        except Exception:
-            return False
-
     def run_once(self, mode: str = "POLL_ONCE", do_candles: bool = True) -> dict:
         # MCP 3.3 continuation -- Dhan capture must NOT require AngelOne to
         # be logged in (previously _capture_dhan() lived inside the
@@ -611,7 +605,6 @@ class CaptureWorker:
             "config": {k: self.cfg[k] for k in ("symbols", "chain_window", "chain_window_by_sym",
                                                 "tfs", "quote_sec", "candle_sec", "candle_delay_sec",
                                                 "option_candles", "dhan_capture", "raw_retention_days")},
-            "dhan_auth_ok": self._safe_dhan_auth_ok(),
             "last_run": self.last_run, "store": self.store.summary(),
         }
 
