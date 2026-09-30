@@ -93,8 +93,25 @@ def test_route_is_cached_then_bypassed_for_baseline(hist_db):
     b = api_optionchain("NIFTY", live=0)
     assert a is b                                    # same cached object
     c = api_optionchain("NIFTY", live=0, baseline="2026-09-09T09:00:20Z")
-    assert c is not a and "oi_baseline" in c
+    assert c is not a and "oi_baseline" in c and "oi_buildup" in c
     assert c["oi_baseline"]["status"] in ("ok", "no_baseline", "no_overlap")
+    assert c["oi_buildup"]["status"] in ("ok", "no_baseline", "no_spot")
+
+
+def test_route_computes_oi_buildup_regime_from_two_snapshots(hist_db):
+    # OI Build-Up regime existed in analytics.py (oi_buildup_regime) but was
+    # never called from this route -- found during a frontend/backend data
+    # audit. Wired alongside the existing oi_baseline block, reusing the
+    # same fetched baseline chain (no extra DB read).
+    j = api_optionchain("NIFTY", live=0, baseline="2026-09-09T08:59:31Z")
+    assert j["status"] == "OK"
+    bu = j["oi_buildup"]
+    assert bu["status"] == "ok"
+    assert bu["price_direction"] == "UP"                      # spot 23470.0 -> 23485.0
+    # the fixture's OI is identical at both captured timestamps (90000.0 for
+    # every strike/side) -- a real net-zero OI change must classify as FLAT,
+    # never a fabricated buildup/unwind label.
+    assert bu["ce_regime"] == "FLAT" and bu["pe_regime"] == "FLAT"
 
 
 def test_unknown_underlying_is_no_data_not_500(hist_db):
@@ -106,6 +123,7 @@ def test_bad_baseline_ts_does_not_raise(hist_db):
     j = api_optionchain("NIFTY", live=0, baseline="not-a-timestamp")
     assert j["status"] == "OK"
     assert j["oi_baseline"]["status"] in ("error", "no_baseline", "no_overlap", "ok")
+    assert j["oi_buildup"]["status"] in ("error", "no_baseline", "no_spot", "ok")
 
 
 def test_atm_window_is_clamped(hist_db):

@@ -2705,7 +2705,7 @@
       if (!j || j.status === "NO_DATA") {
         $("#ocMeta").textContent = `${ocSymbol}: ${(j && j.note) || "no data"}`;
         const tb = $("#ocTable tbody");
-        if (tb) tb.innerHTML = `<tr><td colspan="14" class="hint">no chain available</td></tr>`;
+        if (tb) tb.innerHTML = `<tr><td colspan="16" class="hint">no chain available</td></tr>`;
         $("#ocStrip").innerHTML = ""; $("#ocQual").innerHTML = ""; $("#ocNote").textContent = "";
         return;
       }
@@ -2801,7 +2801,7 @@
       `<div class="stat-value ${cls || ""}">${val}</div></div>`;
     const skTxt = (st.iv_skew_bias || {}).bias || sk.status || "—";
     const gxTxt = (st.gex_regime || {}).regime || gx.status || "—";
-    $("#ocStrip").innerHTML = [
+    const cards = [
       card("Spot", text(fmt(j.spot, 1))),
       card("PCR (OI)", text(pcr.pcr_oi), (pcr.pcr_oi > 1.1 ? "pos" : pcr.pcr_oi < 0.9 && pcr.pcr_oi != null ? "neg" : "")),
       card("Max Pain", text(mp.max_pain_strike) + (mp.distance_pct != null ? ` <small>${mp.distance_pct > 0 ? "+" : ""}${esc(mp.distance_pct)}%</small>` : "")),
@@ -2810,14 +2810,27 @@
       card("GEX", esc(gxTxt) + ((st.gex_regime || {}).flip_strike ? ` <small>flip ${esc(st.gex_regime.flip_strike)}</small>` : "")),
       card("DQ", text(qy.dqs) + (qy.verdict ? ` <small>${esc(qy.verdict)}</small>` : ""),
         qy.verdict === "PASS" ? "pos" : qy.verdict === "FAIL" ? "neg" : ""),
-    ].join("");
+    ];
+    // OI Build-Up regime (LONG_BUILDUP/SHORT_BUILDUP/SHORT_COVERING/
+    // LONG_UNWINDING per side) -- only present when the "Δ OI vs an earlier
+    // snapshot" baseline toggle above the table is on. The underlying
+    // classifier (analytics.oi_buildup_regime) was already fully
+    // implemented but was never wired into this route or view before.
+    const bu = j.oi_buildup;
+    if (bu && bu.status === "ok") {
+      const buCls = (r) => (r === "LONG_BUILDUP" || r === "SHORT_COVERING") ? "pos"
+                          : (r === "SHORT_BUILDUP" || r === "LONG_UNWINDING") ? "neg" : "";
+      cards.push(card("CE Build-Up", esc(bu.ce_regime || "—"), buCls(bu.ce_regime)));
+      cards.push(card("PE Build-Up", esc(bu.pe_regime || "—"), buCls(bu.pe_regime)));
+    }
+    $("#ocStrip").innerHTML = cards.join("");
   }
 
   function ocRenderTable(j) {
     const tb = $("#ocTable tbody");
     if (!tb) return;
     const rows = ((j.chain || {}).rows) || [];
-    if (!rows.length) { tb.innerHTML = `<tr><td colspan="14" class="hint">empty chain</td></tr>`; return; }
+    if (!rows.length) { tb.innerHTML = `<tr><td colspan="16" class="hint">empty chain</td></tr>`; return; }
     const atm = j.atm_strike;
     // ΔOI baseline map (strike -> {ce_doi, pe_doi}) when the toggle is on
     const bmap = {};
@@ -2841,6 +2854,18 @@
       const oc = (leg || {}).oi_change;
       return oc == null ? "—" : `<span class="${oc > 0 ? "pos" : oc < 0 ? "neg" : ""}">${ocFmtOi(oc)}</span>`;
     };
+    const spreadPct = (leg) => {
+      const bid = Number((leg || {}).bid), ask = Number((leg || {}).ask);
+      if (!bid || !ask || ask < bid) return null;
+      const mid = (bid + ask) / 2;
+      return mid > 0 ? (100 * (ask - bid) / mid) : null;
+    };
+    const bidAskTitle = (leg) => (leg && leg.bid != null && leg.ask != null)
+      ? `bid ${fmt(leg.bid, 2)} / ask ${fmt(leg.ask, 2)}` : "no bid/ask captured";
+    const spreadCell = (leg) => {
+      const sp = spreadPct(leg);
+      return `<td title="${esc(bidAskTitle(leg))}">${sp == null ? "—" : esc(sp.toFixed(1)) + "%"}</td>`;
+    };
     tb.innerHTML = rows.map(r => {
       const ce = r.ce || {}, pe = r.pe || {};
       const isAtm = atm != null && Math.abs(r.strike - atm) < 1e-6;
@@ -2850,9 +2875,11 @@
       return `<tr class="${isAtm ? "is-atm" : ""} ${itm}">` +
         `<td>${ocFmtOi(ce.oi)}</td><td>${dcell(ce, "ce", r.strike)}</td><td>${ocFmtOi(ce.volume)}</td>` +
         `<td>${ce.iv != null ? esc((ce.iv * 100).toFixed(1)) : "—"}</td>` +
-        `<td>${text(fmt(ce.delta, 2))}</td><td class="oc-ltp">${text(fmt(ce.ltp, 1))}</td>` +
+        `<td>${text(fmt(ce.delta, 2))}</td>${spreadCell(ce)}` +
+        `<td class="oc-ltp" title="${esc(bidAskTitle(ce))}">${text(fmt(ce.ltp, 1))}</td>` +
         `<td class="oc-k">${text(r.strike)}</td>` +
-        `<td class="oc-ltp">${text(fmt(pe.ltp, 1))}</td><td>${text(fmt(pe.delta, 2))}</td>` +
+        `<td class="oc-ltp" title="${esc(bidAskTitle(pe))}">${text(fmt(pe.ltp, 1))}</td>${spreadCell(pe)}` +
+        `<td>${text(fmt(pe.delta, 2))}</td>` +
         `<td>${pe.iv != null ? esc((pe.iv * 100).toFixed(1)) : "—"}</td>` +
         `<td>${ocFmtOi(pe.volume)}</td><td>${dcell(pe, "pe", r.strike)}</td><td>${ocFmtOi(pe.oi)}</td>` +
         `<td class="oc-prof">${bar(ce.oi, pe.oi)}</td></tr>`;

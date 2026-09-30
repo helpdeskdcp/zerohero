@@ -24,7 +24,7 @@ import time
 
 from fastapi import APIRouter
 
-from .analytics import compute_all, oi_change_vs_baseline
+from .analytics import compute_all, oi_buildup_regime, oi_change_vs_baseline
 from .history_analytics import oi_profile as _oi_profile
 from .history_analytics import straddle_pnl as _straddle_pnl
 from .history_analytics import vol_surface as _vol_surface
@@ -143,8 +143,17 @@ def api_optionchain(underlying: str, expiry: str = "AUTO", live: int = 1,
             out["oi_baseline"] = (oi_change_vs_baseline(chain, base) if base
                                   else {"status": "no_baseline",
                                         "note": f"no captured snapshot at/<= {baseline}"})
+            # OI Build-Up regime (CALL/PUT WRITING / SHORT COVERING / LONG
+            # BUILDUP / UNWINDING) -- the underlying analytics.oi_buildup_
+            # regime() already existed and was fully implemented but was
+            # never called from this route, so it never reached the chain
+            # response or the frontend at all. Reuses the same `base` chain
+            # already fetched for oi_baseline above -- no extra DB read.
+            out["oi_buildup"] = (_pack(oi_buildup_regime(chain, base)) if base
+                                 else {"status": "no_baseline"})
         except Exception as e:                # a bad ts must not 500 the view
             out["oi_baseline"] = {"status": "error", "detail": f"{type(e).__name__}: {e}"}
+            out["oi_buildup"] = {"status": "error", "detail": f"{type(e).__name__}: {e}"}
     else:
         _cache[key] = {"ts": now, "data": out}
     return out
