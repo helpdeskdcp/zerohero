@@ -54,6 +54,7 @@ _LOCK_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 ARMED_KEY = "hedging_armed"
 CONFIG_KEY = "hedging_config"
 LAST_SCAN_KEY = "hedging_last_scan"
+_IST = timezone(timedelta(hours=5, minutes=30))   # matches position.py/market_calendar.py's own constant
 
 DEFAULT_CONFIG = {
     "symbols": ["NIFTY", "BANKNIFTY", "SENSEX"],
@@ -70,6 +71,12 @@ DEFAULT_CONFIG = {
     # checked against starting_capital, not the shrinking available_capital,
     # so the ceiling is a stable fraction of the account, not a moving target.
     "max_portfolio_margin_pct": 0.50,
+    # Kill-switch (MCP 3.3 section 45/46 -- "capital survival over trade
+    # frequency"). Both checked once per scan cycle, before any symbol is
+    # evaluated; either breach disarms the engine outright (not just
+    # skips this cycle's entries) -- "do not attempt recovery trades".
+    "max_daily_loss_pct": 0.05,     # of starting_capital; today's (IST) realized P&L only
+    "max_consecutive_losses": 3,    # most-recently-closed streak, across any days
 }
 
 
@@ -417,18 +424,84 @@ def _reconcile_capital() -> dict | None:
     return check
 
 
+def _kill_switch_breach(positions: dict, cfg: dict, cap, now=None) -> dict | None:
+    """Capital-survival kill switch (MCP 3.3 section 45/46): "when daily
+    loss limit reached, DISARM -- do not attempt recovery trades" and
+    "if live strategy performance degrades materially, AUTO PAUSE
+    STRATEGY". Two independent triggers, either disarms:
+
+    1. today's (IST) realized P&L across every position CLOSED today <=
+       -(max_daily_loss_pct * starting_capital).
+    2. the most-recently-closed positions, taken in closed_at order, form
+       a losing streak of >= max_consecutive_losses -- stops counting at
+       the first non-loss, so this is "how many losses in a row right
+       now", not "how many losses today" (a losing streak that started
+       late yesterday and continues today is still a real streak).
+
+    Returns None when neither trips (the common, healthy path)."""
+    now = now or datetime.now(_IST)
+    now_ist = now.astimezone(_IST) if now.tzinfo else now.replace(tzinfo=_IST)
+    today = now_ist.date()
+
+    closed = [p for p in positions.values() if p.status == "CLOSED" and p.closed_at]
+
+    def _closed_ist_date(p):
+        ts = datetime.fromisoformat(p.closed_at)
+        return (ts.astimezone(_IST) if ts.tzinfo else ts.replace(tzinfo=_IST)).date()
+
+    today_pnl = sum(p.gross_pnl or 0.0 for p in closed if _closed_ist_date(p) == today)
+    daily_limit = cap.starting_capital * cfg.get("max_daily_loss_pct", 0.05)
+    if today_pnl <= -daily_limit:
+        return {"reason": "DAILY_LOSS_LIMIT", "today_pnl": round(today_pnl, 2),
+                "limit": round(daily_limit, 2)}
+
+    by_close = sorted(closed, key=lambda p: p.closed_at, reverse=True)
+    streak = 0
+    for p in by_close:
+        if (p.gross_pnl or 0.0) < 0:
+            streak += 1
+        else:
+            break
+    max_streak = cfg.get("max_consecutive_losses", 3)
+    if streak >= max_streak:
+        return {"reason": "CONSECUTIVE_LOSS_LIMIT", "streak": streak, "limit": max_streak}
+    return None
+
+
 def _scan_unlocked(now=None) -> dict:
     """One full cron tick: exits first (never let a stale-priced position
     sit past its rule because a new one was being evaluated), then a
-    capital/position reconciliation check, then new-entry evaluation per
-    configured symbol -- only if armed. `now` defaults to real IST time;
-    pass it explicitly in tests."""
+    capital/position reconciliation check, then the kill switch, then
+    new-entry evaluation per configured symbol -- only if armed and the
+    kill switch didn't just trip. `now` defaults to real IST time; pass it
+    explicitly in tests."""
     if not is_armed():
         return {"armed": False, "note": "hedging is disarmed -- no entries evaluated, exits still monitored",
                 "exits": check_exits(now=now)}
     exits = check_exits(now=now)
     reconciliation = _reconcile_capital()
     cfg = get_config()
+
+    positions = _position.load_all()
+    cap = _capital.load()
+    breach = _kill_switch_breach(positions, cfg, cap, now=now)
+    if breach is not None:
+        disarm()
+        if breach["reason"] == "DAILY_LOSS_LIMIT":
+            msg = (f"HEDGING KILL-SWITCH -- auto-disarmed.\n"
+                   f"today's realized P&L: {breach['today_pnl']:.2f} <= -{breach['limit']:.2f} "
+                   f"(daily loss limit)\nNo recovery trades. Manual re-arm required after review.")
+        else:
+            msg = (f"HEDGING KILL-SWITCH -- auto-disarmed.\n"
+                   f"{breach['streak']} losses in a row (limit {breach['limit']})\n"
+                   f"Manual re-arm required after review.")
+        _notify("KILL_SWITCH", "SYSTEM", msg)
+        out = {"armed": False, "exits": exits, "entries": [], "kill_switch": breach,
+              "ts": datetime.now(timezone.utc).isoformat()}
+        if reconciliation is not None:
+            out["reconciliation"] = reconciliation
+        return out
+
     entries = [evaluate_symbol(sym, cfg, now=now) for sym in cfg["symbols"]]
     out = {"armed": True, "exits": exits, "entries": entries,
           "ts": datetime.now(timezone.utc).isoformat()}

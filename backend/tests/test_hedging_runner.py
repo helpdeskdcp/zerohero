@@ -222,3 +222,62 @@ def test_scan_and_record_never_raises_on_internal_error(fresh_db, monkeypatch):
     runner.scan_and_record()  # must not raise
     result = runner.last_scan_result()
     assert "error" in result
+
+
+# ---------------------------------------------------------------- kill switch (MCP 3.3 section 45/46)
+def _closed_position(*, gross_pnl, lots=1):
+    pos = _position.open_position(symbol="NIFTY", primary_strike=23400, primary_option_type="CE",
+                                  primary_entry_premium=30.0, hedge_strike=23600, hedge_entry_premium=10.0,
+                                  lots=lots, lot_size=65, max_loss_per_lot=1300.0,
+                                  margin_locked=1300.0 * lots, cost_paid=650.0 * lots)
+    return _position.close_position(pos, exit_reason="STOP_LOSS", pnl=gross_pnl)
+
+
+def test_kill_switch_daily_loss_limit_disarms_and_notifies(fresh_db, monkeypatch):
+    sent = _patch_common(monkeypatch)
+    _capital.reset(100000.0)
+    runner.set_config({"symbols": ["NIFTY"], "max_daily_loss_pct": 0.02})   # 2% of 100000 = 2000
+    runner.arm()
+    _closed_position(gross_pnl=-2500.0)   # breaches the 2000 limit
+
+    out = runner.scan()
+    assert out["armed"] is False
+    assert out["kill_switch"]["reason"] == "DAILY_LOSS_LIMIT"
+    assert out["entries"] == []                      # no recovery trades this cycle
+    assert runner.is_armed() is False                 # actually disarmed, not just skipped
+    assert sent and sent[-1]["direction"] == "KILL_SWITCH"
+
+
+def test_kill_switch_consecutive_losses_disarms(fresh_db, monkeypatch):
+    _patch_common(monkeypatch)
+    _capital.reset(500000.0)   # large capital so the daily-loss %% doesn't also trip
+    runner.set_config({"symbols": ["NIFTY"], "max_daily_loss_pct": 0.5, "max_consecutive_losses": 2})
+    runner.arm()
+    _closed_position(gross_pnl=-100.0)
+    _closed_position(gross_pnl=-50.0)
+
+    out = runner.scan()
+    assert out["armed"] is False
+    assert out["kill_switch"] == {"reason": "CONSECUTIVE_LOSS_LIMIT", "streak": 2, "limit": 2}
+
+
+def test_kill_switch_streak_resets_after_a_win(fresh_db, monkeypatch):
+    _patch_common(monkeypatch)
+    _capital.reset(500000.0)
+    runner.set_config({"symbols": ["NIFTY"], "max_daily_loss_pct": 0.9, "max_consecutive_losses": 2})
+    _closed_position(gross_pnl=-100.0)
+    _closed_position(gross_pnl=200.0)     # win breaks the streak
+    _closed_position(gross_pnl=-50.0)     # only 1 loss since the last win
+
+    breach = runner._kill_switch_breach(_position.load_all(), runner.get_config(), _capital.load())
+    assert breach is None
+
+
+def test_no_kill_switch_on_healthy_operation(fresh_db, monkeypatch):
+    _patch_common(monkeypatch)
+    _capital.reset(500000.0)
+    runner.set_config({"symbols": ["NIFTY"]})
+    _closed_position(gross_pnl=200.0)
+
+    breach = runner._kill_switch_breach(_position.load_all(), runner.get_config(), _capital.load())
+    assert breach is None

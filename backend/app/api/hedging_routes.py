@@ -38,6 +38,8 @@ class HedgingConfigPatch(BaseModel):
     max_concurrent_positions: int | None = None
     max_positions_per_symbol: int | None = None
     max_portfolio_margin_pct: float | None = None
+    max_daily_loss_pct: float | None = None
+    max_consecutive_losses: int | None = None
 
 
 @router.get("/status")
