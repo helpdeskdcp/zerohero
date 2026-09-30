@@ -82,6 +82,21 @@ def test_check_exit_priority_emergency_beats_everything(fresh_db):
     assert out["reason"] == "EMERGENCY"
 
 
+def test_check_exit_carry_forward_past_midnight_is_time_cutoff(fresh_db):
+    # Real bug found live 2026-09-30: a NATURALGAS position opened 21:59 IST
+    # on 2026-09-29 was still OPEN the next morning because the old check
+    # only compared time-of-day (06:23 is "before" any sane cutoff) and
+    # never noticed the calendar date had rolled over. No session in this
+    # system spans midnight, so a later date while still OPEN is always a
+    # missed cutoff, at any time-of-day, on any exchange's cutoff value.
+    pos = _open(fresh_db, lots=1)
+    pos.opened_at = datetime(2026, 9, 29, 21, 59, tzinfo=_IST).astimezone(timezone.utc).isoformat()
+    now = datetime(2026, 9, 30, 6, 23, tzinfo=_IST)   # next day, well before any cutoff time-of-day
+    out = P.check_exit(pos, current_primary_premium=12.95, current_hedge_premium=1.9,
+                       now=now, cutoff=P.dtime(23, 15))
+    assert out["should_exit"] is True and out["reason"] == "TIME_CUTOFF"
+
+
 def test_close_position_releases_margin_and_books_pnl(fresh_db):
     pos = _open(fresh_db, lots=1)
     P.close_position(pos, exit_reason="PROFIT_TARGET", pnl=1500.0)

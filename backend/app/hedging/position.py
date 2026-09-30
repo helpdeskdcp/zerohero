@@ -155,6 +155,21 @@ def check_exit(position: HedgePosition, *, current_primary_premium: float,
 
     now = now or datetime.now(_IST)
     now_ist = now.astimezone(_IST) if now.tzinfo else now.replace(tzinfo=_IST)
+    opened_ist = datetime.fromisoformat(position.opened_at).astimezone(_IST)
+    # A position still OPEN on a later IST calendar date than it opened has
+    # already carried forward through a cutoff it should have hit -- no
+    # session in this system spans midnight (MCX's latest window ends
+    # 23:30 IST same day), so this can only happen from a monitoring gap
+    # (e.g. cron not covering that window), never a legitimate same-session
+    # hold. Found live 2026-09-29: a NATURALGAS position opened 21:59 IST
+    # sat OPEN past midnight into 2026-09-30 because the cron only runs
+    # */5 8-15 * * 1-5 and the old cutoff (one fixed 15:15 for every
+    # symbol) would have force-exited it hours before a real MCX close
+    # anyway -- see runner._exit_cutoff_for(). Comparing only .time() (the
+    # pre-existing check below) can never catch this: 06:23 today is still
+    # "before" a 23:15 cutoff even though the position is a full day stale.
+    if now_ist.date() > opened_ist.date():
+        return {"should_exit": True, "reason": "TIME_CUTOFF", "pnl": pnl}
     if now_ist.time() >= cutoff:
         return {"should_exit": True, "reason": "TIME_CUTOFF", "pnl": pnl}
 
