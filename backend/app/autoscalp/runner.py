@@ -915,6 +915,16 @@ class AutoScalpRunner:
             "ev_mode": sig.get("ev_mode"),
         })
 
+        # Renko trend-state SHADOW log: observation only (own SQLite file, daemon thread,
+        # no decision input). Guarded so it can never block or alter the trade.
+        try:
+            from . import renko_shadow as _rsh
+            _rsh.log_entry_async(trade_id=row.get("trade_id"), signal_id=signal_id, symbol=sym,
+                                 option_type=sig["decision"].split("_")[1], entry_ts=_now_iso(),
+                                 underlying_ltp=self._aggs[sym.upper()].last_price)
+        except Exception as e:
+            _log.debug("renko shadow hook failed for %s (cosmetic): %r", sym, e)
+
         # PHASE 8 — immutable entry-feature snapshot, written ONCE, straight from
         # the live decision context. Guarded: a failure here never blocks the trade.
         try:
