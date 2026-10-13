@@ -100,9 +100,51 @@ def connection_status() -> dict:
         record = json.loads(raw)
     except Exception:
         return {"connected": False, "note": "stored record is corrupt"}
+    ts = token_state(record=record)
+    # `connected` keeps its historical meaning ("a token record is stored") because the
+    # dashboard keys its NOT CONNECTED vs EXPIRED pill off it. It is NOT a health signal:
+    # use `authenticated` / `token_state` (a stored but expired token is never "healthy").
     return {"connected": True, "dhan_client_id": record.get("dhanClientId"),
             "dhan_client_name": record.get("dhanClientName"),
-            "expiry_time": record.get("expiryTime"), "stored_at": record.get("stored_at")}
+            "expiry_time": record.get("expiryTime"), "stored_at": record.get("stored_at"),
+            "token_state": ts["state"], "authenticated": ts["state"] == "VALID"}
+
+
+def token_state(now=None, record: dict | None = None) -> dict:
+    """VALID / EXPIRED / UNCERTAIN / UNKNOWN / MISSING from the stored expiryTime.
+
+    Dhan's expiryTime is a naive timestamp whose timezone is not documented in the
+    response (the dashboard assumes UTC). Both readings are evaluated: past BOTH => EXPIRED
+    (certain), before BOTH => VALID (by clock only: a 401 from Dhan always overrides),
+    in between => UNCERTAIN. Never raises."""
+    from datetime import datetime, timedelta, timezone
+    if record is None:
+        raw = db.get_setting(_SETTINGS_KEY)
+        if not raw:
+            return {"state": "MISSING"}
+        try:
+            record = json.loads(raw)
+        except Exception:
+            return {"state": "MISSING", "note": "stored record is corrupt"}
+    if not record.get("accessToken"):
+        return {"state": "MISSING"}
+    exp = record.get("expiryTime")
+    try:
+        naive = datetime.fromisoformat(str(exp).replace("Z", ""))
+    except Exception:
+        return {"state": "UNKNOWN", "expiry_time": exp}
+    now = now or datetime.now(timezone.utc)
+    as_utc = naive.replace(tzinfo=timezone.utc)
+    as_ist = naive.replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+    if now >= max(as_utc, as_ist):
+        state = "EXPIRED"
+    elif now < min(as_utc, as_ist):
+        state = "VALID"
+    else:
+        state = "UNCERTAIN"
+    return {"state": state, "expiry_time": exp,
+            "seconds_left_if_utc": int((as_utc - now).total_seconds()),
+            "seconds_left_if_ist": int((as_ist - now).total_seconds())}
 
 
 def get_access_token() -> str | None:

@@ -161,7 +161,12 @@ class AngelMarketFeed:
             age = now - r["recv"]
             return {"ltp": r["ltp"], "age_sec": age, "fresh": is_ltp_fresh(age)}
         return {
-            "connected": self.connected,
+            "connected": self.connected,            # socket open (kept for compatibility; NOT a health signal)
+            "socket_open": self.connected,
+            "data_flowing": bool(self.connected and self.last_msg_ts and now - self.last_msg_ts <= LTP_MAX_AGE_SEC),
+            "subscribed": bool(self._desired) and set(self._desired.keys()) <= set(self._active),
+            "fresh_tokens": sorted(t for t, r in self.ltp.items() if is_ltp_fresh(now - r["recv"])),
+            "stale_tokens": sorted(t for t, r in self.ltp.items() if not is_ltp_fresh(now - r["recv"])),
             "last_error": self.last_error,
             "last_msg_age_sec": round(now - self.last_msg_ts, 1) if self.last_msg_ts else None,
             "desired_tokens": sorted(self._desired.keys()),

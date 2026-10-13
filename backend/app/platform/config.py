@@ -20,3 +20,11 @@ STALE_TICK_AFTER_SEC = 12.0          # same freshness rule the live execution pa
 
 def platform_db_path() -> str:
     return os.environ.get("CHANAKYA_PLATFORM_DB") or DEFAULT_PLATFORM_DB
+
+
+DEFAULT_PLATFORM_TICKS_DB = os.path.abspath(os.path.join(_HERE, "..", "..", "data", "platform_ticks.db"))
+CANDLE_RETENTION_DAYS = 14          # 1-second candles: ~50 MB/day for 5 NSE + 5 MCX instruments (see estimate_storage)
+
+
+def platform_ticks_db_path() -> str:
+    return os.environ.get("CHANAKYA_PLATFORM_TICKS_DB") or DEFAULT_PLATFORM_TICKS_DB

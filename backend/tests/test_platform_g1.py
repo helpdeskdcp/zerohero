@@ -111,7 +111,7 @@ def test_platform_db_is_separate_from_production_and_not_created_on_import(monke
 
 def test_package_imports_no_broker_execution_or_network_code():
     banned = ("app.execution", "app.connectors", "broker", "requests", "websockets", "app.db", "app.autoscalp", "app.dhan_client")
-    for f in glob.glob(os.path.join(PKG, "*.py")):
+    for f in glob.glob(os.path.join(PKG, "**", "*.py"), recursive=True):
         tree = ast.parse(open(f).read())
         for node in ast.walk(tree):
             names = ([a.name for a in node.names] if isinstance(node, ast.Import)

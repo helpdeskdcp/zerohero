@@ -161,7 +161,14 @@ class DhanOrderflowWorker:
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self.enabled = _enabled()
+        # `connected` now means AUTHENTICATED + DATA FLOWING: it turns True only when the first
+        # valid frame arrives in a session. `socket_open` is the bare TCP/WebSocket state.
         self.connected = False
+        self.socket_open = False
+        self.auth_state = "UNKNOWN"
+        self.reconnects = 0
+        self.empty_sessions = 0
+        self.last_close_info: dict | None = None
         self.last_error: str | None = None
         self.last_msg_ts: float | None = None
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=queue_maxsize)
@@ -230,7 +237,11 @@ class DhanOrderflowWorker:
     def status(self) -> dict:
         now = time.time()
         return {
-            "enabled": self.enabled, "connected": self.connected, "last_error": self.last_error,
+            "enabled": self.enabled, "connected": self.connected, "socket_open": self.socket_open,
+            "auth_state": self.auth_state, "reconnects": self.reconnects,
+            "data_flowing": bool(self.last_msg_ts and now - self.last_msg_ts < 15 and self.connected),
+            "consecutive_empty_sessions": self.empty_sessions, "last_close": self.last_close_info,
+            "last_error": self.last_error,
             "last_msg_age_sec": round(now - self.last_msg_ts, 1) if self.last_msg_ts else None,
             "instruments": len(self._instruments), "frames": self._n_frames,
             "ticks_enqueued": self._n_ticks, "ticks_dropped_queue_full": self._n_dropped,
@@ -256,27 +267,50 @@ class DhanOrderflowWorker:
             from .. import dhan_client  # local: avoids a hard import cycle at module load
             token = dhan_client.get_access_token()
             client_id = _env("DHAN_CLIENT_ID")
+            tstate = dhan_client.token_state()
+            self.auth_state = tstate["state"]
+            if token and tstate["state"] == "EXPIRED":
+                # a connect attempt cannot succeed and only produces a reconnect storm
+                self.last_error = (f"token expired ({tstate.get('expiry_time')}): "
+                                   "reconnect via the Dhan OAuth login (no connection attempted)")
+                self.connected = False
+                await self._sleep(300)
+                continue
             if not token or not client_id:
                 self.last_error = "not connected -- complete the Dhan OAuth login (DHAN_CLIENT_ID not set, or no stored access token)"
                 await self._sleep(15)
                 continue
             try:
-                await self._session(websockets, token, client_id)
-                backoff = 2
+                frames_before = self._n_frames
+                t_open = time.time()
+                try:
+                    await self._session(websockets, token, client_id)
+                finally:
+                    if self._n_frames == frames_before:       # opened but never produced a valid frame
+                        self.empty_sessions += 1
+                        self.auth_state = "REJECTED_OR_NO_DATA" if tstate["state"] != "EXPIRED" else "EXPIRED"
+                        self.last_close_info = {"after_sec": round(time.time() - t_open, 1), "frames": 0}
+                        backoff = min(max(backoff * 2, 30), 300)
+                    else:
+                        self.empty_sessions = 0
+                        self.auth_state = "VALID"
+                        backoff = 2
+                self.reconnects += 1
             except Exception as e:
                 self.last_error = f"{type(e).__name__}: {e}"
                 _log.warning("dhan_ws: session ended with %s -- reconnect in %ds",
                              self.last_error, backoff)
             finally:
                 self.connected = False
+                self.socket_open = False
             await self._sleep(backoff)
-            backoff = min(backoff * 2, 30)
+            backoff = min(backoff * 2, 300)
 
     async def _session(self, websockets, token: str, client_id: str):
         url = WS_URL_FMT.format(token=token, client_id=client_id)
         session_day = self._instruments_day
         async with websockets.connect(url, ping_interval=None, max_size=None) as ws:
-            self.connected = True
+            self.socket_open = True
             self.last_error = None
             _log.info("dhan_ws: connected, subscribing %d instrument(s)", len(self._instruments))
             for start in range(0, len(self._instruments), _MAX_INSTRUMENTS_PER_MSG):
@@ -306,6 +340,7 @@ class DhanOrderflowWorker:
                     continue
                 self.last_msg_ts = time.time()
                 self._n_frames += 1
+                self.connected = True                          # first valid frame: authenticated + data flowing
                 for packet in dhan_parser.parse_frame(bytes(raw)):
                     if packet["type"] == "DISCONNECT":
                         _log.warning("dhan_ws: server sent disconnect, reason_code=%s",
