@@ -8,7 +8,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
+import threading
 import time
+import traceback
+from collections import deque
 
 from .marketdata.health import ProviderFacts
 from .marketdata.service import MarketDataService
@@ -25,6 +29,41 @@ def enabled() -> bool:
     return os.environ.get("PLATFORM_STREAM", "1").strip().lower() not in ("0", "false", "off", "no")
 
 
+class StallWatchdog:
+    """Separate thread: if the event loop stops beating for > threshold_sec, record the loop thread's stack (what is blocking it).
+    Diagnostic only; reads sys._current_frames(), never interrupts anything."""
+    def __init__(self, loop_thread_id: int, threshold_sec: float = 3.0, keep: int = 20):
+        self.tid, self.threshold = loop_thread_id, threshold_sec
+        self.beat = time.time()
+        self.events: deque = deque(maxlen=keep)
+        self._open: dict | None = None
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._run, name="platform-stall-watchdog", daemon=True)
+
+    def start(self):
+        self._t.start()
+
+    def stop(self):
+        self._stop.set()
+
+    def heartbeat(self):
+        now = time.time()
+        if self._open is not None:                           # loop is back: close the stall record
+            self._open["ended"] = now
+            self._open["duration_sec"] = round(now - self._open["since"], 2)
+            self._open = None
+        self.beat = now
+
+    def _run(self):
+        while not self._stop.wait(0.5):
+            lag = time.time() - self.beat
+            if lag > self.threshold and self._open is None:
+                fr = sys._current_frames().get(self.tid)
+                stack = traceback.format_stack(fr)[-8:] if fr else ["<loop thread frame unavailable>"]
+                self._open = {"since": self.beat, "detected": time.time(), "duration_sec": None, "stack": [x.strip() for x in stack]}
+                self.events.append(self._open)
+
+
 class PlatformLive:
     def __init__(self, get_feed, poll_sec: float = 0.25):
         self.get_feed, self.poll = get_feed, poll_sec
@@ -39,9 +78,12 @@ class PlatformLive:
         self.ticks_in = 0
         self.last_error: str | None = None
         self._last_eval = 0.0
+        self.watchdog: StallWatchdog | None = None
 
     def start(self):
         self.writer.start()
+        self.watchdog = StallWatchdog(threading.get_ident())     # start() runs on the loop thread
+        self.watchdog.start()
         self._task = asyncio.get_event_loop().create_task(self._loop())
 
     async def stop(self):
@@ -51,6 +93,8 @@ class PlatformLive:
                 await self._task
             except BaseException:
                 pass
+        if self.watchdog:
+            self.watchdog.stop()
         self.writer.stop()
 
     def _publish(self, candle):                   # called by MarketDataService for every closed candle
@@ -96,6 +140,8 @@ class PlatformLive:
     async def _loop(self):
         while True:
             try:
+                if self.watchdog:
+                    self.watchdog.heartbeat()
                 self._poll_once(time.time())
             except asyncio.CancelledError:
                 raise
@@ -111,6 +157,7 @@ class PlatformLive:
                            for n, h in self.svc.healths.items()}, "trading_blocked": self.svc.trading_blocked,
                 "writer": self.writer.status(), "hub": self.hub.status(),
                 "gate": getattr(self.svc.gate, "counters", None) and dict(self.svc.gate.counters),
+                "loop_stalls": list(self.watchdog.events) if self.watchdog else [],
                 "note": "observation/charting only; Angel LTP-only (no volume/OI)"}
 
 

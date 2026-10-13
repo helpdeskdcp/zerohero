@@ -165,3 +165,28 @@ def test_live_mode_refused_for_tenants(tmp_path):
     st = TenantStore(str(tmp_path / "p.db")); st.create_tenant("ta", "A")
     with pytest.raises(LiveModeNotEnabled):
         st.set_execution_mode("ta", "LIVE_AUTO", actor="test")
+
+
+# ---------------------------------------------------------------- stall watchdog (diagnoses event-loop blocking)
+def test_stall_watchdog_captures_the_blocking_stack():
+    import asyncio
+    import threading
+    import time as _t
+    from app.platform.live import StallWatchdog
+
+    def blocker_in_loop():
+        _t.sleep(1.6)
+
+    async def main():
+        wd = StallWatchdog(threading.get_ident(), threshold_sec=0.6)
+        wd.start(); wd.heartbeat()
+        blocker_in_loop()                              # blocks the loop like a sync requests call would
+        wd.heartbeat()
+        await asyncio.sleep(0.05)
+        wd.stop()
+        return wd
+    wd = asyncio.run(main())
+    assert len(wd.events) == 1
+    ev = wd.events[0]
+    assert ev["duration_sec"] is not None and ev["duration_sec"] >= 1.4
+    assert any("blocker_in_loop" in line for line in ev["stack"])
