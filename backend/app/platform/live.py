@@ -90,7 +90,7 @@ class PlatformLive:
                                   socket_open=bool(st.get("socket_open")), subscribed=bool(st.get("subscribed")),
                                   last_message_ts=feed.last_msg_ts if getattr(feed, "last_msg_ts", None) else None,
                                   instrument_last_ts=dict(self._last_tick_ts), last_error=st.get("last_error"))
-            req = [k for k, t in self._last_tick_ts.items() if now - t < 3600]
+            req = [k for k in self._last_tick_ts if self.svc.engine.in_session(k, now)]     # only instruments whose session is open
             self.svc.evaluate({"ANGELONE": facts}, {"ANGELONE": req}, now)
 
     async def _loop(self):
@@ -106,7 +106,9 @@ class PlatformLive:
     def status(self) -> dict:
         d = self.svc.decision
         return {"enabled": True, "ticks_in": self.ticks_in, "last_error": self.last_error,
-                "active_provider": getattr(d, "active", None), "trading_blocked": self.svc.trading_blocked,
+                "active_provider": getattr(d, "active", None), "decision_reasons": getattr(d, "reasons", None),
+                "health": {n: {"state": h.state, "reasons": h.reasons, "fresh": len(h.fresh), "stale": h.stale[:8]}
+                           for n, h in self.svc.healths.items()}, "trading_blocked": self.svc.trading_blocked,
                 "writer": self.writer.status(), "hub": self.hub.status(),
                 "gate": getattr(self.svc.gate, "counters", None) and dict(self.svc.gate.counters),
                 "note": "observation/charting only; Angel LTP-only (no volume/OI)"}
