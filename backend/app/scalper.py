@@ -982,7 +982,8 @@ class ScalpRunner:
                     self.last_error = f"smart_stop: {type(e).__name__}: {e}"
                 # --- smart: wrong-side detection via the signal engine ---
                 try:
-                    ws = self._wrong_side(updated, cfg)
+                    # blocking REST candle fetch (up to ~30s on retries): off the event loop so the WS feed/other tasks keep running
+                    ws = await asyncio.to_thread(self._wrong_side, updated, cfg)
                     if ws and not self._ws_alerted.get(tid):
                         self._ws_alerted[tid] = True
                         await asyncio.to_thread(_tg_send,
