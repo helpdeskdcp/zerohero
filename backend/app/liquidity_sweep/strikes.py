@@ -59,7 +59,8 @@ class StrikeCandidate:
 
 
 def _eligible(leg: dict, *, spot: float, option_type: str, delta_band: tuple[float, float],
-              max_spread_pct: float, min_volume: float, min_oi: float, min_premium: float) -> str | None:
+              max_spread_pct: float, min_volume: float, min_oi: float, min_premium: float,
+              require_itm: bool = True) -> str | None:
     """Returns a rejection reason string, or None if eligible."""
     strike = _num(leg.get("strike"))
     ltp = _num(leg.get("ltp"))
@@ -69,9 +70,9 @@ def _eligible(leg: dict, *, spot: float, option_type: str, delta_band: tuple[flo
 
     if strike is None:
         return "missing strike"
-    if option_type == "CE" and not (strike < spot):
+    if require_itm and option_type == "CE" and not (strike < spot):
         return "not ITM (CE strike must be below spot)"
-    if option_type == "PE" and not (strike > spot):
+    if require_itm and option_type == "PE" and not (strike > spot):
         return "not ITM (PE strike must be above spot)"
     if ltp is None or ltp < min_premium:
         return "invalid or too-small premium"
@@ -134,7 +135,8 @@ def rank_strikes(candidates: list[dict], *, spot: float, option_type: str,
                  delta_band: tuple[float, float] = (0.60, 0.70),
                  weights: dict | None = None, max_spread_pct: float = MAX_SPREAD_PCT,
                  min_volume: float = MIN_VOLUME, min_oi: float = MIN_OI,
-                 min_premium: float = MIN_PREMIUM, strike_step: float = 50.0) -> list[StrikeCandidate]:
+                 min_premium: float = MIN_PREMIUM, strike_step: float = 50.0,
+                 require_itm: bool = True) -> list[StrikeCandidate]:
     """`candidates`: raw option-chain legs (dicts with strike/ltp/bid/ask/
     delta/oi/volume/...) for ONE option_type. Returns ALL candidates
     (eligible ranked first by score desc, then rejected with reasons) --
@@ -144,7 +146,7 @@ def rank_strikes(candidates: list[dict], *, spot: float, option_type: str,
     eligible_raw = [c for c in candidates
                     if _eligible(c, spot=spot, option_type=option_type, delta_band=delta_band,
                                 max_spread_pct=max_spread_pct, min_volume=min_volume,
-                                min_oi=min_oi, min_premium=min_premium) is None]
+                                min_oi=min_oi, min_premium=min_premium, require_itm=require_itm) is None]
     ref = {
         "strike_step": strike_step,
         "max_itm_depth": max((abs(spot - (_num(c.get("strike")) or spot)) for c in eligible_raw), default=10 * strike_step) or 10 * strike_step,
@@ -156,7 +158,7 @@ def rank_strikes(candidates: list[dict], *, spot: float, option_type: str,
     for c in candidates:
         reject = _eligible(c, spot=spot, option_type=option_type, delta_band=delta_band,
                            max_spread_pct=max_spread_pct, min_volume=min_volume,
-                           min_oi=min_oi, min_premium=min_premium)
+                           min_oi=min_oi, min_premium=min_premium, require_itm=require_itm)
         strike = _num(c.get("strike")) or 0.0
         if reject:
             out.append(StrikeCandidate(strike=strike, option_type=option_type, status="REJECTED",
