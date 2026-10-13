@@ -1251,7 +1251,7 @@ class AutoScalpRunner:
             self.last_error = f"persist: {type(e).__name__}: {e}"
         return None
 
-    def _maybe_daily_report(self):
+    async def _maybe_daily_report(self):
         """Once per IST day per exchange, after its session close, push the
         day's per-symbol rollup to Telegram. Bypasses the confidence gate;
         a settings key makes it fire exactly once."""
@@ -1266,7 +1266,8 @@ class AutoScalpRunner:
                     continue
                 db.set_setting(key, _now_iso())
                 from . import report as _report
-                rep = _report.session_report(day)
+                # full-table SQL over live_market_snapshots (~10s observed): off the event loop that serves the feed
+                rep = await asyncio.to_thread(_report.session_report, day)
                 self._tg_send(f"report:{ex}:{day}",
                               notify.session_report_card(rep, segment=ex),
                               conf="HIGH", dedup=False, gate=False)
@@ -1331,7 +1332,7 @@ class AutoScalpRunner:
         await self._seed_aggs(cfg)
         self._pump_feed()
         self._monitor()
-        self._maybe_daily_report()
+        await self._maybe_daily_report()
         if not self.armed:
             return
         every = max(2, int(cfg.get("decide_every_sec", 30)))

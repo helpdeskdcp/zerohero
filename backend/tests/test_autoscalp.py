@@ -561,7 +561,9 @@ def test_runner_medium_confidence_opens_trade_but_no_telegram(fresh_db, monkeypa
     r, _ = _runner(monkeypatch, sig)
     # the daily session-report card is time-of-day driven (fires after NSE
     # close on a fresh DB); it is unrelated to per-signal Telegram gating.
-    monkeypatch.setattr(r, "_maybe_daily_report", lambda: None)
+    async def _no_report():
+        return None
+    monkeypatch.setattr(r, "_maybe_daily_report", _no_report)
     sent = []
     r._telegram = lambda text: sent.append(text)
     r.arm()
