@@ -308,6 +308,14 @@ def _now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
+def _renko_shadow_status():
+    try:
+        from . import renko_shadow as _rsh
+        return _rsh.status()
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {str(e)[:80]}"}
+
+
 def _ist_now():
     return datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
 
@@ -477,6 +485,12 @@ class AutoScalpRunner:
     # ---------------- lifecycle ----------------
     def start(self):
         db.init_db()
+        try:                                        # idempotent schema init: file exists with 0 rows until events arrive
+            from . import renko_shadow as _rsh0
+            if _rsh0.enabled():
+                _rsh0.init_schema()
+        except Exception as e:
+            _log.debug("renko shadow init failed (cosmetic): %r", e)
         if self.get_config().get("auto_arm"):
             db.set_setting(ARMED_KEY, "1")
         if self._task and not self._task.done():
@@ -737,6 +751,15 @@ class AutoScalpRunner:
                 sig["vwap_reason"] = "from front-month index future (cash index has no volume)"
 
         snap_id = await asyncio.to_thread(self._persist_snapshot, sym, agg, atm, chain, sig, feed_age)
+
+        # Renko tick-level SHADOW stream: observation only (own SQLite file, daemon thread, one row per
+        # newly completed 1m bar). Never an input to any decision; guarded so it cannot affect this tick.
+        try:
+            from . import renko_shadow as _rsh2
+            _rsh2.observe_tick_async(symbol=sym, tick_price=agg.last_price, decision=sig.get("decision"),
+                                     reason=sig.get("reason"), regime=sig.get("regime"))
+        except Exception as e:
+            _log.debug("renko tick shadow hook failed for %s (cosmetic): %r", sym, e)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
         if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):
@@ -1292,6 +1315,7 @@ class AutoScalpRunner:
             "entry_blocks": self._blocks,   # per-symbol: why BUY signals were refused entry
             "live_trading": False, "paper_mode": True,
             "config": cfg,
+            "renko_shadow": _renko_shadow_status(),
         }
 
     # ---------------- main loop ----------------

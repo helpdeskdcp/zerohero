@@ -137,3 +137,143 @@ def test_hook_is_inert_under_pytest_unless_a_test_db_is_set(monkeypatch):
     assert started == []
     monkeypatch.setenv("CHANAKYA_RENKO_SHADOW_DB", "/tmp/never-written.db")
     assert RS.enabled() is True
+
+
+# ================================================================== tick-level stream
+def _tick_bars(n_extra=0):
+    bars, entry_ts = _series(trend=4.0)
+    if n_extra:                                              # append more complete bars after the first 'now'
+        last = int(bars["t"][-1])
+        px = float(bars["c"][-1])
+        add = {k: [] for k in "tohlc"}
+        for i in range(n_extra):
+            o = px
+            px += 4.0
+            add["t"].append(last + 60 * (i + 1)); add["o"].append(o); add["c"].append(px)
+            add["h"].append(px + 1); add["l"].append(o - 1)
+        bars = {k: np.concatenate([bars[k], np.asarray(add[k], bars[k].dtype)]) for k in "tohlc"} | {"v": np.zeros(len(bars["t"]) + n_extra)}
+    return bars, dt.datetime.fromisoformat(entry_ts).timestamp() + 60 * n_extra
+
+
+def test_init_schema_is_idempotent_and_creates_a_real_zero_row_database(tmp_path):
+    db = str(tmp_path / "s.db")
+    assert RS.init_schema(db) is True and RS.init_schema(db) is True
+    c = sqlite3.connect(db)
+    names = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"renko_shadow_entries", "renko_shadow_ticks"} <= names
+    assert c.execute("SELECT COUNT(*) FROM renko_shadow_ticks").fetchone()[0] == 0
+    assert RS.status(db)["ticks"] == 0 and RS.status(db)["entries"] == 0
+
+
+def test_db_path_resolution_default_and_env_override(monkeypatch, tmp_path):
+    monkeypatch.delenv("CHANAKYA_RENKO_SHADOW_DB", raising=False)
+    assert RS._db_path().endswith("/backend/data/renko_shadow.db")
+    monkeypatch.setenv("CHANAKYA_RENKO_SHADOW_DB", str(tmp_path / "x.db"))
+    assert RS._db_path() == str(tmp_path / "x.db")
+
+
+def test_valid_tick_is_persisted_read_back_and_duplicates_are_ignored(tmp_path):
+    db = str(tmp_path / "s.db")
+    bars, now = _tick_bars()
+    prov = lambda s, k, u: bars  # noqa: E731
+    a = RS.observe_tick(symbol="NIFTY", tick_price=20500.0, decision="NO_TRADE", reason="NSE closed", regime="X",
+                        bars_provider=prov, db_path=db, now_epoch=now)
+    b = RS.observe_tick(symbol="NIFTY", tick_price=20501.0, decision="NO_TRADE", reason="again",
+                        bars_provider=prov, db_path=db, now_epoch=now + 20)          # same completed bar
+    assert a["status"] == "OK" and a["inserted"] is True and b["inserted"] is False
+    row = sqlite3.connect(db).execute("SELECT symbol, renko_dir, renko_run, decision, no_trade_reason, regime, k, bar_lag_sec "
+                                      "FROM renko_shadow_ticks").fetchall()
+    assert row == [("NIFTY", 1, a["renko_run"], "NO_TRADE", "NSE closed", "X", 0.12, 0.0)] and a["renko_run"] >= 3
+    bars2, now2 = _tick_bars(n_extra=2)                                                  # two newer completed bars
+    c = RS.observe_tick(symbol="NIFTY", bars_provider=lambda s, k, u: bars2, db_path=db, now_epoch=now2)
+    assert c["inserted"] is True
+    assert sqlite3.connect(db).execute("SELECT COUNT(*) FROM renko_shadow_ticks").fetchone()[0] == 2
+    assert RS.status(db)["ticks"] == 2
+
+
+def test_nothing_observed_means_no_row_and_no_file(tmp_path):
+    db = str(tmp_path / "never.db")
+    empty = {k: np.array([], np.int64 if k == "t" else float) for k in "tohlcv"}
+    assert RS.observe_tick(symbol="NIFTY", bars_provider=lambda s, k, u: empty, db_path=db, now_epoch=1.8e9)["status"] == "INSUFFICIENT_BARS"
+    assert RS.observe_tick(symbol="COALINDIA", db_path=db, now_epoch=1.8e9)["status"] == "UNSUPPORTED"
+    import os
+    assert not os.path.exists(db)                                                        # nothing fabricated, no placeholder file
+    assert RS.status(db)["db_exists"] is False
+
+
+def test_write_failure_is_reported_never_raised(tmp_path):
+    bars, now = _tick_bars()
+    before = RS._state["write_errors"]
+    out = RS.observe_tick(symbol="NIFTY", bars_provider=lambda s, k, u: bars, db_path="/proc/nope/x.db", now_epoch=now)
+    assert out["status"] == "LOG_ERROR" and RS._state["write_errors"] == before + 1 and RS._state["last_error"]
+
+
+def test_async_observer_is_inert_under_pytest_and_does_not_pile_up(monkeypatch):
+    started = []
+    monkeypatch.setattr(RS.threading, "Thread", lambda *a, **k: type("T", (), {"start": lambda self: started.append(1)})())
+    monkeypatch.delenv("CHANAKYA_RENKO_SHADOW_DB", raising=False)
+    RS.observe_tick_async(symbol="NIFTY")
+    assert started == []                                                                  # pytest guard
+    monkeypatch.setenv("CHANAKYA_RENKO_SHADOW_DB", "/tmp/never.db")
+    RS.observe_tick_async(symbol="NIFTY"); RS.observe_tick_async(symbol="NIFTY")
+    assert started == [1]                                                                 # second call skipped: one in-flight per symbol
+    RS._inflight.discard("NIFTY")
+
+
+def test_runner_tick_calls_observer_with_the_decision_and_fabricates_no_trade(fresh_db, monkeypatch):
+    calls = []
+    monkeypatch.setattr(RS, "observe_tick_async", lambda **kw: calls.append(kw))
+    r, feed = _runner(monkeypatch, {"decision": "NO_TRADE", "reason": "regime blocked", "regime": "UNSTABLE"})
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert calls and calls[0]["symbol"] == "NIFTY" and calls[0]["decision"] == "NO_TRADE" and calls[0]["regime"] == "UNSTABLE"
+    assert fresh_db.list_trades(strategy="AUTOSCALP") == []                               # observation never creates a trade
+
+
+def test_runner_decision_unchanged_when_observer_raises_and_status_has_renko_block(fresh_db, monkeypatch):
+    def boom(**kw):
+        raise RuntimeError("shadow tick exploded")
+    monkeypatch.setattr(RS, "observe_tick_async", boom)
+    r, feed = _runner(monkeypatch, _sig())
+    r.arm()
+    asyncio.run(r.tick_once())
+    assert fresh_db.list_trades(strategy="AUTOSCALP") != []                               # BUY_PE still opened as before
+    assert "renko_shadow" in r.status() and r.status()["live_trading"] is False
+
+
+def test_runner_start_initializes_schema_only_when_enabled(monkeypatch):
+    called = []
+    monkeypatch.setattr(RS, "init_schema", lambda *a, **k: called.append(1) or True)
+    monkeypatch.setattr(RS, "enabled", lambda: True)
+    from app.autoscalp import runner as ascr
+
+    async def go():
+        r = ascr.AutoScalpRunner()
+        r.start()
+        await r.stop()
+    asyncio.run(go())
+    assert called == [1]
+
+
+# ================================================================== offline analysis
+def test_forward_bps_uses_next_open_and_signs_by_renko_direction():
+    from app.autoscalp import renko_shadow_analysis as A
+    t0 = 1_800_000_000
+    iso = lambda e: dt.datetime.fromtimestamp(e, tz=dt.timezone.utc).isoformat()  # noqa: E731
+    bars = {t0 + 60 * k: (100.0 + k, 100.0 + k + 0.5) for k in range(1, 40)}
+    tick = {"symbol": "NIFTY", "last_bar_ts": iso(t0), "renko_dir": 1, "renko_run": 3}
+    f = A.forward_bps(tick, bars, 15)
+    assert f == pytest.approx(((100.0 + 15 + 0.5) / (100.0 + 1) - 1) * 1e4)             # entry = OPEN of t0+60, exit = CLOSE at t0+15m
+    assert A.forward_bps({**tick, "renko_dir": -1}, bars, 15) == pytest.approx(-f)
+    assert A.forward_bps({**tick, "renko_dir": 0}, bars, 15) is None
+    assert A.forward_bps(tick, {k: v for k, v in bars.items() if k < t0 + 600}, 15) is None   # horizon not observed
+
+
+def test_analysis_refuses_conclusions_on_small_samples():
+    from app.autoscalp import renko_shadow_analysis as A
+    t0 = 1_800_000_000
+    iso = lambda e: dt.datetime.fromtimestamp(e, tz=dt.timezone.utc).isoformat()  # noqa: E731
+    bars = {t0 + 60 * k: (100.0, 100.0) for k in range(1, 200)}
+    ticks = [{"symbol": "NIFTY", "last_bar_ts": iso(t0 + 60 * k), "renko_dir": 1, "renko_run": min(k, 4)} for k in range(1, 4)]
+    r = A.analyse(ticks, {"NIFTY": bars}, horizons=(15,))[15]
+    assert r["verdict"].startswith("INSUFFICIENT SAMPLE") and "diff_ci95_bps" not in r

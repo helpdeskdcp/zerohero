@@ -1,4 +1,11 @@
-"""Renko trend-state SHADOW log for autoscalp entries (observation only).
+"""Renko trend-state SHADOW log for autoscalp (observation only).
+
+Two observation streams, both in data/renko_shadow.db:
+  * renko_shadow_entries - one row per autoscalp paper ENTRY (rare: ~2 BUY signals in 8 sessions).
+  * renko_shadow_ticks   - one row per symbol per newly COMPLETED 1-minute bar, written from the
+    decision tick regardless of whether a trade happens (PRIMARY KEY (symbol, last_bar_ts) dedupes
+    the 30 s ticks). Lets the Renko trend-persistence finding be validated forward from price
+    alone, in days instead of years. Non-OK states (no bars, no brick size) are NOT written.
 
 For every autoscalp paper entry this records the causal Renko state of the
 underlying (direction, run length, brick size, alignment with the trade side) into
@@ -17,6 +24,7 @@ import logging
 import os
 import sqlite3
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -162,3 +170,159 @@ def log_entry_async(**kw) -> None:
     if not enabled():
         return
     threading.Thread(target=log_entry, kwargs=kw, name="renko-shadow", daemon=True).start()
+
+
+# ---------------------------------------------------------------- tick-level stream
+_TICK_SCHEMA = """CREATE TABLE IF NOT EXISTS renko_shadow_ticks (
+  symbol TEXT NOT NULL, last_bar_ts TEXT NOT NULL, logged_ts TEXT, last_close REAL, brick REAL,
+  renko_dir INTEGER, renko_run INTEGER, bricks_today INTEGER, bar_lag_sec REAL, bars_used INTEGER,
+  tick_price REAL, decision TEXT, no_trade_reason TEXT, regime TEXT, k REAL,
+  PRIMARY KEY (symbol, last_bar_ts))"""
+_TICK_COLS = ("symbol", "last_bar_ts", "logged_ts", "last_close", "brick", "renko_dir", "renko_run", "bricks_today",
+              "bar_lag_sec", "bars_used", "tick_price", "decision", "no_trade_reason", "regime", "k")
+_state = {"schema_ready": False, "last_error": None, "last_error_ts": None, "ticks_logged": 0, "write_errors": 0}
+_last_bar: dict = {}
+_inflight: set = set()
+_lock = threading.Lock()
+
+
+def _note_error(msg: str) -> None:
+    _state["last_error"], _state["last_error_ts"] = msg, datetime.now(timezone.utc).isoformat()
+    _state["write_errors"] += 1
+    _log.warning("renko shadow: %s", msg)
+
+
+def init_schema(db_path: str | None = None) -> bool:
+    """Create BOTH tables (idempotent). The file then exists with a schema and 0 rows - a real
+    'logger initialized, awaiting events' state, not an empty placeholder file."""
+    path = db_path or _db_path()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        conn = sqlite3.connect(path, timeout=5.0)
+        try:
+            conn.execute(_SCHEMA)
+            conn.execute(_TICK_SCHEMA)
+            conn.commit()
+        finally:
+            conn.close()
+        _state["schema_ready"] = True
+        return True
+    except Exception as e:
+        _note_error(f"init_schema failed: {type(e).__name__}: {e}")
+        return False
+
+
+def _latest_complete_bar(symbol: str, kind: str, now_epoch: float, db_path: str | None = None):
+    """Epoch of the newest COMPLETE 1m bar (indexed, O(log n)); None if none."""
+    hi = datetime.fromtimestamp(now_epoch, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    lo = datetime.fromtimestamp(now_epoch - 3 * 86400, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    conn = sqlite3.connect(f"file:{db_path or _HIST_DB}?mode=ro", uri=True, timeout=1.0)
+    try:
+        r = conn.execute("SELECT MAX(bar_start) FROM market_candles WHERE symbol=? AND kind=? AND tf='1m' "
+                         "AND bar_start>=? AND bar_start<?", (symbol, kind, lo, hi)).fetchone()
+    finally:
+        conn.close()
+    if not r or not r[0]:
+        return None
+    e = _iso_to_epoch(r[0])
+    return e if e + 60 <= now_epoch else None
+
+
+def observe_tick(*, symbol, tick_price=None, decision=None, reason=None, regime=None, bars_provider=None,
+                 db_path=None, now_epoch=None, hist_db=None) -> dict:
+    """Synchronous core. Writes at most one row per (symbol, newly completed 1m bar). Never raises."""
+    try:
+        sym = symbol.upper()
+        spec = SERIES.get(sym)
+        if spec is None:
+            return {"status": "UNSUPPORTED"}
+        kind, session, mintick = spec
+        now = float(now_epoch if now_epoch is not None else time.time())
+        if bars_provider is None:
+            last = _latest_complete_bar(sym, kind, now, hist_db)
+            if last is None:
+                return {"status": "NO_BARS"}
+            if _last_bar.get(sym) == last:
+                return {"status": "UNCHANGED"}
+        bars = (bars_provider or (lambda s, k, u: recent_bars(s, k, u, db_path=hist_db)))(sym, kind, now)
+        st = compute_state(bars, K_FROZEN, session, mintick)
+        if st["status"] != "OK":
+            return {"status": st["status"]}                       # no row: nothing observed
+        last_t = int(bars["t"][-1])
+        row = {"symbol": sym, "last_bar_ts": datetime.fromtimestamp(last_t, tz=timezone.utc).isoformat(),
+               "logged_ts": datetime.now(timezone.utc).isoformat(), "last_close": float(bars["c"][-1]),
+               "brick": st["brick"], "renko_dir": st["dir"], "renko_run": st["run"],
+               "bricks_today": st["bricks_today"], "bar_lag_sec": now - (last_t + 60), "bars_used": st["bars"],
+               "tick_price": tick_price, "decision": decision,
+               "no_trade_reason": (reason or "")[:160] or None, "regime": regime, "k": K_FROZEN}
+        path = db_path or _db_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        conn = sqlite3.connect(path, timeout=5.0)
+        try:
+            conn.execute(_SCHEMA)
+            conn.execute(_TICK_SCHEMA)
+            cur = conn.execute(f"INSERT OR IGNORE INTO renko_shadow_ticks ({','.join(_TICK_COLS)}) "
+                               f"VALUES ({','.join('?' * len(_TICK_COLS))})", [row[c] for c in _TICK_COLS])
+            conn.commit()
+        finally:
+            conn.close()
+        _last_bar[sym] = last_t
+        _state["schema_ready"] = True
+        if cur.rowcount:
+            _state["ticks_logged"] += 1
+        return {"status": "OK", "inserted": bool(cur.rowcount), **row}
+    except Exception as e:                                         # observation must never affect trading
+        _note_error(f"observe_tick {symbol}: {type(e).__name__}: {str(e)[:160]}")
+        return {"status": "LOG_ERROR", "reason": repr(e)}
+
+
+def observe_tick_async(**kw) -> None:
+    """Fire-and-forget from the decision tick; one in-flight worker per symbol (no pile-up)."""
+    if not enabled():
+        return
+    sym = str(kw.get("symbol", "")).upper()
+    with _lock:
+        if sym in _inflight:
+            return
+        _inflight.add(sym)
+
+    def _run():
+        try:
+            observe_tick(**kw)
+        finally:
+            with _lock:
+                _inflight.discard(sym)
+    try:
+        threading.Thread(target=_run, name="renko-shadow-tick", daemon=True).start()
+    except Exception:
+        with _lock:
+            _inflight.discard(sym)
+        raise
+
+
+_status_cache = {"t": 0.0, "v": None}
+
+
+def status(db_path: str | None = None) -> dict:
+    """Cheap, read-only (never creates the file). Cached 5 s so /status polling stays light."""
+    if time.time() - _status_cache["t"] < 5 and _status_cache["v"] is not None and db_path is None:
+        return _status_cache["v"]
+    path = db_path or _db_path()
+    out = {"enabled": enabled(), "db_path": path, "db_exists": os.path.exists(path),
+           "schema_ready_in_process": _state["schema_ready"], "ticks_logged_in_process": _state["ticks_logged"],
+           "write_errors": _state["write_errors"], "last_error": _state["last_error"],
+           "last_error_ts": _state["last_error_ts"]}
+    if out["db_exists"]:
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=0.5)
+            try:
+                out["entries"] = conn.execute("SELECT COUNT(*) FROM renko_shadow_entries").fetchone()[0]
+                n, last = conn.execute("SELECT COUNT(*), MAX(logged_ts) FROM renko_shadow_ticks").fetchone()
+                out["ticks"], out["last_tick_logged_ts"] = n, last
+            finally:
+                conn.close()
+        except Exception as e:
+            out["read_error"] = f"{type(e).__name__}: {str(e)[:100]}"
+    if db_path is None:
+        _status_cache.update(t=time.time(), v=out)
+    return out
