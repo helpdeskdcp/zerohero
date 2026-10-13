@@ -395,9 +395,39 @@ except Exception as _e:
     print(f"[smart_index_scalper] scheduler disabled: {type(_e).__name__}: {_e}")
 
 
+# ---- Platform live stream (G2-G4: Angel feed -> TickGate -> 1s candles -> writer + delta WS). Observation only;
+# kill switch PLATFORM_STREAM=0. Never touches the feed/connector or any order path. ----
+platform_live = None
+try:
+    from .platform import live as _platform_live
+    if _platform_live.enabled():
+        from .feed_registry import get_feed as _get_feed
+        platform_live = _platform_live.PlatformLive(_get_feed)
+except Exception as _e:
+    print(f"[platform_live] disabled: {type(_e).__name__}: {_e}")
+
+
+@app.get("/api/platform/status")
+def platform_status():
+    return platform_live.status() if platform_live else {"enabled": False}
+
+
+@app.get("/api/platform/candles")
+def platform_candles(instrument: str, tf: int = 60, limit: int = 300):
+    if not platform_live:
+        return {"enabled": False, "candles": []}
+    snap = platform_live.hub.snapshot_message(instrument, tf)
+    return {"instrument": instrument, "tf": tf, "seq": snap["seq"], "candles": snap["candles"][-max(1, min(limit, 600)):]}
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     db.init_db()
+    if platform_live is not None:
+        try:
+            platform_live.start()
+        except Exception as e:
+            print(f"[platform_live] start failed: {type(e).__name__}: {e}")
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:
@@ -424,6 +454,11 @@ async def _lifespan(_app: FastAPI):
 
     yield
 
+    if platform_live is not None:
+        try:
+            await platform_live.stop()
+        except Exception:
+            pass
     await runtime.scalp_runner.stop()
     await runtime.autoscalp.stop()
     if histcap_worker is not None:
@@ -454,6 +489,23 @@ async def _lifespan(_app: FastAPI):
 # which are only defined after `app` is constructed and the route modules
 # above are imported.
 app.router.lifespan_context = _lifespan
+
+
+@app.websocket("/ws/platform")
+async def ws_platform(websocket: WebSocket):
+    auth = websocket.headers.get("authorization", "")
+    if not ((API_TOKEN and websocket.query_params.get("token") == API_TOKEN)
+            or (auth.lower().startswith("basic ") and _basic_ok(auth))):
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+    if platform_live is None:
+        await websocket.close(code=1013)
+        return
+    try:
+        await _platform_live.ws_session(platform_live, websocket)
+    except Exception:
+        pass
 
 
 @app.websocket("/ws")

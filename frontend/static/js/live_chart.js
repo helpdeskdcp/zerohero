@@ -36,7 +36,7 @@
 
   function bootstrap() {
     const q = new URLSearchParams(location.search);
-    const instrument = q.get("i") || "NSE:NIFTY-IDX", tf = parseInt(q.get("tf") || "60", 10);
+    const instrument = q.get("i") || "NSE:99926000", tf = parseInt(q.get("tf") || "60", 10);
     const el = document.getElementById("chart"), status = document.getElementById("status");
     const chart = LightweightCharts.createChart(el, { autoSize: true, layout: { background: { color: "#0b0f14" }, textColor: "#cbd5e1" },
       timeScale: { timeVisible: true, secondsVisible: tf < 60 } });
@@ -46,7 +46,7 @@
       onResync: () => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "resync", i: instrument, tf })) });
     function connect() {
       const proto = location.protocol === "https:" ? "wss" : "ws";
-      ws = new WebSocket(proto + "://" + location.host + "/ws" + (q.get("token") ? "?token=" + encodeURIComponent(q.get("token")) : ""));
+      ws = new WebSocket(proto + "://" + location.host + "/ws/platform" + (q.get("token") ? "?token=" + encodeURIComponent(q.get("token")) : ""));
       ws.onopen = () => { retry = 1000; status.textContent = "subscribing…"; ws.send(JSON.stringify({ t: "subscribe", i: instrument, tf })); };
       ws.onmessage = (ev) => { try { feed.apply(JSON.parse(ev.data)); } catch (e) { /* ignore non-JSON keepalives */ } };
       ws.onclose = () => { status.textContent = "disconnected, retrying"; feed.lastSeq = null; setTimeout(connect, retry); retry = Math.min(retry * 2, 15000); };

@@ -5,6 +5,17 @@ from app.platform.paper.engine import PaperEngine, PaperError
 from app.platform.signals.personalize import PersonalSignal, TenantState
 from app.platform.tenancy import TenantStore
 
+import contextlib
+
+
+@contextlib.contextmanager
+def raises_paper():
+    # compare by name: other suites reload app.* modules, so the class object can differ across the full run
+    with pytest.raises(Exception) as ei:
+        yield
+    assert type(ei.value).__name__ == "PaperError"
+
+
 T0 = 1_760_000_000.0          # arbitrary epoch; IST wall-clock derived inside engine
 
 
@@ -77,10 +88,10 @@ def test_tenant_isolation_and_state(env):
 
 def test_refusals(env):
     st, e = env
-    with pytest.raises(PaperError):
+    with raises_paper():
         e.open_from_signal(ps("ta", eligible=False), sl_fraction=0.2, target_rr=2, exchange="NSE", now=T0)
-    with pytest.raises(PaperError):
+    with raises_paper():
         e.open_from_signal(ps("ta", ask=5000.0, qty=50), sl_fraction=0.2, target_rr=2, exchange="NSE", now=T0)   # 250k > capital
-    with pytest.raises(PaperError):
+    with raises_paper():
         e.open_from_signal(ps("ta"), sl_fraction=0, target_rr=2, exchange="NSE", now=T0)
     assert e.positions("ta") == [] and any(j["event"] == "REFUSED" for j in e.journal("ta"))
