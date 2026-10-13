@@ -59,7 +59,10 @@ class StallWatchdog:
             lag = time.time() - self.beat
             if lag > self.threshold and self._open is None:
                 fr = sys._current_frames().get(self.tid)
-                stack = traceback.format_stack(fr)[-8:] if fr else ["<loop thread frame unavailable>"]
+                frames = traceback.format_stack(fr) if fr else ["<loop thread frame unavailable>"]
+                # keep every application frame (who called) plus the deepest 3 library frames (what blocked)
+                app_frames = [f for f in frames if "/app/" in f.split("\n", 1)[0]]
+                stack = app_frames[-12:] + frames[-3:]
                 self._open = {"since": self.beat, "detected": time.time(), "duration_sec": None, "stack": [x.strip() for x in stack]}
                 self.events.append(self._open)
 
