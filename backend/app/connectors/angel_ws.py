@@ -225,7 +225,8 @@ class AngelMarketFeed:
                 self.last_error = "no credential provider"
                 await self._sleep(5)
                 continue
-            status, creds = self._cred_provider()
+            # sync login (HTTP, up to ~30s on retries) must not run on the event loop that serves every other task
+            status, creds = await asyncio.to_thread(self._cred_provider)
             if status != "OK" or not creds or not creds.get("feed_token"):
                 self.last_error = f"stream credentials unavailable ({status})"
                 await self._sleep(5)

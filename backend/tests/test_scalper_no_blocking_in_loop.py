@@ -15,3 +15,11 @@ def test_wrong_side_only_called_via_to_thread():
                 if isinstance(n, ast.Call) and getattr(n.func, "attr", None) == "_wrong_side":
                     bad.append((fn.name, n.lineno))        # a direct call inside an async def blocks the loop
     assert not bad, bad
+
+
+def test_angel_ws_credential_provider_not_called_on_loop():
+    src = os.path.join(os.path.dirname(__file__), "..", "app", "connectors", "angel_ws.py")
+    tree = ast.parse(open(src).read())
+    bad = [(fn.name, n.lineno) for fn in ast.walk(tree) if isinstance(fn, ast.AsyncFunctionDef)
+           for n in ast.walk(fn) if isinstance(n, ast.Call) and getattr(n.func, "attr", None) == "_cred_provider"]
+    assert not bad, bad
