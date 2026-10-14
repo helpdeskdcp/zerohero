@@ -1,6 +1,6 @@
 # Hybrid Market Profile v13.0 — final status per acceptance criterion (2026-10-14)
 
-Tests: full suite `./scripts/run_tests.sh -q` → **3208 passed, 0 failed, exit 0** (391 s). New/extended hybrid_mp suites: `test_hybrid_mp.py` (22), `test_hybrid_mp_audit.py` (22), `test_hybrid_mp_spec.py` (25), `test_hybrid_mp_fixtures.py` (16), `test_hybrid_mp_option_model.py` (5), `test_hybrid_mp_bias_world.py` (2), `test_hybrid_mp_api.py` (4), `test_weekday_regression.py` (7).
+Tests: full suite `./scripts/run_tests.sh -q` → **3208 passed, 0 failed, exit 0** (391 s). New/extended hybrid_mp suites: `test_hybrid_mp.py` (22), `test_hybrid_mp_audit.py` (22), `test_hybrid_mp_spec.py` (25), `test_hybrid_mp_fixtures.py` (16), `test_hybrid_mp_option_model.py` (5), `test_hybrid_mp_bias_world.py` (2), `test_hybrid_mp_api.py` (4), `test_weekday_regression.py` (5).
 
 **Strategy verdict: FAIL (no tradable edge).** NIFTY 5m fixed version: gross +0.027 / +0.033 / +0.036 R, net (2 bps) −0.128 / −0.142 / −0.145 R (TRAIN / VALID / OOS); literal script 1m net −0.29 … −0.41 R. Gross is inside the sign-flip null; every year and every split is net negative. Nothing here is profitable or production-ready.
 
