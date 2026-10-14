@@ -120,7 +120,7 @@ def generate_signals(bars: dict, p: Params | None = None, renko=None) -> tuple[l
     atr = _atr(h, l, c, p.atr_len)
     ph = _pivots(h, p.pivot_len, True, p.pivot_ties)
     pl = _pivots(l, p.pivot_len, False, p.pivot_ties)
-    wd = ((t + 19800) // 86400 + 4) % 7          # 0=Mon .. 6=Sun (epoch day 0 = Thursday)
+    wd = ((t + 19800) // 86400 + 3) % 7          # 0=Mon .. 6=Sun (epoch day 0 = Thursday = 3)
     sig, stats = [], {"bars": n, "breaks_up": 0, "breaks_dn": 0, "days_skipped_incomplete": 0}
 
     swing_hi = swing_lo = np.nan

@@ -5,7 +5,7 @@ import pytest
 from app.research_engines.hybrid_mp.engine import Params, mtf_dirs, resample, run
 
 T0 = 1_760_000_000 - (1_760_000_000 % 86400) - 19800 + 555 * 60      # 09:15 IST on some day
-T0 += (7 - ((T0 + 19800) // 86400 + 4) % 7) % 7 * 86400                 # roll forward to a Monday
+T0 += (7 - ((T0 + 19800) // 86400 + 3) % 7) % 7 * 86400                 # roll forward to a Monday
 
 
 def mk(rows, tf=1, start=T0, v=None):
@@ -76,16 +76,25 @@ def test_retest_only_mode_makes_a_pending_setup_that_expires_without_retest():
     assert tr == [] and st["pending_set"] == 1 and st["expired"] == 1
 
 
-def test_eod_flat_closes_on_the_sessions_last_bar():
-    rows = BASE + [(105.8, 106.5, 105.2, 106.0)] * 3
-    two_days = mk(rows)
-    day2 = mk(rows, start=T0 + 86400)
-    both = {k: np.concatenate([two_days[k], day2[k]]) for k in two_days}
-    # a 7-bar session so bar 9 of day 1 is the last bar of the day: pad by splitting at day boundary
+def _day(rows_head, n_total, start):
+    pad = [(105.5, 105.9, 105.1, 105.5)] * (n_total - len(rows_head))       # quiet bars: no stop/target touched
+    return mk(list(rows_head) + pad, start=start)
+
+
+def test_eod_flat_uses_the_clock_and_flags_missing_session_end_bars():
+    head = BASE + [(105.8, 106.2, 105.4, 106.0)]
+    # (a) complete 375-bar session: flat at the 15:29 bar's close, reason EOD (decided from the clock, not from bar i+1)
+    d1, d2 = _day(head, 375, T0), _day(head, 375, T0 + 86400)
+    both = {k: np.concatenate([d1[k], d2[k]]) for k in d1}
     tr, _ = run(both, Params(eod_flat=True, **P))
-    assert any(t.reason == "EOD" for t in tr)
-    tr_hold, _ = run(both, Params(eod_flat=False, **P))
-    assert all(t.reason != "EOD" for t in tr_hold)
+    assert tr[0].reason == "EOD" and tr[0].exit_i == 374 and tr[0].overnight_days == 0
+    assert all(t.reason != "EOD" for t in run(both, Params(eod_flat=False, **P))[0][:1])
+    # (b) the day's last bars are missing from the data: the position is NOT silently kept; it is flattened at the next day's
+    #     first open and flagged EOD_MISSED (a data-driven "last bar of the day" would have peeked at the next bar)
+    d1 = _day(head, 120, T0)
+    both = {k: np.concatenate([d1[k], d2[k]]) for k in d1}
+    tr, st = run(both, Params(eod_flat=True, **P))
+    assert tr[0].reason == "EOD_MISSED" and st["eod_missed"] == 1 and tr[0].exit == d2["o"][0]
 
 
 def _rw(n, seed):
@@ -238,3 +247,23 @@ def test_fixed_params_prefix_invariance_with_all_filters():
         da = [(t.sig_i, t.exit_i, round(t.r, 9)) for t in a if t.exit_i < cut - 3]
         db = [(t.sig_i, t.exit_i, round(t.r, 9)) for t in b if t.exit_i < cut - 3]
         assert da == db
+
+
+def test_pivot_tie_rule_matches_tradingview_left_ties_allowed_right_ties_not():
+    from app.research_engines.hybrid_mp.engine import pivots_tv
+    a = np.array([1, 3, 3, 2, 1, 0.0])                     # two equal highs (bars 1 and 2), n=1
+    ph = pivots_tv(a, 1, True)
+    # pivot candidate bar 2 (value 3): left neighbour 3 (tie, allowed), right 2 -> pivot, known at bar 3
+    assert ph[3] == 3 and np.isnan(ph[2])                  # bar 1 is rejected: its RIGHT neighbour ties (3 > 3 is False)
+    lo = pivots_tv(np.array([5, 2, 2, 3, 4.0]), 1, False)
+    assert lo[3] == 2 and np.isnan(lo[2])
+
+
+def test_pattern_filter_flag_is_a_real_boolean_not_a_bitwise_accident():
+    from app.research_engines.hybrid_mp.engine import _flags
+    b = mk([(100, 101, 99, 100.5), (100.5, 102, 100.2, 101.9), (101.9, 103, 101.5, 102.7)])
+    on = _flags(b, Params(use_pattern_filter=True))
+    off = _flags(b, Params(use_pattern_filter=False))
+    assert on["bull_ok"].dtype == bool and off["bull_ok"].dtype == bool
+    assert off["bull_ok"].tolist() == (b["c"] > b["o"]).tolist()
+    assert (on["bull_ok"] <= off["bull_ok"]).all()          # the pattern requirement can only remove candles

@@ -1,0 +1,693 @@
+//@version=6
+indicator("Hybrid Market Profile Engine v13.0 | Candlestick Edition", overlay=true, max_labels_count=300, max_lines_count=150)
+
+//=====================================================================
+// 01. MARKET PROFILE
+//=====================================================================
+gP = "01. Market Profile"
+profileInput = input.string("Auto Detect", "Market Profile", options=["Auto Detect", "Forex/Crypto", "Indian Index/Options", "Indian Equity", "MCX"], group=gP)
+fallbackProfile = input.string("Indian Equity", "Unrecognized symbol fallback", options=["Forex/Crypto", "Indian Index/Options", "Indian Equity", "MCX"], group=gP)
+
+sym = str.upper(syminfo.ticker)
+pref = str.upper(syminfo.prefix)
+typ = str.lower(syminfo.type)
+
+isCrypto = typ == "crypto" or str.contains(pref, "BINANCE") or str.contains(pref, "BYBIT")
+isForex = typ == "forex"
+isMCX = str.contains(pref, "MCX") or str.contains(sym, "CRUDEOIL") or str.contains(sym, "NATURALGAS") or str.contains(sym, "GOLD") or str.contains(sym, "SILVER")
+isIndex = str.contains(sym, "NIFTY") or str.contains(sym, "SENSEX") or str.contains(sym, "BANKEX")
+isOption = typ == "option" or str.contains(sym, "CE") or str.contains(sym, "PE")
+isIndianExchange = str.contains(pref, "NSE") or str.contains(pref, "BSE")
+
+autoProfile = isMCX ? "MCX" : (isForex or isCrypto) ? "Forex/Crypto" : (isIndex or isOption) ? "Indian Index/Options" : isIndianExchange ? "Indian Equity" : fallbackProfile
+profile = profileInput == "Auto Detect" ? autoProfile : profileInput
+profileKnown = profileInput != "Auto Detect" or isMCX or isForex or isCrypto or isIndex or isOption or isIndianExchange
+
+isIndian = profile == "Indian Index/Options" or profile == "Indian Equity"
+isMCXProfile = profile == "MCX"
+
+//=====================================================================
+// 02. SESSIONS / DAY RESET
+//=====================================================================
+gS = "02. Trading Sessions"
+useSession = input.bool(true, "Enable session filter", group=gS)
+indiaSessionInput = input.session("0915-1530:23456", "NSE/BSE session (IST)", group=gS)
+mcxSessionInput = input.session("0900-2330:23456", "MCX session", group=gS)
+customSessionInput = input.session("0000-2359:1234567", "Forex/Crypto session", group=gS)
+useCustomForexSession = input.bool(false, "Restrict Forex/Crypto session", group=gS)
+
+indiaSession = not na(time(timeframe.period, indiaSessionInput, "Asia/Kolkata"))
+mcxSession = not na(time(timeframe.period, mcxSessionInput, syminfo.timezone))
+forexSession = not na(time(timeframe.period, customSessionInput, syminfo.timezone))
+
+sessionOK = not useSession ? true : isIndian ? indiaSession : isMCXProfile ? mcxSession : useCustomForexSession ? forexSession : true
+sessionText = not useSession ? "FILTER OFF" : isIndian ? (indiaSession ? "INDIA DAY SESSION" : "OUT OF SESSION") : isMCXProfile ? (mcxSession ? "MCX SESSION" : "OUT OF SESSION") : useCustomForexSession ? (forexSession ? "CUSTOM SESSION" : "OUT OF SESSION") : "24H SESSION"
+
+dayStamp = time("1D", "0000-2359:1234567", isIndian ? "Asia/Kolkata" : syminfo.timezone)
+newTradingDay = not na(dayStamp) and (na(dayStamp[1]) or dayStamp != dayStamp[1])
+
+//=====================================================================
+// 03. STANDARD CANDLE MTF TREND — NO RENKO
+//=====================================================================
+gM = "03. Candlestick MTF"
+tf1 = input.timeframe("3", "Timeframe 1", group=gM)
+tf2 = input.timeframe("5", "Timeframe 2", group=gM)
+tf3 = input.timeframe("15", "Timeframe 3", group=gM)
+tf4 = input.timeframe("40", "Timeframe 4", group=gM)
+requireMTF = input.bool(false, "Require MTF agreement", group=gM)
+minAgree = input.int(3, "Minimum agreeing timeframes", minval=1, maxval=4, group=gM)
+mtfLookback = input.int(5, "MTF breakout lookback", minval=2, maxval=30, group=gM)
+
+// Direction based on standard candles and recent high/low.
+// request.security uses the last confirmed candle to reduce repainting.
+f_candleDir(_len) =>
+    hh = ta.highest(high[1], _len)
+    ll = ta.lowest(low[1], _len)
+    close > hh ? 1 : close < ll ? -1 : close > open ? 1 : close < open ? -1 : 0
+
+d1 = request.security(syminfo.tickerid, tf1, f_candleDir(mtfLookback)[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+d2 = request.security(syminfo.tickerid, tf2, f_candleDir(mtfLookback)[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+d3 = request.security(syminfo.tickerid, tf3, f_candleDir(mtfLookback)[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+d4 = request.security(syminfo.tickerid, tf4, f_candleDir(mtfLookback)[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+
+bullAgree = (d1 == 1 ? 1 : 0) + (d2 == 1 ? 1 : 0) + (d3 == 1 ? 1 : 0) + (d4 == 1 ? 1 : 0)
+bearAgree = (d1 == -1 ? 1 : 0) + (d2 == -1 ? 1 : 0) + (d3 == -1 ? 1 : 0) + (d4 == -1 ? 1 : 0)
+mtfLongOK = not requireMTF or bullAgree >= minAgree
+mtfShortOK = not requireMTF or bearAgree >= minAgree
+
+//=====================================================================
+// 04. MARKET STRUCTURE — BOS / CHOCH
+//=====================================================================
+gB = "04. BoS / CHoCH"
+pivotLen = input.int(5, "Pivot confirmation bars", minval=2, maxval=30, group=gB)
+showStructure = input.bool(true, "Show structure labels", group=gB)
+showStructureEvery = input.int(3, "Display every Nth event", minval=1, maxval=20, group=gB)
+
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low, pivotLen, pivotLen)
+
+var float swingH = na
+var float swingL = na
+var int structureDir = 0
+var int structureEvents = 0
+
+if not na(ph)
+    swingH := ph
+if not na(pl)
+    swingL := pl
+
+breakH = not na(swingH) and close > swingH and close[1] <= swingH
+breakL = not na(swingL) and close < swingL and close[1] >= swingL
+
+bullCH = breakH and structureDir == -1
+bearCH = breakL and structureDir == 1
+bullBoS = breakH and structureDir != -1
+bearBoS = breakL and structureDir != 1
+
+if barstate.isconfirmed
+    if breakH
+        structureDir := 1
+    if breakL
+        structureDir := -1
+
+if barstate.isconfirmed and (breakH or breakL)
+    structureEvents += 1
+    if showStructure and structureEvents % showStructureEvery == 0
+        if bullCH
+            label.new(bar_index, low, "CHoCH", style=label.style_label_up, color=color.teal, textcolor=color.white, size=size.tiny)
+        else if bearCH
+            label.new(bar_index, high, "CHoCH", style=label.style_label_down, color=color.orange, textcolor=color.white, size=size.tiny)
+        else if bullBoS
+            label.new(bar_index, low, "BoS", style=label.style_label_up, color=color.green, textcolor=color.white, size=size.tiny)
+        else if bearBoS
+            label.new(bar_index, high, "BoS", style=label.style_label_down, color=color.red, textcolor=color.white, size=size.tiny)
+
+//=====================================================================
+// 05. RISK / CANDLE PATTERNS / ENTRY OPTIONS
+//=====================================================================
+gT = "05. Entry / Risk"
+capital = input.float(12000, "Capital", minval=1, group=gT)
+riskPct = input.float(1.0, "Planned capital risk (%)", minval=0.1, maxval=5, step=0.1, group=gT)
+atrLen = input.int(14, "ATR length", minval=1, group=gT)
+retestBars = input.int(8, "Retest expiry bars", minval=1, maxval=50, group=gT)
+retestTolATR = input.float(0.20, "Retest tolerance (ATR)", minval=0.01, step=0.01, group=gT)
+useVWAP = input.bool(false, "Use VWAP filter", group=gT)
+useCandleSL = input.bool(true, "Use candle-based SL", group=gT)
+usePatternFilter = input.bool(false, "Require named candle pattern", group=gT)
+maruBodyRatio = input.float(0.85, "Marubozu body/range", minval=0.5, maxval=0.99, step=0.01, group=gT)
+maxWickRatio = input.float(0.08, "Marubozu max wick/range", minval=0.01, maxval=0.25, step=0.01, group=gT)
+showLines = input.bool(true, "Show trade levels", group=gT)
+entryMode = input.string("Hybrid: Retest or Continuation", "Entry mode", options=["Breakout + Retest", "Hybrid: Retest or Continuation"], group=gT)
+continuationLookback = input.int(5, "Continuation breakout lookback", minval=2, maxval=30, group=gT)
+showGapStatus = input.bool(true, "Show opening gap status", group=gT)
+
+atr = ta.atr(atrLen)
+vwapV = ta.vwap(hlc3)
+vwapLongOK = not useVWAP or na(vwapV) or close >= vwapV
+vwapShortOK = not useVWAP or na(vwapV) or close <= vwapV
+
+cRange = math.max(high - low, syminfo.mintick)
+cBody = math.abs(close - open)
+uWick = high - math.max(open, close)
+lWick = math.min(open, close) - low
+bRatio = cBody / cRange
+
+bullEngulf = close > open and close[1] < open[1] and open <= close[1] and close >= open[1]
+bearEngulf = close < open and close[1] > open[1] and open >= close[1] and close <= open[1]
+bullMaru = close > open and bRatio >= maruBodyRatio and uWick / cRange <= maxWickRatio and lWick / cRange <= maxWickRatio
+bearMaru = close < open and bRatio >= maruBodyRatio and uWick / cRange <= maxWickRatio and lWick / cRange <= maxWickRatio
+
+bullHammer = close > open and lWick >= cBody * 2 and uWick <= cBody
+bearStar = close < open and uWick >= cBody * 2 and lWick <= cBody
+
+bullPattern = bullEngulf or bullMaru or bullHammer
+bearPattern = bearEngulf or bearMaru or bearStar
+
+bullCandleOK = close > open and (not usePatternFilter or bullPattern)
+bearCandleOK = close < open and (not usePatternFilter or bearPattern)
+
+trendDir = structureDir
+allowBuyDirection = trendDir == 1
+allowSellDirection = trendDir == -1
+
+//=====================================================================
+// 06. STATE
+//=====================================================================
+var int pendingDir = 0
+var float pendingLevel = na
+var int pendingBar = na
+
+var bool active = false
+var int tradeDir = 0
+var float entry = na
+var float sl = na
+var float R = na
+var float t1 = na
+var float t2 = na
+var float t3 = na
+var float t4 = na
+var float qty = na
+
+var bool done1 = false
+var bool done2 = false
+var bool done3 = false
+var bool done4 = false
+var int entryBar = na
+var string lastResult = "NO CLOSED TRADE"
+
+var string lastSetupStatus = "NO SETUP YET"
+var string lastBlockReason = "WAITING FOR BREAKOUT"
+var int lastSetupBar = na
+var float lastSetupLevel = na
+var int lastSetupDir = 0
+var string lastSetupType = "NONE"
+
+var line lEntry = na
+var line lSL = na
+var line lT1 = na
+var line lT2 = na
+var line lT3 = na
+var line lT4 = na
+var label pendingLabel = na
+var label slHitLabel = na
+
+bool slHitEvent = false
+bool t1Event = false
+bool t2Event = false
+bool t3Event = false
+bool t4Event = false
+
+// Clear only pending setup on a new day. Do not erase active trade.
+if newTradingDay and not active
+    pendingDir := 0
+    pendingLevel := na
+    pendingBar := na
+
+//=====================================================================
+// 07. GAP-UP / GAP-DOWN STATUS
+//=====================================================================
+var float priorDayClose = na
+var float todayOpen = na
+
+if newTradingDay
+    priorDayClose := close[1]
+    todayOpen := open
+
+gapPct = not na(priorDayClose) and priorDayClose != 0 and not na(todayOpen) ? (todayOpen - priorDayClose) / priorDayClose * 100.0 : na
+gapText = na(gapPct) ? "GAP N/A" : gapPct > 0.10 ? "GAP UP " + str.tostring(gapPct, "#.##") + "%" : gapPct < -0.10 ? "GAP DOWN " + str.tostring(gapPct, "#.##") + "%" : "FLAT OPEN"
+
+//=====================================================================
+// 08. BREAKOUT / RETEST / CONTINUATION
+//=====================================================================
+tol = nz(atr, 0.0) * retestTolATR
+
+pendingExpired = pendingDir != 0 and not na(pendingBar) and bar_index - pendingBar > retestBars
+pendingStale = pendingDir != 0 and not sessionOK
+
+if pendingExpired
+    lastSetupStatus := "SETUP EXPIRED"
+    lastBlockReason := "RETEST WINDOW EXPIRED"
+    pendingDir := 0
+    pendingLevel := na
+    pendingBar := na
+
+if pendingStale
+    lastSetupStatus := "SETUP CANCELLED"
+    lastBlockReason := "SESSION CLOSED"
+    pendingDir := 0
+    pendingLevel := na
+    pendingBar := na
+
+newBreakUp = barstate.isconfirmed and sessionOK and breakH and not active and pendingDir == 0
+newBreakDn = barstate.isconfirmed and sessionOK and breakL and not active and pendingDir == 0
+
+if newBreakUp
+    pendingDir := 1
+    pendingLevel := swingH
+    pendingBar := bar_index
+    lastSetupDir := 1
+    lastSetupLevel := swingH
+    lastSetupBar := bar_index
+    lastSetupType := "BREAKOUT"
+    lastSetupStatus := "WAITING FOR BUY RETEST"
+    lastBlockReason := "RETEST NOT CONFIRMED"
+
+if newBreakDn
+    pendingDir := -1
+    pendingLevel := swingL
+    pendingBar := bar_index
+    lastSetupDir := -1
+    lastSetupLevel := swingL
+    lastSetupBar := bar_index
+    lastSetupType := "BREAKOUT"
+    lastSetupStatus := "WAITING FOR SELL RETEST"
+    lastBlockReason := "RETEST NOT CONFIRMED"
+
+bullRetest = pendingDir == 1 and bar_index > pendingBar and low <= pendingLevel + tol and close > pendingLevel and bullCandleOK
+bearRetest = pendingDir == -1 and bar_index > pendingBar and high >= pendingLevel - tol and close < pendingLevel and bearCandleOK
+
+// Independent continuation breakout. Does not require a pending retest.
+// It uses standard OHLC values, confirmed candle close, and recent range breakout.
+bullContinuation = entryMode == "Hybrid: Retest or Continuation" and close > ta.highest(high[1], continuationLookback) and bullCandleOK
+bearContinuation = entryMode == "Hybrid: Retest or Continuation" and close < ta.lowest(low[1], continuationLookback) and bearCandleOK
+
+buySetup = bullRetest or bullContinuation
+sellSetup = bearRetest or bearContinuation
+
+buyFilterOK = vwapLongOK and mtfLongOK
+sellFilterOK = vwapShortOK and mtfShortOK
+
+buySignal = barstate.isconfirmed and sessionOK and not active and allowBuyDirection and buySetup and buyFilterOK
+sellSignal = barstate.isconfirmed and sessionOK and not active and allowSellDirection and sellSetup and sellFilterOK
+
+buyRejected = barstate.isconfirmed and bullRetest and (not allowBuyDirection or not buyFilterOK)
+sellRejected = barstate.isconfirmed and bearRetest and (not allowSellDirection or not sellFilterOK)
+
+if buyRejected
+    lastSetupDir := 1
+    lastSetupLevel := pendingLevel
+    lastSetupBar := bar_index
+    lastSetupType := "RETEST"
+    lastSetupStatus := "BUY REJECTED"
+    lastBlockReason := not allowBuyDirection ? "STRUCTURE TREND NOT UP" : not vwapLongOK ? "PRICE BELOW VWAP" : not mtfLongOK ? "MTF AGREEMENT FAILED" : "FILTER REJECTED"
+
+if sellRejected
+    lastSetupDir := -1
+    lastSetupLevel := pendingLevel
+    lastSetupBar := bar_index
+    lastSetupType := "RETEST"
+    lastSetupStatus := "SELL REJECTED"
+    lastBlockReason := not allowSellDirection ? "STRUCTURE TREND NOT DOWN" : not vwapShortOK ? "PRICE ABOVE VWAP" : not mtfShortOK ? "MTF AGREEMENT FAILED" : "FILTER REJECTED"
+
+if buySignal
+    lastSetupDir := 1
+    lastSetupLevel := close
+    lastSetupBar := bar_index
+    lastSetupType := bullRetest ? "RETEST ENTRY" : "CONTINUATION ENTRY"
+    lastSetupStatus := "BUY CONFIRMED"
+    lastBlockReason := "NONE"
+
+if sellSignal
+    lastSetupDir := -1
+    lastSetupLevel := close
+    lastSetupBar := bar_index
+    lastSetupType := bearRetest ? "RETEST ENTRY" : "CONTINUATION ENTRY"
+    lastSetupStatus := "SELL CONFIRMED"
+    lastBlockReason := "NONE"
+
+// Consume pending setup after entry or rejected retest.
+if buySignal or sellSignal or buyRejected or sellRejected
+    pendingDir := 0
+    pendingLevel := na
+    pendingBar := na
+
+//=====================================================================
+// 09. LINE HELPERS
+//=====================================================================
+f_deleteLine(_ln) =>
+    if not na(_ln)
+        line.delete(_ln)
+
+f_freezeLine(_ln) =>
+    if not na(_ln)
+        line.set_extend(_ln, extend.none)
+        line.set_x2(_ln, bar_index)
+
+f_price(_v) =>
+    na(_v) ? "—" : str.tostring(_v, format.mintick)
+
+f_dirText(_d) =>
+    _d == 1 ? "UP" : _d == -1 ? "DOWN" : "NEUTRAL"
+
+//=====================================================================
+// 10. BUY ENTRY
+//=====================================================================
+if buySignal
+    float candidateSL = useCandleSL ? (bullEngulf ? low[1] : bullMaru or bullHammer ? low : low[1]) : low[1]
+    float candidateR = close - candidateSL
+
+    if not na(candidateSL) and candidateR >= syminfo.mintick
+        f_deleteLine(lEntry)
+        f_deleteLine(lSL)
+        f_deleteLine(lT1)
+        f_deleteLine(lT2)
+        f_deleteLine(lT3)
+        f_deleteLine(lT4)
+
+        active := true
+        tradeDir := 1
+        entry := close
+        sl := candidateSL
+        R := candidateR
+        t1 := entry + R
+        t2 := entry + R * 2
+        t3 := entry + R * 3
+        t4 := entry + R * 4
+        qty := (capital * riskPct / 100.0) / math.max(R * syminfo.pointvalue, syminfo.mintick)
+
+        done1 := false
+        done2 := false
+        done3 := false
+        done4 := false
+        entryBar := bar_index
+        lastResult := "BUY ACTIVE"
+
+        label.new(bar_index, low - nz(atr, syminfo.mintick) * 0.2, "BUY", style=label.style_label_up, color=color.lime, textcolor=color.black)
+
+        if showLines
+            lEntry := line.new(bar_index, entry, bar_index + 1, entry, extend=extend.right, color=color.blue, width=2)
+            lSL := line.new(bar_index, sl, bar_index + 1, sl, extend=extend.right, color=color.red, width=2)
+            lT1 := line.new(bar_index, t1, bar_index + 1, t1, extend=extend.right, color=color.yellow, style=line.style_dotted)
+            lT2 := line.new(bar_index, t2, bar_index + 1, t2, extend=extend.right, color=color.yellow, style=line.style_dotted)
+            lT3 := line.new(bar_index, t3, bar_index + 1, t3, extend=extend.right, color=color.yellow, style=line.style_dotted)
+            lT4 := line.new(bar_index, t4, bar_index + 1, t4, extend=extend.right, color=color.yellow, style=line.style_dotted)
+
+//=====================================================================
+// 11. SELL ENTRY
+//=====================================================================
+if sellSignal
+    float candidateSL = useCandleSL ? (bearEngulf ? high[1] : bearMaru or bearStar ? high : high[1]) : high[1]
+    float candidateR = candidateSL - close
+
+    if not na(candidateSL) and candidateR >= syminfo.mintick
+        f_deleteLine(lEntry)
+        f_deleteLine(lSL)
+        f_deleteLine(lT1)
+        f_deleteLine(lT2)
+        f_deleteLine(lT3)
+        f_deleteLine(lT4)
+
+        active := true
+        tradeDir := -1
+        entry := close
+        sl := candidateSL
+        R := candidateR
+        t1 := entry - R
+        t2 := entry - R * 2
+        t3 := entry - R * 3
+        t4 := entry - R * 4
+        qty := (capital * riskPct / 100.0) / math.max(R * syminfo.pointvalue, syminfo.mintick)
+
+        done1 := false
+        done2 := false
+        done3 := false
+        done4 := false
+        entryBar := bar_index
+        lastResult := "SELL ACTIVE"
+
+        label.new(bar_index, high + nz(atr, syminfo.mintick) * 0.2, "SELL", style=label.style_label_down, color=color.red, textcolor=color.white)
+
+        if showLines
+            lEntry := line.new(bar_index, entry, bar_index + 1, entry, extend=extend.right, color=color.blue, width=2)
+            lSL := line.new(bar_index, sl, bar_index + 1, sl, extend=extend.right, color=color.red, width=2)
+            lT1 := line.new(bar_index, t1, bar_index + 1, t1, extend=extend.right, color=color.yellow, style=line.style_dotted)
+            lT2 := line.new(bar_index, t2, bar_index + 1, t2, extend=extend.right, color=color.yellow, style=line.style_dotted)
+            lT3 := line.new(bar_index, t3, bar_index + 1, t3, extend=extend.right, color=color.yellow, style=line.style_dotted)
+            lT4 := line.new(bar_index, t4, bar_index + 1, t4, extend=extend.right, color=color.yellow, style=line.style_dotted)
+
+//=====================================================================
+// 12. ACTIVE TRADE MANAGEMENT
+//=====================================================================
+if active and barstate.isconfirmed and bar_index > entryBar
+    bool hitSL = tradeDir == 1 ? low <= sl : high >= sl
+
+    if hitSL
+        active := false
+        lastResult := "STOPPED"
+        slHitEvent := true
+
+        f_freezeLine(lEntry)
+        f_freezeLine(lSL)
+        f_freezeLine(lT1)
+        f_freezeLine(lT2)
+        f_freezeLine(lT3)
+        f_freezeLine(lT4)
+
+        if not na(slHitLabel)
+            label.delete(slHitLabel)
+
+        float slLabelY = tradeDir == 1 ? low - nz(atr, syminfo.mintick) * 0.8 : high + nz(atr, syminfo.mintick) * 0.8
+        slHitLabel := label.new(bar_index, slLabelY, "SL HIT", style=tradeDir == 1 ? label.style_label_up : label.style_label_down, color=color.maroon, textcolor=color.white, size=size.small)
+    else
+        if tradeDir == 1
+            if not done1 and high >= t1
+                done1 := true
+                t1Event := true
+                if not na(lT1)
+                    line.set_style(lT1, line.style_solid)
+                    line.set_width(lT1, 3)
+            if not done2 and high >= t2
+                done2 := true
+                t2Event := true
+                if not na(lT2)
+                    line.set_style(lT2, line.style_solid)
+                    line.set_width(lT2, 3)
+            if not done3 and high >= t3
+                done3 := true
+                t3Event := true
+                if not na(lT3)
+                    line.set_style(lT3, line.style_solid)
+                    line.set_width(lT3, 3)
+            if not done4 and high >= t4
+                done4 := true
+                t4Event := true
+                if not na(lT4)
+                    line.set_style(lT4, line.style_solid)
+                    line.set_width(lT4, 3)
+        else
+            if not done1 and low <= t1
+                done1 := true
+                t1Event := true
+                if not na(lT1)
+                    line.set_style(lT1, line.style_solid)
+                    line.set_width(lT1, 3)
+            if not done2 and low <= t2
+                done2 := true
+                t2Event := true
+                if not na(lT2)
+                    line.set_style(lT2, line.style_solid)
+                    line.set_width(lT2, 3)
+            if not done3 and low <= t3
+                done3 := true
+                t3Event := true
+                if not na(lT3)
+                    line.set_style(lT3, line.style_solid)
+                    line.set_width(lT3, 3)
+            if not done4 and low <= t4
+                done4 := true
+                t4Event := true
+                if not na(lT4)
+                    line.set_style(lT4, line.style_solid)
+                    line.set_width(lT4, 3)
+
+        if done4
+            active := false
+            lastResult := "T4 COMPLETE"
+
+            f_freezeLine(lEntry)
+            f_freezeLine(lSL)
+            f_freezeLine(lT1)
+            f_freezeLine(lT2)
+            f_freezeLine(lT3)
+            f_freezeLine(lT4)
+
+            label.new(bar_index, tradeDir == 1 ? high + nz(atr, syminfo.mintick) * 0.3 : low - nz(atr, syminfo.mintick) * 0.3, "T4 COMPLETE", style=tradeDir == 1 ? label.style_label_down : label.style_label_up, color=color.green, textcolor=color.white)
+
+//=====================================================================
+// 13. DIAGNOSTICS
+//=====================================================================
+directionText = trendDir == 1 ? "UPSIDE" : trendDir == -1 ? "DOWNSIDE" : "NEUTRAL"
+weakening = trendDir == 1 ? close < close[1] and close[1] < close[2] : trendDir == -1 ? close > close[1] and close[1] > close[2] : false
+reversalConfirmed = (bullCH or bearCH) and barstate.isconfirmed
+reversalWatch = not reversalConfirmed and ((trendDir == 1 and close < low[1]) or (trendDir == -1 and close > high[1]))
+
+trendStatus = reversalConfirmed ? "REVERSAL CONFIRMED" : reversalWatch ? "REVERSAL WATCH" : weakening ? "TREND WEAKENING" : trendDir == 1 ? "UPSIDE CONTINUATION" : trendDir == -1 ? "DOWNSIDE CONTINUATION" : "NEUTRAL"
+
+string signalBlock = "WAITING FOR BREAKOUT"
+if not profileKnown
+    signalBlock := "PROFILE NOT RECOGNIZED"
+else if not sessionOK
+    signalBlock := "SESSION FILTER BLOCK"
+else if active
+    signalBlock := "TRADE ALREADY ACTIVE"
+else if trendDir == 0
+    signalBlock := "NEED STRUCTURE BREAK"
+else if buySignal
+    signalBlock := "BUY CONFIRMED"
+else if sellSignal
+    signalBlock := "SELL CONFIRMED"
+else if buyRejected
+    signalBlock := lastBlockReason
+else if sellRejected
+    signalBlock := lastBlockReason
+else if pendingDir == 1
+    signalBlock := "WAITING FOR BUY RETEST"
+else if pendingDir == -1
+    signalBlock := "WAITING FOR SELL RETEST"
+else if trendDir == 1
+    signalBlock := entryMode == "Breakout + Retest" ? "UPTREND: WAIT RETEST" : "UPTREND: WAIT FRESH BREAKOUT"
+else
+    signalBlock := entryMode == "Breakout + Retest" ? "DOWNTREND: WAIT RETEST" : "DOWNTREND: WAIT FRESH BREAKOUT"
+
+tradeStatus = active ? (tradeDir == 1 ? "BUY ACTIVE" : "SELL ACTIVE") : pendingDir != 0 ? (pendingDir == 1 ? "PENDING BUY" : "PENDING SELL") : "NO ACTIVE TRADE"
+f_targetText(_done) =>
+    active ? (_done ? "COMPLETED" : "PENDING") : "—"
+
+nextTarget = not done1 ? "T1" : not done2 ? "T2" : not done3 ? "T3" : not done4 ? "T4" : "COMPLETE"
+
+//=====================================================================
+// 14. MAIN DASHBOARD
+//=====================================================================
+var table dash = table.new(position.top_right, 2, 23, frame_color=color.white, frame_width=1, border_color=color.gray, border_width=1)
+bg = color.rgb(8, 28, 72)
+fg = color.white
+
+if barstate.islast
+    table.cell(dash, 0, 0, "HYBRID ENGINE v13.0", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 0, profileKnown ? profile : "PROFILE NOT RECOGNIZED", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 1, "Chart TF", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 1, timeframe.period, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 2, tf1 + " Candle Trend", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 2, f_dirText(d1), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 3, tf2 + " Candle Trend", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 3, f_dirText(d2), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 4, tf3 + " Candle Trend", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 4, f_dirText(d3), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 5, tf4 + " Candle Trend", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 5, f_dirText(d4), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 6, "Direction", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 6, directionText, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 7, "Trend Status", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 7, trendStatus, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 8, "Trade", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 8, tradeStatus, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 9, "Session", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 9, sessionText, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 10, "Opening Gap", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 10, showGapStatus ? gapText : "OFF", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 11, "Signal Check", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 11, signalBlock, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 12, "Next Target", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 12, active ? nextTarget : "—", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 13, "T1", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 13, f_targetText(done1), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 14, "T2", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 14, f_targetText(done2), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 15, "T3", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 15, f_targetText(done3), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 16, "T4", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 16, f_targetText(done4), bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 17, "Current Entry", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 17, active ? f_price(entry) : "—", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 18, "Current SL", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 18, active ? f_price(sl) : "—", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 19, "T1 / T2", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 19, active ? f_price(t1) + " / " + f_price(t2) : "—", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 20, "T3 / T4", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 20, active ? f_price(t3) + " / " + f_price(t4) : "—", bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 21, "Last Result", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 21, lastResult, bgcolor=bg, text_color=fg)
+    table.cell(dash, 0, 22, "Planned Qty*", bgcolor=bg, text_color=fg)
+    table.cell(dash, 1, 22, na(qty) ? "—" : str.tostring(qty, "#.##"), bgcolor=bg, text_color=fg)
+
+//=====================================================================
+// 15. PENDING SETUP LIST
+//=====================================================================
+showPendingList = input.bool(true, "Show Pending Setup List", group="06. Diagnostics")
+var table pendingTable = table.new(position.bottom_right, 2, 8, frame_color=color.white, frame_width=1, border_color=color.gray, border_width=1)
+
+pendingDirectionText = pendingDir == 1 ? "BUY" : pendingDir == -1 ? "SELL" : "NONE"
+pendingAgeText = pendingDir != 0 and not na(pendingBar) ? str.tostring(bar_index - pendingBar) + " bars" : "—"
+pendingPriceText = pendingDir != 0 ? f_price(pendingLevel) : "—"
+lastSetupAgeText = not na(lastSetupBar) ? str.tostring(bar_index - lastSetupBar) + " bars ago" : "—"
+lastSetupDirectionText = lastSetupDir == 1 ? "BUY" : lastSetupDir == -1 ? "SELL" : "NONE"
+pendingReason = active ? "TRADE ACTIVE" : not sessionOK ? "OUT OF SESSION" : pendingDir == 1 ? "WAITING FOR BUY RETEST" : pendingDir == -1 ? "WAITING FOR SELL RETEST" : "WAITING FOR NEW SETUP"
+
+if barstate.islast
+    if showPendingList
+        table.cell(pendingTable, 0, 0, "PENDING SETUP LIST", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 0, "CURRENT STATUS", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 1, "Pending Direction", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 1, pendingDirectionText, bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 2, "Pending Level", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 2, pendingPriceText, bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 3, "Pending Age", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 3, pendingAgeText, bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 4, "Pending Reason", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 4, pendingReason, bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 5, "Last Setup", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 5, lastSetupStatus, bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 6, "Last Block Reason", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 6, lastBlockReason, bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 0, 7, "Last Setup Info", bgcolor=bg, text_color=fg)
+        table.cell(pendingTable, 1, 7, lastSetupDirectionText + " | " + lastSetupType + " | " + lastSetupAgeText, bgcolor=bg, text_color=fg)
+    else
+        table.clear(pendingTable, 0, 0, 1, 7)
+
+//=====================================================================
+// 16. PENDING CHART LABEL
+//=====================================================================
+if barstate.isconfirmed
+    if pendingDir != 0
+        if na(pendingLabel)
+            pendingLabel := label.new(bar_index, pendingLevel, pendingDir == 1 ? "PENDING BUY" : "PENDING SELL", style=pendingDir == 1 ? label.style_label_up : label.style_label_down, color=pendingDir == 1 ? color.new(color.lime, 15) : color.new(color.red, 15), textcolor=color.white, size=size.small)
+        else
+            label.set_xy(pendingLabel, bar_index, pendingLevel)
+            label.set_text(pendingLabel, pendingDir == 1 ? "PENDING BUY" : "PENDING SELL")
+            label.set_color(pendingLabel, pendingDir == 1 ? color.new(color.lime, 15) : color.new(color.red, 15))
+    else
+        if not na(pendingLabel)
+            label.delete(pendingLabel)
+            pendingLabel := na
+
+//=====================================================================
+// 17. ALERTS
+//=====================================================================
+alertcondition(buySignal, "BUY Confirmed", "BUY: confirmed candlestick setup")
+alertcondition(sellSignal, "SELL Confirmed", "SELL: confirmed candlestick setup")
+alertcondition(t1Event, "T1 Reached", "T1 reached on active trade")
+alertcondition(t2Event, "T2 Reached", "T2 reached on active trade")
+alertcondition(t3Event, "T3 Reached", "T3 reached on active trade")
+alertcondition(t4Event, "T4 Reached", "T4 reached; trade closed")
+alertcondition(slHitEvent, "Stop Loss Hit", "Active trade stopped out")
+alertcondition(reversalConfirmed, "Reversal Confirmed", "Confirmed BoS/CHoCH reversal")

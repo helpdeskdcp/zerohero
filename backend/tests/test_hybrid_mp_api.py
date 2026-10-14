@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app import hybrid_mp_api as api  # noqa: E402
 
 T0 = 1_791_000_000 - (1_791_000_000 % 86400) - 19800 + 555 * 60
-T0 += (7 - ((T0 + 19800) // 86400 + 4) % 7) % 7 * 86400
+T0 += (7 - ((T0 + 19800) // 86400 + 3) % 7) % 7 * 86400
 
 
 def _bars(days=4, seed=1):

@@ -53,7 +53,7 @@ class Params:
     use_session: bool = True
     session: tuple = (555, 930)                # minute-of-day [start, end): NSE 09:15-15:30 IST (MCX: (540, 1410))
     mintick: float = 0.05
-    pivot_ties: str = "allow"                  # Pine tie behaviour for ta.pivothigh/low is not specified in the reference we have
+    pivot_ties: str = "tv"                     # "tv" = TradingView rule (left ties allowed, right ties NOT); "allow"/"strict" kept for comparison
     # --- execution assumptions (NOT in Pine) ---
     chart_tf: int = 1                          # chart timeframe in minutes (bars must already be this timeframe)
     exit_model: str = "PINE"
@@ -70,6 +70,7 @@ class Params:
     no_entry_last_min: int = 0                 # ... and in the last N minutes
     max_trades_day: int | None = None
     daily_loss_r: float | None = None          # stop trading for the day once gross day R <= -x
+    favorable_first: bool = False              # SENSITIVITY ONLY: when a bar touches both the stop and T4, credit T4 (default False = adverse-first)
     mtf_mode: str = "pine"                     # "pine" (colour fallback, noisy) | "state" (carry last breakout direction)
     vwap_proxy: bool = False                   # no volume (index): use session mean of typical price (TWAP proxy), flagged
     pointvalue: float = 1.0
@@ -79,6 +80,7 @@ class Params:
     # --- optional SMC confirmation (smc.py) ---
     smc_filter: bool = False
     smc_min: int = 2
+    smc_require: tuple = ()                    # components that must ALL be true (sweep, inducement, displacement, fvg_or_ob_touch, discount_premium); overrides smc_min
     smc: SMCParams = field(default_factory=SMCParams)
 
 
@@ -181,8 +183,8 @@ def _flags(chart: dict, p: Params) -> dict:
     bull_ham = (c > o) & (lw >= body * 2) & (uw <= body)
     bear_star = (c < o) & (uw >= body * 2) & (lw <= body)
     bull_pat, bear_pat = bull_eng | bull_maru | bull_ham, bear_eng | bear_maru | bear_star
-    bull_ok = (c > o) & (~p.use_pattern_filter | bull_pat)
-    bear_ok = (c < o) & (~p.use_pattern_filter | bear_pat)
+    bull_ok = (c > o) & ((not p.use_pattern_filter) | bull_pat)
+    bear_ok = (c < o) & ((not p.use_pattern_filter) | bear_pat)
     L = p.continuation_lookback
     hhL, llL = np.full(n, NAN), np.full(n, NAN)
     if n > L:
@@ -190,6 +192,30 @@ def _flags(chart: dict, p: Params) -> dict:
         llL[L:] = sliding_window_view(l, L).min(axis=1)[:n - L]
     return dict(bull_eng=bull_eng, bear_eng=bear_eng, bull_maru=bull_maru, bear_maru=bear_maru, bull_ham=bull_ham,
                 bear_star=bear_star, bull_ok=bull_ok, bear_ok=bear_ok, hhL=hhL, llL=llL)
+
+
+def round_trip_cost_bps(commission_bps_per_side: float = 0.0, slippage_bps_per_side: float = 0.0, spread_bps: float = 0.0) -> float:
+    """Round-trip cost in bps of price: both sides pay commission + slippage, the bid-ask spread is crossed once (half on entry, half on exit)."""
+    return 2.0 * (commission_bps_per_side + slippage_bps_per_side) + spread_bps
+
+
+def weekday_ist(t) -> np.ndarray:
+    """Mon=0 .. Sun=6 for epoch seconds in IST (1970-01-01 was a Thursday, i.e. weekday 3)."""
+    return (((np.asarray(t) + 19800) // 86400) + 3) % 7
+
+
+def pivots_tv(a: np.ndarray, n: int, high: bool) -> np.ndarray:
+    """ta.pivothigh/pivotlow with TradingView's tie rule (confirmed from the TradingView-validated PyneCore implementation, which keeps
+    the NEWEST of equal extremes): pivot high iff v >= every LEFT bar and v > every RIGHT bar (low: <= left, < right).
+    out[i] = pivot value of bar i-n, known at bar i (nan otherwise)."""
+    out = np.full(len(a), NAN)
+    if len(a) < 2 * n + 1:
+        return out
+    w = sliding_window_view(a, 2 * n + 1)
+    v, left, right = w[:, n], w[:, :n], w[:, n + 1:]
+    ok = (v >= left.max(axis=1)) & (v > right.max(axis=1)) if high else (v <= left.min(axis=1)) & (v < right.min(axis=1))
+    out[2 * n:] = np.where(ok, v, NAN)
+    return out
 
 
 def vol_usable(chart: dict) -> bool:
@@ -217,18 +243,21 @@ def _vwap(chart: dict, days: np.ndarray, proxy: bool = False) -> np.ndarray:
     return out
 
 
-def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state: bool = False) -> tuple[list[HTrade], dict]:
+def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state: bool = False, want_events: bool = False) -> tuple[list[HTrade], dict]:
     """chart: bars at p.chart_tf (t = bar OPEN epoch). b1: 1-minute bars (only needed when require_mtf)."""
     p = p or Params()
     t, o, h, l, c = (chart[k] for k in ("t", "o", "h", "l", "c"))
     n = len(t)
     days, mod = ist_minutes(t)
-    wd = ((t + 19800) // 86400 + 4) % 7
+    wd = weekday_ist(t)
     sess_ok = np.ones(n, dtype=bool) if not p.use_session else ((mod >= p.session[0]) & (mod < p.session[1]) &
                                                                   ((wd < 5) if p.weekdays_only else True))
     F = _flags(chart, p)
     atr = _atr(h, l, c, p.atr_len)
-    ph, pl = _pivots(h, p.pivot_len, True, p.pivot_ties), _pivots(l, p.pivot_len, False, p.pivot_ties)
+    if p.pivot_ties == "tv":
+        ph, pl = pivots_tv(h, p.pivot_len, True), pivots_tv(l, p.pivot_len, False)
+    else:
+        ph, pl = _pivots(h, p.pivot_len, True, p.pivot_ties), _pivots(l, p.pivot_len, False, p.pivot_ties)
     vwap = _vwap(chart, days, p.vwap_proxy)
     mt = mtf_dirs(chart, b1, p) if (p.require_mtf and b1 is not None) else np.zeros((n, 4), dtype=np.int8)
     bull_agree, bear_agree = (mt == 1).sum(axis=1), (mt == -1).sum(axis=1)
@@ -241,9 +270,14 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
     b_ham, s_star = F["bull_ham"].tolist(), F["bear_star"].tolist()
     ba, sa = bull_agree.tolist(), bear_agree.tolist()
     hybrid = p.entry_mode == "hybrid"
+    EV = [] if want_events else None            # Pine-semantic event log used by the parity audit
     smc = smc_context(chart, p.smc) if (p.smc_filter or want_state) else None
     sbull = smc["bull_score"].tolist() if smc else [0] * n
     sbear = smc["bear_score"].tolist() if smc else [0] * n
+    SMC_COMPONENTS = ("sweep", "inducement", "displacement", "fvg_or_ob_touch", "discount_premium")
+    req_idx = [SMC_COMPONENTS.index(x) for x in p.smc_require]
+    comp_b = smc["comp_bull"].tolist() if smc else None
+    comp_s = smc["comp_bear"].tolist() if smc else None
 
     swingH = swingL = NAN
     hi_used = lo_used = False
@@ -293,23 +327,33 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
             structure = -1; lo_used = True; st["breaks_dn"] += 1
         if break_h or break_l:
             st["choch" if (bull_ch or bear_ch) else "bos"] += 1
+            if EV is not None:
+                EV.append((i, "CHOCH" if (bull_ch or bear_ch) else "BOS", 1 if break_h else -1))
         allow_buy, allow_sell = structure == 1, structure == -1
         # ---- 06 / 08 pending housekeeping ----
         if newday and not active:
             pend_dir, pend_level, pend_bar = 0, NAN, -1
         if pend_dir != 0 and pend_bar >= 0 and i - pend_bar > p.retest_bars:
             st["expired"] += 1; last_setup, last_block = "SETUP EXPIRED", "RETEST WINDOW EXPIRED"
+            if EV is not None:
+                EV.append((i, "PENDING_EXPIRED", pend_dir))
             pend_dir, pend_level, pend_bar = 0, NAN, -1
         if pend_dir != 0 and not sess:
             st["cancelled_session"] += 1; last_setup, last_block = "SETUP CANCELLED", "SESSION CLOSED"
+            if EV is not None:
+                EV.append((i, "PENDING_CANCELLED", pend_dir))
             pend_dir, pend_level, pend_bar = 0, NAN, -1
         new_up = sess and break_h and not active and (pend_dir == 0 or (p.opposite_replaces_pending and pend_dir == -1))
         new_dn = sess and break_l and not active and (pend_dir == 0 or (p.opposite_replaces_pending and pend_dir == 1))
         if new_up:
             pend_dir, pend_level, pend_bar = 1, swingH, i; st["pending_set"] += 1
+            if EV is not None:
+                EV.append((i, "PENDING_SET", 1, swingH))
             last_dir, last_type, last_setup, last_block, last_setup_bar = 1, "BREAKOUT", "WAITING FOR BUY RETEST", "RETEST NOT CONFIRMED", i
         if new_dn:
             pend_dir, pend_level, pend_bar = -1, swingL, i; st["pending_set"] += 1
+            if EV is not None:
+                EV.append((i, "PENDING_SET", -1, swingL))
             last_dir, last_type, last_setup, last_block, last_setup_bar = -1, "BREAKOUT", "WAITING FOR SELL RETEST", "RETEST NOT CONFIRMED", i
         tol = 0.0 if math.isnan(L_[i]) else L_[i] * p.retest_tol_atr
         bull_retest = pend_dir == 1 and i > pend_bar and ll[i] <= pend_level + tol and cl_[i] > pend_level and bull_ok[i]
@@ -321,8 +365,12 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
         vwap_short = (not p.use_vwap) or math.isnan(vw_i) or cl_[i] <= vw_i
         mtf_long = (not p.require_mtf) or ba[i] >= p.min_agree
         mtf_short = (not p.require_mtf) or sa[i] >= p.min_agree
-        smc_long = (not p.smc_filter) or sbull[i] >= p.smc_min
-        smc_short = (not p.smc_filter) or sbear[i] >= p.smc_min
+        if p.smc_filter and p.smc_require:
+            smc_long = all(comp_b[i][k] for k in req_idx)
+            smc_short = all(comp_s[i][k] for k in req_idx)
+        else:
+            smc_long = (not p.smc_filter) or sbull[i] >= p.smc_min
+            smc_short = (not p.smc_filter) or sbear[i] >= p.smc_min
         buy_ok, sell_ok = vwap_long and mtf_long and smc_long, vwap_short and mtf_short and smc_short
         win_ok = (mod_l[i] >= p.session[0] + p.no_entry_first_min) and (mod_l[i] + p.chart_tf <= p.session[1] - p.no_entry_last_min)
         lim_ok = (p.max_trades_day is None or day_trades < p.max_trades_day) and (p.daily_loss_r is None or day_r > -p.daily_loss_r)
@@ -340,6 +388,8 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
         sell_rej = bear_retest and (not allow_sell or not sell_ok)
         if buy_rej or sell_rej:
             st["rejected"] += 1
+            if EV is not None:
+                EV.append((i, "REJECTED", 1 if buy_rej else -1))
             last_dir, last_type = (1 if buy_rej else -1), "RETEST"
             last_setup = "BUY REJECTED" if buy_rej else "SELL REJECTED"
             last_block = ("STRUCTURE TREND NOT UP" if not allow_buy else "PRICE BELOW VWAP" if not vwap_long else "MTF AGREEMENT FAILED" if not mtf_long else "SMC CONFIRMATION FAILED") if buy_rej else ("STRUCTURE TREND NOT DOWN" if not allow_sell else "PRICE ABOVE VWAP" if not vwap_short else "MTF AGREEMENT FAILED" if not mtf_short else "SMC CONFIRMATION FAILED")
@@ -368,7 +418,7 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
             if not risk_ok:
                 st["skipped_risk"] += 1
             elif (not math.isnan(cand)) and candR >= p.mintick:
-                last_bar = (i + 1 >= n) or day_l[i + 1] != day_l[i]
+                last_bar = mod_l[i] + p.chart_tf >= p.session[1]        # clock rule: no peeking at bar i+1
                 if p.eod_flat and last_bar:
                     st["skipped_eod"] += 1                      # entry on the day's last bar would be flat at once
                 else:
@@ -381,11 +431,15 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
                     remain, parts, cur_sl, mae, mfe = 1.0, [], sl, 0.0, 0.0
                     ent_type, ent_day = ("RETEST" if retest else "CONT"), day_l[i]
                     day_trades += 1
+                    if EV is not None:
+                        EV.append((i, "SIGNAL", d, ent_type, sl, candR))
                     last_dir, last_type, last_setup, last_block, last_setup_bar = d, ent_type + " ENTRY", "BUY CONFIRMED" if d == 1 else "SELL CONFIRMED", "NONE", i
                     last_result = "BUY ACTIVE" if d == 1 else "SELL ACTIVE"
                     fill_pending = p.fill == "next_open"
             else:
                 st["no_trade_small_R"] += 1
+                if EV is not None:
+                    EV.append((i, "SIGNAL_NO_TRADE", d))
         # ---- 12 management (trade entered on an EARLIER bar) ----
         if active and i > entry_bar:
             if fill_pending:                                   # realistic fill at this bar's open
@@ -399,12 +453,20 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
                         fill_pending = False
                     else:
                         entry = fpx; fill_pending = False
+            if active and p.eod_flat and not fill_pending and day_l[i] != ent_day:
+                # the last bar(s) of the entry day are absent from the data: flatten at this bar's open (conservative, flagged)
+                parts.append((remain, ol[i])); st["eod_missed"] = st.get("eod_missed", 0) + 1
+                close_trade(i, "EOD_MISSED", parts, sum(done))
             if active:
                 lo, hi, op = ll[i], hl[i], ol[i]
                 mae = min(mae, side * ((lo if side == 1 else hi) - entry))
                 mfe = max(mfe, side * ((hi if side == 1 else lo) - entry))
                 hit_sl = (lo <= cur_sl) if side == 1 else (hi >= cur_sl)
+                if hit_sl and p.favorable_first and p.exit_model == "PINE" and ((hi >= tg[3]) if side == 1 else (lo <= tg[3])):
+                    hit_sl = False                                   # optimistic ordering (sensitivity test only)
                 if hit_sl:
+                    if EV is not None:
+                        EV.append((i, "SL_HIT", side))
                     px = cur_sl
                     if p.gap_fills:
                         px = min(op, cur_sl) if side == 1 else max(op, cur_sl)
@@ -419,12 +481,16 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
                         if not reached:
                             break                              # targets are ordered; a farther one cannot be reached first
                         done[k] = True
+                        if EV is not None:
+                            EV.append((i, f"T{k + 1}", side))
                         px = tg[k]
                         if p.gap_fills:
                             px = max(op, tg[k]) if side == 1 else min(op, tg[k])
                         m = p.exit_model
                         if m == "PINE":
                             if k == 3:
+                                if EV is not None:
+                                    EV.append((i, "T4_COMPLETE", side))
                                 parts.append((remain, px)); close_trade(i, "T4", parts, 4); ended = True
                         elif m in ("T1", "T2", "T3", "T4"):
                             if k + 1 == int(m[1]):
@@ -438,7 +504,7 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
                                 close_trade(i, "T4", parts, 4); ended = True
                         if ended:
                             break
-                    if not ended and p.eod_flat and ((i + 1 >= n) or day_l[i + 1] != day_l[i]):
+                    if not ended and p.eod_flat and mod_l[i] + p.chart_tf >= p.session[1]:
                         parts.append((remain, cl_[i])); close_trade(i, "EOD", parts, sum(done))
     if want_state and n:
         i = n - 1
@@ -521,4 +587,6 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
         else:
             parts.append((remain, cl_[n - 1])); close_trade(n - 1, "EOD_DATA", parts, sum(done))
     st["trades"] = len(trades)
+    if EV is not None:
+        st["events"] = EV
     return trades, st

@@ -55,7 +55,7 @@ def make_session_fn(specs: dict | None = None):
         if spec is None:
             return False
         ist = int(ts) + IST_OFFSET
-        if ((ist // 86400) + 4) % 7 >= 5:
+        if ((ist // 86400) + 3) % 7 >= 5:          # 1970-01-01 was a Thursday => (days+3)%7 gives Mon=0 .. Sun=6
             return False
         mod = (ist % 86400) // 60
         return spec[0] <= mod < spec[1]

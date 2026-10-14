@@ -69,6 +69,13 @@ def latest_1m(symbol: str) -> tuple[dict, dict]:
     return b, meta
 
 
+def _nse_open(now_ist_epoch: float) -> bool:
+    """NSE/BSE cash session by wall clock (IST epoch = unix + 19800): Mon-Fri 09:15-15:30. Holidays are not modelled."""
+    wd = int((now_ist_epoch // 86400 + 3) % 7)                # Mon=0 (1970-01-01 was a Thursday)
+    mod = int((now_ist_epoch % 86400) // 60)
+    return wd < 5 and 555 <= mod < 930
+
+
 def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: int = 2) -> dict:
     symbol = symbol.upper()
     if symbol not in _PLATFORM_KEY:
@@ -84,8 +91,7 @@ def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: 
     last_day = int((chart["t"][-1] + tz) // 86400)
     today = [t for t in trades if t.day == last_day]
     now_ist = time.time() + tz
-    mod_now, wd_now = int((now_ist % 86400) // 60), int((now_ist // 86400 + 4) % 7)
-    market_open = wd_now < 5 and 555 <= mod_now < 930
+    market_open = _nse_open(now_ist)
     age = meta["last_bar_age_sec"]
     if not market_open:
         data_status = "MARKET_CLOSED"
