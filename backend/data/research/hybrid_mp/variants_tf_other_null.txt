@@ -1,0 +1,93 @@
+######## variants
+VARIANTS NIFTY (1m, cost=2bps unless noted) -- every variant is declared, none was tuned
+[AS-IS plotted (close fill, level exits, overnight)] trades=13610
+  TRAIN                        n= 6776 win=21.5% meanR=+0.076 CI=(+0.025,+0.124) PF=1.10 bps= +0.68 totR= +514.0 maxDD_R=65.0
+  VALID                        n= 2124 win=21.8% meanR=+0.092 CI=(+0.008,+0.170) PF=1.12 bps= +0.30 totR= +196.0 maxDD_R=55.0
+  OOS                          n= 4710 win=20.4% meanR=+0.022 CI=(-0.047,+0.082) PF=1.03 bps= -0.06 totR= +102.5 maxDD_R=128.0
+[REAL + exit T1] trades=41153
+  TRAIN                        n=19379 win=49.1% meanR=-0.349 CI=(-0.364,-0.335) PF=0.48 bps= -1.85 totR=-6765.3 maxDD_R=6764.5
+  VALID                        n= 9347 win=48.0% meanR=-0.429 CI=(-0.451,-0.410) PF=0.40 bps= -1.98 totR=-4009.7 maxDD_R=4011.7
+  OOS                          n=12427 win=46.1% meanR=-0.463 CI=(-0.482,-0.446) PF=0.37 bps= -2.24 totR=-5754.9 maxDD_R=5758.0
+[REAL + exit T2] trades=26176
+  TRAIN                        n=12202 win=35.1% meanR=-0.318 CI=(-0.344,-0.294) PF=0.63 bps= -1.56 totR=-3878.4 maxDD_R=3878.0
+  VALID                        n= 6049 win=34.8% meanR=-0.393 CI=(-0.425,-0.360) PF=0.57 bps= -1.86 totR=-2375.0 maxDD_R=2376.9
+  OOS                          n= 7925 win=33.3% meanR=-0.437 CI=(-0.468,-0.410) PF=0.53 bps= -2.09 totR=-3461.6 maxDD_R=3462.3
+[REAL + exit T3] trades=20070
+  TRAIN                        n= 9170 win=28.1% meanR=-0.307 CI=(-0.341,-0.270) PF=0.68 bps= -1.44 totR=-2813.9 maxDD_R=2822.5
+  VALID                        n= 4656 win=27.9% meanR=-0.364 CI=(-0.415,-0.314) PF=0.64 bps= -1.86 totR=-1693.9 maxDD_R=1696.5
+  OOS                          n= 6244 win=25.8% meanR=-0.446 CI=(-0.491,-0.403) PF=0.57 bps= -2.29 totR=-2785.3 maxDD_R=2784.2
+[REAL + SCALE 25% x4] trades=16667
+  TRAIN                        n= 7590 win=30.7% meanR=-0.303 CI=(-0.337,-0.272) PF=0.62 bps= -1.54 totR=-2299.4 maxDD_R=2304.7
+  VALID                        n= 3893 win=29.5% meanR=-0.382 CI=(-0.430,-0.340) PF=0.55 bps= -2.03 totR=-1488.4 maxDD_R=1490.5
+  OOS                          n= 5184 win=28.2% meanR=-0.428 CI=(-0.468,-0.391) PF=0.51 bps= -2.28 totR=-2218.3 maxDD_R=2217.6
+[REAL + SCALE_BE] trades=22924
+  TRAIN                        n=10593 win=35.3% meanR=-0.308 CI=(-0.332,-0.286) PF=0.55 bps= -1.55 totR=-3265.7 maxDD_R=3265.1
+  VALID                        n= 5099 win=33.1% meanR=-0.373 CI=(-0.407,-0.342) PF=0.50 bps= -1.78 totR=-1903.6 maxDD_R=1905.7
+  OOS                          n= 7232 win=30.2% meanR=-0.447 CI=(-0.476,-0.420) PF=0.43 bps= -2.19 totR=-3233.2 maxDD_R=3235.3
+[REAL + retest-only entries] trades=14985
+  TRAIN                        n= 7349 win=20.8% meanR=-0.623 CI=(-0.667,-0.570) PF=0.51 bps= -1.96 totR=-4575.7 maxDD_R=4578.0
+  VALID                        n= 3142 win=22.3% meanR=-0.674 CI=(-0.757,-0.601) PF=0.50 bps= -1.62 totR=-2117.5 maxDD_R=2120.9
+  OOS                          n= 4494 win=20.0% meanR=-0.765 CI=(-0.837,-0.696) PF=0.44 bps= -2.09 totR=-3438.1 maxDD_R=3437.0
+[REAL + pattern filter] trades=14926
+  TRAIN                        n= 6768 win=22.9% meanR=-0.366 CI=(-0.411,-0.318) PF=0.66 bps= -1.27 totR=-2476.4 maxDD_R=2479.9
+  VALID                        n= 3664 win=24.3% meanR=-0.365 CI=(-0.430,-0.300) PF=0.68 bps= -1.26 totR=-1337.4 maxDD_R=1347.6
+  OOS                          n= 4494 win=20.9% meanR=-0.514 CI=(-0.572,-0.458) PF=0.56 bps= -1.92 totR=-2311.6 maxDD_R=2319.7
+[REAL + MTF agree>=3] trades=17417
+  TRAIN                        n= 8347 win=23.1% meanR=-0.351 CI=(-0.395,-0.310) PF=0.67 bps= -1.75 totR=-2929.6 maxDD_R=2978.9
+  VALID                        n= 3918 win=23.1% meanR=-0.420 CI=(-0.481,-0.357) PF=0.63 bps= -1.58 totR=-1647.3 maxDD_R=1649.9
+  OOS                          n= 5152 win=21.7% meanR=-0.482 CI=(-0.539,-0.425) PF=0.58 bps= -2.07 totR=-2484.3 maxDD_R=2485.8
+[REAL + pivot ties strict] trades=16678
+  TRAIN                        n= 7589 win=24.5% meanR=-0.285 CI=(-0.327,-0.239) PF=0.71 bps= -1.38 totR=-2160.4 maxDD_R=2190.0
+  VALID                        n= 3883 win=23.7% meanR=-0.349 CI=(-0.412,-0.289) PF=0.67 bps= -1.82 totR=-1354.5 maxDD_R=1357.2
+  OOS                          n= 5206 win=22.6% meanR=-0.420 CI=(-0.475,-0.370) PF=0.61 bps= -2.24 totR=-2184.4 maxDD_R=2183.7
+[REAL + candle SL off (prev low)] trades=15135
+  TRAIN                        n= 7040 win=24.6% meanR=-0.294 CI=(-0.340,-0.248) PF=0.70 bps= -1.56 totR=-2068.0 maxDD_R=2080.8
+  VALID                        n= 3358 win=24.0% meanR=-0.333 CI=(-0.399,-0.265) PF=0.68 bps= -1.72 totR=-1119.6 maxDD_R=1122.2
+  OOS                          n= 4737 win=23.0% meanR=-0.390 CI=(-0.445,-0.334) PF=0.63 bps= -2.25 totR=-1848.7 maxDD_R=1865.7
+######## tf
+TF=3m PINE exits, REALISTIC (bars=289204, trades=6648)
+  TRAIN cost=0bps              n= 3174 win=30.0% meanR=+0.016 CI=(-0.049,+0.076) PF=1.02 bps= +1.13 totR=  +51.6 maxDD_R=76.0
+  TRAIN cost=2bps              n= 3174 win=29.0% meanR=-0.161 CI=(-0.225,-0.100) PF=0.80 bps= -0.87 totR= -511.3 maxDD_R=510.0
+    reach T1/T2/T3/T4 = 46%/27%/18%/12%  overnight=0% retest=8% long=52% avg_hold_bars=28
+  VALID cost=0bps              n= 1529 win=29.2% meanR=+0.046 CI=(-0.043,+0.140) PF=1.07 bps= +0.45 totR=  +69.7 maxDD_R=46.0
+  VALID cost=2bps              n= 1529 win=28.3% meanR=-0.163 CI=(-0.253,-0.067) PF=0.80 bps= -1.55 totR= -249.9 maxDD_R=270.2
+    reach T1/T2/T3/T4 = 44%/26%/18%/13%  overnight=0% retest=8% long=52% avg_hold_bars=25
+  OOS cost=0bps                n= 1945 win=29.4% meanR=+0.012 CI=(-0.060,+0.086) PF=1.02 bps= +0.06 totR=  +22.8 maxDD_R=116.4
+  OOS cost=2bps                n= 1945 win=28.4% meanR=-0.199 CI=(-0.273,-0.123) PF=0.76 bps= -1.94 totR= -387.6 maxDD_R=423.7
+    reach T1/T2/T3/T4 = 46%/27%/18%/12%  overnight=0% retest=9% long=49% avg_hold_bars=27
+TF=5m PINE exits, REALISTIC (bars=173528, trades=4825)
+  TRAIN cost=0bps              n= 2329 win=34.7% meanR=+0.079 CI=(-0.006,+0.154) PF=1.13 bps= +2.41 totR= +184.0 maxDD_R=67.0
+  TRAIN cost=2bps              n= 2329 win=33.8% meanR=-0.058 CI=(-0.143,+0.018) PF=0.92 bps= +0.41 totR= -135.6 maxDD_R=158.2
+    reach T1/T2/T3/T4 = 46%/26%/16%/11%  overnight=0% retest=9% long=52% avg_hold_bars=21
+  VALID cost=0bps              n= 1068 win=31.0% meanR=+0.001 CI=(-0.096,+0.100) PF=1.00 bps= +0.16 totR=   +1.2 maxDD_R=67.7
+  VALID cost=2bps              n= 1068 win=30.1% meanR=-0.160 CI=(-0.259,-0.060) PF=0.79 bps= -1.84 totR= -170.6 maxDD_R=199.9
+    reach T1/T2/T3/T4 = 42%/24%/15%/9%  overnight=0% retest=8% long=55% avg_hold_bars=20
+  OOS cost=0bps                n= 1428 win=32.8% meanR=+0.005 CI=(-0.071,+0.091) PF=1.01 bps= -0.10 totR=   +7.1 maxDD_R=91.2
+  OOS cost=2bps                n= 1428 win=31.2% meanR=-0.158 CI=(-0.231,-0.073) PF=0.79 bps= -2.10 totR= -225.2 maxDD_R=251.0
+    reach T1/T2/T3/T4 = 44%/23%/15%/9%  overnight=0% retest=10% long=51% avg_hold_bars=21
+######## other
+BANKNIFTY INDEX 1m PINE exits REALISTIC trades=8854
+  all periods cost=0bps        n= 8854 win=22.7% meanR=-0.048 CI=(-0.084,-0.009) PF=0.94 bps= -0.41 totR= -428.2 maxDD_R=627.6
+  all periods cost=2bps        n= 8854 win=22.1% meanR=-0.341 CI=(-0.377,-0.301) PF=0.66 bps= -2.41 totR=-3018.5 maxDD_R=3019.8
+  VALID cost=2bps              n= 3607 win=22.3% meanR=-0.324 CI=(-0.382,-0.264) PF=0.67 bps= -2.27 totR=-1167.2 maxDD_R=1191.5
+  OOS cost=2bps                n= 4725 win=22.0% meanR=-0.358 CI=(-0.411,-0.304) PF=0.64 bps= -2.41 totR=-1691.6 maxDD_R=1692.9
+SENSEX INDEX 1m PINE exits REALISTIC trades=9470
+  all periods cost=0bps        n= 9470 win=24.4% meanR=+0.051 CI=(+0.013,+0.089) PF=1.07 bps= +0.26 totR= +478.9 maxDD_R=163.4
+  all periods cost=2bps        n= 9470 win=23.8% meanR=-0.365 CI=(-0.403,-0.325) PF=0.66 bps= -1.74 totR=-3460.7 maxDD_R=3459.4
+  VALID cost=2bps              n= 3655 win=25.4% meanR=-0.296 CI=(-0.362,-0.228) PF=0.72 bps= -1.11 totR=-1081.7 maxDD_R=1085.6
+  OOS cost=2bps                n= 5301 win=22.7% meanR=-0.426 CI=(-0.473,-0.378) PF=0.61 bps= -2.21 totR=-2258.5 maxDD_R=2259.5
+NATURALGAS FUTURE 1m PINE exits REALISTIC trades=1003
+  all periods cost=0bps        n= 1003 win=18.5% meanR=-0.178 CI=(-0.293,-0.057) PF=0.79 bps= -1.32 totR= -178.5 maxDD_R=197.8
+  all periods cost=2bps        n= 1003 win=18.5% meanR=-0.432 CI=(-0.549,-0.311) PF=0.60 bps= -3.32 totR= -433.5 maxDD_R=439.3
+CRUDEOIL FUTURE 1m PINE exits REALISTIC trades=1060
+  all periods cost=0bps        n= 1060 win=23.2% meanR=-0.062 CI=(-0.213,+0.091) PF=0.93 bps= -0.99 totR=  -65.4 maxDD_R=119.8
+  all periods cost=2bps        n= 1060 win=22.7% meanR=-0.327 CI=(-0.476,-0.173) PF=0.71 bps= -2.99 totR= -346.6 maxDD_R=383.2
+######## null
+REAL OOS subset:   gross                        n= 5185 win=23.4% meanR=-0.004 CI=(-0.059,+0.047) PF=0.99 bps= -0.21 totR=  -21.0 maxDD_R=127.7
+  null seed 0:   gross                        n= 4953 win=24.2% meanR=+0.035 CI=(-0.018,+0.089) PF=1.05 bps= +0.10 totR= +173.1 maxDD_R=120.3
+  null seed 1:   gross                        n= 4537 win=25.5% meanR=+0.077 CI=(+0.022,+0.129) PF=1.11 bps= +0.74 totR= +349.8 maxDD_R=77.0
+  null seed 2:   gross                        n= 4855 win=24.4% meanR=+0.025 CI=(-0.034,+0.080) PF=1.03 bps= +0.14 totR= +120.9 maxDD_R=115.0
+  null seed 3:   gross                        n= 4748 win=24.8% meanR=+0.055 CI=(-0.006,+0.111) PF=1.07 bps= +0.33 totR= +259.6 maxDD_R=106.2
+  null seed 4:   gross                        n= 4966 win=24.3% meanR=+0.022 CI=(-0.037,+0.071) PF=1.03 bps= +0.28 totR= +110.2 maxDD_R=156.3
+  null seed 5:   gross                        n= 4965 win=24.0% meanR=+0.034 CI=(-0.017,+0.083) PF=1.04 bps= -0.16 totR= +166.8 maxDD_R=97.9
+exit=0

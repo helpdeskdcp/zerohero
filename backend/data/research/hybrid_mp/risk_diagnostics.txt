@@ -1,0 +1,10 @@
+[REAL] trades=16667 risk(R) in bps of price: median=6.3 p90=16.7 p99=66.8 max=757
+   1bp round-trip cost = 0.16 R at the median trade; trades with R>50bps: 293 (1.8%)
+   trades/day: mean=9.0 max=27 days_with_trades=1852
+[ASIS] trades=13610 risk(R) in bps of price: median=6.1 p90=14.5 p99=42.2 max=562
+   1bp round-trip cost = 0.16 R at the median trade; trades with R>50bps: 104 (0.8%)
+   overnight holds: 1131 (8.3%); longest 232 calendar-day-index gap; >5 days: 37
+   largest R: 2022-04-11 R= 922.6 pts 520bps hold days 232
+   largest R: 2020-03-16 R= 533.3 pts 562bps hold days 79
+   largest R: 2026-03-23 R= 478.2 pts 211bps hold days 2
+   trades/day: mean=9.8 max=27 days_with_trades=1392

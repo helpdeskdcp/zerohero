@@ -1,0 +1,29 @@
+PRIMARY NIFTY 1m, PINE exits, REALISTIC execution  (bars=867533, trades=16667, 6s)
+  engine counters: {'bars': 867533, 'signals_buy': 8408, 'signals_sell': 8304, 'rejected': 3, 'no_trade_small_R': 2, 'expired': 434, 'cancelled_session': 0, 'pending_set': 8115, 'skipped_gap_fill': 2, 'skipped_eod': 41, 'breaks_up': 28752, 'breaks_dn': 27285, 'choch': 21308, 'bos': 34729, 'trades': 16667}
+-- by split (net of round-trip bps cost)
+  TRAIN cost=0bps              n= 7590 win=25.2% meanR=+0.047 CI=(+0.001,+0.091) PF=1.06 bps= +0.65 totR= +360.0 maxDD_R=87.3
+  TRAIN cost=1bps              n= 7590 win=24.8% meanR=-0.120 CI=(-0.166,-0.075) PF=0.86 bps= -0.35 totR= -907.2 maxDD_R=954.0
+  TRAIN cost=2bps              n= 7590 win=24.5% meanR=-0.286 CI=(-0.334,-0.241) PF=0.71 bps= -1.35 totR=-2174.4 maxDD_R=2202.4
+  TRAIN cost=3bps              n= 7590 win=24.1% meanR=-0.453 CI=(-0.500,-0.407) PF=0.60 bps= -2.35 totR=-3441.7 maxDD_R=3450.8
+    reach T1/T2/T3/T4 = 50%/32%/23%/17%  overnight=0% retest=7% long=50% avg_hold_bars=37
+  VALID cost=0bps              n= 3893 win=24.5% meanR=+0.057 CI=(-0.010,+0.118) PF=1.08 bps= +0.20 totR= +222.2 maxDD_R=53.7
+  VALID cost=1bps              n= 3893 win=24.2% meanR=-0.146 CI=(-0.215,-0.085) PF=0.84 bps= -0.80 totR= -569.6 maxDD_R=611.3
+  VALID cost=2bps              n= 3893 win=23.7% meanR=-0.350 CI=(-0.417,-0.288) PF=0.67 bps= -1.80 totR=-1361.4 maxDD_R=1364.0
+  VALID cost=3bps              n= 3893 win=23.2% meanR=-0.553 CI=(-0.620,-0.490) PF=0.55 bps= -2.80 totR=-2153.1 maxDD_R=2155.8
+    reach T1/T2/T3/T4 = 48%/31%/23%/18%  overnight=0% retest=6% long=51% avg_hold_bars=30
+  OOS cost=0bps                n= 5184 win=23.4% meanR=-0.005 CI=(-0.057,+0.045) PF=0.99 bps= -0.21 totR=  -25.0 maxDD_R=127.7
+  OOS cost=1bps                n= 5184 win=23.3% meanR=-0.211 CI=(-0.263,-0.160) PF=0.77 bps= -1.21 totR=-1091.7 maxDD_R=1120.4
+  OOS cost=2bps                n= 5184 win=22.7% meanR=-0.416 CI=(-0.469,-0.365) PF=0.61 bps= -2.21 totR=-2158.5 maxDD_R=2157.8
+  OOS cost=3bps                n= 5184 win=22.4% meanR=-0.622 CI=(-0.675,-0.571) PF=0.50 bps= -3.21 totR=-3225.3 maxDD_R=3224.1
+    reach T1/T2/T3/T4 = 47%/31%/22%/17%  overnight=0% retest=9% long=49% avg_hold_bars=32
+-- by year, cost=2bps
+  2017                         n=  873 win=25.8% meanR=-0.351 CI=(-0.492,-0.224) PF=0.67 bps= -1.38 totR= -306.8 maxDD_R=311.2
+  2018                         n= 1816 win=24.8% meanR=-0.296 CI=(-0.396,-0.208) PF=0.71 bps= -1.20 totR= -538.3 maxDD_R=539.8
+  2019                         n= 1649 win=23.5% meanR=-0.338 CI=(-0.426,-0.246) PF=0.67 bps= -1.86 totR= -557.2 maxDD_R=569.3
+  2020                         n= 1544 win=24.3% meanR=-0.212 CI=(-0.303,-0.115) PF=0.77 bps= -1.01 totR= -326.9 maxDD_R=333.6
+  2021                         n= 1708 win=24.6% meanR=-0.261 CI=(-0.344,-0.164) PF=0.73 bps= -1.31 totR= -445.3 maxDD_R=482.3
+  2022                         n= 1980 win=24.6% meanR=-0.259 CI=(-0.344,-0.175) PF=0.74 bps= -1.43 totR= -512.4 maxDD_R=524.7
+  2023                         n= 1913 win=22.8% meanR=-0.444 CI=(-0.539,-0.365) PF=0.60 bps= -2.18 totR= -849.0 maxDD_R=850.1
+  2024                         n= 2058 win=22.6% meanR=-0.415 CI=(-0.498,-0.337) PF=0.62 bps= -2.13 totR= -853.8 maxDD_R=853.1
+  2025                         n= 1777 win=23.2% meanR=-0.441 CI=(-0.537,-0.348) PF=0.60 bps= -2.13 totR= -783.0 maxDD_R=791.3
+  2026                         n= 1349 win=22.4% meanR=-0.387 CI=(-0.488,-0.277) PF=0.64 bps= -2.46 totR= -521.7 maxDD_R=520.6
