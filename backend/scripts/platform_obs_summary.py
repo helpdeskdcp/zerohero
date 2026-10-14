@@ -8,6 +8,8 @@ rows = [json.loads(l) for l in open(sys.argv[1])]
 P = dt.datetime.fromisoformat
 lo, hi = (sys.argv[2], sys.argv[3]) if len(sys.argv) >= 4 else ("00:00", "23:59")
 rows = [r for r in rows if lo <= r["t"][11:16] <= hi]
+if not rows:
+    sys.exit(f"no observer rows between {lo} and {hi} (log not covering that window yet, or monitoring was down)")
 print(f"rows={len(rows)} first={rows[0]['t']} last={rows[-1]['t']}")
 miss = [(a["t"][11:19], b["t"][11:19], int((P(b["t"]) - P(a["t"])).total_seconds())) for a, b in zip(rows, rows[1:]) if (P(b["t"]) - P(a["t"])).total_seconds() > 75]
 print("missing monitoring periods (>75 s between samples):", miss or "none")
