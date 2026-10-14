@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hybrid MP v13 (fixed) — dashboard</title>
+<style>
+:root{--bg:#0b0f14;--panel:#111826;--line:#243047;--tx:#dbe4f0;--mut:#8a99b0;--up:#22c55e;--dn:#ef4444;--warn:#f59e0b;--hi:#60a5fa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.45 system-ui,Segoe UI,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+header h1{font-size:15px;margin:0 12px 0 0}select,button,label{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font:inherit}
+.badge{padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--mut)}
+main{display:grid;gap:12px;padding:12px 16px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.card h2{font-size:12px;margin:0 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+table{width:100%;border-collapse:collapse}td{padding:3px 4px;border-top:1px solid var(--line);vertical-align:top}td:first-child{color:var(--mut);width:46%}
+.up{color:var(--up)}.dn{color:var(--dn)}.wn{color:var(--warn)}.hi{color:var(--hi)}.wide{grid-column:1/-1}
+#chart{height:340px}small{color:var(--mut)}
+</style></head><body>
+<header><h1>HYBRID MP v13 — fixed engine</h1>
+<select id="sym"><option>NIFTY</option><option>BANKNIFTY</option><option>SENSEX</option></select>
+<select id="tf"><option value="1">1m</option><option value="3">3m</option><option value="5" selected>5m</option><option value="15">15m</option></select>
+<label><input type="checkbox" id="smc"> SMC filter</label>
+<span class="badge" id="status">loading…</span><span class="badge">research only · PAPER · no orders</span></header>
+<main>
+<section class="card wide"><h2>Chart <small id="chartnote"></small></h2><div id="chart"></div></section>
+<section class="card"><h2>Dashboard</h2><table id="dash"></table></section>
+<section class="card"><h2>Pending setup list</h2><table id="pend"></table></section>
+<section class="card"><h2>SMC context</h2><table id="smcT"></table></section>
+<section class="card"><h2>Trade levels</h2><table id="lv"></table></section>
+<section class="card wide"><h2>Today's engine trades (simulated, gross R)</h2><table id="trd"></table></section>
+<section class="card wide"><h2>Backtest of this engine (saved research result)</h2><div id="bt"><small>loading…</small></div></section>
+</main>
+<script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const chart=LightweightCharts.createChart($("chart"),{autoSize:true,layout:{background:{color:"#111826"},textColor:"#cbd5e1"},
+  grid:{vertLines:{color:"#1b2538"},horzLines:{color:"#1b2538"}},timeScale:{timeVisible:true,secondsVisible:false}});
+const series=chart.addSeries(LightweightCharts.CandlestickSeries,{upColor:"#22c55e",downColor:"#ef4444",borderVisible:false,wickUpColor:"#22c55e",wickDownColor:"#ef4444"});
+let lines=[];
+function cls(v){v=String(v);return /UP|BUY|COMPLETED|CONFIRMED|DISCOUNT|IN SESSION/.test(v)?"up":/DOWN|SELL|STOPPED|OUT OF|REJECT|BLOCK|PREMIUM/.test(v)?"dn":/WAIT|PENDING|WATCH|WEAK/.test(v)?"wn":""}
+function rows(el,data){el.replaceChildren();for(const [k,v,c] of data){const tr=document.createElement("tr"),a=document.createElement("td"),b=document.createElement("td");
+  a.textContent=k;b.textContent=v===null||v===undefined?"—":String(v);b.className=c===undefined?cls(v):c;tr.append(a,b);el.append(tr)}}
+const f=(x,d=2)=>x===null||x===undefined?"—":Number(x).toFixed(d);
+function render(s){
+  $("status").textContent=`${s.symbol} ${s.chart_tf}m · last bar ${s.data.last_bar_age_sec}s ago · live bars +${s.data.live_bars_appended}`;
+  const m=Object.entries(s.mtf).map(([k,v])=>[k+" candle trend",v+(s.mtf_required?"":" (filter off)")]);
+  rows($("dash"),[["Engine",s.engine,"hi"],["Chart TF",s.chart_tf+"m","hi"],...m,["Direction",s.direction],["Trend status",s.trend_status],["Trade",s.trade],["Session",s.session],
+    ["Opening gap",s.opening_gap,""],["Signal check",s.signal_check],["Next target",s.next_target,""],["T1",s.targets.T1],["T2",s.targets.T2],["T3",s.targets.T3],["T4",s.targets.T4],
+    ["Current entry",f(s.entry),""],["Current SL",f(s.sl),""],["Last result",s.last_result],["Planned qty*",f(s.planned_qty),""],
+    ["VWAP"+(s.vwap_is_proxy?" (TWAP proxy — index has no volume)":""),f(s.vwap),""],["Day",`${s.today.trades}/${s.today.max_trades} trades · ${s.today.gross_r}R (limit −${s.today.loss_limit_r}R)`,""]]);
+  const p=s.pending;
+  rows($("pend"),[["Pending direction",p.direction],["Pending level",f(p.level),""],["Pending age",p.age_bars===null?"—":p.age_bars+" bars",""],["Pending reason",p.reason],
+    ["Last setup",p.last_setup],["Last block reason",p.last_block],["Last setup info",p.last_info,""],
+    ["Swing high / low",`${f(s.structure.swing_high)} / ${f(s.structure.swing_low)}`,""],["BoS / CHoCH (window)",`${s.structure.breaks_up}↑ ${s.structure.breaks_dn}↓`,""]]);
+  const sm=s.smc,cp=sm.components||{},tick=(o)=>(o?"●":"○");
+  rows($("smcT"),[["Filter",sm.enabled?`ON (min score ${sm.min_score})`:"OFF (optional)",""],["Score bull / bear",`${sm.bull_score} / ${sm.bear_score}  (of 5)`,""],["Zone",sm.zone],["Equilibrium (50%)",f(sm.equilibrium),""],
+    ["Dealing range",sm.dealing_range?`${f(sm.dealing_range[0])} – ${f(sm.dealing_range[1])}`:"—",""],
+    ...Object.entries(cp).map(([k,v])=>[k.replaceAll("_"," "),`bull ${tick(v.bull)}   bear ${tick(v.bear)}`,""]),
+    ["Active FVG ↑ / ↓",`${sm.fvg_bull.length} / ${sm.fvg_bear.length}`,""],["Active OB ↑ / ↓",`${sm.ob_bull.length} / ${sm.ob_bear.length}`,""],
+    ["Liquidity above / below",`${sm.buy_side_liquidity.length} / ${sm.sell_side_liquidity.length}  (EQ: ${sm.buy_side_liquidity.filter(x=>x[1]==="EQ").length} / ${sm.sell_side_liquidity.filter(x=>x[1]==="EQ").length})`,""]]);
+  const L=s.levels||[];
+  rows($("lv"),[["Entry",f(s.entry),""],["SL",f(s.sl),""],...L.map((v,i)=>["T"+(i+1),f(v),""])]);
+  const t=$("trd");t.replaceChildren();
+  const head=document.createElement("tr");for(const h of ["Signal bar (IST)","Side","Type","Entry","Exit","R","Exit reason","Max T"]){const td=document.createElement("td");td.textContent=h;td.style.color="var(--hi)";head.append(td)}t.append(head);
+  for(const x of s.trades_today){const tr=document.createElement("tr");const d=new Date(x.time*1000).toISOString().substr(11,5);
+    [d,x.side,x.type,x.entry,x.exit,x.r,x.reason,"T"+x.max_target].forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;td.style.color=i===1?(v==="BUY"?"var(--up)":"var(--dn)"):(i===5?(x.r>=0?"var(--up)":"var(--dn)"):"");tr.append(td)});t.append(tr)}
+  series.setData(s.candles.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
+  series.setMarkers&&series.setMarkers([]);
+  lines.forEach(l=>series.removePriceLine(l));lines=[];
+  if(s.entry!==null){const add=(price,color,title)=>lines.push(series.createPriceLine({price,color,lineWidth:1,lineStyle:2,axisLabelVisible:true,title}));
+    add(s.entry,"#60a5fa","ENTRY");add(s.sl,"#ef4444","SL");L.forEach((v,i)=>add(v,"#f59e0b","T"+(i+1)))}
+  $("chartnote").textContent=`${s.candles.length} bars · SL/targets shown only while a simulated trade is active`;
+}
+async function load(){
+  const q=`symbol=${$("sym").value}&tf=${$("tf").value}&smc=${$("smc").checked?1:0}`;
+  try{const r=await fetch("/api/hybrid_mp/state?"+q,{credentials:"same-origin"});if(!r.ok)throw new Error(r.status);render(await r.json())}
+  catch(e){$("status").textContent="error: "+e.message}
+}
+async function loadBt(){
+  try{const r=await fetch("/api/hybrid_mp/backtest",{credentials:"same-origin"});const j=await r.json();const el=$("bt");el.replaceChildren();
+    if(!j.available){el.textContent="no saved result";return}
+    const pre=document.createElement("pre");pre.style.whiteSpace="pre-wrap";pre.style.margin=0;pre.textContent=j.text;el.append(pre)}catch(e){$("bt").textContent="error "+e.message}
+}
+["sym","tf","smc"].forEach(id=>$(id).addEventListener("change",load));load();loadBt();setInterval(load,10000);
+</script></body></html>

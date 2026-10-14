@@ -1,0 +1,120 @@
+######## fixed
+FIXED primary NIFTY 5m (bars=173528, trades=4961)
+  counters: {'bars': 173528, 'signals_buy': 2796, 'signals_sell': 2500, 'rejected': 677, 'no_trade_small_R': 0, 'expired': 527, 'cancelled_session': 0, 'pending_set': 4171, 'skipped_gap_fill': 0, 'skipped_eod': 0, 'skipped_risk': 335, 'blocked_limits': 351, 'blocked_smc': 0, 'blocked_window': 610, 'breaks_up': 4428, 'breaks_dn': 4062, 'choch': 4121, 'bos': 4369, 'trades': 4961}
+  TRAIN cost=0bps              n= 2454 win=50.8% meanR=+0.032 CI=(-0.016,+0.074) PF=1.07 bps= +1.02 totR=  +77.4 maxDD_R=34.5
+  TRAIN cost=2bps              n= 2454 win=47.1% meanR=-0.125 CI=(-0.173,-0.084) PF=0.77 bps= -0.98 totR= -307.9 maxDD_R=307.4
+  VALID cost=0bps              n= 1072 win=49.1% meanR=+0.047 CI=(-0.025,+0.119) PF=1.10 bps= +1.02 totR=  +50.1 maxDD_R=30.3
+  VALID cost=2bps              n= 1072 win=45.1% meanR=-0.131 CI=(-0.202,-0.059) PF=0.77 bps= -0.98 totR= -140.3 maxDD_R=155.6
+  OOS cost=0bps                n= 1435 win=50.8% meanR=+0.044 CI=(-0.017,+0.107) PF=1.09 bps= +0.78 totR=  +62.7 maxDD_R=37.3
+  OOS cost=2bps                n= 1435 win=45.5% meanR=-0.138 CI=(-0.198,-0.075) PF=0.76 bps= -1.22 totR= -198.7 maxDD_R=205.2
+  TRAIN: reach T1/T2/T3/T4 = 48%/23%/13%/9%  overnight=0% retest=13% long=54% avg_hold_bars=12
+  VALID: reach T1/T2/T3/T4 = 47%/24%/14%/10%  overnight=0% retest=11% long=55% avg_hold_bars=13
+  OOS: reach T1/T2/T3/T4 = 48%/23%/14%/9%  overnight=0% retest=13% long=51% avg_hold_bars=13
+  risk bps: median=13.5 p90=28.5 max=296; 1bp cost = 0.07R; trades/day=2.7
+  by year cost=2bps:
+    2017                       n=  311 win=39.9% meanR=-0.262 CI=(-0.385,-0.141) PF=0.58 bps= -2.01 totR=  -81.4 maxDD_R=80.4
+    2018                       n=  538 win=49.3% meanR=-0.091 CI=(-0.201,+0.012) PF=0.83 bps= -0.51 totR=  -49.2 maxDD_R=59.0
+    2019                       n=  536 win=48.3% meanR=-0.126 CI=(-0.224,-0.037) PF=0.77 bps= -1.03 totR=  -67.7 maxDD_R=74.4
+    2020                       n=  534 win=48.7% meanR=-0.055 CI=(-0.159,+0.055) PF=0.90 bps= +0.05 totR=  -29.6 maxDD_R=46.5
+    2021                       n=  535 win=46.2% meanR=-0.149 CI=(-0.239,-0.051) PF=0.74 bps= -1.83 totR=  -79.9 maxDD_R=83.9
+    2022                       n=  547 win=47.7% meanR=-0.095 CI=(-0.209,+0.000) PF=0.83 bps= -0.58 totR=  -52.2 maxDD_R=65.8
+    2023                       n=  525 win=42.5% meanR=-0.168 CI=(-0.272,-0.070) PF=0.72 bps= -1.39 totR=  -88.1 maxDD_R=97.6
+    2024                       n=  531 win=44.8% meanR=-0.204 CI=(-0.299,-0.113) PF=0.65 bps= -1.70 totR= -108.4 maxDD_R=112.9
+    2025                       n=  511 win=43.4% meanR=-0.127 CI=(-0.229,-0.017) PF=0.78 bps= -1.21 totR=  -65.1 maxDD_R=78.6
+    2026                       n=  393 win=49.1% meanR=-0.064 CI=(-0.193,+0.057) PF=0.88 bps= -0.58 totR=  -25.2 maxDD_R=27.8
+######## fixed_abl
+ABLATION of the fixed version NIFTY 5m (one fix removed at a time; cost=2bps)
+[FIXED (all)] trades=4961
+  TRAIN                        n= 2454 win=47.1% meanR=-0.125 CI=(-0.178,-0.085) PF=0.77 bps= -0.98 totR= -307.9 maxDD_R=307.4
+  VALID                        n= 1072 win=45.1% meanR=-0.131 CI=(-0.198,-0.063) PF=0.77 bps= -0.98 totR= -140.3 maxDD_R=155.6
+  OOS                          n= 1435 win=45.5% meanR=-0.138 CI=(-0.200,-0.076) PF=0.76 bps= -1.22 totR= -198.7 maxDD_R=205.2
+[exit PINE (SL or T4 only)] trades=4298
+  TRAIN                        n= 2105 win=30.3% meanR=-0.074 CI=(-0.139,+0.003) PF=0.91 bps= -0.18 totR= -155.4 maxDD_R=157.0
+  VALID                        n=  936 win=29.8% meanR=-0.065 CI=(-0.180,+0.060) PF=0.92 bps= -0.76 totR=  -60.9 maxDD_R=87.8
+  OOS                          n= 1257 win=31.0% meanR=-0.092 CI=(-0.188,-0.006) PF=0.88 bps= -1.26 totR= -116.1 maxDD_R=149.8
+[exit SCALE (no BE)] trades=4366
+  TRAIN                        n= 2136 win=36.9% meanR=-0.110 CI=(-0.157,-0.053) PF=0.83 bps= -0.68 totR= -234.6 maxDD_R=235.2
+  VALID                        n=  953 win=36.1% meanR=-0.129 CI=(-0.222,-0.053) PF=0.80 bps= -1.50 totR= -123.3 maxDD_R=136.5
+  OOS                          n= 1277 win=36.8% meanR=-0.119 CI=(-0.195,-0.058) PF=0.81 bps= -1.46 totR= -152.3 maxDD_R=162.5
+[no swing_used flag] trades=5018
+  TRAIN                        n= 2477 win=47.2% meanR=-0.122 CI=(-0.165,-0.077) PF=0.78 bps= -0.91 totR= -302.9 maxDD_R=302.4
+  VALID                        n= 1083 win=45.2% meanR=-0.131 CI=(-0.194,-0.066) PF=0.77 bps= -0.92 totR= -142.4 maxDD_R=158.3
+  OOS                          n= 1458 win=44.9% meanR=-0.151 CI=(-0.213,-0.094) PF=0.74 bps= -1.33 totR= -220.3 maxDD_R=225.6
+[no opposite-replaces] trades=4957
+  TRAIN                        n= 2453 win=47.1% meanR=-0.126 CI=(-0.176,-0.078) PF=0.77 bps= -0.99 totR= -308.4 maxDD_R=307.9
+  VALID                        n= 1070 win=45.1% meanR=-0.131 CI=(-0.202,-0.054) PF=0.78 bps= -0.96 totR= -139.6 maxDD_R=155.0
+  OOS                          n= 1434 win=45.5% meanR=-0.139 CI=(-0.198,-0.085) PF=0.76 bps= -1.24 totR= -199.1 maxDD_R=205.7
+[no risk bounds] trades=4947
+  TRAIN                        n= 2464 win=46.8% meanR=-0.135 CI=(-0.180,-0.088) PF=0.76 bps= -1.09 totR= -331.9 maxDD_R=331.5
+  VALID                        n= 1063 win=45.1% meanR=-0.123 CI=(-0.191,-0.052) PF=0.79 bps= -0.76 totR= -131.2 maxDD_R=149.2
+  OOS                          n= 1420 win=45.1% meanR=-0.155 CI=(-0.220,-0.093) PF=0.73 bps= -1.35 totR= -220.0 maxDD_R=234.1
+[no entry windows] trades=5073
+  TRAIN                        n= 2500 win=47.6% meanR=-0.121 CI=(-0.164,-0.075) PF=0.78 bps= -0.66 totR= -301.3 maxDD_R=300.8
+  VALID                        n= 1102 win=44.6% meanR=-0.142 CI=(-0.214,-0.081) PF=0.76 bps= -1.14 totR= -156.3 maxDD_R=170.0
+  OOS                          n= 1471 win=44.7% meanR=-0.151 CI=(-0.218,-0.091) PF=0.74 bps= -1.43 totR= -222.2 maxDD_R=228.5
+[no daily limits] trades=5091
+  TRAIN                        n= 2527 win=47.3% meanR=-0.118 CI=(-0.167,-0.072) PF=0.79 bps= -0.79 totR= -299.0 maxDD_R=298.5
+  VALID                        n= 1110 win=45.0% meanR=-0.124 CI=(-0.202,-0.057) PF=0.79 bps= -0.80 totR= -137.5 maxDD_R=155.7
+  OOS                          n= 1454 win=45.4% meanR=-0.143 CI=(-0.198,-0.089) PF=0.75 bps= -1.22 totR= -207.4 maxDD_R=213.9
+[MTF off] trades=5621
+  TRAIN                        n= 2821 win=48.9% meanR=-0.067 CI=(-0.114,-0.027) PF=0.87 bps= -0.49 totR= -188.8 maxDD_R=192.1
+  VALID                        n= 1190 win=46.1% meanR=-0.122 CI=(-0.185,-0.056) PF=0.79 bps= -1.09 totR= -144.8 maxDD_R=166.1
+  OOS                          n= 1610 win=46.3% meanR=-0.130 CI=(-0.194,-0.079) PF=0.77 bps= -1.35 totR= -210.1 maxDD_R=223.7
+[MTF pine-colour mode] trades=5016
+  TRAIN                        n= 2468 win=49.0% meanR=-0.063 CI=(-0.106,-0.010) PF=0.88 bps= -0.06 totR= -154.8 maxDD_R=173.2
+  VALID                        n= 1088 win=44.8% meanR=-0.135 CI=(-0.202,-0.063) PF=0.76 bps= -1.31 totR= -146.8 maxDD_R=155.6
+  OOS                          n= 1460 win=44.9% meanR=-0.147 CI=(-0.216,-0.090) PF=0.74 bps= -1.36 totR= -215.0 maxDD_R=218.8
+[VWAP filter off] trades=5034
+  TRAIN                        n= 2483 win=47.0% meanR=-0.129 CI=(-0.179,-0.085) PF=0.77 bps= -0.97 totR= -319.8 maxDD_R=319.3
+  VALID                        n= 1089 win=45.2% meanR=-0.133 CI=(-0.210,-0.059) PF=0.77 bps= -0.97 totR= -144.9 maxDD_R=160.2
+  OOS                          n= 1462 win=45.3% meanR=-0.148 CI=(-0.213,-0.083) PF=0.74 bps= -1.33 totR= -216.7 maxDD_R=223.3
+[retest-only entries] trades=2208
+  TRAIN                        n= 1127 win=41.6% meanR=-0.169 CI=(-0.235,-0.103) PF=0.72 bps= -0.85 totR= -191.0 maxDD_R=191.1
+  VALID                        n=  472 win=43.0% meanR=-0.164 CI=(-0.253,-0.043) PF=0.73 bps= -0.71 totR=  -77.3 maxDD_R=83.4
+  OOS                          n=  609 win=39.9% meanR=-0.184 CI=(-0.287,-0.081) PF=0.71 bps= -1.61 totR= -112.0 maxDD_R=116.4
+######## fixed_smc
+OPTIONAL SMC confirmation filter on the fixed version NIFTY 5m (declared: min score 2, 3, 4 of 5)
+[SMC min score OFF] trades=4961 blocked_smc=0
+  TRAIN gross                  n= 2454 win=50.8% meanR=+0.032 CI=(-0.021,+0.074) PF=1.07 bps= +1.02 totR=  +77.4 maxDD_R=34.5 | net2bps=-0.125
+  VALID gross                  n= 1072 win=49.1% meanR=+0.047 CI=(-0.021,+0.115) PF=1.10 bps= +1.02 totR=  +50.1 maxDD_R=30.3 | net2bps=-0.131
+  OOS gross                    n= 1435 win=50.8% meanR=+0.044 CI=(-0.018,+0.104) PF=1.09 bps= +0.78 totR=  +62.7 maxDD_R=37.3 | net2bps=-0.138
+[SMC min score 2] trades=2878 blocked_smc=7711
+  TRAIN gross                  n= 1392 win=50.9% meanR=+0.056 CI=(-0.004,+0.120) PF=1.12 bps= +1.43 totR=  +78.1 maxDD_R=30.0 | net2bps=-0.094
+  VALID gross                  n=  636 win=51.4% meanR=+0.060 CI=(-0.031,+0.151) PF=1.13 bps= +1.59 totR=  +38.2 maxDD_R=20.0 | net2bps=-0.110
+  OOS gross                    n=  850 win=50.1% meanR=+0.014 CI=(-0.050,+0.099) PF=1.03 bps= +0.45 totR=  +12.3 maxDD_R=55.9 | net2bps=-0.160
+[SMC min score 3] trades=982 blocked_smc=14691
+  TRAIN gross                  n=  466 win=54.7% meanR=+0.109 CI=(+0.006,+0.224) PF=1.25 bps= +2.13 totR=  +50.9 maxDD_R=11.2 | net2bps=-0.037
+  VALID gross                  n=  214 win=51.4% meanR=+0.080 CI=(-0.065,+0.209) PF=1.17 bps= +1.73 totR=  +17.2 maxDD_R=15.5 | net2bps=-0.084
+  OOS gross                    n=  302 win=49.3% meanR=-0.019 CI=(-0.141,+0.104) PF=0.96 bps= +1.29 totR=   -5.8 maxDD_R=27.3 | net2bps=-0.196
+[SMC min score 4] trades=145 blocked_smc=17864
+  TRAIN gross                  n=   67 win=49.3% meanR=+0.019 CI=(-0.259,+0.263) PF=1.04 bps= -0.34 totR=   +1.3 maxDD_R=9.8 | net2bps=-0.124
+  VALID gross                  n=   32 win=50.0% meanR=-0.108 CI=(-0.466,+0.239) PF=0.78 bps= -1.71 totR=   -3.4 maxDD_R=6.8 | net2bps=-0.248
+  OOS gross                    n=   46 win=52.2% meanR=-0.037 CI=(-0.326,+0.277) PF=0.92 bps= +1.99 totR=   -1.7 maxDD_R=9.7 | net2bps=-0.205
+######## fixed_other
+FIXED NIFTY 1m trades=8821
+  TRAIN gross                  n= 4318 win=50.1% meanR=+0.006 CI=(-0.033,+0.048) PF=1.01 bps= +0.21 totR=  +24.7 maxDD_R=123.3 | net2bps=-0.367
+  VALID gross                  n= 1874 win=49.0% meanR=+0.000 CI=(-0.050,+0.051) PF=1.00 bps= +0.04 totR=   +0.8 maxDD_R=69.8 | net2bps=-0.439
+  OOS gross                    n= 2629 win=49.6% meanR=+0.036 CI=(-0.015,+0.083) PF=1.07 bps= +0.17 totR=  +94.9 maxDD_R=64.1 | net2bps=-0.386
+FIXED NIFTY 3m trades=6726
+  TRAIN gross                  n= 3361 win=51.2% meanR=+0.020 CI=(-0.024,+0.058) PF=1.04 bps= +0.50 totR=  +68.6 maxDD_R=55.6 | net2bps=-0.190
+  VALID gross                  n= 1479 win=49.8% meanR=+0.037 CI=(-0.026,+0.093) PF=1.07 bps= +0.44 totR=  +54.0 maxDD_R=36.1 | net2bps=-0.204
+  OOS gross                    n= 1886 win=50.5% meanR=+0.036 CI=(-0.022,+0.090) PF=1.07 bps= +0.52 totR=  +67.9 maxDD_R=56.1 | net2bps=-0.206
+FIXED BANKNIFTY 5m trades=2544
+  TRAIN gross                  n=  141 win=45.4% meanR=-0.085 CI=(-0.279,+0.119) PF=0.84 bps= -1.59 totR=  -11.9 maxDD_R=17.9 | net2bps=-0.180
+  VALID gross                  n= 1030 win=47.4% meanR=-0.012 CI=(-0.081,+0.054) PF=0.97 bps= -0.04 totR=  -12.8 maxDD_R=57.0 | net2bps=-0.137
+  OOS gross                    n= 1373 win=48.1% meanR=-0.014 CI=(-0.080,+0.056) PF=0.97 bps= -0.08 totR=  -19.7 maxDD_R=53.5 | net2bps=-0.159
+FIXED SENSEX 5m trades=2644
+  TRAIN gross                  n=  141 win=47.5% meanR=+0.026 CI=(-0.156,+0.212) PF=1.05 bps= +1.05 totR=   +3.7 maxDD_R=8.3 | net2bps=-0.114
+  VALID gross                  n= 1063 win=50.1% meanR=+0.072 CI=(-0.008,+0.144) PF=1.15 bps= +1.43 totR=  +76.6 maxDD_R=30.2 | net2bps=-0.105
+  OOS gross                    n= 1440 win=49.4% meanR=+0.025 CI=(-0.027,+0.085) PF=1.05 bps= +0.97 totR=  +35.6 maxDD_R=37.8 | net2bps=-0.159
+######## fixed_null
+REAL OOS subset (fixed, 5m):   gross                        n= 1433 win=50.8% meanR=+0.044 CI=(-0.018,+0.108) PF=1.09 bps= +0.79 totR=  +63.4 maxDD_R=37.3
+  null seed 0:   gross                        n= 1469 win=51.4% meanR=+0.084 CI=(+0.024,+0.148) PF=1.18 bps= +1.24 totR= +123.4 maxDD_R=23.3
+  null seed 1:   gross                        n= 1485 win=50.1% meanR=+0.037 CI=(-0.026,+0.101) PF=1.08 bps= +0.43 totR=  +54.6 maxDD_R=40.1
+  null seed 2:   gross                        n= 1471 win=46.6% meanR=-0.053 CI=(-0.106,+0.004) PF=0.90 bps= -0.97 totR=  -77.6 maxDD_R=92.7
+  null seed 3:   gross                        n= 1495 win=49.2% meanR=+0.004 CI=(-0.053,+0.067) PF=1.01 bps= +0.05 totR=   +5.6 maxDD_R=51.7
+  null seed 4:   gross                        n= 1455 win=48.5% meanR=-0.017 CI=(-0.086,+0.040) PF=0.97 bps= -0.04 totR=  -24.2 maxDD_R=76.1
+  null seed 5:   gross                        n= 1507 win=51.1% meanR=+0.024 CI=(-0.028,+0.087) PF=1.05 bps= +0.11 totR=  +36.0 maxDD_R=23.6
+  null seed 6:   gross                        n= 1450 win=50.3% meanR=+0.054 CI=(-0.006,+0.117) PF=1.11 bps= +0.86 totR=  +78.0 maxDD_R=55.0
+  null seed 7:   gross                        n= 1474 win=51.6% meanR=+0.049 CI=(-0.008,+0.111) PF=1.11 bps= +0.96 totR=  +72.9 maxDD_R=32.7
+exit=0

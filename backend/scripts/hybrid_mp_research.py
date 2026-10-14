@@ -5,7 +5,9 @@ Pre-declared protocol (fixed before any result was seen):
     for the as-is script; they are reported separately to expose regime/decay)
   * PRIMARY = literal Pine exits (SL or T4), chart 1m, REALISTIC execution (next-bar-open fill, gap fills, flat at session end),
     round-trip cost 2 bps of price. Everything else is a labelled secondary view.
-Usage: python scripts/hybrid_mp_research.py <primary|variants|tf|null|other> [SYMBOL]
+FIXED version (fixed_params): primary = chart 5m (chosen from the review's cost arithmetic BEFORE any fixed-version result), 2 bps,
+  literal T1..T4 levels with 25% partials + break-even after T1, executable fills, hard intraday exit; SMC filter is OPTIONAL (secondary).
+Usage: python scripts/hybrid_mp_research.py <primary|variants|tf|null|other|fixed|fixed_abl|fixed_smc|fixed_null|fixed_other> [SYMBOL]
 """
 import datetime as dt
 import sys
@@ -14,7 +16,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, ".")
-from app.research_engines.hybrid_mp.engine import Params, resample, run  # noqa: E402
+from app.research_engines.hybrid_mp.engine import Params, fixed_params, resample, run  # noqa: E402
 from app.research_engines.smart_bos.data import load_1m  # noqa: E402
 from app.research_engines.smart_bos.sim import summarize  # noqa: E402
 from app.research_engines.smart_bos.splits import OOS, TRAIN, VALID, of_split  # noqa: E402
@@ -135,6 +137,79 @@ if __name__ == "__main__":
             sb = {"t": b["t"], "o": npc * np.exp(no), "h": npc * np.exp(nh), "l": npc * np.exp(nl), "c": chain, "v": b["v"]}
             tr, _ = run(resample(sb, 1), real_p)
             print(f"  null seed {seed}: {fmt(summarize(tr, cost_bps=0, boot=300), 'gross')}")
+    elif mode.startswith("fixed"):
+        def fx(sym_, kind_="INDEX", tf_=5, **kw):
+            b1 = load_1m(sym_, kind_)
+            chart = resample(b1, tf_, 555, 930) if tf_ > 1 else resample(b1, 1, 555, 930)
+            pp = fixed_params(chart_tf=tf_, **kw)
+            tr_, st_ = run(chart, pp, b1=b1)
+            return tr_, st_, chart, b1
+        def show(tr_, label, costs=(0, 2)):
+            print(label)
+            for name, sp in (("TRAIN", TRAIN), ("VALID", VALID), ("OOS", OOS)):
+                for c in costs:
+                    print(fmt(summarize(of_split(tr_, sp), cost_bps=c, boot=800), f"{name} cost={c}bps"))
+        if mode == "fixed":
+            tr, st, chart, b1 = fx(sym)
+            show(tr, f"FIXED primary {sym} 5m (bars={len(chart['t'])}, trades={len(tr)})\n  counters: {st}")
+            for sp_name, sp in (("TRAIN", TRAIN), ("VALID", VALID), ("OOS", OOS)):
+                print(f"  {sp_name}:", funnel(of_split(tr, sp)).strip())
+            rb = np.array([1e4 * t.risk / t.entry for t in tr])
+            print(f"  risk bps: median={np.median(rb):.1f} p90={np.percentile(rb,90):.1f} max={rb.max():.0f}; 1bp cost = {1/np.median(rb):.2f}R; trades/day={len(tr)/len(set(t.day for t in tr)):.1f}")
+            import datetime as _d
+            by = {}
+            for t in tr:
+                by.setdefault(_d.date.fromordinal(719163 + t.day).year, []).append(t)
+            print("  by year cost=2bps:")
+            for y, v in sorted(by.items()):
+                print(fmt(summarize(v, cost_bps=2, boot=300), f"  {y}"))
+        elif mode == "fixed_abl":
+            print(f"ABLATION of the fixed version {sym} 5m (one fix removed at a time; cost=2bps)")
+            for label, kw in (("FIXED (all)", {}), ("exit PINE (SL or T4 only)", dict(exit_model="PINE")), ("exit SCALE (no BE)", dict(exit_model="SCALE")),
+                              ("no swing_used flag", dict(swing_used_flag=False)), ("no opposite-replaces", dict(opposite_replaces_pending=False)),
+                              ("no risk bounds", dict(min_risk_atr=None, max_risk_atr=None)), ("no entry windows", dict(no_entry_first_min=0, no_entry_last_min=0)),
+                              ("no daily limits", dict(max_trades_day=None, daily_loss_r=None)), ("MTF off", dict(require_mtf=False)),
+                              ("MTF pine-colour mode", dict(mtf_mode="pine")), ("VWAP filter off", dict(use_vwap=False)),
+                              ("retest-only entries", dict(entry_mode="retest"))):
+                tr, st, chart, b1 = fx(sym, **kw)
+                print(f"[{label}] trades={len(tr)}")
+                for name, sp in (("TRAIN", TRAIN), ("VALID", VALID), ("OOS", OOS)):
+                    print(fmt(summarize(of_split(tr, sp), cost_bps=2, boot=300), name))
+        elif mode == "fixed_smc":
+            print(f"OPTIONAL SMC confirmation filter on the fixed version {sym} 5m (declared: min score 2, 3, 4 of 5)")
+            for k in (0, 2, 3, 4):
+                tr, st, chart, b1 = fx(sym, smc_filter=k > 0, smc_min=max(k, 1))
+                print(f"[SMC min score {k or 'OFF'}] trades={len(tr)} blocked_smc={st['blocked_smc']}")
+                for name, sp in (("TRAIN", TRAIN), ("VALID", VALID), ("OOS", OOS)):
+                    print(fmt(summarize(of_split(tr, sp), cost_bps=0, boot=300), name + " gross") + " | " + f"net2bps={summarize(of_split(tr, sp), cost_bps=2, boot=50).get('mean_r', 0):+.3f}")
+        elif mode == "fixed_other":
+            for s2, k, tf_ in (("NIFTY", "INDEX", 1), ("NIFTY", "INDEX", 3), ("BANKNIFTY", "INDEX", 5), ("SENSEX", "INDEX", 5)):
+                tr, st, chart, b1 = fx(s2, k, tf_)
+                print(f"FIXED {s2} {tf_}m trades={len(tr)}")
+                for name, sp in (("TRAIN", TRAIN), ("VALID", VALID), ("OOS", OOS)):
+                    sub = of_split(tr, sp)
+                    if sub:
+                        print(fmt(summarize(sub, cost_bps=0, boot=300), name + " gross") + " | " + f"net2bps={summarize(sub, cost_bps=2, boot=50).get('mean_r', 0):+.3f}")
+        elif mode == "fixed_null":
+            b1 = load_1m(sym, "INDEX")
+            days = (b1["t"] + 19800) // 86400
+            sel = days >= (dt.date(2024, 1, 1).toordinal() - 719163)
+            b = {k: v[sel] for k, v in b1.items()}
+            pp = fixed_params(chart_tf=5)
+            rtr, _ = run(resample(b, 5), pp, b1=b)
+            print(f"REAL OOS subset (fixed, 5m): {fmt(summarize(rtr, cost_bps=0, boot=500), 'gross')}")
+            for seed in range(8):
+                rng = np.random.default_rng(seed)
+                pc = np.r_[b["c"][0], b["c"][:-1]]
+                ln = {k_: np.log(b[k_] / pc) for k_ in ("o", "h", "l", "c")}
+                flip = rng.random(len(pc)) < 0.5
+                no = np.where(flip, -ln["o"], ln["o"]); nc = np.where(flip, -ln["c"], ln["c"])
+                nh = np.where(flip, -ln["l"], ln["h"]); nl = np.where(flip, -ln["h"], ln["l"])
+                chain = np.exp(np.cumsum(nc)) * b["c"][0]
+                npc = np.r_[b["c"][0], chain[:-1]]
+                sb = {"t": b["t"], "o": npc * np.exp(no), "h": npc * np.exp(nh), "l": npc * np.exp(nl), "c": chain, "v": b["v"]}
+                tr, _ = run(resample(sb, 5), pp, b1=sb)
+                print(f"  null seed {seed}: {fmt(summarize(tr, cost_bps=0, boot=300), 'gross')}")
     elif mode == "time":
         tr, st, dt_, ch = go(sym)
         print(f"{sym} bars={len(ch['t'])} trades={len(tr)} {dt_:.1f}s", st)

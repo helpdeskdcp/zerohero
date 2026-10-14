@@ -286,6 +286,13 @@ try:
 except Exception as _e:
     print(f"[hcs] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Hybrid MP v13 (fixed) research dashboard: READ-ONLY, runs the research engine on the latest 1m bars; no order path ----
+try:
+    from . import hybrid_mp_api as _hybrid_mp_api
+    app.include_router(_hybrid_mp_api.router)
+except Exception as _e:
+    print(f"[hybrid_mp] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:

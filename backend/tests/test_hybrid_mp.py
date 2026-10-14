@@ -137,3 +137,104 @@ def test_resample_anchors_at_session_open_and_40m_has_a_short_last_bar():
     r40 = resample(b1, 40)
     assert len(r40["t"]) == 10 and r40["t"][0] == b1["t"][0]          # 9 x 40m + one 15m remainder
     assert r40["h"][0] == b1["h"][:40].max() and r40["c"][-1] == b1["c"][-1]
+
+
+# ======================= fixed version + SMC + dashboard =======================
+from app.research_engines.hybrid_mp.engine import fixed_params, vol_usable  # noqa: E402
+from app.research_engines.hybrid_mp.smc import SMCParams, smc_context  # noqa: E402
+
+
+def test_swing_used_flag_stops_repeated_breaks_of_the_same_level():
+    rows = BASE + [(105.8, 106.2, 104, 104.5), (104.5, 107, 104.4, 106.9), (106.9, 108, 106, 107.5)]   # re-crosses 105 again
+    _, a = run(mk(rows), Params(**P))
+    _, b = run(mk(rows), Params(swing_used_flag=True, **P))
+    assert a["breaks_up"] >= 2 and b["breaks_up"] == 1
+
+
+def test_risk_bounds_skip_entries_and_are_counted():
+    tr, st = run(mk(BASE + [(105.8, 106, 105, 105.5)]), Params(max_risk_atr=0.5, **P))      # R=5.8 vs ATR ~1.5 -> too wide
+    assert tr == [] and st["skipped_risk"] == 1
+    tr, st = run(mk(BASE + [(105.8, 106, 105, 105.5)]), Params(min_risk_atr=10.0, **P))
+    assert tr == [] and st["skipped_risk"] == 1
+
+
+def test_entry_window_and_daily_trade_limit():
+    _, st = run(mk(BASE), Params(no_entry_first_min=60, **P))                                # bar 6 = 09:21, first hour blocked
+    assert st["blocked_window"] == 1 and st["signals_buy"] == 0
+    rows = BASE + [(105.8, 112, 105, 111), (111, 111.5, 99, 100)] * 1
+    _, st = run(mk(rows), Params(max_trades_day=0, **P))
+    assert st["blocked_limits"] >= 1 and st["signals_buy"] == 0
+
+
+def test_scale_be_moves_stop_to_entry_after_t1():
+    rows = BASE + [(105.8, 112, 105, 111), (111, 111.5, 105.0, 105.5)]       # T1 hit bar 7; bar 8 trades back through entry
+    tr, _ = run(mk(rows), Params(exit_model="SCALE_BE", **P))
+    t = tr[0]
+    assert t.reason == "BE" and t.r == pytest.approx(0.25 * 1.0 + 0.75 * 0.0, abs=1e-6)
+
+
+def test_vwap_proxy_only_when_volume_is_unusable():
+    b = mk(BASE)
+    assert not vol_usable(b)
+    b["v"] = np.full(len(b["t"]), 100.0)
+    assert vol_usable(b)
+
+
+def _smc_bars():
+    return mk([(100, 101, 99, 100), (100, 100.5, 99, 99.5), (99.5, 100, 98, 98.5), (98.5, 99, 97.5, 98.8),   # down-move
+               (98.8, 103, 98.7, 102.8),                       # bullish displacement
+               (102.8, 104, 102.5, 103.5),                      # low 102.5 > high of bar 3?  (99) -> bull FVG between bar 3 high and bar 5 low
+               (103.5, 104, 100, 103.8), (103.8, 105, 103, 104.5)])
+
+
+def test_smc_fvg_displacement_and_discount_detected_causally():
+    b = _smc_bars()
+    sp = SMCParams(swing_len=1, minor_len=1, atr_len=3, disp_atr=1.0, fvg_min_atr=0.05)
+    ctx = smc_context(b, sp)
+    assert ctx["disp_bull"][4] and ctx["fvg_new_bull"][5]
+    assert ctx["fvg_touch_bull"][6]                          # bar 6 dips into the gap (low 100 <= top 102.5) and closes above bottom
+    # prefix invariance: results for the first k bars never change when later bars are appended
+    for k in (5, 6, 7):
+        part = smc_context({kk: v[:k] for kk, v in b.items()}, sp)
+        for key in ("sweep_bull", "sweep_bear", "disp_bull", "fvg_new_bull", "fvg_touch_bull", "bull_score", "bear_score"):
+            assert np.array_equal(part[key], ctx[key][:k]), key
+
+
+def test_smc_equal_lows_and_liquidity_sweep():
+    # two equal lows (98) then a wick below them that closes back above -> sell-side sweep (bullish)
+    rows = [(100, 101, 99, 100), (100, 100.5, 98, 99), (99, 101, 98.9, 100.5), (100.5, 101.5, 99.5, 101), (101, 101.2, 98.02, 100.2),
+            (100.2, 102, 99.8, 101.5), (101.5, 102, 100.5, 101), (101, 101.4, 100.6, 101.2), (101.2, 101.3, 97.5, 100.5), (100.5, 102, 100, 101.8)]
+    ctx = smc_context(mk(rows), SMCParams(swing_len=1, minor_len=1, atr_len=3, eq_tol_atr=0.5))
+    assert ctx["sweep_bull"][8] and ctx["eq_sweep_bull"][8]
+
+
+def test_smc_filter_blocks_when_score_too_low_and_dashboard_state_is_complete():
+    b = mk(BASE + [(105.8, 106, 105, 105.5)])
+    tr, st = run(b, Params(smc_filter=True, smc_min=5, smc=SMCParams(swing_len=2, atr_len=3), **P))
+    assert tr == [] and st["blocked_smc"] >= 1
+    tr, st = run(b, Params(**P), want_state=True)
+    s = st["state"]
+    for key in ("mtf", "direction", "trend_status", "trade", "opening_gap", "signal_check", "next_target", "targets", "entry", "sl",
+                "levels", "last_result", "planned_qty", "pending", "smc", "vwap", "today"):
+        assert key in s, key
+    assert s["trade"] == "BUY ACTIVE" and s["next_target"] == "T1" and s["entry"] == 105.8
+    assert set(s["smc"]["components"]) == {"sweep", "inducement", "displacement", "fvg_or_ob_touch", "discount_premium"}
+
+
+def test_fixed_params_prefix_invariance_with_all_filters():
+    parts = []
+    for d in range(14):
+        o, h, l, c = _rw(375, 300 + d)
+        parts.append(mk(list(zip(o, h, l, c)), start=T0 + d * 86400))
+    b1 = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+    full = resample(b1, 5)
+    cut = 75 * 9 + 20
+    pre = {k: v[:cut] for k, v in full.items()}
+    b1_pre = {k: v[b1["t"] <= pre["t"][-1]] for k, v in b1.items()}
+    for smc_on in (False, True):
+        pp = fixed_params(chart_tf=5, smc_filter=smc_on)
+        a, _ = run(full, pp, b1=b1)
+        b, _ = run(pre, pp, b1=b1_pre)
+        da = [(t.sig_i, t.exit_i, round(t.r, 9)) for t in a if t.exit_i < cut - 3]
+        db = [(t.sig_i, t.exit_i, round(t.r, 9)) for t in b if t.exit_i < cut - 3]
+        assert da == db
