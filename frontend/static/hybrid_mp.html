@@ -41,7 +41,8 @@ function rows(el,data){el.replaceChildren();for(const [k,v,c] of data){const tr=
   a.textContent=k;b.textContent=v===null||v===undefined?"—":String(v);b.className=c===undefined?cls(v):c;tr.append(a,b);el.append(tr)}}
 const f=(x,d=2)=>x===null||x===undefined?"—":Number(x).toFixed(d);
 function render(s){
-  $("status").textContent=`${s.symbol} ${s.chart_tf}m · last bar ${s.data.last_bar_age_sec}s ago · live bars +${s.data.live_bars_appended}`;
+  $("status").textContent=`${s.symbol} ${s.chart_tf}m · ${s.data.data_status} · last bar ${Math.round(s.data.last_bar_age_sec/60)} min ago`;
+  $("status").style.color=s.data.data_status==="LIVE"?"var(--up)":"var(--warn)";
   const m=Object.entries(s.mtf).map(([k,v])=>[k+" candle trend",v+(s.mtf_required?"":" (filter off)")]);
   rows($("dash"),[["Engine",s.engine,"hi"],["Chart TF",s.chart_tf+"m","hi"],...m,["Direction",s.direction],["Trend status",s.trend_status],["Trade",s.trade],["Session",s.session],
     ["Opening gap",s.opening_gap,""],["Signal check",s.signal_check],["Next target",s.next_target,""],["T1",s.targets.T1],["T2",s.targets.T2],["T3",s.targets.T3],["T4",s.targets.T4],

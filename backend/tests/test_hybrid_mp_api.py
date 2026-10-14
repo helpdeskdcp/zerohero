@@ -41,6 +41,7 @@ def test_state_has_all_dashboard_fields_and_is_flagged_research_only(client):
               "levels", "last_result", "planned_qty", "pending", "smc", "vwap", "vwap_is_proxy", "today", "candles", "trades_today", "counters"):
         assert k in j, k
     assert j["research_only"] is True and j["live_trading"] is False
+    assert j["data"]["data_status"] in ("MARKET_CLOSED", "STALE") and j["session"] != "IN SESSION"      # bars are days old in this test
     assert set(j["mtf"]) == {"3m", "5m", "15m", "40m"} and j["vwap_is_proxy"] is True and j["vwap"] is not None
     assert len(j["candles"]) <= 150 and j["candles"][-1]["time"] > 0
 

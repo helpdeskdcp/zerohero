@@ -83,6 +83,19 @@ def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: 
     lo = max(0, n - 150)
     last_day = int((chart["t"][-1] + tz) // 86400)
     today = [t for t in trades if t.day == last_day]
+    now_ist = time.time() + tz
+    mod_now, wd_now = int((now_ist % 86400) // 60), int((now_ist // 86400 + 4) % 7)
+    market_open = wd_now < 5 and 555 <= mod_now < 930
+    age = meta["last_bar_age_sec"]
+    if not market_open:
+        data_status = "MARKET_CLOSED"
+    elif age is None or age > max(180, 3 * tf * 60):
+        data_status = "STALE"
+    else:
+        data_status = "LIVE"
+    meta["data_status"] = data_status
+    if data_status != "LIVE":
+        state["session"] = "MARKET CLOSED (state as of last bar)" if data_status == "MARKET_CLOSED" else "DATA STALE"
     state.update(
         symbol=symbol, data=meta, counters={k: v for k, v in st.items()},
         research_only=True, live_trading=False,

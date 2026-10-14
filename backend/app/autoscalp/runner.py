@@ -517,6 +517,21 @@ class AutoScalpRunner:
         self.armed = False
 
     # ---------------- feed wiring ----------------
+    async def _warm_underlying_refs(self, cfg):
+        """_underlying_ref() hits the broker REST API on a cache miss (after a restart, hourly for MCX). Resolve those in a worker
+        thread so the event loop (WS feed, platform candles, API) keeps running; the later sync call is then a cache hit."""
+        if not self.feed:
+            return
+        syms = list(cfg["symbols"])
+
+        def _warm():
+            for sym in syms:
+                try:
+                    _underlying_ref(sym)
+                except Exception as e:
+                    _log.debug("_warm_underlying_refs(%s): %r", sym, e)
+        await asyncio.to_thread(_warm)
+
     def _refresh_subscription(self, cfg):
         if not self.feed:
             return
@@ -1328,6 +1343,7 @@ class AutoScalpRunner:
         if sg_sig != self._sg_cfg_sig:
             self.safeguards = Safeguards(cfg.get("safeguards") or {})
             self._sg_cfg_sig = sg_sig
+        await self._warm_underlying_refs(cfg)       # blocking broker REST on a cache miss -> worker thread, not the event loop
         self._refresh_subscription(cfg)
         await self._seed_aggs(cfg)
         self._pump_feed()

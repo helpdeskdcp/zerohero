@@ -117,3 +117,39 @@ def test_autoscalp_daily_report_does_not_block_event_loop(monkeypatch):
     max_lag = asyncio.run(main())
     assert called["n"] == 2                      # NSE + MCX both due at 23:59
     assert max_lag < 0.4, f"event loop blocked {max_lag:.2f}s"
+
+
+def test_autoscalp_underlying_ref_warmup_does_not_block_event_loop(monkeypatch):
+    """_underlying_ref does broker REST on a cache miss; tick_once must warm it in a worker thread (stall seen 2026-10-14)."""
+    from app.autoscalp import runner as ascr
+
+    r = ascr.AutoScalpRunner(feed=object(), chain_provider=lambda *a, **k: {}, telegram_fn=lambda *a: None, now_fn=lambda: 1_800_000_000.0)
+    calls = {"n": 0}
+
+    def slow_ref(sym):
+        calls["n"] += 1
+        time.sleep(1.0)
+        return {"token": "1", "exchange": "NSE"}
+
+    monkeypatch.setattr(ascr, "_underlying_ref", slow_ref)
+
+    async def main():
+        lag, stop = [], asyncio.Event()
+
+        async def ticker():
+            prev = time.time()
+            while not stop.is_set():
+                await asyncio.sleep(0.05)
+                now = time.time(); lag.append(now - prev - 0.05); prev = now
+
+        t = asyncio.create_task(ticker())
+        await r._warm_underlying_refs({"symbols": ["CRUDEOIL", "NATURALGAS"]})
+        stop.set(); await t
+        return max(lag)
+
+    assert asyncio.run(main()) < 0.4 and calls["n"] == 2
+
+    import ast
+    import inspect
+    src = inspect.getsource(ascr.AutoScalpRunner.tick_once)
+    assert src.index("_warm_underlying_refs") < src.index("_refresh_subscription")   # warmed BEFORE the sync call
