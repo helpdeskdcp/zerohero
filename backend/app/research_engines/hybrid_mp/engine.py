@@ -40,6 +40,7 @@ class Params:
     retest_bars: int = 8
     retest_tol_atr: float = 0.20
     use_vwap: bool = False
+    vwap_missing_blocks: bool = False          # Pine parity = False: a missing VWAP (no volume) silently lets the trade through; True = block instead
     use_candle_sl: bool = True
     use_pattern_filter: bool = False
     maru_body_ratio: float = 0.85
@@ -361,8 +362,9 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
         bull_cont = hybrid and (not math.isnan(hhL[i])) and cl_[i] > hhL[i] and bull_ok[i]
         bear_cont = hybrid and (not math.isnan(llL[i])) and cl_[i] < llL[i] and bear_ok[i]
         vw_i = vw[i]
-        vwap_long = (not p.use_vwap) or math.isnan(vw_i) or cl_[i] >= vw_i
-        vwap_short = (not p.use_vwap) or math.isnan(vw_i) or cl_[i] <= vw_i
+        vw_ok_missing = not p.vwap_missing_blocks
+        vwap_long = (not p.use_vwap) or (math.isnan(vw_i) and vw_ok_missing) or (not math.isnan(vw_i) and cl_[i] >= vw_i)
+        vwap_short = (not p.use_vwap) or (math.isnan(vw_i) and vw_ok_missing) or (not math.isnan(vw_i) and cl_[i] <= vw_i)
         mtf_long = (not p.require_mtf) or ba[i] >= p.min_agree
         mtf_short = (not p.require_mtf) or sa[i] >= p.min_agree
         if p.smc_filter and p.smc_require:
@@ -587,6 +589,7 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
         else:
             parts.append((remain, cl_[n - 1])); close_trade(n - 1, "EOD_DATA", parts, sum(done))
     st["trades"] = len(trades)
+    st["mtf_incompatible_tfs"] = [N for N in p.mtf_tfs if N < p.chart_tf] if p.require_mtf else []     # requested TF lower than the chart TF: not TradingView-verified
     if EV is not None:
         st["events"] = EV
     return trades, st

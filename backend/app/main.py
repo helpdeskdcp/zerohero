@@ -288,8 +288,11 @@ except Exception as _e:
 
 # ---- Hybrid MP v13 (fixed) research dashboard: READ-ONLY, runs the research engine on the latest 1m bars; no order path ----
 try:
-    from . import hybrid_mp_api as _hybrid_mp_api
-    app.include_router(_hybrid_mp_api.router)
+    if os.environ.get("HYBRID_MP_ENABLED", "1").strip().lower() in ("0", "false", "off", "no"):
+        print("[hybrid_mp] disabled by HYBRID_MP_ENABLED=0")           # feature flag / kill switch (default ON, read-only research API)
+    else:
+        from . import hybrid_mp_api as _hybrid_mp_api
+        app.include_router(_hybrid_mp_api.router)
 except Exception as _e:
     print(f"[hybrid_mp] router disabled: {type(_e).__name__}: {_e}")
 

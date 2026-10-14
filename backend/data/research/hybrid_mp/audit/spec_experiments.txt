@@ -1,0 +1,7 @@
+A. OPENING GAP: INVALID RUN REMOVED (daily-bar dates were keyed by the UTC date of an IST-midnight stamp, one day early). Corrected run: gap_experiment.txt.
+
+B. STATE FROM A SHORT WINDOW vs FULL HISTORY (50 random end bars in the last 150 sessions; fixed_params, 5m, MTF on)
+  window = last  3 sessions: all-fields agreement 50/50 (100%); structure-direction agreement 50/50 (100%); disagreements e.g. []
+  window = last  8 sessions: all-fields agreement 50/50 (100%); structure-direction agreement 50/50 (100%); disagreements e.g. []
+  window = last 20 sessions: all-fields agreement 50/50 (100%); structure-direction agreement 50/50 (100%); disagreements e.g. []
+exit=0

@@ -1,0 +1,6 @@
+A. OPENING GAP, NIFTY, 2304 trading days with all four sources (Pine on raw bars incl. outside-session | session-aware | Pine on session-only bars | daily table open/prev close)
+  Pine on raw (extended) bars    mean|gap - daily-table gap| = 0.1144 pct-pts; days differing by >0.05 pct-pt: 1200 (52.1%); by >0.10: 596
+  session-aware (corrected)      mean|gap - daily-table gap| = 0.0772 pct-pts; days differing by >0.05 pct-pt: 1157 (50.2%); by >0.10: 509
+  Pine on session-only bars      mean|gap - daily-table gap| = 0.0772 pct-pts; days differing by >0.05 pct-pt: 1157 (50.2%); by >0.10: 509
+  worst Pine-on-raw days: [('2021-09-27', np.float64(-6.75), np.float64(0.44)), ('2021-11-15', np.float64(-4.63), np.float64(0.21)), ('2022-04-11', np.float64(-4.65), np.float64(-0.24))]
+  session-aware flagged incomplete prior session on 3015 bars (first-of-day only counted once per day: 8 days)
