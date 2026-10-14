@@ -1,0 +1,66 @@
+NIFTY_5m_last250s          C0_defaults              post-fix                           events ref=  2620 eng=  2620 signals=  355 -> EXACT MATCH {}
+NIFTY_5m_last250s          C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=  2620 eng=  2620 signals=  355 -> EXACT MATCH {}
+NIFTY_5m_last250s          C1_retest_only           post-fix                           events ref=  3531 eng=  3531 signals=  409 -> EXACT MATCH {}
+NIFTY_5m_last250s          C2_mtf_3of4              post-fix                           events ref=  3049 eng=  3049 signals=  421 -> EXACT MATCH {}
+NIFTY_5m_last250s          C3_vwap                  post-fix                           events ref=  2600 eng=  2600 signals=  344 -> EXACT MATCH {}
+NIFTY_5m_last250s          C4_pattern_filter        post-fix                           events ref=  3420 eng=  3420 signals=  415 -> EXACT MATCH {}
+NIFTY_5m_last250s          C5_prev_low_sl           post-fix                           events ref=  2376 eng=  2376 signals=  297 -> EXACT MATCH {}
+NIFTY_5m_last250s          C6_pivot3_cont3_retest4  post-fix                           events ref=  3207 eng=  3207 signals=  427 -> EXACT MATCH {}
+NIFTY_5m_last250s          C7_all_filters           post-fix                           events ref=  3356 eng=  3356 signals=  337 -> EXACT MATCH {}
+NIFTY_1m_last45s           C0_defaults              post-fix                           events ref=  1828 eng=  1828 signals=  212 -> EXACT MATCH {}
+NIFTY_1m_last45s           C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=  1828 eng=  1774 signals=  212 -> MISMATCH {'EXTRA_IN_PYTHON': 30, 'MISSING_IN_PYTHON': 80, 'VALUE_DIFF': 6}
+NIFTY_1m_last45s           C1_retest_only           post-fix                           events ref=  2936 eng=  2936 signals=  360 -> EXACT MATCH {}
+NIFTY_1m_last45s           C2_mtf_3of4              post-fix                           events ref=  2648 eng=  2648 signals=  348 -> EXACT MATCH {}
+NIFTY_1m_last45s           C3_vwap                  post-fix                           events ref=  2198 eng=  2198 signals=  289 -> EXACT MATCH {}
+NIFTY_1m_last45s           C4_pattern_filter        post-fix                           events ref=  2685 eng=  2685 signals=  300 -> EXACT MATCH {}
+NIFTY_1m_last45s           C5_prev_low_sl           post-fix                           events ref=  1773 eng=  1773 signals=  193 -> EXACT MATCH {}
+NIFTY_1m_last45s           C6_pivot3_cont3_retest4  post-fix                           events ref=  2642 eng=  2642 signals=  333 -> EXACT MATCH {}
+NIFTY_1m_last45s           C7_all_filters           post-fix                           events ref=  2647 eng=  2647 signals=  236 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C0_defaults              post-fix                           events ref=  2849 eng=  2849 signals=  450 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=  2849 eng=  2850 signals=  450 -> MISMATCH {'EXTRA_IN_PYTHON': 1}
+BANKNIFTY_5m_last250s      C1_retest_only           post-fix                           events ref=  3414 eng=  3414 signals=  411 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C2_mtf_3of4              post-fix                           events ref=  2510 eng=  2510 signals=  325 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C3_vwap                  post-fix                           events ref=  2817 eng=  2817 signals=  427 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C4_pattern_filter        post-fix                           events ref=  3113 eng=  3113 signals=  363 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C5_prev_low_sl           post-fix                           events ref=  2760 eng=  2760 signals=  426 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C6_pivot3_cont3_retest4  post-fix                           events ref=  3426 eng=  3426 signals=  516 -> EXACT MATCH {}
+BANKNIFTY_5m_last250s      C7_all_filters           post-fix                           events ref=  3158 eng=  3158 signals=  325 -> EXACT MATCH {}
+SENSEX_5m_last250s         C0_defaults              post-fix                           events ref=  2702 eng=  2702 signals=  390 -> EXACT MATCH {}
+SENSEX_5m_last250s         C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=  2702 eng=  2702 signals=  390 -> EXACT MATCH {}
+SENSEX_5m_last250s         C1_retest_only           post-fix                           events ref=  3561 eng=  3561 signals=  428 -> EXACT MATCH {}
+SENSEX_5m_last250s         C2_mtf_3of4              post-fix                           events ref=  3382 eng=  3382 signals=  532 -> EXACT MATCH {}
+SENSEX_5m_last250s         C3_vwap                  post-fix                           events ref=  2656 eng=  2656 signals=  372 -> EXACT MATCH {}
+SENSEX_5m_last250s         C4_pattern_filter        post-fix                           events ref=  3036 eng=  3036 signals=  365 -> EXACT MATCH {}
+SENSEX_5m_last250s         C5_prev_low_sl           post-fix                           events ref=  2764 eng=  2764 signals=  411 -> EXACT MATCH {}
+SENSEX_5m_last250s         C6_pivot3_cont3_retest4  post-fix                           events ref=  3259 eng=  3259 signals=  440 -> EXACT MATCH {}
+SENSEX_5m_last250s         C7_all_filters           post-fix                           events ref=  3011 eng=  3011 signals=  318 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C0_defaults              post-fix                           events ref=  8417 eng=  8417 signals= 1312 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=  8417 eng=  8820 signals= 1312 -> MISMATCH {'ORDER_ONLY': 3, 'EXTRA_IN_PYTHON': 1258, 'MISSING_IN_PYTHON': 1250, 'VALUE_DIFF': 65}
+CRUDEOIL_FUT_1m_MCX        C1_retest_only           post-fix                           events ref=  7985 eng=  7985 signals=  578 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C2_mtf_3of4              post-fix                           events ref=  8874 eng=  8874 signals= 1117 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C3_vwap                  post-fix                           events ref=  8046 eng=  8046 signals= 1095 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C4_pattern_filter        post-fix                           events ref=  9314 eng=  9314 signals= 1403 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C5_prev_low_sl           post-fix                           events ref=  7458 eng=  7458 signals= 1095 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C6_pivot3_cont3_retest4  post-fix                           events ref=  9966 eng=  9966 signals= 1423 -> EXACT MATCH {}
+CRUDEOIL_FUT_1m_MCX        C7_all_filters           post-fix                           events ref=  8694 eng=  8694 signals= 1003 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C0_defaults              post-fix                           events ref=  4711 eng=  4711 signals=  805 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=  4711 eng=  4711 signals=  805 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C1_retest_only           post-fix                           events ref=  4710 eng=  4710 signals=  577 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C2_mtf_3of4              post-fix                           events ref=  4641 eng=  4641 signals=  653 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C3_vwap                  post-fix                           events ref=  4137 eng=  4137 signals=  588 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C4_pattern_filter        post-fix                           events ref=  5286 eng=  5286 signals=  748 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C5_prev_low_sl           post-fix                           events ref=  4559 eng=  4559 signals=  758 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C6_pivot3_cont3_retest4  post-fix                           events ref=  5318 eng=  5318 signals=  805 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_1m      C7_all_filters           post-fix                           events ref=  5042 eng=  5042 signals=  593 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C0_defaults              post-fix                           events ref=   928 eng=   928 signals=  167 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C0_defaults              PRE-FIX (engine pivot_ties=allow)  events ref=   928 eng=   928 signals=  167 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C1_retest_only           post-fix                           events ref=   973 eng=   973 signals=  119 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C2_mtf_3of4              post-fix                           events ref=   980 eng=   980 signals=  169 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C3_vwap                  post-fix                           events ref=   945 eng=   945 signals=  170 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C4_pattern_filter        post-fix                           events ref=  1025 eng=  1025 signals=  162 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C5_prev_low_sl           post-fix                           events ref=   904 eng=   904 signals=  163 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C6_pivot3_cont3_retest4  post-fix                           events ref=  1187 eng=  1187 signals=  206 -> EXACT MATCH {}
+SYNTH_RW_vol_holes_5m      C7_all_filters           post-fix                           events ref=   992 eng=   992 signals=  133 -> EXACT MATCH {}
+
+POST-FIX comparisons: 56 | exact: 56 | mismatching: 0 | total signals compared: 27617 | discrepancy rows written: 317
+exit=0

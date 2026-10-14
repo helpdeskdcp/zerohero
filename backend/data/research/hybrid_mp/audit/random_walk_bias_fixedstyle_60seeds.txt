@@ -1,0 +1,7 @@
+world: 60 seeds x 40 sessions x 375 bars, true path 600 steps/bar, bar sd 3.5 pts; strides (samples/bar)= [600, 60]
+
+== FIXED-style (REALISTIC + 25% partials, BE after T1)
+samples/bar  trades      bar-level R      true-path R       bar - true
+        600   35111  +0.0015±0.0125  +0.0020±0.0125  -0.0005±0.0007
+         60   36553  +0.0160±0.0124  +0.0064±0.0123  +0.0096±0.0026
+exit=0

@@ -1,0 +1,13 @@
+Cost sensitivity, NIFTY 5m, mean net R per trade = mean(r_gross - cost_bps/risk_bps)   (cost = 2*(commission+slippage) + spread, bps of price)
+
+[FIXED_primary_5m]  cost_bps:   0       1       2       3       4       6
+   TRAIN n= 3054      +0.027  -0.051  -0.128  -0.206  -0.284  -0.439    median risk 14.7 bps
+   VALID n= 1365      +0.033  -0.054  -0.142  -0.229  -0.317  -0.492    median risk 12.8 bps
+   OOS   n= 1766      +0.036  -0.054  -0.145  -0.235  -0.326  -0.507    median risk 12.5 bps
+
+[PINE_ASIS_5m]  cost_bps:   0       1       2       3       4       6
+   TRAIN n= 2169      +0.208  +0.136  +0.063  -0.009  -0.081  -0.226    median risk 16.2 bps
+   VALID n=  996      +0.114  +0.030  -0.055  -0.140  -0.225  -0.395    median risk 14.1 bps
+   OOS   n= 1110      +0.151  +0.064  -0.023  -0.110  -0.197  -0.371    median risk 13.5 bps
+
+example decomposition: commission 0.3 bps/side + slippage 0.5 bps/side + spread 0.4 bps -> round trip = 2*(0.3+0.5)+0.4 = 2.0 bps

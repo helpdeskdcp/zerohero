@@ -1,0 +1,607 @@
+dataset,config,engine_variant,bar_index,bar_open_ist,weekday,pine_literal_events,python_engine_events,discrepancy_type
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),551,2025-10-17 11:25,Fri,"[[551, ""SIGNAL"", 1, ""CONT"", 25744.25, 22.150000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),554,2025-10-17 11:40,Fri,"[[554, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),562,2025-10-17 12:20,Fri,"[[562, ""SIGNAL"", 1, ""CONT"", 25756.35, 18.100000000002183]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),566,2025-10-17 12:40,Fri,"[[566, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),568,2025-10-17 12:50,Fri,"[[568, ""CHOCH"", -1], [568, ""PENDING_SET"", -1, 25710.4], [568, ""SIGNAL"", -1, ""CONT"", 25770.4, 71.95000000000073]]","[[568, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),577,2025-10-17 13:35,Fri,"[[577, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),600,2025-10-20 09:15,Mon,"[[600, ""CHOCH"", 1], [600, ""SL_HIT"", -1]]","[[600, ""CHOCH"", 1], [600, ""PENDING_SET"", 1, 25751.7], [600, ""SIGNAL"", 1, ""CONT"", 25696.0, 206.79999999999927]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),611,2025-10-20 10:10,Mon,"[[611, ""SIGNAL"", 1, ""CONT"", 25819.2, 37.349999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),615,2025-10-20 10:30,Mon,"[[615, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),617,2025-10-20 10:40,Mon,"[[617, ""SIGNAL"", 1, ""CONT"", 25833.15, 29.599999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),621,2025-10-20 11:00,Mon,"[[621, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),626,2025-10-20 11:25,Mon,"[[626, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),641,2025-10-20 12:40,Mon,"[[641, ""SIGNAL"", 1, ""CONT"", 25848.75, 19.950000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),644,2025-10-20 12:55,Mon,"[[644, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),646,2025-10-20 13:05,Mon,"[[646, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),655,2025-10-20 13:50,Mon,"[[655, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),661,2025-10-20 14:20,Mon,"[[661, ""CHOCH"", -1], [661, ""PENDING_SET"", -1, 25837.65], [661, ""SIGNAL"", -1, ""CONT"", 25884.15, 53.30000000000291]]","[[661, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),675,2025-10-21 13:45,Tue,"[[675, ""CHOCH"", 1], [675, ""SL_HIT"", -1]]","[[675, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),687,2025-10-23 09:15,Thu,"[[687, ""BOS"", 1], [687, ""PENDING_SET"", 1, 25934.35]]","[[687, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),690,2025-10-23 09:30,Thu,"[[690, ""SIGNAL"", 1, ""CONT"", 26026.35, 51.95000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),738,2025-10-23 13:30,Thu,"[[738, ""CHOCH"", -1], [738, ""SL_HIT"", 1]]","[[738, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),743,2025-10-23 13:55,Thu,"[[743, ""SIGNAL"", -1, ""CONT"", 26036.6, 46.599999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),748,2025-10-23 14:20,Thu,"[[748, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),757,2025-10-23 15:05,Thu,"[[757, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),762,2025-10-24 09:15,Fri,"[[762, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),784,2025-10-24 11:05,Fri,"[[784, ""T4"", -1], [784, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),791,2025-10-24 11:40,Fri,"[[791, ""CHOCH"", 1], [791, ""PENDING_SET"", 1, 25835.45], [791, ""SIGNAL"", 1, ""CONT"", 25800.0, 37.099999999998545]]","[[791, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),800,2025-10-24 12:25,Fri,"[[800, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),811,2025-10-24 13:20,Fri,"[[811, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),812,2025-10-24 13:25,Fri,"[[812, ""CHOCH"", -1], [812, ""PENDING_SET"", -1, 25783.75], [812, ""SIGNAL"", -1, ""CONT"", 25817.35, 45.849999999998545]]","[[812, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),815,2025-10-24 13:40,Fri,"[[815, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),837,2025-10-27 09:15,Mon,"[[837, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),838,2025-10-27 09:20,Mon,"[[838, ""SIGNAL"", 1, ""CONT"", 25827.0, 53.95000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),842,2025-10-27 09:40,Mon,"[[842, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),869,2025-10-27 11:55,Mon,"[[869, ""BOS"", 1], [869, ""T2"", 1]]","[[869, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),946,2025-10-28 12:05,Tue,"[[946, ""BOS"", -1], [946, ""SL_HIT"", 1]]","[[946, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),952,2025-10-28 12:35,Tue,"[[952, ""CHOCH"", 1], [952, ""PENDING_SET"", 1, 25899.4], [952, ""SIGNAL"", 1, ""CONT"", 25854.25, 45.45000000000073]]","[[952, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),955,2025-10-28 12:50,Tue,"[[955, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),970,2025-10-28 14:05,Tue,"[[970, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),978,2025-10-28 14:45,Tue,"[[978, ""CHOCH"", -1], [978, ""PENDING_SET"", -1, 25826.15]]","[[978, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),984,2025-10-28 15:15,Tue,"[[984, ""CHOCH"", 1], [984, ""SIGNAL"", 1, ""CONT"", 25912.05, 50.150000000001455]]","[[984, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),987,2025-10-29 09:15,Wed,"[[987, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1002,2025-10-29 10:30,Wed,"[[1002, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1068,2025-10-30 09:45,Thu,"[[1068, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1069,2025-10-30 09:50,Thu,"[[1069, ""SIGNAL"", -1, ""CONT"", 25930.3, 28.649999999997817]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1072,2025-10-30 10:05,Thu,"[[1072, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1079,2025-10-30 10:40,Thu,"[[1079, ""SIGNAL"", -1, ""CONT"", 25938.25, 20.450000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1084,2025-10-30 11:05,Thu,"[[1084, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1087,2025-10-30 11:20,Thu,"[[1087, ""CHOCH"", 1], [1087, ""PENDING_SET"", 1, 25967.4], [1087, ""SIGNAL"", 1, ""CONT"", 25947.25, 23.5]]","[[1087, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1089,2025-10-30 11:30,Thu,"[[1089, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1093,2025-10-30 11:50,Thu,"[[1093, ""CHOCH"", -1], [1093, ""PENDING_SET"", -1, 25911.95], [1093, ""SIGNAL"", -1, ""CONT"", 25937.7, 28.350000000002183]]","[[1093, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1113,2025-10-30 13:30,Thu,"[[1113, ""BOS"", -1], [1113, ""T1"", -1]]","[[1113, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1130,2025-10-30 14:55,Thu,"[[1130, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1137,2025-10-31 09:15,Fri,"[[1137, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1140,2025-10-31 09:30,Fri,"[[1140, ""CHOCH"", 1], [1140, ""SL_HIT"", -1]]","[[1140, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1152,2025-10-31 10:30,Fri,"[[1152, ""CHOCH"", -1], [1152, ""PENDING_SET"", -1, 25822.1], [1152, ""SIGNAL"", -1, ""CONT"", 25839.85, 29.25]]","[[1152, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1158,2025-10-31 11:00,Fri,"[[1158, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1197,2025-10-31 14:15,Fri,"[[1197, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1206,2025-10-31 15:00,Fri,"[[1206, ""BOS"", -1], [1206, ""T3"", -1]]","[[1206, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1212,2025-11-03 09:15,Mon,"[[1212, ""T4"", -1], [1212, ""T4_COMPLETE"", -1]]","[[1212, ""SL_HIT"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1440,2025-11-07 09:30,Fri,"[[1440, ""SIGNAL"", -1, ""CONT"", 25352.9, 32.900000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1442,2025-11-07 09:40,Fri,"[[1442, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1460,2025-11-07 11:10,Fri,"[[1460, ""CHOCH"", 1], [1460, ""PENDING_SET"", 1, 25391.15], [1460, ""SIGNAL"", 1, ""CONT"", 25354.4, 55.54999999999927]]","[[1460, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1464,2025-11-07 11:30,Fri,"[[1464, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1487,2025-11-07 13:25,Fri,"[[1487, ""BOS"", 1], [1487, ""T2"", 1]]","[[1487, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1512,2025-11-10 09:15,Mon,"[[1512, ""BOS"", 1], [1512, ""T3"", 1]]","[[1512, ""BOS"", 1], [1512, ""PENDING_SET"", 1, 25540.5], [1512, ""SIGNAL"", 1, ""CONT"", 25496.35, 58.25]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1525,2025-11-10 10:20,Mon,[],"[[1525, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1536,2025-11-10 11:15,Mon,"[[1536, ""T4"", 1], [1536, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1537,2025-11-10 11:20,Mon,"[[1537, ""SIGNAL"", 1, ""CONT"", 25625.95, 17.799999999999272]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1544,2025-11-10 11:55,Mon,"[[1544, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1553,2025-11-10 12:40,Mon,"[[1553, ""SIGNAL"", 1, ""CONT"", 25629.7, 16.450000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1559,2025-11-10 13:10,Mon,"[[1559, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1565,2025-11-10 13:40,Mon,"[[1565, ""CHOCH"", -1], [1565, ""PENDING_SET"", -1, 25618.75], [1565, ""SIGNAL"", -1, ""CONT"", 25637.55, 30.0]]","[[1565, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1573,2025-11-10 14:20,Mon,"[[1573, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1577,2025-11-10 14:40,Mon,"[[1577, ""SIGNAL"", -1, ""CONT"", 25636.8, 34.04999999999927]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1583,2025-11-10 15:10,Mon,"[[1583, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1587,2025-11-11 09:15,Tue,"[[1587, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1588,2025-11-11 09:20,Tue,"[[1588, ""SIGNAL"", -1, ""CONT"", 25637.6, 102.14999999999782]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1591,2025-11-11 09:35,Tue,[],"[[1591, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1600,2025-11-11 10:20,Tue,[],"[[1600, ""SIGNAL"", -1, ""CONT"", 25512.3, 21.799999999999272]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1602,2025-11-11 10:30,Tue,"[[1602, ""BOS"", -1]]","[[1602, ""BOS"", -1], [1602, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1618,2025-11-11 11:50,Tue,[],"[[1618, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1620,2025-11-11 12:00,Tue,[],"[[1620, ""SIGNAL"", 1, ""CONT"", 25523.6, 17.150000000001455]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1624,2025-11-11 12:20,Tue,[],"[[1624, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1625,2025-11-11 12:25,Tue,[],"[[1625, ""T2"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1635,2025-11-11 13:15,Tue,"[[1635, ""BOS"", 1]]","[[1635, ""BOS"", 1], [1635, ""T3"", 1], [1635, ""T4"", 1], [1635, ""T4_COMPLETE"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1636,2025-11-11 13:20,Tue,[],"[[1636, ""SIGNAL"", 1, ""CONT"", 25586.8, 28.450000000000728]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1639,2025-11-11 13:35,Tue,"[[1639, ""SL_HIT"", -1]]","[[1639, ""T1"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1641,2025-11-11 13:45,Tue,"[[1641, ""SIGNAL"", 1, ""CONT"", 25623.3, 43.150000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1642,2025-11-11 13:50,Tue,[],"[[1642, ""T2"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1643,2025-11-11 13:55,Tue,"[[1643, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1647,2025-11-11 14:15,Tue,"[[1647, ""SIGNAL"", 1, ""CONT"", 25644.15, 35.349999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1656,2025-11-11 15:00,Tue,[],"[[1656, ""T3"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1661,2025-11-11 15:25,Tue,"[[1661, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1662,2025-11-12 09:15,Wed,"[[1662, ""T2"", 1], [1662, ""T3"", 1], [1662, ""T4"", 1], [1662, ""T4_COMPLETE"", 1]]","[[1662, ""T4"", 1], [1662, ""T4_COMPLETE"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1816,2025-11-14 09:35,Fri,"[[1816, ""BOS"", -1], [1816, ""PENDING_SET"", -1, 25871.1]]","[[1816, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1818,2025-11-14 09:45,Fri,"[[1818, ""SIGNAL"", -1, ""RETEST"", 25860.95, 6.25]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1819,2025-11-14 09:50,Fri,"[[1819, ""T1"", -1], [1819, ""T2"", -1], [1819, ""T3"", -1], [1819, ""T4"", -1], [1819, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1821,2025-11-14 10:00,Fri,"[[1821, ""SIGNAL"", -1, ""CONT"", 25818.0, 43.349999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1831,2025-11-14 10:50,Fri,"[[1831, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1839,2025-11-14 11:30,Fri,"[[1839, ""SIGNAL"", -1, ""CONT"", 25821.9, 13.30000000000291]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1841,2025-11-14 11:40,Fri,"[[1841, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1847,2025-11-14 12:10,Fri,"[[1847, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1857,2025-11-14 13:00,Fri,"[[1857, ""SIGNAL"", -1, ""CONT"", 25809.45, 21.850000000002183]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1860,2025-11-14 13:15,Fri,"[[1860, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1864,2025-11-14 13:35,Fri,"[[1864, ""BOS"", -1], [1864, ""PENDING_SET"", -1, 25781.75], [1864, ""SIGNAL"", -1, ""CONT"", 25806.2, 39.04999999999927]]","[[1864, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1881,2025-11-14 15:00,Fri,"[[1881, ""CHOCH"", 1], [1881, ""SL_HIT"", -1]]","[[1881, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1882,2025-11-14 15:05,Fri,"[[1882, ""SIGNAL"", 1, ""CONT"", 25887.55, 48.79999999999927]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1887,2025-11-17 09:15,Mon,[],"[[1887, ""SIGNAL"", 1, ""CONT"", 25906.3, 44.75]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1927,2025-11-17 12:35,Mon,"[[1927, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1929,2025-11-17 12:45,Mon,[],"[[1929, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1970,2025-11-18 09:55,Tue,[],"[[1970, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),1971,2025-11-18 10:00,Tue,"[[1971, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2187,2025-11-21 09:15,Fri,"[[2187, ""CHOCH"", -1], [2187, ""PENDING_SET"", -1, 26169.6]]","[[2187, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2189,2025-11-21 09:25,Fri,"[[2189, ""SIGNAL"", -1, ""RETEST"", 26161.85, 3.649999999997817]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2190,2025-11-21 09:30,Fri,"[[2190, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2193,2025-11-21 09:45,Fri,"[[2193, ""SIGNAL"", -1, ""CONT"", 26159.25, 37.650000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2198,2025-11-21 10:10,Fri,"[[2198, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2224,2025-11-21 12:20,Fri,"[[2224, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2229,2025-11-21 12:45,Fri,"[[2229, ""SIGNAL"", 1, ""CONT"", 26148.55, 14.400000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2230,2025-11-21 12:50,Fri,"[[2230, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2234,2025-11-21 13:10,Fri,"[[2234, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2242,2025-11-21 13:50,Fri,"[[2242, ""SIGNAL"", 1, ""CONT"", 26099.35, 29.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2251,2025-11-21 14:35,Fri,"[[2251, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2254,2025-11-21 14:50,Fri,"[[2254, ""CHOCH"", -1], [2254, ""SL_HIT"", 1]]","[[2254, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2255,2025-11-21 14:55,Fri,"[[2255, ""SIGNAL"", -1, ""CONT"", 26111.65, 41.30000000000291]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2262,2025-11-24 09:15,Mon,"[[2262, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2562,2025-11-28 09:15,Fri,"[[2562, ""CHOCH"", 1], [2562, ""PENDING_SET"", 1, 26222.45], [2562, ""SIGNAL"", 1, ""CONT"", 26217.75, 24.400000000001455]]","[[2562, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2563,2025-11-28 09:20,Fri,"[[2563, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2564,2025-11-28 09:25,Fri,"[[2564, ""BOS"", 1], [2564, ""PENDING_SET"", 1, 26222.45]]","[[2564, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2565,2025-11-28 09:30,Fri,"[[2565, ""SIGNAL"", 1, ""RETEST"", 26202.3, 50.04999999999927]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2566,2025-11-28 09:35,Fri,"[[2566, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2567,2025-11-28 09:40,Fri,"[[2567, ""BOS"", 1], [2567, ""PENDING_SET"", 1, 26222.45]]","[[2567, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2568,2025-11-28 09:45,Fri,"[[2568, ""SIGNAL"", 1, ""RETEST"", 26209.15, 29.549999999999272]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2578,2025-11-28 10:35,Fri,"[[2578, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2604,2025-11-28 12:45,Fri,"[[2604, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2621,2025-11-28 14:10,Fri,"[[2621, ""BOS"", -1], [2621, ""PENDING_SET"", -1, 26204.0]]","[[2621, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2623,2025-11-28 14:20,Fri,"[[2623, ""SIGNAL"", -1, ""RETEST"", 26206.9, 5.80000000000291]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2625,2025-11-28 14:30,Fri,"[[2625, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2633,2025-11-28 15:10,Fri,"[[2633, ""SIGNAL"", -1, ""CONT"", 26213.15, 15.600000000002183]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2636,2025-11-28 15:25,Fri,"[[2636, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2946,2025-12-05 10:00,Fri,"[[2946, ""BOS"", 1], [2946, ""PENDING_SET"", 1, 26059.05], [2946, ""SIGNAL"", 1, ""CONT"", 26018.85, 66.30000000000291]]","[[2946, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2952,2025-12-05 10:30,Fri,"[[2952, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2953,2025-12-05 10:35,Fri,"[[2953, ""BOS"", 1], [2953, ""PENDING_SET"", 1, 26059.05]]","[[2953, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2954,2025-12-05 10:40,Fri,"[[2954, ""SIGNAL"", 1, ""RETEST"", 26062.85, 33.400000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2956,2025-12-05 10:50,Fri,"[[2956, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2975,2025-12-05 12:25,Fri,"[[2975, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),2977,2025-12-05 12:35,Fri,"[[2977, ""T3"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3012,2025-12-08 09:15,Mon,[],"[[3012, ""SIGNAL"", -1, ""CONT"", 26197.75, 38.04999999999927]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3016,2025-12-08 09:35,Mon,"[[3016, ""BOS"", -1]]","[[3016, ""BOS"", -1], [3016, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3019,2025-12-08 09:50,Mon,[],"[[3019, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3033,2025-12-08 11:00,Mon,"[[3033, ""BOS"", -1], [3033, ""SL_HIT"", 1]]","[[3033, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3036,2025-12-08 11:15,Mon,"[[3036, ""BOS"", -1], [3036, ""PENDING_SET"", -1, 26068.5]]","[[3036, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3039,2025-12-08 11:30,Mon,"[[3039, ""SIGNAL"", -1, ""RETEST"", 26077.85, 12.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3041,2025-12-08 11:40,Mon,"[[3041, ""T1"", -1]]","[[3041, ""T3"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3047,2025-12-08 12:10,Mon,"[[3047, ""BOS"", -1], [3047, ""T2"", -1]]","[[3047, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3050,2025-12-08 12:25,Mon,"[[3050, ""BOS"", -1], [3050, ""T3"", -1]]","[[3050, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3051,2025-12-08 12:30,Mon,"[[3051, ""T4"", -1], [3051, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3056,2025-12-08 12:55,Mon,[],"[[3056, ""T4"", -1], [3056, ""T4_COMPLETE"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3334,2025-12-12 11:05,Fri,"[[3334, ""SIGNAL"", 1, ""CONT"", 25953.3, 32.79999999999927]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3337,2025-12-12 11:20,Fri,"[[3337, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3370,2025-12-12 14:05,Fri,"[[3370, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3387,2025-12-15 09:15,Mon,"[[3387, ""CHOCH"", -1], [3387, ""SL_HIT"", 1]]","[[3387, ""CHOCH"", -1], [3387, ""PENDING_SET"", -1, 26015.8]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3689,2025-12-19 09:25,Fri,"[[3689, ""SIGNAL"", 1, ""CONT"", 25933.35, 16.950000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3690,2025-12-19 09:30,Fri,"[[3690, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3697,2025-12-19 10:05,Fri,"[[3697, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3704,2025-12-19 10:40,Fri,"[[3704, ""BOS"", 1], [3704, ""PENDING_SET"", 1, 25970.4], [3704, ""SIGNAL"", 1, ""CONT"", 25954.35, 20.5]]","[[3704, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3708,2025-12-19 11:00,Fri,"[[3708, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3716,2025-12-19 11:40,Fri,"[[3716, ""CHOCH"", -1], [3716, ""PENDING_SET"", -1, 25929.05], [3716, ""SIGNAL"", -1, ""CONT"", 25938.85, 25.44999999999709]]","[[3716, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3720,2025-12-19 12:00,Fri,"[[3720, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3727,2025-12-19 12:35,Fri,"[[3727, ""CHOCH"", 1], [3727, ""PENDING_SET"", 1, 25955.7], [3727, ""SIGNAL"", 1, ""CONT"", 25933.6, 26.05000000000291]]","[[3727, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3734,2025-12-19 13:10,Fri,"[[3734, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3736,2025-12-19 13:20,Fri,"[[3736, ""SIGNAL"", 1, ""CONT"", 25926.8, 30.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3748,2025-12-19 14:20,Fri,"[[3748, ""BOS"", 1], [3748, ""T1"", 1]]","[[3748, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3762,2025-12-22 09:15,Mon,"[[3762, ""CHOCH"", 1], [3762, ""T2"", 1], [3762, ""T3"", 1], [3762, ""T4"", 1], [3762, ""T4_COMPLETE"", 1]]","[[3762, ""CHOCH"", 1], [3762, ""PENDING_SET"", 1, 25993.35], [3762, ""SIGNAL"", 1, ""CONT"", 25955.6, 138.3000000000029]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3763,2025-12-22 09:20,Mon,"[[3763, ""SIGNAL"", 1, ""CONT"", 26047.8, 73.25]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3837,2025-12-23 09:15,Tue,"[[3837, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),3897,2025-12-23 14:15,Tue,[],"[[3897, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4026,2025-12-26 12:30,Fri,"[[4026, ""BOS"", -1], [4026, ""SL_HIT"", 1]]","[[4026, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4027,2025-12-26 12:35,Fri,"[[4027, ""SIGNAL"", -1, ""CONT"", 26060.8, 19.899999999997817]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4048,2025-12-26 14:20,Fri,"[[4048, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4062,2025-12-29 09:15,Mon,"[[4062, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4063,2025-12-29 09:20,Mon,"[[4063, ""CHOCH"", 1], [4063, ""PENDING_SET"", 1, 26054.35]]","[[4063, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4065,2025-12-29 09:30,Mon,"[[4065, ""BOS"", 1], [4065, ""SIGNAL"", 1, ""RETEST"", 26051.75, 22.650000000001455]]","[[4065, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4070,2025-12-29 09:55,Mon,"[[4070, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4079,2025-12-29 10:40,Mon,"[[4079, ""CHOCH"", -1], [4079, ""PENDING_SET"", -1, 26008.6], [4079, ""SIGNAL"", -1, ""CONT"", 26022.05, 18.649999999997817]]","[[4079, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4084,2025-12-29 11:05,Mon,"[[4084, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4087,2025-12-29 11:20,Mon,"[[4087, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4103,2025-12-29 12:40,Mon,[],"[[4103, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4109,2025-12-29 13:10,Mon,"[[4109, ""BOS"", -1]]","[[4109, ""BOS"", -1], [4109, ""PENDING_SET"", -1, 25964.85]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4110,2025-12-29 13:15,Mon,"[[4110, ""T3"", -1]]","[[4110, ""SIGNAL"", -1, ""CONT"", 25972.0, 23.450000000000728]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4122,2025-12-29 14:15,Mon,"[[4122, ""BOS"", -1], [4122, ""T4"", -1], [4122, ""T4_COMPLETE"", -1]]","[[4122, ""BOS"", -1], [4122, ""T1"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4124,2025-12-29 14:25,Mon,[],"[[4124, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4364,2026-01-02 09:25,Fri,"[[4364, ""SIGNAL"", 1, ""CONT"", 26178.5, 29.599999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4367,2026-01-02 09:40,Fri,"[[4367, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4369,2026-01-02 09:50,Fri,"[[4369, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4393,2026-01-02 11:50,Fri,"[[4393, ""T3"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4433,2026-01-02 15:10,Fri,"[[4433, ""T4"", 1], [4433, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4435,2026-01-02 15:20,Fri,"[[4435, ""SIGNAL"", 1, ""CONT"", 26319.5, 13.950000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4437,2026-01-05 09:15,Mon,"[[4437, ""SL_HIT"", 1]]","[[4437, ""SIGNAL"", 1, ""CONT"", 26329.45, 10.799999999999272]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4438,2026-01-05 09:20,Mon,[],"[[4438, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4738,2026-01-09 09:20,Fri,"[[4738, ""BOS"", -1], [4738, ""PENDING_SET"", -1, 25900.45]]","[[4738, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4740,2026-01-09 09:30,Fri,"[[4740, ""SIGNAL"", -1, ""CONT"", 25872.25, 35.099999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4742,2026-01-09 09:40,Fri,"[[4742, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4756,2026-01-09 10:50,Fri,"[[4756, ""SIGNAL"", -1, ""CONT"", 25868.4, 36.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4761,2026-01-09 11:15,Fri,"[[4761, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4765,2026-01-09 11:35,Fri,"[[4765, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4775,2026-01-09 12:25,Fri,"[[4775, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4777,2026-01-09 12:35,Fri,"[[4777, ""T4"", -1], [4777, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4779,2026-01-09 12:45,Fri,"[[4779, ""SIGNAL"", -1, ""CONT"", 25695.2, 21.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4780,2026-01-09 12:50,Fri,"[[4780, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4790,2026-01-09 13:40,Fri,"[[4790, ""SIGNAL"", -1, ""CONT"", 25730.4, 46.60000000000218]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4802,2026-01-09 14:40,Fri,"[[4802, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4812,2026-01-12 09:15,Mon,"[[4812, ""BOS"", -1]]","[[4812, ""BOS"", -1], [4812, ""PENDING_SET"", -1, 25623.0], [4812, ""SIGNAL"", -1, ""CONT"", 25703.7, 92.65000000000146]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4813,2026-01-12 09:20,Mon,"[[4813, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4814,2026-01-12 09:25,Mon,"[[4814, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4836,2026-01-12 11:15,Mon,[],"[[4836, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4839,2026-01-12 11:30,Mon,"[[4839, ""T4"", -1], [4839, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4848,2026-01-12 12:15,Mon,"[[4848, ""CHOCH"", 1], [4848, ""PENDING_SET"", 1, 25598.2], [4848, ""SIGNAL"", 1, ""CONT"", 25511.0, 90.29999999999927]]","[[4848, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4851,2026-01-12 12:30,Mon,"[[4851, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4852,2026-01-12 12:35,Mon,[],"[[4852, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4853,2026-01-12 12:40,Mon,[],"[[4853, ""SIGNAL"", 1, ""CONT"", 25676.1, 46.95000000000073]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4857,2026-01-12 13:00,Mon,[],"[[4857, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4863,2026-01-12 13:30,Mon,"[[4863, ""BOS"", 1]]","[[4863, ""BOS"", 1], [4863, ""PENDING_SET"", 1, 25738.4], [4863, ""SIGNAL"", 1, ""CONT"", 25689.15, 56.099999999998545]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4879,2026-01-12 14:50,Mon,"[[4879, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4880,2026-01-12 14:55,Mon,[],"[[4880, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4887,2026-01-13 09:15,Tue,"[[4887, ""BOS"", 1], [4887, ""T3"", 1]]","[[4887, ""BOS"", 1], [4887, ""T2"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4928,2026-01-13 12:40,Tue,[],"[[4928, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4929,2026-01-13 12:45,Tue,"[[4929, ""CHOCH"", -1]]","[[4929, ""CHOCH"", -1], [4929, ""PENDING_SET"", -1, 25700.85], [4929, ""SIGNAL"", -1, ""CONT"", 25714.6, 29.599999999998545]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4930,2026-01-13 12:50,Tue,[],"[[4930, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4946,2026-01-13 14:10,Tue,[],"[[4946, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4954,2026-01-13 14:50,Tue,[],"[[4954, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4982,2026-01-14 10:55,Wed,[],"[[4982, ""SIGNAL"", 1, ""CONT"", 25691.7, 37.099999999998545]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),4988,2026-01-14 11:25,Wed,"[[4988, ""BOS"", 1]]","[[4988, ""BOS"", 1], [4988, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5014,2026-01-14 13:35,Wed,[],"[[5014, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5015,2026-01-14 13:40,Wed,[],"[[5015, ""SIGNAL"", -1, ""CONT"", 25709.35, 50.0]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5024,2026-01-14 14:25,Wed,[],"[[5024, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5028,2026-01-14 14:45,Wed,[],"[[5028, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5112,2026-01-19 09:15,Mon,"[[5112, ""BOS"", -1]]","[[5112, ""BOS"", -1], [5112, ""PENDING_SET"", -1, 25667.4], [5112, ""SIGNAL"", -1, ""CONT"", 25710.75, 113.34999999999854]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5121,2026-01-19 10:00,Mon,"[[5121, ""BOS"", -1], [5121, ""SL_HIT"", 1]]","[[5121, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5123,2026-01-19 10:10,Mon,"[[5123, ""BOS"", -1], [5123, ""PENDING_SET"", -1, 25528.3]]","[[5123, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5126,2026-01-19 10:25,Mon,"[[5126, ""BOS"", -1], [5126, ""SIGNAL"", -1, ""RETEST"", 25547.6, 40.349999999998545]]","[[5126, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5132,2026-01-19 10:55,Mon,"[[5132, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5137,2026-01-19 11:20,Mon,"[[5137, ""SIGNAL"", -1, ""CONT"", 25538.4, 20.850000000002183]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5140,2026-01-19 11:35,Mon,"[[5140, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5146,2026-01-19 12:05,Mon,"[[5146, ""SIGNAL"", -1, ""CONT"", 25535.25, 19.900000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5148,2026-01-19 12:15,Mon,"[[5148, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5166,2026-01-19 13:45,Mon,"[[5166, ""CHOCH"", 1], [5166, ""PENDING_SET"", 1, 25565.25], [5166, ""SIGNAL"", 1, ""CONT"", 25543.2, 32.849999999998545]]","[[5166, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5168,2026-01-19 13:55,Mon,"[[5168, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5187,2026-01-20 09:15,Tue,"[[5187, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5188,2026-01-20 09:20,Tue,"[[5188, ""CHOCH"", -1], [5188, ""PENDING_SET"", -1, 25522.35], [5188, ""SIGNAL"", -1, ""CONT"", 25560.4, 46.05000000000291]]","[[5188, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5190,2026-01-20 09:30,Tue,[],"[[5190, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5191,2026-01-20 09:35,Tue,"[[5191, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5224,2026-01-20 12:20,Tue,"[[5224, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5239,2026-01-20 13:35,Tue,"[[5239, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5240,2026-01-20 13:40,Tue,[],"[[5240, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5254,2026-01-20 14:50,Tue,"[[5254, ""T4"", -1], [5254, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5255,2026-01-20 14:55,Tue,"[[5255, ""SIGNAL"", -1, ""CONT"", 25350.7, 39.0]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5256,2026-01-20 15:00,Tue,"[[5256, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5258,2026-01-20 15:10,Tue,"[[5258, ""T2"", -1]]","[[5258, ""T3"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5259,2026-01-20 15:15,Tue,"[[5259, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5441,2026-01-23 11:40,Fri,"[[5441, ""SIGNAL"", -1, ""CONT"", 25259.25, 47.650000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5460,2026-01-23 13:15,Fri,"[[5460, ""BOS"", -1], [5460, ""T1"", -1]]","[[5460, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5463,2026-01-23 13:30,Fri,"[[5463, ""T2"", -1], [5463, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5487,2026-01-27 09:15,Tue,"[[5487, ""BOS"", -1], [5487, ""T4"", -1], [5487, ""T4_COMPLETE"", -1]]","[[5487, ""BOS"", -1], [5487, ""PENDING_SET"", -1, 25041.0], [5487, ""SIGNAL"", -1, ""CONT"", 25074.5, 64.54999999999927]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5488,2026-01-27 09:20,Tue,"[[5488, ""SIGNAL"", -1, ""CONT"", 25126.3, 179.89999999999782]]","[[5488, ""T1"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5491,2026-01-27 09:35,Tue,[],"[[5491, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5492,2026-01-27 09:40,Tue,"[[5492, ""CHOCH"", 1], [5492, ""SL_HIT"", -1]]","[[5492, ""CHOCH"", 1], [5492, ""PENDING_SET"", 1, 25107.8], [5492, ""SIGNAL"", 1, ""CONT"", 24977.8, 169.79999999999927]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5493,2026-01-27 09:45,Tue,"[[5493, ""SIGNAL"", 1, ""CONT"", 25064.75, 87.45000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5504,2026-01-27 10:40,Tue,"[[5504, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5511,2026-01-27 11:15,Tue,"[[5511, ""SIGNAL"", 1, ""CONT"", 25013.8, 34.25]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5514,2026-01-27 11:30,Tue,"[[5514, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5516,2026-01-27 11:40,Tue,"[[5516, ""T2"", 1], [5516, ""T3"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5544,2026-01-27 14:00,Tue,"[[5544, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5554,2026-01-27 14:50,Tue,"[[5554, ""CHOCH"", 1], [5554, ""PENDING_SET"", 1, 25132.25], [5554, ""SIGNAL"", 1, ""CONT"", 25088.3, 54.20000000000073]]","[[5554, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5559,2026-01-27 15:15,Tue,"[[5559, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5562,2026-01-28 09:15,Wed,"[[5562, ""T2"", 1], [5562, ""T3"", 1]]","[[5562, ""T1"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5563,2026-01-28 09:20,Wed,"[[5563, ""T4"", 1], [5563, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5578,2026-01-28 10:35,Wed,"[[5578, ""SIGNAL"", 1, ""CONT"", 25256.15, 45.44999999999709]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5588,2026-01-28 11:25,Wed,"[[5588, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5607,2026-01-28 13:00,Wed,"[[5607, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5611,2026-01-28 13:20,Wed,"[[5611, ""SIGNAL"", -1, ""CONT"", 25291.3, 53.0]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5629,2026-01-28 14:50,Wed,"[[5629, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5630,2026-01-28 14:55,Wed,"[[5630, ""SIGNAL"", 1, ""CONT"", 25278.0, 42.70000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5637,2026-01-29 09:15,Thu,"[[5637, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5644,2026-01-29 09:50,Thu,"[[5644, ""CHOCH"", -1], [5644, ""PENDING_SET"", -1, 25187.65], [5644, ""SIGNAL"", -1, ""CONT"", 25232.8, 52.099999999998545]]","[[5644, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5657,2026-01-29 10:55,Thu,"[[5657, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5668,2026-01-29 11:50,Thu,"[[5668, ""SIGNAL"", -1, ""CONT"", 25270.2, 25.950000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5671,2026-01-29 12:05,Thu,"[[5671, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5676,2026-01-29 12:30,Thu,"[[5676, ""CHOCH"", 1], [5676, ""PENDING_SET"", 1, 25296.9], [5676, ""SIGNAL"", 1, ""CONT"", 25268.2, 29.099999999998545]]","[[5676, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5680,2026-01-29 12:50,Thu,"[[5680, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5683,2026-01-29 13:05,Thu,"[[5683, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5689,2026-01-29 13:35,Thu,"[[5689, ""T3"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5691,2026-01-29 13:45,Thu,"[[5691, ""T4"", 1], [5691, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5700,2026-01-29 14:30,Thu,"[[5700, ""BOS"", 1], [5700, ""PENDING_SET"", 1, 25437.3], [5700, ""SIGNAL"", 1, ""CONT"", 25408.6, 39.400000000001455]]","[[5700, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5706,2026-01-29 15:00,Thu,"[[5706, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5713,2026-01-30 09:20,Fri,"[[5713, ""CHOCH"", -1], [5713, ""PENDING_SET"", -1, 25240.0]]","[[5713, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5722,2026-01-30 10:05,Fri,"[[5722, ""PENDING_EXPIRED"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5734,2026-01-30 11:05,Fri,"[[5734, ""BOS"", -1], [5734, ""PENDING_SET"", -1, 25266.45], [5734, ""SIGNAL"", -1, ""CONT"", 25300.65, 37.55000000000291]]","[[5734, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5748,2026-01-30 12:15,Fri,"[[5748, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5757,2026-01-30 13:00,Fri,"[[5757, ""SIGNAL"", -1, ""CONT"", 25303.3, 26.349999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5758,2026-01-30 13:05,Fri,"[[5758, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5760,2026-01-30 13:15,Fri,"[[5760, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5765,2026-01-30 13:40,Fri,"[[5765, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5767,2026-01-30 13:50,Fri,"[[5767, ""CHOCH"", 1], [5767, ""PENDING_SET"", 1, 25316.6], [5767, ""SIGNAL"", 1, ""CONT"", 25284.9, 44.69999999999709]]","[[5767, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5787,2026-02-01 09:15,Sun,"[[5787, ""CHOCH"", -1], [5787, ""SL_HIT"", 1]]","[[5787, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5825,2026-02-01 12:25,Sun,[],"[[5825, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5826,2026-02-01 12:30,Sun,[],"[[5826, ""SIGNAL"", -1, ""CONT"", 25075.45, 241.0]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5831,2026-02-01 12:55,Sun,[],"[[5831, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5842,2026-02-01 13:50,Sun,[],"[[5842, ""SIGNAL"", -1, ""CONT"", 25095.3, 99.09999999999854]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5857,2026-02-01 15:05,Sun,[],"[[5857, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5859,2026-02-01 15:15,Sun,[],"[[5859, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5871,2026-02-02 10:00,Mon,"[[5871, ""SIGNAL"", -1, ""CONT"", 24865.9, 48.70000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5878,2026-02-02 10:35,Mon,"[[5878, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5882,2026-02-02 10:55,Mon,"[[5882, ""BOS"", -1], [5882, ""PENDING_SET"", -1, 24795.7], [5882, ""SIGNAL"", -1, ""CONT"", 24823.05, 50.04999999999927]]","[[5882, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5884,2026-02-02 11:05,Mon,"[[5884, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5887,2026-02-02 11:20,Mon,[],"[[5887, ""T3"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5889,2026-02-02 11:30,Mon,"[[5889, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5894,2026-02-02 11:55,Mon,"[[5894, ""CHOCH"", 1], [5894, ""PENDING_SET"", 1, 24873.65]]","[[5894, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5897,2026-02-02 12:10,Mon,"[[5897, ""BOS"", 1], [5897, ""SIGNAL"", 1, ""RETEST"", 24853.75, 56.900000000001455]]","[[5897, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5911,2026-02-02 13:20,Mon,"[[5911, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5915,2026-02-02 13:40,Mon,"[[5915, ""BOS"", 1], [5915, ""PENDING_SET"", 1, 24963.3], [5915, ""SIGNAL"", 1, ""CONT"", 24880.2, 84.0]]","[[5915, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5931,2026-02-02 15:00,Mon,"[[5931, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5934,2026-02-02 15:15,Mon,[],"[[5934, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),5937,2026-02-03 09:15,Tue,"[[5937, ""T2"", 1], [5937, ""T3"", 1], [5937, ""T4"", 1], [5937, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6164,2026-02-06 09:25,Fri,"[[6164, ""CHOCH"", -1], [6164, ""PENDING_SET"", -1, 25579.5]]","[[6164, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6165,2026-02-06 09:30,Fri,"[[6165, ""SIGNAL"", -1, ""RETEST"", 25596.95, 33.35000000000218]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6167,2026-02-06 09:40,Fri,"[[6167, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6177,2026-02-06 10:30,Fri,"[[6177, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6187,2026-02-06 11:20,Fri,"[[6187, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6196,2026-02-06 12:05,Fri,"[[6196, ""SIGNAL"", -1, ""CONT"", 25621.3, 27.349999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6200,2026-02-06 12:25,Fri,"[[6200, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6201,2026-02-06 12:30,Fri,"[[6201, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6218,2026-02-06 13:55,Fri,"[[6218, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6227,2026-02-06 14:40,Fri,"[[6227, ""CHOCH"", 1], [6227, ""PENDING_SET"", 1, 25633.3], [6227, ""SIGNAL"", 1, ""CONT"", 25631.7, 20.149999999997817]]","[[6227, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6231,2026-02-06 15:00,Fri,"[[6231, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6232,2026-02-06 15:05,Fri,"[[6232, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6237,2026-02-09 09:15,Mon,"[[6237, ""T3"", 1], [6237, ""T4"", 1], [6237, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6914,2026-02-20 09:25,Fri,"[[6914, ""SIGNAL"", -1, ""CONT"", 25432.0, 49.900000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6915,2026-02-20 09:30,Fri,"[[6915, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6935,2026-02-20 11:10,Fri,"[[6935, ""SIGNAL"", -1, ""CONT"", 25586.35, 24.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6938,2026-02-20 11:25,Fri,"[[6938, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6948,2026-02-20 12:15,Fri,"[[6948, ""CHOCH"", 1], [6948, ""PENDING_SET"", 1, 25620.7], [6948, ""SIGNAL"", 1, ""CONT"", 25591.2, 43.70000000000073]]","[[6948, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6954,2026-02-20 12:45,Fri,"[[6954, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6958,2026-02-20 13:05,Fri,"[[6958, ""CHOCH"", -1], [6958, ""PENDING_SET"", -1, 25580.55], [6958, ""SIGNAL"", -1, ""CONT"", 25588.9, 26.950000000000728]]","[[6958, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6961,2026-02-20 13:20,Fri,"[[6961, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6963,2026-02-20 13:30,Fri,"[[6963, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6964,2026-02-20 13:35,Fri,"[[6964, ""BOS"", -1], [6964, ""PENDING_SET"", -1, 25580.55]]","[[6964, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6965,2026-02-20 13:40,Fri,"[[6965, ""SIGNAL"", -1, ""RETEST"", 25609.6, 36.599999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6969,2026-02-20 14:00,Fri,"[[6969, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6982,2026-02-20 15:05,Fri,"[[6982, ""SIGNAL"", -1, ""CONT"", 25649.65, 75.45000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6987,2026-02-23 09:15,Mon,"[[6987, ""CHOCH"", 1], [6987, ""SL_HIT"", -1]]","[[6987, ""CHOCH"", 1], [6987, ""PENDING_SET"", 1, 25652.85], [6987, ""SIGNAL"", 1, ""CONT"", 25626.5, 70.90000000000146]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6988,2026-02-23 09:20,Mon,"[[6988, ""SIGNAL"", 1, ""CONT"", 25626.5, 109.79999999999927]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),6990,2026-02-23 09:30,Mon,[],"[[6990, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7287,2026-02-27 09:15,Fri,"[[7287, ""CHOCH"", -1], [7287, ""PENDING_SET"", -1, 25406.15], [7287, ""SIGNAL"", -1, ""CONT"", 25501.85, 106.44999999999709]]","[[7287, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7314,2026-02-27 11:30,Fri,"[[7314, ""BOS"", -1], [7314, ""T1"", -1]]","[[7314, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7356,2026-02-27 15:00,Fri,"[[7356, ""CHOCH"", -1], [7356, ""T2"", -1]]","[[7356, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7362,2026-03-02 09:15,Mon,"[[7362, ""T3"", -1], [7362, ""T4"", -1], [7362, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7620,2026-03-06 12:00,Fri,"[[7620, ""SIGNAL"", -1, ""CONT"", 24630.2, 20.549999999999272]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7622,2026-03-06 12:10,Fri,"[[7622, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7625,2026-03-06 12:25,Fri,"[[7625, ""BOS"", -1], [7625, ""PENDING_SET"", -1, 24593.9], [7625, ""SIGNAL"", -1, ""CONT"", 24609.7, 31.400000000001455]]","[[7625, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7630,2026-03-06 12:50,Fri,"[[7630, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7638,2026-03-06 13:30,Fri,"[[7638, ""SIGNAL"", -1, ""CONT"", 24613.15, 28.950000000000728]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7639,2026-03-06 13:35,Fri,"[[7639, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7642,2026-03-06 13:50,Fri,"[[7642, ""BOS"", -1], [7642, ""PENDING_SET"", -1, 24576.05]]","[[7642, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7643,2026-03-06 13:55,Fri,"[[7643, ""SIGNAL"", -1, ""RETEST"", 24596.5, 41.599999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7646,2026-03-06 14:10,Fri,"[[7646, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7651,2026-03-06 14:35,Fri,"[[7651, ""SIGNAL"", -1, ""CONT"", 24602.3, 33.39999999999782]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7652,2026-03-06 14:40,Fri,"[[7652, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7653,2026-03-06 14:45,Fri,"[[7653, ""BOS"", -1], [7653, ""T2"", -1], [7653, ""T3"", -1]]","[[7653, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),7658,2026-03-06 15:10,Fri,"[[7658, ""T4"", -1], [7658, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),9913,2026-04-24 09:20,Fri,"[[9913, ""SIGNAL"", -1, ""CONT"", 24206.0, 114.90000000000146]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),9918,2026-04-24 09:45,Fri,"[[9918, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),9959,2026-04-24 13:10,Fri,"[[9959, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),9987,2026-04-27 09:15,Mon,"[[9987, ""BOS"", 1]]","[[9987, ""BOS"", 1], [9987, ""PENDING_SET"", 1, 23930.5], [9987, ""SIGNAL"", 1, ""CONT"", 23900.7, 119.64999999999782]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10068,2026-04-28 09:45,Tue,[],"[[10068, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10146,2026-04-29 10:00,Wed,"[[10146, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10147,2026-04-29 10:05,Wed,"[[10147, ""SIGNAL"", 1, ""CONT"", 24174.6, 37.150000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10149,2026-04-29 10:15,Wed,"[[10149, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10150,2026-04-29 10:20,Wed,[],"[[10150, ""T2"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10151,2026-04-29 10:25,Wed,"[[10151, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10176,2026-04-29 12:30,Wed,"[[10176, ""T3"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10208,2026-04-29 15:10,Wed,"[[10208, ""BOS"", -1], [10208, ""SL_HIT"", 1]]","[[10208, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10209,2026-04-29 15:15,Wed,"[[10209, ""SIGNAL"", -1, ""CONT"", 24193.0, 34.900000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10212,2026-04-30 09:15,Thu,"[[10212, ""T1"", -1], [10212, ""T2"", -1], [10212, ""T3"", -1], [10212, ""T4"", -1], [10212, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10213,2026-04-30 09:20,Thu,"[[10213, ""SIGNAL"", -1, ""CONT"", 24019.15, 118.35000000000218]]","[[10213, ""SL_HIT"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10214,2026-04-30 09:25,Thu,[],"[[10214, ""SIGNAL"", -1, ""CONT"", 23951.25, 74.29999999999927]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10218,2026-04-30 09:45,Thu,[],"[[10218, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10221,2026-04-30 10:00,Thu,"[[10221, ""BOS"", -1]]","[[10221, ""BOS"", -1], [10221, ""PENDING_SET"", -1, 23864.55], [10221, ""SIGNAL"", -1, ""CONT"", 23880.0, 30.400000000001455]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10224,2026-04-30 10:15,Thu,[],"[[10224, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10247,2026-04-30 12:10,Thu,[],"[[10247, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10249,2026-04-30 12:20,Thu,[],"[[10249, ""SIGNAL"", 1, ""CONT"", 23882.15, 29.44999999999709]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10256,2026-04-30 12:55,Thu,[],"[[10256, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10261,2026-04-30 13:20,Thu,[],"[[10261, ""T2"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10265,2026-04-30 13:40,Thu,"[[10265, ""SL_HIT"", -1]]","[[10265, ""T3"", 1], [10265, ""T4"", 1], [10265, ""T4_COMPLETE"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10606,2026-05-08 10:50,Fri,"[[10606, ""SIGNAL"", -1, ""CONT"", 24239.85, 33.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10611,2026-05-08 11:15,Fri,"[[10611, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10621,2026-05-08 12:05,Fri,"[[10621, ""BOS"", -1], [10621, ""PENDING_SET"", -1, 24185.6], [10621, ""SIGNAL"", -1, ""CONT"", 24203.65, 24.700000000000728]]","[[10621, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10629,2026-05-08 12:45,Fri,"[[10629, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10643,2026-05-08 13:55,Fri,"[[10643, ""BOS"", -1], [10643, ""T2"", -1]]","[[10643, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10650,2026-05-08 14:30,Fri,"[[10650, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10651,2026-05-08 14:35,Fri,"[[10651, ""CHOCH"", 1], [10651, ""PENDING_SET"", 1, 24202.65], [10651, ""SIGNAL"", 1, ""CONT"", 24168.55, 50.10000000000218]]","[[10651, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),10656,2026-05-08 15:00,Fri,"[[10656, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12762,2026-06-19 09:15,Fri,"[[12762, ""CHOCH"", -1], [12762, ""PENDING_SET"", -1, 24074.7], [12762, ""SIGNAL"", -1, ""CONT"", 24184.75, 203.95000000000073]]","[[12762, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12837,2026-06-22 09:15,Mon,[],"[[12837, ""SIGNAL"", 1, ""CONT"", 24073.15, 49.0]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12912,2026-06-23 09:15,Tue,[],"[[12912, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12926,2026-06-23 10:25,Tue,[],"[[12926, ""SIGNAL"", -1, ""CONT"", 24130.1, 17.649999999997817]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12930,2026-06-23 10:45,Tue,[],"[[12930, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12936,2026-06-23 11:15,Tue,[],"[[12936, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12940,2026-06-23 11:35,Tue,[],"[[12940, ""SIGNAL"", -1, ""CONT"", 24114.75, 16.400000000001455]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12941,2026-06-23 11:40,Tue,"[[12941, ""BOS"", -1]]","[[12941, ""BOS"", -1], [12941, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12942,2026-06-23 11:45,Tue,[],"[[12942, ""T2"", -1], [12942, ""T3"", -1], [12942, ""T4"", -1], [12942, ""T4_COMPLETE"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12943,2026-06-23 11:50,Tue,[],"[[12943, ""SIGNAL"", -1, ""CONT"", 24083.4, 68.60000000000218]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12949,2026-06-23 12:20,Tue,[],"[[12949, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12963,2026-06-23 13:30,Tue,[],"[[12963, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),12984,2026-06-23 15:15,Tue,[],"[[12984, ""T3"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13039,2026-06-24 13:35,Wed,[],"[[13039, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13058,2026-06-24 15:10,Wed,"[[13058, ""CHOCH"", -1]]","[[13058, ""CHOCH"", -1], [13058, ""PENDING_SET"", -1, 24026.5], [13058, ""SIGNAL"", -1, ""CONT"", 24036.6, 30.149999999997817]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13062,2026-06-25 09:15,Thu,"[[13062, ""CHOCH"", 1]]","[[13062, ""CHOCH"", 1], [13062, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13063,2026-06-25 09:20,Thu,[],"[[13063, ""SIGNAL"", 1, ""CONT"", 24107.8, 49.29999999999927]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13069,2026-06-25 09:50,Thu,"[[13069, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13080,2026-06-25 10:45,Thu,"[[13080, ""BOS"", 1], [13080, ""PENDING_SET"", 1, 24190.25], [13080, ""SIGNAL"", 1, ""CONT"", 24166.9, 32.29999999999927]]","[[13080, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13092,2026-06-25 11:45,Thu,[],"[[13092, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13094,2026-06-25 11:55,Thu,"[[13094, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13097,2026-06-25 12:10,Thu,[],"[[13097, ""T2"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13121,2026-06-25 14:10,Thu,"[[13121, ""BOS"", -1], [13121, ""SL_HIT"", 1]]","[[13121, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13122,2026-06-25 14:15,Thu,"[[13122, ""SIGNAL"", -1, ""CONT"", 24173.6, 53.849999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13123,2026-06-25 14:20,Thu,[],"[[13123, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13127,2026-06-25 14:40,Thu,[],"[[13127, ""SIGNAL"", -1, ""CONT"", 24128.9, 57.85000000000218]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13131,2026-06-25 15:00,Thu,"[[13131, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13141,2026-06-29 09:35,Mon,"[[13141, ""T2"", -1]]","[[13141, ""T1"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13176,2026-06-29 12:30,Mon,"[[13176, ""T3"", -1]]","[[13176, ""T2"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13213,2026-06-30 09:20,Tue,"[[13213, ""BOS"", -1], [13213, ""T4"", -1], [13213, ""T4_COMPLETE"", -1]]","[[13213, ""BOS"", -1], [13213, ""T3"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13215,2026-06-30 09:30,Tue,"[[13215, ""SIGNAL"", -1, ""CONT"", 23912.8, 39.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13221,2026-06-30 10:00,Tue,"[[13221, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13235,2026-06-30 11:10,Tue,"[[13235, ""CHOCH"", 1], [13235, ""PENDING_SET"", 1, 23916.05], [13235, ""SIGNAL"", 1, ""CONT"", 23876.8, 61.25]]","[[13235, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13272,2026-06-30 14:15,Tue,"[[13272, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13280,2026-06-30 14:55,Tue,"[[13280, ""SIGNAL"", -1, ""CONT"", 23941.95, 36.60000000000218]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13281,2026-06-30 15:00,Tue,"[[13281, ""BOS"", -1], [13281, ""T1"", -1], [13281, ""T2"", -1]]","[[13281, ""BOS"", -1], [13281, ""T4"", -1], [13281, ""T4_COMPLETE"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13291,2026-07-01 09:35,Wed,"[[13291, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13451,2026-07-03 10:25,Fri,"[[13451, ""SIGNAL"", 1, ""CONT"", 24315.4, 29.69999999999709]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13483,2026-07-03 13:05,Fri,"[[13483, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13485,2026-07-03 13:15,Fri,"[[13485, ""CHOCH"", -1], [13485, ""PENDING_SET"", -1, 24319.1]]","[[13485, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13486,2026-07-03 13:20,Fri,"[[13486, ""SIGNAL"", -1, ""RETEST"", 24325.8, 14.599999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13488,2026-07-03 13:30,Fri,"[[13488, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13489,2026-07-03 13:35,Fri,"[[13489, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13498,2026-07-03 14:20,Fri,"[[13498, ""BOS"", -1], [13498, ""T3"", -1]]","[[13498, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13505,2026-07-03 14:55,Fri,"[[13505, ""T4"", -1], [13505, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13508,2026-07-03 15:10,Fri,"[[13508, ""BOS"", -1], [13508, ""PENDING_SET"", -1, 24272.65]]","[[13508, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13509,2026-07-03 15:15,Fri,"[[13509, ""SIGNAL"", -1, ""RETEST"", 24282.25, 14.049999999999272]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13512,2026-07-06 09:15,Mon,"[[13512, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13820,2026-07-10 09:55,Fri,"[[13820, ""SIGNAL"", 1, ""CONT"", 24198.45, 18.299999999999272]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13827,2026-07-10 10:30,Fri,"[[13827, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13834,2026-07-10 11:05,Fri,"[[13834, ""CHOCH"", -1], [13834, ""PENDING_SET"", -1, 24187.95], [13834, ""SIGNAL"", -1, ""CONT"", 24206.15, 22.350000000002183]]","[[13834, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13838,2026-07-10 11:25,Fri,"[[13838, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13866,2026-07-10 13:45,Fri,"[[13866, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13870,2026-07-10 14:05,Fri,"[[13870, ""SIGNAL"", -1, ""CONT"", 24193.1, 15.69999999999709]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13873,2026-07-10 14:20,Fri,"[[13873, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13874,2026-07-10 14:25,Fri,"[[13874, ""CHOCH"", 1], [13874, ""PENDING_SET"", 1, 24207.3], [13874, ""SIGNAL"", 1, ""CONT"", 24187.95, 24.349999999998545]]","[[13874, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13881,2026-07-10 15:00,Fri,"[[13881, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13882,2026-07-10 15:05,Fri,"[[13882, ""BOS"", 1], [13882, ""PENDING_SET"", 1, 24207.3]]","[[13882, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13885,2026-07-10 15:20,Fri,"[[13885, ""SIGNAL"", 1, ""RETEST"", 24197.25, 11.849999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13886,2026-07-10 15:25,Fri,"[[13886, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13887,2026-07-13 09:15,Mon,"[[13887, ""CHOCH"", -1], [13887, ""SL_HIT"", 1]]","[[13887, ""CHOCH"", -1], [13887, ""PENDING_SET"", -1, 24187.3], [13887, ""SIGNAL"", -1, ""CONT"", 24220.95, 193.5]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13916,2026-07-13 11:40,Mon,"[[13916, ""SIGNAL"", -1, ""CONT"", 24152.1, 21.44999999999709]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13918,2026-07-13 11:50,Mon,"[[13918, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13922,2026-07-13 12:10,Mon,"[[13922, ""CHOCH"", 1], [13922, ""PENDING_SET"", 1, 24162.05], [13922, ""SIGNAL"", 1, ""CONT"", 24151.9, 30.099999999998545]]","[[13922, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13927,2026-07-13 12:35,Mon,"[[13927, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13929,2026-07-13 12:45,Mon,[],"[[13929, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13930,2026-07-13 12:50,Mon,"[[13930, ""T2"", 1]]","[[13930, ""SIGNAL"", 1, ""CONT"", 24209.6, 28.950000000000728]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13932,2026-07-13 13:00,Mon,[],"[[13932, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13946,2026-07-13 14:10,Mon,[],"[[13946, ""SIGNAL"", 1, ""CONT"", 24194.35, 21.0]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13948,2026-07-13 14:20,Mon,[],"[[13948, ""T1"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13960,2026-07-13 15:20,Mon,[],"[[13960, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13962,2026-07-14 09:15,Tue,"[[13962, ""CHOCH"", -1], [13962, ""SL_HIT"", 1]]","[[13962, ""CHOCH"", -1], [13962, ""PENDING_SET"", -1, 24161.8]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13964,2026-07-14 09:25,Tue,[],"[[13964, ""SIGNAL"", -1, ""RETEST"", 24157.1, 16.19999999999709]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13965,2026-07-14 09:30,Tue,[],"[[13965, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13966,2026-07-14 09:35,Tue,[],"[[13966, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13967,2026-07-14 09:40,Tue,[],"[[13967, ""T3"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13968,2026-07-14 09:45,Tue,"[[13968, ""SIGNAL"", -1, ""CONT"", 24106.25, 27.150000000001455]]","[[13968, ""T4"", -1], [13968, ""T4_COMPLETE"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),13974,2026-07-14 10:15,Tue,"[[13974, ""BOS"", -1], [13974, ""T1"", -1]]","[[13974, ""BOS"", -1], [13974, ""PENDING_SET"", -1, 24062.45], [13974, ""SIGNAL"", -1, ""CONT"", 24097.3, 49.599999999998545]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14189,2026-07-17 09:25,Fri,"[[14189, ""SIGNAL"", 1, ""CONT"", 24182.65, 27.349999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14193,2026-07-17 09:45,Fri,"[[14193, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14199,2026-07-17 10:15,Fri,"[[14199, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14229,2026-07-17 12:45,Fri,"[[14229, ""BOS"", 1], [14229, ""T3"", 1]]","[[14229, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14247,2026-07-17 14:15,Fri,"[[14247, ""CHOCH"", 1], [14247, ""T4"", 1], [14247, ""T4_COMPLETE"", 1]]","[[14247, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14250,2026-07-17 14:30,Fri,"[[14250, ""BOS"", 1], [14250, ""PENDING_SET"", 1, 24297.5]]","[[14250, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14252,2026-07-17 14:40,Fri,"[[14252, ""SIGNAL"", 1, ""RETEST"", 24290.0, 27.650000000001455]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14261,2026-07-17 15:25,Fri,"[[14261, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14262,2026-07-20 09:15,Mon,"[[14262, ""CHOCH"", -1], [14262, ""SL_HIT"", 1]]","[[14262, ""CHOCH"", -1], [14262, ""PENDING_SET"", -1, 24213.45]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14264,2026-07-20 09:25,Mon,[],"[[14264, ""SIGNAL"", -1, ""RETEST"", 24217.15, 25.450000000000728]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14266,2026-07-20 09:35,Mon,[],"[[14266, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14273,2026-07-20 10:10,Mon,[],"[[14273, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14568,2026-07-24 09:45,Fri,"[[14568, ""SIGNAL"", -1, ""CONT"", 23677.1, 28.099999999998545]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14571,2026-07-24 10:00,Fri,"[[14571, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14587,2026-07-24 11:20,Fri,"[[14587, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14608,2026-07-24 13:05,Fri,"[[14608, ""SIGNAL"", -1, ""CONT"", 23800.25, 32.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14618,2026-07-24 13:55,Fri,"[[14618, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14619,2026-07-24 14:00,Fri,"[[14619, ""CHOCH"", 1], [14619, ""PENDING_SET"", 1, 23808.7], [14619, ""SIGNAL"", 1, ""CONT"", 23780.1, 37.05000000000291]]","[[14619, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14623,2026-07-24 14:20,Fri,"[[14623, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14629,2026-07-24 14:50,Fri,"[[14629, ""SIGNAL"", 1, ""CONT"", 23761.85, 28.600000000002183]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),14631,2026-07-24 15:00,Fri,"[[14631, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16821,2026-09-04 10:00,Fri,"[[16821, ""CHOCH"", 1], [16821, ""PENDING_SET"", 1, 23949.85], [16821, ""SIGNAL"", 1, ""CONT"", 23945.95, 13.349999999998545]]","[[16821, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16822,2026-09-04 10:05,Fri,"[[16822, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16825,2026-09-04 10:20,Fri,"[[16825, ""BOS"", 1], [16825, ""PENDING_SET"", 1, 23949.85]]","[[16825, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16826,2026-09-04 10:25,Fri,"[[16826, ""SIGNAL"", 1, ""RETEST"", 23951.4, 12.399999999997817]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16837,2026-09-04 11:20,Fri,"[[16837, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16838,2026-09-04 11:25,Fri,"[[16838, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16840,2026-09-04 11:35,Fri,"[[16840, ""T3"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16847,2026-09-04 12:10,Fri,"[[16847, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16874,2026-09-04 14:25,Fri,"[[16874, ""SIGNAL"", 1, ""CONT"", 23943.8, 13.799999999999272]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16876,2026-09-04 14:35,Fri,"[[16876, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16881,2026-09-04 15:00,Fri,"[[16881, ""CHOCH"", -1], [16881, ""PENDING_SET"", -1, 23931.65], [16881, ""SIGNAL"", -1, ""CONT"", 23943.3, 12.299999999999272]]","[[16881, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16883,2026-09-04 15:10,Fri,"[[16883, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16886,2026-09-04 15:25,Fri,"[[16886, ""BOS"", -1], [16886, ""PENDING_SET"", -1, 23931.65], [16886, ""SIGNAL"", -1, ""CONT"", 23937.9, 40.20000000000073]]","[[16886, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16887,2026-09-07 09:15,Mon,"[[16887, ""T1"", -1]]","[[16887, ""SIGNAL"", -1, ""CONT"", 23937.9, 79.10000000000218]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16894,2026-09-07 09:50,Mon,"[[16894, ""BOS"", -1], [16894, ""T2"", -1]]","[[16894, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16908,2026-09-07 11:00,Mon,"[[16908, ""T3"", -1]]","[[16908, ""T1"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16962,2026-09-08 09:15,Tue,"[[16962, ""BOS"", -1], [16962, ""T4"", -1], [16962, ""T4_COMPLETE"", -1]]","[[16962, ""BOS"", -1], [16962, ""T2"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),16963,2026-09-08 09:20,Tue,"[[16963, ""SIGNAL"", -1, ""CONT"", 23758.95, 79.45000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17037,2026-09-09 09:15,Wed,"[[17037, ""BOS"", -1], [17037, ""T1"", -1], [17037, ""T2"", -1]]","[[17037, ""BOS"", -1], [17037, ""T3"", -1], [17037, ""T4"", -1], [17037, ""T4_COMPLETE"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17044,2026-09-09 09:50,Wed,[],"[[17044, ""SIGNAL"", -1, ""CONT"", 23527.75, 30.349999999998545]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17048,2026-09-09 10:10,Wed,[],"[[17048, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17050,2026-09-09 10:20,Wed,[],"[[17050, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17062,2026-09-09 11:20,Wed,[],"[[17062, ""SIGNAL"", -1, ""CONT"", 23530.95, 13.900000000001455]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17066,2026-09-09 11:40,Wed,[],"[[17066, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17068,2026-09-09 11:50,Wed,[],"[[17068, ""SIGNAL"", -1, ""CONT"", 23518.15, 15.850000000002183]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17070,2026-09-09 12:00,Wed,[],"[[17070, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17076,2026-09-09 12:30,Wed,"[[17076, ""CHOCH"", 1]]","[[17076, ""CHOCH"", 1], [17076, ""SL_HIT"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17077,2026-09-09 12:35,Wed,[],"[[17077, ""SIGNAL"", 1, ""CONT"", 23510.7, 46.75]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17101,2026-09-09 14:35,Wed,[],"[[17101, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17102,2026-09-09 14:40,Wed,[],"[[17102, ""SIGNAL"", -1, ""CONT"", 23516.6, 28.94999999999709]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17107,2026-09-09 15:05,Wed,[],"[[17107, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17111,2026-09-09 15:25,Wed,"[[17111, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17113,2026-09-10 09:20,Thu,[],"[[17113, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17177,2026-09-10 14:40,Thu,[],"[[17177, ""T3"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17222,2026-09-11 12:10,Fri,"[[17222, ""SIGNAL"", -1, ""CONT"", 23352.5, 20.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17227,2026-09-11 12:35,Fri,"[[17227, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17232,2026-09-11 13:00,Fri,"[[17232, ""SIGNAL"", -1, ""CONT"", 23358.65, 27.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17238,2026-09-11 13:30,Fri,"[[17238, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17243,2026-09-11 13:55,Fri,"[[17243, ""CHOCH"", 1], [17243, ""PENDING_SET"", 1, 23361.1], [17243, ""SIGNAL"", 1, ""CONT"", 23338.2, 47.95000000000073]]","[[17243, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17244,2026-09-11 14:00,Fri,"[[17244, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17262,2026-09-15 09:15,Tue,"[[17262, ""BOS"", 1], [17262, ""T2"", 1], [17262, ""T3"", 1], [17262, ""T4"", 1], [17262, ""T4_COMPLETE"", 1]]","[[17262, ""BOS"", 1], [17262, ""PENDING_SET"", 1, 23440.55]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17266,2026-09-15 09:35,Tue,[],"[[17266, ""SIGNAL"", 1, ""RETEST"", 23446.45, 10.299999999999272]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17267,2026-09-15 09:40,Tue,[],"[[17267, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17491,2026-09-18 09:35,Fri,"[[17491, ""BOS"", 1], [17491, ""PENDING_SET"", 1, 23311.65]]","[[17491, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17493,2026-09-18 09:45,Fri,"[[17493, ""SIGNAL"", 1, ""RETEST"", 23302.05, 10.25]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17494,2026-09-18 09:50,Fri,"[[17494, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17495,2026-09-18 09:55,Fri,"[[17495, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17501,2026-09-18 10:25,Fri,"[[17501, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17517,2026-09-18 11:45,Fri,"[[17517, ""SIGNAL"", 1, ""CONT"", 23296.35, 14.25]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17518,2026-09-18 11:50,Fri,"[[17518, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17528,2026-09-18 12:40,Fri,"[[17528, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17545,2026-09-18 14:05,Fri,"[[17545, ""BOS"", 1], [17545, ""T3"", 1]]","[[17545, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17550,2026-09-18 14:30,Fri,"[[17550, ""T4"", 1], [17550, ""T4_COMPLETE"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17554,2026-09-18 14:50,Fri,"[[17554, ""SIGNAL"", 1, ""CONT"", 23352.3, 31.25]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17556,2026-09-18 15:00,Fri,"[[17556, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17926,2026-09-25 14:35,Fri,"[[17926, ""SIGNAL"", 1, ""CONT"", 23118.3, 19.5]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17927,2026-09-25 14:40,Fri,"[[17927, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17933,2026-09-25 15:10,Fri,"[[17933, ""SIGNAL"", 1, ""CONT"", 23104.4, 23.19999999999709]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17937,2026-09-28 09:15,Mon,"[[17937, ""CHOCH"", -1], [17937, ""SL_HIT"", 1]]","[[17937, ""CHOCH"", -1], [17937, ""PENDING_SET"", -1, 23103.5], [17937, ""SIGNAL"", -1, ""CONT"", 23140.5, 191.0]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),17938,2026-09-28 09:20,Mon,"[[17938, ""SIGNAL"", -1, ""CONT"", 23080.25, 153.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18001,2026-09-28 14:35,Mon,"[[18001, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18012,2026-09-29 09:15,Tue,"[[18012, ""BOS"", -1]]","[[18012, ""BOS"", -1], [18012, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18015,2026-09-29 09:30,Tue,"[[18015, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18041,2026-09-29 15:20,Tue,"[[18041, ""T3"", -1], [18041, ""T4"", -1], [18041, ""T4_COMPLETE"", -1]]","[[18041, ""T2"", -1], [18041, ""T3"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18042,2026-09-29 15:25,Tue,"[[18042, ""CHOCH"", 1], [18042, ""PENDING_SET"", 1, 22696.0], [18042, ""SIGNAL"", 1, ""CONT"", 22628.55, 87.65000000000146]]","[[18042, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18085,2026-09-30 12:45,Wed,"[[18085, ""T1"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18107,2026-09-30 14:35,Wed,"[[18107, ""SL_HIT"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18117,2026-10-01 09:15,Thu,"[[18117, ""BOS"", -1], [18117, ""PENDING_SET"", -1, 22595.2]]","[[18117, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18118,2026-10-01 09:20,Thu,"[[18118, ""SIGNAL"", -1, ""CONT"", 22590.05, 76.59999999999854]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18126,2026-10-01 10:00,Thu,"[[18126, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18139,2026-10-01 11:05,Thu,"[[18139, ""BOS"", -1], [18139, ""PENDING_SET"", -1, 22543.0], [18139, ""SIGNAL"", -1, ""CONT"", 22563.1, 27.94999999999709]]","[[18139, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18141,2026-10-01 11:15,Thu,"[[18141, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18142,2026-10-01 11:20,Thu,"[[18142, ""BOS"", -1], [18142, ""PENDING_SET"", -1, 22543.0]]","[[18142, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18151,2026-10-01 12:05,Thu,"[[18151, ""PENDING_EXPIRED"", -1], [18151, ""SIGNAL"", -1, ""CONT"", 22574.25, 41.95000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18154,2026-10-01 12:20,Thu,"[[18154, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18158,2026-10-01 12:40,Thu,"[[18158, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18159,2026-10-01 12:45,Thu,"[[18159, ""T3"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18160,2026-10-01 12:50,Thu,"[[18160, ""T4"", -1], [18160, ""T4_COMPLETE"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18161,2026-10-01 12:55,Thu,"[[18161, ""SIGNAL"", -1, ""CONT"", 22380.55, 55.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18163,2026-10-01 13:05,Thu,"[[18163, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18170,2026-10-01 13:40,Thu,"[[18170, ""BOS"", -1], [18170, ""PENDING_SET"", -1, 22301.3], [18170, ""SIGNAL"", -1, ""CONT"", 22361.95, 66.29999999999927]]","[[18170, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18174,2026-10-01 14:00,Thu,"[[18174, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18180,2026-10-01 14:30,Thu,"[[18180, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18200,2026-10-05 10:20,Mon,"[[18200, ""SIGNAL"", -1, ""CONT"", 22560.5, 55.70000000000073]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18218,2026-10-05 11:50,Mon,"[[18218, ""T1"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18241,2026-10-05 13:45,Mon,"[[18241, ""SL_HIT"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18259,2026-10-05 15:20,Mon,"[[18259, ""SIGNAL"", 1, ""CONT"", 22520.55, 47.75]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18261,2026-10-06 09:15,Tue,"[[18261, ""BOS"", 1], [18261, ""T1"", 1]]","[[18261, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18269,2026-10-06 09:55,Tue,"[[18269, ""T2"", 1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18301,2026-10-06 12:35,Tue,"[[18301, ""BOS"", 1], [18301, ""T3"", 1]]","[[18301, ""BOS"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18332,2026-10-06 15:20,Tue,"[[18332, ""CHOCH"", 1], [18332, ""T4"", 1], [18332, ""T4_COMPLETE"", 1]]","[[18332, ""CHOCH"", 1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18334,2026-10-07 09:15,Wed,"[[18334, ""CHOCH"", -1], [18334, ""PENDING_SET"", -1, 22684.65], [18334, ""SIGNAL"", -1, ""CONT"", 22849.35, 226.64999999999782]]","[[18334, ""CHOCH"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18427,2026-10-08 11:20,Thu,"[[18427, ""BOS"", -1], [18427, ""T1"", -1]]","[[18427, ""BOS"", -1]]",MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18472,2026-10-08 15:05,Thu,"[[18472, ""BOS"", -1]]","[[18472, ""BOS"", -1], [18472, ""T4"", -1], [18472, ""T4_COMPLETE"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18474,2026-10-08 15:20,Thu,"[[18474, ""T2"", -1]]",[],MISSING_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18550,2026-10-12 09:15,Mon,"[[18550, ""BOS"", 1]]","[[18550, ""BOS"", 1], [18550, ""PENDING_SET"", 1, 22571.0]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18552,2026-10-12 09:25,Mon,"[[18552, ""BOS"", 1]]","[[18552, ""BOS"", 1], [18552, ""SIGNAL"", 1, ""RETEST"", 22512.0, 69.79999999999927]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18555,2026-10-12 09:40,Mon,[],"[[18555, ""SL_HIT"", 1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18564,2026-10-12 10:25,Mon,"[[18564, ""CHOCH"", -1]]","[[18564, ""CHOCH"", -1], [18564, ""PENDING_SET"", -1, 22472.15], [18564, ""SIGNAL"", -1, ""CONT"", 22503.4, 37.30000000000291]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18570,2026-10-12 10:55,Mon,[],"[[18570, ""T1"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18573,2026-10-12 11:10,Mon,[],"[[18573, ""T2"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18585,2026-10-12 12:10,Mon,[],"[[18585, ""T3"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18617,2026-10-12 15:05,Mon,[],"[[18617, ""T4"", -1], [18617, ""T4_COMPLETE"", -1]]",EXTRA_IN_PYTHON
+NIFTY_5m_last250s,C0_defaults,PRE-FIX (weekday off by one),18619,2026-10-12 15:20,Mon,"[[18619, ""CHOCH"", 1]]","[[18619, ""CHOCH"", 1], [18619, ""PENDING_SET"", 1, 22389.15]]",EXTRA_IN_PYTHON

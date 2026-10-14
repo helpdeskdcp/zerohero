@@ -1,0 +1,48 @@
+######## smart_bos_research.py baseline (after weekday fix)
+signals {'bars': 931831, 'breaks_up': 32400, 'breaks_dn': 31273, 'days_skipped_incomplete': 14, 'signals': 17792}
+== Pine levels TRAIN T1: trades=6429
+   cost=0bps meanR=+0.018 bps=+0.10 PF=1.03 CI95R=(-0.020,+0.053)
+   cost=1bps meanR=-0.214 bps=-0.90 PF=0.73 CI95R=(-0.253,-0.179)
+== Pine levels TRAIN T2: trades=5701
+   cost=0bps meanR=+0.038 bps=+0.27 PF=1.05 CI95R=(-0.009,+0.080)
+   cost=1bps meanR=-0.191 bps=-0.73 PF=0.79 CI95R=(-0.237,-0.147)
+== Pine levels TRAIN T3: trades=5135
+   cost=0bps meanR=+0.044 bps=+0.24 PF=1.06 CI95R=(-0.014,+0.096)
+   cost=1bps meanR=-0.182 bps=-0.76 PF=0.81 CI95R=(-0.240,-0.130)
+== Pine levels TRAIN SCALE: trades=5135
+   cost=0bps meanR=+0.037 bps=+0.19 PF=1.06 CI95R=(-0.012,+0.079)
+   cost=1bps meanR=-0.188 bps=-0.81 PF=0.77 CI95R=(-0.239,-0.146)
+== Pine levels VALID T1: trades=3023
+   cost=0bps meanR=+0.024 bps=+0.14 PF=1.04 CI95R=(-0.025,+0.070)
+   cost=1bps meanR=-0.240 bps=-0.86 PF=0.71 CI95R=(-0.288,-0.192)
+== Pine levels VALID T2: trades=2686
+   cost=0bps meanR=+0.014 bps=+0.13 PF=1.02 CI95R=(-0.047,+0.081)
+   cost=1bps meanR=-0.246 bps=-0.87 PF=0.73 CI95R=(-0.307,-0.177)
+== Pine levels VALID T3: trades=2393
+   cost=0bps meanR=+0.031 bps=+0.08 PF=1.04 CI95R=(-0.055,+0.112)
+   cost=1bps meanR=-0.226 bps=-0.92 PF=0.77 CI95R=(-0.311,-0.145)
+== Pine levels VALID SCALE: trades=2393
+   cost=0bps meanR=+0.034 bps=+0.18 PF=1.05 CI95R=(-0.028,+0.103)
+   cost=1bps meanR=-0.223 bps=-0.82 PF=0.73 CI95R=(-0.284,-0.155)
+######## smart_bos_research.py oos (after weekday fix)
+== NIFTY OOS: trades=934
+   cost=0bps meanR=+0.149 bps=+2.72 PF=1.27 CI95R=(+0.051,+0.256)
+   cost=1bps meanR=+0.099 bps=+1.72 PF=1.17 CI95R=(+0.001,+0.206)
+   cost=2bps meanR=+0.049 bps=+0.72 PF=1.08 CI95R=(-0.049,+0.156)
+   cost=3bps meanR=-0.001 bps=-0.28 PF=1.00 CI95R=(-0.100,+0.106)
+== NIFTY all years: trades=3175
+   cost=0bps meanR=+0.187 bps=+4.27 PF=1.34 CI95R=(+0.129,+0.245)
+   cost=1bps meanR=+0.141 bps=+3.27 PF=1.25 CI95R=(+0.082,+0.199)
+   cost=2bps meanR=+0.095 bps=+2.27 PF=1.16 CI95R=(+0.036,+0.153)
+   cost=3bps meanR=+0.048 bps=+1.27 PF=1.08 CI95R=(-0.010,+0.106)
+== BANKNIFTY all: trades=1678
+   cost=0bps meanR=+0.094 bps=+2.21 PF=1.17 CI95R=(+0.014,+0.175)
+   cost=1bps meanR=+0.056 bps=+1.21 PF=1.10 CI95R=(-0.024,+0.137)
+   cost=2bps meanR=+0.018 bps=+0.21 PF=1.03 CI95R=(-0.062,+0.099)
+   cost=3bps meanR=-0.020 bps=-0.79 PF=0.97 CI95R=(-0.100,+0.061)
+== SENSEX all: trades=1711
+   cost=0bps meanR=+0.157 bps=+2.80 PF=1.28 CI95R=(+0.079,+0.236)
+   cost=1bps meanR=+0.109 bps=+1.80 PF=1.19 CI95R=(+0.032,+0.188)
+   cost=2bps meanR=+0.061 bps=+0.80 PF=1.10 CI95R=(-0.016,+0.140)
+   cost=3bps meanR=+0.014 bps=-0.20 PF=1.02 CI95R=(-0.063,+0.093)
+exit=0

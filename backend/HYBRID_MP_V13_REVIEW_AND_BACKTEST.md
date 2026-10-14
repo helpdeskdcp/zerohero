@@ -1,3 +1,5 @@
+> **NUMBERS SUPERSEDED (2026-10-14 audit).** All backtest figures below were produced with a weekday off-by-one defect that dropped every Friday (≈20% of sessions) and with a non-TradingView pivot tie rule. The corrected figures, the parity audit and the bias investigation are in `data/research/hybrid_mp/audit/` (`PINE_PYTHON_PARITY_REPORT.md`, `BACKTEST_CORRECTNESS_REPORT.md`). The conclusion (NO-GO) is unchanged; the review findings in §2 are unchanged.
+
 # Hybrid Market Profile Engine v13.0 (Pine v6) — review, Python port, backtest (2026-10-14)
 
 **Verdict: NO-GO.** The script has no measurable edge on NIFTY/BANKNIFTY/SENSEX 1-minute data (2017-06 → 2026-10), gross R is indistinguishable from a random-walk null, and after realistic costs every split, year and exit model loses. Status labels: VERIFIED = measured/tested here; READING = from reading the code only; NOT VERIFIED = could not be tested.

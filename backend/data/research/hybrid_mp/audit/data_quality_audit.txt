@@ -1,0 +1,35 @@
+
+NIFTY INDEX  file=NIFTY_INDEX_2017-01-01_2027-01-01.npz sha256[:16]=678b29a7a1130f78
+  bars=931831 sessions=2327 first=2017-06-01 last=2026-10-12 15:29
+  bars/session expected 375: median 375, sessions with >=99% bars 99.1%, <90% bars 16 sessions, missing bars total 4123
+  duplicate timestamps=0 | bars outside session=63467 | weekend bars (fixed weekday)=3663 | first bar at session open in 91.0% of sampled days
+  OHLC inconsistent bars=12 | zero-range bars=6.8% | zero-volume bars=91.7%
+  largest overnight jumps (open vs prev close): 2020-03-23 -9.15%, 2021-09-27 -6.75%, 2020-03-13 -5.81%
+
+BANKNIFTY INDEX  file=BANKNIFTY_INDEX_2017-01-01_2027-01-01.npz sha256[:16]=3b3f5bf8b0e4c151
+  bars=522262 sessions=1258 first=2021-09-29 last=2026-10-14 15:29
+  bars/session expected 375: median 375, sessions with >=99% bars 98.3%, <90% bars 15 sessions, missing bars total 3588
+  duplicate timestamps=0 | bars outside session=54900 | weekend bars (fixed weekday)=2691 | first bar at session open in 84.8% of sampled days
+  OHLC inconsistent bars=4 | zero-range bars=10.6% | zero-volume bars=85.3%
+  largest overnight jumps (open vs prev close): 2026-02-03 +4.79%, 2025-04-07 -4.23%, 2026-04-08 +4.17%
+
+SENSEX INDEX  file=SENSEX_INDEX_2017-01-01_2027-01-01.npz sha256[:16]=348d3548622f8413
+  bars=502648 sessions=1258 first=2021-09-29 last=2026-10-14 15:29
+  bars/session expected 375: median 375, sessions with >=99% bars 98.1%, <90% bars 14 sessions, missing bars total 4092
+  duplicate timestamps=0 | bars outside session=35568 | weekend bars (fixed weekday)=2295 | first bar at session open in 83.8% of sampled days
+  OHLC inconsistent bars=68 | zero-range bars=6.9% | zero-volume bars=84.8%
+  largest overnight jumps (open vs prev close): 2026-08-01 +6.70%, 2026-08-03 -5.26%, 2025-04-07 -5.25%
+
+CRUDEOIL FUTURE  file=CRUDEOIL_FUTURE_2017-01-01_2027-01-01.npz sha256[:16]=9b5dd3b103f9c267
+  bars=57414 sessions=69 first=2026-07-02 last=2026-10-12 20:28
+  bars/session expected 870: median 870, sessions with >=99% bars 76.8%, <90% bars 8 sessions, missing bars total 2620
+  duplicate timestamps=0 | bars outside session=9 | weekend bars (fixed weekday)=0 | first bar at session open in 78.3% of sampled days
+  OHLC inconsistent bars=0 | zero-range bars=50.8% | zero-volume bars=43.2%
+  largest overnight jumps (open vs prev close): 2026-07-14 +10.26%, 2026-07-27 -4.19%, 2026-08-03 -4.02%
+
+NATURALGAS FUTURE  file=NATURALGAS_FUTURE_2017-01-01_2027-01-01.npz sha256[:16]=0f7a1fa2816794e6
+  bars=62601 sessions=74 first=2026-06-30 last=2026-10-12 20:28
+  bars/session expected 870: median 870, sessions with >=99% bars 77.0%, <90% bars 5 sessions, missing bars total 1784
+  duplicate timestamps=0 | bars outside session=10 | weekend bars (fixed weekday)=0 | first bar at session open in 73.0% of sampled days
+  OHLC inconsistent bars=0 | zero-range bars=53.6% | zero-volume bars=40.3%
+  largest overnight jumps (open vs prev close): 2026-07-13 -3.82%, 2026-10-08 +2.55%, 2026-07-27 -2.22%

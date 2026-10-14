@@ -1,0 +1,32 @@
+
+REAL NIFTY 5m, Pine defaults (gross meanR, 95% CI)
+  AS-PLOTTED                       TRAIN n= 2169 +0.208(+0.11,+0.29) | VALID n=  996 +0.114(-0.02,+0.24) | OOS n= 1110 +0.151(+0.05,+0.27) | overnight 30%
+  + next-open fill only            TRAIN n= 2165 +0.192(+0.10,+0.27) | VALID n=  995 +0.109(-0.03,+0.23) | OOS n= 1101 +0.123(-0.01,+0.23) | overnight 30%
+  + gap fills only                 TRAIN n= 2169 +0.203(+0.09,+0.31) | VALID n=  996 +0.118(-0.06,+0.30) | OOS n= 1110 +0.129(-0.01,+0.27) | overnight 30%
+  + EOD flat only (no overnight)   TRAIN n= 2929 +0.063(+0.00,+0.13) | VALID n= 1316 +0.021(-0.06,+0.10) | OOS n= 1771 -0.021(-0.09,+0.05) | overnight 0%
+  + next-open + EOD flat           TRAIN n= 2929 +0.061(+0.00,+0.12) | VALID n= 1316 +0.021(-0.06,+0.10) | OOS n= 1771 -0.021(-0.09,+0.05) | overnight 0%
+  REALISTIC (all three)            TRAIN n= 2929 +0.061(+0.00,+0.12) | VALID n= 1316 +0.021(-0.06,+0.10) | OOS n= 1771 -0.019(-0.09,+0.05) | overnight 0%
+
+SIGN-FLIP NULL seed 0 (2024-01.. subset; destroys drift/autocorrelation, keeps volatility)
+  AS-PLOTTED                       n=  965 gross meanR +0.223 (+0.10,+0.36)
+  + next-open fill only            n=  958 gross meanR +0.226 (+0.09,+0.36)
+  + gap fills only                 n=  965 gross meanR +0.076 (-0.12,+0.26)
+  + EOD flat only (no overnight)   n= 1706 gross meanR +0.061 (-0.02,+0.13)
+  + next-open + EOD flat           n= 1705 gross meanR +0.063 (-0.02,+0.14)
+  REALISTIC (all three)            n= 1705 gross meanR +0.059 (-0.02,+0.13)
+
+SIGN-FLIP NULL seed 1 (2024-01.. subset; destroys drift/autocorrelation, keeps volatility)
+  AS-PLOTTED                       n= 1107 gross meanR +0.107 (-0.00,+0.22)
+  + next-open fill only            n= 1100 gross meanR +0.077 (-0.05,+0.20)
+  + gap fills only                 n= 1107 gross meanR +0.050 (-0.09,+0.19)
+  + EOD flat only (no overnight)   n= 1784 gross meanR +0.055 (-0.03,+0.12)
+  + next-open + EOD flat           n= 1784 gross meanR +0.055 (-0.04,+0.12)
+  REALISTIC (all three)            n= 1784 gross meanR +0.057 (-0.03,+0.12)
+
+SIGN-FLIP NULL seed 2 (2024-01.. subset; destroys drift/autocorrelation, keeps volatility)
+  AS-PLOTTED                       n= 1158 gross meanR -0.011 (-0.14,+0.11)
+  + next-open fill only            n= 1151 gross meanR -0.020 (-0.12,+0.10)
+  + gap fills only                 n= 1158 gross meanR -0.119 (-0.29,+0.03)
+  + EOD flat only (no overnight)   n= 1805 gross meanR -0.050 (-0.12,+0.01)
+  + next-open + EOD flat           n= 1805 gross meanR -0.050 (-0.12,+0.01)
+  REALISTIC (all three)            n= 1805 gross meanR -0.048 (-0.12,+0.01)
