@@ -1,0 +1,8 @@
+ORDERFLOW weekly, one leg per spike (spike-candle direction), sessions: 2026-10-08, 2026-10-09, 2026-10-12, 2026-10-13, 2026-10-14
+NIFTY       signals= 19 win=  5 loss=  9 unresolved=  5 | target=5 stop=9 time+=0 time-=0 | points=+292.6
+BANKNIFTY   signals= 35 win=  5 loss= 14 unresolved= 16 | target=5 stop=14 time+=0 time-=0 | points=-285.8
+FINNIFTY    no signals
+SENSEX      no signals
+NATURALGAS  signals=123 win= 60 loss= 62 unresolved=  1 | target=0 stop=21 time+=60 time-=41 | points=+13.7
+CRUDEOIL    signals= 71 win= 10 loss= 53 unresolved=  8 | target=10 stop=53 time+=0 time-=0 | points=-484.0
+TOTAL signals=248 win=80 loss=138 unresolved=30 win-rate(resolved)=36.7%; no data: [('NIFTY', '2026-10-09'), ('NIFTY', '2026-10-14'), ('BANKNIFTY', '2026-10-09'), ('FINNIFTY', '2026-10-08'), ('FINNIFTY', '2026-10-09'), ('FINNIFTY', '2026-10-12'), ('FINNIFTY', '2026-10-13'), ('FINNIFTY', '2026-10-14'), ('SENSEX', '2026-10-08'), ('SENSEX', '2026-10-09'), ('SENSEX', '2026-10-12'), ('SENSEX', '2026-10-13'), ('SENSEX', '2026-10-14')]

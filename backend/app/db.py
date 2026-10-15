@@ -5,7 +5,9 @@ Tables mirror the n8n Data Tables: ai_signals_log, ai_paper_trades.
 import logging
 import os
 import sqlite3
+import sys
 import threading
+import time as _time
 from contextlib import contextmanager
 
 _log = logging.getLogger(__name__)
@@ -446,15 +448,67 @@ def get_conn():
     return conn
 
 
+# --- lock-contention diagnostics (observation only; never changes locking behaviour) -----------------------------------
+# One process-wide lock serialises every DB user, including the asyncio event loop. A slow query in ANY thread therefore stalls the whole
+# app (seen: a 29.9 s event-loop stall at startup). These counters + warnings name the offender: who held the lock and for how long, and who
+# had to wait. Threshold via CHANAKYA_DB_LOCK_WARN_SEC (default 1.5 s).
+_LOCK_WARN_SEC = float(os.environ.get("CHANAKYA_DB_LOCK_WARN_SEC", "1.5") or 1.5)
+_lock_info: dict = {"holder": None, "since": 0.0}
+LOCK_STATS: dict = {"acquires": 0, "max_wait_sec": 0.0, "max_hold_sec": 0.0, "slow": []}     # slow: last 25 events (bounded)
+
+
+def _db_caller() -> str:
+    try:
+        f = sys._getframe(2)                      # frame 0 = this helper's caller (db), 1 = contextlib.__enter__, 2 = the `with db()` user
+        for _ in range(4):
+            if f is not None and f.f_code.co_filename.endswith("contextlib.py"):
+                f = f.f_back
+        return f"{os.path.basename(f.f_code.co_filename)}:{f.f_code.co_name}:{f.f_lineno}|{threading.current_thread().name}"
+    except Exception:
+        return "?"
+
+
+def _note_slow(kind: str, sec: float, who: str, other: str | None = None) -> None:
+    try:
+        LOCK_STATS["slow"].append({"kind": kind, "sec": round(sec, 2), "who": who, "holder": other, "ts": _time.time()})
+        del LOCK_STATS["slow"][:-25]
+        _log.warning("db lock %s %.2fs by %s%s", kind, sec, who, f" (holder: {other})" if other else "")
+    except Exception:
+        pass
+
+
 @contextmanager
 def db():
+    t_req = _time.monotonic()
+    who = _db_caller()
+    before = dict(_lock_info)                     # racy snapshot of the current holder, only used for the message
     with _lock:
+        t_got = _time.monotonic()
+        try:
+            wait = t_got - t_req
+            LOCK_STATS["acquires"] += 1
+            if wait > LOCK_STATS["max_wait_sec"]:
+                LOCK_STATS["max_wait_sec"] = wait
+            if wait >= _LOCK_WARN_SEC:
+                _note_slow("wait", wait, who, f"{before.get('holder')} for {t_req - before.get('since', t_req):.1f}s+" if before.get("holder") else None)
+            _lock_info["holder"], _lock_info["since"] = who, t_got
+        except Exception:
+            pass
         conn = get_conn()
         try:
             yield conn
             conn.commit()
         finally:
             conn.close()
+            try:
+                hold = _time.monotonic() - t_got
+                if hold > LOCK_STATS["max_hold_sec"]:
+                    LOCK_STATS["max_hold_sec"] = hold
+                if hold >= _LOCK_WARN_SEC:
+                    _note_slow("hold", hold, who)
+                _lock_info["holder"] = None
+            except Exception:
+                pass
 
 
 # Columns added after the initial release — applied idempotently on every boot

@@ -152,6 +152,29 @@ class PlatformLive:
                 self.last_error = f"{type(e).__name__}: {e}"
             await asyncio.sleep(self.poll)
 
+    def _diagnostics(self) -> dict:
+        """Read-only health extras: DB lock contention (named offenders), Angel feed connection counters, AI provider circuit breaker."""
+        out: dict = {}
+        try:
+            from .. import db as _db
+            ls = _db.LOCK_STATS
+            out["db_lock"] = {"acquires": ls["acquires"], "max_wait_sec": round(ls["max_wait_sec"], 2), "max_hold_sec": round(ls["max_hold_sec"], 2),
+                              "recent_slow": list(ls["slow"][-5:])}
+        except Exception as e:
+            out["db_lock"] = {"error": repr(e)[:80]}
+        try:
+            fs = self.get_feed().status()
+            out["angel_feed"] = {k: fs.get(k) for k in ("socket_open", "data_flowing", "connects", "reconnects", "cred_failures", "last_connect_age_sec",
+                                                        "disconnects_last_hour", "recent_disconnects", "last_error")}
+        except Exception as e:
+            out["angel_feed"] = {"error": repr(e)[:80]}
+        try:
+            from ..ai import ai_client as _ai
+            out["ai_breaker"] = _ai.breaker_status()
+        except Exception as e:
+            out["ai_breaker"] = {"error": repr(e)[:80]}
+        return out
+
     def status(self) -> dict:
         d = self.svc.decision
         return {"enabled": True, "ticks_in": self.ticks_in, "last_error": self.last_error,
@@ -161,6 +184,7 @@ class PlatformLive:
                 "writer": self.writer.status(), "hub": self.hub.status(),
                 "gate": getattr(self.svc.gate, "counters", None) and dict(self.svc.gate.counters),
                 "loop_stalls": list(self.watchdog.events) if self.watchdog else [],
+                **self._diagnostics(),
                 "note": "observation/charting only; Angel LTP-only (no volume/OI)"}
 
 

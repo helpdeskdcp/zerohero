@@ -101,6 +101,11 @@ class AngelMarketFeed:
         self.last_error = None
         self.last_msg_ts = None
         self.subscribe_generation = 0
+        # connection-health counters (observation only): reconnects were previously invisible in both status and logs
+        self.connects = 0
+        self.cred_failures = 0
+        self.last_connect_ts = None
+        self.disconnect_events: deque = deque(maxlen=50)      # (epoch, last_error)
         self._ws = None
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
@@ -163,6 +168,12 @@ class AngelMarketFeed:
         return {
             "connected": self.connected,            # socket open (kept for compatibility; NOT a health signal)
             "socket_open": self.connected,
+            "connects": self.connects,
+            "reconnects": max(self.connects - 1, 0),
+            "cred_failures": self.cred_failures,
+            "last_connect_age_sec": round(now - self.last_connect_ts, 1) if self.last_connect_ts else None,
+            "disconnects_last_hour": sum(1 for t_, _ in self.disconnect_events if now - t_ <= 3600),
+            "recent_disconnects": [{"age_sec": round(now - t_, 1), "error": e} for t_, e in list(self.disconnect_events)[-5:]],
             "data_flowing": bool(self.connected and self.last_msg_ts and now - self.last_msg_ts <= LTP_MAX_AGE_SEC),
             "subscribed": bool(self._desired) and set(self._desired.keys()) <= set(self._active),
             "fresh_tokens": sorted(t for t, r in self.ltp.items() if is_ltp_fresh(now - r["recv"])),
@@ -228,6 +239,7 @@ class AngelMarketFeed:
             # sync login (HTTP, up to ~30s on retries) must not run on the event loop that serves every other task
             status, creds = await asyncio.to_thread(self._cred_provider)
             if status != "OK" or not creds or not creds.get("feed_token"):
+                self.cred_failures += 1
                 self.last_error = f"stream credentials unavailable ({status})"
                 await self._sleep(5)
                 continue
@@ -244,6 +256,7 @@ class AngelMarketFeed:
                 ) as ws:
                     self._ws = ws
                     self.connected = True
+                    self.connects += 1; self.last_connect_ts = time.time()
                     self.last_error = None
                     backoff = 2
                     self._active = set()
@@ -256,6 +269,7 @@ class AngelMarketFeed:
                     ) as ws:
                         self._ws = ws
                         self.connected = True
+                        self.connects += 1; self.last_connect_ts = time.time()
                         self.last_error = None
                         backoff = 2
                         self._active = set()
@@ -265,6 +279,8 @@ class AngelMarketFeed:
             except Exception as e:
                 self.last_error = f"{type(e).__name__}: {e}"
             finally:
+                if self.connected:
+                    self.disconnect_events.append((time.time(), self.last_error))
                 self.connected = False
                 self._ws = None
             await self._sleep(backoff)

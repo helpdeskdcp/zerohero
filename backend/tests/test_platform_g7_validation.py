@@ -190,3 +190,16 @@ def test_stall_watchdog_captures_the_blocking_stack():
     ev = wd.events[0]
     assert ev["duration_sec"] is not None and ev["duration_sec"] >= 1.4
     assert any("blocker_in_loop" in line for line in ev["stack"])
+
+
+def test_platform_status_exposes_db_lock_angel_feed_and_ai_breaker_diagnostics():
+    from app.platform.live import PlatformLive
+
+    class F:
+        def status(self):
+            return {"socket_open": True, "data_flowing": True, "connects": 2, "reconnects": 1, "cred_failures": 0, "last_connect_age_sec": 5.0,
+                    "disconnects_last_hour": 1, "recent_disconnects": [], "last_error": None}
+    live = PlatformLive(lambda: F())
+    st = live.status()
+    assert {"acquires", "max_wait_sec", "max_hold_sec", "recent_slow"} <= set(st["db_lock"])
+    assert st["angel_feed"]["reconnects"] == 1 and set(st["ai_breaker"]) == {"groq", "openai"}

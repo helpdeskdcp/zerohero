@@ -153,3 +153,31 @@ def test_autoscalp_underlying_ref_warmup_does_not_block_event_loop(monkeypatch):
     import inspect
     src = inspect.getsource(ascr.AutoScalpRunner.tick_once)
     assert src.index("_warm_underlying_refs") < src.index("_refresh_subscription")   # warmed BEFORE the sync call
+
+
+def test_reconnects_and_disconnects_are_counted_and_exposed_in_status(monkeypatch):
+    """The Angel feed used to reconnect silently (no counter, no log). Now status shows connects/reconnects/disconnect history."""
+    async def main():
+        async def handler(ws):
+            for i in range(3):
+                await ws.send(frame(int(time.time() * 1000), 24000 + i))
+                await asyncio.sleep(0.05)
+            await ws.close()                                   # server drops the connection -> the feed must reconnect
+
+        async with websockets.serve(handler, "127.0.0.1", 0) as srv:
+            port = srv.sockets[0].getsockname()[1]
+            monkeypatch.setattr(AW, "WS_URL", f"ws://127.0.0.1:{port}")
+            f = AW.AngelMarketFeed(cred_provider=lambda: CREDS)
+            f.subscribe([{"token": TOKEN, "exchange_type": 1}], owner="t")
+            f.start()
+            for _ in range(120):
+                await asyncio.sleep(0.1)
+                if f.connects >= 2:
+                    break
+            st = f.status()
+            await f.stop()
+            return st
+
+    st = asyncio.run(main())
+    assert st["connects"] >= 2 and st["reconnects"] >= 1 and st["disconnects_last_hour"] >= 1
+    assert st["recent_disconnects"] and st["cred_failures"] == 0 and st["last_connect_age_sec"] is not None

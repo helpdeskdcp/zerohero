@@ -852,10 +852,19 @@ class ScalpRunner:
 
         # 1) round-turned broker positions → realised P&L. If a mirror is still
         # OPEN for that token, CLOSE THE SAME ROW (no duplicate); else record one.
-        seen_closed = {
-            (t.get("symboltoken"), t.get("reason"))
-            for t in db.list_trades(status="CLOSED", limit=500, strategy="MANUAL")
-        }
+        closed_manual = db.list_trades(status="CLOSED", limit=500, strategy="MANUAL")
+        seen_closed = {(t.get("symboltoken"), t.get("reason")) for t in closed_manual}
+        # A mirror row can be closed through another path (BROKER_FLAT / manual close) and keeps reason "auto-synced…", so the (token, reason)
+        # key above misses it and the broker's DAY-realised figure was then inserted again on every later sync (one result counted up to 5x;
+        # 2026-10-15 audit). Any token that already has a CLOSED MANUAL row today (IST) is therefore never inserted again.
+        today_ist = datetime.now(timezone(timedelta(hours=5, minutes=30))).date().isoformat()
+
+        def _closed_today_ist(ts):
+            try:
+                return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).astimezone(timezone(timedelta(hours=5, minutes=30))).date().isoformat() == today_ist
+            except Exception:
+                return False
+        closed_today_tokens = {str(t.get("symboltoken") or "") for t in closed_manual if _closed_today_ist(t.get("closed_ts"))}
         for p in res.get("closed", []):
             tok = str(p.get("symboltoken") or "")
             rsn = f"broker realised {p.get('realised_pnl')}"
@@ -870,8 +879,9 @@ class ScalpRunner:
                 self._broker_miss.pop(tok, None)
                 await self._emit("position_exit", db.get_trade(mirror["trade_id"]))
                 continue
-            if not tok or (tok, rsn) in seen_closed:
+            if not tok or (tok, rsn) in seen_closed or tok in closed_today_tokens:
                 continue
+            closed_today_tokens.add(tok)
             qty = abs(p.get("traded_qty") or 0)
             row = await asyncio.to_thread(open_trade, {
                 "signal_id": None, "market": p.get("exchange") or "",
