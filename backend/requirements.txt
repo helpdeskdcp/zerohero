@@ -11,3 +11,4 @@ numpy==2.4.6
 scipy==1.17.1
 scikit-learn==1.9.1
 pandas==3.0.5
+httpx2==2.13.0
