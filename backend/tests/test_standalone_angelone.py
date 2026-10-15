@@ -4,10 +4,23 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 from broker.angelone.client import AngelOneClient
+import broker.angelone.client as client_module
+import pytest
 
-# relative future expiries — a fixed date would expire and flip AUTO to the next one
-_E1 = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%d%b%Y").upper()
-_E2 = (datetime.now(timezone.utc) + timedelta(days=14)).strftime("%d%b%Y").upper()
+
+@pytest.fixture(autouse=True)
+def fixed_contract_clock(monkeypatch):
+    """Keep AUTO chronology tests before the retained September fixture expiries."""
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = datetime(2026, 9, 15, 8, tzinfo=timezone.utc)
+            return fixed.astimezone(tz) if tz is not None else fixed.replace(tzinfo=None)
+    monkeypatch.setattr(client_module, 'datetime', Clock)
+
+# Future expiries relative to the fixed fixture clock above, independent of wall time.
+_E1 = '22SEP2026'
+_E2 = '29SEP2026'
 
 
 def test_standalone_resolver_uses_valid_master_and_expiry(monkeypatch, tmp_path):
@@ -60,7 +73,7 @@ def test_auto_expiry_is_chronological_not_lexical(tmp_path):
 def test_auto_roll_skips_the_0dte_contract_on_expiry_day(tmp_path):
     from datetime import datetime, timedelta, timezone
     c = AngelOneClient(cache_path=str(tmp_path / "m.json"))
-    now = datetime.now(timezone.utc)
+    now = client_module.datetime.now(timezone.utc)
     today = now.strftime("%d%b%Y").upper()
     next_wk = (now + timedelta(days=7)).strftime("%d%b%Y").upper()   # relative, so it stays in the future
     c._master = [

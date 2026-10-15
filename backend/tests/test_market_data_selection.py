@@ -29,7 +29,13 @@ class FakeSDK:
              "pe": {"token": "PE1", "ltp": 2, "oi": 3, "oi_change": 0, "volume": 4}}]}
 
 
-def test_dynamic_nse_and_mcx_symbols_are_from_master():
+def test_dynamic_nse_and_mcx_symbols_are_from_master(monkeypatch):
+    from datetime import datetime, timezone
+    class FixtureClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 8, 29, tzinfo=timezone.utc).astimezone(tz)
+    monkeypatch.setattr(market_data, "datetime", FixtureClock)
     sdk = FakeSDK()
     assert [x["name"] for x in market_data.available_symbols(sdk, "NSE")] == ["BANKNIFTY", "NIFTY"]
     assert [x["name"] for x in market_data.available_symbols(sdk, "MCX")] == ["CRUDEOILMINI"]
@@ -99,6 +105,11 @@ def test_run_pipeline_boundary_converts_market_exception_to_data_unavailable(mon
     # module-local `run_pipeline` name -- patch it there, not on app.main
     # (which only re-exports the handler itself for backward-compat).
     monkeypatch.setattr(engines_routes, "run_pipeline", lambda _payload: (_ for _ in ()).throw(RuntimeError("broker down")))
+    # This test protects the handler's exception contract, not asyncio's
+    # executor lifecycle. Keep the offload boundary deterministic and offline.
+    async def inline_thread(func, *args, **kwargs):
+        return func(*args, **kwargs)
+    monkeypatch.setattr(engines_routes.asyncio, "to_thread", inline_thread)
     response = asyncio.run(main.api_run_pipeline(main.SignalRequest(market="NSE", symbol="NIFTY")))
     assert response["error"] == "DATA_UNAVAILABLE"
     assert response["contract"]["data_status"] == "DATA_UNAVAILABLE"
