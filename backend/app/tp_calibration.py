@@ -75,7 +75,8 @@ def resolve_pending(fetch_fn, now: datetime | None = None) -> int:
     """fetch_fn(market, symbol, exchange, symboltoken, interval, fromdate, todate,
     timeframe, instrument) -> connector dict (i.e. angelone.fetch_candles)."""
     now = now or datetime.now(timezone.utc)
-    with db.db() as conn:
+    # pure read (no index on `resolved`: a full scan of ~74k rows, 1.8 s observed while holding the global DB lock and stalling the event loop)
+    with db._ro() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM tp_predictions WHERE resolved=0 ORDER BY id LIMIT 200")]
     resolved = 0
@@ -174,7 +175,7 @@ def recalibrate() -> dict:
     """Fit sigmoid (k, b) by OLS on logit(hit-rate) ~ k*turn + b across turn
     buckets, and feature weights ∝ max(0, corr(Sᵢ, signed_outcome)), EMA-blended
     with the prior. All closed-form and deterministic."""
-    with db.db() as conn:
+    with db._ro() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT turn, p_up, signed_outcome, feature_scores, direction "
             "FROM tp_predictions WHERE resolved=1 AND outcome!='TIMEOUT' AND signed_outcome IS NOT NULL")]
