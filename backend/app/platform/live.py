@@ -76,6 +76,12 @@ class PlatformLive:
         self.svc.subscribers.append(self._publish)
         self.svc.arbiter.mark_validated("ANGELONE", "policy: default primary provider (production feed in use); Dhan stays unvalidated")
         self._seen: dict = {}                      # token -> last ts_ms ingested
+        self._q: deque = deque(maxlen=400_000)     # per-tick queue filled by the feed's tick listener (preserves every tick, in order)
+        self.q_dropped = 0
+        self._hold: deque = deque(maxlen=200_000)   # ticks received before the arbiter selected a provider (flushed in order once it does)
+        self.hold_max_age_sec = 60.0
+        self.hold_flushed = 0
+        self.listener_attached = False
         self._last_tick_ts: dict = {}
         self._task: asyncio.Task | None = None
         self.ticks_in = 0
@@ -83,8 +89,29 @@ class PlatformLive:
         self._last_eval = 0.0
         self.watchdog: StallWatchdog | None = None
 
+    def _on_tick(self, t: dict, recv: float) -> None:     # runs inside the feed's ingest path: O(1), never raises
+        if len(self._q) == self._q.maxlen:
+            self.q_dropped += 1
+        self._q.append((t, recv))
+
+    def _flush_hold(self) -> None:
+        now = time.time()
+        while self._hold:
+            tk, recv = self._hold.popleft()
+            if now - recv > self.hold_max_age_sec:
+                continue
+            self.hold_flushed += 1
+            self._emit(self.svc.on_tick(tk))
+
+    def _attach(self) -> None:
+        feed = self.get_feed()
+        if feed is not None and not self.listener_attached and hasattr(feed, "add_tick_listener"):
+            feed.add_tick_listener(self._on_tick)
+            self.listener_attached = True
+
     def start(self):
         self.writer.start()
+        self._attach()
         self.watchdog = StallWatchdog(threading.get_ident())     # start() runs on the loop thread
         self.watchdog.start()
         self._task = asyncio.get_event_loop().create_task(self._loop())
@@ -113,8 +140,29 @@ class PlatformLive:
         feed = self.get_feed()
         if feed is None:
             return
+        self._attach()
         desired = dict(getattr(feed, "_desired", {}) or {})
-        marks = dict(getattr(feed, "ltp", {}) or {})
+        marks = {} if self.listener_attached else dict(getattr(feed, "ltp", {}) or {})       # sampling only when the tick listener is unavailable
+        drained = 0
+        while self._q and drained < 200_000:
+            t, recv = self._q.popleft()
+            drained += 1
+            ex = EX.get(t.get("exchange_type"))
+            if ex not in SESSION_EX:
+                continue
+            key = f"{ex}:{t['token']}"
+            tk = Tick("ANGELONE", key, float(t["ltp"]), t["ts_ms"] / 1000.0, recv)
+            self._last_tick_ts[key] = recv
+            self.ticks_in += 1
+            if self.svc.arbiter.active is None:           # warm-up: keep the tick instead of discarding it as NO_ACTIVE_PROVIDER
+                self._hold.append((tk, recv))
+                while self._hold and recv - self._hold[0][1] > self.hold_max_age_sec:
+                    self._hold.popleft()
+                continue
+            self._flush_hold()
+            self._emit(self.svc.on_tick(tk))
+        if self._hold and self.svc.arbiter.active is not None:
+            self._flush_hold()
         n = 0
         for tok, rec in marks.items():
             ex = EX.get(desired.get(tok))
@@ -177,7 +225,7 @@ class PlatformLive:
 
     def status(self) -> dict:
         d = self.svc.decision
-        return {"enabled": True, "ticks_in": self.ticks_in, "last_error": self.last_error,
+        return {"enabled": True, "ticks_in": self.ticks_in, "tick_source": "listener(every tick)" if self.listener_attached else "sampling(0.25s)", "queue_depth": len(self._q), "held_before_provider": len(self._hold), "held_then_flushed": self.hold_flushed, "queue_dropped": self.q_dropped, "last_error": self.last_error,
                 "active_provider": getattr(d, "active", None), "decision_reasons": getattr(d, "reasons", None),
                 "health": {n: {"state": h.state, "reasons": h.reasons, "fresh": len(h.fresh), "stale": h.stale[:8]}
                            for n, h in self.svc.healths.items()}, "trading_blocked": self.svc.trading_blocked,

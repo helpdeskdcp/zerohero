@@ -102,6 +102,7 @@ class AngelMarketFeed:
         self.last_msg_ts = None
         self.subscribe_generation = 0
         # connection-health counters (observation only): reconnects were previously invisible in both status and logs
+        self._listeners: list = []                              # optional per-tick callbacks f(tick_dict, recv_epoch); must not block
         self.connects = 0
         self.cred_failures = 0
         self.last_connect_ts = None
@@ -124,6 +125,11 @@ class AngelMarketFeed:
                 await asyncio.wait_for(self._task, timeout=5)
             except Exception:
                 pass
+
+    def add_tick_listener(self, fn) -> None:
+        """Register fn(tick, recv_ts) called synchronously for EVERY ingested tick (in arrival order). Exceptions are swallowed; fn must be O(1)."""
+        if fn not in self._listeners:
+            self._listeners.append(fn)
 
     def subscribe(self, tokens: list[dict], *, owner: str = "default"):
         """tokens: [{'token': '99926000', 'exchange_type': 1}, ...]. Sets THIS
@@ -193,7 +199,13 @@ class AngelMarketFeed:
         tok = tick["token"]
         ltp = tick["ltp"]
         ts_ms = tick["ts_ms"] or int(time.time() * 1000)
-        self.ltp[tok] = {"ltp": ltp, "ts_ms": ts_ms, "recv": time.time()}
+        recv = time.time()
+        self.ltp[tok] = {"ltp": ltp, "ts_ms": ts_ms, "recv": recv}
+        for _fn in self._listeners:
+            try:
+                _fn({"token": tok, "exchange_type": tick.get("exchange_type"), "ltp": ltp, "ts_ms": ts_ms}, recv)
+            except Exception:
+                pass
         # light 1-minute OHLC (no volume in LTP mode)
         bucket = (ts_ms // 60000) * 60
         dq = self._candles.setdefault(tok, deque(maxlen=240))

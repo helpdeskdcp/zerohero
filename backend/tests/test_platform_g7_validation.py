@@ -203,3 +203,61 @@ def test_platform_status_exposes_db_lock_angel_feed_and_ai_breaker_diagnostics()
     st = live.status()
     assert {"acquires", "max_wait_sec", "max_hold_sec", "recent_slow"} <= set(st["db_lock"])
     assert st["angel_feed"]["reconnects"] == 1 and set(st["ai_breaker"]) == {"groq", "openai"}
+
+
+def test_tick_listener_path_keeps_every_tick_in_order_where_sampling_would_lose_most():
+    import time as _t
+    from app.connectors.angel_ws import AngelMarketFeed
+    from app.platform.live import PlatformLive
+
+    feed = AngelMarketFeed()
+    feed.subscribe([{"token": "99926000", "exchange_type": 1}], owner="t")
+    live = PlatformLive(lambda: feed)
+    live._attach()
+    assert live.listener_attached
+    live.svc.arbiter.active = "ANGELONE"
+    live.svc.engine.in_session = lambda inst, ts: True
+    base = _t.time() - 5
+    for i in range(300):                                           # 300 ticks, 10 ms apart: a 0.25 s sampler would have seen about 12 of them
+        ts_ms = int((base + i * 0.01) * 1000)
+        feed._ingest({"token": "99926000", "exchange_type": 1, "ltp": 24000 + i * 0.05, "ts_ms": ts_ms})
+    assert len(live._q) == 300
+    live._poll_once(_t.time())
+    assert live.ticks_in == 300 and live.svc.gate.counters["ACCEPTED"] == 300 and len(live._q) == 0
+    st = live.status()
+    assert st["tick_source"].startswith("listener") and st["queue_dropped"] == 0
+
+
+def test_sampling_fallback_when_feed_has_no_listener_hook():
+    from app.platform.live import PlatformLive
+
+    class Old:
+        _desired = {"99926000": 1}
+        ltp = {}
+        last_msg_ts = None
+        def status(self):
+            return {}
+    live = PlatformLive(lambda: Old())
+    live._attach()
+    assert not live.listener_attached and live.status()["tick_source"].startswith("sampling")
+
+
+def test_ticks_received_before_a_provider_is_active_are_held_and_flushed_in_order_not_discarded():
+    import time as _t
+    from app.connectors.angel_ws import AngelMarketFeed
+    from app.platform.live import PlatformLive
+
+    feed = AngelMarketFeed()
+    feed.subscribe([{"token": "99926000", "exchange_type": 1}], owner="t")
+    live = PlatformLive(lambda: feed)
+    live._attach()
+    live.svc.engine.in_session = lambda inst, ts: True
+    base = _t.time() - 3
+    for i in range(50):
+        feed._ingest({"token": "99926000", "exchange_type": 1, "ltp": 24000 + i * 0.05, "ts_ms": int((base + i * 0.02) * 1000)})
+    live._poll_once(_t.time())                                       # arbiter has no active provider yet -> hold, do not reject
+    assert len(live._hold) == 50 and live.svc.gate.counters.get("NO_ACTIVE_PROVIDER", 0) == 0
+    live.svc.arbiter.active = "ANGELONE"
+    feed._ingest({"token": "99926000", "exchange_type": 1, "ltp": 24100.0, "ts_ms": int((base + 2) * 1000)})
+    live._poll_once(_t.time())
+    assert live.hold_flushed == 50 and len(live._hold) == 0 and live.svc.gate.counters["ACCEPTED"] == 51
