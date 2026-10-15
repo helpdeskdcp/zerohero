@@ -211,6 +211,11 @@ class PlatformLive:
         except Exception as e:
             out["db_lock"] = {"error": repr(e)[:80]}
         try:
+            io = {k: int(v) for k, v in (l.split(": ") for l in open("/proc/self/io").read().splitlines())}
+            out["process_io"] = {"write_mb": round(io["write_bytes"] / 1048576), "read_mb": round(io["read_bytes"] / 1048576)}
+        except Exception:
+            out["process_io"] = None
+        try:
             fs = self.get_feed().status()
             out["angel_feed"] = {k: fs.get(k) for k in ("socket_open", "data_flowing", "connects", "reconnects", "cred_failures", "last_connect_age_sec",
                                                         "disconnects_last_hour", "recent_disconnects", "last_error")}

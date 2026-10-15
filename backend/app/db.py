@@ -440,8 +440,35 @@ CREATE INDEX IF NOT EXISTS ix_live_snap_date          ON live_market_snapshots(s
 """
 
 
+# One long-lived, never-used "keeper" connection per database file. db() opens and closes a connection on every call; in WAL mode SQLite checkpoints
+# the whole WAL and deletes it when the LAST connection closes, so each tiny write became a checkpoint + fsyncs, executed while holding the global lock
+# (measured on a scratch DB: 400 tiny writes = 21.9 MB / 1.5 s without a keeper vs 4.7 MB / 0.5 s with one; the live process wrote 35.8 GB in ~10 h and
+# the host shows io-pressure 'full' ~19%). With a keeper present the close is cheap and SQLite's normal auto-checkpoint (every ~1000 pages) applies.
+_KEEPER: dict = {"path": None, "conn": None}
+
+
+def _ensure_keeper() -> None:
+    if _KEEPER["path"] == DB_PATH and _KEEPER["conn"] is not None:
+        return
+    try:
+        old = _KEEPER["conn"]
+        if old is not None:
+            old.close()
+    except Exception:
+        pass
+    try:
+        k = sqlite3.connect(DB_PATH, check_same_thread=False)
+        k.execute("PRAGMA journal_mode=WAL;")
+        k.execute("SELECT count(*) FROM sqlite_master").fetchone()      # a real read attaches this connection to the WAL index, so it counts as "another connection"
+        _KEEPER["path"], _KEEPER["conn"] = DB_PATH, k
+    except Exception as e:                              # never let the optimisation break a database call
+        _log.warning("db keeper connection unavailable: %r", e)
+        _KEEPER["path"], _KEEPER["conn"] = None, None
+
+
 def get_conn():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    _ensure_keeper()
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -509,6 +536,23 @@ def db():
                 _lock_info["holder"] = None
             except Exception:
                 pass
+
+
+@contextmanager
+def _ro():
+    """Lock-free READ-ONLY connection (WAL: readers never wait for writers). Use only for monitoring/listing reads whose callers do not rely on seeing
+    a write that another thread has not committed yet; dedupe-style atomic checks (find_open_by_token) deliberately stay on the locked db()."""
+    try:
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, check_same_thread=False, timeout=3.0)
+        conn.row_factory = sqlite3.Row
+    except sqlite3.Error:
+        with db() as c:
+            yield c
+        return
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 # Columns added after the initial release — applied idempotently on every boot
@@ -676,7 +720,7 @@ def update_trade(trade_id: str, fields: dict):
 
 
 def get_trade(trade_id: str):
-    with db() as conn:
+    with _ro() as conn:
         cur = conn.execute("SELECT * FROM ai_paper_trades WHERE trade_id=?", (trade_id,))
         r = cur.fetchone()
         return dict(r) if r else None
@@ -809,7 +853,7 @@ def list_trades(status=None, limit=200, strategy=None):
         params.append(strategy)
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     params.append(limit)
-    with db() as conn:
+    with _ro() as conn:
         cur = conn.execute(f"SELECT * FROM ai_paper_trades{where} ORDER BY id DESC LIMIT ?", params)
         return [dict(r) for r in cur.fetchall()]
 
@@ -889,7 +933,7 @@ def list_smart_scalper_states(signal_id: str | None = None, trade_id: str | None
 
 def list_open_managed():
     """OPEN trades the scalp runner is responsible for marking to market."""
-    with db() as conn:
+    with _ro() as conn:
         cur = conn.execute(
             "SELECT * FROM ai_paper_trades WHERE status='OPEN' "
             "AND COALESCE(strategy,'CORE') IN ('SCALP','MANUAL') ORDER BY id DESC")
@@ -909,6 +953,18 @@ def count_trades_since(iso_ts, strategy=None):
 
 
 def get_setting(key, default=None):
+    """Read one setting. Takes NO global lock: the database is in WAL mode, so a read-only connection is never blocked by a writer, whereas the
+    old `with db()` made every config read (done by the asyncio loops on every tick) wait for whichever thread held `_lock` - the cause of
+    recurring 4-30 s event-loop stalls seen 2026-10-14/15 (`scalper._loop -> get_config -> get_setting`). Falls back to the locked path on any error."""
+    try:
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, check_same_thread=False, timeout=3.0)
+        try:
+            r = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,)).fetchone()
+            return r[0] if r else default
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        pass
     with db() as conn:
         cur = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,))
         r = cur.fetchone()
@@ -1135,7 +1191,7 @@ def list_scalp_signals(source=None, status=None, symbol=None, resolved=None,
             params.append(val)
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     params.append(limit)
-    with db() as conn:
+    with _ro() as conn:
         cur = conn.execute(f"SELECT * FROM scalp_signals{where} ORDER BY id DESC LIMIT ?", params)
         return [dict(r) for r in cur.fetchall()]
 
