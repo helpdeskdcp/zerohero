@@ -39,12 +39,22 @@ AUTH_COOLDOWN_SEC = 3600.0
 RATE_BASE_COOLDOWN_SEC, RATE_MAX_COOLDOWN_SEC = 60.0, 900.0
 
 
+def _enabled() -> bool:
+    """Inert under pytest (module-level state would leak cooldowns between unrelated tests) unless AI_BREAKER_FORCE=1."""
+    import os
+    return not os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("AI_BREAKER_FORCE") == "1"
+
+
 def _in_cooldown(name: str) -> bool:
+    if not _enabled():
+        return False
     with _BREAKER_LOCK:
         return _time.time() < _BREAKER[name]["until"]
 
 
 def _record(name: str, result: AIResult) -> None:
+    if not _enabled():
+        return
     with _BREAKER_LOCK:
         b = _BREAKER[name]
         if result.status == "OK":

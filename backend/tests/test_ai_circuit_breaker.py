@@ -11,6 +11,7 @@ def res(status, codes=(), err=None):
 
 @pytest.fixture(autouse=True)
 def reset(monkeypatch):
+    monkeypatch.setenv("AI_BREAKER_FORCE", "1")
     C._reset_breaker_for_tests()
     monkeypatch.setattr(C._openai, "is_available", lambda: True)
     yield

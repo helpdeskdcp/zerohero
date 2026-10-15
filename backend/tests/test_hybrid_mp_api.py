@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app import hybrid_mp_api as api  # noqa: E402
 
-T0 = 1_791_000_000 - (1_791_000_000 % 86400) - 19800 + 555 * 60
+T0 = 1_775_000_000 - (1_775_000_000 % 86400) - 19800 + 555 * 60          # fixed date in the past (never 'live' whatever day the suite runs)
 T0 += (7 - ((T0 + 19800) // 86400 + 3) % 7) % 7 * 86400
 
 
@@ -28,7 +28,7 @@ def _bars(days=4, seed=1):
 @pytest.fixture
 def client(monkeypatch):
     b = _bars()
-    monkeypatch.setattr(api, "latest_1m", lambda symbol: (b, {"history_last_bar": int(b["t"][-1]), "live_bars_appended": 0, "last_bar_age_sec": 5}))
+    monkeypatch.setattr(api, "latest_1m", lambda symbol: (b, {"history_last_bar": int(b["t"][-1]), "live_bars_appended": 0, "last_bar_age_sec": 400_000}))
     api._cache.clear()
     app = FastAPI()
     app.include_router(api.router)
