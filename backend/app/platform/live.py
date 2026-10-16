@@ -23,6 +23,17 @@ from .ws.delta_protocol import DeltaHub
 EX = {1: "NSE", 2: "NFO", 3: "BSE", 4: "BFO", 5: "MCX"}
 SESSION_EX = {"NSE", "BSE", "MCX"}       # candle engine session map knows these; NFO/BFO options are skipped (no session spec)
 MAX_INSTRUMENTS = 40
+ACTIVE_WINDOW_SEC = 120.0     # an instrument counts as "required" for provider health only if it ticked within this window
+
+
+def required_instruments(last_tick_ts: dict, now: float, in_session, window: float = ACTIVE_WINDOW_SEC) -> list:
+    """Instruments the provider must be fresh on: in session AND actively streaming (ticked within `window`).
+
+    Previously every instrument that had EVER ticked since process start stayed required forever, so contracts the shared
+    feed had since unsubscribed (or expired) stayed stale and pinned health at DEGRADED (<80% fresh) -> no provider ->
+    every tick held and no candle written all day (2026-10-16). A dead feed still cannot look healthy: if nothing has
+    ticked within `window` the list is empty (-> IDLE, not HEALTHY) and the message-age check in health.evaluate still applies."""
+    return [k for k, t in last_tick_ts.items() if now - t <= window and in_session(k, now)]
 
 
 def enabled() -> bool:
@@ -185,7 +196,7 @@ class PlatformLive:
                                   socket_open=bool(st.get("socket_open")), subscribed=bool(st.get("subscribed")),
                                   last_message_ts=feed.last_msg_ts if getattr(feed, "last_msg_ts", None) else None,
                                   instrument_last_ts=dict(self._last_tick_ts), last_error=st.get("last_error"))
-            req = [k for k in self._last_tick_ts if self.svc.engine.in_session(k, now)]     # only instruments whose session is open
+            req = required_instruments(self._last_tick_ts, now, self.svc.engine.in_session)     # in session AND actively streaming
             self.svc.evaluate({"ANGELONE": facts}, {"ANGELONE": req}, now)
 
     async def _loop(self):
