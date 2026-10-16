@@ -12,6 +12,7 @@ would actually live.
 from __future__ import annotations
 
 import asyncio
+import pytest
 import struct
 
 from app.connectors import dhan_parser, dhan_ws
@@ -250,6 +251,12 @@ def test_worker_disabled_by_default(monkeypatch):
     w.start()
     assert w._task is None
     assert "disabled" in w.last_error
+
+
+@pytest.fixture(autouse=True)
+def _no_mcx_auto_roll_by_default(monkeypatch):
+    """The production default auto-rolls NATURALGAS/CRUDEOIL via the (network) instrument master; these tests are hermetic."""
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_FUTURES", "")
 
 
 def test_worker_refuses_to_start_with_no_instruments(monkeypatch):

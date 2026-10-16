@@ -50,6 +50,10 @@ SYMBOL_EXCHANGE = {
     "SENSEX": ("BSE", "D", "BSE_FNO"),
 }
 
+# Futures-only symbols (MCX commodities): front-month FUTCOM re-resolved daily so the subscription follows the roll. No ATM options here
+# (no STRIKE_STEP / spot source for them), which is why they are NOT in SYMBOL_EXCHANGE (that path demands an option pair).
+FUTURES_ONLY_EXCHANGE = {"NATURALGAS": ("MCX", "M", "MCX_COMM"), "CRUDEOIL": ("MCX", "M", "MCX_COMM")}
+
 _cache: dict = {"day": None, "rows": None}
 
 
@@ -92,9 +96,10 @@ def _matches_symbol(row: dict, symbol: str) -> bool:
 
 
 def resolve_front_month_future(symbol: str, *, exch_id: str = "NSE", segment: str = "D",
-                               rows: list[dict] | None = None) -> dict | None:
-    """Nearest not-yet-expired FUTIDX/FUTCOM contract for `symbol`."""
-    today = today_ist()
+                               rows: list[dict] | None = None, min_days: int = 0) -> dict | None:
+    """Nearest FUTIDX/FUTCOM contract for `symbol` that is not yet expired and has at least `min_days` days left
+    (min_days=1 rolls to the next month ON the expiry day itself, when the expiring contract is thin)."""
+    today = today_ist() + timedelta(days=min_days)
     candidates = []
     for row in (rows if rows is not None else _load_master()):
         if row.get("SEM_EXM_EXCH_ID") != exch_id or row.get("SEM_SEGMENT") != segment:
@@ -235,3 +240,22 @@ def describe_static_instruments(instruments: list[dict], rows: list[dict] | None
             pass
         out[sid] = meta
     return out
+
+
+def resolve_front_futures(symbols: list[str], min_days: int = 1, rows: list[dict] | None = None) -> tuple[list[dict], dict, list[str]]:
+    """Front-month future for each futures-only symbol (see FUTURES_ONLY_EXCHANGE). Same return shape as resolve_daily_instruments:
+    ([{"exchange_segment","security_id"}], meta, incomplete). Unknown symbols are reported incomplete, never guessed."""
+    rows = rows if rows is not None else _load_master()
+    out: list[dict] = []
+    meta: dict = {}
+    incomplete: list[str] = []
+    for sym in symbols:
+        spec = FUTURES_ONLY_EXCHANGE.get(sym)
+        fut = resolve_front_month_future(sym, exch_id=spec[0], segment=spec[1], rows=rows, min_days=min_days) if spec else None
+        if not fut:
+            _log.warning("dhan_instruments: no front-month future resolved for %s", sym)
+            incomplete.append(sym)
+            continue
+        out.append({"exchange_segment": spec[2], "security_id": fut["security_id"]})
+        meta[fut["security_id"]] = {"symbol": sym, "kind": "FUTURE", "expiry": fut["expiry"], "trading_symbol": fut["trading_symbol"]}
+    return out, meta, incomplete

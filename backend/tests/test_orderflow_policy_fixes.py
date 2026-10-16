@@ -113,3 +113,67 @@ def test_describe_static_instruments_without_instruments_does_not_load_the_maste
     from app.connectors import dhan_instruments as di
     monkeypatch.setattr(di, "_load_master", lambda *a, **k: (_ for _ in ()).throw(AssertionError("network")))
     assert di.describe_static_instruments([]) == {}
+
+
+# ---- MCX futures auto-roll (CRUDEOIL 569900 expires 2026-10-19 23:30) -------------------------------------------------------
+def _fut_row(sec_id, sym, exp):
+    return {"SEM_EXM_EXCH_ID": "MCX", "SEM_SEGMENT": "M", "SEM_SMST_SECURITY_ID": sec_id, "SEM_INSTRUMENT_NAME": "FUTCOM",
+            "SEM_TRADING_SYMBOL": f"{sym}-{exp}-FUT", "SM_SYMBOL_NAME": sym, "SEM_EXPIRY_DATE": f"{exp} 23:30:00", "SEM_STRIKE_PRICE": "0", "SEM_OPTION_TYPE": "XX"}
+
+
+def test_front_future_rolls_on_expiry_day_with_min_days(monkeypatch):
+    from datetime import date
+    from app.connectors import dhan_instruments as di
+    rows = [_fut_row("569900", "CRUDEOIL", "2026-10-19"), _fut_row("571111", "CRUDEOIL", "2026-11-19"),
+            {**_fut_row("1", "CRUDEOILM", "2026-10-19"), "SEM_TRADING_SYMBOL": "CRUDEOILM-19Oct2026-FUT"}]      # mini contract must not match CRUDEOIL
+    for today, want in ((date(2026, 10, 16), "569900"), (date(2026, 10, 18), "569900"), (date(2026, 10, 19), "571111"), (date(2026, 10, 20), "571111")):
+        monkeypatch.setattr(di, "today_ist", lambda t=today: t)
+        out, meta, inc = di.resolve_front_futures(["CRUDEOIL"], min_days=1, rows=rows)
+        assert out == [{"exchange_segment": "MCX_COMM", "security_id": want}] and inc == [] and meta[want]["symbol"] == "CRUDEOIL", today
+    monkeypatch.setattr(di, "today_ist", lambda: date(2026, 10, 19))
+    out, _, _ = di.resolve_front_futures(["CRUDEOIL"], min_days=0, rows=rows)           # min_days=0 keeps the expiring contract until it expires
+    assert out[0]["security_id"] == "569900"
+
+
+def test_unknown_or_missing_future_is_incomplete_not_guessed():
+    from app.connectors import dhan_instruments as di
+    out, meta, inc = di.resolve_front_futures(["GOLD", "NATURALGAS"], rows=[])
+    assert out == [] and meta == {} and sorted(inc) == ["GOLD", "NATURALGAS"]
+
+
+def test_worker_rolls_mcx_and_drops_expired_static_ids(monkeypatch):
+    from datetime import date
+    from app.connectors import dhan_instruments as di, dhan_ws
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_FUTURES", "CRUDEOIL")
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_SYMBOLS", "")
+    monkeypatch.setenv("DHAN_ORDERFLOW_INSTRUMENTS", "MCX_COMM:569900,MCX_COMM:570750")
+    rows = [_fut_row("569900", "CRUDEOIL", "2026-10-19"), _fut_row("571111", "CRUDEOIL", "2026-11-19"), _fut_row("570750", "NATURALGAS", "2026-10-27")]
+    monkeypatch.setattr(di, "_load_master", lambda *a, **k: rows)
+    monkeypatch.setattr(di, "today_ist", lambda: date(2026, 10, 20))                        # after the Oct crude contract expired
+    w = dhan_ws.DhanOrderflowWorker()
+    asyncio.run(w._refresh_instruments())
+    ids = [str(i["security_id"]) for i in w._instruments]
+    assert ids == ["571111", "570750"]                                                       # crude rolled to Nov; stale 569900 dropped; NG static kept once
+    assert w._instrument_meta["571111"]["symbol"] == "CRUDEOIL" and w._instrument_meta["570750"]["symbol"] == "NATURALGAS"
+    assert w._instruments_day == date(2026, 10, 20)
+
+
+def test_worker_static_id_already_auto_resolved_is_not_subscribed_twice(monkeypatch):
+    from datetime import date
+    from app.connectors import dhan_instruments as di, dhan_ws
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_FUTURES", "NATURALGAS")
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_SYMBOLS", "")
+    monkeypatch.setenv("DHAN_ORDERFLOW_INSTRUMENTS", "MCX_COMM:570750")
+    monkeypatch.setattr(di, "_load_master", lambda *a, **k: [_fut_row("570750", "NATURALGAS", "2026-10-27")])
+    monkeypatch.setattr(di, "today_ist", lambda: date(2026, 10, 16))
+    w = dhan_ws.DhanOrderflowWorker()
+    asyncio.run(w._refresh_instruments())
+    assert [str(i["security_id"]) for i in w._instruments] == ["570750"]
+
+
+def test_auto_futures_default_and_opt_out(monkeypatch):
+    from app.connectors import dhan_ws
+    monkeypatch.delenv("DHAN_ORDERFLOW_AUTO_FUTURES", raising=False)
+    assert dhan_ws._auto_futures() == ["NATURALGAS", "CRUDEOIL"]
+    monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_FUTURES", "")
+    assert dhan_ws._auto_futures() == []

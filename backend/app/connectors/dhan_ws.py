@@ -71,6 +71,22 @@ def _auto_symbols() -> list[str]:
     return [s.strip().upper() for s in raw.split(",") if s.strip()]
 
 
+def _auto_futures() -> list[str]:
+    """DHAN_ORDERFLOW_AUTO_FUTURES="NATURALGAS,CRUDEOIL" -- futures-only symbols whose front-month contract is re-resolved daily (so the
+    subscription follows the MCX roll). Unset => these two MCX symbols (the ones the static DHAN_ORDERFLOW_INSTRUMENTS line used to pin
+    by hand, which went stale at every expiry); set it to an empty string to turn auto-roll off."""
+    raw = os.environ.get("DHAN_ORDERFLOW_AUTO_FUTURES")
+    raw = "NATURALGAS,CRUDEOIL" if raw is None else raw
+    return [s.strip().upper() for s in raw.split(",") if s.strip()]
+
+
+def _fut_min_days() -> int:
+    try:
+        return max(0, int(_env("DHAN_ORDERFLOW_FUT_MIN_DAYS", "1")))
+    except ValueError:
+        return 1
+
+
 _SPOT_STALE_SEC = 1800  # 30min -- stale enough to reject for a same-day ATM pick
 
 
@@ -174,6 +190,7 @@ class DhanOrderflowWorker:
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=queue_maxsize)
         self._explicit_instruments = instruments
         self._auto_syms = _auto_symbols() if instruments is None else []
+        self._auto_futs = _auto_futures() if instruments is None else []
         self._instruments = list(instruments) if instruments is not None else list(instruments_from_env())
         self._instruments_day = None
         self._instrument_meta: dict = {}
@@ -185,7 +202,7 @@ class DhanOrderflowWorker:
         if not self.enabled:
             self.last_error = "disabled (DHAN_ORDERFLOW_ENABLED=0)"
             return
-        if not self._instruments and not self._auto_syms:
+        if not self._instruments and not self._auto_syms and not self._auto_futs:
             self.last_error = "no instruments configured (DHAN_ORDERFLOW_INSTRUMENTS / DHAN_ORDERFLOW_AUTO_SYMBOLS)"
             return
         if self._task and not self._task.done():
@@ -198,7 +215,7 @@ class DhanOrderflowWorker:
         manual override). Otherwise re-resolves self._auto_syms once per IST
         calendar day and merges with the static DHAN_ORDERFLOW_INSTRUMENTS
         extras -- mirrors app.l2capture.worker's day-cached _refresh_tokens()."""
-        if self._explicit_instruments is not None or not self._auto_syms:
+        if self._explicit_instruments is not None or not (self._auto_syms or self._auto_futs):
             return
         today = dhan_instruments.today_ist()
         if self._instruments_day == today:
@@ -206,17 +223,34 @@ class DhanOrderflowWorker:
         try:
             auto, meta, incomplete = await asyncio.to_thread(
                 dhan_instruments.resolve_daily_instruments, self._auto_syms, _get_spot)
+            if self._auto_futs:                                # MCX futures-only: follow the roll instead of a hand-pinned security_id
+                f_out, f_meta, f_inc = await asyncio.to_thread(
+                    dhan_instruments.resolve_front_futures, self._auto_futs, _fut_min_days())
+                auto, meta, incomplete = auto + f_out, {**meta, **f_meta}, incomplete + f_inc
         except Exception as e:
             self.last_error = f"instrument resolution: {type(e).__name__}: {e}"
             _log.warning("dhan_ws: %s", self.last_error)
             return
         static = instruments_from_env()
-        self._instruments = auto + static
-        try:                                                   # static extras (e.g. MCX futures) need meta too, or their ticks persist with symbol NULL
+        try:                                                   # static extras need meta too, or their ticks persist with symbol NULL
             extra = await asyncio.to_thread(dhan_instruments.describe_static_instruments, static)
         except Exception as e:
             extra = {}
             _log.warning("dhan_ws: static instrument meta unavailable: %s: %s", type(e).__name__, e)
+        today_iso = today.isoformat()
+        have = {(i["exchange_segment"], str(i["security_id"])) for i in auto}
+        kept = []
+        for i in static:
+            sid = str(i["security_id"])
+            if (i["exchange_segment"], sid) in have:           # already covered by auto-resolution
+                continue
+            exp = (extra.get(sid) or {}).get("expiry")
+            if exp and exp < today_iso:                        # a hand-pinned contract past its expiry is dead: never subscribe it
+                _log.warning("dhan_ws: dropping expired static instrument %s (expiry %s)", sid, exp)
+                continue
+            kept.append(i)
+        static = kept
+        self._instruments = auto + static
         for sid, m in extra.items():
             meta.setdefault(sid, m)
         self._instrument_meta = meta
