@@ -1,0 +1,4 @@
+time_ist,open,high,low,close,provenance
+2026-10-12 09:20,22585.10,22597.70,22512.00,22530.20,user-transcribed from a MOBILE screenshot (not Data Window); every value equals a value Claude had printed in chat earlier; UNVERIFIED
+2026-10-12 09:25,22529.90,22582.80,22519.15,22581.80,same; UNVERIFIED
+2026-10-12 09:30,22584.25,22587.60,22534.75,22534.85,same; open 22584.25 follows first-tick convention while 09:20/09:25 opens follow prev-close convention; UNVERIFIED
