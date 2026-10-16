@@ -23,9 +23,16 @@ def _epoch(ts: str) -> int:
 
 
 def load_1m(symbol: str, kind: str = "INDEX", start: str = "2017-01-01", end: str = "2027-01-01",
-            use_cache: bool = True, db_path: str | None = None) -> dict:
-    """{'t': epoch[], 'o','h','l','c','v' arrays} sorted by time, deduped."""
-    key = f"{symbol}_{kind}_{start}_{end}.npz"
+            use_cache: bool = True, db_path: str | None = None,
+            source: str | None = None, prefer: str | None = None) -> dict:
+    """{'t': epoch[], 'o','h','l','c','v' arrays} sorted by time, deduped.
+
+    A minute can exist in several capture sources (e.g. DHAN_HISTORICAL and ANGELONE_CANDLES) with slightly different
+    OHLC. Default (both None) keeps the legacy behaviour = all sources, first row kept (effectively undefined order).
+    source: only rows from that `market_candles.source`.  prefer: when a minute exists in several sources keep this one.
+    Non-default values get their own cache file."""
+    tag = (f"_src-{source}" if source else "") + (f"_pref-{prefer}" if prefer else "")
+    key = f"{symbol}_{kind}_{start}_{end}{tag}.npz"
     path = os.path.join(_CACHE, key)
     if use_cache and os.path.exists(path):
         z = np.load(path)
@@ -38,17 +45,27 @@ def load_1m(symbol: str, kind: str = "INDEX", start: str = "2017-01-01", end: st
         b = min(end, f"{y + 1}-01-01")
         if a >= b:
             continue
-        rows += conn.execute(
-            "SELECT bar_start, o, h, l, c, COALESCE(v,0) FROM market_candles "
-            "WHERE symbol=? AND kind=? AND tf='1m' AND bar_start>=? AND bar_start<? ORDER BY bar_start",
-            (symbol, kind, a, b)).fetchall()
+        q = ("SELECT bar_start, o, h, l, c, COALESCE(v,0), source FROM market_candles "
+             "WHERE symbol=? AND kind=? AND tf='1m' AND bar_start>=? AND bar_start<?")
+        args = [symbol, kind, a, b]
+        if source:
+            q += " AND source=?"
+            args.append(source)
+        q += " ORDER BY bar_start"
+        rows += conn.execute(q, args).fetchall()
     conn.close()
-    seen, t, o, h, l, c, v = set(), [], [], [], [], [], []
+    seen, t, o, h, l, c, v = {}, [], [], [], [], [], []
     for r in rows:
         e = _epoch(r[0])
-        if e in seen or None in r[1:5]:
+        if None in r[1:5]:
             continue
-        seen.add(e)
+        if e in seen:
+            if prefer and r[6] == prefer and seen[e][1] != prefer:   # swap in the preferred source's row
+                i = seen[e][0]
+                o[i], h[i], l[i], c[i], v[i] = r[1], r[2], r[3], r[4], r[5]
+                seen[e] = (i, prefer)
+            continue
+        seen[e] = (len(t), r[6])
         t.append(e); o.append(r[1]); h.append(r[2]); l.append(r[3]); c.append(r[4]); v.append(r[5])
     order = np.argsort(t)
     out = {k: np.asarray(a, dtype=np.float64)[order] if k != "t" else np.asarray(a, dtype=np.int64)[order]
