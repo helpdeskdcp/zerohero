@@ -38,7 +38,7 @@ def classify(date, rs, n_have):
         return [("whole day", "NO_DATA (weekday: holiday or total capture outage; check NSE holiday list)")]
     res = []
     for a, b in rs:
-        if (a, b) == KNOWN_PRECLOSE or (a >= KNOWN_PRECLOSE[0] and b <= "15:39"):
+        if (a, b) == KNOWN_PRECLOSE:      # exact documented run only; anything else stays GENUINE (e.g. 15:29)
             res.append((f"{a}-{b}", "KNOWN_VENDOR_FREEZE (Angel index feed pre-close, recurring every session)"))
         else:
             res.append((f"{a}-{b}", "GENUINE_MISSING (cause not proven)"))
