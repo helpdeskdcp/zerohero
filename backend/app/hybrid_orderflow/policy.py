@@ -60,6 +60,18 @@ def validate(p: dict) -> dict:
     _need(_num(sc.get("min_total_score")) and 0 < sc["min_total_score"] <= total, "scoring.min_total_score must be in (0, total]")
     _need(sc.get("is_probability") is False, "scoring must not be represented as a probability")
     _need(isinstance(sc.get("min_distinct_evidence_groups"), int) and sc["min_distinct_evidence_groups"] >= 2, "need >= 2 distinct evidence groups")
+    _need(sc.get("conflict_rule") in ("WAIT_IF_ANY_OPPOSING", "WAIT_IF_ANY_OPPOSING_MANDATORY"), "scoring.conflict_rule invalid")
+    _need(sc.get("mandatory_components") and set(sc["mandatory_components"]) <= _SCORE_KEYS, "scoring.mandatory_components invalid")
+    members = [c for g in sc.get("groups", {}).values() for c in g]
+    _need(sorted(members) == sorted(_SCORE_KEYS), "scoring.groups must cover every component exactly once")
+    _need(all(g in sc["groups"] and _num(c) and c > 0 for g, c in sc.get("group_caps", {}).items()), "scoring.group_caps invalid")
+    er = sc.get("evidence_rules", {})
+    _need(set(_SCORE_KEYS) <= set(er), "scoring.evidence_rules must define every component")
+    _need(0 < er["delta_cvd"]["delta_pct_1pt"] < er["delta_cvd"]["delta_pct_2pt"] <= 1, "delta_cvd thresholds must satisfy 0 < 1pt < 2pt <= 1")
+    _need(er["structure"]["BOS"] <= sc["components_max"]["structure"] and er["structure"]["CHOCH"] <= sc["components_max"]["structure"], "structure points exceed component max")
+    _need(er["liquidity_sweep"]["full_points_fast"] <= sc["components_max"]["liquidity_sweep"], "sweep points exceed component max")
+    _need(er["imbalance_absorption"]["require_adjacency_verified"] is True, "imbalance must require verified adjacency")
+    _need(_num(sc.get("duplicate_window_sec")) and sc["duplicate_window_sec"] > 0, "scoring.duplicate_window_sec must be > 0")
     o = p["options"]
     _need(o.get("direction_map") == {"BULLISH": "CE", "BEARISH": "PE"}, "options.direction_map must be BULLISH->CE, BEARISH->PE")
     _need(o.get("reject_expired") is True, "options.reject_expired must be true")

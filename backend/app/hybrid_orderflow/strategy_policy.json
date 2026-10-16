@@ -1,9 +1,18 @@
 {
   "_comment": "Authoritative strategy policy. Thresholds marked INITIAL are heuristics, NOT validated for profitability. Validation status below is honest: nothing here is claimed profitable.",
-  "policy_version": "1.0.0",
+  "policy_version": "1.1.0",
   "validation_status": "DRAFT_UNVALIDATED",
   "change_history": [
-    {"version": "1.0.0", "date": "2026-10-16", "change": "initial policy created by rule audit; see ORDERFLOW_RULE_AUDIT_2026-10-16.md"}
+    {
+      "version": "1.0.0",
+      "date": "2026-10-16",
+      "change": "initial policy created by rule audit; see ORDERFLOW_RULE_AUDIT_2026-10-16.md"
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-10-16",
+      "change": "added scoring groups, correlation caps, mandatory components and evidence rules (all INITIAL, uncalibrated) for the paper-only scoring engine"
+    }
   ],
   "execution": {
     "mode": "PAPER",
@@ -11,12 +20,29 @@
     "kill_switch_required": true
   },
   "markets": {
-    "index_derivatives": ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BANKEX"],
-    "mcx": ["NATURALGAS", "CRUDEOIL", "CRUDEOILM"],
-    "equity_derivatives": {"enabled": false, "reason": "no validated per-stock aggressor/depth data; REQUIRES_DATA"}
+    "index_derivatives": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX",
+      "BANKEX"
+    ],
+    "mcx": [
+      "NATURALGAS",
+      "CRUDEOIL",
+      "CRUDEOILM"
+    ],
+    "equity_derivatives": {
+      "enabled": false,
+      "reason": "no validated per-stock aggressor/depth data; REQUIRES_DATA"
+    }
   },
   "data": {
-    "provider_priority": ["DHAN", "ANGELONE"],
+    "provider_priority": [
+      "DHAN",
+      "ANGELONE"
+    ],
     "max_quote_age_sec": 5.0,
     "max_candle_age_sec": 90.0,
     "require_closed_candle": true,
@@ -24,36 +50,154 @@
     "no_forward_fill_missing_bars": true
   },
   "features": {
-    "delta": {"allowed_classes": ["INFERRED_QUOTE_RULE"], "forbidden_classes": ["OHLC_PROXY"], "min_classified_fraction": 0.7,
-              "_note": "no broker supplies a genuine aggressor flag; quote-rule inference is labelled INFERRED, candle-colour 'pressure' is never called delta"},
-    "cvd": {"session_reset": "IST_DAY", "divergence_requires_confirmed_pivots": true},
-    "footprint": {"stack_min_run": 3, "stack_ratio": 3.0, "min_level_volume": 10, "require_tick_size": true, "status": "INITIAL"},
-    "absorption": {"status": "REQUIRES_DATA", "_note": "needs tick volume + book events; treated as inference not proof"},
-    "dom": {"max_book_age_sec": 3.0, "reject_crossed_book": true},
-    "volume_profile": {"label_ohlcv_approximation": true}
+    "delta": {
+      "allowed_classes": [
+        "INFERRED_QUOTE_RULE"
+      ],
+      "forbidden_classes": [
+        "OHLC_PROXY"
+      ],
+      "min_classified_fraction": 0.7,
+      "_note": "no broker supplies a genuine aggressor flag; quote-rule inference is labelled INFERRED, candle-colour 'pressure' is never called delta"
+    },
+    "cvd": {
+      "session_reset": "IST_DAY",
+      "divergence_requires_confirmed_pivots": true
+    },
+    "footprint": {
+      "stack_min_run": 3,
+      "stack_ratio": 3.0,
+      "min_level_volume": 10,
+      "require_tick_size": true,
+      "status": "INITIAL"
+    },
+    "absorption": {
+      "status": "REQUIRES_DATA",
+      "_note": "needs tick volume + book events; treated as inference not proof"
+    },
+    "dom": {
+      "max_book_age_sec": 3.0,
+      "reject_crossed_book": true
+    },
+    "volume_profile": {
+      "label_ohlcv_approximation": true
+    }
   },
   "smc": {
     "pivot_len": 3,
     "pivot_confirmation": "CLOSED_CANDLES_RIGHT_SIDE",
     "bos_requires": "CANDLE_CLOSE_BEYOND_LEVEL",
     "choch_requires": "CANDLE_CLOSE_BEYOND_LEVEL",
-    "sweep": {"wick_event_is_not_setup": true, "reaction_bars": 3, "min_reclaim_fraction_of_range": 0.5, "status": "INITIAL"},
+    "sweep": {
+      "wick_event_is_not_setup": true,
+      "reaction_bars": 3,
+      "min_reclaim_fraction_of_range": 0.5,
+      "status": "INITIAL"
+    },
     "never_rewrite_past_signals": true
   },
   "scoring": {
-    "components_max": {"structure": 2, "liquidity_sweep": 2, "delta_cvd": 2, "imbalance_absorption": 2, "vwap_regime": 1, "relative_volume": 1, "htf_alignment": 1},
+    "components_max": {
+      "structure": 2,
+      "liquidity_sweep": 2,
+      "delta_cvd": 2,
+      "imbalance_absorption": 2,
+      "vwap_regime": 1,
+      "relative_volume": 1,
+      "htf_alignment": 1
+    },
     "min_total_score": 7,
     "min_distinct_evidence_groups": 3,
-    "conflict_rule": "WAIT_IF_ANY_OPPOSING_MANDATORY",
+    "conflict_rule": "WAIT_IF_ANY_OPPOSING",
     "is_probability": false,
-    "status": "INITIAL_UNCALIBRATED"
+    "status": "INITIAL_UNCALIBRATED",
+    "mandatory_components": [
+      "structure"
+    ],
+    "groups": {
+      "STRUCTURE": [
+        "structure"
+      ],
+      "LIQUIDITY": [
+        "liquidity_sweep"
+      ],
+      "ORDERFLOW": [
+        "delta_cvd",
+        "imbalance_absorption"
+      ],
+      "CONTEXT": [
+        "vwap_regime",
+        "htf_alignment"
+      ],
+      "PARTICIPATION": [
+        "relative_volume"
+      ]
+    },
+    "group_caps": {
+      "ORDERFLOW": 3,
+      "CONTEXT": 1
+    },
+    "evidence_rules": {
+      "_note": "INITIAL heuristics. Not validated, not calibrated; weights are NOT win probabilities.",
+      "structure": {
+        "BOS": 2,
+        "CHOCH": 1,
+        "max_age_bars": 6
+      },
+      "liquidity_sweep": {
+        "fast_reclaim_bars": 2,
+        "full_points_fast": 2,
+        "points_slow": 1,
+        "max_age_bars": 6
+      },
+      "delta_cvd": {
+        "delta_pct_1pt": 0.3,
+        "delta_pct_2pt": 0.5,
+        "cvd_must_agree_for_2pt": true
+      },
+      "imbalance_absorption": {
+        "stacked_run_points": 1,
+        "stacked_run_levels_for_2pt": 4,
+        "require_adjacency_verified": true
+      },
+      "vwap_regime": {
+        "points": 1
+      },
+      "relative_volume": {
+        "min_rvol": 1.5,
+        "points": 1
+      },
+      "htf_alignment": {
+        "points": 1
+      }
+    },
+    "duplicate_window_sec": 300
   },
   "options": {
-    "direction_map": {"BULLISH": "CE", "BEARISH": "PE"},
-    "preference_order": ["ATM", "ITM"],
+    "direction_map": {
+      "BULLISH": "CE",
+      "BEARISH": "PE"
+    },
+    "preference_order": [
+      "ATM",
+      "ITM"
+    ],
     "otm_enabled": false,
     "atm_tie_break": "LOWER_STRIKE",
-    "delta_bands": {"ITM": [0.60, 0.80], "ATM": [0.40, 0.60], "OTM": [0.20, 0.40]},
+    "delta_bands": {
+      "ITM": [
+        0.6,
+        0.8
+      ],
+      "ATM": [
+        0.4,
+        0.6
+      ],
+      "OTM": [
+        0.2,
+        0.4
+      ]
+    },
     "delta_band_status": "INITIAL_HEURISTIC",
     "max_spread_pct": 3.0,
     "min_volume": 100,
@@ -71,11 +215,38 @@
     "allow_averaging_down": false,
     "allow_stop_widening": false,
     "model_slippage_and_charges": true,
-    "sessions_ist": {"NSE_BSE": ["09:20", "15:00"], "MCX": ["09:15", "23:00"]}
+    "sessions_ist": {
+      "NSE_BSE": [
+        "09:20",
+        "15:00"
+      ],
+      "MCX": [
+        "09:15",
+        "23:00"
+      ]
+    }
   },
   "no_trade": [
-    "DATA_STALE", "DATA_MISSING", "DATA_UNMAPPED", "CROSSED_OR_LOCKED_BOOK", "CONFLICTING_EVIDENCE", "SCORE_BELOW_MIN",
-    "OUTSIDE_SESSION", "DAILY_LOSS_LIMIT", "MAX_TRADES", "COOLDOWN", "NO_ELIGIBLE_CONTRACT", "CONTRACT_EXPIRED",
-    "SPREAD_TOO_WIDE", "ILLIQUID", "KILL_SWITCH", "POLICY_INVALID", "UNSUPPORTED_INSTRUMENT", "DUPLICATE_SIGNAL"
+    "DATA_STALE",
+    "DATA_MISSING",
+    "DATA_UNMAPPED",
+    "CROSSED_OR_LOCKED_BOOK",
+    "CONFLICTING_EVIDENCE",
+    "SCORE_BELOW_MIN",
+    "OUTSIDE_SESSION",
+    "DAILY_LOSS_LIMIT",
+    "MAX_TRADES",
+    "COOLDOWN",
+    "NO_ELIGIBLE_CONTRACT",
+    "CONTRACT_EXPIRED",
+    "SPREAD_TOO_WIDE",
+    "ILLIQUID",
+    "KILL_SWITCH",
+    "POLICY_INVALID",
+    "UNSUPPORTED_INSTRUMENT",
+    "DUPLICATE_SIGNAL",
+    "MANDATORY_COMPONENT_MISSING",
+    "INSUFFICIENT_EVIDENCE_GROUPS",
+    "NO_EVIDENCE"
   ]
 }

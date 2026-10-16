@@ -61,7 +61,7 @@ Incorrect (fixed): OF-01, OF-05, OF-06, OF-07, OF-08. Incorrect (replaced, dorma
 
 ## 3. Strategy policy
 
-`app/hybrid_orderflow/strategy_policy.json` (v1.0.0, `DRAFT_UNVALIDATED`) + `policy.py` validator. Fails closed (`PolicyError` ⇒ NO_TRADE/POLICY_INVALID) on: missing section, wrong major version, live enabled, mode not PAPER/SIGNAL_ONLY, candle finality off, forward-fill allowed, BOS on wick, score treated as probability, OTM ordered while disabled, averaging down/stop widening allowed, delta allowed from OHLC proxy, missing kill-switch/no-trade codes. All thresholds marked INITIAL/UNCALIBRATED are heuristics, not validated.
+`app/hybrid_orderflow/strategy_policy.json` (v1.1.0, `DRAFT_UNVALIDATED`; v1.1.0 added scoring groups/caps/evidence rules) + `policy.py` validator. Fails closed (`PolicyError` ⇒ NO_TRADE/POLICY_INVALID) on: missing section, wrong major version, live enabled, mode not PAPER/SIGNAL_ONLY, candle finality off, forward-fill allowed, BOS on wick, score treated as probability, OTM ordered while disabled, averaging down/stop widening allowed, delta allowed from OHLC proxy, missing kill-switch/no-trade codes. All thresholds marked INITIAL/UNCALIBRATED are heuristics, not validated.
 
 ## 4. Architecture / integration map
 
@@ -120,7 +120,8 @@ Created: `app/hybrid_orderflow/{__init__,policy,option_select}.py`, `strategy_po
 ## 10. Not done / blockers
 
 - **Deployment:** the live Dhan worker still runs the OLD classifier/engine in memory; fixes take effect only after a service restart (needs the owner's go; not done).
-- **Not implemented (honestly):** scoring/confluence engine, entry/exit/stop/target engine, risk manager integration, paper-trading workflow for this engine, provider-fallback double-count guard, SMC non-repainting re-implementation, session-VWAP timezone re-verification. These are `NOT TESTED`/not built; the policy and selector are the foundation only.
+- **Scoring engine:** built 2026-10-16 (`app/hybrid_orderflow/scoring.py`, 29 unit tests, paper-only, unwired). Thresholds INITIAL/uncalibrated; NOT run on real data yet; the score is a count of confirmed evidence, not a probability.
+- **Not implemented (honestly):** entry/exit/stop/target engine, risk manager integration, paper-trading workflow for this engine, provider-fallback double-count guard, SMC non-repainting re-implementation, session-VWAP timezone re-verification. These are `NOT TESTED`/not built; the policy and selector are the foundation only.
 - **Data blockers:** genuine aggressor/tick tape, true volume-at-price, per-stock derivatives data (equity derivatives disabled in policy), more than 6 sessions of inferred ticks.
 - Existing 361 crossed-book rows and 538 k NULL-symbol rows are left as-is (no destructive migration).
 
@@ -132,7 +133,8 @@ Created: `app/hybrid_orderflow/{__init__,policy,option_select}.py`, `strategy_po
 | Corrected OrderFlow rules OF-01/05/06/07/08 | PASS (unit) — not deployed |
 | CE/PE + ITM/ATM/OTM selector | PASS (unit) — not integrated |
 | Genuine delta / CVD / footprint / absorption | PARTIAL (inferred only) / NOT TESTED on live |
-| Scoring, entry/exit, risk integration | NOT TESTED (not built) |
+| Scoring engine (unit) | PASS (29 tests: caps, conflict, mandatory gates, fail-closed gates, adapters) — not wired, not run on real data, not calibrated |
+| Entry/exit, risk integration | NOT TESTED (not built) |
 | Backtest with costs | NOT TESTED (no valid genuine data; inferred study is descriptive) |
 | Production readiness | **FAIL / NOT READY** |
 | Live order execution | **DISABLED** (confirmed: policy + no wiring + killswitch tests) |
