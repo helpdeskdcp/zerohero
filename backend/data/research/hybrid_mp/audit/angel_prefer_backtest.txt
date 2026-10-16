@@ -1,0 +1,11 @@
+
+[A legacy loader (first row of any source)] 1m bars=933180 5m bars=173806 trades=6194 last 5m bar=2026-10-16 15:25
+   OOS 2024+           n=1775 gross meanR=+0.043 CI=(-0.014,+0.101) net2bps=-0.138 win=49.8%
+   WINDOW 2026-09-01+  n=  79 gross meanR=+0.223 CI=(-0.239,+0.669) net2bps=+0.025 win=53.2%
+
+[B prefer ANGELONE_CANDLES] 1m bars=933180 5m bars=173806 trades=6188 last 5m bar=2026-10-16 15:25
+   OOS 2024+           n=1769 gross meanR=+0.038 CI=(-0.016,+0.095) net2bps=-0.142 win=49.7%
+   WINDOW 2026-09-01+  n=  73 gross meanR=+0.105 CI=(-0.381,+0.661) net2bps=-0.070 win=50.7%
+
+window trades A=79 B=73  identical=60  only-A=19  only-B=13
+NOTE: window sample is tiny and 1m has gaps (see CANDLE_PARITY_REPORT.md); no edge/NO-GO claim is made from it. Baseline verdict unchanged: NO-GO.
