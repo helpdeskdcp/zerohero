@@ -212,6 +212,13 @@ class DhanOrderflowWorker:
             return
         static = instruments_from_env()
         self._instruments = auto + static
+        try:                                                   # static extras (e.g. MCX futures) need meta too, or their ticks persist with symbol NULL
+            extra = await asyncio.to_thread(dhan_instruments.describe_static_instruments, static)
+        except Exception as e:
+            extra = {}
+            _log.warning("dhan_ws: static instrument meta unavailable: %s: %s", type(e).__name__, e)
+        for sid, m in extra.items():
+            meta.setdefault(sid, m)
         self._instrument_meta = meta
         if incomplete:
             # Don't lock in a partial result for the rest of the day (e.g. a

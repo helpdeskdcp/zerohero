@@ -204,3 +204,34 @@ def resolve_daily_instruments(symbols: list[str], get_spot) -> tuple[list[dict],
         if not ok:
             incomplete.append(sym)
     return out, meta, incomplete
+
+
+def describe_static_instruments(instruments: list[dict], rows: list[dict] | None = None) -> dict:
+    """meta for explicitly configured (DHAN_ORDERFLOW_INSTRUMENTS) security ids, from Dhan's master, so their ticks are persisted with a
+    symbol/kind instead of NULL. {security_id: {"symbol","kind","expiry","trading_symbol"[,"strike"]}}; ids not found in the master are
+    simply absent (never guessed)."""
+    if not instruments:
+        return {}                                          # never touch the network (master download) when there is nothing to describe
+    want = {}
+    for ins in instruments:
+        want.setdefault(str(ins["security_id"]), str(ins.get("exchange_segment", "")).split("_")[0])
+    out: dict = {}
+    for row in (rows if rows is not None else _load_master()):
+        sid = row.get("SEM_SMST_SECURITY_ID")
+        if sid not in want or row.get("SEM_EXM_EXCH_ID") != want[sid]:
+            continue
+        ts = row.get("SEM_TRADING_SYMBOL") or ""
+        name = (row.get("SM_SYMBOL_NAME") or "").strip() or ts.split("-", 1)[0]
+        inst = row.get("SEM_INSTRUMENT_NAME") or ""
+        opt = (row.get("SEM_OPTION_TYPE") or "").strip()
+        kind = "FUTURE" if inst.startswith("FUT") else (f"OPTION_{opt}" if opt in ("CE", "PE") else inst or "UNKNOWN")
+        exp = _parse_expiry(row)
+        meta = {"symbol": name, "kind": kind, "expiry": exp.isoformat() if exp else None, "trading_symbol": ts}
+        try:
+            k = float(row.get("SEM_STRIKE_PRICE") or 0)
+            if kind.startswith("OPTION") and k > 0:
+                meta["strike"] = k
+        except ValueError:
+            pass
+        out[sid] = meta
+    return out

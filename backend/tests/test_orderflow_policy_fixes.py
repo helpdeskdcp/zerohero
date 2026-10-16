@@ -92,3 +92,24 @@ def test_persisted_ticks_carry_symbol_and_kind_when_meta_is_keyed_by_string_id()
     eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), tick_store=store, meta_provider=lambda: {"48704": {"symbol": "NIFTY", "kind": "FUTURE"}})
     eng.ingest(_full_packet(security_id=48704, ltp=101.0, ltq=10, ltt=1_700_000_000))
     assert eng._pending[0]["symbol"] == "NIFTY" and eng._pending[0]["kind"] == "FUTURE"
+
+
+def test_static_mcx_instruments_get_meta_from_the_master():
+    from app.connectors import dhan_instruments as di
+    rows = [{"SEM_EXM_EXCH_ID": "MCX", "SEM_SMST_SECURITY_ID": "570750", "SEM_INSTRUMENT_NAME": "FUTCOM", "SEM_TRADING_SYMBOL": "NATURALGAS-27Oct2026-FUT",
+             "SM_SYMBOL_NAME": "NATURALGAS", "SEM_EXPIRY_DATE": "2026-10-27 23:30:00", "SEM_STRIKE_PRICE": "0.00000", "SEM_OPTION_TYPE": "XX"},
+            {"SEM_EXM_EXCH_ID": "NSE", "SEM_SMST_SECURITY_ID": "570750", "SEM_INSTRUMENT_NAME": "OPTIDX", "SEM_TRADING_SYMBOL": "NIFTY-X", "SM_SYMBOL_NAME": "",
+             "SEM_EXPIRY_DATE": "2026-10-27 00:00:00", "SEM_STRIKE_PRICE": "1.0", "SEM_OPTION_TYPE": "CE"},      # same id on another exchange must not match
+            {"SEM_EXM_EXCH_ID": "MCX", "SEM_SMST_SECURITY_ID": "999", "SEM_INSTRUMENT_NAME": "OPTFUT", "SEM_TRADING_SYMBOL": "CRUDEOIL-19Oct2026-6000-CE",
+             "SM_SYMBOL_NAME": "", "SEM_EXPIRY_DATE": "2026-10-19 23:30:00", "SEM_STRIKE_PRICE": "6000.0", "SEM_OPTION_TYPE": "CE"}]
+    out = di.describe_static_instruments([{"exchange_segment": "MCX_COMM", "security_id": "570750"}, {"exchange_segment": "MCX_COMM", "security_id": "999"},
+                                          {"exchange_segment": "MCX_COMM", "security_id": "404"}], rows)
+    assert out["570750"] == {"symbol": "NATURALGAS", "kind": "FUTURE", "expiry": "2026-10-27", "trading_symbol": "NATURALGAS-27Oct2026-FUT"}
+    assert out["999"]["symbol"] == "CRUDEOIL" and out["999"]["kind"] == "OPTION_CE" and out["999"]["strike"] == 6000.0
+    assert "404" not in out                                  # unknown ids are never guessed
+
+
+def test_describe_static_instruments_without_instruments_does_not_load_the_master(monkeypatch):
+    from app.connectors import dhan_instruments as di
+    monkeypatch.setattr(di, "_load_master", lambda *a, **k: (_ for _ in ()).throw(AssertionError("network")))
+    assert di.describe_static_instruments([]) == {}
