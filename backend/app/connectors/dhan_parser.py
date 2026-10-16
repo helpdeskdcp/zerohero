@@ -139,8 +139,11 @@ def classify_tick(packet: dict, prev_state: dict | None) -> tuple[dict | None, d
     best_bid = depth[0]["bid_price"] if depth else 0.0
     best_ask = depth[0]["ask_price"] if depth else 0.0
 
+    # Quote rule needs a sane book. A crossed/locked book (bid >= ask) is a transient or bad snapshot: both
+    # "ltp >= ask" and "ltp <= bid" can then be true and the old code silently called every such trade a BUY.
+    book_state = "ABSENT" if not (best_bid > 0 and best_ask > 0) else ("VALID" if best_bid < best_ask else "CROSSED_OR_LOCKED")
     side = method = None
-    if best_bid > 0 and best_ask > 0:
+    if book_state == "VALID":
         if ltp >= best_ask:
             side, method = "BUY_AGGRESSOR", "QUOTE_RULE"
         elif ltp <= best_bid:
@@ -160,6 +163,8 @@ def classify_tick(packet: dict, prev_state: dict | None) -> tuple[dict | None, d
     tick = {
         "security_id": packet["security_id"], "ltp": ltp, "ltq": packet["ltq"],
         "ltt": packet["ltt"], "side": side, "classification_method": method,
-        "best_bid": best_bid, "best_ask": best_ask,
+        "best_bid": best_bid, "best_ask": best_ask, "book_state": book_state,
     }
+    if book_state == "CROSSED_OR_LOCKED":                  # never presented as a clean classification
+        tick["classification_method"] = f"{method}_BOOK_INVALID"
     return tick, new_state

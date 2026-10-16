@@ -35,14 +35,17 @@ _log = logging.getLogger("orderflow_engine")
 
 STACK_MIN_RUN = 3
 STACK_RATIO = 3.0
+STACK_MIN_LEVEL_VOLUME = 10       # a level needs this much classified volume (buy+sell) to be judged at all; INITIAL, UNCALIBRATED
 BAR_SECONDS = (60, 300)
+_IST_SEC = 19800
 
 
 class FootprintBar:
     __slots__ = ("bar_start", "bar_sec", "levels", "open", "high", "low", "close",
-                "buy_vol", "sell_vol", "method_counts")
+                "buy_vol", "sell_vol", "method_counts", "tick_size")
 
-    def __init__(self, bar_start: int, bar_sec: int, price: float):
+    def __init__(self, bar_start: int, bar_sec: int, price: float, tick_size: float | None = None):
+        self.tick_size = tick_size                 # None => price adjacency cannot be verified (reported in the output)
         self.bar_start = bar_start
         self.bar_sec = bar_sec
         self.levels: dict[float, dict] = {}   # price -> {"buy": int, "sell": int}
@@ -80,7 +83,7 @@ class FootprintBar:
         directions = []
         for p in prices:
             b, s = self.levels[p]["buy"], self.levels[p]["sell"]
-            if b == 0 and s == 0:
+            if b + s < STACK_MIN_LEVEL_VOLUME:       # too thin to call an imbalance (1-lot vs 0 is not 'infinite' imbalance)
                 directions.append(None)
             elif b > 0 and (s == 0 or b / s >= STACK_RATIO):
                 directions.append("BUY")
@@ -96,11 +99,12 @@ class FootprintBar:
                 i += 1
                 continue
             j = i
-            while j < len(directions) and directions[j] == d:
-                j += 1
+            while j < len(directions) and directions[j] == d and (
+                    j == i or self.tick_size is None or abs(prices[j] - prices[j - 1] - self.tick_size) <= self.tick_size * 1e-6):
+                j += 1                                # with a known tick size, levels must be ADJACENT, not merely the next occupied ones
             if j - i >= STACK_MIN_RUN:
                 runs.append({"direction": d, "price_from": prices[i], "price_to": prices[j - 1],
-                            "levels": j - i})
+                            "levels": j - i, "adjacency_verified": self.tick_size is not None})
             i = j
         return runs
 
@@ -109,6 +113,8 @@ class FootprintBar:
             "bar_start": self.bar_start, "bar_sec": self.bar_sec,
             "open": self.open, "high": self.high, "low": self.low, "close": self.close,
             "buy_vol": self.buy_vol, "sell_vol": self.sell_vol, "delta": self.delta,
+            "delta_pct": (round(self.delta / (self.buy_vol + self.sell_vol), 4) if (self.buy_vol + self.sell_vol) else None),
+            "classified_vol": self.buy_vol + self.sell_vol,
             "n_levels": len(self.levels), "stacked_imbalances": self.stacked_imbalances(),
             "classification_methods": dict(self.method_counts),
         }
@@ -118,6 +124,9 @@ class SymbolState:
     def __init__(self, max_closed_bars: int = 500):
         self.prev: dict | None = None          # dhan_parser.classify_tick()'s ltt/ltp de-dupe state
         self.cvd = 0
+        self.cvd_session_date: int | None = None   # IST day number the running CVD belongs to (resets each session)
+        self.cvd_resets = 0
+        self.late_ticks = 0                        # ticks older than the open bar: counted in CVD, kept out of bars
         self.bars: dict[int, dict[int, FootprintBar]] = {sec: {} for sec in BAR_SECONDS}
         self.closed_bars: dict[int, list[dict]] = {sec: [] for sec in BAR_SECONDS}
         self.max_closed_bars = max_closed_bars
@@ -126,14 +135,23 @@ class SymbolState:
         tick, self.prev = dhan_parser.classify_tick(packet, self.prev)
         if tick is None:
             return None
+        day = (tick["ltt"] + _IST_SEC) // 86400
+        if self.cvd_session_date is not None and day != self.cvd_session_date:
+            self.cvd, self.cvd_resets = 0, self.cvd_resets + 1       # CVD is a SESSION quantity: never carried across days
+        self.cvd_session_date = day
         if tick["side"] == "BUY_AGGRESSOR":
             self.cvd += tick["ltq"]
         elif tick["side"] == "SELL_AGGRESSOR":
             self.cvd -= tick["ltq"]
         tick["cvd"] = self.cvd
+        counted_late = False
         for bar_sec in BAR_SECONDS:
             bar_start = (tick["ltt"] // bar_sec) * bar_sec
             bars = self.bars[bar_sec]
+            if bars and bar_start < max(bars):          # out-of-order tick for an already-superseded bar: do not reopen/close bars
+                if not counted_late:
+                    self.late_ticks, counted_late = self.late_ticks + 1, True
+                continue
             for existing_start in [s for s in bars if s != bar_start]:
                 self.closed_bars[bar_sec].append(bars.pop(existing_start).to_dict())
             if bar_start not in bars:
@@ -214,7 +232,8 @@ class OrderflowEngine:
         if tick["side"] == "UNKNOWN":
             self.n_ticks_unknown += 1
         if self.tick_store is not None:
-            meta = self._meta_provider().get(sid, {})
+            metas = self._meta_provider()
+            meta = metas.get(sid) or metas.get(str(sid)) or {}      # instrument_meta is keyed by STRING security_id; packet sid is int
             self._pending.append({
                 "received_ts": datetime.now(timezone.utc).isoformat(),
                 "security_id": sid, "symbol": meta.get("symbol"), "kind": meta.get("kind"),
@@ -246,7 +265,8 @@ class OrderflowEngine:
         if state is None:
             return None
         return {
-            "security_id": security_id, "cvd": state.cvd,
+            "security_id": security_id, "cvd": state.cvd, "cvd_session_ist_day": state.cvd_session_date,
+            "cvd_resets": state.cvd_resets, "late_ticks": state.late_ticks,
             "open_bars": {sec: [b.to_dict() for b in bars.values()] for sec, bars in state.bars.items()},
             "closed_bars": state.closed_bars,
         }
