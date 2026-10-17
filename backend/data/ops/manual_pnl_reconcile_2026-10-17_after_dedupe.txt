@@ -1,0 +1,17 @@
+MANUAL paper rows: recorded vs de-duplicated estimate (estimate = last closed row per token per IST day; broker contract note is the truth)
+day         rows    recorded    estimate recorded-estimate
+2026-10-05     1        -211        -211              0
+2026-10-06     5        -899        -814            -84
+2026-10-07     5      -3,853      -4,513            660
+2026-10-08     8       3,439       1,492          1,947
+2026-10-09    12       3,854       3,926            -72
+2026-10-10     3         659         220            439
+2026-10-12    28      -4,607       1,591         -6,198
+2026-10-13    33     -15,351      -7,623         -7,728
+2026-10-14     7      -2,597      -1,573         -1,024
+2026-10-15    25      -3,848      -1,733         -2,116
+2026-10-16     9       1,752       1,551            201
+2026-10-17     1        -414        -414              0
+TOTAL        137     -22,076      -8,102        -13,974
+
+exact duplicate rows (same token, entry, exit, qty, pnl on the same day): 0; P&L counted twice: 0
