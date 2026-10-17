@@ -1,0 +1,32 @@
+NIFTY 5m: 2315 sessions, 17318..20742 (day keys), cost 2.0 bps round trip
+hypotheses tested (pre-registered, nothing tuned): 534  {'A_slot': 402, 'B_gap': 36, 'C_first30': 24, 'D_extreme': 36, 'E_weekday': 20, 'F_prevday': 12, 'G_lasthour': 4}
+eligible (>=300 events, >=150 days in TRAIN): 466
+S1 discovery  (BH q=0.10, net>0): 0 survivors
+S2 validation (BH q=0.05 within S1): 0 survivors
+S3 holdout    (BH q=0.05 within S2): 0 survivors
+
+Top 12 by TRAIN evidence (net bps/event, one-sided p) and what happened later:
+hypothesis                         TRAIN net        p      n | VALID net      p |  OOS net      p
+G lasthourdn fade overnight            11.86   0.0013    382 |      2.99  0.284 |    -5.66  0.926
+G lasthourup follow overnight          10.92   0.0073    393 |     12.26  0.001 |     5.34  0.174
+F prevday30up fade                     10.98   0.0147    339 |      3.28  0.276 |     3.67  0.214
+F prevclose-top fade                    6.90   0.0666    315 |      0.41  0.468 |     5.66  0.159
+D z2.0dn follow h12                     2.21   0.1452   1163 |      1.96  0.233 |    -2.04  0.785
+D z2.0dn follow h6                      1.19   0.1860   1528 |     -1.68  0.886 |    -1.60  0.882
+F prevday30dn follow                    2.43   0.3376    411 |     -2.53  0.666 |   -10.21  0.986
+A slot33 h6 L                           0.36   0.3466   1134 |     -2.08  0.998 |    -1.61  0.993
+A slot55 h12 S                          0.37   0.3582   1133 |     -2.10  0.958 |    -2.00  0.985
+D z2.5dn follow h12                     1.24   0.3591    477 |      5.66  0.098 |    -4.15  0.744
+C r3010dn fade ->1pm-ish +60m           0.92   0.3611    474 |     -2.68  0.920 |    -2.41  0.918
+C r3020dn fade ->1pm-ish +60m           1.23   0.3653    337 |     -4.63  0.958 |    -1.96  0.802
+
+Informational replication on BANKNIFTY (same rule, no re-tuning), net bps/event [p]:
+  G lasthourdn fade overnight        VALID  +1.42 [0.407] n= 156 | OOS  -6.38 [0.930] n= 209
+  G lasthourup follow overnight      VALID  +9.45 [0.030] n= 193 | OOS  +2.11 [0.346] n= 201
+  F prevday30up fade                 VALID  +5.59 [0.222] n= 163 | OOS  +4.99 [0.197] n= 227
+  F prevclose-top fade               VALID  +9.43 [0.130] n= 139 | OOS  +6.84 [0.172] n= 166
+
+Placebo calibration (events replaced by random same-size draws from the same opportunity pool; 30 runs): survivors per stage (S1,S2,S3)
+  mean [1.17, 0.33, 0.03]  max [3, 2, 1]  | real run: (0, 0, 0)
+
+elapsed 3s
