@@ -210,3 +210,20 @@ def test_master_tick_size_is_converted_from_paise():
              "SEM_TRADING_SYMBOL": "NATURALGAS-27Oct2026-FUT", "SM_SYMBOL_NAME": "NATURALGAS", "SEM_EXPIRY_DATE": "2026-10-27 23:30:00",
              "SEM_STRIKE_PRICE": "0", "SEM_OPTION_TYPE": "XX", "SEM_TICK_SIZE": "10.0000"}]
     assert di.describe_static_instruments([{"exchange_segment": "MCX_COMM", "security_id": "570750"}], rows)["570750"]["tick_size"] == 0.1
+
+
+def test_option_legs_carry_tick_size_from_the_master(monkeypatch):
+    from datetime import date
+    from app.connectors import dhan_instruments as di
+
+    def leg(sid, typ):
+        return {"SEM_EXM_EXCH_ID": "NSE", "SEM_SEGMENT": "D", "SEM_SMST_SECURITY_ID": sid, "SEM_INSTRUMENT_NAME": "OPTIDX", "SEM_TRADING_SYMBOL": f"NIFTY-Oct2026-23000-{typ}",
+                "SEM_EXPIRY_DATE": "2026-10-27 14:30:00", "SEM_STRIKE_PRICE": "23000.00000", "SEM_OPTION_TYPE": typ, "SEM_TICK_SIZE": "5.0000"}
+    fut = {"SEM_EXM_EXCH_ID": "NSE", "SEM_SEGMENT": "D", "SEM_SMST_SECURITY_ID": "9", "SEM_INSTRUMENT_NAME": "FUTIDX", "SEM_TRADING_SYMBOL": "NIFTY-Oct2026-FUT",
+           "SEM_EXPIRY_DATE": "2026-10-27 14:30:00", "SEM_STRIKE_PRICE": "0", "SEM_OPTION_TYPE": "XX", "SEM_TICK_SIZE": "10.0000"}
+    monkeypatch.setattr(di, "_load_master", lambda *a, **k: [leg("1", "CE"), leg("2", "PE"), fut])
+    monkeypatch.setattr(di, "today_ist", lambda: date(2026, 10, 17))
+    r = di.resolve_atm_options("NIFTY", 23010)
+    assert r["ce"]["tick_size"] == 0.05 and r["pe"]["tick_size"] == 0.05
+    out, meta, inc = di.resolve_daily_instruments(["NIFTY"], lambda s: 23010)
+    assert inc == [] and meta["1"]["tick_size"] == 0.05 and meta["2"]["tick_size"] == 0.05 and meta["9"]["tick_size"] == 0.1

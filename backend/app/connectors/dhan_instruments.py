@@ -171,8 +171,8 @@ def resolve_atm_options(symbol: str, spot: float, *, exch_id: str = "NSE", segme
         return None
     return {
         "expiry": nearest_expiry.isoformat(), "strike": actual_strike,
-        "ce": {"security_id": ce["SEM_SMST_SECURITY_ID"], "trading_symbol": ce.get("SEM_TRADING_SYMBOL")},
-        "pe": {"security_id": pe["SEM_SMST_SECURITY_ID"], "trading_symbol": pe.get("SEM_TRADING_SYMBOL")},
+        "ce": {"security_id": ce["SEM_SMST_SECURITY_ID"], "trading_symbol": ce.get("SEM_TRADING_SYMBOL"), "tick_size": _tick_size(ce)},
+        "pe": {"security_id": pe["SEM_SMST_SECURITY_ID"], "trading_symbol": pe.get("SEM_TRADING_SYMBOL"), "tick_size": _tick_size(pe)},
     }
 
 
@@ -209,7 +209,7 @@ def resolve_daily_instruments(symbols: list[str], get_spot) -> tuple[list[dict],
                     out.append({"exchange_segment": ws_segment, "security_id": r["security_id"]})
                     meta[r["security_id"]] = {"symbol": sym, "kind": f"OPTION_{leg.upper()}",
                                               "expiry": atm["expiry"], "strike": atm["strike"],
-                                              "trading_symbol": r["trading_symbol"]}
+                                              "trading_symbol": r["trading_symbol"], "tick_size": r.get("tick_size")}
             else:
                 _log.warning("dhan_instruments: no ATM options resolved for %s (spot=%s)", sym, spot)
                 ok = False
