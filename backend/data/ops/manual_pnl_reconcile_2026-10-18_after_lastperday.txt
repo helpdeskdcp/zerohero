@@ -1,0 +1,2 @@
+TOTAL        135     -23,326     -23,109           -217
+exact duplicate rows (same token, entry, exit, qty, pnl on the same day): 0; P&L counted twice: 0
