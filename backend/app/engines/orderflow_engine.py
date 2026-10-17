@@ -60,6 +60,8 @@ class FootprintBar:
         self.low = min(self.low, price)
         self.close = price
         self.method_counts[tick["classification_method"]] += 1
+        if self.tick_size:      # Dhan prices are float32 (288.299987792969): snap to the exchange tick grid so levels and adjacency are exact
+            price = round(round(price / self.tick_size) * self.tick_size, 8)
         lvl = self.levels.setdefault(price, {"buy": 0, "sell": 0})
         if side == "BUY_AGGRESSOR":
             lvl["buy"] += qty
@@ -100,7 +102,7 @@ class FootprintBar:
                 continue
             j = i
             while j < len(directions) and directions[j] == d and (
-                    j == i or self.tick_size is None or abs(prices[j] - prices[j - 1] - self.tick_size) <= self.tick_size * 1e-6):
+                    j == i or self.tick_size is None or abs(prices[j] - prices[j - 1] - self.tick_size) <= self.tick_size * 1e-3):
                 j += 1                                # with a known tick size, levels must be ADJACENT, not merely the next occupied ones
             if j - i >= STACK_MIN_RUN:
                 runs.append({"direction": d, "price_from": prices[i], "price_to": prices[j - 1],
@@ -121,7 +123,8 @@ class FootprintBar:
 
 
 class SymbolState:
-    def __init__(self, max_closed_bars: int = 500):
+    def __init__(self, max_closed_bars: int = 500, tick_size: float | None = None):
+        self.tick_size = tick_size                  # exchange tick (rupees) from the instrument master; None => adjacency cannot be verified
         self.prev: dict | None = None          # dhan_parser.classify_tick()'s ltt/ltp de-dupe state
         self.cvd = 0
         self.cvd_session_date: int | None = None   # IST day number the running CVD belongs to (resets each session)
@@ -155,7 +158,7 @@ class SymbolState:
             for existing_start in [s for s in bars if s != bar_start]:
                 self.closed_bars[bar_sec].append(bars.pop(existing_start).to_dict())
             if bar_start not in bars:
-                bars[bar_start] = FootprintBar(bar_start, bar_sec, tick["ltp"])
+                bars[bar_start] = FootprintBar(bar_start, bar_sec, tick["ltp"], tick_size=self.tick_size)
             bars[bar_start].add(tick)
             if len(self.closed_bars[bar_sec]) > self.max_closed_bars:
                 self.closed_bars[bar_sec] = self.closed_bars[bar_sec][-self.max_closed_bars:]
@@ -224,7 +227,14 @@ class OrderflowEngine:
 
     def ingest(self, packet: dict) -> dict | None:
         sid = packet["security_id"]
-        state = self._symbols.setdefault(sid, SymbolState())
+        state = self._symbols.get(sid)
+        if state is None or state.tick_size is None:
+            metas = self._meta_provider() or {}
+            ts = (metas.get(sid) or metas.get(str(sid)) or {}).get("tick_size")
+            if state is None:
+                state = self._symbols[sid] = SymbolState(tick_size=ts)
+            elif ts:
+                state.tick_size = ts
         tick = state.ingest(packet)
         if tick is None:
             return None

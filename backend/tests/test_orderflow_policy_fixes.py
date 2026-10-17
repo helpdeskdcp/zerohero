@@ -104,7 +104,7 @@ def test_static_mcx_instruments_get_meta_from_the_master():
              "SM_SYMBOL_NAME": "", "SEM_EXPIRY_DATE": "2026-10-19 23:30:00", "SEM_STRIKE_PRICE": "6000.0", "SEM_OPTION_TYPE": "CE"}]
     out = di.describe_static_instruments([{"exchange_segment": "MCX_COMM", "security_id": "570750"}, {"exchange_segment": "MCX_COMM", "security_id": "999"},
                                           {"exchange_segment": "MCX_COMM", "security_id": "404"}], rows)
-    assert out["570750"] == {"symbol": "NATURALGAS", "kind": "FUTURE", "expiry": "2026-10-27", "trading_symbol": "NATURALGAS-27Oct2026-FUT"}
+    assert out["570750"] == {"symbol": "NATURALGAS", "kind": "FUTURE", "expiry": "2026-10-27", "trading_symbol": "NATURALGAS-27Oct2026-FUT", "tick_size": None}
     assert out["999"]["symbol"] == "CRUDEOIL" and out["999"]["kind"] == "OPTION_CE" and out["999"]["strike"] == 6000.0
     assert "404" not in out                                  # unknown ids are never guessed
 
@@ -177,3 +177,36 @@ def test_auto_futures_default_and_opt_out(monkeypatch):
     assert dhan_ws._auto_futures() == ["NATURALGAS", "CRUDEOIL"]
     monkeypatch.setenv("DHAN_ORDERFLOW_AUTO_FUTURES", "")
     assert dhan_ws._auto_futures() == []
+
+
+# ---- real Dhan prices are float32: snap to the tick grid (audit replay 2026-10-17) -----------------------------------------------
+def test_float32_prices_are_adjacent_on_the_tick_grid():
+    bar = orderflow_engine.FootprintBar(0, 60, 288.3, tick_size=0.1)
+    for price in (288.299987792969, 288.399993896484, 288.5, 288.600006103516):     # real NATURALGAS values, diffs 0.100006 / 0.099976
+        bar.add(_ADD(price, 30, "BUY_AGGRESSOR")); bar.add(_ADD(price, 5, "SELL_AGGRESSOR"))
+    runs = bar.stacked_imbalances()
+    assert len(runs) == 1 and runs[0]["levels"] == 4 and runs[0]["adjacency_verified"] is True
+    assert runs[0]["price_from"] == 288.3 and runs[0]["price_to"] == 288.6                 # snapped, not float32 noise
+
+
+def test_float32_noise_does_not_split_one_price_into_two_levels():
+    bar = orderflow_engine.FootprintBar(0, 60, 22371.3, tick_size=0.1)
+    bar.add(_ADD(22371.30078125, 10, "BUY_AGGRESSOR")); bar.add(_ADD(22371.3, 10, "BUY_AGGRESSOR"))
+    assert len(bar.levels) == 1
+
+
+def test_engine_passes_instrument_tick_size_from_meta():
+    eng = orderflow_engine.OrderflowEngine(asyncio.Queue(), meta_provider=lambda: {"570750": {"symbol": "NATURALGAS", "tick_size": 0.1}})
+    eng.ingest(_full_packet(security_id=570750, ltp=101.0, ltq=10, ltt=1_700_000_000))
+    assert eng._symbols[570750].tick_size == 0.1
+    assert next(iter(eng.snapshot(570750)["open_bars"][60]))["n_levels"] == 1
+
+
+def test_master_tick_size_is_converted_from_paise():
+    from app.connectors import dhan_instruments as di
+    assert di._tick_size({"SEM_TICK_SIZE": "10.0000"}) == 0.1 and di._tick_size({"SEM_TICK_SIZE": "100.0000"}) == 1.0
+    assert di._tick_size({"SEM_TICK_SIZE": "20.0000"}) == 0.2 and di._tick_size({"SEM_TICK_SIZE": ""}) is None and di._tick_size({}) is None
+    rows = [{"SEM_EXM_EXCH_ID": "MCX", "SEM_SEGMENT": "M", "SEM_SMST_SECURITY_ID": "570750", "SEM_INSTRUMENT_NAME": "FUTCOM",
+             "SEM_TRADING_SYMBOL": "NATURALGAS-27Oct2026-FUT", "SM_SYMBOL_NAME": "NATURALGAS", "SEM_EXPIRY_DATE": "2026-10-27 23:30:00",
+             "SEM_STRIKE_PRICE": "0", "SEM_OPTION_TYPE": "XX", "SEM_TICK_SIZE": "10.0000"}]
+    assert di.describe_static_instruments([{"exchange_segment": "MCX_COMM", "security_id": "570750"}], rows)["570750"]["tick_size"] == 0.1

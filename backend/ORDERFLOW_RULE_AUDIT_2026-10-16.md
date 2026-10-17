@@ -138,3 +138,12 @@ Created: `app/hybrid_orderflow/{__init__,policy,option_select}.py`, `strategy_po
 | Backtest with costs | NOT TESTED (no valid genuine data; inferred study is descriptive) |
 | Production readiness | **FAIL / NOT READY** |
 | Live order execution | **DISABLED** (confirmed: policy + no wiring + killswitch tests) |
+
+## 12. Real-data scoring replay (2026-10-17)
+
+`scripts/orderflow_scoring_replay.py` (read-only, causal, policy thresholds as shipped, no tuning): 5m bars built from the real Dhan ticks (NATURALGAS 5 days, CRUDEOIL 5, NIFTY fut 3, BANKNIFTY fut 3), evidence from `scoring.py` adapters, entry next-bar open, exits +3/+6 bars, no forward-fill, 2 bps cost. Output: `data/research/orderflow/scoring_replay_2026-10-17.txt`.
+
+- **New defect found by the replay and fixed (OF-16):** Dhan prices are float32 (`288.299987792969`, diffs 0.100006/0.099976), so the footprint adjacency check (exact tick diff) could never pass on real data, and the live engine never passed a tick size at all (`adjacency_verified` always false, imbalance evidence always `ADJACENCY_UNVERIFIED`). Fix: tick size now comes from the Dhan master (`SEM_TICK_SIZE`/100 — the field is in PAISE; verified NIFTY 0.1, BANKNIFTY 0.2, NATURALGAS 0.1, CRUDEOIL 1.0 against the observed price grid), plumbed through `instrument_meta` into the engine; footprint levels snap to the tick grid. Effect: imbalance evidence active on 1.2% of bars before the fix, 13.8% after.
+- **Behaviour:** 1,632 scored bars -> 10 SIGNAL (0.6%), 1,526 WAIT, 96 NO_TRADE (OUTSIDE_SESSION). Main WAIT reasons: score below min, insufficient evidence groups, conflicting evidence, mandatory structure missing. Component availability: HTF 91%, VWAP 76%, structure 48%, sweep 37%, delta 23%, imbalance 14%, rvol 16%.
+- **Result (descriptive only):** SIGNAL n=10 (9 NATURALGAS-heavy, ~5 days), forward result in signal direction H=3: mean -21.9 bps (hit 22%), H=6: -47.5 bps (hit 10%); a random-lead-bar null puts p(mean >= signal) at 0.98 / 1.00. One bar (-203/-244 bps) dominates the mean; excluding it the signals are still mostly negative. **No evidence of an edge; if anything the signals preceded reversals** (consistent with the negative inferred-delta relation in section 7). Effective sample is a handful of independent signals, so this is neither validation nor rejection of the idea.
+- **Status:** scoring engine behaviour PASS (plumbing); predictive value NOT VALIDATED, thresholds uncalibrated. Do not wire to anything that trades.

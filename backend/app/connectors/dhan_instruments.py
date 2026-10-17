@@ -76,6 +76,16 @@ def _load_master(force: bool = False) -> list[dict]:
     return rows
 
 
+def _tick_size(row: dict) -> float | None:
+    """Dhan's SEM_TICK_SIZE is in PAISE (verified 2026-10-17: NIFTY fut 10 -> 0.10, BANKNIFTY 20 -> 0.20, NATURALGAS 10 -> 0.10, CRUDEOIL 100 -> 1.00
+    against the observed price grid). None if absent/invalid."""
+    try:
+        v = float(row.get("SEM_TICK_SIZE") or 0) / 100.0
+    except ValueError:
+        return None
+    return round(v, 6) if v > 0 else None
+
+
 def _parse_expiry(row: dict) -> date | None:
     raw = (row.get("SEM_EXPIRY_DATE") or "").strip()
     if not raw or raw.startswith("0001"):
@@ -117,7 +127,7 @@ def resolve_front_month_future(symbol: str, *, exch_id: str = "NSE", segment: st
     candidates.sort(key=lambda t: t[0])
     exp, row = candidates[0]
     return {"security_id": row["SEM_SMST_SECURITY_ID"], "expiry": exp.isoformat(),
-            "trading_symbol": row.get("SEM_TRADING_SYMBOL")}
+            "trading_symbol": row.get("SEM_TRADING_SYMBOL"), "tick_size": _tick_size(row)}
 
 
 def resolve_atm_options(symbol: str, spot: float, *, exch_id: str = "NSE", segment: str = "D",
@@ -187,7 +197,7 @@ def resolve_daily_instruments(symbols: list[str], get_spot) -> tuple[list[dict],
             if fut:
                 out.append({"exchange_segment": ws_segment, "security_id": fut["security_id"]})
                 meta[fut["security_id"]] = {"symbol": sym, "kind": "FUTURE", "expiry": fut["expiry"],
-                                            "trading_symbol": fut["trading_symbol"]}
+                                            "trading_symbol": fut["trading_symbol"], "tick_size": fut.get("tick_size")}
             else:
                 _log.warning("dhan_instruments: no front-month future resolved for %s", sym)
                 ok = False
@@ -231,7 +241,7 @@ def describe_static_instruments(instruments: list[dict], rows: list[dict] | None
         opt = (row.get("SEM_OPTION_TYPE") or "").strip()
         kind = "FUTURE" if inst.startswith("FUT") else (f"OPTION_{opt}" if opt in ("CE", "PE") else inst or "UNKNOWN")
         exp = _parse_expiry(row)
-        meta = {"symbol": name, "kind": kind, "expiry": exp.isoformat() if exp else None, "trading_symbol": ts}
+        meta = {"symbol": name, "kind": kind, "expiry": exp.isoformat() if exp else None, "trading_symbol": ts, "tick_size": _tick_size(row)}
         try:
             k = float(row.get("SEM_STRIKE_PRICE") or 0)
             if kind.startswith("OPTION") and k > 0:
@@ -257,5 +267,6 @@ def resolve_front_futures(symbols: list[str], min_days: int = 1, rows: list[dict
             incomplete.append(sym)
             continue
         out.append({"exchange_segment": spec[2], "security_id": fut["security_id"]})
-        meta[fut["security_id"]] = {"symbol": sym, "kind": "FUTURE", "expiry": fut["expiry"], "trading_symbol": fut["trading_symbol"]}
+        meta[fut["security_id"]] = {"symbol": sym, "kind": "FUTURE", "expiry": fut["expiry"], "trading_symbol": fut["trading_symbol"],
+                                    "tick_size": fut.get("tick_size")}
     return out, meta, incomplete
