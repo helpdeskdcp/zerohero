@@ -9,7 +9,7 @@ import re
 POLICY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "strategy_policy.json")
 SUPPORTED_MAJOR = 1
 _REQUIRED = ("policy_version", "validation_status", "change_history", "execution", "markets", "data", "features", "smc",
-             "scoring", "options", "risk", "no_trade")
+             "scoring", "options", "risk", "no_trade", "promotion", "trade")
 _SCORE_KEYS = {"structure", "liquidity_sweep", "delta_cvd", "imbalance_absorption", "vwap_regime", "relative_volume", "htf_alignment"}
 
 
@@ -88,6 +88,26 @@ def validate(p: dict) -> dict:
     _need(r.get("allow_averaging_down") is False and r.get("allow_stop_widening") is False, "averaging down / stop widening must be false")
     _need(_num(r.get("min_reward_risk_t1")) and r["min_reward_risk_t1"] >= 1.0, "risk.min_reward_risk_t1 must be >= 1")
     _need("POLICY_INVALID" in p["no_trade"] and "KILL_SWITCH" in p["no_trade"], "no_trade list must include POLICY_INVALID and KILL_SWITCH")
+    t = p["trade"]
+    _need(len(t["targets_r"]) == len(t["partial_fractions"]) and all(_num(x) and x > 0 for x in t["targets_r"]), "trade targets_r/partial_fractions mismatch")
+    _need(t["targets_r"] == sorted(t["targets_r"]) and t["targets_r"][0] >= p["risk"]["min_reward_risk_t1"], "trade.targets_r must ascend and T1 must satisfy risk.min_reward_risk_t1")
+    _need(abs(sum(t["partial_fractions"]) - 1.0) < 1e-9, "trade.partial_fractions must sum to 1")
+    _need(_num(t.get("max_stop_premium_pct")) and 0 < t["max_stop_premium_pct"] <= 60, "trade.max_stop_premium_pct invalid")
+    _need(isinstance(t.get("max_hold_minutes"), int) and t["max_hold_minutes"] > 0, "trade.max_hold_minutes invalid")
+    _need(t.get("intrabar_conflict") == "STOP_FIRST", "trade.intrabar_conflict must be STOP_FIRST (pessimistic fills)")
+    _need(isinstance(t.get("slippage_ticks"), int) and t["slippage_ticks"] >= 1, "trade.slippage_ticks must be >= 1")
+    _need(_num(p["risk"].get("paper_capital_inr")) and p["risk"]["paper_capital_inr"] > 0, "risk.paper_capital_inr invalid")
+    _need(_num(p["risk"].get("max_premium_exposure_pct")) and 0 < p["risk"]["max_premium_exposure_pct"] <= 100, "risk.max_premium_exposure_pct invalid")
+    pr = p["promotion"]
+    _need(pr.get("paper_only") is True, "promotion.paper_only must be true (no promotion to live)")
+    _need(isinstance(pr.get("min_trades"), int) and pr["min_trades"] >= 100, "promotion.min_trades must be an int >= 100")
+    _need(isinstance(pr.get("min_distinct_days"), int) and pr["min_distinct_days"] >= 20, "promotion.min_distinct_days must be >= 20")
+    _need(_num(pr.get("min_net_mean_bps")) and pr["min_net_mean_bps"] >= 0, "promotion.min_net_mean_bps must be >= 0")
+    _need(isinstance(pr.get("folds"), int) and pr["folds"] >= 3 and pr.get("min_positive_folds", 0) > pr["folds"] // 2 and pr["min_positive_folds"] <= pr["folds"], "promotion folds/min_positive_folds invalid (need a majority)")
+    _need(_num(pr.get("cost_stress_multiplier")) and pr["cost_stress_multiplier"] >= 1.0, "promotion.cost_stress_multiplier must be >= 1")
+    _need(_num(pr.get("max_top5_profit_share")) and 0 < pr["max_top5_profit_share"] <= 0.8, "promotion.max_top5_profit_share invalid")
+    _need(isinstance(pr.get("bootstrap"), int) and pr["bootstrap"] >= 500, "promotion.bootstrap must be >= 500")
+    _need(pr.get("last_fold_must_be_positive") is True, "promotion.last_fold_must_be_positive must be true")
     return p
 
 

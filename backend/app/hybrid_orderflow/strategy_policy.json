@@ -1,6 +1,6 @@
 {
   "_comment": "Authoritative strategy policy. Thresholds marked INITIAL are heuristics, NOT validated for profitability. Validation status below is honest: nothing here is claimed profitable.",
-  "policy_version": "1.1.0",
+  "policy_version": "1.2.0",
   "validation_status": "DRAFT_UNVALIDATED",
   "change_history": [
     {
@@ -12,6 +12,11 @@
       "version": "1.1.0",
       "date": "2026-10-16",
       "change": "added scoring groups, correlation caps, mandatory components and evidence rules (all INITIAL, uncalibrated) for the paper-only scoring engine"
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-10-17",
+      "change": "added promotion gate (net-of-cost statistical criteria), trade lifecycle and portfolio risk limits"
     }
   ],
   "execution": {
@@ -224,7 +229,9 @@
         "09:15",
         "23:00"
       ]
-    }
+    },
+    "paper_capital_inr": 200000.0,
+    "max_premium_exposure_pct": 30.0
   },
   "no_trade": [
     "DATA_STALE",
@@ -248,5 +255,48 @@
     "MANDATORY_COMPONENT_MISSING",
     "INSUFFICIENT_EVIDENCE_GROUPS",
     "NO_EVIDENCE"
-  ]
+  ],
+  "promotion": {
+    "_note": "A strategy gets PAPER allocation only if every criterion passes on out-of-sample trades; there is no promotion to live in this policy.",
+    "min_trades": 200,
+    "min_distinct_days": 40,
+    "min_net_mean_bps": 1.0,
+    "bootstrap": 2000,
+    "folds": 4,
+    "min_positive_folds": 3,
+    "last_fold_must_be_positive": true,
+    "cost_stress_multiplier": 1.5,
+    "max_top5_profit_share": 0.5,
+    "max_drawdown_over_total_net": 1.0,
+    "auto_disable_after_net_loss_bps": 150.0,
+    "paper_only": true
+  },
+  "trade": {
+    "_note": "INITIAL, uncalibrated. Premium-based option buying lifecycle; paper only.",
+    "targets_r": [
+      1.5,
+      2.5,
+      4.0
+    ],
+    "partial_fractions": [
+      0.5,
+      0.3,
+      0.2
+    ],
+    "be_after_t1": true,
+    "trail_to_t1_after_t2": true,
+    "max_hold_minutes": 45,
+    "max_stop_premium_pct": 35.0,
+    "slippage_ticks": 1,
+    "intrabar_conflict": "STOP_FIRST",
+    "charges": {
+      "brokerage_per_order_inr": 20.0,
+      "stt_sell_pct": 0.1,
+      "exchange_txn_pct": 0.0356,
+      "sebi_pct": 0.0001,
+      "stamp_buy_pct": 0.003,
+      "gst_pct": 18.0,
+      "_note": "approximate public schedule, VERIFY against a contract note; used only to stop the paper P&L being flattering"
+    }
+  }
 }
