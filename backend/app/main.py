@@ -239,6 +239,22 @@ except Exception as _e:  # never let orderflow wiring break the app
     dhan_orderflow_engine = None
     print(f"[dhan_orderflow] disabled: {type(_e).__name__}: {_e}")
 
+# ---- Hybrid OrderFlow SHADOW runner: SIGNAL-ONLY / PAPER-ONLY, no order path. Reads the Dhan ticks read-only, scores closed 5m bars with the
+# policy-driven engine, stores into its OWN sqlite file, exposes /api/hybrid_orderflow/status. Kill switch: HYBRID_ORDERFLOW_SHADOW=0 ----
+hybrid_orderflow_shadow = None
+try:
+    from . import hybrid_orderflow_api as _hof_api
+    from .hybrid_orderflow import shadow as _hof_shadow
+    app.include_router(_hof_api.router)
+    if _hof_shadow.enabled() and dhan_orderflow_worker is not None:
+        hybrid_orderflow_shadow = _hof_shadow.ShadowRunner(lambda: dhan_orderflow_worker._instrument_meta)     # PolicyError => not created (fail closed)
+        _hof_api.set_runner(hybrid_orderflow_shadow)
+    else:
+        print("[hybrid_orderflow] shadow runner not started (HYBRID_ORDERFLOW_SHADOW=0 or Dhan worker unavailable)")
+except Exception as _e:  # never let it break the app
+    hybrid_orderflow_shadow = None
+    print(f"[hybrid_orderflow] shadow disabled: {type(_e).__name__}: {_e}")
+
 # ---- Option Greeks Engine (derived exposure over captured broker Greeks; read-only) ----
 try:
     from .greeks_engine import api as _greeks_api
@@ -461,8 +477,19 @@ async def _lifespan(_app: FastAPI):
             dhan_orderflow_engine.start()
         except Exception as e:
             print(f"[dhan_orderflow] start failed: {type(e).__name__}: {e}")
+    if hybrid_orderflow_shadow is not None:
+        try:
+            hybrid_orderflow_shadow.start()
+        except Exception as e:
+            print(f"[hybrid_orderflow] start failed: {type(e).__name__}: {e}")
 
     yield
+
+    if hybrid_orderflow_shadow is not None:
+        try:
+            await hybrid_orderflow_shadow.stop()
+        except Exception:
+            pass
 
     if platform_live is not None:
         try:

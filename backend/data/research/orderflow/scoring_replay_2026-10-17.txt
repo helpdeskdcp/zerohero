@@ -4,7 +4,7 @@ CRUDEOIL    tick_size=1.0 scored_bars=646 days=5
 NIFTY       tick_size=0.1 scored_bars=170 days=3
 BANKNIFTY   tick_size=0.2 scored_bars=170 days=3
 
-STATUS counts: {'WAIT': 1526, 'SIGNAL': 10, 'NO_TRADE': 96}
+STATUS counts: {'WAIT': 1525, 'SIGNAL': 11, 'NO_TRADE': 96}
 top WAIT/NO_TRADE reasons: [('SCORE_BELOW_MIN', 1272), ('INSUFFICIENT_EVIDENCE_GROUPS', 915), ('CONFLICTING_EVIDENCE', 775), ('MANDATORY_COMPONENT_MISSING', 596), ('OUTSIDE_SESSION', 96), ('NO_EVIDENCE', 2)]
 
 component availability (mean points | share of bars with points>0 | most common reason when 0):
@@ -17,8 +17,8 @@ component availability (mean points | share of bars with points>0 | most common 
   htf_alignment         mean=0.91  active= 91.3%  [('HTF_UNAVAILABLE', 46)]
 
 forward result in signal direction (bps, entry next-bar open, exit +H bars close; missing bars skipped):
-  H=3: SIGNAL n=9 gross mean=-21.9bps net(2bps)=-23.9 hit=22% | WAIT-with-lead n=1262 gross mean=+0.7 | random-lead-bar null p(mean>=signal)=0.98
-  H=6: SIGNAL n=10 gross mean=-47.5bps net(2bps)=-49.5 hit=10% | WAIT-with-lead n=1259 gross mean=+3.1 | random-lead-bar null p(mean>=signal)=1.00
+  H=3: SIGNAL n=10 gross mean=-21.1bps net(2bps)=-23.1 hit=20% | WAIT-with-lead n=1261 gross mean=+0.7 | random-lead-bar null p(mean>=signal)=0.98
+  H=6: SIGNAL n=11 gross mean=-46.3bps net(2bps)=-48.3 hit=9% | WAIT-with-lead n=1258 gross mean=+3.1 | random-lead-bar null p(mean>=signal)=1.00
 
 SIGNAL bars (IST bar-open | symbol | direction | total | fwd bps H3/H6 in signal direction):
   09-29 13:00 NATURALGAS BEARISH  9  n/a/-7
@@ -26,6 +26,7 @@ SIGNAL bars (IST bar-open | symbol | direction | total | fwd bps H3/H6 in signal
   09-30 17:30 NATURALGAS BEARISH  7  -14/-7
   09-30 18:15 NATURALGAS BEARISH  7  -10/-24
   10-01 14:50 NATURALGAS BEARISH  7  +14/-3
+  10-01 14:55 NATURALGAS BEARISH  7  -14/-35
   10-15 17:25 NATURALGAS BULLISH  7  +55/-129
   10-15 17:35 NATURALGAS BULLISH  8  -203/-244
   10-15 21:50 NATURALGAS BEARISH  7  -7/-7
