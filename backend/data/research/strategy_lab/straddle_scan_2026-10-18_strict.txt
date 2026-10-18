@@ -1,0 +1,20 @@
+NIFTY weekly expiries with option bars: 60 (2025-08-28 .. 2026-10-13); spot from our own 5m series; cost model: flat brokerage + STT on sold premium + txn/GST + 0.1 pt slippage per leg per transaction
+mode: strict; expiries used 60, skipped (not a session in our index data) 0
+
+hypothesis                             n   gross  cost  net pts  net bps  win%      t   p(>0) | 5% worst   worst    best | halves net
+short straddle 09:20->1515            60    13.4   2.1    11.37     4.28    67   1.00  0.1617 |   -182.1  -252.0   226.1 | +29.3 / -6.6 | dropped 0, carried legs 0
+short straddle 10:30->1515            60    15.0   2.0    12.93     4.91    62   1.47  0.0731 |   -103.3  -197.0   187.9 | +36.6 / -10.7 | dropped 0, carried legs 0
+short straddle 12:00->1515            59     4.8   2.0     2.83     0.87    66   0.37  0.3564 |   -107.9  -190.0    82.3 | +17.9 / -11.7 | dropped 1, carried legs 0
+short straddle 13:30->1515            59     4.7   2.0     2.72     0.98    66   0.49  0.3138 |    -83.6  -104.5    75.3 | +5.2 / +0.4 | dropped 1, carried legs 0
+long straddle 09:20->1515             60   -13.4   2.1   -15.52    -5.98    30  -1.36  0.9106 |   -130.3  -230.6   247.3 | -33.5 / +2.4 | dropped 0, carried legs 0
+long straddle 10:30->1515             60   -15.0   2.0   -17.00    -6.57    35  -1.94  0.9713 |    -93.3  -192.0   192.7 | -40.6 / +6.6 | dropped 0, carried legs 0
+long straddle 12:00->1515             59    -4.8   2.0    -6.85    -2.51    34  -0.90  0.8134 |    -72.5   -86.2   185.6 | -21.8 / +7.6 | dropped 1, carried legs 0
+long straddle 13:30->1515             59    -4.7   2.0    -6.68    -2.60    31  -1.20  0.8823 |    -62.3   -79.3   100.3 | -9.1 / -4.3 | dropped 1, carried legs 0
+short strangle1 09:20->1515           60    14.4   2.0    12.44     4.73    72   1.16  0.1245 |   -173.2  -246.1   228.8 | +29.8 / -5.0 | dropped 0, carried legs 0
+long strangle1 09:20->1515            60   -14.4   2.0   -16.43    -6.36    27  -1.54  0.9354 |   -107.1  -233.0   241.6 | -33.8 / +0.9 | dropped 0, carried legs 0
+short straddle E-1 14:45->E 09:30     60    13.8   2.2    11.61     5.23    75   0.84  0.2026 |   -123.7  -647.7   158.6 | -17.0 / +40.2 | dropped 0, carried legs 0
+long straddle E-1 14:45->E 09:30      60   -13.8   2.2   -15.94    -7.00    23  -1.15  0.8733 |   -127.3  -163.6   642.0 | +12.7 / -44.6 | dropped 0, carried legs 0
+
+BH-FDR (12 hypotheses, q=0.10, one-sided net>0): survivors = NONE
+n is about 55-60 expiries, i.e. far below the promotion gate (n>=200 trades, >=40 days with a stable out-of-sample): even a survivor here is only a FORWARD-TEST candidate, never a trade.
+Short-premium results must also be read against the tail column: a high win rate with one worst loss several times the average win is the signature of selling insurance.

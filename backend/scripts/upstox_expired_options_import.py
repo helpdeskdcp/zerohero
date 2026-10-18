@@ -32,7 +32,7 @@ import json
 import sqlite3
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -184,7 +184,9 @@ def run(underlyings, dfrom, dto, interval, max_exp, max_ct, dry, big_ok, out, at
             n_all = len(contracts)
             atm = step = None
             if atm_steps:
-                spot = _spot_on(str(DB), u, expiry)
+                # Centre on the PREVIOUS day's close, never the expiry-day close: centring on the close is look-ahead and silently drops the big-move days
+                # (their 09:20 ATM falls outside the window) -- which biases any short-premium test (found 2026-10-18). Use a wide window (>= +/-12 strikes).
+                spot = _spot_on(str(DB), u, (datetime.fromisoformat(expiry) - timedelta(days=1)).date().isoformat())
                 contracts, atm, step = _atm_filter(contracts, spot, atm_steps)
                 p(f"  {expiry}: {n_all} contracts -> ATM {atm} (spot {spot}, step {step}) "
                   f"+/-{atm_steps} -> {len(contracts)} kept")
