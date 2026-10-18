@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PA + Order Flow Lab</title>
+<style>
+:root{--bg:#0b0f14;--panel:#111826;--line:#243047;--tx:#dbe4f0;--mut:#8a99b0;--up:#22c55e;--dn:#ef4444;--warn:#f59e0b;--hi:#60a5fa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.45 system-ui,Segoe UI,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+header h1{font-size:15px;margin:0 10px 0 0}select,input,button{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font:inherit}
+button{cursor:pointer}.badge{padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--mut)}.banner{margin:8px 12px;padding:8px 12px;border-radius:6px;border:1px solid var(--line)}
+.banner.error{border-color:var(--dn);color:#fecaca}.banner.stale{border-color:var(--warn);color:#fde68a}.banner.nodata{color:var(--mut)}.banner.loading{color:var(--hi)}
+.bar{display:flex;flex-wrap:wrap;gap:12px;padding:4px 12px;color:var(--mut)}.bar label{color:var(--tx)}
+main{display:grid;gap:10px;padding:8px 12px;grid-template-columns:1fr}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}.card h2{font-size:12px;margin:0 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.chart{height:340px;width:100%}#fpwrap{position:relative}#fpmsg{position:absolute;z-index:5;inset:30px 10px auto 10px;padding:10px;border:1px dashed var(--warn);border-radius:6px;background:rgba(11,15,20,.92);color:#fde68a}
+table{width:100%;border-collapse:collapse}td,th{padding:3px 5px;border-top:1px solid var(--line);text-align:left;vertical-align:top}tr{cursor:pointer}tr.sel{background:#1e293b}tr.prov{color:var(--mut);font-style:italic}
+#inspect{white-space:pre-wrap;color:var(--mut);min-height:4.2em}.tbl{max-height:240px;overflow:auto}small{color:var(--mut)}
+.tabs{display:none;gap:6px;padding:0 12px}
+@media(max-width:800px){.tabs{display:flex}.chart{height:300px}body[data-view=pa] #cardB,body[data-view=of] #cardA{display:none}}
+</style></head><body data-view="stacked">
+<header><h1>PA + ORDER FLOW LAB</h1>
+<select id="symbol"><option>NIFTY</option></select><input id="date" type="date">
+<select id="tf"><option value="60">1m</option><option value="180">3m</option><option value="300" selected>5m</option><option value="900">15m</option></select>
+<select id="source"><option value="ticks">ticks (footprint)</option><option value="candles">index candles (no footprint)</option></select>
+<select id="days"><option value="1">1 day</option><option value="2">2 days</option><option value="3">3 days</option></select>
+<span class="badge" id="src">—</span><span class="badge" id="feed">—</span><span class="badge" id="dq">—</span><span class="badge" id="regime">—</span>
+<span class="badge">research only · no orders · baseline PA net −5.99 bps/trade</span></header>
+<div class="banner loading" id="banner">Loading…</div>
+<div class="bar">Show: <label><input type="checkbox" id="sh_swing"> swings</label><label><input type="checkbox" id="sh_structure"> BOS/CHoCH/retest</label><label><input type="checkbox" id="sh_liquidity"> sweeps/EQ</label><label><input type="checkbox" id="sh_rejection"> rejections</label><label><input type="checkbox" id="sh_signal"> signals</label>
+<span>Legend: solid = confirmed · grey “?” = provisional (not yet confirmed)</span></div>
+<div class="tabs"><button data-view="stacked">Stacked</button><button data-view="pa">Price Action</button><button data-view="of">Order Flow</button></div>
+<main>
+<section class="card" id="cardA"><h2>A · Price action <small id="vwapnote"></small></h2><div id="chartA" class="chart"></div></section>
+<section class="card" id="cardB"><h2>B · Order flow / footprint <small>(Δ, CVD and sides are INFERRED, not broker-confirmed · zoom in ≥40px/bar for price-level cells; rows are display bins of summed ticks)</small></h2><div id="fpwrap"><div id="fpmsg" hidden></div><div id="chartB" class="chart"></div></div></section>
+<section class="card"><h2>Bar inspector</h2><div id="inspect">hover a bar</div></section>
+<section class="card"><h2>Signals <select id="ftype"><option>ALL</option><option>PA</option><option>OF</option></select> <select id="fside"><option value="0">both</option><option value="1">long</option><option value="-1">short</option></select> <small id="avail"></small></h2>
+<div class="tbl"><table><thead><tr><th>IST</th><th>src</th><th>side</th><th>entry</th><th>stop</th><th>T2</th><th>state · order-flow status</th></tr></thead><tbody id="sigs"></tbody></table></div></section>
+<section class="card"><h2>Plotted events (timestamp · price · rule · status)</h2><div class="tbl"><table><thead><tr><th>IST</th><th>event</th><th>price</th><th>rule</th><th>status</th></tr></thead><tbody id="evs"></tbody></table></div></section>
+</main>
+<script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script>
+<script src="/static/js/pa_of_lab.js"></script>
+</body></html>

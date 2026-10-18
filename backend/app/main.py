@@ -312,6 +312,14 @@ try:
 except Exception as _e:
     print(f"[hybrid_mp] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- PA/OF research lab chart API: READ-ONLY (sqlite mode=ro), no order path. Kill switch: PA_OF_LAB=0 ----
+try:
+    if os.environ.get("PA_OF_LAB", "1").strip().lower() not in ("0", "false", "off", "no"):
+        from .pa_of_lab import api as _pa_of_lab_api
+        app.include_router(_pa_of_lab_api.router)
+except Exception as _e:
+    print(f"[pa_of_lab] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:
