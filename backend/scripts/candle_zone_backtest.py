@@ -63,6 +63,7 @@ say("lift ~ 1.0 = the feature does not identify where big moves start; precision
 # ---------------- PART B: causal backtest
 hyps = []
 cache = {}
+DUMP = []
 
 
 def outcomes(key, idx, side, ext_dist_fn, floor, rr):
@@ -96,6 +97,7 @@ def add(name, fam, idx, side, ext, floor, rr, key):
     ii, out = outcomes(key, idx, side, ext, floor, rr)
     m = np.isfinite(out)
     hyps.append(ES.Hyp(name, fam, day[ii][m], out[m], np.zeros(0), np.zeros(0), side))
+    DUMP.append((name, fam, day[ii][m], out[m]))
 
 
 for side, plist, extf in ((1, CP.PATTERNS_LONG, ext_long), (-1, CP.PATTERNS_SHORT, ext_short)):
@@ -137,4 +139,10 @@ for fam in ("pattern", "control"):
     say(f"{fam:8s}: {len(sub)} eligible hypotheses | mean TRAIN net {np.mean([r[3] for r in sub]):+.2f} bps | mean 2024+ net {np.mean([r[7] for r in sub]):+.2f} bps | share with 2024+ net>0: {np.mean([r[7] > 0 for r in sub]) * 100:.0f}%")
 say("\nwin rate of pattern entries by geometry (mean over eligible pattern hypotheses, TRAIN): " + ", ".join(
     f"rr{rr:g}: {np.mean([r[5] for r in rows if r[2] == 'pattern' and f'rr{rr:g}' in r[1]]):.0f}%" for rr in (1.0, 2.0)))
+import gzip
+with gzip.open("data/research/strategy_lab/candle_zone_events_2026-10-18.csv.gz", "wt") as f:       # EVENT-LEVEL record: one row per signal (hypothesis, IST session day as epoch-day, gross bps signed in the trade direction)
+    f.write("hypothesis,family,epoch_day,gross_bps\n")
+    for nm, fam_, dd, vv in DUMP:
+        for a_, b_ in zip(dd, vv):
+            f.write(f"{nm},{fam_},{int(a_)},{b_:.6f}\n")
 open("data/research/strategy_lab/candle_zone_backtest_2026-10-18.txt", "w").write("\n".join(LINES) + "\n")

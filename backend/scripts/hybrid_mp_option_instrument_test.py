@@ -55,7 +55,7 @@ t_ist = lambda i: dt.datetime.utcfromtimestamp(int(ch["t"][i])) + IST
 def one(label, params):
     tr, _ = run(ch, params, b1=b1)
     tr = [t for t in tr if dt.date(1970, 1, 1) + dt.timedelta(days=t.day) >= dt.date(2025, 8, 28)]
-    rows, dropped = [], []
+    rows, dropped, meta = [], [], []
     for t in tr:
         et, xt = t_ist(t.entry_i), t_ist(t.exit_i)
         d0 = et.date()
@@ -73,12 +73,26 @@ def one(label, params):
             dropped.append(t); continue
         ep, xpc, xpo = bars[ek][0], bars[xk][3], bars[xk][0]
         rows.append((t, ep, xpc, xpo, spot, (dt.date.fromisoformat(e) - d0).days))
+        meta.append((e, k, ty, ek, xk))
     say(f"\n[{label}] engine trades in window {len(tr)}; priced on real option bars {len(rows)}; dropped (missing bar / no expiry) {len(dropped)}")
     if dropped:
         gd = np.array([t.bps for t in dropped]) - 2.0
         say(f"  dropped trades, underlying net at 2 bps: mean {gd.mean():+.2f} bps (kept: {np.mean([r[0].bps for r in rows]) - 2.0:+.2f})  <- selection-bias check")
     if not rows:
         return
+    import csv, re
+    fn = "data/research/strategy_lab/option_instrument_trades_" + re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_") + ".csv"
+    with open(fn, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["entry_time_ist", "exit_time_ist", "side", "expiry", "dte_days", "strike", "type", "spot_at_entry", "underlying_gross_bps", "underlying_dir_correct",
+                    "opt_entry_open", "opt_exit_close", "opt_exit_open", "cost_pts_slip025", "cost_pts_slip050", "net_pts_close_slip025", "net_pts_close_slip050", "stop_reason"])
+        for (t_, ep_, xc_, xo_, sp_, dte_), (e_, k_, ty_, ek_, xk_) in zip(rows, meta):
+            w.writerow([ek_, xk_, "long" if t_.side > 0 else "short", e_, dte_, k_, ty_, round(sp_, 2), round(t_.bps, 4), int(t_.bps > 0), ep_, xc_, xo_,
+                        round(cost_pts(ep_, xc_, 0.25), 4), round(cost_pts(ep_, xc_, 0.5), 4), round((xc_ - ep_) - cost_pts(ep_, xc_, 0.25), 4),
+                        round((xc_ - ep_) - cost_pts(ep_, xc_, 0.5), 4), t_.reason])
+    say(f"  trade-level rows written: {fn} ({len(rows)} rows)")
+    dirc = np.mean([r[0].bps > 0 for r in rows]) * 100
+    say(f"  underlying DIRECTION accuracy (gross P&L of the underlying trade > 0, before any cost): {dirc:.1f}% ; option trade profitable before cost (exit at bar close): {np.mean([(r[2] - r[1]) > 0 for r in rows]) * 100:.1f}%")
     und = np.array([r[0].bps for r in rows])
     say(f"  underlying (same trades): gross {und.mean():+.2f} bps, net@2bps {und.mean() - 2:+.2f} bps, net@4bps {und.mean() - 4:+.2f} bps")
     for lab, idx in (("exit at bar CLOSE", 2), ("exit at bar OPEN (bound)", 3)):
