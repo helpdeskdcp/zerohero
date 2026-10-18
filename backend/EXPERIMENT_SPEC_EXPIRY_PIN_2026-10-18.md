@@ -23,3 +23,6 @@ On NIFTY weekly-expiry days, between 14:30 and 15:15 IST the index drifts TOWARD
 - **Stage B PASS (-> forward paper validation only)** requires: n_trades >= 25; mean net > 0 with one-sided p <= 0.10; same sign of beta; placebo p <= 0.10. Anything else = REJECT / UNVERIFIED (if n < 25 -> UNVERIFIED, not PASS).
 - No profitability claim at any stage; a pass means "eligible for 3+ months of forward paper validation with measured fills".
 - Minimum detectable effect is reported with every result (80% power, one-sided 0.05: 2.49 x SE); a non-significant result with a large MDE is UNVERIFIED, not "no edge".
+
+## Stage A result (appended after the run; spec above unchanged since b11dbfd)
+60 expiries (spec said 59; DB holds 60 on/after 2025-08-28), 60 had a dominant wall, 21 trades (band 15-150 bps). Gross +1.18 bps, net -5.12 bps (SE 4.95, t -1.03, one-sided p 0.84), win 33%, +2 bps cost -7.1, placebo p 0.49, pull beta -0.064 (anti-pin sign). MDE(80%) 12.3 bps. Verdict: **REJECT** (mean net <= 0 and beta <= 0; n=21 < 25 as well). Stage B not run (only runs after a Stage A pass). Reproduce: `venv/bin/python scripts/expiry_pin_test.py A`; outputs in data/research/expiry_pin/.

@@ -1,0 +1,23 @@
+{
+ "stage": "A",
+ "n_expiries": 60,
+ "n_events_with_wall": 60,
+ "n_trades": 21,
+ "skipped": [],
+ "mean_net": -5.116912561837727,
+ "sd": 22.66828865542772,
+ "se": 4.946626125647918,
+ "t": -1.0344247638419417,
+ "p_one_sided": 0.843357842447966,
+ "mean_gross": 1.1830874381622731,
+ "win_rate": 0.3333333333333333,
+ "mean_net_plus2bps_cost": -7.116912561837727,
+ "mean_net_excl_best": -7.512695689075509,
+ "beta_pull": -0.06408112702092575,
+ "placebo_p": 0.486,
+ "mde_80pct_bps": 12.317099052863316,
+ "best_trade": 42.79874998291793,
+ "worst_trade": -41.300000000000516,
+ "sum_net_bps": -107.45516379859225,
+ "verdict": "REJECT"
+}
