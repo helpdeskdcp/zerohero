@@ -1,0 +1,12 @@
+cost 2.0 bps; variant: min_risk_atr / max_risk_atr
+variant          | TRAIN                                        | VALID (clean)                                | OOS (not independent)
+ 0.5 /  3.0      | n=3054 gross +0.89 net -1.11 bps p(>0)=0.995 | n=1365 gross +0.63 net -1.37 bps p(>0)=0.993 | n=1769 gross +0.91 net -1.09 bps p(>0)=0.990
+ 1.0 /  3.0      | n=2615 gross +1.32 net -0.68 bps p(>0)=0.902 | n=1165 gross +0.76 net -1.24 bps p(>0)=0.972 | n=1495 gross +1.21 net -0.79 bps p(>0)=0.924
+ 1.5 /  3.0      | n=1686 gross +2.21 net +0.21 bps p(>0)=0.395 | n= 786 gross +1.83 net -0.17 bps p(>0)=0.577 | n= 946 gross +2.31 net +0.31 bps p(>0)=0.355
+ 2.0 /  3.0      | n= 814 gross +5.14 net +3.14 bps p(>0)=0.008 | n= 392 gross +2.44 net +0.44 bps p(>0)=0.383 | n= 468 gross +4.87 net +2.87 bps p(>0)=0.029
+
+Gate on OOS trades for each variant (informational: OOS not independent for the stop-size idea):
+  min_risk_atr 0.5: REJECT ['NET_EXPECTANCY', 'NET_CI_LOWER_NOT_POSITIVE', 'WALK_FORWARD_FOLDS', 'LAST_FOLD_NEGATIVE', 'COST_STRESS', 'CONCENTRATION']
+  min_risk_atr 1.0: REJECT ['NET_EXPECTANCY', 'NET_CI_LOWER_NOT_POSITIVE', 'WALK_FORWARD_FOLDS', 'LAST_FOLD_NEGATIVE', 'COST_STRESS', 'CONCENTRATION']
+  min_risk_atr 1.5: REJECT ['NET_EXPECTANCY', 'NET_CI_LOWER_NOT_POSITIVE', 'WALK_FORWARD_FOLDS', 'LAST_FOLD_NEGATIVE', 'COST_STRESS', 'CONCENTRATION', 'DRAWDOWN']
+  min_risk_atr 2.0: PROMOTE_TO_PAPER []

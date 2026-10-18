@@ -98,6 +98,17 @@ def fixed_params(**kw) -> "Params":
     return Params(**base)
 
 
+def corrected_params(**kw) -> "Params":
+    """fixed_params + the COST-AWARE STOP FILTER found by the 2026-10-18 failure analysis (scripts/hybrid_mp_failure_analysis.py, hybrid_mp_cost_filter_test.py):
+    the corrected engine earned only +0.9 bps gross per trade against a 2 bps round-trip cost because 2/3 of its trades had stops of 7-15 bps (cost = 0.14-0.27 R)
+    and zero gross edge; only wide-stop trades carry gross edge (+2.7 bps). Raising min_risk_atr from 0.5 to 2.0 (max 3.0) moves net per trade monotonically:
+    NIFTY TRAIN -1.1 -> +3.1 bps, VALID -1.4 -> +0.4, 2024+ -1.1 -> +2.9; replicated with unchanged parameters on SENSEX (+1.75 bps, p=0.03) and BANKNIFTY (+0.15).
+    EVIDENCE IS WEAK (VALID p=0.38, ~400 trades per period) and the 2024+ period is not independent for this idea: research-only, NOT promoted, forward test pending."""
+    base = dict(min_risk_atr=2.0, max_risk_atr=3.0)
+    base.update(kw)
+    return fixed_params(**base)
+
+
 @dataclass
 class HTrade(Trade):
     max_t: int = 0                             # highest target reached before the exit (0..4)

@@ -1,0 +1,38 @@
+== PART 1: decomposition of the corrected engine (NIFTY 5m), 6188 trades 2017-2026; cost 2.0 bps round trip
+
+[TRAIN 2017-21] n=3054 win(gross)=50% | mean GROSS +0.89 bps | mean stop distance 18.3 bps -> cost = 0.11 R | mean gross R +0.027 | break-even gross needed 2.0 bps
+  exit reason:      SL n=1422 mean -17.3bps  BE n=894 mean +7.2bps  EOD n=458 mean +21.0bps  T4 n=280 mean +40.1bps
+  highest target reached: T0:1592 (-15.5)  T1:754 (+7.4)  T2:301 (+21.0)  T3:127 (+33.3)  T4:280 (+40.1)
+  by entry type: CONT n=2665 +0.8  RETEST n=389 +1.6
+  by side      : long n=1645 +0.8  short n=1409 +1.0
+  by hour      : 09h n=533 -1.4  10h n=475 -0.7  11h n=409 +2.7  12h n=455 -0.2  13h n=501 +2.4  14h n=500 +3.4  15h n=181 -0.6
+  small stop (stop 8 bps): n=1008 gross +0.04 bps, cost 0.24R, net -1.96 bps
+  mid stop   (stop 15 bps): n=1007 gross -0.07 bps, cost 0.14R, net -2.07 bps
+  large stop (stop 31 bps): n=1039 gross +2.66 bps, cost 0.06R, net +0.66 bps
+
+[OOS 2024+] n=1769 win(gross)=50% | mean GROSS +0.91 bps | mean stop distance 14.8 bps -> cost = 0.14 R | mean gross R +0.038 | break-even gross needed 2.0 bps
+  exit reason:      SL n=831 mean -14.5bps  BE n=472 mean +5.6bps  EOD n=302 mean +18.3bps  T4 n=164 mean +33.6bps
+  highest target reached: T0:931 (-13.0)  T1:425 (+6.1)  T2:165 (+19.7)  T3:84 (+28.1)  T4:164 (+33.6)
+  by entry type: CONT n=1531 +0.9  RETEST n=238 +0.8
+  by side      : long n=902 +1.2  short n=867 +0.6
+  by hour      : 09h n=324 +0.7  10h n=296 +0.6  11h n=270 +1.2  12h n=265 +2.7  13h n=238 +1.7  14h n=273 -0.0  15h n=103 -2.1
+  small stop (stop 7 bps): n=584 gross -0.10 bps, cost 0.27R, net -2.10 bps
+  mid stop   (stop 13 bps): n=583 gross +0.06 bps, cost 0.16R, net -1.94 bps
+  large stop (stop 24 bps): n=602 gross +2.70 bps, cost 0.08R, net +0.70 bps
+
+
+== PART 2: premise test -- does price continue after a close-confirmed swing break? 36 pre-registered hypotheses (pivot 3/5/8 x up/down x follow/fade x 3/6/12 bars), cost 2.0 bps
+hypothesis                       TRAIN gross TRAIN net       p      n | VALID net |  OOS net      p
+BoS L8 dn-break follow h12              2.67      0.67  0.3503    659 |      0.09 |    -1.32  0.853
+BoS L5 dn-break follow h12              2.22      0.22  0.4223   1202 |     -0.98 |    -0.69  0.776
+BoS L8 dn-break follow h6               2.03      0.03  0.4910    774 |     -0.70 |    -1.63  0.948
+BoS L5 dn-break follow h6               1.82     -0.18  0.5832   1381 |     -0.99 |    -1.29  0.971
+BoS L3 dn-break follow h12              1.50     -0.50  0.7249   2072 |     -1.57 |    -1.10  0.933
+BoS L5 dn-break follow h3               1.42     -0.58  0.8100   1495 |     -1.70 |    -1.72  1.000
+BoS L8 up-break fade h3                 0.60     -1.40  0.8164    873 |     -2.53 |    -3.18  1.000
+BoS L8 dn-break follow h3               0.97     -1.03  0.8327    860 |     -1.55 |    -1.33  0.990
+BoS L3 dn-break follow h6               1.33     -0.67  0.8671   2326 |     -0.95 |    -1.24  0.984
+BoS L8 up-break fade h12                0.34     -1.66  0.8750    681 |     -1.54 |    -2.15  0.967
+
+BH pipeline: eligible 36 | S1 0 | S2 0 | S3 0
+mean TRAIN GROSS bps: follow +0.70, fade -0.70  (a continuation premise needs follow > cost 2.0; these are the raw drifts after a break)

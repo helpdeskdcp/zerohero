@@ -11,7 +11,7 @@ import time
 import numpy as np
 from fastapi import APIRouter, HTTPException
 
-from .research_engines.hybrid_mp.engine import fixed_params, resample, run
+from .research_engines.hybrid_mp.engine import corrected_params, fixed_params, resample, run
 from .research_engines.smart_bos.data import ist_minutes, load_1m
 
 router = APIRouter(prefix="/api/hybrid_mp", tags=["hybrid-mp"])
@@ -76,13 +76,15 @@ def _nse_open(now_ist_epoch: float) -> bool:
     return wd < 5 and 555 <= mod < 930
 
 
-def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: int = 2) -> dict:
+def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: int = 2, variant: str = "corrected") -> dict:
     symbol = symbol.upper()
     if symbol not in _PLATFORM_KEY:
         raise ValueError(f"symbol must be one of {sorted(_PLATFORM_KEY)}")
     b1, meta = latest_1m(symbol)
     chart = resample(b1, tf, 555, 930)
-    p = fixed_params(chart_tf=tf, smc_filter=smc, smc_min=smc_min)
+    if variant not in ("corrected", "fixed"):
+        raise ValueError("variant must be 'corrected' (cost-aware stop filter, research-only) or 'fixed'")
+    p = (corrected_params if variant == "corrected" else fixed_params)(chart_tf=tf, smc_filter=smc, smc_min=smc_min)
     trades, st = run(chart, p, b1=b1, want_state=True)
     state = st.pop("state")
     tz = 19800
@@ -104,7 +106,9 @@ def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: 
         state["session"] = "MARKET CLOSED (state as of last bar)" if data_status == "MARKET_CLOSED" else "DATA STALE"
     state.update(
         symbol=symbol, data=meta, counters={k: v for k, v in st.items()},
-        research_only=True, live_trading=False,
+        research_only=True, live_trading=False, variant=variant,
+        variant_note=("v13 fixed + cost-aware stop filter (min_risk_atr 2.0): measured +0.4..+3 bps net/trade, weak evidence, NOT promoted" if variant == "corrected"
+                      else "v13 fixed (net negative: -1.1 bps/trade on NIFTY)"),
         candles=[{"time": int(chart["t"][k] + tz), "open": float(chart["o"][k]), "high": float(chart["h"][k]),
                   "low": float(chart["l"][k]), "close": float(chart["c"][k])} for k in range(lo, n)],
         trades_today=[{"time": int(chart["t"][t.sig_i] + tz), "side": "BUY" if t.side == 1 else "SELL", "type": t.entry_type,
@@ -115,16 +119,16 @@ def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: 
 
 
 @router.get("/state")
-def state(symbol: str = "NIFTY", tf: int = 5, smc: int = 0, smc_min: int = 2):
+def state(symbol: str = "NIFTY", tf: int = 5, smc: int = 0, smc_min: int = 2, variant: str = "corrected"):
     if tf not in (1, 3, 5, 15):
         raise HTTPException(400, "tf must be 1, 3, 5 or 15")
-    key = (symbol.upper(), tf, smc, smc_min)
+    key = (symbol.upper(), tf, smc, smc_min, variant)
     now = time.time()
     hit = _cache.get(key)
     if hit and now - hit[0] < _TTL:
         return hit[1]
     try:
-        out = build_state(symbol, tf, bool(smc), smc_min)
+        out = build_state(symbol, tf, bool(smc), smc_min, variant)
     except ValueError as e:
         raise HTTPException(400, str(e))
     _cache[key] = (now, out)

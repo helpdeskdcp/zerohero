@@ -70,3 +70,10 @@ def test_api_module_has_no_order_or_write_paths():
         if n.func.attr == "execute":
             assert n.args and isinstance(n.args[0], ast.Constant) and n.args[0].value.strip().upper().startswith("SELECT")
     assert "mode=ro" in src
+
+
+def test_state_defaults_to_the_corrected_variant_and_labels_it_not_promoted(monkeypatch):
+    from app import hybrid_mp_api as api
+    import pytest
+    with pytest.raises(ValueError):
+        api.build_state("NIFTY", 5, False, 2, "bogus")

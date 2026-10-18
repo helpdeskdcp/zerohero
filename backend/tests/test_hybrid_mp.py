@@ -267,3 +267,14 @@ def test_pattern_filter_flag_is_a_real_boolean_not_a_bitwise_accident():
     assert on["bull_ok"].dtype == bool and off["bull_ok"].dtype == bool
     assert off["bull_ok"].tolist() == (b["c"] > b["o"]).tolist()
     assert (on["bull_ok"] <= off["bull_ok"]).all()          # the pattern requirement can only remove candles
+
+
+# ---- corrected_params (cost-aware stop filter, 2026-10-18) ----------------------------------------------------------------------
+def test_corrected_params_only_changes_the_stop_filter_and_is_causal():
+    from app.research_engines.hybrid_mp.engine import corrected_params
+    c, f = corrected_params(chart_tf=5), fixed_params(chart_tf=5)
+    assert c.min_risk_atr == 2.0 and c.max_risk_atr == 3.0 and f.min_risk_atr == 0.5
+    diff = {k for k, v in vars(c).items() if v != vars(f)[k]}
+    assert diff == {"min_risk_atr"} or diff == {"min_risk_atr", "max_risk_atr"} or diff == {"min_risk_atr"}      # nothing else may change
+    assert corrected_params(min_risk_atr=1.0).min_risk_atr == 1.0                                               # still overridable
+    assert c.fill == "next_open" and c.eod_flat and c.require_mtf                                               # the executable-fill corrections are kept
