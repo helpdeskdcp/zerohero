@@ -1,0 +1,21 @@
+entry     exit structure       | TRAIN 2017-21                                      | VALID 2022-23                                      | 2024+
+previous  T1 @ 0.2R (all out)  | n=5029 win 56.6% (b/e 77.4%) net  -2.04 PF 0.38    | n=2276 win 50.6% (b/e 77.5%) net  -1.94 PF 0.30    | n=2972 win 51.6% (b/e 79.6%) net  -2.18 PF 0.27
+previous  T1 @ 0.25R (all out) | n=4993 win 64.5% (b/e 79.1%) net  -1.96 PF 0.48    | n=2257 win 61.1% (b/e 79.2%) net  -1.82 PF 0.41    | n=2940 win 60.7% (b/e 80.5%) net  -2.11 PF 0.38
+previous  T1 @ 0.33R (all out) | n=4913 win 69.0% (b/e 79.2%) net  -1.93 PF 0.59    | n=2218 win 67.4% (b/e 80.4%) net  -1.93 PF 0.50    | n=2898 win 66.8% (b/e 80.1%) net  -2.00 PF 0.50
+previous  T1 @ 0.4R (all out)  | n=4838 win 68.9% (b/e 77.4%) net  -1.87 PF 0.65    | n=2189 win 68.6% (b/e 78.8%) net  -1.82 PF 0.59    | n=2855 win 66.9% (b/e 78.6%) net  -2.12 PF 0.55
+previous  T1 @ 0.5R (all out)  | n=4713 win 65.3% (b/e 72.9%) net  -1.88 PF 0.70    | n=2146 win 65.7% (b/e 74.5%) net  -1.77 PF 0.66    | n=2785 win 63.8% (b/e 73.9%) net  -2.03 PF 0.62
+previous  T1 @ 0.75R (all out) | n=4419 win 55.5% (b/e 62.2%) net  -1.96 PF 0.76    | n=2014 win 57.2% (b/e 64.0%) net  -1.66 PF 0.75    | n=2602 win 55.8% (b/e 62.9%) net  -1.71 PF 0.74
+previous  T1 @ 1.0R (all out)  | n=4115 win 50.0% (b/e 54.3%) net  -1.46 PF 0.84    | n=1876 win 49.2% (b/e 56.0%) net  -1.90 PF 0.76    | n=2437 win 49.0% (b/e 55.6%) net  -1.82 PF 0.77
+previous  SCALE_BE m=0.25      | n=4709 win 42.9% (b/e 56.1%) net  -1.89 PF 0.59    | n=2146 win 38.6% (b/e 55.4%) net  -1.94 PF 0.51    | n=2799 win 38.6% (b/e 57.5%) net  -2.23 PF 0.46
+previous  SCALE_BE m=0.5       | n=4039 win 46.1% (b/e 52.5%) net  -1.45 PF 0.77    | n=1812 win 43.8% (b/e 51.6%) net  -1.47 PF 0.73    | n=2369 win 41.8% (b/e 51.5%) net  -1.85 PF 0.68
+previous  SCALE_BE m=1.0       | n=3054 win 46.6% (b/e 49.8%) net  -1.11 PF 0.88    | n=1365 win 45.3% (b/e 49.8%) net  -1.37 PF 0.83    | n=1769 win 44.8% (b/e 48.4%) net  -1.09 PF 0.86
+CORRECT   T1 @ 0.2R (all out)  | n=1092 win 83.2% (b/e 87.0%) net  -1.09 PF 0.74    | n= 517 win 81.4% (b/e 87.5%) net  -1.41 PF 0.63    | n= 602 win 81.9% (b/e 88.8%) net  -1.85 PF 0.57
+CORRECT   T1 @ 0.25R (all out) | n=1089 win 81.5% (b/e 84.6%) net  -1.04 PF 0.80    | n= 513 win 78.2% (b/e 84.9%) net  -1.80 PF 0.64    | n= 598 win 78.8% (b/e 85.0%) net  -1.76 PF 0.65
+CORRECT   T1 @ 0.33R (all out) | n=1068 win 77.2% (b/e 79.0%) net  -0.63 PF 0.90    | n= 504 win 71.0% (b/e 78.9%) net  -2.23 PF 0.66    | n= 592 win 75.7% (b/e 80.2%) net  -1.39 PF 0.77
+CORRECT   T1 @ 0.4R (all out)  | n=1049 win 74.2% (b/e 74.7%) net  -0.18 PF 0.97    | n= 500 win 67.0% (b/e 74.4%) net  -2.20 PF 0.70    | n= 586 win 71.5% (b/e 75.9%) net  -1.43 PF 0.80
+CORRECT   T1 @ 0.5R (all out)  | n=1022 win 69.1% (b/e 68.3%) net  +0.32 PF 1.04    | n= 490 win 62.4% (b/e 69.8%) net  -2.40 PF 0.72    | n= 575 win 67.5% (b/e 70.3%) net  -0.96 PF 0.88
+CORRECT   T1 @ 0.75R (all out) | n= 983 win 58.9% (b/e 56.5%) net  +1.04 PF 1.10    | n= 468 win 55.1% (b/e 59.5%) net  -1.67 PF 0.84    | n= 552 win 58.7% (b/e 59.4%) net  -0.29 PF 0.97
+CORRECT   T1 @ 1.0R (all out)  | n= 939 win 54.1% (b/e 50.3%) net  +1.90 PF 1.17    | n= 442 win 51.8% (b/e 52.7%) net  -0.38 PF 0.97    | n= 531 win 52.9% (b/e 52.0%) net  +0.43 PF 1.04
+CORRECT   SCALE_BE m=0.25      | n=1014 win 52.9% (b/e 55.4%) net  -0.55 PF 0.90    | n= 478 win 44.4% (b/e 54.5%) net  -1.90 PF 0.66    | n= 564 win 51.6% (b/e 57.3%) net  -1.15 PF 0.79
+CORRECT   SCALE_BE m=0.5       | n= 904 win 63.8% (b/e 60.4%) net  +1.24 PF 1.16    | n= 431 win 56.6% (b/e 60.3%) net  -1.23 PF 0.86    | n= 507 win 59.2% (b/e 58.2%) net  +0.32 PF 1.04
+CORRECT   SCALE_BE m=1.0       | n= 814 win 54.1% (b/e 48.0%) net  +3.14 PF 1.28    | n= 392 win 51.3% (b/e 50.3%) net  +0.44 PF 1.04    | n= 468 win 53.0% (b/e 47.0%) net  +2.87 PF 1.27

@@ -72,6 +72,7 @@ class Params:
     max_trades_day: int | None = None
     daily_loss_r: float | None = None          # stop trading for the day once gross day R <= -x
     favorable_first: bool = False              # SENSITIVITY ONLY: when a bar touches both the stop and T4, credit T4 (default False = adverse-first)
+    target_mults: tuple = (1, 2, 3, 4)          # T1..T4 distances in units of the risk R (Pine = 1,2,3,4); a research knob for the win-rate/payoff frontier
     mtf_mode: str = "pine"                     # "pine" (colour fallback, noisy) | "state" (carry last breakout direction)
     vwap_proxy: bool = False                   # no volume (index): use session mean of typical price (TWAP proxy), flagged
     pointvalue: float = 1.0
@@ -107,6 +108,17 @@ def corrected_params(**kw) -> "Params":
     base = dict(min_risk_atr=2.0, max_risk_atr=3.0)
     base.update(kw)
     return fixed_params(**base)
+
+
+def highwin_params(**kw) -> "Params":
+    """HIGH-WIN-RATE profile (measured, executable, no look-ahead): corrected entries + ONE exit at T1 = 0.4 R (stop = candle stop 1 R). NIFTY 5m 2017-2026,
+    2,135 trades: win rate 71-72% (74% / 67% / 71.5% in TRAIN / VALID / 2024+) -- BUT every win is small (+8..10 bps) and every loss large (-24..-25 bps), so the
+    expectancy is NEGATIVE at any realistic cost: +1.0 bps gross, 0.0 at 1 bps cost, -1.0 at 2 bps, -3.0 at 4 bps (profit factor 0.86 / 0.61). The break-even win rate
+    for this payoff is ~75%, the strategy delivers 71%. It exists so the high-win-rate request is implemented for real and can be inspected; it LOSES MONEY after costs.
+    The profitable profile is corrected_params() (53% win, +2.4 bps at 2 bps cost). A high win rate is not an edge: see scripts/hybrid_mp_winrate_frontier.py."""
+    base = dict(exit_model="T1", target_mults=(0.4, 0.8, 1.2, 1.6))
+    base.update(kw)
+    return corrected_params(**base)
 
 
 @dataclass
@@ -438,7 +450,7 @@ def run(chart: dict, p: Params | None = None, b1: dict | None = None, want_state
                     active, side, R, sig_bar, entry_bar = True, d, candR, i, i
                     sl = cand
                     base = cl_[i]
-                    tg = [base + d * R * k for k in (1, 2, 3, 4)]
+                    tg = [base + d * R * k for k in p.target_mults]
                     entry = base
                     done = [False] * 4
                     remain, parts, cur_sl, mae, mfe = 1.0, [], sl, 0.0, 0.0

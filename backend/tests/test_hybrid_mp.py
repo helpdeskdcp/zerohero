@@ -278,3 +278,16 @@ def test_corrected_params_only_changes_the_stop_filter_and_is_causal():
     assert diff == {"min_risk_atr"} or diff == {"min_risk_atr", "max_risk_atr"} or diff == {"min_risk_atr"}      # nothing else may change
     assert corrected_params(min_risk_atr=1.0).min_risk_atr == 1.0                                               # still overridable
     assert c.fill == "next_open" and c.eod_flat and c.require_mtf                                               # the executable-fill corrections are kept
+
+
+def test_highwin_profile_is_corrected_entries_with_a_single_small_target():
+    from app.research_engines.hybrid_mp.engine import corrected_params, highwin_params
+    h, c = highwin_params(chart_tf=5), corrected_params(chart_tf=5)
+    assert h.exit_model == "T1" and h.target_mults == (0.4, 0.8, 1.2, 1.6) and h.min_risk_atr == c.min_risk_atr == 2.0
+    assert c.target_mults == (1, 2, 3, 4) and c.exit_model == "SCALE_BE"                  # the default targets are unchanged by the new knob
+    assert h.fill == "next_open" and h.eod_flat                                           # executable fills are kept: the win rate is not manufactured by optimistic fills
+
+
+def test_target_mults_default_reproduces_the_pine_targets():
+    from app.research_engines.hybrid_mp.engine import Params
+    assert Params().target_mults == (1, 2, 3, 4)

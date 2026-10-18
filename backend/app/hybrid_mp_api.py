@@ -11,7 +11,7 @@ import time
 import numpy as np
 from fastapi import APIRouter, HTTPException
 
-from .research_engines.hybrid_mp.engine import corrected_params, fixed_params, resample, run
+from .research_engines.hybrid_mp.engine import corrected_params, fixed_params, highwin_params, resample, run
 from .research_engines.smart_bos.data import ist_minutes, load_1m
 
 router = APIRouter(prefix="/api/hybrid_mp", tags=["hybrid-mp"])
@@ -82,9 +82,9 @@ def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: 
         raise ValueError(f"symbol must be one of {sorted(_PLATFORM_KEY)}")
     b1, meta = latest_1m(symbol)
     chart = resample(b1, tf, 555, 930)
-    if variant not in ("corrected", "fixed"):
-        raise ValueError("variant must be 'corrected' (cost-aware stop filter, research-only) or 'fixed'")
-    p = (corrected_params if variant == "corrected" else fixed_params)(chart_tf=tf, smc_filter=smc, smc_min=smc_min)
+    if variant not in ("corrected", "fixed", "highwin"):
+        raise ValueError("variant must be 'corrected' (cost-aware stop filter, research-only), 'highwin' (71% win rate, loses money after costs) or 'fixed'")
+    p = {"corrected": corrected_params, "fixed": fixed_params, "highwin": highwin_params}[variant](chart_tf=tf, smc_filter=smc, smc_min=smc_min)
     trades, st = run(chart, p, b1=b1, want_state=True)
     state = st.pop("state")
     tz = 19800
@@ -107,8 +107,9 @@ def build_state(symbol: str = "NIFTY", tf: int = 5, smc: bool = False, smc_min: 
     state.update(
         symbol=symbol, data=meta, counters={k: v for k, v in st.items()},
         research_only=True, live_trading=False, variant=variant,
-        variant_note=("v13 fixed + cost-aware stop filter (min_risk_atr 2.0): measured +0.4..+3 bps net/trade, weak evidence, NOT promoted" if variant == "corrected"
-                      else "v13 fixed (net negative: -1.1 bps/trade on NIFTY)"),
+        variant_note={"corrected": "v13 fixed + cost-aware stop filter (min_risk_atr 2.0): ~53% win, measured +0.4..+3 bps net/trade, weak evidence, NOT promoted",
+                      "highwin": "HIGH-WIN profile (exit at T1 = 0.4R): ~71% win but LOSES MONEY after costs (-1.0 bps/trade at 2 bps, PF 0.86); a high win rate is not an edge",
+                      "fixed": "v13 fixed (net negative: -1.1 bps/trade on NIFTY)"}[variant],
         candles=[{"time": int(chart["t"][k] + tz), "open": float(chart["o"][k]), "high": float(chart["h"][k]),
                   "low": float(chart["l"][k]), "close": float(chart["c"][k])} for k in range(lo, n)],
         trades_today=[{"time": int(chart["t"][t.sig_i] + tz), "side": "BUY" if t.side == 1 else "SELL", "type": t.entry_type,
