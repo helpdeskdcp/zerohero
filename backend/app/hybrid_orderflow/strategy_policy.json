@@ -291,12 +291,12 @@
     "intrabar_conflict": "STOP_FIRST",
     "charges": {
       "brokerage_per_order_inr": 20.0,
-      "stt_sell_pct": 0.1,
+      "stt_sell_pct": 0.15,
       "exchange_txn_pct": 0.0356,
       "sebi_pct": 0.0001,
       "stamp_buy_pct": 0.003,
       "gst_pct": 18.0,
-      "_note": "approximate public schedule, VERIFY against a contract note; used only to stop the paper P&L being flattering"
+      "_note": "approximate public schedule; STT on option sell premium 0.15% from 2026-04-01 (was 0.10%). VERIFY against a contract note; used only to keep paper P&L from being flattering"
     }
   }
 }

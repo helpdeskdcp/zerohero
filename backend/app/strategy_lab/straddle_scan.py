@@ -36,7 +36,7 @@ def cost_points(side: str, entry_prem: float, exit_prem: float, lot: int = LOT) 
     brokerage = 4 * 20.0 / lot                                  # 2 legs x (entry + exit) orders, flat Rs 20 each
     sold = entry_prem if side == "short" else exit_prem
     bought = exit_prem if side == "short" else entry_prem
-    stt = 0.001 * sold
+    stt = 0.0015 * sold                                          # option sell premium STT 0.15% from 2026-04-01 (0.10% before)
     txn = 0.000356 * (entry_prem + exit_prem)
     sebi = 0.000001 * (entry_prem + exit_prem)
     stamp = 0.00003 * bought
