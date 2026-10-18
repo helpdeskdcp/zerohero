@@ -1,0 +1,24 @@
+
+[corrected, exit T2] engine trades in window 185; priced on real option bars 183; dropped (missing bar / no expiry) 2
+  dropped trades, underlying net at 2 bps: mean +15.64 bps (kept: +1.06)  <- selection-bias check
+  underlying (same trades): gross +3.06 bps, net@2bps +1.06 bps, net@4bps -0.94 bps
+  option exit at bar CLOSE          slip 0.25/leg: gross  +1.94 pts, cost 1.42, net  +0.52 pts/trade (p=0.434), win  36%, net/premium  -4.5%, net in bps of spot +0.29, avg premium 103, n=183
+  option exit at bar CLOSE          slip 0.50/leg: gross  +1.94 pts, cost 1.92, net  +0.02 pts/trade (p=0.498), win  36%, net/premium  -5.7%, net in bps of spot +0.09, avg premium 103, n=183
+  option exit at bar OPEN (bound)   slip 0.25/leg: gross  +1.33 pts, cost 1.42, net  -0.09 pts/trade (p=0.515), win  34%, net/premium  -3.7%, net in bps of spot +0.01, avg premium 103, n=183
+  option exit at bar OPEN (bound)   slip 0.50/leg: gross  +1.33 pts, cost 1.92, net  -0.59 pts/trade (p=0.595), win  33%, net/premium  -4.9%, net in bps of spot -0.20, avg premium 103, n=183
+
+[corrected, exit PINE (SL or T4)] engine trades in window 183; priced on real option bars 181; dropped (missing bar / no expiry) 2
+  dropped trades, underlying net at 2 bps: mean +44.01 bps (kept: +0.68)  <- selection-bias check
+  underlying (same trades): gross +2.68 bps, net@2bps +0.68 bps, net@4bps -1.32 bps
+  option exit at bar CLOSE          slip 0.25/leg: gross  +0.61 pts, cost 1.42, net  -0.81 pts/trade (p=0.595), win  34%, net/premium  -6.3%, net in bps of spot -0.27, avg premium 104, n=181
+  option exit at bar CLOSE          slip 0.50/leg: gross  +0.61 pts, cost 1.92, net  -1.31 pts/trade (p=0.651), win  33%, net/premium  -7.4%, net in bps of spot -0.47, avg premium 104, n=181
+  option exit at bar OPEN (bound)   slip 0.25/leg: gross  +2.60 pts, cost 1.42, net  +1.18 pts/trade (p=0.347), win  33%, net/premium  -2.8%, net in bps of spot +0.51, avg premium 104, n=181
+  option exit at bar OPEN (bound)   slip 0.50/leg: gross  +2.60 pts, cost 1.92, net  +0.68 pts/trade (p=0.411), win  32%, net/premium  -4.0%, net in bps of spot +0.31, avg premium 104, n=181
+
+[previous fixed, exit T2 (for contrast)] engine trades in window 807; priced on real option bars 781; dropped (missing bar / no expiry) 26
+  dropped trades, underlying net at 2 bps: mean +6.00 bps (kept: -0.90)  <- selection-bias check
+  underlying (same trades): gross +1.10 bps, net@2bps -0.90 bps, net@4bps -2.90 bps
+  option exit at bar CLOSE          slip 0.25/leg: gross  +0.37 pts, cost 1.43, net  -1.06 pts/trade (p=0.859), win  36%, net/premium  -0.6%, net in bps of spot -0.42, avg premium 108, n=781
+  option exit at bar CLOSE          slip 0.50/leg: gross  +0.37 pts, cost 1.93, net  -1.56 pts/trade (p=0.943), win  36%, net/premium  -1.6%, net in bps of spot -0.63, avg premium 108, n=781
+  option exit at bar OPEN (bound)   slip 0.25/leg: gross  +0.70 pts, cost 1.43, net  -0.73 pts/trade (p=0.845), win  34%, net/premium  -1.1%, net in bps of spot -0.29, avg premium 108, n=781
+  option exit at bar OPEN (bound)   slip 0.50/leg: gross  +0.70 pts, cost 1.93, net  -1.23 pts/trade (p=0.956), win  34%, net/premium  -2.0%, net in bps of spot -0.50, avg premium 108, n=781

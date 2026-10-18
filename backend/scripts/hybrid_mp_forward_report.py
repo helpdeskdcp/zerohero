@@ -32,7 +32,7 @@ for sym in ("NIFTY", "BANKNIFTY", "SENSEX"):
     fw = [t for t in tr if t.day > FREEZE_DAY]
     g = np.array([t.bps for t in fw])
     last = dt.date(1970, 1, 1) + dt.timedelta(days=int(max(t.day for t in tr))) if tr else None
-    lines.append(f"  {sym}: forward trades {len(fw)}" + (f", gross {g.mean():+.2f} bps, net {g.mean() - COST:+.2f} bps, win {np.mean(g - COST > 0) * 100:.0f}%" if len(fw) else "") + f"  (latest trade day {last})")
+    lines.append(f"  {sym}: forward trades {len(fw)}" + (f", gross {g.mean():+.2f} bps, net@2 {g.mean() - COST:+.2f}, net@3.5 {g.mean() - 3.5:+.2f}, net@4 {g.mean() - 4.0:+.2f} bps (realistic index-futures round trip is ~3.5-4 bps or more, see audit sec. 18), win@2 {np.mean(g - COST > 0) * 100:.0f}%" if len(fw) else "") + f"  (latest trade day {last})")
     allg += list(g); alld += [t.day for t in fw]
 order = np.argsort(alld, kind="stable") if alld else []
 res = G.evaluate(np.array(allg)[order] if alld else [], np.array(alld)[order] if alld else [], COST, PR)
