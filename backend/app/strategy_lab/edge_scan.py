@@ -246,3 +246,53 @@ def placebo(hyps, per, cost, runs=20, seed=11, **kw) -> list[tuple[int, int, int
         r = pipeline(hyps, per, cost, placebo_rng=rng, **kw)
         res.append((len(r["s1"]), len(r["s2"]), len(r["s3"])))
     return res
+
+
+# ------------------------------------------------------------------ daily-bar family (continuous futures with unadjusted ROLL GAPS)
+def generate_daily(day, wd, O, H, L, C, tag="") -> list[Hyp]:
+    """Pre-registered daily hypotheses on a continuous-futures series whose contract rolls leave unadjusted overnight gaps. Therefore ONLY gap-free quantities
+    are used: the outcome is always the NEXT session's open->close return, and every signal is built from open->close returns and high/low ranges of earlier
+    sessions (never close-to-close). Dropping roll days by size would condition on the outcome magnitude, so nothing is dropped. All arrays are per session."""
+    n = len(day)
+    r_oc = (C / O - 1) * 1e4                                         # gap-free session return
+    nxt = np.r_[r_oc[1:], np.nan]                                    # outcome: next session open->close
+    rng_ = (H - L) / O * 1e4
+    atr = np.full(n, np.nan)
+    for i in range(20, n):
+        atr[i] = np.nanmean(rng_[i - 20:i])                          # mean range of the 20 earlier sessions (no look-ahead)
+    loc = (C - L) / np.where(H > L, H - L, np.nan)
+    out: list[Hyp] = []
+
+    def add(name, fam, mask, sign):
+        out.append(_mk(f"{tag}{name}", fam, mask, nxt, day, sign))
+    # A: prior session's open->close
+    for thr in (0, 50, 100):
+        for pdir, pm in (("up", r_oc > thr), ("dn", r_oc < -thr)):
+            for act, sign in (("follow", 1 if pdir == "up" else -1), ("fade", -1 if pdir == "up" else 1)):
+                add(f"A prev-oc{thr}{pdir} {act}", "A_prev", pm, sign)
+    # B: cumulative gap-free return over the last N sessions
+    for N in (2, 3, 5, 10):
+        cum = np.full(n, np.nan)
+        for i in range(N - 1, n):
+            cum[i] = r_oc[i - N + 1:i + 1].sum()
+        for pdir, pm in (("up", cum > 0), ("dn", cum < 0)):
+            for act, sign in (("follow", 1 if pdir == "up" else -1), ("fade", -1 if pdir == "up" else 1)):
+                add(f"B cum{N}d-{pdir} {act}", "B_cum", pm, sign)
+    # C: close location in the prior session's range
+    for pdir, pm in (("top", loc >= 0.8), ("bot", loc <= 0.2)):
+        for act, sign in (("follow", 1 if pdir == "top" else -1), ("fade", -1 if pdir == "top" else 1)):
+            add(f"C close-{pdir} {act}", "C_loc", pm, sign)
+    # D: range expansion / compression relative to the 20-session mean range
+    ratio = rng_ / atr
+    sg = np.sign(r_oc)
+    fin = np.isfinite(nxt)
+    for lab, pm in (("expand>1.5", ratio > 1.5), ("compress<0.6", ratio < 0.6)):
+        for act, k in (("follow", 1), ("fade", -1)):
+            m = pm & fin & (sg != 0)
+            out.append(Hyp(f"{tag}D {lab} {act}", "D_range", day[m], k * sg[m] * nxt[m], day[fin], nxt[fin], 1))
+    # E: weekday (next session's weekday), long / short
+    nwd = np.r_[wd[1:], -1]
+    for w in range(5):
+        for sign, side in ((1, "L"), (-1, "S")):
+            add(f"E next-wd{w} {side}", "E_weekday", nwd == w, sign)
+    return out

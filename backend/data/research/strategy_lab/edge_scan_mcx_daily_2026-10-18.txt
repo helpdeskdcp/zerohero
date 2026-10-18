@@ -1,0 +1,21 @@
+NATURALGAS: 1215 sessions 2021-09-29..2026-09-25, weekend-dated sessions after IST conversion: 2
+CRUDEOIL: 1215 sessions 2021-09-29..2026-09-25, weekend-dated sessions after IST conversion: 2
+hypotheses tested (pre-registered, nothing tuned, one BH family): 92 {'A_prev': 24, 'B_cum': 32, 'C_loc': 8, 'D_range': 8, 'E_weekday': 20}; cost 3.0 bps round trip; outcome = next session open->close
+eligible: 86 | S1 discovery (BH q=0.10): 0 | S2 validation (q=0.05): 0 | S3 holdout (q=0.05): 0
+
+Top 12 by TRAIN evidence (net bps/event, one-sided p) and what happened later:
+hypothesis                         TRAIN net       p     n | VALID net      p |  OOS net      p
+NAT B cum5d-dn follow                   43.6  0.0204   290 |      34.3  0.057 |    -12.0  0.683
+CRU E next-wd0 L                        37.8  0.0313   107 |      -0.2  0.503 |     -0.9  0.511
+NAT E next-wd1 S                        72.2  0.0355   103 |      10.5  0.396 |    -49.9  0.860
+NAT B cum3d-dn follow                   34.6  0.0496   282 |      19.3  0.201 |    -14.0  0.720
+CRU A prev-oc0dn fade                   19.5  0.0824   240 |      12.9  0.150 |     -6.5  0.620
+CRU A prev-oc50dn fade                  21.7  0.0851   185 |      18.5  0.105 |     -8.0  0.637
+NAT B cum2d-dn follow                   28.7  0.0991   281 |      -8.1  0.630 |    -24.4  0.838
+NAT B cum10d-up fade                    32.5  0.1212   216 |     -30.1  0.831 |    -10.5  0.613
+NAT E next-wd4 S                        36.9  0.1291   100 |      33.2  0.196 |    -15.1  0.660
+CRU B cum2d-dn fade                     14.2  0.1572   237 |      -4.4  0.633 |     38.0  0.018
+CRU E next-wd2 S                        23.6  0.1631   105 |      -1.4  0.531 |    -13.4  0.640
+CRU A prev-oc100dn fade                 17.3  0.1699   140 |       1.9  0.464 |      0.6  0.492
+
+Placebo (30 runs, random same-size draws): survivors per stage mean [0.1, 0.0, 0.0] max [1, 0, 0] | real [0, 0, 0]

@@ -88,3 +88,43 @@ def test_placebo_false_survivors_stay_near_zero():
     hyps = ES.generate(M)
     res = ES.placebo(hyps, periods(M), 2.0, runs=4, min_events=100, min_days=60)
     assert max(s3 for _, _, s3 in res) <= 1 and len(res) == 4
+
+
+# ---- daily family (roll-gap safe) -------------------------------------------------------------------------------------------
+def daily_series(n=800, seed=4, planted=0.0):
+    rng = np.random.default_rng(seed)
+    day = 20000 + np.arange(n) + (np.arange(n) // 5) * 2
+    wd = (((day - 719163) + 3) % 7).astype(int)
+    ret = rng.normal(0, 60, n)                                        # session open->close, bps
+    O = np.empty(n); C = np.empty(n)
+    px = 5000.0
+    for i in range(n):
+        if i and i % 21 == 0:
+            px *= 1.08                                               # an unadjusted ROLL gap every 21 sessions
+        O[i] = px
+        C[i] = px * (1 + ret[i] * 1e-4)
+        px = C[i]
+    if planted:
+        C[1:] = O[1:] * (1 + (ret[1:] + planted * np.sign(ret[:-1])) * 1e-4)    # next-day continuation after an up/down day
+    H = np.maximum(O, C) * 1.0005
+    L = np.minimum(O, C) * 0.9995
+    return day, wd, O, H, L, C
+
+
+def test_daily_outcomes_ignore_roll_gaps_completely():
+    day, wd, O, H, L, C = daily_series()
+    hyps = ES.generate_daily(day, wd, O, H, L, C)
+    assert len(hyps) > 40 and {h.family for h in hyps} == {"A_prev", "B_cum", "C_loc", "D_range", "E_weekday"}
+    allv = np.concatenate([h.pool_val for h in hyps])
+    assert np.nanmax(np.abs(allv)) < 600                              # 8% roll gaps (800 bps) never leak into any outcome (sessions are ~60 bps sd)
+
+
+def test_daily_pipeline_finds_a_planted_continuation_and_is_quiet_on_noise():
+    d, wd, O, H, L, C = daily_series(1200, seed=2, planted=25.0)
+    n = len(d)
+    per = ES.Periods((d[0], d[n // 2 - 1]), (d[n // 2], d[3 * n // 4 - 1]), (d[3 * n // 4], d[-1]))
+    r = ES.pipeline(ES.generate_daily(d, wd, O, H, L, C), per, cost=3.0, min_events=60, min_days=50)
+    assert any(h.name.startswith("A prev-oc0") and "follow" in h.name for h, *_ in r["s3"]), [h.name for h, *_ in r["s3"]]
+    d, wd, O, H, L, C = daily_series(1200, seed=7)
+    r = ES.pipeline(ES.generate_daily(d, wd, O, H, L, C), per, cost=3.0, min_events=60, min_days=50)
+    assert len(r["s3"]) == 0
