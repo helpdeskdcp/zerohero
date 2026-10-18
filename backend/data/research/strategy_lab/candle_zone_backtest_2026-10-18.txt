@@ -1,0 +1,42 @@
+NIFTY 5m: 173806 bars, patterns per 1000 bars: bull_maru 39, bull_engulf 46, bull_harami 40, hammer 24, bear_maru 41, bear_engulf 46, bear_harami 39, shooting 22
+
+== PART A (hindsight, not tradable): origins of the biggest 12-bar moves = top 5% excursion (up >= 4.3 ATR: 6704 bars; down >= 5.0 ATR: 6823 bars)
+feature                    P(feature) P(feature|up-origin)   lift | P(feat|down-origin)   lift
+bull_maru                       3.95%                4.28%   1.08 |               2.92%   0.74
+bull_engulf                     4.58%                5.19%   1.13 |               4.81%   1.05
+bull_harami                     4.02%                4.06%   1.01 |               4.06%   1.01
+hammer                          2.45%                2.63%   1.07 |               2.84%   1.16
+bear_maru                       4.12%                3.86%   0.94 |               5.47%   1.33
+bear_engulf                     4.65%                5.22%   1.12 |               5.57%   1.20
+bear_harami                     3.88%                3.48%   0.90 |               3.55%   0.92
+shooting                        2.18%                2.45%   1.12 |               2.23%   1.02
+zone exhaust (long side)        7.28%                7.22%   0.99 |               7.17%   0.98
+zone exhaust (short side)       8.94%                7.65%   0.86 |               6.77%   0.76
+zone prevday (long side)       24.75%               31.58%   1.28 |              21.91%   0.89
+zone prevday (short side)      33.83%               27.45%   0.81 |              38.47%   1.14
+zone sweep (long side)          4.82%                5.22%   1.08 |               5.57%   1.15
+zone sweep (short side)         5.99%                6.26%   1.05 |               6.02%   1.01
+lift ~ 1.0 = the feature does not identify where big moves start; precision is also tiny: a 5% base rate of a 'big move' barely moves with any pattern.
+
+== PART B (causal): 160 hypotheses (128 pattern, 32 zone-only controls), cost 2.0 bps, entry next bar open
+eligible 144 | S1 discovery (BH q=0.10) 0 | S2 validation (q=0.05) 0 | S3 holdout (q=0.05) 0
+
+Top 14 by TRAIN evidence: hypothesis                                                 TRAIN net  win%      p     n |  VALID |  2024+      p
+   L bull_maru @prevday stop>=2.0ATR rr2                             0.51    41  0.435   625 |  -0.55 |  -1.79  0.828
+   L hammer @sweep stop>=2.0ATR rr2                                  0.02    46  0.496   316 |  -5.59 |  -6.15  1.000
+   L bull_maru @prevday stop>=1.0ATR rr2                            -0.28    37  0.547   625 |  -1.56 |  -2.10  0.934
+   L bull_maru @prevday stop>=1.0ATR rr1                            -0.24    49  0.548   625 |  -3.30 |  -2.38  0.988
+   S shooting @sweep stop>=1.0ATR rr1                               -0.35    57  0.695   332 |  -1.51 |  -2.17  0.994
+   L hammer @sweep stop>=1.0ATR rr2                                 -0.65    40  0.711   316 |  -5.84 |  -4.07  1.000
+   L bull_maru @none stop>=2.0ATR rr2                               -0.71    45  0.714  2627 |  -0.65 |  -1.58  0.976
+   L bull_maru @prevday stop>=2.0ATR rr1                            -1.40    48  0.718   625 |  -1.76 |  -2.04  0.915
+   S shooting @exhaust stop>=1.0ATR rr2                             -1.11    34  0.719   160 |  -4.58 |  -2.56  0.922
+   S shooting @sweep stop>=1.0ATR rr2                               -0.64    38  0.738   332 |  -1.75 |  -4.10  1.000
+   L hammer @none stop>=2.0ATR rr2                                  -0.56    44  0.738  1898 |  -1.66 |  -2.91  0.996
+   L hammer @prevday stop>=2.0ATR rr2                               -1.27    42  0.744   478 |   0.09 |  -4.60  0.938
+   L hammer @prevday stop>=1.0ATR rr2                               -0.86    37  0.768   478 |   0.18 |  -3.52  0.955
+   L hammer @sweep stop>=2.0ATR rr1                                 -1.16    52  0.786   316 |  -6.10 |  -4.42  1.000
+pattern : 112 eligible hypotheses | mean TRAIN net -2.64 bps | mean 2024+ net -2.97 bps | share with 2024+ net>0: 0%
+control : 32 eligible hypotheses | mean TRAIN net -2.67 bps | mean 2024+ net -2.56 bps | share with 2024+ net>0: 0%
+
+win rate of pattern entries by geometry (mean over eligible pattern hypotheses, TRAIN): rr1: 48%, rr2: 37%
