@@ -1,0 +1,109 @@
+"""Public (token-protected) arena API for the SEBI-side participant. NOT behind the dashboard login, so it carries its own secret (env ARENA_TOKEN_HUMAN, header X-Arena-Token),
+a rate limit, a body-size limit, server-side participant naming and an append-only ledger. Reads market data read-only; no order path. Kill switch: ARENA_PUBLIC=0."""
+from __future__ import annotations
+
+import hmac
+import os
+import threading
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, HTTPException, Request
+
+from . import compare as CMP, run as R, submit as SU
+
+router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
+BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+IST = timezone(timedelta(hours=5, minutes=30))
+EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
+PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js")
+_hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None}
+MAX_BODY, RATE_PER_MIN = 4096, 60
+
+
+def enabled() -> bool: return os.environ.get("ARENA_PUBLIC", "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def is_public_path(path: str) -> bool:
+    return enabled() and (path.startswith("/api/arena/public/") or path in PUBLIC_STATIC)
+
+
+def cfg() -> dict:
+    return {"token": (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip(), "name": (os.environ.get("ARENA_HUMAN_NAME") or "SEBI_TRADER").strip(),
+            "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25")}
+
+
+def _auth(request: Request) -> dict:
+    if not enabled(): raise HTTPException(404, "not found")
+    c = cfg()
+    if not c["token"]: raise HTTPException(503, "arena not configured")
+    ip = request.client.host if request.client else "?"; now = time.time()
+    with _lock:
+        q = _hits[ip]
+        while q and now - q[0] > 60: q.popleft()
+        if len(q) >= RATE_PER_MIN: raise HTTPException(429, "rate limit")
+        q.append(now)
+    if not hmac.compare_digest(request.headers.get("x-arena-token", "").encode(), c["token"].encode()): raise HTTPException(401, "bad arena token")
+    return c
+
+
+def mode(c: dict, now: datetime | None = None) -> str:
+    d = (now or datetime.now(IST)).strftime("%Y-%m-%d")
+    return "PRACTICE" if d < c["start"] else ("ARENA_LIVE" if d <= c["end"] else "ENDED")
+
+
+@router.get("/state")
+def state(request: Request):
+    c = _auth(request)
+    return {"mode": mode(c), "start": c["start"], "end": c["end"], "participant": c["name"], "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
+            "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
+
+
+@router.post("/submit")
+async def submit(request: Request):
+    c = _auth(request)
+    if int(request.headers.get("content-length") or 0) > MAX_BODY: raise HTTPException(413, "body too large")
+    try: body = await request.json()
+    except Exception: raise HTTPException(400, "invalid JSON")
+    if not isinstance(body, dict): raise HTTPException(400, "object expected")
+    m = mode(c)
+    if m == "ENDED": raise HTTPException(409, "arena has ended")
+    u = str(body.get("underlying", "")).upper()
+    if m == "ARENA_LIVE":
+        try:
+            from .. import market_calendar as mc
+            if u in EXCH and not mc.is_trading(EXCH[u]): raise HTTPException(409, f"{EXCH[u]} is not open: scored signals can only be submitted while the market is trading")
+        except HTTPException: raise
+        except Exception: pass
+    try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    _cache["v"] = None
+    return {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
+
+
+@router.get("/signals")
+def signals(request: Request):
+    _auth(request)
+    return {"signals": [{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")} for r in SU.load()]}
+
+
+@router.get("/standings")
+def standings(request: Request):
+    c = _auth(request)
+    if time.time() - _cache["t"] > 120 or _cache["v"] is None:
+        sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"])
+        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
+        ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
+        _cache.update(t=time.time(), v={"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
+                                        "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
+                                        "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
+                                                    "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
+    return _cache["v"]
+
+
+@router.get("/guide")
+def guide(request: Request):
+    _auth(request)
+    p = os.path.join(BASE, "SEBI_ARENA_GUIDE.md")
+    return {"markdown": open(p, encoding="utf-8").read() if os.path.exists(p) else "guide missing"}

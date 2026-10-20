@@ -46,7 +46,12 @@ def is_auth_exempt_path(path: str) -> bool:
     Dhan-facing routes that can't carry our credentials, by path shape
     alone -- kept here, next to the routes they protect, not duplicated in
     main.py."""
-    return path.startswith("/api/dhan/postback/") or path == "/api/dhan/redirect"
+    if path.startswith("/api/dhan/postback/") or path == "/api/dhan/redirect": return True
+    try:                                                   # SEBI-side arena: its own token-protected public API + its two static files (app/arena/api.py)
+        from ..arena.api import is_public_path
+        return is_public_path(path)
+    except Exception:
+        return False
 
 
 @router.post("/postback/{secret}")

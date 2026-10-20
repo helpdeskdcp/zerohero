@@ -11,11 +11,11 @@ IST = timezone(timedelta(hours=5, minutes=30))
 CAPITAL = 50000.0
 
 
-def ai_signals(chanakya_db: str, since_date: str) -> list[dict]:
+def ai_signals(chanakya_db: str, since_date: str, until_date: str | None = None) -> list[dict]:
     c = sqlite3.connect(f"file:{chanakya_db}?mode=ro", uri=True, timeout=30); c.row_factory = sqlite3.Row
     try:
         rows = c.execute("SELECT trade_id,underlying,expiry,strike,option_type,opened_ts,entry,stop_loss,target_1,target_2 FROM ai_paper_trades WHERE strategy='AUTOSCALP' AND entry>0 "
-                         "AND stop_loss>0 AND target_1>0 AND substr(opened_ts,1,10)>=? ORDER BY opened_ts", (since_date,)).fetchall()
+                         "AND stop_loss>0 AND target_1>0 AND substr(opened_ts,1,10)>=? AND substr(opened_ts,1,10)<=? ORDER BY opened_ts", (since_date, until_date or "9999-12-31")).fetchall()
     finally:
         c.close()
     out = []
@@ -28,9 +28,12 @@ def ai_signals(chanakya_db: str, since_date: str) -> list[dict]:
     return out
 
 
-def human_signals(path: str | None = None) -> list[dict]:
+def human_signals(path: str | None = None, start: str | None = None, end: str | None = None, include_practice: bool = False) -> list[dict]:
+    """Scoring set: practice entries and anything outside [start, end] (IST dates) never count."""
+    def day(r): return datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
+    rows = [r for r in SU.load(path) if (include_practice or not r.get("practice")) and (not start or day(r) >= start) and (not end or day(r) <= end)]
     return [{"id": r["id"], "participant": r["participant"], "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
-             "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": r["server_ts"]} for r in SU.load(path)]
+             "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": r["server_ts"]} for r in rows]
 
 
 def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", capital: float = CAPITAL) -> dict:

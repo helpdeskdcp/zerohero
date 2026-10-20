@@ -40,10 +40,10 @@ def validate(d: dict) -> dict:
             "targets": tg, "note": str(d.get("note", ""))[:300]}
 
 
-def submit(d: dict, path: str | None = None, now: float | None = None) -> dict:
+def submit(d: dict, path: str | None = None, now: float | None = None, practice: bool = False) -> dict:
     p = path or PATH; rec = validate(d)
     n = sum(1 for line in open(p) if line.strip()) if os.path.exists(p) else 0
-    rec.update(type="HUMAN_SIGNAL", id=f"H{n + 1:05d}", server_ts=(now or time.time()), server_iso=datetime.fromtimestamp(now or time.time(), tz=timezone.utc).isoformat())
+    rec.update(type="HUMAN_SIGNAL", practice=bool(practice), id=f"H{n + 1:05d}", server_ts=(now or time.time()), server_iso=datetime.fromtimestamp(now or time.time(), tz=timezone.utc).isoformat())
     return L.append(p, rec)
 
 

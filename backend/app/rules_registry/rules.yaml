@@ -217,3 +217,8 @@ env_flags:
   - {name: RULES_REGISTRY, category: FEATURE_FLAG, note: "this inventory API"}
   - {name: RULES_ENGINE_SHADOW, category: FEATURE_FLAG, rule: RE-UNIFIED-POLICY}
   - {name: RULES_ENGINE_CAPITAL, category: TUNING}
+  - {name: ARENA_PUBLIC, category: FEATURE_FLAG, note: "SEBI-side arena public API + 2 static files (kill switch)"}
+  - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
+  - {name: ARENA_HUMAN_NAME, category: TUNING}
+  - {name: ARENA_START, category: TUNING}
+  - {name: ARENA_END, category: TUNING}

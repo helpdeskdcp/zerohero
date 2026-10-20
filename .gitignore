@@ -63,3 +63,4 @@ backend/data/autoscalp_config_pre_trendingup_haircut.json
 backend/data/research/order_pressure/_cache/
 backend/data/research/order_pressure/_run*.log
 backend/data/backups/
+backend/data/arena/SEBI_ACCESS.txt

@@ -328,6 +328,14 @@ try:
 except Exception as _e:
     print(f"[rules_registry] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Arena (paper head-to-head, SEBI-side participant): own token-protected public API; append-only submission ledger; no order path. Kill switch: ARENA_PUBLIC=0 ----
+try:
+    if os.environ.get("ARENA_PUBLIC", "1").strip().lower() not in ("0", "false", "off", "no"):
+        from .arena import api as _arena_api
+        app.include_router(_arena_api.router)
+except Exception as _e:
+    print(f"[arena] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:

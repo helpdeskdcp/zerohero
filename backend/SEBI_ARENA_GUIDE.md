@@ -1,0 +1,57 @@
+# SEBI-side trader guide — ZeroHero Arena (paper trading, 22 trading days)
+
+You and the ZeroHero AI trade the **same market on paper**, and both are scored by the **same program on the same recorded quotes**, costs included. No real money is involved.
+
+## 1. What you need
+- The arena page: **/static/arena.html** on the ZeroHero server, and your **arena access token** (given to you privately). Paste it once on the page; it stays only in your browser session.
+- Nothing else. You do not need the dashboard login.
+
+## 2. Dates
+- **Practice:** until the start date. Everything you submit is stored but **never scored**. Use it to learn the form.
+- **Arena:** Monday 26 Oct 2026 to 25 Nov 2026 (22 trading days). Entries outside this window are never scored.
+
+## 3. What you may trade
+- BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL**, nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.
+- Scored signals can be submitted only while that exchange is trading.
+
+## 4. How to submit a signal — BEFORE you take the trade
+Open the **Submit** tab and fill:
+
+| field | meaning | example |
+|---|---|---|
+| Underlying | one of the five | NIFTY |
+| Expiry | `27OCT2026` or `2026-10-27` | 27OCT2026 |
+| Strike / CE or PE | the option you would buy | 23000 CE |
+| Entry mode | **ABOVE**: buy only if the option trades up to your price; **NEAR**: buy at the next available price; **MARKET**: same as NEAR | ABOVE |
+| Entry | option premium (not the index level) | 100 |
+| Stop-loss | premium; must be below entry | 85 |
+| Targets | premium(s) above entry, comma separated | 120, 140 |
+| Note | optional (your reason) | "breakout over VWAP" |
+
+Tick **"I have not entered this trade yet"** and press Submit. The server stamps the time. You get an id (H00001 …) and a hash. **You cannot edit or delete** a submitted signal; if you changed your mind, submit a new one (the old one still counts).
+A trade you did not submit before entering **does not exist** for scoring.
+
+## 5. How every signal is settled (same for you and the AI)
+1. Execution starts **20 seconds after** your submission time (first recorded quote after that).
+2. You **buy at the ask**; you **sell at the bid**. Where a recorded quote has no bid/ask, a half-spread is used (measured where we have data, otherwise a stated assumption; shown in the Standings tab).
+3. ABOVE waits until the traded price reaches your entry, then fills at the higher of the ask and your entry. NEAR/MARKET fills at the next ask, unless it is already more than 5% above your entry (then it is MISSED).
+4. Exit at the **first** recorded quote where the sell price is at or below your stop (gap = that price), or at/above your **first target (T1)**; otherwise at the session end (NSE/BSE 15:15, MCX 23:15).
+5. **Costs:** brokerage, STT, exchange, SEBI fee, stamp duty and GST are deducted; slippage is already inside the bid/ask fills.
+6. If there is not enough recorded data to settle a signal, it is shown as NO_DATA with the reason and is reported for both sides.
+
+## 6. Scoring
+- **Primary:** net return after costs on Rs 50,000 notional (1 lot per signal).
+- **Also shown, never decisive alone:** win rate, profit factor, maximum drawdown, number of signals, share of fills on real bid/ask.
+- The winner is the higher primary result. If the gap is within normal day-to-day noise (95% bootstrap interval of the difference contains zero) the result is a **DRAW**. Maximum drawdown above 20% of capital disqualifies a side.
+
+## 7. Fairness and limits you should know
+- Recorded quotes are about 1–3 minutes apart per strike, so very short spikes between two snapshots are invisible — for you and for the AI alike.
+- SENSEX and MCX option quotes sometimes carry no bid/ask; the model spread is then applied to both sides.
+- Results, including losses, are published as they are. One month is a small sample; the report shows the uncertainty. A win means "ahead in this period", not "proven".
+- Nobody puts money at stake and nobody agrees to quit anything. A loss means the losing approach is revised and re-tested.
+
+## 8. Questions
+- *Can I submit after the move?* No — entries are time-stamped by the server before settlement starts.
+- *Can I use a limit order idea?* Use ABOVE (breakout) or NEAR; other order types are not modelled.
+- *What if I make a typo?* Submit a corrected new signal; the original stays on the record.
+- *Command line instead of the page?* `python scripts/arena_submit.py --participant NAME --underlying NIFTY --expiry 27OCT2026 --strike 23000 --type CE --entry 100 --sl 85 --targets 120,140 --mode ABOVE` (run on the server).

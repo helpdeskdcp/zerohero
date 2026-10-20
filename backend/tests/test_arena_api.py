@@ -1,0 +1,123 @@
+import json
+import os
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.api import dhan_routes
+from app.arena import api as A, compare as CMP, run as R, submit as SU
+from app.forward_test import ledger as L
+
+TOK = "t0k-" + "x" * 24
+GOOD = {"underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "ABOVE", "entry": 100, "sl": 85, "targets": [120, 140], "participant": "HACKER"}
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(SU, "PATH", str(tmp_path / "h.jsonl"))
+    monkeypatch.setenv("ARENA_TOKEN_HUMAN", TOK); monkeypatch.setenv("ARENA_HUMAN_NAME", "SEBI_TRADER"); monkeypatch.delenv("ARENA_PUBLIC", raising=False)
+    monkeypatch.setenv("ARENA_START", "2999-01-01"); monkeypatch.setenv("ARENA_END", "2999-02-01")          # default: PRACTICE
+    A._hits.clear(); A._cache.update(t=0.0, v=None)
+    app = FastAPI(); app.include_router(A.router); return TestClient(app)
+
+
+H = {"X-Arena-Token": TOK}
+
+
+def test_auth_required_and_wrong_token_rejected(client):
+    assert client.get("/api/arena/public/state").status_code == 401
+    assert client.get("/api/arena/public/state", headers={"X-Arena-Token": "nope"}).status_code == 401
+    assert client.post("/api/arena/public/submit", json=GOOD).status_code == 401
+    r = client.get("/api/arena/public/state", headers=H).json()
+    assert r["mode"] == "PRACTICE" and r["participant"] == "SEBI_TRADER" and "NIFTY" in r["allowed_underlyings"]
+
+
+def test_not_configured_and_kill_switch(client, monkeypatch):
+    monkeypatch.setenv("ARENA_TOKEN_HUMAN", ""); assert client.get("/api/arena/public/state", headers=H).status_code == 503
+    monkeypatch.setenv("ARENA_TOKEN_HUMAN", TOK); monkeypatch.setenv("ARENA_PUBLIC", "0"); assert client.get("/api/arena/public/state", headers=H).status_code == 404
+
+
+def test_submit_practice_forces_server_participant_and_hash_chain(client):
+    r = client.post("/api/arena/public/submit", json=GOOD, headers=H); assert r.status_code == 200, r.text
+    j = r.json(); assert j["practice"] is True and j["id"] == "H00001" and j["expiry"] == "2026-10-27"
+    rec = SU.load()[0]; assert rec["participant"] == "SEBI_TRADER" and rec["practice"] is True                      # client-supplied participant ignored
+    assert L.verify_chain(SU.PATH)[0]
+    assert len(client.get("/api/arena/public/signals", headers=H).json()["signals"]) == 1
+
+
+@pytest.mark.parametrize("bad", [{"sl": 120}, {"underlying": "TCS"}, {"targets": []}, {"entry": 0}, {"expiry": "soon"}, {"option_type": "XX"}])
+def test_invalid_submissions_rejected_422_and_not_stored(client, bad):
+    r = client.post("/api/arena/public/submit", json={**GOOD, **bad}, headers=H); assert r.status_code == 422 and SU.load() == []
+
+
+def test_body_size_and_bad_json(client):
+    assert client.post("/api/arena/public/submit", content=b"{" + b" " * 5000 + b"}", headers={**H, "Content-Type": "application/json"}).status_code in (413, 400)
+    assert client.post("/api/arena/public/submit", content=b"not json", headers={**H, "Content-Type": "application/json"}).status_code == 400
+    assert client.post("/api/arena/public/submit", json=[1, 2], headers=H).status_code == 400
+
+
+def test_rate_limit(client):
+    codes = [client.get("/api/arena/public/state", headers=H).status_code for _ in range(A.RATE_PER_MIN + 3)]
+    assert codes[: A.RATE_PER_MIN] == [200] * A.RATE_PER_MIN and set(codes[A.RATE_PER_MIN:]) == {429}
+
+
+def test_live_mode_requires_open_market_and_scores(client, monkeypatch):
+    monkeypatch.setenv("ARENA_START", "2000-01-01"); monkeypatch.setenv("ARENA_END", "2999-01-01")
+    from app import market_calendar as mc
+    monkeypatch.setattr(mc, "is_trading", lambda ex, *a, **k: False)
+    r = client.post("/api/arena/public/submit", json=GOOD, headers=H); assert r.status_code == 409 and SU.load() == []
+    monkeypatch.setattr(mc, "is_trading", lambda ex, *a, **k: True)
+    r = client.post("/api/arena/public/submit", json=GOOD, headers=H); assert r.status_code == 200 and r.json()["practice"] is False
+    monkeypatch.setenv("ARENA_END", "2000-02-01"); assert client.post("/api/arena/public/submit", json=GOOD, headers=H).status_code == 409        # ended
+
+
+def test_scoring_loader_excludes_practice_and_out_of_window(tmp_path):
+    p = str(tmp_path / "h.jsonl"); base = {k: v for k, v in GOOD.items() if k != "participant"}
+    day = lambda d: datetime.fromisoformat(f"{d}T05:00:00+00:00").timestamp()
+    SU.submit({**base, "participant": "X"}, p, now=day("2026-10-20"), practice=True); SU.submit({**base, "participant": "X"}, p, now=day("2026-10-27"))
+    SU.submit({**base, "participant": "X"}, p, now=day("2026-12-01"))
+    got = R.human_signals(p, start="2026-10-26", end="2026-11-25"); assert [g["id"] for g in got] == ["H00002"]
+    assert len(R.human_signals(p, include_practice=True)) == 3
+
+
+def test_standings_shape_and_cache(client, monkeypatch):
+    calls = {"n": 0}
+    monkeypatch.setattr(R, "ai_signals", lambda *a, **k: calls.__setitem__("n", calls["n"] + 1) or [])
+    monkeypatch.setattr(R, "human_signals", lambda *a, **k: [])
+    j = client.get("/api/arena/public/standings", headers=H).json()
+    assert {"ai", "human", "comparison", "caveats", "spread_models", "mode"} <= set(j) and j["comparison"]["verdict"] == "INSUFFICIENT_DAYS" and any("noise" in c or "DRAW" in c for c in j["caveats"])
+    client.get("/api/arena/public/standings", headers=H); assert calls["n"] == 1
+
+
+def test_guide_served(client):
+    assert "SEBI-side trader guide" in client.get("/api/arena/public/guide", headers=H).json()["markdown"]
+
+
+# ---------------- auth exemption stays narrow ----------------
+def test_only_arena_paths_are_exempt_from_dashboard_auth(monkeypatch):
+    monkeypatch.delenv("ARENA_PUBLIC", raising=False)
+    for p in ("/api/arena/public/state", "/api/arena/public/submit", "/static/arena.html", "/static/js/arena.js", "/api/dhan/redirect"): assert dhan_routes.is_auth_exempt_path(p), p
+    for p in ("/api/arena/admin", "/api/arena", "/static/js/app.js", "/static/pa_of_lab.html", "/api/rules/inventory", "/api/execution/kill", "/api/signals/unified", "/api/arena/publicx/state"): assert not dhan_routes.is_auth_exempt_path(p), p
+    monkeypatch.setenv("ARENA_PUBLIC", "0"); assert not dhan_routes.is_auth_exempt_path("/api/arena/public/state") and not dhan_routes.is_auth_exempt_path("/static/arena.html")
+
+
+def test_arena_api_has_no_order_or_network_code_and_files_exist():
+    s = open(A.__file__).read()
+    for bad in ("requests", "urllib", "app.execution", "place_order", "subprocess"): assert bad not in s
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    for f in ("frontend/static/arena.html", "frontend/static/js/arena.js", "backend/SEBI_ARENA_GUIDE.md"): assert os.path.exists(os.path.join(root, f)), f
+
+
+# ---------------- comparison ----------------
+def _res(days_pnl):
+    base = datetime.fromisoformat("2026-10-26T06:00:00+00:00").timestamp()
+    return [{"status": "SETTLED", "net_rs": x, "fill_t": base + i * 86400} for i, x in enumerate(days_pnl)]
+
+
+def test_compare_draw_ahead_and_insufficient():
+    assert CMP.compare(_res([100] * 3), _res([0] * 3))["verdict"] == "INSUFFICIENT_DAYS"
+    noisy_a, noisy_b = _res([500, -400, 300, -200, 100, 50, -100, 400]), _res([-300, 450, -100, 200, -50, 120, 80, -350])
+    assert CMP.compare(noisy_a, noisy_b)["verdict"] == "DRAW"
+    assert CMP.compare(_res([300, 310, 290, 305, 295, 300, 310, 290]), _res([-10, -5, -12, -8, -9, -11, -7, -6]))["verdict"] == "A_AHEAD"
