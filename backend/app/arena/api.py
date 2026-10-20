@@ -151,6 +151,14 @@ async def amend(request: Request):
     return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "server_iso", "practice", "hash")}
 
 
+@router.get("/ingest/status")
+def ingest_status(request: Request):
+    """Health of the read-only channel reader (no message contents, no ids)."""
+    _auth(request)
+    from . import tg_reader
+    return tg_reader.public_status()
+
+
 @router.get("/signals")
 def signals(request: Request):
     c = _auth(request)

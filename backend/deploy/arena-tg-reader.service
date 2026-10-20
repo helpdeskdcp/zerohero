@@ -1,0 +1,13 @@
+[Unit]
+Description=ZeroHero Arena read-only Telegram channel reader (log-only until TG_INGEST_SUBMIT=1)
+After=network-online.target
+
+[Service]
+WorkingDirectory=/root/zerohero/backend
+ExecStart=/root/zerohero/backend/venv/bin/python scripts/arena_tg_reader.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

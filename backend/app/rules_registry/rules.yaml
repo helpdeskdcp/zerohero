@@ -224,6 +224,10 @@ env_flags:
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: ARENA_START, category: TUNING}
+  - {name: TG_API_ID, category: SECRET_OR_ID}
+  - {name: TG_API_HASH, category: SECRET_OR_ID}
+  - {name: TG_SOURCE_CHANNEL_IDS, category: TUNING, note: "verified numeric ids of the only channels the read-only reader may touch"}
+  - {name: TG_INGEST_SUBMIT, category: FEATURE_FLAG, note: "reader submits to the arena ledger only when 1; default log-only"}
   - {name: ARENA_CHANNEL_IDS, category: TUNING, note: "whitelist of institution channel ids ingested into the arena (empty = nothing read)"}
   - {name: ARENA_EXCLUDE_IDS, category: TUNING, note: "ledger ids agreed to be tests (excluded from scoring, publicly)"}
   - {name: ARENA_END, category: TUNING}

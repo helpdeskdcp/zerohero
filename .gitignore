@@ -70,3 +70,6 @@ backend/data/evidence_feed/chat_id.txt
 backend/data/arena/channel_ingest_log.jsonl
 backend/data/arena/channel_ingest_state.json
 backend/data/arena/channel_ingest_cron.log
+
+# telegram reader session + keys (never commit)
+backend/data/tg/

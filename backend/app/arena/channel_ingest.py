@@ -47,19 +47,19 @@ def _market_open(und: str) -> bool:
         return False
 
 
-def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None) -> dict:
+def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None, dry_run: bool = False) -> dict:
     """One channel_post -> outcome dict (also appended to the log). Mutates `state['seen']`."""
     chat = str(post["chat"]["id"]); mid = post.get("message_id"); key = f"{chat}:{mid}"
     t = now or time.time(); text = post.get("text") or post.get("caption") or ""
     base = {"key": key, "chat_id": chat, "message_id": mid, "tg_date": datetime.fromtimestamp(post.get("date", t), tz=timezone.utc).isoformat(), "received_iso": datetime.fromtimestamp(t, tz=timezone.utc).isoformat(), "text": text[:1500]}
     if key in state["seen"]: return {"outcome": "DUPLICATE", **base}
-    out = _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path)
+    out = _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run)
     state["seen"][key] = out.get("signal_id") or out["outcome"]
     _log({**base, **out}, log)
     return {**base, **out}
 
 
-def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path) -> dict:
+def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run=False) -> dict:
     if not text.strip(): return {"outcome": "IGNORED_NO_TEXT"}
     r = CP.parse_signal(text)
     if not r["ok"]:
@@ -69,6 +69,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path) -
         reply = (post.get("reply_to_message") or {}).get("message_id")
         sid = state["by_msg"].get(f"{base['chat_id']}:{reply}") if reply else state["last_by_chat"].get(base["chat_id"])
         if not sid: return {"outcome": "CANCEL_NO_TARGET"}
+        if dry_run: return {"outcome": "WOULD_CANCEL", "signal_id": sid}
         try: ev = SU.submit_event({"signal_id": sid, "action": "CANCEL", "note": "channel: trade cancelled"}, participant, path=ledger, now=t)
         except SU.SubmissionError as e: return {"outcome": "CANCEL_REJECTED", "reason": str(e)}
         return {"outcome": "CANCEL_SUBMITTED", "event_id": ev["id"], "signal_id": sid}
@@ -83,6 +84,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path) -
     if not exp: return {"outcome": "NO_CAPTURED_EXPIRY", "underlying": und}
     chk = CT.check(und, exp, s["strike"], s["option_type"], s["entry"], s["entry_mode"], sl=s["sl"], path=db_path)
     if chk["problems"] and scored: return {"outcome": "UNSCORABLE_NOT_SUBMITTED", "problems": chk["problems"], "parsed": s, "expiry": exp}
+    if dry_run: return {"outcome": "WOULD_SUBMIT", "parsed": s, "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
     try:
         rec = SU.submit({"participant": participant, "underlying": und, "expiry": exp, "strike": s["strike"], "option_type": s["option_type"], "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"],
                          "targets": s["targets"], "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured)"},
