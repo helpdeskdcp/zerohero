@@ -22,9 +22,9 @@ Open the **Submit** tab and fill:
 
 | field | meaning | example |
 |---|---|---|
-| Underlying | one of the five | NIFTY |
-| Expiry | `27OCT2026` or `2026-10-27` | 27OCT2026 |
-| Strike / CE or PE | the option you would buy | 23000 CE |
+| Underlying | one of the five; selecting it loads the live price and the chain | NIFTY |
+| Expiry | **auto**: the current (nearest) expiry is pre-selected, the next ones are listed | current |
+| Strike / CE or PE | **auto**: the strike list is built around the live price with **ATM / ITM1.. / OTM1..** labels and each strike's last price; ATM is pre-selected. For a call, ITM = below the price; for a put, ITM = above it | ATM CE |
 | Entry mode | **LIMIT**: a buy limit — you are filled as soon as the ask comes down to your entry or lower (valid until session end); **ABOVE**: buy only when the option trades up to your price; **NEAR / MARKET**: buy at the next available ask | LIMIT |
 | Entry | option premium (not the index level) | 100 |
 | Stop-loss | premium; must be below entry | 85 |
@@ -36,6 +36,8 @@ Open the **Submit** tab and fill:
 Tick **"I have not entered this trade yet"** and press Submit. The server stamps the time. You get an id (H00001 …) and a hash. **You cannot edit or delete** a submitted signal; if you changed your mind, submit a new one (the old one still counts).
 A trade you did not submit before entering **does not exist** for scoring.
 
+**Speed-ups on the form:** the entry price is pre-filled from the quote of the strike you pick (bid for LIMIT, ask otherwise) and can be edited; "Refresh prices" reloads the chain. Prices come from the captured quotes (~1-3 minutes old).
+
 ## 4b. Managing the trade after entry (amend, trail, emergency exit)
 In **My signals → Manage a signal** you can, at any time while the exchange is open:
 - **Change targets** (e.g. move the target further if it is not being reached) — **Change stop-loss** — **Trailing stop** (by points or %, follows the highest bid since entry) — **Emergency exit** (sell at the next bid) — **Cancel** a still-pending entry.
@@ -46,7 +48,8 @@ The AI engine is frozen (code hashes in the forward-test manifest) and **no trad
 
 ## 5. How every signal is settled (same for you and the AI)
 1. Execution starts **20 seconds after** your submission time (first recorded quote after that).
-2. You **buy at the ask**; you **sell at the bid**. Where a recorded quote has no bid/ask, a half-spread is used (measured where we have data, otherwise a stated assumption; shown in the Standings tab).
+2. **SL-at-fill rule (from 2026-10-20, not retroactive):** if your stop-loss is at or above the sell price at the moment you are filled (for example a limit buy fills far below your limit and the stop sits above the fill), the trade is stopped at once at that bid. This mirrors a real stop order placed above the market. H00002 (settled before the rule) keeps its result.
+2b. You **buy at the ask**; you **sell at the bid**. Where a recorded quote has no bid/ask, a half-spread is used (measured where we have data, otherwise a stated assumption; shown in the Standings tab).
 3. LIMIT fills at the ask once the ask is at or below your entry. ABOVE waits until the traded price reaches your entry, then fills at the higher of the ask and your entry. NEAR/MARKET fills at the next ask, unless it is already more than 5% above your entry (then it is MISSED).
 4. Exit at the **first** recorded quote where the sell price is at or below your (current or trailing) stop (gap = that price), or at/above your **current first target**, or on your emergency exit; otherwise at the session end (NSE/BSE 15:15, MCX 23:15).
 5. **Costs:** brokerage, STT, exchange, regulatory turnover fee, stamp duty and GST are deducted; slippage is already inside the bid/ask fills.

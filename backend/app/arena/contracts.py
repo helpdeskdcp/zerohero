@@ -81,3 +81,77 @@ def check(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float
             if 0 < entry - sl <= 1.5 * spread: out["warnings"].append(f"stop-loss {sl:g} is only {entry - sl:.2f} below the entry, about {(entry - sl) / spread:.1f}x the current bid/ask spread ({spread:.2f}): it is likely to be hit immediately")
         if mode == "ABOVE" and r < 0.9: out["warnings"].append(f"ABOVE {entry:g} is already below the market ({q['ltp']:g}): it would trigger immediately")
     return out
+
+
+def spot_for(underlying: str, option_expiry_iso: str | None = None, path: str | None = None) -> tuple[float | None, str]:
+    """Underlying price for ATM detection: the INDEX quote for index options; for MCX the FUTURE whose expiry is the nearest one on/after the option expiry. Latest polls only (PK range)."""
+    from datetime import date
+    c = _ro(path)
+    try:
+        mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
+        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL ORDER BY id DESC LIMIT 1", (mx - 30000, underlying)).fetchone()
+        if r: return float(r[0]), f"INDEX @ {r[1]}"
+        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL ORDER BY id DESC", (mx - 30000, underlying)).fetchall()
+    finally:
+        c.close()
+    best: dict = {}
+    for raw, ltp, ts, _ in rows:
+        try: iso = norm_expiry(raw)
+        except Exception: continue
+        best.setdefault(iso, (float(ltp), ts))
+    if not best: return None, "NO_SPOT"
+    pick = next((e for e in sorted(best) if not option_expiry_iso or e >= option_expiry_iso), sorted(best)[0])
+    return best[pick][0], f"FUTURE {pick} @ {best[pick][1]}"
+
+
+_chain_cache: dict = {}
+
+
+def chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path: str | None = None) -> dict:
+    hit = _chain_cache.get((underlying, expiry_iso, option_type, n, path))
+    if hit and time.time() - hit[0] < 10: return hit[1]
+    out = _chain(underlying, expiry_iso, option_type, n, path); _chain_cache[(underlying, expiry_iso, option_type, n, path)] = (time.time(), out); return out
+
+
+def warm(underlyings=("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL"), path: str | None = None) -> None:
+    """Touch the latest quote pages of every underlying so the first user click is fast (cold page cache on the 12 GB file costs seconds). Never raises."""
+    for u in underlyings:
+        try:
+            cap = captured(u, None, path); e = next(iter(cap["expiries"]), None)
+            if e: chain(u, e, "CE", 7, path)
+        except Exception:
+            continue
+
+
+def _chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path: str | None = None) -> dict:
+    """ATM + n ITM + n OTM strikes (ITM = below spot for CE, above spot for PE) with the last quote of each. Everything from captured data; nothing is guessed."""
+    from .settle import snap_expiry
+    cap = captured(underlying, None, path); ex = cap["expiries"].get(expiry_iso)
+    out = {"underlying": underlying, "expiry": expiry_iso, "option_type": option_type, "spot": None, "spot_source": None, "step": None, "atm": None, "rows": [], "problems": []}
+    if not ex: out["problems"].append(f"no captured quotes for {underlying} {expiry_iso}"); return out
+    spot, src = spot_for(underlying, expiry_iso, path); out["spot"], out["spot_source"] = spot, src
+    ks = ex["strikes"]
+    if spot is None: out["problems"].append("no underlying price captured: cannot detect ATM"); return out
+    near = [k for k in ks if abs(k - spot) <= 0.15 * spot] or ks
+    diffs = sorted({round(b - a, 6) for a, b in zip(near, near[1:]) if b > a}); step = diffs[0] if diffs else None
+    if len(diffs) > 1:                                                                   # modal step near the money
+        from collections import Counter
+        step = Counter(round(b - a, 6) for a, b in zip(near, near[1:]) if b > a).most_common(1)[0][0]
+    atm = min(ks, key=lambda k: abs(k - spot)); out["step"], out["atm"] = step, atm
+    i = ks.index(atm); lo, hi = max(0, i - n), min(len(ks), i + n + 1); win = ks[lo:hi]
+    c = _ro(path)
+    try:
+        mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
+        qs: dict = {}
+        for k, ltp, bid, ask, ts in c.execute("SELECT strike, ltp, bid, ask, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='OPTION' AND expiry=? AND option_type=? AND strike BETWEEN ? AND ? AND ltp IS NOT NULL ORDER BY id DESC",
+                                              (mx - 30000, underlying, snap_expiry(expiry_iso), option_type, win[0], win[-1])):
+            qs.setdefault(float(k), {"ltp": ltp, "bid": bid, "ask": ask, "ts": ts})
+    finally:
+        c.close()
+    for k in win:
+        d = ks.index(k) - i                                                              # >0 : strike above ATM
+        if d == 0: lab = "ATM"
+        else:
+            itm = (d < 0) if option_type == "CE" else (d > 0); lab = ("ITM" if itm else "OTM") + str(abs(d))
+        out["rows"].append({"strike": k, "label": lab, "quote": qs.get(k)})
+    return out

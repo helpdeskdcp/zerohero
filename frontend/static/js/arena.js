@@ -119,18 +119,31 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   const form = $("f");
   function readForm() { const v = {}; for (const el of form.elements) if (el.name) v[el.name] = el.type === "checkbox" ? el.checked : el.value; return v; }
   const preview = () => { const r = validateForm(readForm()); $("prev").textContent = r.preview.risk_per_unit ? `risk/unit ${r.preview.risk_per_unit.toFixed(2)} · reward:risk to T1 ${r.preview.rr_to_t1 ? r.preview.rr_to_t1.toFixed(2) : "—"}` : ""; };
-  let hintTimer = null;
-  async function refreshContracts() {
-    const u = form.underlying.value; try { const j = await api("/contracts?underlying=" + encodeURIComponent(u)); $("expList").replaceChildren(...j.expiries.map((e) => { const o = document.createElement("option"); o.value = e.raw; o.label = `${e.expiry} · strikes ${e.strike_min}-${e.strike_max}`; return o; }));
-      $("hint").textContent = j.expiries.length ? `Captured ${u} expiries: ` + j.expiries.map((e) => `${e.raw} (strikes ${e.strike_min}-${e.strike_max})`).join(" · ") : `No captured quotes for ${u} in the latest session.`; } catch (e) { $("hint").textContent = ""; }
+  let autoEntry = true, lastChain = null;
+  const roleLabel = (e) => `${e.raw} · ${e.role}`;
+  const rowLabel = (r) => `${r.label} ${r.strike}` + (r.quote ? ` · ${r.quote.ltp}${r.quote.bid ? " (bid " + r.quote.bid + " / ask " + r.quote.ask + ")" : ""}` : " · no quote");
+  function suggestEntry() {
+    if (!autoEntry || !lastChain) return; const k = Number(form.strike.value), r = lastChain.rows.find((x) => x.strike === k); if (!r || !r.quote) return;
+    const q = r.quote, v = form.entry_mode.value === "LIMIT" ? (q.bid || q.ltp) : (q.ask || q.ltp); if (v) { form.entry.value = v; preview(); }
   }
-  async function refreshQuote() {
-    const v = readForm(); if (!v.expiry || !(Number(v.strike) > 0)) return;
-    try { const j = await api(`/quote?underlying=${encodeURIComponent(v.underlying)}&expiry=${encodeURIComponent(v.expiry)}&strike=${encodeURIComponent(v.strike)}&option_type=${encodeURIComponent(v.option_type)}`);
-      $("hint").textContent = j.last ? `Last ${v.underlying} ${v.strike} ${v.option_type}: ${j.last.ltp}${j.last.bid ? " (bid " + j.last.bid + " / ask " + j.last.ask + ")" : ""} at ${String(j.last.ts).replace("T", " ").slice(11, 19)} UTC` : "No captured quote for this contract: it cannot be scored. Pick an expiry/strike from the captured list."; } catch (e) { /* keep previous hint */ }
+  async function loadChain(keepExpiry) {
+    const u = form.underlying.value, ot = form.option_type.value, ex = keepExpiry ? form.expiry.value : "";
+    try {
+      const j = await api(`/chain?underlying=${encodeURIComponent(u)}&option_type=${ot}` + (ex ? `&expiry=${encodeURIComponent(ex)}` : "") + "&n=7"); lastChain = j;
+      if (!j.expiries || !j.expiries.length) { form.expiry.replaceChildren(); form.strike.replaceChildren(); $("hint").textContent = (j.problems || []).join(" · ") || `No captured quotes for ${u} yet.`; return; }
+      const curExp = ex || j.expiries[0].raw; form.expiry.replaceChildren(...j.expiries.map((e) => { const o = document.createElement("option"); o.value = e.raw; o.textContent = roleLabel(e); return o; })); form.expiry.value = curExp;
+      const keep = form.strike.value; form.strike.replaceChildren(...j.rows.map((r) => { const o = document.createElement("option"); o.value = r.strike; o.textContent = rowLabel(r); return o; }));
+      form.strike.value = keep && j.rows.some((r) => String(r.strike) === keep) ? keep : String(j.atm);
+      $("hint").textContent = j.spot ? `${u} price ${j.spot} (${String(j.spot_source).replace("T", " ").slice(0, 40)}) · ATM ${j.atm} · step ${j.step}` : (j.problems || []).join(" · ");
+      suggestEntry();
+    } catch (e) { $("hint").textContent = e.message; }
   }
-  form.oninput = (ev) => { preview(); if (ev && ev.target && ev.target.name === "underlying") refreshContracts(); clearTimeout(hintTimer); hintTimer = setTimeout(refreshQuote, 500); };
-  form.underlying.addEventListener("change", refreshContracts);
+  form.oninput = (ev) => { preview(); const n = ev && ev.target && ev.target.name; if (n === "entry") autoEntry = false; if (n === "strike" || n === "entry_mode") suggestEntry(); };
+  form.underlying.addEventListener("change", () => { autoEntry = true; form.entry.value = ""; loadChain(false); });
+  form.option_type.addEventListener("change", () => { autoEntry = true; form.entry.value = ""; loadChain(true); });
+  form.expiry.addEventListener("change", () => { autoEntry = true; form.entry.value = ""; loadChain(true); });
+  $("refreshChain").onclick = () => { autoEntry = true; loadChain(true); };
+  const refreshContracts = () => loadChain(false);
   form.onsubmit = async (ev) => { ev.preventDefault(); const r = validateForm(readForm()); if (!r.ok) return msg("submsg", r.errors.join(" · "), true);
     $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.` + ((j.warnings || []).length ? "  ⚠ " + j.warnings.join(" · ") : ""), !!((j.warnings || []).length)); form.reset(); preview(); }
     catch (e) { msg("submsg", e.message, true); } finally { $("go").disabled = false; } };

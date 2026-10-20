@@ -18,6 +18,7 @@ The AI's own signals (the frozen AUTOSCALP entrant, and the exploratory ACTIVE a
 
 ## 3. Settlement (identical for both sides; code in `app/arena/`, open for audit)
 - Execution delay 20 s after the signal. BUY fills at the ASK, exits at the BID of captured Angel quote snapshots; SL/targets checked on the BID; T1 exit policy; forced exit at session end (NSE 15:15, MCX 23:15). One stop-first rule; gaps fill at the gap price.
+- SL-at-fill (from 2026-10-20, not retroactive): a stop at/above the fill-time sell price is executed at once at that bid.
 - Costs: brokerage, STT, exchange charges, regulatory turnover fee, stamp duty, GST from the cost models (index options = formula estimate, MCX NG/CRUDE = contract-note-validated profiles). Slippage is the real/modelled spread inside the fills (not added twice).
 - **Data limits, disclosed:** snapshots are ~1–3 minutes apart per strike, so brief spikes between snapshots are invisible to BOTH sides; SENSEX and MCX option snapshots currently carry NO bid/ask (Angel returns zeros), so those fills use a half-spread model (measured where >= 200 rows exist, else a stated proxy/fallback, labelled in every result). Fix in progress: dynamic Dhan depth subscription for arena strikes (blocked while the Dhan tick feed is silent, see status).
 

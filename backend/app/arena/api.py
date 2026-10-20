@@ -54,9 +54,14 @@ def mode(c: dict, now: datetime | None = None) -> str:
     return "PRACTICE" if d < c["start"] else ("ARENA_LIVE" if d <= c["end"] else "ENDED")
 
 
+_warm = {"t": 0.0}
+
+
 @router.get("/state")
 def state(request: Request):
     c = _auth(request)
+    if time.time() - _warm["t"] > 120:                                                  # keep the quote pages hot so contract/strike pickers answer instantly
+        _warm["t"] = time.time(); threading.Thread(target=CT.warm, daemon=True).start()
     return {"mode": mode(c), "start": c["start"], "end": c["end"], "participant": c["name"], "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
             "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
 
@@ -67,6 +72,20 @@ def contracts(request: Request, underlying: str):
     if u not in SU.ALLOWED: raise HTTPException(422, f"underlying must be one of {SU.ALLOWED}")
     cap = CT.captured(u)
     return {"underlying": u, "session_day": cap["day"], "expiries": [{"expiry": e, "raw": v["raw"], "strike_min": v["strikes"][0], "strike_max": v["strikes"][-1], "n_strikes": len(v["strikes"])} for e, v in cap["expiries"].items()]}
+
+
+@router.get("/chain")
+def chain(request: Request, underlying: str, option_type: str = "CE", expiry: str | None = None, n: int = 7):
+    """Auto-detected ATM / ITM / OTM strikes with last quotes. Without `expiry` the CURRENT (nearest captured) expiry is used; the response lists all captured expiries (current, next, ...)."""
+    _auth(request); u = underlying.upper(); ot = option_type.upper()
+    if u not in SU.ALLOWED or ot not in ("CE", "PE"): raise HTTPException(422, "bad underlying / option_type")
+    cap = CT.captured(u); exps = list(cap["expiries"])
+    if not exps: return {"underlying": u, "expiries": [], "problems": [f"no captured quotes for {u} in the latest session"]}
+    try: e = SU.norm_expiry(expiry) if expiry else exps[0]
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    out = CT.chain(u, e, ot, max(1, min(int(n), 15)))
+    out["expiries"] = [{"expiry": x, "raw": cap["expiries"][x]["raw"], "role": ("current" if i == 0 else "next" if i == 1 else f"+{i}")} for i, x in enumerate(exps)]
+    return out
 
 
 @router.get("/quote")

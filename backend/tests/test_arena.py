@@ -231,3 +231,75 @@ def test_information_barrier_no_trading_code_imports_the_arena():
     for f in ("app/autoscalp/runner.py", "app/engines/scalp_strategy.py", "app/rules_engine/shadow.py", "app/active_arm/shadow.py", "app/active_arm/__init__.py"): assert "arena" not in open(os.path.join(os.path.dirname(root), f)).read().lower()
     runner = open(os.path.join(os.path.dirname(root), "app/autoscalp/runner.py")).read()
     assert "active_arm.run" not in runner and "from ..active_arm import run" not in runner                                   # the runner only ever imports the log-only shadow module
+
+
+# ---------------- SL-at-fill rule (forward-only) ----------------
+def _rule(tmp_path, monkeypatch, from_ts):
+    import json
+    p = tmp_path / "rule_effective.json"; p.write_text(json.dumps({"sl_at_fill_from_ts": from_ts})); monkeypatch.setattr(S, "RULES_FILE", str(p))
+
+
+H2 = [("10:03", 9.55, 9.55, 9.6), ("10:06", 9.85, 9.75, 9.85), ("10:09", 9.75, 9.7, 9.75), ("10:12", 10.15, 10.05, 10.15)]
+
+
+def test_sl_at_fill_exits_immediately_when_stop_is_above_the_fill_market(tmp_path, monkeypatch):
+    s0 = sig(underlying="NATURALGAS", strike=290.0, option_type="PE", entry_mode="LIMIT", entry=9.8, entry_hi=9.8, sl=9.7, targets=[10.0], t=ep("10:00"))
+    sn = snaps(H2)
+    base = S.settle(s0, sn, half_spread=0.0); assert base["exit_reason"] == "SL" and base["fill"] == 9.6 and base["exit"] == 9.7                       # old behaviour: the stop-out came later at a better price (artefact)
+    _rule(tmp_path, monkeypatch, ep("09:59"))                                                                                                            # rule effective before this signal
+    r = S.settle(s0, sn, half_spread=0.0)
+    assert r["exit_reason"] == "SL_AT_FILL" and r["fill"] == 9.6 and r["exit"] == 9.55 and r["hold_sec"] == 0 and r["gross_rs"] == pytest.approx((9.55 - 9.6) * 1250) and r["net_rs"] < 0
+    _rule(tmp_path, monkeypatch, ep("10:30"))                                                                                                            # rule effective AFTER the signal: not retroactive
+    assert S.settle(s0, sn, half_spread=0.0)["exit_reason"] == "SL"
+
+
+def test_sl_at_fill_does_not_fire_for_a_normal_stop_and_inactive_without_file(tmp_path, monkeypatch):
+    sn = snaps([("10:01", 100, 99, 100.5), ("10:05", 125, 124, 126)])
+    _rule(tmp_path, monkeypatch, ep("09:00")); r = S.settle(sig(), sn, half_spread=0.0); assert r["exit_reason"] == "TARGET"                          # SL 85 far below the market
+    monkeypatch.setattr(S, "RULES_FILE", str(tmp_path / "missing.json")); assert S.sl_at_fill_from() is None
+    assert S.settle(sig(entry_mode="LIMIT", entry=100.0, sl=99.8, t=ep("10:00")), snaps([("10:01", 99.5, 99.5, 99.9), ("10:05", 99.0, 98.9, 99.1)]), half_spread=0.0)["exit_reason"] == "SL"        # rule off: normal path
+
+
+# ---------------- ATM / ITM / OTM chain ----------------
+def _chain_db(tmp_path, fut_rows=None, index=None, name="c.db"):
+    import sqlite3
+    p = str(tmp_path / name); c = sqlite3.connect(p)
+    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL)")
+    rows = []
+    for k in range(9200, 9700, 50):
+        for ot in ("CE", "PE"): rows.append(("2026-10-20T13:00:00Z", "CRUDEOIL", "OPTION", "17NOV2026", float(k), ot, "2026-10-20", 500.0 - (k - 9400) * 0.5 if ot == "CE" else 500.0 + (k - 9400) * 0.5, None, None))
+    for e, v in (fut_rows or [("19OCT2026", 9300.0), ("19NOV2026", 9356.0), ("19DEC2026", 9400.0)]): rows.append(("2026-10-20T13:00:00Z", "CRUDEOIL", "FUTURE", e, None, None, "2026-10-20", v, None, None))
+    if index: rows.append(("2026-10-20T13:00:00Z", "CRUDEOIL", "INDEX", None, None, None, "2026-10-20", index, None, None))
+    c.executemany("INSERT INTO quote_snapshots (received_ts,symbol,kind,expiry,strike,option_type,session_date_ist,ltp,bid,ask) VALUES (?,?,?,?,?,?,?,?,?,?)", rows); c.commit(); c.close(); return p
+
+
+def test_spot_uses_the_future_on_or_after_the_option_expiry_or_the_index(tmp_path):
+    from app.arena import contracts as CT
+    p = _chain_db(tmp_path); CT._cache.clear(); CT._chain_cache.clear()
+    spot, src = CT.spot_for("CRUDEOIL", "2026-11-17", p); assert spot == 9356.0 and "2026-11-19" in src                                  # Nov future for the Nov option, not the (expired) Oct one
+    p2 = _chain_db(tmp_path, index=9999.0, name="c2.db")
+    spot, src = CT.spot_for("CRUDEOIL", "2026-11-17", p2); assert spot == 9999.0 and src.startswith("INDEX")
+
+
+def test_chain_labels_itm_otm_correctly_for_calls_and_puts(tmp_path):
+    from app.arena import contracts as CT
+    p = _chain_db(tmp_path); CT._cache.clear(); CT._chain_cache.clear()
+    ce = CT.chain("CRUDEOIL", "2026-11-17", "CE", 2, p); lab = {r["strike"]: r["label"] for r in ce["rows"]}
+    assert ce["atm"] == 9350.0 and ce["step"] == 50.0 and lab[9350.0] == "ATM" and lab[9300.0] == "ITM1" and lab[9250.0] == "ITM2" and lab[9400.0] == "OTM1" and lab[9450.0] == "OTM2" and len(ce["rows"]) == 5
+    pe = CT.chain("CRUDEOIL", "2026-11-17", "PE", 2, p); lab = {r["strike"]: r["label"] for r in pe["rows"]}
+    assert lab[9400.0] == "ITM1" and lab[9300.0] == "OTM1" and lab[9350.0] == "ATM"                                                         # puts: ITM is ABOVE spot
+    assert ce["rows"][0]["quote"] is not None and ce["problems"] == []
+    miss = CT.chain("CRUDEOIL", "2026-12-01", "CE", 2, p); assert miss["problems"] and miss["rows"] == []
+
+
+def test_chain_endpoint_defaults_to_current_expiry_and_labels_roles(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.arena import api as A, contracts as CT, submit as SU
+    p = _chain_db(tmp_path); CT._cache.clear(); CT._chain_cache.clear(); monkeypatch.setattr(CT, "DB", p)
+    monkeypatch.setattr(SU, "PATH", str(tmp_path / "h.jsonl")); monkeypatch.setenv("ARENA_TOKEN_HUMAN", "tok"); A._hits.clear()
+    cl = TestClient(FastAPI()); app = cl.app; app.include_router(A.router)
+    j = cl.get("/api/arena/public/chain?underlying=crudeoil&option_type=ce&n=3", headers={"X-Arena-Token": "tok"}).json()
+    assert j["expiry"] == "2026-11-17" and j["expiries"][0]["role"] == "current" and j["atm"] == 9350.0 and len(j["rows"]) == 7
+    assert cl.get("/api/arena/public/chain?underlying=TCS", headers={"X-Arena-Token": "tok"}).status_code == 422 and cl.get("/api/arena/public/chain?underlying=NIFTY").status_code == 401
+    CT.warm(path=p)                                                                                                              # never raises, fills the cache

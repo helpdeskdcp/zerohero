@@ -3,6 +3,7 @@
   * BUY fills at the ASK (observed); SELL (SL / target / time exit) at the BID. Where a snapshot has no usable bid/ask (all SENSEX and MCX option rows today), the fill is LTP -/+ the
     instrument's half-spread from spread_model (measured where data exists, else a stated fallback) - applied to BOTH sides.
   * ABOVE x: waits for ltp >= x, fills at max(ask, x). LIMIT x: buy limit, fills at the ask once ask <= x (valid to session end). NEAR/MARKET: next snapshot ask; MISSED if it is >5% above the stated entry high.
+  * SL-at-fill (effective only for signals submitted after the deployment time in data/arena/rule_effective.json, never retroactive): if the stop is at/above the sell price of the fill snapshot, exit there at once (reason SL_AT_FILL).
   * management events (amend SL / targets, trailing stop, emergency exit, cancel) take effect 20 s after their server timestamp, never retroactively; the AI's own recorded management is replayed as the same event types.
   * exit on the first snapshot whose sell price <= SL (gap: that price) or >= target (T1 policy by default; 'LAST' = last target); forced exit at session end.
   * resolution is the snapshot interval (about 1-3 minutes per strike): brief spikes between snapshots are NOT seen, for either side.
@@ -60,6 +61,18 @@ def cost_points(und: str, entry: float, exit_: float, lot: int) -> float | None:
     return estimate_index_option_cost(entry, max(exit_, 0.05), lot, lots=1, slippage_points=0.0)["total_cost_points"]
 
 
+RULES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "rule_effective.json")
+
+
+def sl_at_fill_from() -> float | None:
+    """Epoch from which the SL-at-fill rule applies (written at deployment; NOT retroactive). Absent file -> rule inactive."""
+    try:
+        import json
+        v = json.load(open(RULES_FILE)).get("sl_at_fill_from_ts"); return float(v) if v is not None else None
+    except Exception:
+        return None
+
+
 def _apply(ev: dict, st: dict) -> None:
     a = ev["action"]
     if a == "AMEND_SL": st["sl"] = float(ev["sl"])
@@ -103,7 +116,11 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
             fill, real_fill, j = p, real, i; break
     if fill is None: return {**base, "status": "NOT_TRIGGERED", "events_applied": applied}
     hwm = sell_px(live[j], half_spread)[0]; px = why = None; k_exit = j; real_exit = False
-    for k in range(j + 1, len(live)):
+    _from = sl_at_fill_from()
+    if _from is not None and sig["t"] >= _from and st["sl"] is not None:                    # SL-at-fill rule: a stop already at/above the market at the moment of the fill is hit immediately
+        drain(live[j]["t"]); sp0, real0 = sell_px(live[j], half_spread)
+        if st["sl"] >= sp0: px, why, real_exit, k_exit = sp0, "SL_AT_FILL", real0, j
+    for k in range(j + 1, len(live) if px is None else j + 1):
         s = live[k]; sp, real = sell_px(s, half_spread); k_exit = k; drain(s["t"]); hwm = max(hwm, sp)
         if _mod(s["t"]) >= end_min: px, real_exit, why = sp, real, "TIME"; break
         if st.get("EXIT_NOW"): px, real_exit, why = sp, real, "EMERGENCY"; break
