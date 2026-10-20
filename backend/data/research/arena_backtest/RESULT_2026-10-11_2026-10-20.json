@@ -1,0 +1,60 @@
+{
+ "window": [
+  "2026-10-11",
+  "2026-10-20"
+ ],
+ "n_signals": 1,
+ "result": {
+  "ZEROHERO_AI": {
+   "summary": {
+    "signals": 1,
+    "by_status": {
+     "SETTLED": 1
+    },
+    "settled": 1,
+    "capital": 50000.0,
+    "net_rs": -1375.91,
+    "return_pct": -2.7518200000000004,
+    "win_rate": 0.0,
+    "gross_rs": -1315.0,
+    "cost_rs": 60.910000000000004,
+    "profit_factor": 0.0,
+    "max_drawdown_rs": 1375.91,
+    "max_drawdown_pct": 2.7518200000000004,
+    "avg_net_rs": -1375.91,
+    "real_quote_fill_share": 1.0
+   },
+   "results": [
+    {
+     "id": "TRD-1a13964a39a-4049f",
+     "participant": "ZEROHERO_AI",
+     "underlying": "SENSEX",
+     "strike": 72600.0,
+     "type": "PE",
+     "t": 1791964259.226507,
+     "entry_mode": "NEAR",
+     "status": "SETTLED",
+     "fill": 342.3,
+     "exit": 276.55,
+     "exit_reason": "EMERGENCY",
+     "fill_real_quote": true,
+     "exit_real_quote": true,
+     "lot": 20,
+     "gross_rs": -1315.0,
+     "cost_rs": 60.910000000000004,
+     "net_rs": -1375.91,
+     "hold_sec": 1150.664349079132,
+     "fill_t": 1791964360.715659,
+     "events_applied": 1,
+     "spread_source": "MEASURED(4487 rows)"
+    }
+   ]
+  }
+ },
+ "spread_models": {
+  "SENSEX": {
+   "half_spread": 0.0013708019191226736,
+   "source": "MEASURED(4487 rows)"
+  }
+ }
+}
