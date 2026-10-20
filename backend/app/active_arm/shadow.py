@@ -48,8 +48,15 @@ def record(sym: str, sig: dict, frozen: dict, exchange: str | None, *, path: str
                       (t, sym.upper(), d, sig.get("strike"), str(sig.get("expiry") or ""), sig["entry"], sig["stop_loss"], sig["target_1"], sig.get("target_2"), sig.get("max_hold_sec") or 1500.0, sig.get("regime"),
                        sig.get("signal_type"), sig.get("confidence"), sig.get("probability"), fd, 0 if fd == d else 1, exchange, json.dumps({"reason": str(sig.get("reason", ""))[:400]})))
             c.commit()
+            rid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
         finally:
             c.close()
+    try:                                                      # evidence post of the arm signal (log-only side effect; never raises)
+        from ..evidence_feed import publish as _ev
+        _ev.publish_arm_signal({"id": rid, "ts": t, "symbol": sym.upper(), "decision": d, "strike": sig.get("strike"), "expiry": str(sig.get("expiry") or ""), "entry": sig["entry"], "stop_loss": sig["stop_loss"],
+                                "target_1": sig["target_1"], "target_2": sig.get("target_2"), "regime": sig.get("regime"), "signal_type": sig.get("signal_type"), "confidence": sig.get("confidence"), "frozen_blocked": 0 if fd == d else 1})
+    except Exception:
+        pass
     return True
 
 

@@ -217,6 +217,8 @@ env_flags:
   - {name: RULES_REGISTRY, category: FEATURE_FLAG, note: "this inventory API"}
   - {name: RULES_ENGINE_SHADOW, category: FEATURE_FLAG, rule: RE-UNIFIED-POLICY}
   - {name: RULES_ENGINE_CAPITAL, category: TUNING}
+  - {name: TELEGRAM_EVIDENCE_ONLY, category: SAFETY_SWITCH, note: "signals channel receives ONLY AI evidence posts (default on)"}
+  - {name: EVIDENCE_FEED, category: FEATURE_FLAG, note: "hash-chained Telegram evidence posts of the AI's paper signals"}
   - {name: ACTIVE_ARM_SHADOW, category: FEATURE_FLAG, note: "ACTIVE arm shadow recorder (log only)"}
   - {name: ARENA_PUBLIC, category: FEATURE_FLAG, note: "SEBI-side arena public API + 2 static files (kill switch)"}
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}

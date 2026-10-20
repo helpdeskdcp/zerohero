@@ -6,7 +6,7 @@
   * management events (amend SL / targets, trailing stop, emergency exit, cancel) take effect 20 s after their server timestamp, never retroactively; the AI's own recorded management is replayed as the same event types.
   * exit on the first snapshot whose sell price <= SL (gap: that price) or >= target (T1 policy by default; 'LAST' = last target); forced exit at session end.
   * resolution is the snapshot interval (about 1-3 minutes per strike): brief spikes between snapshots are NOT seen, for either side.
-  * costs: brokerage + STT/exchange/SEBI/stamp/GST via the cost models, slippage already inside the fills (not added twice). One lot per signal."""
+  * costs: brokerage + STT/exchange/regulatory-fee/stamp/GST via the cost models, slippage already inside the fills (not added twice). One lot per signal."""
 from __future__ import annotations
 
 import math

@@ -1,4 +1,4 @@
-"""Public (token-protected) arena API for the SEBI-side participant. NOT behind the dashboard login, so it carries its own secret (env ARENA_TOKEN_HUMAN, header X-Arena-Token),
+"""Public (token-protected) arena API for the institution-side participant. NOT behind the dashboard login, so it carries its own secret (env ARENA_TOKEN_HUMAN, header X-Arena-Token),
 a rate limit, a body-size limit, server-side participant naming and an append-only ledger. Reads market data read-only; no order path. Kill switch: ARENA_PUBLIC=0."""
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def is_public_path(path: str) -> bool:
 
 
 def cfg() -> dict:
-    return {"token": (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip(), "name": (os.environ.get("ARENA_HUMAN_NAME") or "SEBI_TRADER").strip(),
+    return {"token": (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip(), "name": (os.environ.get("ARENA_HUMAN_NAME") or "INSTITUTION_TRADER").strip(),
             "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25")}
 
 
@@ -139,5 +139,5 @@ def standings(request: Request):
 @router.get("/guide")
 def guide(request: Request):
     _auth(request)
-    p = os.path.join(BASE, "SEBI_ARENA_GUIDE.md")
+    p = os.path.join(BASE, "INSTITUTION_ARENA_GUIDE.md")
     return {"markdown": open(p, encoding="utf-8").read() if os.path.exists(p) else "guide missing"}

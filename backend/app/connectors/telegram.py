@@ -10,10 +10,30 @@ import requests
 API_BASE = "https://api.telegram.org/bot{token}/sendMessage"
 
 
-def _send(text, chat_id):
+_suppressed = {"n": 0, "last_ts": None}
+
+
+def evidence_only() -> bool:
+    """EVIDENCE-ONLY mode (default ON since 2026-10-20 at the owner's instruction): nothing is posted to the SIGNALS CHANNEL except evidence records of the AI's own paper signals
+    (app/evidence_feed). Lifecycle / operational messages to the private chat are unaffected. TELEGRAM_EVIDENCE_ONLY=0 restores the old behaviour. Tests are unaffected unless 'force'."""
+    v = os.environ.get("TELEGRAM_EVIDENCE_ONLY", "1").strip().lower()
+    if os.environ.get("PYTEST_CURRENT_TEST") and v != "force": return False
+    return v not in ("0", "false", "off", "no")
+
+
+def suppressed_stats() -> dict:
+    return dict(_suppressed)
+
+
+def _send(text, chat_id, evidence=False):
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token or not chat_id:
         return {"ok": False, "reason": "TELEGRAM_NOT_CONFIGURED"}
+    sig_chan = (os.environ.get("TELEGRAM_SIGNALS_CHANNEL_ID") or "").strip()
+    if not evidence and sig_chan and str(chat_id) == sig_chan and sig_chan != (os.environ.get("TELEGRAM_CHAT_ID") or "").strip() and evidence_only():
+        import time as _t
+        _suppressed["n"] += 1; _suppressed["last_ts"] = _t.time()
+        return {"ok": False, "reason": "SUPPRESSED_EVIDENCE_ONLY"}
     try:
         resp = requests.post(
             API_BASE.format(token=token),

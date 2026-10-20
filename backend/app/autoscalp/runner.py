@@ -967,6 +967,13 @@ class AutoScalpRunner:
             "ev_mode": sig.get("ev_mode"),
         })
 
+        # EVIDENCE post (log-only side effect, own module, daemon thread, never raises): the AI's own paper signal with its server-side timestamp. EVIDENCE_FEED=0 disables.
+        try:
+            from ..evidence_feed import publish as _evidence
+            _evidence.publish_open_trade(sym, sig, row, signal_id)
+        except Exception:
+            pass
+
         # Renko trend-state SHADOW log: observation only (own SQLite file, daemon thread,
         # no decision input). Guarded so it can never block or alter the trade.
         try:

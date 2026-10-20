@@ -19,8 +19,8 @@ test("markdown renderer escapes HTML (no script injection) and renders structure
 });
 test("number formatting and verdict wording never overclaims", () => {
   assert.equal(A.rs(-1234.4), "−₹1,234"); assert.equal(A.rs(0), "₹0"); assert.equal(A.pct(0.256), "25.6%");
-  assert.ok(A.verdictText({ verdict: "DRAW", days: 12, diff_total_rs: 800, ci95_rs: [-500, 2000] }, "SEBI_TRADER").startsWith("DRAW"));
-  assert.ok(A.verdictText({ verdict: "A_AHEAD", days: 12, diff_total_rs: 5000, ci95_rs: [100, 9000] }, "SEBI_TRADER").includes("Ahead ≠ proven"));
+  assert.ok(A.verdictText({ verdict: "DRAW", days: 12, diff_total_rs: 800, ci95_rs: [-500, 2000] }, "INSTITUTION_TRADER").startsWith("DRAW"));
+  assert.ok(A.verdictText({ verdict: "A_AHEAD", days: 12, diff_total_rs: 5000, ci95_rs: [100, 9000] }, "INSTITUTION_TRADER").includes("Ahead ≠ proven"));
   assert.ok(A.verdictText({ verdict: "INSUFFICIENT_DAYS", days: 2 }, "X").includes("Too early"));
 });
 test("side card handles empty and populated summaries", () => {

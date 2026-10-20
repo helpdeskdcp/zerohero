@@ -1,4 +1,4 @@
-/* SEBI arena page. Pure helpers are exported for node tests; DOM wiring runs only in a browser. All API calls carry the arena token (header X-Arena-Token); no dashboard login. */
+/* Institution arena page. Pure helpers are exported for node tests; DOM wiring runs only in a browser. All API calls carry the arena token (header X-Arena-Token); no dashboard login. */
 "use strict";
 const ALLOWED = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL"];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

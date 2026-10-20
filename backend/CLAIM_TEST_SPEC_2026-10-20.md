@@ -4,7 +4,7 @@
 
 ## What is (and is not) tested
 - **Tested claim C1:** "ZeroHero's signals win more often than the payoff structure requires, and produce positive net expectancy after costs."
-- **Not testable as asked:** "ZeroHero's win probability is higher than SEBI's". SEBI publishes no per-signal win rate. Its published retail-F&O studies report the share of traders with net losses; that is a different statistic. Any marketing comparison with SEBI or a "SEBI trainer" would be unsupported and is NOT made here. The only fair comparators are (a) the break-even win rate implied by ZeroHero's own payoffs and costs, (b) zero net expectancy, (c) calibration of its own stated probabilities.
+- **Not testable as asked:** "ZeroHero's win probability is higher than a registered adviser's". No regulator or adviser publishes a comparable per-signal win rate. The regulator's published retail-F&O studies report the share of traders with net losses; that is a different statistic. Any marketing comparison with SEBI or a "registered trainer" would be unsupported and is NOT made here. The only fair comparators are (a) the break-even win rate implied by ZeroHero's own payoffs and costs, (b) zero net expectancy, (c) calibration of its own stated probabilities.
 
 ## Data (read-only, `data/chanakya.db`, `mode=ro`)
 `ai_paper_trades` with `status='CLOSED'` and non-null `net_pnl`; duplicates were already archived (`ai_paper_trades_dupe_archive`, not used). Outcome per trade = `net_pnl` (rupees, after the recorded modelled costs). Win = `net_pnl > 0`; FLAT (net 0) counts as a non-win. Trades whose `cost_model_status` is not an OK-type status are listed but kept (reported separately).
@@ -20,4 +20,4 @@ n, trading days, win rate with Wilson 95% interval, break-even win rate `= mean|
 - Subsets (per underlying family; opened on/after 2026-09-21 = after the calibration fix) are **exploratory**, labelled as such, never used to rescue a FAIL.
 
 ## What a PASS would still not mean
-Paper results use modelled fills; this ledger is not an independent holdout (rules were tuned on part of it, see RULES_INVENTORY). A PASS would justify only a pre-registered forward paper test, never a public "proven" or "higher than SEBI" statement.
+Paper results use modelled fills; this ledger is not an independent holdout (rules were tuned on part of it, see RULES_INVENTORY). A PASS would justify only a pre-registered forward paper test, never a public "proven" or "higher than registered advisers" statement.

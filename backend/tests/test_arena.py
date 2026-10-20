@@ -76,7 +76,7 @@ def test_summary_metrics_and_drawdown():
 
 
 # ---------------- submission ledger ----------------
-GOODSUB = {"participant": "SEBI_TRADER", "underlying": "nifty", "expiry": "27OCT2026", "strike": 23000, "option_type": "ce", "entry_mode": "above", "entry": 100, "sl": 85, "targets": [120, 140]}
+GOODSUB = {"participant": "INSTITUTION_TRADER", "underlying": "nifty", "expiry": "27OCT2026", "strike": 23000, "option_type": "ce", "entry_mode": "above", "entry": 100, "sl": 85, "targets": [120, 140]}
 
 
 def test_submission_validation_and_hash_chain(tmp_path):
@@ -112,9 +112,9 @@ def test_spread_model_measured_proxy_and_fallback(tmp_path):
 def test_run_settles_both_sides_identically(tmp_path):
     rows = [row("10:00", "NIFTY", 100, 99, 101), row("10:03", "NIFTY", 125, 124, 126)] + [row("09:30", "NIFTY", 100.0, 99.0, 101.0, strike=24000 + i * 50) for i in range(300)]
     p = mkdb(tmp_path, rows)
-    a = sig(id="a", participant="ZEROHERO_AI", t=ep("09:59")); b = sig(id="h", participant="SEBI_TRADER", t=ep("09:59"))
+    a = sig(id="a", participant="ZEROHERO_AI", t=ep("09:59")); b = sig(id="h", participant="INSTITUTION_TRADER", t=ep("09:59"))
     out = R.run([a, b], market_db=p)
-    ra, rb = out["ZEROHERO_AI"]["results"][0], out["SEBI_TRADER"]["results"][0]
+    ra, rb = out["ZEROHERO_AI"]["results"][0], out["INSTITUTION_TRADER"]["results"][0]
     assert ra["status"] == rb["status"] == "SETTLED" and ra["net_rs"] == rb["net_rs"] and ra["spread_source"].startswith("MEASURED")
 
 
@@ -198,19 +198,19 @@ def test_ai_exit_event_backstop_does_not_override_an_earlier_stop():
 
 def test_event_validation_and_submission(tmp_path):
     p = str(tmp_path / "h.jsonl"); s1 = SU.submit({**GOODSUB, "entry_mode": "limit"}, p, now=ep("10:00"))
-    e1 = SU.submit_event({"signal_id": s1["id"], "action": "amend_sl", "sl": 95}, "SEBI_TRADER", p, now=ep("10:05"))
-    e2 = SU.submit_event({"signal_id": s1["id"], "action": "TRAIL_SL", "trail_pct": 5}, "SEBI_TRADER", p, now=ep("10:06"))
+    e1 = SU.submit_event({"signal_id": s1["id"], "action": "amend_sl", "sl": 95}, "INSTITUTION_TRADER", p, now=ep("10:05"))
+    e2 = SU.submit_event({"signal_id": s1["id"], "action": "TRAIL_SL", "trail_pct": 5}, "INSTITUTION_TRADER", p, now=ep("10:06"))
     assert e1["id"] == "E00001" and e2["id"] == "E00002" and e1["action"] == "AMEND_SL" and L.verify_chain(p)[0] and s1["entry_mode"] == "LIMIT"
     for bad in ({"action": "BUY_MORE"}, {"action": "AMEND_SL", "sl": 0}, {"action": "AMEND_TARGETS", "targets": []}, {"action": "TRAIL_SL"}, {"action": "TRAIL_SL", "trail_points": 1, "trail_pct": 5}, {"action": "TRAIL_SL", "trail_pct": 100}, {"signal_id": "H99999", "action": "CANCEL"}):
-        with pytest.raises(SU.SubmissionError): SU.submit_event({"signal_id": s1["id"], "action": "CANCEL", **bad}, "SEBI_TRADER", p)
+        with pytest.raises(SU.SubmissionError): SU.submit_event({"signal_id": s1["id"], "action": "CANCEL", **bad}, "INSTITUTION_TRADER", p)
     with pytest.raises(SU.SubmissionError): SU.submit_event({"signal_id": s1["id"], "action": "CANCEL"}, "SOMEONE_ELSE", p)                    # not their signal
-    for i in range(SU.MAX_EVENTS_PER_SIGNAL - 2): SU.submit_event({"signal_id": s1["id"], "action": "EXIT_NOW"}, "SEBI_TRADER", p)
-    with pytest.raises(SU.SubmissionError, match="at most"): SU.submit_event({"signal_id": s1["id"], "action": "EXIT_NOW"}, "SEBI_TRADER", p)
+    for i in range(SU.MAX_EVENTS_PER_SIGNAL - 2): SU.submit_event({"signal_id": s1["id"], "action": "EXIT_NOW"}, "INSTITUTION_TRADER", p)
+    with pytest.raises(SU.SubmissionError, match="at most"): SU.submit_event({"signal_id": s1["id"], "action": "EXIT_NOW"}, "INSTITUTION_TRADER", p)
 
 
 def test_human_loader_attaches_events_and_signal_ids_ignore_events(tmp_path):
     p = str(tmp_path / "h.jsonl"); day = lambda d: datetime.fromisoformat(f"{d}T05:00:00+00:00").timestamp()
-    a = SU.submit(GOODSUB, p, now=day("2026-10-27")); SU.submit_event({"signal_id": a["id"], "action": "AMEND_SL", "sl": 90}, "SEBI_TRADER", p, now=day("2026-10-27") + 60)
+    a = SU.submit(GOODSUB, p, now=day("2026-10-27")); SU.submit_event({"signal_id": a["id"], "action": "AMEND_SL", "sl": 90}, "INSTITUTION_TRADER", p, now=day("2026-10-27") + 60)
     b = SU.submit(GOODSUB, p, now=day("2026-10-27") + 120); assert b["id"] == "H00002"
     got = R.human_signals(p, start="2026-10-26", end="2026-11-25"); assert [g["id"] for g in got] == ["H00001", "H00002"] and got[0]["events"] == [{"action": "AMEND_SL", "sl": 90.0, "t": day("2026-10-27") + 60}] and got[1]["events"] == []
     assert SU.load(p)[1]["type"] == "HUMAN_EVENT"

@@ -17,7 +17,7 @@ GOOD = {"underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_t
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(SU, "PATH", str(tmp_path / "h.jsonl"))
-    monkeypatch.setenv("ARENA_TOKEN_HUMAN", TOK); monkeypatch.setenv("ARENA_HUMAN_NAME", "SEBI_TRADER"); monkeypatch.delenv("ARENA_PUBLIC", raising=False)
+    monkeypatch.setenv("ARENA_TOKEN_HUMAN", TOK); monkeypatch.setenv("ARENA_HUMAN_NAME", "INSTITUTION_TRADER"); monkeypatch.delenv("ARENA_PUBLIC", raising=False)
     monkeypatch.setenv("ARENA_START", "2999-01-01"); monkeypatch.setenv("ARENA_END", "2999-02-01")          # default: PRACTICE
     A._hits.clear(); A._cache.update(t=0.0, v=None)
     app = FastAPI(); app.include_router(A.router); return TestClient(app)
@@ -31,7 +31,7 @@ def test_auth_required_and_wrong_token_rejected(client):
     assert client.get("/api/arena/public/state", headers={"X-Arena-Token": "nope"}).status_code == 401
     assert client.post("/api/arena/public/submit", json=GOOD).status_code == 401
     r = client.get("/api/arena/public/state", headers=H).json()
-    assert r["mode"] == "PRACTICE" and r["participant"] == "SEBI_TRADER" and "NIFTY" in r["allowed_underlyings"]
+    assert r["mode"] == "PRACTICE" and r["participant"] == "INSTITUTION_TRADER" and "NIFTY" in r["allowed_underlyings"]
 
 
 def test_not_configured_and_kill_switch(client, monkeypatch):
@@ -42,7 +42,7 @@ def test_not_configured_and_kill_switch(client, monkeypatch):
 def test_submit_practice_forces_server_participant_and_hash_chain(client):
     r = client.post("/api/arena/public/submit", json=GOOD, headers=H); assert r.status_code == 200, r.text
     j = r.json(); assert j["practice"] is True and j["id"] == "H00001" and j["expiry"] == "2026-10-27"
-    rec = SU.load()[0]; assert rec["participant"] == "SEBI_TRADER" and rec["practice"] is True                      # client-supplied participant ignored
+    rec = SU.load()[0]; assert rec["participant"] == "INSTITUTION_TRADER" and rec["practice"] is True                      # client-supplied participant ignored
     assert L.verify_chain(SU.PATH)[0]
     assert len(client.get("/api/arena/public/signals", headers=H).json()["signals"]) == 1
 
@@ -92,7 +92,7 @@ def test_standings_shape_and_cache(client, monkeypatch):
 
 
 def test_guide_served(client):
-    assert "SEBI-side trader guide" in client.get("/api/arena/public/guide", headers=H).json()["markdown"]
+    assert "Institution-side trader guide" in client.get("/api/arena/public/guide", headers=H).json()["markdown"]
 
 
 # ---------------- auth exemption stays narrow ----------------
@@ -107,7 +107,7 @@ def test_arena_api_has_no_order_or_network_code_and_files_exist():
     s = open(A.__file__).read()
     for bad in ("requests", "urllib", "app.execution", "place_order", "subprocess"): assert bad not in s
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    for f in ("frontend/static/arena.html", "frontend/static/js/arena.js", "backend/SEBI_ARENA_GUIDE.md"): assert os.path.exists(os.path.join(root, f)), f
+    for f in ("frontend/static/arena.html", "frontend/static/js/arena.js", "backend/INSTITUTION_ARENA_GUIDE.md"): assert os.path.exists(os.path.join(root, f)), f
 
 
 # ---------------- comparison ----------------
@@ -156,8 +156,8 @@ def test_events_flow_into_scored_signals_and_settlement(tmp_path):
     from app.arena import settle as S
     p = str(tmp_path / "h.jsonl"); day = lambda hhmm: datetime.fromisoformat(f"2026-10-27T{hhmm}:00+05:30").timestamp()
     base = {k: v for k, v in GOOD.items() if k != "participant"}
-    a = SU.submit({**base, "participant": "SEBI_TRADER", "entry_mode": "LIMIT", "entry": 100, "sl": 90, "targets": [120]}, p, now=day("10:00"))
-    SU.submit_event({"signal_id": a["id"], "action": "AMEND_TARGETS", "targets": [150]}, "SEBI_TRADER", p, now=day("10:04"))
+    a = SU.submit({**base, "participant": "INSTITUTION_TRADER", "entry_mode": "LIMIT", "entry": 100, "sl": 90, "targets": [120]}, p, now=day("10:00"))
+    SU.submit_event({"signal_id": a["id"], "action": "AMEND_TARGETS", "targets": [150]}, "INSTITUTION_TRADER", p, now=day("10:04"))
     sig = R.human_signals(p, start="2026-10-26", end="2026-11-25")[0]
     sn = [{"t": day(t), "ltp": l, "bid": b, "ask": k} for t, l, b, k in [("10:01", 100, 99, 100), ("10:05", 125, 124, 126), ("10:10", 151, 150, 152), ("10:15", 140, 139, 141)]]
     r = S.settle(sig, sn, half_spread=0.01); assert r["status"] == "SETTLED" and r["exit"] == 150 and r["exit_reason"] == "TARGET" and r["events_applied"] == 1

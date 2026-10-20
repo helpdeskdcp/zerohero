@@ -1,10 +1,13 @@
-# SEBI-side trader guide — ZeroHero Arena (paper trading, 22 trading days)
+# Institution-side trader guide — ZeroHero Arena (paper trading, 22 trading days)
 
 You and the ZeroHero AI trade the **same market on paper**, and both are scored by the **same program on the same recorded quotes**, costs included. No real money is involved.
 
 ## 1. What you need
 - The arena page: **/static/arena.html** on the ZeroHero server, and your **arena access token** (given to you privately). Paste it once on the page; it stays only in your browser session.
 - Nothing else. You do not need the dashboard login.
+
+## 1b. The AI's signals are posted as evidence
+Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised, with its ID and time (Telegram's own server time is on every message), and recorded in a hash-chained list (`data/evidence_feed/posts.jsonl`) that referees can compare with the chat. All other automated signal posts are switched off. These posts are PAPER-trading evidence records, not recommendations.
 
 ## 2. Dates
 - **Practice:** until the start date. Everything you submit is stored but **never scored**. Use it to learn the form.
@@ -44,7 +47,7 @@ The AI engine is frozen (code hashes in the forward-test manifest) and **no trad
 2. You **buy at the ask**; you **sell at the bid**. Where a recorded quote has no bid/ask, a half-spread is used (measured where we have data, otherwise a stated assumption; shown in the Standings tab).
 3. LIMIT fills at the ask once the ask is at or below your entry. ABOVE waits until the traded price reaches your entry, then fills at the higher of the ask and your entry. NEAR/MARKET fills at the next ask, unless it is already more than 5% above your entry (then it is MISSED).
 4. Exit at the **first** recorded quote where the sell price is at or below your (current or trailing) stop (gap = that price), or at/above your **current first target**, or on your emergency exit; otherwise at the session end (NSE/BSE 15:15, MCX 23:15).
-5. **Costs:** brokerage, STT, exchange, SEBI fee, stamp duty and GST are deducted; slippage is already inside the bid/ask fills.
+5. **Costs:** brokerage, STT, exchange, regulatory turnover fee, stamp duty and GST are deducted; slippage is already inside the bid/ask fills.
 6. If there is not enough recorded data to settle a signal, it is shown as NO_DATA with the reason and is reported for both sides.
 
 ## 6. Scoring
