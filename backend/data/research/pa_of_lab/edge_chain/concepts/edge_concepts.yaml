@@ -1,0 +1,154 @@
+generated_at_utc: '2026-10-20T07:04:15+00:00'
+as_of: null
+source:
+  tickets_dir: /root/zerohero/backend/data/research/pa_of_lab/edge_chain/tickets
+  hints_path: /root/zerohero/backend/data/research/pa_of_lab/edge_chain/hints/edge_hint_extractor/hints.yaml
+  ticket_file_count: 0
+  ticket_count: 4
+  promote_hints: true
+  real_ticket_count: 0
+  synthetic_ticket_count: 4
+  dedup_enabled: true
+  overlap_threshold: 0.75
+  dedup_merged_count: 0
+concept_count: 4
+concepts:
+- id: edge_concept_breakout_structure_unknown
+  title: Participation-backed trend breakout
+  hypothesis_type: breakout
+  mechanism_tag: structure
+  regime: Unknown
+  support:
+    ticket_count: 1
+    avg_priority_score: 30.0
+    symbols:
+    - NIFTY
+    entry_family_distribution: {}
+    representative_conditions: []
+    real_ticket_count: 0
+    synthetic_ticket_count: 1
+  abstraction:
+    thesis: When liquidity and participation expand during a positive regime, price
+      expansion above structural pivots can persist for multiple sessions.
+    invalidation_signals:
+    - Breakout fails quickly with volume contraction.
+    - Breadth weakens while correlations spike defensively.
+  strategy_design:
+    playbooks:
+    - trend_following_breakout
+    - confirmation_filtered_breakout
+    recommended_entry_family: null
+    export_ready_v1: false
+  evidence:
+    ticket_ids: []
+    matched_hint_titles:
+    - Expiry-day closing pin toward max-OI strike (NIFTY, 14:30-15:15)
+    - Option buying on index-level signals loses to theta/spread
+    - Order-flow absorption/exhaustion with inferred aggressor volume (index futures)
+    - Price action rejection at key levels in trend (NIFTY 5m futures)
+    synthetic_ticket_ids:
+    - hint_promo_price_action_rejection_at_key_levels_in_trend_nifty_5m_futures_0
+- id: edge_concept_calendar_anomaly_flow_unknown
+  title: Seasonality-linked demand imbalance
+  hypothesis_type: calendar_anomaly
+  mechanism_tag: flow
+  regime: Unknown
+  support:
+    ticket_count: 1
+    avg_priority_score: 30.0
+    symbols:
+    - NIFTY
+    entry_family_distribution: {}
+    representative_conditions: []
+    real_ticket_count: 0
+    synthetic_ticket_count: 1
+  abstraction:
+    thesis: Recurring calendar windows can produce repeatable demand-supply imbalances
+      for specific symbols.
+    invalidation_signals:
+    - Recent years break the historical seasonal pattern.
+    - Pattern only survives in illiquid tails.
+  strategy_design:
+    playbooks:
+    - seasonal_rotation
+    - seasonal_overlay
+    recommended_entry_family: null
+    export_ready_v1: false
+  evidence:
+    ticket_ids: []
+    matched_hint_titles:
+    - Expiry-day closing pin toward max-OI strike (NIFTY, 14:30-15:15)
+    - Option buying on index-level signals loses to theta/spread
+    - Order-flow absorption/exhaustion with inferred aggressor volume (index futures)
+    - Price action rejection at key levels in trend (NIFTY 5m futures)
+    synthetic_ticket_ids:
+    - hint_promo_expiry_day_closing_pin_toward_max_oi_strike_nifty_14_30_15_15_1
+- id: edge_concept_futures_trigger_flow_unknown
+  title: Cross-asset propagation
+  hypothesis_type: futures_trigger
+  mechanism_tag: flow
+  regime: Unknown
+  support:
+    ticket_count: 1
+    avg_priority_score: 30.0
+    symbols:
+    - NIFTY
+    entry_family_distribution: {}
+    representative_conditions: []
+    real_ticket_count: 0
+    synthetic_ticket_count: 1
+  abstraction:
+    thesis: Cross-asset futures shocks can transmit to related equities through hedging
+      flows and risk transfer.
+    invalidation_signals:
+    - Futures shock normalizes immediately.
+    - Mapped equities show no directional sensitivity.
+  strategy_design:
+    playbooks:
+    - cross_asset_follow_through
+    - mapped_basket_rotation
+    recommended_entry_family: null
+    export_ready_v1: false
+  evidence:
+    ticket_ids: []
+    matched_hint_titles:
+    - Expiry-day closing pin toward max-OI strike (NIFTY, 14:30-15:15)
+    - Option buying on index-level signals loses to theta/spread
+    - Order-flow absorption/exhaustion with inferred aggressor volume (index futures)
+    - Price action rejection at key levels in trend (NIFTY 5m futures)
+    synthetic_ticket_ids:
+    - hint_promo_order_flow_absorption_exhaustion_with_inferred_aggressor_volume_index_futures_2
+- id: edge_concept_regime_shift_structure_unknown
+  title: Regime transition opportunity
+  hypothesis_type: regime_shift
+  mechanism_tag: structure
+  regime: Unknown
+  support:
+    ticket_count: 1
+    avg_priority_score: 30.0
+    symbols:
+    - NIFTY
+    entry_family_distribution: {}
+    representative_conditions: []
+    real_ticket_count: 0
+    synthetic_ticket_count: 1
+  abstraction:
+    thesis: Early inflections in breadth, correlation, and volatility can front-run
+      major regime transitions.
+    invalidation_signals:
+    - Breadth and volatility revert to prior regime quickly.
+    - Signal appears only during isolated macro events.
+  strategy_design:
+    playbooks:
+    - regime_transition_probe
+    recommended_entry_family: null
+    export_ready_v1: false
+  evidence:
+    ticket_ids: []
+    matched_hint_titles:
+    - Expiry-day closing pin toward max-OI strike (NIFTY, 14:30-15:15)
+    - Option buying on index-level signals loses to theta/spread
+    - Order-flow absorption/exhaustion with inferred aggressor volume (index futures)
+    - Price action rejection at key levels in trend (NIFTY 5m futures)
+    synthetic_ticket_ids:
+    - hint_promo_option_buying_on_index_level_signals_loses_to_theta_spread_3

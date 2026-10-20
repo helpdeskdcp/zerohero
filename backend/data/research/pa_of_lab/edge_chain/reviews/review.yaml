@@ -1,0 +1,199 @@
+generated_at_utc: '2026-10-20T07:04:21+00:00'
+source:
+  drafts_dir: /root/zerohero/backend/data/research/pa_of_lab/edge_chain/drafts
+  draft_count: 4
+summary:
+  total: 4
+  PASS: 4
+  REVISE: 0
+  REJECT: 0
+  export_eligible: 0
+reviews:
+- draft_id: draft_edge_concept_breakout_structure_unknown_research_probe
+  verdict: PASS
+  confidence_score: 84
+  export_eligible: false
+  findings:
+  - criterion: C1_edge_plausibility
+    score: 95
+    severity: pass
+    reason: Thesis contains specific causal reasoning.
+    revision_instruction: null
+  - criterion: C2_overfitting_risk
+    score: 90
+    severity: pass
+    reason: 0 filters within acceptable range.
+    revision_instruction: null
+  - criterion: C3_sample_adequacy
+    score: 95
+    severity: pass
+    reason: Estimated 252 annual opportunities.
+    revision_instruction: null
+  - criterion: C4_regime_dependency
+    score: 80
+    severity: pass
+    reason: Strategy not restricted to single regime.
+    revision_instruction: null
+  - criterion: C5_exit_calibration
+    score: 80
+    severity: pass
+    reason: Exit parameters acceptable (stop=4%, RR=2.2).
+    revision_instruction: null
+  - criterion: C6_risk_concentration
+    score: 80
+    severity: pass
+    reason: Risk parameters within acceptable range.
+    revision_instruction: null
+  - criterion: C7_execution_realism
+    score: 50
+    severity: warn
+    reason: No volume filter in entry conditions.
+    revision_instruction: Add volume filter (e.g., avg_volume > 500000) for execution
+      realism.
+  - criterion: C8_invalidation_quality
+    score: 80
+    severity: pass
+    reason: 2 invalidation signals defined.
+    revision_instruction: null
+  revision_instructions: []
+- draft_id: draft_edge_concept_calendar_anomaly_flow_unknown_research_probe
+  verdict: PASS
+  confidence_score: 79
+  export_eligible: false
+  findings:
+  - criterion: C1_edge_plausibility
+    score: 70
+    severity: pass
+    reason: Thesis contains specific causal reasoning.
+    revision_instruction: null
+  - criterion: C2_overfitting_risk
+    score: 90
+    severity: pass
+    reason: 0 filters within acceptable range.
+    revision_instruction: null
+  - criterion: C3_sample_adequacy
+    score: 95
+    severity: pass
+    reason: Estimated 252 annual opportunities.
+    revision_instruction: null
+  - criterion: C4_regime_dependency
+    score: 80
+    severity: pass
+    reason: Strategy not restricted to single regime.
+    revision_instruction: null
+  - criterion: C5_exit_calibration
+    score: 80
+    severity: pass
+    reason: Exit parameters acceptable (stop=4%, RR=1.7).
+    revision_instruction: null
+  - criterion: C6_risk_concentration
+    score: 80
+    severity: pass
+    reason: Risk parameters within acceptable range.
+    revision_instruction: null
+  - criterion: C7_execution_realism
+    score: 50
+    severity: warn
+    reason: No volume filter in entry conditions.
+    revision_instruction: Add volume filter (e.g., avg_volume > 500000) for execution
+      realism.
+  - criterion: C8_invalidation_quality
+    score: 80
+    severity: pass
+    reason: 2 invalidation signals defined.
+    revision_instruction: null
+  revision_instructions: []
+- draft_id: draft_edge_concept_futures_trigger_flow_unknown_research_probe
+  verdict: PASS
+  confidence_score: 77
+  export_eligible: false
+  findings:
+  - criterion: C1_edge_plausibility
+    score: 60
+    severity: pass
+    reason: Thesis contains specific causal reasoning.
+    revision_instruction: null
+  - criterion: C2_overfitting_risk
+    score: 90
+    severity: pass
+    reason: 0 filters within acceptable range.
+    revision_instruction: null
+  - criterion: C3_sample_adequacy
+    score: 95
+    severity: pass
+    reason: Estimated 252 annual opportunities.
+    revision_instruction: null
+  - criterion: C4_regime_dependency
+    score: 80
+    severity: pass
+    reason: Strategy not restricted to single regime.
+    revision_instruction: null
+  - criterion: C5_exit_calibration
+    score: 80
+    severity: pass
+    reason: Exit parameters acceptable (stop=4%, RR=2.2).
+    revision_instruction: null
+  - criterion: C6_risk_concentration
+    score: 80
+    severity: pass
+    reason: Risk parameters within acceptable range.
+    revision_instruction: null
+  - criterion: C7_execution_realism
+    score: 50
+    severity: warn
+    reason: No volume filter in entry conditions.
+    revision_instruction: Add volume filter (e.g., avg_volume > 500000) for execution
+      realism.
+  - criterion: C8_invalidation_quality
+    score: 80
+    severity: pass
+    reason: 2 invalidation signals defined.
+    revision_instruction: null
+  revision_instructions: []
+- draft_id: draft_edge_concept_regime_shift_structure_unknown_research_probe
+  verdict: PASS
+  confidence_score: 77
+  export_eligible: false
+  findings:
+  - criterion: C1_edge_plausibility
+    score: 60
+    severity: pass
+    reason: Thesis contains specific causal reasoning.
+    revision_instruction: null
+  - criterion: C2_overfitting_risk
+    score: 90
+    severity: pass
+    reason: 0 filters within acceptable range.
+    revision_instruction: null
+  - criterion: C3_sample_adequacy
+    score: 95
+    severity: pass
+    reason: Estimated 252 annual opportunities.
+    revision_instruction: null
+  - criterion: C4_regime_dependency
+    score: 80
+    severity: pass
+    reason: Strategy not restricted to single regime.
+    revision_instruction: null
+  - criterion: C5_exit_calibration
+    score: 80
+    severity: pass
+    reason: Exit parameters acceptable (stop=5%, RR=2.2).
+    revision_instruction: null
+  - criterion: C6_risk_concentration
+    score: 80
+    severity: pass
+    reason: Risk parameters within acceptable range.
+    revision_instruction: null
+  - criterion: C7_execution_realism
+    score: 50
+    severity: warn
+    reason: No volume filter in entry conditions.
+    revision_instruction: Add volume filter (e.g., avg_volume > 500000) for execution
+      realism.
+  - criterion: C8_invalidation_quality
+    score: 80
+    severity: pass
+    reason: 2 invalidation signals defined.
+    revision_instruction: null
+  revision_instructions: []

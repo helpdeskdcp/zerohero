@@ -1,0 +1,9 @@
+{
+  "generated_at_utc": "2026-10-20T07:04:18+00:00",
+  "concepts_file": "/root/zerohero/backend/data/research/pa_of_lab/edge_chain/concepts/edge_concepts.yaml",
+  "risk_profile": "conservative",
+  "draft_count": 4,
+  "exportable_ticket_count": 0,
+  "output_dir": "/root/zerohero/backend/data/research/pa_of_lab/edge_chain/drafts",
+  "exportable_tickets_dir": null
+}

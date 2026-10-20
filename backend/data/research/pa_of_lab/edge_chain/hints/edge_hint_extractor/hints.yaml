@@ -1,0 +1,43 @@
+generated_at_utc: '2026-10-20T07:04:12+00:00'
+as_of: '2026-10-20'
+hints:
+- title: Price action rejection at key levels in trend (NIFTY 5m futures)
+  observation: 'Hammer/engulfing rejection at prior-day/swing levels with trend, 1:2
+    RR: 711 trades 2021-26, gross +0.31 bps, net -5.99 bps at 6.3 bps cost, win 33.9%,
+    residual alpha vs buy&hold -7.5%/yr (t -7.95 net, +0.35%/yr t 0.40 gross)'
+  symbols:
+  - NIFTY
+  regime_bias: ''
+  mechanism_tag: structure
+  hypothesis_type: breakout
+- title: Expiry-day closing pin toward max-OI strike (NIFTY, 14:30-15:15)
+  observation: '60 expiries, 21 trades after 15-150 bps band: gross +1.18 bps, net
+    -5.12 bps, pull coefficient -0.064 (anti-pin), placebo p 0.49, MDE 12.3 bps'
+  symbols:
+  - NIFTY
+  regime_bias: ''
+  mechanism_tag: flow
+  hypothesis_type: calendar_anomaly
+- title: Order-flow absorption/exhaustion with inferred aggressor volume (index futures)
+  observation: Engine built (pa_of_lab.orderflow) but only ~4 NIFTY future sessions
+    of tick data since 2026-09-30; 48% of 5m bars degraded (quote-rule share, few
+    ticks); aggressor side is inferred, no historical data; cannot be tested yet
+  symbols:
+  - NIFTY
+  regime_bias: ''
+  mechanism_tag: flow
+  hypothesis_type: futures_trigger
+- title: Option buying on index-level signals loses to theta/spread
+  observation: '183 priced NIFTY weekly option trades from the corrected Hybrid MP:
+    direction accuracy 46.4%, gross +1.94 pts (t 0.64), net +0.52 pts at 0.25 pt slippage,
+    bid/ask-executed net -0.99 pts (15 measured trades)'
+  symbols:
+  - NIFTY
+  regime_bias: ''
+  mechanism_tag: structure
+  hypothesis_type: regime_shift
+meta:
+  rule_hints: 0
+  llm_hints: 4
+  total_hints: 4
+  regime: Neutral

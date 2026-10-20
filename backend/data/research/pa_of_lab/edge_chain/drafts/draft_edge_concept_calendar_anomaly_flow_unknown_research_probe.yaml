@@ -1,0 +1,41 @@
+id: draft_edge_concept_calendar_anomaly_flow_unknown_research_probe
+as_of: null
+concept_id: edge_concept_calendar_anomaly_flow_unknown
+variant: research_probe
+risk_profile: conservative
+name: Seasonality-linked demand imbalance (research_probe)
+hypothesis_type: calendar_anomaly
+mechanism_tag: flow
+regime: Unknown
+export_ready_v1: false
+entry_family: research_only
+entry:
+  conditions: []
+  trend_filter: []
+  note: Probe setup with small size for hypothesis validation.
+exit:
+  stop_loss_pct: 0.0425
+  take_profit_rr: 1.7
+  time_stop_days: 7
+risk:
+  position_sizing: fixed_risk
+  risk_per_trade: 0.0025
+  max_positions: 2
+  max_sector_exposure: 0.3
+  sector_group_by: sector
+validation_plan:
+  period: 2016-01-01 to latest
+  entry_timing: next_open
+  hold_days:
+  - 5
+  - 20
+  - 60
+  success_criteria:
+  - expected_value_after_costs > 0
+  - stable across regimes and subperiods
+  - passes pipeline phase1 gates
+thesis: Recurring calendar windows can produce repeatable demand-supply imbalances
+  for specific symbols.
+invalidation_signals:
+- Recent years break the historical seasonal pattern.
+- Pattern only survives in illiquid tails.

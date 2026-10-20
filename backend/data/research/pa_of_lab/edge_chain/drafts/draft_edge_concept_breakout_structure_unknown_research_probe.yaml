@@ -1,0 +1,42 @@
+id: draft_edge_concept_breakout_structure_unknown_research_probe
+as_of: null
+concept_id: edge_concept_breakout_structure_unknown
+variant: research_probe
+risk_profile: conservative
+name: Participation-backed trend breakout (research_probe)
+hypothesis_type: breakout
+mechanism_tag: structure
+regime: Unknown
+export_ready_v1: false
+entry_family: research_only
+entry:
+  conditions: []
+  trend_filter: []
+  note: Probe setup with small size for hypothesis validation.
+exit:
+  stop_loss_pct: 0.0425
+  take_profit_rr: 2.2
+  time_stop_days: 20
+  trailing_stop_hint: ATR trailing recommended
+risk:
+  position_sizing: fixed_risk
+  risk_per_trade: 0.0025
+  max_positions: 2
+  max_sector_exposure: 0.3
+  sector_group_by: sector
+validation_plan:
+  period: 2016-01-01 to latest
+  entry_timing: next_open
+  hold_days:
+  - 5
+  - 20
+  - 60
+  success_criteria:
+  - expected_value_after_costs > 0
+  - stable across regimes and subperiods
+  - passes pipeline phase1 gates
+thesis: When liquidity and participation expand during a positive regime, price expansion
+  above structural pivots can persist for multiple sessions.
+invalidation_signals:
+- Breakout fails quickly with volume contraction.
+- Breadth weakens while correlations spike defensively.
