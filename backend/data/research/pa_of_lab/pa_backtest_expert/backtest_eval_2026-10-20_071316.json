@@ -1,0 +1,57 @@
+{
+  "total_score": 52,
+  "quality_score": 52,
+  "decision": "REJECT",
+  "blocking_reasons": [
+    "negative_expectancy"
+  ],
+  "verdict": "Abandon",
+  "dimensions": [
+    {
+      "name": "Sample Size",
+      "score": 20,
+      "max_score": 20
+    },
+    {
+      "name": "Expectancy",
+      "score": 0,
+      "max_score": 20
+    },
+    {
+      "name": "Risk Management",
+      "score": 2,
+      "max_score": 20
+    },
+    {
+      "name": "Robustness",
+      "score": 10,
+      "max_score": 20
+    },
+    {
+      "name": "Execution Realism",
+      "score": 20,
+      "max_score": 20
+    }
+  ],
+  "red_flags": [
+    {
+      "id": "negative_expectancy",
+      "severity": "high",
+      "message": "Negative expectancy (-0.060%) — strategy loses money on average."
+    }
+  ],
+  "profit_factor": 0.543346658181444,
+  "profit_factor_status": "FINITE",
+  "expectancy": -0.0599168,
+  "inputs": {
+    "total_trades": 711,
+    "win_rate": 33.9,
+    "avg_win_pct": 0.2103,
+    "avg_loss_pct": 0.1985,
+    "max_drawdown_pct": 42.63,
+    "years_tested": 6,
+    "num_parameters": 6,
+    "slippage_tested": true,
+    "max_acceptable_drawdown_pct": 50
+  }
+}

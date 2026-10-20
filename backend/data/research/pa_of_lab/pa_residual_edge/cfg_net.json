@@ -1,0 +1,29 @@
+{
+ "schema_version": "1.0",
+ "date_column": "date",
+ "strategy_column": "strategy_net",
+ "return_unit": "decimal",
+ "frequency": "daily",
+ "primary_model": {
+  "name": "market",
+  "baseline_columns": [
+   "market_return"
+  ]
+ },
+ "regime_columns": [
+  "vol_regime"
+ ],
+ "rolling_window": 63,
+ "minimum_observations": 60,
+ "minimum_regime_observations": 20,
+ "minimum_rolling_windows": 12,
+ "hac_lags": "auto",
+ "include_series": false,
+ "data_declarations": {
+  "baseline_selection": "predeclared",
+  "strategy_return_basis": "net",
+  "baseline_return_basis": "net",
+  "analysis_scope": "in_sample",
+  "universe_data": "not_applicable"
+ }
+}

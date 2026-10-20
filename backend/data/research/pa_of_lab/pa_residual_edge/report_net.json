@@ -1,0 +1,195 @@
+{
+  "analysis_type": "returns_based_residual_edge",
+  "data": {
+    "annualization_factor": 252,
+    "baseline_columns": [
+      "market_return"
+    ],
+    "configured_minimum_observations": 60,
+    "declarations": {
+      "analysis_scope": "in_sample",
+      "baseline_return_basis": "net",
+      "baseline_selection": "predeclared",
+      "strategy_return_basis": "net",
+      "universe_data": "not_applicable"
+    },
+    "effective_minimum_observations": 60,
+    "end_date": "2026-10-16",
+    "frequency": "daily",
+    "observation_count": 1445,
+    "regime_columns": [
+      "vol_regime"
+    ],
+    "return_unit_normalized": "decimal",
+    "start_date": "2021-01-04",
+    "strategy_column": "strategy_net"
+  },
+  "method_notes": [
+    "OLS includes an intercept.",
+    "Residual edge ratio is annualized alpha divided by annualized residual volatility.",
+    "HAC standard errors address heteroskedasticity and serial correlation asymptotically.",
+    "Results describe declared return-series exposure, not holdings-based Brinson attribution."
+  ],
+  "models": [
+    {
+      "adjusted_r_squared": 0.0015534767,
+      "alpha": {
+        "annualized_arithmetic": -0.0750687258,
+        "hac_standard_error_periodic": 3.74617e-05,
+        "periodic": -0.0002978918,
+        "t_stat": -7.9518916955
+      },
+      "baseline_columns": [
+        "market_return"
+      ],
+      "coefficients": [
+        {
+          "estimate": -0.0002978918,
+          "hac_standard_error": 3.74617e-05,
+          "name": "intercept",
+          "t_stat": -7.9518916955
+        },
+        {
+          "estimate": 0.0076617088,
+          "hac_standard_error": 0.0063905904,
+          "name": "market_return",
+          "t_stat": 1.1989047011
+        }
+      ],
+      "diagnostic_status": "RESIDUAL_FRAGILE",
+      "hac_lags": 7,
+      "name": "market",
+      "observation_count": 1445,
+      "r_squared": 0.0022449217,
+      "residual": {
+        "active_return_max_drawdown": -0.3522450644,
+        "annualized_volatility": 0.0248600621,
+        "durbin_watson": 2.0526695788,
+        "lag_one_autocorrelation": -0.0278887548,
+        "periodic_volatility": 0.0015660367,
+        "residual_edge_ratio": -3.0196515789
+      },
+      "role": "primary",
+      "rolling": {
+        "enabled": true,
+        "failed_window_count": 0,
+        "latest": {
+          "annualized_alpha": -0.0198044302,
+          "end_index": 1444,
+          "r_squared": 0.0899675766,
+          "residual_edge_ratio": -1.4508098596
+        },
+        "positive_alpha_fraction": 0.0592913955,
+        "r_squared": {
+          "max": 0.3223969288,
+          "median": 0.0123976204,
+          "min": 2.51e-08
+        },
+        "residual_edge_ratio": {
+          "max": 2.3927339861,
+          "median": -3.1800964243,
+          "min": -8.4368308042
+        },
+        "window": 63,
+        "window_count": 1383
+      },
+      "status_reasons": [
+        "Residual evidence does not clear all robustness thresholds.",
+        "Rolling alpha is positive in too few windows."
+      ],
+      "vif": {
+        "market_return": 1.0
+      }
+    }
+  ],
+  "primary_model": "market",
+  "regime_analysis": {
+    "vol_regime": [
+      {
+        "active_return_metrics": {
+          "annualized_arithmetic_return": -0.1135015895,
+          "annualized_volatility": 0.0282496758,
+          "max_drawdown": -0.1729386547,
+          "periodic_mean": -0.0004504031,
+          "periodic_volatility": 0.0017795623,
+          "sharpe_zero_rate": -4.0178014824
+        },
+        "evidence_status": "ADEQUATE",
+        "label": "high",
+        "observation_count": 420,
+        "positive_fraction": 0.3880952381
+      },
+      {
+        "active_return_metrics": {
+          "annualized_arithmetic_return": -0.0516511088,
+          "annualized_volatility": 0.0210210267,
+          "max_drawdown": -0.1843978436,
+          "periodic_mean": -0.0002049647,
+          "periodic_volatility": 0.0013242002,
+          "sharpe_zero_rate": -2.4571163702
+        },
+        "evidence_status": "ADEQUATE",
+        "label": "low",
+        "observation_count": 945,
+        "positive_fraction": 0.4328042328
+      },
+      {
+        "active_return_metrics": {
+          "annualized_arithmetic_return": -0.1499167924,
+          "annualized_volatility": 0.041278527,
+          "max_drawdown": -0.0575262212,
+          "periodic_mean": -0.0005949079,
+          "periodic_volatility": 0.0026003028,
+          "sharpe_zero_rate": -3.6318348379
+        },
+        "evidence_status": "ADEQUATE",
+        "label": "warmup",
+        "observation_count": 80,
+        "positive_fraction": 0.3
+      }
+    ]
+  },
+  "schema_version": "1.0",
+  "source": {
+    "config_name": "cfg_net.json",
+    "csv_name": "daily.csv"
+  },
+  "strategy_metrics": {
+    "annualized_arithmetic_return": -0.0743074057,
+    "annualized_volatility": 0.0248880136,
+    "max_drawdown": -0.3493478723,
+    "periodic_mean": -0.0002948707,
+    "periodic_volatility": 0.0015677975,
+    "sharpe_zero_rate": -2.9856704029
+  },
+  "verdict": {
+    "decision_eligibility": "REVIEW_REQUIRED",
+    "decision_grade": false,
+    "reasons": [
+      "Residual evidence does not clear all robustness thresholds.",
+      "Rolling alpha is positive in too few windows.",
+      "No alternate baseline model was supplied."
+    ],
+    "status": "RESIDUAL_FRAGILE",
+    "thresholds": {
+      "alpha_t_stat_min": 2.0,
+      "baseline_explained_r2_min": 0.75,
+      "residual_edge_ratio_min": 0.75,
+      "rolling_positive_fraction_min": 0.6,
+      "weak_edge_ratio_max": 0.5
+    },
+    "trade_authorization": "NOT_AUTHORIZED"
+  },
+  "warnings": [
+    {
+      "id": "NOT_OUT_OF_SAMPLE",
+      "message": "Treat in-sample residual edge as exploratory until confirmed out of sample.",
+      "severity": "high"
+    },
+    {
+      "id": "NO_SENSITIVITY_MODELS",
+      "message": "No alternate baseline model was supplied; baseline-choice sensitivity is unknown.",
+      "severity": "high"
+    }
+  ]
+}
