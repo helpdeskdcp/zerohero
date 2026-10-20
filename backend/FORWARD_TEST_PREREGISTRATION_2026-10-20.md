@@ -13,3 +13,6 @@
 
 ## Addendum (2026-10-20, before the epoch started)
 `rules_engine/policy.yaml` was removed from the frozen-file list: it is a SHADOW policy that does not influence AUTOSCALP's trades, so editing it must not restart the epoch. The ledger now also records **Candidate V2** (the same AUTOSCALP trades filtered by the unified policy v1.0.0; a subset, evaluated alongside, never replacing the frozen engine). Its thresholds are those in policy.yaml as of this commit (max 6 trades/day, 3 consecutive losses, 15-min cooldown, RR>=1.3, premium>=8, session windows).
+
+## Addendum 2 (2026-10-20 evening, still before the epoch starts on 2026-10-21)
+`app/autoscalp/safeguards.py` (a frozen file) changed: the holiday check now passes the signalled exchange (`market_calendar.is_holiday(exchange=ex)`), because ZeroHero's calendar closed ALL exchanges on a date while MCX trades on NSE holidays (Dussehra evening). No strategy rule, threshold or sizing changed. The manifest was re-initialised (new hashes, `git_head` updated) before any forward trade existed; from now on any hash change starts a new epoch as pre-registered. The ledger also records **OF-1** (see OF_CANDIDATE_SPEC_2026-10-20.md) as `candidate_of1`.

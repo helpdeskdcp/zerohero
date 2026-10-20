@@ -42,7 +42,7 @@ def _conn(path=None):
 def build_ctx(*, symbol, sig, opens, open_keys, feed_connected, feed_age, last_price, exchange, safeguards, now=None) -> dict:
     now = now or datetime.now(IST)
     side = str(sig.get("decision", "")).split("_")[-1]
-    try: import app.market_calendar as mc; hol = bool(mc.is_holiday())
+    try: import app.market_calendar as mc; hol = bool(mc.is_holiday(exchange=exchange))
     except Exception: hol = now.weekday() >= 5
     try: from ..execution import killswitch; ks = bool(killswitch.is_active())
     except Exception: ks = None

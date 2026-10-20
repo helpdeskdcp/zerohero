@@ -109,7 +109,7 @@ class Safeguards:
             return False, "weekend"
         if not c.get("allow_weekend"):
             from .. import market_calendar
-            if market_calendar.is_holiday():
+            if market_calendar.is_holiday(exchange=ex):
                 return False, "exchange holiday"
         # NB: the runner's _evaluate already suspends the strategy outside this
         # symbol's exchange hours; here we only enforce the operator window.

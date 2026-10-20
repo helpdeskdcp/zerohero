@@ -86,19 +86,42 @@ def _now_ist(now: datetime | None = None) -> datetime:
     return now.astimezone(_IST)
 
 
-def _holidays() -> set[str]:
+_EX_ALIAS = {"NFO": "NSE", "BFO": "BSE", "CDS": "NSE", "BCD": "BSE", "NCO": "MCX"}
+
+
+def _holiday_map() -> dict[str, set[str]]:
+    """data/market_holidays.json: either a JSON list of "YYYY-MM-DD" (closes EVERY exchange, the original format) or an object
+    {"NSE": [...], "BSE": [...], "MCX": [...], "ALL": [...]} for per-exchange holidays (e.g. Dussehra: NSE/BSE closed, MCX evening session open)."""
+    if "CHANAKYA_MARKET_HOLIDAYS" not in os.environ and os.environ.get("PYTEST_CURRENT_TEST"):
+        return {}          # tests never depend on the production holiday file (it would make results depend on the calendar date)
     path = os.environ.get("CHANAKYA_MARKET_HOLIDAYS",
                           os.path.join(os.path.dirname(__file__), "..", "data", "market_holidays.json"))
     try:
         with open(path) as fh:
-            return {str(d)[:10] for d in json.load(fh)}
+            raw = json.load(fh)
     except (OSError, ValueError):
-        return set()
+        return {}
+    if isinstance(raw, list):
+        return {"ALL": {str(d)[:10] for d in raw}}
+    if isinstance(raw, dict):
+        return {str(k).upper(): {str(d)[:10] for d in (v or [])} for k, v in raw.items()}
+    return {}
 
 
-def is_holiday(d: date | None = None) -> bool:
+def _holidays() -> set[str]:
+    return _holiday_map().get("ALL", set())
+
+
+def is_holiday(d: date | None = None, exchange: str | None = None) -> bool:
+    """True if `d` is a holiday for EVERY exchange (ALL) or, when `exchange` is given, for that exchange."""
     d = d or _now_ist().date()
-    return d.isoformat() in _holidays()
+    m = _holiday_map(); iso = d.isoformat()
+    if iso in m.get("ALL", set()):
+        return True
+    if exchange:
+        ex = str(exchange).upper(); ex = _EX_ALIAS.get(ex, ex)
+        return iso in m.get(ex, set())
+    return False
 
 
 def _in(mod: int, win) -> bool:
@@ -112,7 +135,7 @@ def segment_status(exchange: str, now: datetime | None = None, *, instrument: st
     if not wins:
         return "CLOSED"
     dt = _now_ist(now)
-    if dt.weekday() >= 5 or is_holiday(dt.date()):
+    if dt.weekday() >= 5 or is_holiday(dt.date(), ex):
         return "CLOSED"
     mod = dt.hour * 60 + dt.minute
     inst = (instrument or "").upper()
@@ -197,4 +220,5 @@ def status_all(now: datetime | None = None) -> dict:
         "restart_allowed": restart_allowed(dt)[0],
         "restart_reason": restart_allowed(dt)[1],
         "holiday": is_holiday(dt.date()),
+        "holidays_by_exchange": {ex: is_holiday(dt.date(), ex) for ex in _windows()},
     }
