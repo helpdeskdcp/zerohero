@@ -224,5 +224,6 @@ env_flags:
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: ARENA_START, category: TUNING}
+  - {name: ARENA_CHANNEL_IDS, category: TUNING, note: "whitelist of institution channel ids ingested into the arena (empty = nothing read)"}
   - {name: ARENA_EXCLUDE_IDS, category: TUNING, note: "ledger ids agreed to be tests (excluded from scoring, publicly)"}
   - {name: ARENA_END, category: TUNING}
