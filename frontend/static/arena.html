@@ -23,7 +23,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <section data-pane="submit" class="card" hidden><b>Submit BEFORE you take the trade</b> <span class="mut">(long options only · one lot · cannot be edited)</span>
 <form id="f" autocomplete="off"><div class="grid">
 <div><label>Underlying</label><select name="underlying"><option>NIFTY</option><option>BANKNIFTY</option><option>SENSEX</option><option>NATURALGAS</option><option>CRUDEOIL</option></select></div>
-<div><label>Expiry (27OCT2026 or 2026-10-27)</label><input name="expiry" placeholder="27OCT2026"></div>
+<div><label>Expiry (pick a captured one; 27OCT2026 or 2026-10-27)</label><input name="expiry" placeholder="27OCT2026" list="expList"><datalist id="expList"></datalist></div>
 <div><label>Strike</label><input name="strike" inputmode="decimal"></div>
 <div><label>CE / PE</label><select name="option_type"><option>CE</option><option>PE</option></select></div>
 <div><label>Entry mode <span class="mut">(LIMIT = buy when price comes down to your entry; ABOVE = buy when it trades up to it)</span></label><select name="entry_mode"><option>LIMIT</option><option>ABOVE</option><option>NEAR</option><option>MARKET</option></select></div>
@@ -32,7 +32,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <div><label>Targets (premium, comma separated)</label><input name="targets" placeholder="120, 140"></div></div>
 <label>Note (optional)</label><textarea name="note" rows="2" maxlength="300"></textarea>
 <label style="color:var(--tx)"><input type="checkbox" name="confirmNotEntered" style="width:auto"> I have <b>not</b> entered this trade yet</label>
-<div id="prev" class="mut"></div><button id="go" type="submit" style="margin-top:8px">Submit (final)</button><div id="submsg" class="msg" hidden></div></form></section>
+<div id="prev" class="mut"></div><div id="hint" class="mut"></div><button id="go" type="submit" style="margin-top:8px">Submit (final)</button><div id="submsg" class="msg" hidden></div></form></section>
 <section data-pane="mine" class="card" hidden><b>My submitted signals</b> <span class="mut">(server time, hash-chained, read-only)</span><div class="wrap"><table><thead><tr><th>id</th><th>server time (UTC)</th><th>type</th><th>option</th><th>mode</th><th>entry</th><th>SL</th><th>targets</th><th>management</th><th>hash</th></tr></thead><tbody id="mine"></tbody></table></div>
 <h3 style="margin:14px 0 4px">Manage a signal <span class="mut">(time-stamped; applies ~20 s later; never retroactive; cannot be undone)</span></h3>
 <form id="mg" autocomplete="off"><div class="grid">

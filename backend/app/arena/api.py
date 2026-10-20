@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 
-from . import compare as CMP, run as R, submit as SU
+from . import compare as CMP, contracts as CT, run as R, submit as SU
 
 router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -60,6 +60,23 @@ def state(request: Request):
             "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
 
 
+@router.get("/contracts")
+def contracts(request: Request, underlying: str):
+    _auth(request); u = underlying.upper()
+    if u not in SU.ALLOWED: raise HTTPException(422, f"underlying must be one of {SU.ALLOWED}")
+    cap = CT.captured(u)
+    return {"underlying": u, "session_day": cap["day"], "expiries": [{"expiry": e, "raw": v["raw"], "strike_min": v["strikes"][0], "strike_max": v["strikes"][-1], "n_strikes": len(v["strikes"])} for e, v in cap["expiries"].items()]}
+
+
+@router.get("/quote")
+def quote(request: Request, underlying: str, expiry: str, strike: float, option_type: str):
+    _auth(request); u = underlying.upper()
+    if u not in SU.ALLOWED: raise HTTPException(422, "unsupported underlying")
+    try: e = SU.norm_expiry(expiry)
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    return {"expiry": e, "last": CT.last_quote(u, e, float(strike), option_type.upper())}
+
+
 @router.post("/submit")
 async def submit(request: Request):
     c = _auth(request)
@@ -76,10 +93,19 @@ async def submit(request: Request):
             if u in EXCH and not mc.is_trading(EXCH[u]): raise HTTPException(409, f"{EXCH[u]} is not open: scored signals can only be submitted while the market is trading")
         except HTTPException: raise
         except Exception: pass
+    chk = None
+    try:
+        v = SU.validate({**body, "participant": c["name"]})
+        chk = CT.check(v["underlying"], v["expiry"], v["strike"], v["option_type"], v["entry"], v["entry_mode"])
+    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    except Exception: chk = None                                                       # data unavailable: do not block, report nothing
+    if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))
     try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _cache["v"] = None
-    return {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
+    out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
+    if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]; out["available_expiries"] = chk["available_expiries"]
+    return out
 
 
 @router.post("/amend")

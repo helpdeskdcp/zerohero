@@ -114,14 +114,25 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
       resultsTable($("aiRows"), s.ai_results); resultsTable($("huRows"), s.human_results); }
     catch (e) { $("verdict").textContent = e.message; }
   }
-  $("saveToken").onclick = async () => { token = $("tokenIn").value.trim(); try { sessionStorage.setItem("arena_token", token); } catch (e) { /* ok */ } if (await loadState()) { loadGuide(); show("guide"); } };
+  $("saveToken").onclick = async () => { token = $("tokenIn").value.trim(); try { sessionStorage.setItem("arena_token", token); } catch (e) { /* ok */ } if (await loadState()) { loadGuide(); show("guide"); refreshContracts(); } };
   document.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => show(b.dataset.tab)));
   const form = $("f");
   function readForm() { const v = {}; for (const el of form.elements) if (el.name) v[el.name] = el.type === "checkbox" ? el.checked : el.value; return v; }
   const preview = () => { const r = validateForm(readForm()); $("prev").textContent = r.preview.risk_per_unit ? `risk/unit ${r.preview.risk_per_unit.toFixed(2)} · reward:risk to T1 ${r.preview.rr_to_t1 ? r.preview.rr_to_t1.toFixed(2) : "—"}` : ""; };
-  form.oninput = preview;
+  let hintTimer = null;
+  async function refreshContracts() {
+    const u = form.underlying.value; try { const j = await api("/contracts?underlying=" + encodeURIComponent(u)); $("expList").replaceChildren(...j.expiries.map((e) => { const o = document.createElement("option"); o.value = e.raw; o.label = `${e.expiry} · strikes ${e.strike_min}-${e.strike_max}`; return o; }));
+      $("hint").textContent = j.expiries.length ? `Captured ${u} expiries: ` + j.expiries.map((e) => `${e.raw} (strikes ${e.strike_min}-${e.strike_max})`).join(" · ") : `No captured quotes for ${u} in the latest session.`; } catch (e) { $("hint").textContent = ""; }
+  }
+  async function refreshQuote() {
+    const v = readForm(); if (!v.expiry || !(Number(v.strike) > 0)) return;
+    try { const j = await api(`/quote?underlying=${encodeURIComponent(v.underlying)}&expiry=${encodeURIComponent(v.expiry)}&strike=${encodeURIComponent(v.strike)}&option_type=${encodeURIComponent(v.option_type)}`);
+      $("hint").textContent = j.last ? `Last ${v.underlying} ${v.strike} ${v.option_type}: ${j.last.ltp}${j.last.bid ? " (bid " + j.last.bid + " / ask " + j.last.ask + ")" : ""} at ${String(j.last.ts).replace("T", " ").slice(11, 19)} UTC` : "No captured quote for this contract: it cannot be scored. Pick an expiry/strike from the captured list."; } catch (e) { /* keep previous hint */ }
+  }
+  form.oninput = (ev) => { preview(); if (ev && ev.target && ev.target.name === "underlying") refreshContracts(); clearTimeout(hintTimer); hintTimer = setTimeout(refreshQuote, 500); };
+  form.underlying.addEventListener("change", refreshContracts);
   form.onsubmit = async (ev) => { ev.preventDefault(); const r = validateForm(readForm()); if (!r.ok) return msg("submsg", r.errors.join(" · "), true);
-    $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.`, false); form.reset(); preview(); }
+    $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.` + ((j.warnings || []).length ? "  ⚠ " + j.warnings.join(" · ") : ""), !!((j.warnings || []).length)); form.reset(); preview(); }
     catch (e) { msg("submsg", e.message, true); } finally { $("go").disabled = false; } };
   const mg = $("mg"); const showMg = () => { const a = mg.action.value; mg.querySelectorAll("[data-for]").forEach((d) => (d.hidden = !d.dataset.for.split(" ").includes(a))); };
   mg.oninput = showMg; showMg();
@@ -129,5 +140,5 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     const r = validateEvent(v); if (!r.ok) return msg("mgmsg", r.errors.join(" · "), true); $("mgGo").disabled = true;
     try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE)" : ""} — takes effect ~20 s later, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
     catch (e) { msg("mgmsg", e.message, true); } finally { $("mgGo").disabled = false; } };
-  $("tokenIn").value = token; if (token) loadState().then((s) => { if (s) { loadGuide(); show("guide"); } });
+  $("tokenIn").value = token; if (token) loadState().then((s) => { if (s) { loadGuide(); show("guide"); refreshContracts(); } });
 })();

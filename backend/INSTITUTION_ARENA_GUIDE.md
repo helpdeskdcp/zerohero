@@ -31,6 +31,8 @@ Open the **Submit** tab and fill:
 | Targets | premium(s) above entry, comma separated | 120, 140 |
 | Note | optional (your reason) | "breakout over VWAP" |
 
+**Check the hint line under the form**: it lists the expiries and strikes for which quotes are captured, and the last price of the contract you typed. A contract with no captured quotes cannot be scored; during the arena window such a submission is **rejected** (in practice mode it is accepted with a warning). Premiums are the OPTION price (e.g. crude ATM is about 500, not the futures level).
+
 Tick **"I have not entered this trade yet"** and press Submit. The server stamps the time. You get an id (H00001 …) and a hash. **You cannot edit or delete** a submitted signal; if you changed your mind, submit a new one (the old one still counts).
 A trade you did not submit before entering **does not exist** for scoring.
 

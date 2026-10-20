@@ -19,6 +19,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(SU, "PATH", str(tmp_path / "h.jsonl"))
     monkeypatch.setenv("ARENA_TOKEN_HUMAN", TOK); monkeypatch.setenv("ARENA_HUMAN_NAME", "INSTITUTION_TRADER"); monkeypatch.delenv("ARENA_PUBLIC", raising=False)
     monkeypatch.setenv("ARENA_START", "2999-01-01"); monkeypatch.setenv("ARENA_END", "2999-02-01")          # default: PRACTICE
+    from app.arena import contracts as _CT
+    monkeypatch.setattr(_CT, "DB", str(tmp_path / "no_such_market.db")); _CT._cache.clear()                    # tests never touch the real 12 GB quote DB
     A._hits.clear(); A._cache.update(t=0.0, v=None)
     app = FastAPI(); app.include_router(A.router); return TestClient(app)
 
@@ -161,3 +163,38 @@ def test_events_flow_into_scored_signals_and_settlement(tmp_path):
     sig = R.human_signals(p, start="2026-10-26", end="2026-11-25")[0]
     sn = [{"t": day(t), "ltp": l, "bid": b, "ask": k} for t, l, b, k in [("10:01", 100, 99, 100), ("10:05", 125, 124, 126), ("10:10", 151, 150, 152), ("10:15", 140, 139, 141)]]
     r = S.settle(sig, sn, half_spread=0.01); assert r["status"] == "SETTLED" and r["exit"] == 150 and r["exit_reason"] == "TARGET" and r["events_applied"] == 1
+
+
+# ---------------- contract validation ----------------
+def _mkdb(tmp_path):
+    import sqlite3
+    p = str(tmp_path / "m.db"); c = sqlite3.connect(p)
+    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL)")
+    rows = [("2026-10-20T13:20:00Z", "CRUDEOIL", "OPTION", "17NOV2026", k, ot, "2026-10-20", ltp, ltp - 1, ltp + 1) for k, ot, ltp in [(9400.0, "CE", 578.0), (9500.0, "CE", 534.0), (9500.0, "PE", 516.0), (9600.0, "CE", 490.0)]]
+    c.executemany("INSERT INTO quote_snapshots (received_ts,symbol,kind,expiry,strike,option_type,session_date_ist,ltp,bid,ask) VALUES (?,?,?,?,?,?,?,?,?,?)", rows); c.commit(); c.close(); return p
+
+
+def test_check_flags_wrong_expiry_strike_and_premium(tmp_path):
+    from app.arena import contracts as CT
+    p = _mkdb(tmp_path); CT._cache.clear()
+    r = CT.check("CRUDEOIL", "2026-10-27", 8800.0, "CE", 150.0, "LIMIT", day="2026-10-20", path=p)                     # the real-world mistake: NIFTY's expiry, wrong premium level
+    assert not r["found"] and "17NOV2026" not in r["problems"][0] and "2026-11-17" in r["problems"][0] and r["available_expiries"] == ["2026-11-17"]
+    r = CT.check("CRUDEOIL", "2026-11-17", 8800.0, "CE", 150.0, "LIMIT", day="2026-10-20", path=p); assert not r["found"] and "not captured" in r["problems"][0] and r["strike_range"] == [9400.0, 9600.0]
+    ok = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 534.0, "NEAR", day="2026-10-20", path=p); assert ok["found"] and ok["problems"] == [] and ok["warnings"] == [] and ok["last"]["ltp"] == 534.0
+    far = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 150.0, "NEAR", day="2026-10-20", path=p); assert far["found"] and any("far from the last traded price" in w for w in far["warnings"])
+    lim = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 150.0, "LIMIT", day="2026-10-20", path=p); assert any("never fill" in w for w in lim["warnings"])
+
+
+def test_submit_practice_warns_live_rejects_unscorable_and_contract_endpoints(client, tmp_path, monkeypatch):
+    from app.arena import contracts as CT
+    p = _mkdb(tmp_path); CT._cache.clear(); monkeypatch.setattr(CT, "DB", p)
+    bad = {**GOOD, "underlying": "CRUDEOIL", "expiry": "27OCT2026", "strike": 8800, "option_type": "CE", "entry_mode": "LIMIT", "entry": 150, "sl": 125, "targets": [210, 240]}
+    r = client.post("/api/arena/public/submit", json=bad, headers=H); assert r.status_code == 200 and r.json()["practice"] is True and r.json()["warnings"] and "2026-11-17" in " ".join(r.json()["warnings"])
+    monkeypatch.setenv("ARENA_START", "2000-01-01"); monkeypatch.setenv("ARENA_END", "2999-01-01")
+    from app import market_calendar as mc; monkeypatch.setattr(mc, "is_trading", lambda ex, *a, **k: True)
+    r = client.post("/api/arena/public/submit", json=bad, headers=H); assert r.status_code == 422 and "unscorable contract" in r.json()["detail"]
+    good = {**bad, "expiry": "17NOV2026", "strike": 9500, "entry_mode": "NEAR", "entry": 534, "sl": 480, "targets": [600]}
+    r = client.post("/api/arena/public/submit", json=good, headers=H); assert r.status_code == 200 and r.json()["warnings"] == [] and r.json()["last_quote"]["ltp"] == 534.0
+    j = client.get("/api/arena/public/contracts?underlying=crudeoil", headers=H).json(); assert j["expiries"][0]["raw"] == "17NOV2026" and j["expiries"][0]["strike_min"] == 9400.0
+    q = client.get("/api/arena/public/quote?underlying=CRUDEOIL&expiry=17NOV2026&strike=9500&option_type=ce", headers=H).json(); assert q["last"]["ltp"] == 534.0
+    assert client.get("/api/arena/public/contracts?underlying=TCS", headers=H).status_code == 422 and client.get("/api/arena/public/contracts?underlying=NIFTY").status_code == 401
