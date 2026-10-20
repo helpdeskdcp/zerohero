@@ -1,0 +1,26 @@
+"""Daily forward-test run: verify frozen manifest -> evaluate AUTOSCALP trades opened since the epoch start -> append a hash-chained ledger line -> write LATEST.md.
+usage: forward_test_run.py [--init]   (--init writes the frozen manifest ONCE; refuses to overwrite)"""
+import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.forward_test import ledger as L
+
+D = "data/forward_test"; MAN = f"{D}/frozen_manifest.json"; LED = f"{D}/ledger.jsonl"; START = "2026-10-21"
+os.makedirs(D, exist_ok=True)
+if "--init" in sys.argv:
+    if os.path.exists(MAN): sys.exit("manifest exists; refusing to overwrite (a rule change must create a NEW epoch via the daily run)")
+    json.dump({"epoch_start_date": START, "created": L.now_iso(), "git_head": L.git_head(), "files": L.file_hashes(), "population": "ai_paper_trades strategy=AUTOSCALP opened>=epoch start"}, open(MAN, "w"), indent=1)
+    print("manifest written", MAN); sys.exit(0)
+man = json.load(open(MAN)); cur = L.file_hashes(); changed = [f for f, h in cur.items() if h != man["files"].get(f)]
+epoch_start = man["epoch_start_date"]
+if changed:                                                       # rule-bearing code changed: close the epoch, start a new one today, record it
+    L.append(LED, {"type": "EPOCH_BREAK", "ts": L.now_iso(), "changed_files": changed, "old_epoch_start": epoch_start, "new_epoch_start": L.now_iso()[:10], "git_head": L.git_head()})
+    man = {"epoch_start_date": L.now_iso()[:10], "created": L.now_iso(), "git_head": L.git_head(), "files": cur, "population": man["population"]}; json.dump(man, open(MAN, "w"), indent=1); epoch_start = man["epoch_start_date"]
+res = L.evaluate(L.load_trades("data/chanakya.db", epoch_start))
+rec = L.append(LED, {"type": "DAILY", "ts": L.now_iso(), "epoch_start": epoch_start, "git_head": L.git_head(), "result": res})
+ok, n, err = L.verify_chain(LED)
+f = lambda x, d=2: "n/a" if x is None else f"{x:.{d}f}"
+md = [f"# Forward test (frozen rules) — {rec['ts'][:19]}Z", f"epoch start {epoch_start} · ledger lines {n} · chain {'OK' if ok else 'BROKEN: ' + str(err)}",
+      f"**verdict: {res['verdict']}** (claims allowed only after n>={L.MIN_N} and days>={L.MIN_DAYS} with PASS_FOR_NEXT_STAGE; PASS is never 'proven')", "",
+      f"- trades n={res['n']} (skipped w/o cost model {res['skipped_no_cost_model']}) days={res['days']}"]
+if res["n"]: md.append(f"- win rate {res['win_rate']:.1%} (Wilson95 {res['wilson95'][0]:.1%}-{res['wilson95'][1]:.1%}) vs break-even {f(res['breakeven_win_rate'], 3)} · mean gross {f(res['mean_gross_pct'])}% cost {f(res['mean_cost_pct'])}% NET {f(res['mean_net_pct'])}% · p {f(res['p_day_clustered_one_sided'], 3)}")
+open(f"{D}/LATEST.md", "w").write("\n".join(md)); print("\n".join(md))

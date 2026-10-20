@@ -143,3 +143,49 @@ def test_engine_modules_have_no_network_exec_or_order_imports():
     for f in ("engine.py", "expr.py", "replay.py"):
         s = open(os.path.join(d, f)).read()
         for bad in ("requests", "urllib", "socket", "subprocess", "eval(", "exec(", "app.execution", "place_order", "os.system"): assert bad not in s.replace("`eval`", ""), (f, bad)
+
+
+# ---------------- shadow observer ----------------
+from app.rules_engine import shadow as SH
+
+
+def _ctx(**kw): return {**GOOD, **kw}
+
+
+def test_shadow_disabled_under_pytest_unless_forced(tmp_path, monkeypatch):
+    p = str(tmp_path / "s.db")
+    assert SH.observe(_ctx(), symbol="NIFTY", side="CE", existing_allow=True, existing_reason=None, path=p) is None and not os.path.exists(p)
+    monkeypatch.setenv("RULES_ENGINE_SHADOW", "force")
+    assert SH.observe(_ctx(), symbol="NIFTY", side="CE", existing_allow=True, existing_reason=None, path=p)["allow"] is True and os.path.exists(p)
+    monkeypatch.setenv("RULES_ENGINE_SHADOW", "0")
+    assert SH.observe(_ctx(), symbol="NIFTY", side="PE", existing_allow=True, existing_reason=None, path=str(tmp_path / "off.db")) is None
+
+
+def test_shadow_records_disagreement_throttles_and_summarizes(tmp_path, monkeypatch):
+    monkeypatch.setenv("RULES_ENGINE_SHADOW", "force"); SH._last.clear(); p = str(tmp_path / "s.db")
+    bad = _ctx(trades_today=7)
+    for i in range(3): SH.observe(bad, symbol="NIFTY", side="CE", existing_allow=True, existing_reason=None, path=p, now=1000.0 + i)        # same key within 60 s -> one row
+    SH.observe(bad, symbol="NIFTY", side="CE", existing_allow=True, existing_reason=None, path=p, now=1100.0)                               # after throttle -> second row
+    SH.observe(_ctx(), symbol="NIFTY", side="CE", existing_allow=False, existing_reason="stale feed", path=p, now=1000.0)
+    s = SH.summary(p)
+    assert s["rows"] == 3 and s["existing_allow_engine_block"] == 2 and s["existing_block_engine_allow"] == 1 and s["engine_blocks_by_rule"] == {"R-MAX-TRADES": 2}
+    assert SH.summary(str(tmp_path / "none.db"))["rows"] == 0
+
+
+def test_shadow_never_raises_and_build_ctx_maps_runner_state():
+    class SG:
+        consecutive_losses = 2
+        def _trades_today(self): return 4
+        def _daily_realised(self): return -1000.0
+    ctx = SH.build_ctx(symbol="NIFTY", sig={"decision": "BUY_CE", "entry": 90.0, "rr": 1.8}, opens=[{}], open_keys={("NIFTY", "CE")}, feed_connected=True, feed_age=3.0, last_price=24000.0,
+                       exchange="NFO", safeguards=SG())
+    assert ctx["trades_today"] == 4 and ctx["consecutive_losses"] == 2 and ctx["duplicate_open_position"] is True and ctx["premium"] == 90.0 and ctx["reward_risk"] == 1.8
+    assert round(ctx["daily_pnl_pct"], 3) == -0.5 and ctx["live_orders_requested"] is False
+    SH.observe_entry(None, "NIFTY", {}, [], set(), {}, None, None, None, True, None)                                   # garbage in: must not raise
+
+
+def test_runner_hook_is_guarded_log_only():
+    src = open(os.path.join(os.path.dirname(E.HERE), "autoscalp", "runner.py")).read()
+    i = src.index("_rules_shadow.observe_entry"); blk = src[i - 400:i + 200]
+    assert "try:" in blk and "except Exception:" in src[i:i + 300] and "return" not in src[i:i + 200].split("except Exception:")[0]
+    assert src.index("check_entry(") < i < src.index('_record_block(why)\n            await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why')

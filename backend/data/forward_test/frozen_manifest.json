@@ -1,0 +1,17 @@
+{
+ "epoch_start_date": "2026-10-21",
+ "created": "2026-10-20T07:37:14.823731+00:00",
+ "git_head": "97802b0",
+ "files": {
+  "app/autoscalp/safeguards.py": "1228287c216e2960b0077177312eefa09584ec0f44afc2d67117a595b8e65407",
+  "app/engines/scalp_strategy.py": "b54334d51261145ae29d7634c1dc459eeb50164f7941fd3bdb4950f134782981",
+  "app/engines/option_engine.py": "c8be8d302a3aac73ed5ded2564dded4ad233deaa269fca750970274864065d56",
+  "app/engines/risk_engine.py": "c39320a82e4291f6dd0b2f854af1a62249fa1803e416fbdc456013d9ed80c8ce",
+  "app/signal_gate/final_signal_gate.py": "2c4dea10ef800659bce73470ff19c56d47a16e6949fb26a221318eecd6e869d7",
+  "app/engines/state_classifier.py": "62c4edeac3ad3e1ad169cceb991b72e8cd54e8d81b3ed99aef8a5e52bb0230c3",
+  "app/engines/sr_engine.py": "0eeb659fd0eb8c395a580abaef458db8eda7f516cf03c4d4fec24eadfa7f1f4d",
+  "app/engines/regime_mtf.py": "7267f865b1c73987d886b9c5d3e51d43d3844e585c608412725b8cef4eb7d821",
+  "app/rules_engine/policy.yaml": "7b4775f234724321f5c04ee51cc3c684ae1e9453cc3836054636dd495b3a4ad6"
+ },
+ "population": "ai_paper_trades strategy=AUTOSCALP opened>=epoch start"
+}

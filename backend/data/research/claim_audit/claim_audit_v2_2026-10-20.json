@@ -1,0 +1,130 @@
+{
+ "groups": [
+  {
+   "label": "ALL (modelled-cost net, unit-free)",
+   "n": 338,
+   "days": 35,
+   "win_rate": 0.28402366863905326,
+   "wilson95": [
+    0.23858456737997158,
+    0.33431703382947753
+   ],
+   "breakeven_win_rate": 0.6789633831825009,
+   "mean_gross_pct": -2.549198119163582,
+   "mean_cost_pct": 4.331049484092064,
+   "mean_net_pct": -6.880247603255646,
+   "median_net_pct": -2.927156901982198,
+   "p_day_clustered_one_sided": 0.999657514149449,
+   "profit_factor": 0.187570304687026
+  },
+  {
+   "label": "strategy=AUTOSCALP",
+   "n": 199,
+   "days": 21,
+   "win_rate": 0.2562814070351759,
+   "wilson95": [
+    0.2006386774021283,
+    0.321155668530856
+   ],
+   "breakeven_win_rate": 0.5227579871522008,
+   "mean_gross_pct": -0.3368680597361773,
+   "mean_cost_pct": 2.4828718306122055,
+   "mean_net_pct": -2.819739890348382,
+   "median_net_pct": -2.2447058823529367,
+   "p_day_clustered_one_sided": 0.9003421507115399,
+   "profit_factor": 0.31459111478465973
+  },
+  {
+   "label": "strategy=MANUAL",
+   "n": 133,
+   "days": 26,
+   "win_rate": 0.3383458646616541,
+   "wilson95": [
+    0.2634780244474995,
+    0.4222900460807608
+   ],
+   "breakeven_win_rate": 0.7797801651242209,
+   "mean_gross_pct": -5.830092034589528,
+   "mean_cost_pct": 6.613884315158344,
+   "mean_net_pct": -12.443976349747873,
+   "median_net_pct": -5.429720895147104,
+   "p_day_clustered_one_sided": 0.999933766899504,
+   "profit_factor": 0.1444155937764056
+  },
+  {
+   "label": "family=INDEX_OPTIONS",
+   "n": 210,
+   "days": 34,
+   "win_rate": 0.35714285714285715,
+   "wilson95": [
+    0.2954353397923186,
+    0.42398314566607687
+   ],
+   "breakeven_win_rate": 0.7100906968912047,
+   "mean_gross_pct": -3.52589030386182,
+   "mean_cost_pct": 3.3217174914161953,
+   "mean_net_pct": -6.847607795278017,
+   "median_net_pct": -1.5047217422447847,
+   "p_day_clustered_one_sided": 0.9998896353232374,
+   "profit_factor": 0.22681711597470383
+  },
+  {
+   "label": "family=MCX_NG_CRUDE",
+   "n": 128,
+   "days": 22,
+   "win_rate": 0.1640625,
+   "wilson95": [
+    0.10988249779919598,
+    0.23781959319484536
+   ],
+   "breakeven_win_rate": 0.6310104229763258,
+   "mean_gross_pct": -0.946812503643035,
+   "mean_cost_pct": 5.986984784575913,
+   "mean_net_pct": -6.9337972882189485,
+   "median_net_pct": -5.131728827529368,
+   "p_day_clustered_one_sided": 0.9837835028123597,
+   "profit_factor": 0.11476595707439347
+  },
+  {
+   "label": "AUTOSCALP x INDEX_OPTIONS",
+   "n": 101,
+   "days": 20,
+   "win_rate": 0.3465346534653465,
+   "wilson95": [
+    0.2608938535301668,
+    0.4434219905622544
+   ],
+   "breakeven_win_rate": 0.4479479314189969,
+   "mean_gross_pct": 0.271656433714889,
+   "mean_cost_pct": 1.396203110355975,
+   "mean_net_pct": -1.1245466766410859,
+   "median_net_pct": -1.1778584392014517,
+   "p_day_clustered_one_sided": 0.7765657600388558,
+   "profit_factor": 0.6535466832633461
+  },
+  {
+   "label": "AUTOSCALP x MCX_NG_CRUDE",
+   "n": 98,
+   "days": 12,
+   "win_rate": 0.16326530612244897,
+   "wilson95": [
+    0.10306715625004181,
+    0.24886761303873609
+   ],
+   "breakeven_win_rate": 0.6886874861006417,
+   "mean_gross_pct": -0.9640208540071745,
+   "mean_cost_pct": 3.6028059198558706,
+   "mean_net_pct": -4.5668267738630455,
+   "median_net_pct": -4.927588210875875,
+   "p_day_clustered_one_sided": 0.9999937774340695,
+   "profit_factor": 0.08820242327187783
+  }
+ ],
+ "skipped": {
+  "NATGASMINI": 12,
+  "ALOKINDS": 2,
+  "COALINDIA": 1,
+  "RPOWER": 1,
+  "CRUDEOILM": 3
+ }
+}

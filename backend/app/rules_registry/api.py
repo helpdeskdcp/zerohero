@@ -24,5 +24,13 @@ def _get():
 def inventory(): return _get()
 
 
+@router.get("/shadow")
+def shadow_summary(hours: float = 24.0):
+    """Unified-policy SHADOW decisions vs the runner's actual decisions (read-only)."""
+    if os.environ.get("RULES_REGISTRY", "1") == "0": raise HTTPException(503, "disabled (RULES_REGISTRY=0)")
+    from ..rules_engine import shadow
+    return shadow.summary(since_ts=time.time() - hours * 3600.0)
+
+
 @router.get("/report", response_class=PlainTextResponse)
 def md(): return report.render(_get())

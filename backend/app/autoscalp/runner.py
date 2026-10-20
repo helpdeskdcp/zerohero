@@ -811,6 +811,11 @@ class AutoScalpRunner:
             side=sig["decision"].split("_")[1], open_keys=open_keys,
             option_premium=sig.get("entry"), underlying_price=agg.last_price,
             exchange=smeta["exchange"])
+        try:   # SHADOW ONLY (app.rules_engine.shadow): records the unified-policy decision beside this one; never changes control flow. RULES_ENGINE_SHADOW=0 disables.
+            from ..rules_engine import shadow as _rules_shadow
+            _rules_shadow.observe_entry(self, sym, sig, opens, open_keys, feed_st, feed_age, agg, smeta, allow, why)
+        except Exception:
+            pass
         if not allow:
             _record_block(why)
             await self._emit("autoscalp_blocked", {"symbol": sym, "reason": why, "signal": sig["decision"]})
