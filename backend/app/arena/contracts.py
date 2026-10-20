@@ -62,7 +62,7 @@ def last_quote(underlying: str, expiry_iso: str, strike: float, ot: str, day: st
     return {"ltp": r[0], "bid": r[1], "ask": r[2], "ts": r[3]} if r else None
 
 
-def check(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float, mode: str, *, day: str | None = None, path: str | None = None) -> dict:
+def check(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float, mode: str, *, sl: float | None = None, day: str | None = None, path: str | None = None) -> dict:
     """-> {"found": bool, "problems": [..], "warnings": [..], "available_expiries": [...], "strike_range": [lo, hi], "last": {...}|None}. `problems` make a scored submission unscorable."""
     cap = captured(underlying, day, path); ex = cap["expiries"]; out = {"found": False, "problems": [], "warnings": [], "available_expiries": list(ex), "strike_range": None, "last": None, "day": cap["day"]}
     if expiry_iso not in ex:
@@ -76,5 +76,8 @@ def check(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float
         r = entry / q["ltp"]
         if mode != "LIMIT" and abs(r - 1.0) > 0.5: out["warnings"].append(f"entry {entry:g} is far from the last traded price {q['ltp']:g} ({mode} entries are meant to be near the market)")
         if mode == "LIMIT" and r < 0.4: out["warnings"].append(f"limit {entry:g} is {100 * (1 - r):.0f}% below the last price {q['ltp']:g}: it will probably never fill")
+        if sl and q.get("bid") and q.get("ask") and q["ask"] > q["bid"]:
+            spread = q["ask"] - q["bid"]
+            if 0 < entry - sl <= 1.5 * spread: out["warnings"].append(f"stop-loss {sl:g} is only {entry - sl:.2f} below the entry, about {(entry - sl) / spread:.1f}x the current bid/ask spread ({spread:.2f}): it is likely to be hit immediately")
         if mode == "ABOVE" and r < 0.9: out["warnings"].append(f"ABOVE {entry:g} is already below the market ({q['ltp']:g}): it would trigger immediately")
     return out

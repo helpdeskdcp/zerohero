@@ -96,7 +96,7 @@ async def submit(request: Request):
     chk = None
     try:
         v = SU.validate({**body, "participant": c["name"]})
-        chk = CT.check(v["underlying"], v["expiry"], v["strike"], v["option_type"], v["entry"], v["entry_mode"])
+        chk = CT.check(v["underlying"], v["expiry"], v["strike"], v["option_type"], v["entry"], v["entry_mode"], sl=v["sl"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     except Exception: chk = None                                                       # data unavailable: do not block, report nothing
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))

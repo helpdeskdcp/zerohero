@@ -42,7 +42,6 @@ def check_outcome(row: dict, *, store: HistStore | None = None,
     """`row`: one shadow_decisions record (a dict, e.g. from
     app.db.list_shadow_decisions). Returns a status plus whatever real
     evidence backs it -- never a fabricated price or guessed outcome."""
-    store = store or hist_store()
     now = now or datetime.now(timezone.utc)
 
     entry, stop_loss, target_1 = row.get("entry"), row.get("stop_loss"), row.get("target_1")
@@ -56,6 +55,7 @@ def check_outcome(row: dict, *, store: HistStore | None = None,
         return {"status": "NO_LEG_RECORDED",
                "reason": "no resolved option leg (strike/CE-PE) on this decision"}
 
+    store = store or hist_store()             # opened only when a quote lookup is actually needed (the early returns above must not touch the live histcap DB)
     signal_ts = row.get("ts") or ""
     # `since=signal_ts` pushes the lower bound into the query itself -- get_quotes'
     # default ASC+LIMIT ordering otherwise returns a long-lived strike/expiry

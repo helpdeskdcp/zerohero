@@ -198,3 +198,10 @@ def test_submit_practice_warns_live_rejects_unscorable_and_contract_endpoints(cl
     j = client.get("/api/arena/public/contracts?underlying=crudeoil", headers=H).json(); assert j["expiries"][0]["raw"] == "17NOV2026" and j["expiries"][0]["strike_min"] == 9400.0
     q = client.get("/api/arena/public/quote?underlying=CRUDEOIL&expiry=17NOV2026&strike=9500&option_type=ce", headers=H).json(); assert q["last"]["ltp"] == 534.0
     assert client.get("/api/arena/public/contracts?underlying=TCS", headers=H).status_code == 422 and client.get("/api/arena/public/contracts?underlying=NIFTY").status_code == 401
+
+
+def test_tight_stop_inside_the_spread_is_warned(tmp_path):
+    from app.arena import contracts as CT
+    p = _mkdb(tmp_path); CT._cache.clear()                                                                  # fixture quotes: bid = ltp-1, ask = ltp+1 (spread 2)
+    r = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 534.0, "NEAR", sl=533.0, day="2026-10-20", path=p); assert any("likely to be hit immediately" in w for w in r["warnings"])
+    r = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 534.0, "NEAR", sl=480.0, day="2026-10-20", path=p); assert not any("hit immediately" in w for w in r["warnings"])
