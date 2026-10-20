@@ -1,0 +1,207 @@
+# ZeroHero rules registry (2026-10-20). One entry per rule/gate.  `scan.py` verifies against the code: file+symbol exist, params equal the code's value,
+# evidence refs exist, and every environment flag read by app/ is classified (new unclassified flag => tests/test_rules_registry.py fails).
+# effect: BLOCKS_ORDERS | BLOCKS_ENTRY | FILTERS_SIGNAL | LIMITS | ADVISORY | OFFLINE_GATE | CLASSIFIER
+# mode  : ENFORCED (enforced by default) | ADVISORY (computed and shown, never gates) | OFF_BY_DEFAULT (code exists, switch off) | SHADOW (computed+logged, never blocks) | DARK (code exists, not wired) | OFFLINE (research gate)
+# evidence.kind: SAFETY_RAIL (a guard, tested, no alpha claim) | UNVALIDATED | DERIVED_FROM_LIVE_OUTCOMES (in-sample derived, see note) | NEGATIVE (tested, no edge) | DRAFT
+# param source: py:<module>:<ATTR>[.key] | sig:<module>:<func>(<arg>) | json:<file>#<a.b.c> | re:<file>::<regex with one literal-value group (?P<v>..)>
+rules:
+# ------------------------------------------------------------------ L0 execution rails
+- {id: EXEC-LIVE-GATE, layer: L0_execution, name: Live order triple gate, effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/execution/angelone_broker.py, symbol: _guard_live},
+   switch: {kind: env, name: CHANAKYA_ALLOW_LIVE, also: [CHANAKYA_LIVE_CONFIRM_TOKEN, execution_mode=LIVE]},
+   evidence: {kind: SAFETY_RAIL, refs: [tests/test_execution_live_gate.py]}, note: "Any broker order call raises LiveDisabled unless mode=LIVE AND env ALLOW_LIVE=1 AND confirm token set. Default = paper."}
+- {id: EXEC-KILLSWITCH, layer: L0_execution, name: Global kill switch, effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/execution/killswitch.py, symbol: is_active},
+   switch: {kind: api, name: "POST /api/execution/kill (setting execution_kill_switch)"},
+   evidence: {kind: SAFETY_RAIL, refs: [tests/test_execution_killswitch.py]}, note: "Read by OrderManager, runner safeguards and the risk engine. Policy MONITOR (default) or FLATTEN."}
+- {id: EXEC-ENTRIES-BLOCKED, layer: L0_execution, name: Order manager entry block (kill / risk halt / frozen), effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/execution/order_manager.py, symbol: _entries_blocked},
+   evidence: {kind: SAFETY_RAIL, refs: [tests/test_order_manager.py]}}
+- {id: EXEC-STALENESS, layer: L0_execution, name: Stale market-data / reconcile guard for NEW positions, effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/execution/staleness.py, symbol: assess},
+   params: [{name: max_ltp_age_sec, concept: max_feed_age_sec, value: 20.0, source: "sig:app.execution.staleness:assess(max_ltp_age)"},
+            {name: max_reconcile_age_sec, concept: max_reconcile_age_sec, value: 90.0, source: "sig:app.execution.staleness:assess(max_reconcile_age)"}],
+   evidence: {kind: SAFETY_RAIL, refs: [tests/test_execution_staleness.py]}}
+- {id: EXEC-RATELIMIT-BREAKER, layer: L0_execution, name: Broker rate limit + circuit breaker, effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/execution/angelone_broker.py, symbol: _rate}, evidence: {kind: SAFETY_RAIL, refs: [tests/test_execution_ratelimit.py]}}
+- {id: EXEC-IDEMPOTENCY, layer: L0_execution, name: Idempotent order tags (no double submit), effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/execution/idempotency.py, symbol: tag}, evidence: {kind: SAFETY_RAIL, refs: [tests/test_execution_idempotency.py]}}
+# ------------------------------------------------------------------ L1 autonomous runner safeguards (autoscalp/safeguards.py::check_entry)
+- {id: SG-SESSION-WINDOW, layer: L1_runner_safeguards, name: "Session window (NSE 09:20-15:00, MCX to 23:00)", effect: BLOCKS_ENTRY, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: session_start_hhmm, concept: session_start, value: "09:20", source: "py:app.autoscalp.safeguards:DEFAULTS.session_start_hhmm"},
+            {name: daily_cutoff_hhmm, concept: nse_entry_cutoff, value: "15:00", source: "py:app.autoscalp.safeguards:DEFAULTS.daily_cutoff_hhmm"},
+            {name: mcx_daily_cutoff_hhmm, concept: mcx_entry_cutoff, value: "23:00", source: "py:app.autoscalp.safeguards:DEFAULTS.mcx_daily_cutoff_hhmm"},
+            {name: allow_weekend, concept: allow_weekend, value: false, source: "py:app.autoscalp.safeguards:DEFAULTS.allow_weekend"}],
+   evidence: {kind: SAFETY_RAIL}}
+- {id: SG-FEED-FRESH, layer: L1_runner_safeguards, name: Market-data feed connected and fresh, effect: BLOCKS_ENTRY, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: max_feed_age_sec, concept: max_feed_age_sec, value: 12, source: "py:app.autoscalp.safeguards:DEFAULTS.max_feed_age_sec"},
+            {name: require_feed_connected, concept: require_feed_connected, value: true, source: "py:app.autoscalp.safeguards:DEFAULTS.require_feed_connected"}],
+   evidence: {kind: SAFETY_RAIL}}
+- {id: SG-MAX-CONCURRENT, layer: L1_runner_safeguards, name: "Max concurrent positions + no duplicate underlying/side", effect: LIMITS, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: max_concurrent, concept: max_open_positions, value: 3, source: "py:app.autoscalp.safeguards:DEFAULTS.max_concurrent"}], evidence: {kind: SAFETY_RAIL}}
+- {id: SG-MAX-TRADES, layer: L1_runner_safeguards, name: Max trades per day, effect: LIMITS, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: max_trades_per_day, concept: max_trades_per_day, value: 18, source: "py:app.autoscalp.safeguards:DEFAULTS.max_trades_per_day"}], evidence: {kind: UNVALIDATED}}
+- {id: SG-CONSEC-LOSSES, layer: L1_runner_safeguards, name: Halt after consecutive losses, effect: LIMITS, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: max_consecutive_losses, concept: max_consecutive_losses, value: 4, source: "py:app.autoscalp.safeguards:DEFAULTS.max_consecutive_losses"}], evidence: {kind: UNVALIDATED}}
+- {id: SG-DAILY-LOSS, layer: L1_runner_safeguards, name: Daily realised-loss halt (rupees), effect: LIMITS, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: max_daily_loss, concept: daily_loss_cap, unit: INR, value: 3000.0, source: "py:app.autoscalp.safeguards:DEFAULTS.max_daily_loss"}], evidence: {kind: UNVALIDATED}}
+- {id: SG-OPTION-LIQUIDITY, layer: L1_runner_safeguards, name: Option spread + premium bounds, effect: BLOCKS_ENTRY, mode: ENFORCED,
+   where: {file: app/autoscalp/safeguards.py, symbol: check_entry},
+   params: [{name: max_spread_pct, concept: max_option_spread_pct, value: 1.2, source: "py:app.autoscalp.safeguards:DEFAULTS.max_spread_pct"},
+            {name: min_option_premium, concept: min_option_premium, value: 8.0, source: "py:app.autoscalp.safeguards:DEFAULTS.min_option_premium"},
+            {name: max_option_premium_pct, concept: max_option_premium_pct_of_spot, value: 8.0, source: "py:app.autoscalp.safeguards:DEFAULTS.max_option_premium_pct"}],
+   evidence: {kind: UNVALIDATED}}
+- {id: SG-CALENDAR, layer: L1_runner_safeguards, name: Weekend / exchange-holiday block, effect: BLOCKS_ENTRY, mode: ENFORCED,
+   where: {file: app/market_calendar.py, symbol: is_holiday}, evidence: {kind: SAFETY_RAIL}}
+# ------------------------------------------------------------------ L2 strategy decision (engines/*)
+- {id: ST-FILTER-BLOCKS, layer: L2_strategy, name: Regime / signal-type / time-of-day blocks, effect: FILTERS_SIGNAL, mode: ENFORCED,
+   where: {file: app/engines/scalp_strategy.py, symbol: decide_from_context},
+   params: [{name: block_regimes, concept: block_regimes, value: [UNSTABLE, TRENDING_UP, RANGE], source: "py:app.engines.scalp_strategy:_DEFAULT_FILTERS.block_regimes"},
+            {name: block_signal_types, concept: block_signal_types, value: [RESISTANCE_BREAKOUT, SUPPORT_REVERSAL, RESISTANCE_REVERSAL], source: "py:app.engines.scalp_strategy:_DEFAULT_FILTERS.block_signal_types"},
+            {name: block_tod, concept: block_tod, value: [AFTERNOON], source: "py:app.engines.scalp_strategy:_DEFAULT_FILTERS.block_tod"}],
+   evidence: {kind: DERIVED_FROM_LIVE_OUTCOMES, refs: [app/engines/scalp_strategy.py], note: "Derived from pooled live paper outcomes (n=167, 2026-08-31..09-29) with a chronological split; the 'test half' later informed the rule, so it is not an independent holdout. NIFTY-only net edge is NOT established (see memory autoscalp-engine)."}}
+- {id: ST-CONFIDENCE-MAP, layer: L2_strategy, name: Probability to confidence (HIGH/MEDIUM/LOW), effect: CLASSIFIER, mode: ENFORCED,
+   where: {file: app/engines/scalp_strategy.py, symbol: _confidence},
+   params: [{name: high_prob, concept: confidence_high_prob, value: 0.66, source: "re:app/engines/scalp_strategy.py::if prob >= (?P<v>0\\.66):"},
+            {name: medium_prob, concept: confidence_medium_prob, value: 0.56, source: "re:app/engines/scalp_strategy.py::if prob >= (?P<v>0\\.56):"}],
+   evidence: {kind: UNVALIDATED}}
+- {id: ST-EV-GATE, layer: L2_strategy, name: Expected-value + reward/risk gate after costs, effect: FILTERS_SIGNAL, mode: ENFORCED,
+   where: {file: app/engines/option_engine.py, symbol: ev_gate},
+   params: [{name: min_ev_r, concept: min_ev_r, value: 0.12, source: "re:app/engines/option_engine.py::cfg\\.get\\(\"min_ev_r\", (?P<v>0\\.12)\\)"},
+            {name: rr_min, concept: min_reward_risk, value: 1.3, source: "re:app/engines/option_engine.py::cfg\\.get\\(\"rr_min\", (?P<v>1\\.3)\\)"}],
+   evidence: {kind: UNVALIDATED, note: "EV uses the calibrated win probability; calibration overconfidence (K8) fixed 2026-09-21, post-fix live n=13."}}
+- {id: ST-SR-GATE, layer: L2_strategy, name: Live support/resistance confirmation gate, effect: FILTERS_SIGNAL, mode: OFF_BY_DEFAULT,
+   where: {file: app/engines/scalp_strategy.py, symbol: decide_from_context},
+   switch: {kind: config, name: "sr_gates.enabled"},
+   params: [{name: enabled, concept: sr_gate_enabled, value: false, source: "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.enabled"},
+            {name: min_room_ratio, concept: sr_min_room_ratio, value: 1.0, source: "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.min_room_ratio"},
+            {name: marginal_ev_r, concept: marginal_ev_r, value: 0.25, source: "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.marginal_ev_r"},
+            {name: marginal_score, concept: marginal_score, value: 55.0, source: "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.marginal_score"}],
+   evidence: {kind: UNVALIDATED, refs: [tests/test_scalp_strategy_sr_gate.py]}}
+- {id: ST-CHAIN-GATE, layer: L2_strategy, name: Option-chain PCR/OI confirmation gate, effect: FILTERS_SIGNAL, mode: OFF_BY_DEFAULT,
+   where: {file: app/engines/scalp_strategy.py, symbol: decide_from_context},
+   switch: {kind: config, name: "chain_gates.enabled"},
+   params: [{name: enabled, concept: chain_gate_enabled, value: false, source: "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.enabled"},
+            {name: min_coverage, concept: chain_min_coverage, value: 0.6, source: "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.min_coverage"},
+            {name: pcr_confirm, concept: pcr_confirm, value: 1.3, source: "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.pcr_confirm"},
+            {name: pcr_contra, concept: pcr_contra, value: 0.7, source: "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.pcr_contra"},
+            {name: marginal_ev_r, concept: marginal_ev_r, value: 0.25, source: "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.marginal_ev_r"},
+            {name: marginal_score, concept: marginal_score, value: 55.0, source: "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.marginal_score"}],
+   evidence: {kind: NEGATIVE, refs: [tests/test_scalp_strategy_chain_gate.py], note: "Walk-forward: candidate == baseline on n=10 OOS (memory autoscalp-optionchain-audit); stays dark."}}
+- {id: ST-RISK-ENGINE, layer: L2_strategy, name: Risk engine entry/stop/RR/daily limits, effect: LIMITS, mode: ENFORCED,
+   where: {file: app/engines/risk_engine.py, symbol: run_risk_engine},
+   params: [{name: max_daily_loss_pct, concept: daily_loss_cap, unit: pct_of_capital, value: 3, source: "re:app/engines/risk_engine.py::\"max_daily_loss_pct\":.*else (?P<v>3),"},
+            {name: max_trades, concept: max_trades_per_day, value: 10, source: "re:app/engines/risk_engine.py::\"max_trades\":.*else (?P<v>10),"},
+            {name: max_open_positions, concept: max_open_positions, value: 3, source: "re:app/engines/risk_engine.py::\"max_open_positions\":.*else (?P<v>3),"},
+            {name: max_consecutive_losses, concept: max_consecutive_losses, value: 3, source: "re:app/engines/risk_engine.py::\"max_consecutive_losses\":.*else (?P<v>3),"},
+            {name: max_volatility_pct, concept: max_volatility_pct, value: 5, source: "re:app/engines/risk_engine.py::\"max_volatility_pct\":.*else (?P<v>5),"}],
+   evidence: {kind: UNVALIDATED}}
+- {id: ST-NO-TRADE-CLASSIFIER, layer: L2_strategy, name: No-trade reason classifier (data / conflict / market-closed), effect: CLASSIFIER, mode: ENFORCED,
+   where: {file: app/autoscalp/data_quality.py, symbol: classify_no_trade_reason}, evidence: {kind: SAFETY_RAIL}}
+# ------------------------------------------------------------------ L3 final signal gate (subscriber-facing Telegram signals)
+- {id: SIG-FINAL-GATE, layer: L3_signal_gate, name: "High-confidence single-signal gate (score, RR, duplicate, cooldown, late-entry)", effect: FILTERS_SIGNAL, mode: OFF_BY_DEFAULT,
+   where: {file: app/signal_gate/final_signal_gate.py, symbol: evaluate_final_signal},
+   switch: {kind: config, name: "final_signal_gate.enabled (+ shadow_mode, default True when enabled)"},
+   params: [{name: MIN_SIGNAL_SCORE, concept: min_signal_score, value: 80.0, source: "py:app.signal_gate.final_signal_gate:MIN_SIGNAL_SCORE"},
+            {name: MIN_RR, concept: min_reward_risk, value: 1.5, source: "py:app.signal_gate.final_signal_gate:MIN_RR"},
+            {name: MIN_CALIBRATION_SAMPLES, concept: min_calibration_samples, value: 40, source: "py:app.signal_gate.final_signal_gate:MIN_CALIBRATION_SAMPLES"},
+            {name: SIGNAL_COOLDOWN_SEC, concept: signal_cooldown_sec, value: 600.0, source: "py:app.signal_gate.final_signal_gate:SIGNAL_COOLDOWN_SEC"},
+            {name: LATE_ENTRY_ATR_MULT, concept: late_entry_atr_mult, value: 3.0, source: "py:app.signal_gate.final_signal_gate:LATE_ENTRY_ATR_MULT"}],
+   evidence: {kind: UNVALIDATED, refs: [tests/test_autoscalp_final_signal_gate.py], note: "Module docstring: threshold 80 pending its own out-of-sample validation."}}
+# ------------------------------------------------------------------ L4 HCS (shadow meta-engine, hard vetoes)
+- {id: HCS-VETO-LIQUIDITY, layer: L4_hcs_shadow, name: HCS veto - option spread, effect: FILTERS_SIGNAL, mode: SHADOW, where: {file: app/hcs/filters.py, symbol: run},
+   params: [{name: max_opt_spread_pct, concept: max_option_spread_pct, value: 1.2, source: "py:app.hcs.filters:DEFAULTS.max_opt_spread_pct"}], evidence: {kind: UNVALIDATED}}
+- {id: HCS-VETO-RR, layer: L4_hcs_shadow, name: HCS veto - poor reward/risk, effect: FILTERS_SIGNAL, mode: SHADOW, where: {file: app/hcs/filters.py, symbol: run},
+   params: [{name: min_rr, concept: min_reward_risk, value: 1.3, source: "py:app.hcs.filters:DEFAULTS.min_rr"}], evidence: {kind: UNVALIDATED}}
+- {id: HCS-VETO-DATA-QUALITY, layer: L4_hcs_shadow, name: HCS veto - data quality, effect: FILTERS_SIGNAL, mode: SHADOW, where: {file: app/hcs/filters.py, symbol: run},
+   params: [{name: min_data_quality, concept: min_data_quality, value: 0.35, source: "py:app.hcs.filters:DEFAULTS.min_data_quality"}], evidence: {kind: UNVALIDATED}}
+- {id: HCS-VETO-NEARBY-SR, layer: L4_hcs_shadow, name: HCS veto - opposing S/R too close, effect: FILTERS_SIGNAL, mode: SHADOW, where: {file: app/hcs/filters.py, symbol: run},
+   params: [{name: sr_block_atr, concept: sr_block_atr, value: 0.35, source: "py:app.hcs.filters:DEFAULTS.sr_block_atr"}], evidence: {kind: UNVALIDATED}}
+- {id: HCS-VETO-POOR-EV, layer: L4_hcs_shadow, name: HCS veto - poor EV, effect: FILTERS_SIGNAL, mode: SHADOW, where: {file: app/hcs/filters.py, symbol: run},
+   params: [{name: min_ev_r, concept: min_ev_r, value: 0.05, source: "py:app.hcs.filters:DEFAULTS.min_ev_r"}], evidence: {kind: UNVALIDATED}}
+- {id: HCS-VETO-OTHER, layer: L4_hcs_shadow, name: "HCS vetoes: exhaustion, fake_breakout, mtf_conflict, noisy_calibration", effect: FILTERS_SIGNAL, mode: SHADOW,
+   where: {file: app/hcs/filters.py, symbol: run}, evidence: {kind: UNVALIDATED, note: "HCS calibration NOT VALIDATED over 6 sessions (memory hcs-engine)."}}
+# ------------------------------------------------------------------ L5 option-chain qualification (read-only advisory)
+- {id: OC-QUALIFY, layer: L5_optionchain, name: "Option-chain gates G_DQ/G_STRUCTURE/G_DIRECTION/G_ANN/G_LOCATION/G_GEX/G_EXPIRY -> QUALIFIED|WATCH|NO_TRADE", effect: ADVISORY, mode: ADVISORY,
+   where: {file: app/optionchain/qualify.py, symbol: qualify},
+   params: [{name: dqs_hard_floor, concept: min_data_quality_score, value: 45.0, source: "py:app.optionchain.qualify:DEFAULT_CFG.dqs_hard_floor"},
+            {name: min_blocks_watch, concept: min_structure_blocks, value: 3, source: "py:app.optionchain.qualify:DEFAULT_CFG.min_blocks_watch"},
+            {name: bias_thr, concept: structure_bias_threshold, value: 1.0, source: "py:app.optionchain.qualify:DEFAULT_CFG.bias_thr"},
+            {name: ann_min, concept: ann_min_p_win, value: 0.55, source: "py:app.optionchain.qualify:DEFAULT_CFG.ann_min"},
+            {name: wall_room_min_pct, concept: wall_room_min_pct, value: 0.35, source: "py:app.optionchain.qualify:DEFAULT_CFG.wall_room_min_pct"},
+            {name: pin_band_pct, concept: pin_band_pct, value: 0.2, source: "py:app.optionchain.qualify:DEFAULT_CFG.pin_band_pct"},
+            {name: use_expiry_gate, concept: use_expiry_gate, value: true, source: "py:app.optionchain.qualify:DEFAULT_CFG.use_expiry_gate"}],
+   evidence: {kind: UNVALIDATED, refs: [tests/test_optionchain_qualify.py, tests/test_optionchain_qualified_watch.py], note: "Display/advisory; wiring into entries was tested and rejected (ST-CHAIN-GATE)."}}
+# ------------------------------------------------------------------ L6 hybrid order-flow policy (SHADOW) and the offline promotion gate
+- {id: HOF-POLICY-RISK, layer: L6_hybrid_orderflow, name: Hybrid order-flow policy risk limits (shadow runner), effect: LIMITS, mode: SHADOW,
+   where: {file: app/hybrid_orderflow/trade_engine.py, symbol: RiskManager},
+   switch: {kind: env, name: HYBRID_ORDERFLOW_SHADOW},
+   params: [{name: risk_per_trade_pct, concept: risk_per_trade_pct, value: 0.5, source: "json:app/hybrid_orderflow/strategy_policy.json#risk.risk_per_trade_pct"},
+            {name: daily_loss_limit_pct, concept: daily_loss_cap, unit: pct_of_capital, value: 2.0, source: "json:app/hybrid_orderflow/strategy_policy.json#risk.daily_loss_limit_pct"},
+            {name: max_trades_per_day, concept: max_trades_per_day, value: 6, source: "json:app/hybrid_orderflow/strategy_policy.json#risk.max_trades_per_day"},
+            {name: cooldown_after_loss_min, concept: cooldown_after_loss_min, value: 15, source: "json:app/hybrid_orderflow/strategy_policy.json#risk.cooldown_after_loss_min"},
+            {name: min_reward_risk_t1, concept: min_reward_risk, value: 1.3, source: "json:app/hybrid_orderflow/strategy_policy.json#risk.min_reward_risk_t1"}],
+   evidence: {kind: DRAFT, refs: [tests/test_hybrid_orderflow_policy.py], note: "policy_version 1.2.0 validation_status DRAFT_UNVALIDATED; live orders can never be enabled by this policy (validator fails closed)."}}
+- {id: HOF-POLICY-EXECUTION, layer: L6_hybrid_orderflow, name: Policy execution mode is PAPER, live orders disabled, effect: BLOCKS_ORDERS, mode: ENFORCED,
+   where: {file: app/hybrid_orderflow/policy.py, symbol: validate},
+   params: [{name: mode, concept: execution_mode, value: PAPER, source: "json:app/hybrid_orderflow/strategy_policy.json#execution.mode"},
+            {name: live_orders_enabled, concept: live_orders_enabled, value: false, source: "json:app/hybrid_orderflow/strategy_policy.json#execution.live_orders_enabled"}],
+   evidence: {kind: SAFETY_RAIL, refs: [tests/test_hybrid_orderflow_policy.py]}}
+- {id: PROMO-GATE, layer: L7_offline_gates, name: "Promotion gate for any new strategy (net-of-cost, folds, stress, concentration)", effect: OFFLINE_GATE, mode: OFFLINE,
+   where: {file: app/strategy_lab/gate.py, symbol: evaluate},
+   params: [{name: min_trades, concept: promo_min_trades, value: 200, source: "json:app/hybrid_orderflow/strategy_policy.json#promotion.min_trades"},
+            {name: min_distinct_days, concept: promo_min_days, value: 40, source: "json:app/hybrid_orderflow/strategy_policy.json#promotion.min_distinct_days"},
+            {name: min_net_mean_bps, concept: promo_min_net_bps, value: 1.0, source: "json:app/hybrid_orderflow/strategy_policy.json#promotion.min_net_mean_bps"},
+            {name: cost_stress_multiplier, concept: promo_cost_stress, value: 1.5, source: "json:app/hybrid_orderflow/strategy_policy.json#promotion.cost_stress_multiplier"}],
+   evidence: {kind: SAFETY_RAIL, refs: [tests/test_strategy_gate.py], note: "Result so far: PROMOTED = NONE (Hybrid MP, SmartBoS, PA, expiry pin all fail)."}}
+# ------------------------------------------------------------------ L8 dark / other protective layers
+- {id: SB-ADAPTATION, layer: L8_dark, name: Structural-break adaptation (can halt/tighten safeguards), effect: LIMITS, mode: DARK,
+   where: {file: app/structural_break/adaptation.py, symbol: apply_to_safeguards}, evidence: {kind: UNVALIDATED, note: "No non-test caller of apply_to_safeguards: not wired into the runner."}}
+- {id: AI-BREAKER, layer: L8_dark, name: "AI-provider circuit breaker (AI layer degrades, rules keep running)", effect: LIMITS, mode: ENFORCED,
+   where: {file: app/ai/ai_client.py, symbol: breaker_status}, switch: {kind: env, name: AI_BREAKER_FORCE}, evidence: {kind: SAFETY_RAIL}}
+
+# ------------------------------------------------------------------ coverage honesty
+not_yet_inventoried:
+  - {path: app/engines/scalp_strategy.py, why: "decide_from_context internals beyond the filter defaults (score blending, MTF/regime weights, option selection) are not enumerated rule-by-rule"}
+  - {path: app/engines/state_classifier.py, why: "signal-state classification rules"}
+  - {path: app/engines/option_engine.py, why: "select_option / analyse_leg quality rules"}
+  - {path: app/nse_official/controls.py, why: "production_gate"}
+  - {path: app/hedging/runner.py, why: "_kill_switch_breach"}
+  - {path: app/platform/marketdata/service.py, why: "trading_blocked"}
+  - {path: app/mathematical_confluence, why: "research-only confluence engine"}
+  - {path: app/institutional_edge, why: "edge-score state machine (research)"}
+  - {path: app/liquidity_sweep, why: "NOT READY strategy (research)"}
+
+# ------------------------------------------------------------------ environment flags
+# every env name read in app/*.py must match a pattern below or be listed in env_flags. Rule-relevant flags point at a rule.
+env_patterns:
+  - {re: "(_API_KEY|_API_SECRET|_SECRET|_TOTP_SECRET|_PASSWORD|_USERNAME|_CLIENT_ID|_APP_ID|_APP_SECRET|_ACCESS_TOKEN|_ANALYTICS_TOKEN|_API_TOKEN|_BOT_TOKEN|_REDIRECT_URI|_CHAT_ID|_CHANNEL_ID)$", category: SECRET_OR_ID}
+  - {re: "(_DB|_DB_PATH|_PATH|_INSTRUMENT_MASTER|_ENV_FILE|_CSV|_HOLIDAYS|_WINDOWS)$", category: PATH_OR_DATA}
+  - {re: "^(OPENAI|GROQ)_(BASE_URL|MODEL|TIMEOUT_SEC|MAX_RETRIES)$", category: AI_PROVIDER_CONFIG}
+  - {re: "^(HUB_[A-Z_]+_SEC|CHANAKYA_[A-Z_]+_(TTL_SEC|WARN_SEC|STALE_SEC)|CHANAKYA_MAX_DATA_AGE_SEC|CHANAKYA_PCR_[A-Z_]+|CHANAKYA_CORS_ORIGINS|SMART_SCALPER_POLL_SEC)$", category: TUNING}
+  - {re: "^(PYTEST_CURRENT_TEST|TEST_DATABASE_URL)$", category: TEST_ONLY}
+env_flags:
+  - {name: CHANAKYA_ALLOW_LIVE, category: SAFETY_SWITCH, rule: EXEC-LIVE-GATE}
+  - {name: CHANAKYA_LIVE_CONFIRM_TOKEN, category: SAFETY_SWITCH, rule: EXEC-LIVE-GATE}
+  - {name: AI_BREAKER_FORCE, category: SAFETY_SWITCH, rule: AI-BREAKER}
+  - {name: HYBRID_ORDERFLOW_SHADOW, category: FEATURE_FLAG, rule: HOF-POLICY-RISK}
+  - {name: CHANAKYA_RENKO_SHADOW, category: FEATURE_FLAG, note: "Renko shadow logger (research)"}
+  - {name: HYBRID_MP_ENABLED, category: FEATURE_FLAG, note: "Hybrid MP read-only dashboard API"}
+  - {name: PA_OF_LAB, category: FEATURE_FLAG, note: "PA/OrderFlow research chart API"}
+  - {name: PLATFORM_STREAM, category: FEATURE_FLAG, note: "platform live stream"}
+  - {name: DHAN_ORDERFLOW_AUTO_FUTURES, category: FEATURE_FLAG, note: "Dhan MCX/NSE futures auto-roll for the orderflow feed"}
+  - {name: SMART_SCALPER_AUTO_ARM, category: FEATURE_FLAG, note: "smart index scalper auto-arm (research/paper)"}
+  - {name: SMART_SCALPER_PROFILE, category: TUNING}
+  - {name: SMART_SCALPER_PROFILE_OVERRIDES, category: TUNING}
+  - {name: SMART_SCALPER_UNIVERSE, category: TUNING}
+  - {name: L2_CAPTURE_SYMBOLS, category: TUNING}
+  - {name: Z2H_EXPIRY_CLOSE, category: TUNING}
+  - {name: DHAN_POSTBACK_SECRET, category: SECRET_OR_ID}
+  - {name: ORDERFLOW_H1H7_SHADOW_CSV, category: PATH_OR_DATA}
+  - {name: RULES_REGISTRY, category: FEATURE_FLAG, note: "this inventory API"}

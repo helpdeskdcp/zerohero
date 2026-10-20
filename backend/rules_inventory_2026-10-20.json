@@ -1,0 +1,2979 @@
+{
+ "registry_version": "2026-10-20",
+ "rules": [
+  {
+   "id": "EXEC-LIVE-GATE",
+   "layer": "L0_execution",
+   "name": "Live order triple gate",
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/execution/angelone_broker.py",
+    "symbol": "_guard_live"
+   },
+   "switch": {
+    "kind": "env",
+    "name": "CHANAKYA_ALLOW_LIVE",
+    "also": [
+     "CHANAKYA_LIVE_CONFIRM_TOKEN",
+     "execution_mode=LIVE"
+    ]
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_execution_live_gate.py"
+    ]
+   },
+   "note": "Any broker order call raises LiveDisabled unless mode=LIVE AND env ALLOW_LIVE=1 AND confirm token set. Default = paper.",
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_execution_live_gate.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "EXEC-KILLSWITCH",
+   "layer": "L0_execution",
+   "name": "Global kill switch",
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/execution/killswitch.py",
+    "symbol": "is_active"
+   },
+   "switch": {
+    "kind": "api",
+    "name": "POST /api/execution/kill (setting execution_kill_switch)"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_execution_killswitch.py"
+    ]
+   },
+   "note": "Read by OrderManager, runner safeguards and the risk engine. Policy MONITOR (default) or FLATTEN.",
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_execution_killswitch.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "EXEC-ENTRIES-BLOCKED",
+   "layer": "L0_execution",
+   "name": "Order manager entry block (kill / risk halt / frozen)",
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/execution/order_manager.py",
+    "symbol": "_entries_blocked"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_order_manager.py"
+    ]
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_order_manager.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "EXEC-STALENESS",
+   "layer": "L0_execution",
+   "name": "Stale market-data / reconcile guard for NEW positions",
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/execution/staleness.py",
+    "symbol": "assess"
+   },
+   "params": [
+    {
+     "name": "max_ltp_age_sec",
+     "concept": "max_feed_age_sec",
+     "value": 20.0,
+     "source": "sig:app.execution.staleness:assess(max_ltp_age)"
+    },
+    {
+     "name": "max_reconcile_age_sec",
+     "concept": "max_reconcile_age_sec",
+     "value": 90.0,
+     "source": "sig:app.execution.staleness:assess(max_reconcile_age)"
+    }
+   ],
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_execution_staleness.py"
+    ]
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_ltp_age_sec",
+      "registered": 20.0,
+      "actual": 20.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_reconcile_age_sec",
+      "registered": 90.0,
+      "actual": 90.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_execution_staleness.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "EXEC-RATELIMIT-BREAKER",
+   "layer": "L0_execution",
+   "name": "Broker rate limit + circuit breaker",
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/execution/angelone_broker.py",
+    "symbol": "_rate"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_execution_ratelimit.py"
+    ]
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_execution_ratelimit.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "EXEC-IDEMPOTENCY",
+   "layer": "L0_execution",
+   "name": "Idempotent order tags (no double submit)",
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/execution/idempotency.py",
+    "symbol": "tag"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_execution_idempotency.py"
+    ]
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_execution_idempotency.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-SESSION-WINDOW",
+   "layer": "L1_runner_safeguards",
+   "name": "Session window (NSE 09:20-15:00, MCX to 23:00)",
+   "effect": "BLOCKS_ENTRY",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "session_start_hhmm",
+     "concept": "session_start",
+     "value": "09:20",
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.session_start_hhmm"
+    },
+    {
+     "name": "daily_cutoff_hhmm",
+     "concept": "nse_entry_cutoff",
+     "value": "15:00",
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.daily_cutoff_hhmm"
+    },
+    {
+     "name": "mcx_daily_cutoff_hhmm",
+     "concept": "mcx_entry_cutoff",
+     "value": "23:00",
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.mcx_daily_cutoff_hhmm"
+    },
+    {
+     "name": "allow_weekend",
+     "concept": "allow_weekend",
+     "value": false,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.allow_weekend"
+    }
+   ],
+   "evidence": {
+    "kind": "SAFETY_RAIL"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "session_start_hhmm",
+      "registered": "09:20",
+      "actual": "09:20",
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "daily_cutoff_hhmm",
+      "registered": "15:00",
+      "actual": "15:00",
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "mcx_daily_cutoff_hhmm",
+      "registered": "23:00",
+      "actual": "23:00",
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "allow_weekend",
+      "registered": false,
+      "actual": false,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-FEED-FRESH",
+   "layer": "L1_runner_safeguards",
+   "name": "Market-data feed connected and fresh",
+   "effect": "BLOCKS_ENTRY",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "max_feed_age_sec",
+     "concept": "max_feed_age_sec",
+     "value": 12,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_feed_age_sec"
+    },
+    {
+     "name": "require_feed_connected",
+     "concept": "require_feed_connected",
+     "value": true,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.require_feed_connected"
+    }
+   ],
+   "evidence": {
+    "kind": "SAFETY_RAIL"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_feed_age_sec",
+      "registered": 12,
+      "actual": 12,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "require_feed_connected",
+      "registered": true,
+      "actual": true,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-MAX-CONCURRENT",
+   "layer": "L1_runner_safeguards",
+   "name": "Max concurrent positions + no duplicate underlying/side",
+   "effect": "LIMITS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "max_concurrent",
+     "concept": "max_open_positions",
+     "value": 3,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_concurrent"
+    }
+   ],
+   "evidence": {
+    "kind": "SAFETY_RAIL"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_concurrent",
+      "registered": 3,
+      "actual": 3,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-MAX-TRADES",
+   "layer": "L1_runner_safeguards",
+   "name": "Max trades per day",
+   "effect": "LIMITS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "max_trades_per_day",
+     "concept": "max_trades_per_day",
+     "value": 18,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_trades_per_day"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_trades_per_day",
+      "registered": 18,
+      "actual": 18,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-CONSEC-LOSSES",
+   "layer": "L1_runner_safeguards",
+   "name": "Halt after consecutive losses",
+   "effect": "LIMITS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "max_consecutive_losses",
+     "concept": "max_consecutive_losses",
+     "value": 4,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_consecutive_losses"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_consecutive_losses",
+      "registered": 4,
+      "actual": 4,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-DAILY-LOSS",
+   "layer": "L1_runner_safeguards",
+   "name": "Daily realised-loss halt (rupees)",
+   "effect": "LIMITS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "max_daily_loss",
+     "concept": "daily_loss_cap",
+     "unit": "INR",
+     "value": 3000.0,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_daily_loss"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_daily_loss",
+      "registered": 3000.0,
+      "actual": 3000.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-OPTION-LIQUIDITY",
+   "layer": "L1_runner_safeguards",
+   "name": "Option spread + premium bounds",
+   "effect": "BLOCKS_ENTRY",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/safeguards.py",
+    "symbol": "check_entry"
+   },
+   "params": [
+    {
+     "name": "max_spread_pct",
+     "concept": "max_option_spread_pct",
+     "value": 1.2,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_spread_pct"
+    },
+    {
+     "name": "min_option_premium",
+     "concept": "min_option_premium",
+     "value": 8.0,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.min_option_premium"
+    },
+    {
+     "name": "max_option_premium_pct",
+     "concept": "max_option_premium_pct_of_spot",
+     "value": 8.0,
+     "source": "py:app.autoscalp.safeguards:DEFAULTS.max_option_premium_pct"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_spread_pct",
+      "registered": 1.2,
+      "actual": 1.2,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_option_premium",
+      "registered": 8.0,
+      "actual": 8.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_option_premium_pct",
+      "registered": 8.0,
+      "actual": 8.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SG-CALENDAR",
+   "layer": "L1_runner_safeguards",
+   "name": "Weekend / exchange-holiday block",
+   "effect": "BLOCKS_ENTRY",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/market_calendar.py",
+    "symbol": "is_holiday"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-FILTER-BLOCKS",
+   "layer": "L2_strategy",
+   "name": "Regime / signal-type / time-of-day blocks",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/engines/scalp_strategy.py",
+    "symbol": "decide_from_context"
+   },
+   "params": [
+    {
+     "name": "block_regimes",
+     "concept": "block_regimes",
+     "value": [
+      "UNSTABLE",
+      "TRENDING_UP",
+      "RANGE"
+     ],
+     "source": "py:app.engines.scalp_strategy:_DEFAULT_FILTERS.block_regimes"
+    },
+    {
+     "name": "block_signal_types",
+     "concept": "block_signal_types",
+     "value": [
+      "RESISTANCE_BREAKOUT",
+      "SUPPORT_REVERSAL",
+      "RESISTANCE_REVERSAL"
+     ],
+     "source": "py:app.engines.scalp_strategy:_DEFAULT_FILTERS.block_signal_types"
+    },
+    {
+     "name": "block_tod",
+     "concept": "block_tod",
+     "value": [
+      "AFTERNOON"
+     ],
+     "source": "py:app.engines.scalp_strategy:_DEFAULT_FILTERS.block_tod"
+    }
+   ],
+   "evidence": {
+    "kind": "DERIVED_FROM_LIVE_OUTCOMES",
+    "refs": [
+     "app/engines/scalp_strategy.py"
+    ],
+    "note": "Derived from pooled live paper outcomes (n=167, 2026-08-31..09-29) with a chronological split; the 'test half' later informed the rule, so it is not an independent holdout. NIFTY-only net edge is NOT established (see memory autoscalp-engine)."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "block_regimes",
+      "registered": [
+       "UNSTABLE",
+       "TRENDING_UP",
+       "RANGE"
+      ],
+      "actual": [
+       "UNSTABLE",
+       "TRENDING_UP",
+       "RANGE"
+      ],
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "block_signal_types",
+      "registered": [
+       "RESISTANCE_BREAKOUT",
+       "SUPPORT_REVERSAL",
+       "RESISTANCE_REVERSAL"
+      ],
+      "actual": [
+       "RESISTANCE_BREAKOUT",
+       "SUPPORT_REVERSAL",
+       "RESISTANCE_REVERSAL"
+      ],
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "block_tod",
+      "registered": [
+       "AFTERNOON"
+      ],
+      "actual": [
+       "AFTERNOON"
+      ],
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "app/engines/scalp_strategy.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-CONFIDENCE-MAP",
+   "layer": "L2_strategy",
+   "name": "Probability to confidence (HIGH/MEDIUM/LOW)",
+   "effect": "CLASSIFIER",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/engines/scalp_strategy.py",
+    "symbol": "_confidence"
+   },
+   "params": [
+    {
+     "name": "high_prob",
+     "concept": "confidence_high_prob",
+     "value": 0.66,
+     "source": "re:app/engines/scalp_strategy.py::if prob >= (?P<v>0\\.66):"
+    },
+    {
+     "name": "medium_prob",
+     "concept": "confidence_medium_prob",
+     "value": 0.56,
+     "source": "re:app/engines/scalp_strategy.py::if prob >= (?P<v>0\\.56):"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "high_prob",
+      "registered": 0.66,
+      "actual": 0.66,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "medium_prob",
+      "registered": 0.56,
+      "actual": 0.56,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-EV-GATE",
+   "layer": "L2_strategy",
+   "name": "Expected-value + reward/risk gate after costs",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/engines/option_engine.py",
+    "symbol": "ev_gate"
+   },
+   "params": [
+    {
+     "name": "min_ev_r",
+     "concept": "min_ev_r",
+     "value": 0.12,
+     "source": "re:app/engines/option_engine.py::cfg\\.get\\(\"min_ev_r\", (?P<v>0\\.12)\\)"
+    },
+    {
+     "name": "rr_min",
+     "concept": "min_reward_risk",
+     "value": 1.3,
+     "source": "re:app/engines/option_engine.py::cfg\\.get\\(\"rr_min\", (?P<v>1\\.3)\\)"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED",
+    "note": "EV uses the calibrated win probability; calibration overconfidence (K8) fixed 2026-09-21, post-fix live n=13."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "min_ev_r",
+      "registered": 0.12,
+      "actual": 0.12,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "rr_min",
+      "registered": 1.3,
+      "actual": 1.3,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-SR-GATE",
+   "layer": "L2_strategy",
+   "name": "Live support/resistance confirmation gate",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "OFF_BY_DEFAULT",
+   "where": {
+    "file": "app/engines/scalp_strategy.py",
+    "symbol": "decide_from_context"
+   },
+   "switch": {
+    "kind": "config",
+    "name": "sr_gates.enabled"
+   },
+   "params": [
+    {
+     "name": "enabled",
+     "concept": "sr_gate_enabled",
+     "value": false,
+     "source": "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.enabled"
+    },
+    {
+     "name": "min_room_ratio",
+     "concept": "sr_min_room_ratio",
+     "value": 1.0,
+     "source": "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.min_room_ratio"
+    },
+    {
+     "name": "marginal_ev_r",
+     "concept": "marginal_ev_r",
+     "value": 0.25,
+     "source": "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.marginal_ev_r"
+    },
+    {
+     "name": "marginal_score",
+     "concept": "marginal_score",
+     "value": 55.0,
+     "source": "py:app.engines.scalp_strategy:_SR_GATE_DEFAULTS.marginal_score"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED",
+    "refs": [
+     "tests/test_scalp_strategy_sr_gate.py"
+    ]
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "enabled",
+      "registered": false,
+      "actual": false,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_room_ratio",
+      "registered": 1.0,
+      "actual": 1.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "marginal_ev_r",
+      "registered": 0.25,
+      "actual": 0.25,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "marginal_score",
+      "registered": 55.0,
+      "actual": 55.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_scalp_strategy_sr_gate.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-CHAIN-GATE",
+   "layer": "L2_strategy",
+   "name": "Option-chain PCR/OI confirmation gate",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "OFF_BY_DEFAULT",
+   "where": {
+    "file": "app/engines/scalp_strategy.py",
+    "symbol": "decide_from_context"
+   },
+   "switch": {
+    "kind": "config",
+    "name": "chain_gates.enabled"
+   },
+   "params": [
+    {
+     "name": "enabled",
+     "concept": "chain_gate_enabled",
+     "value": false,
+     "source": "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.enabled"
+    },
+    {
+     "name": "min_coverage",
+     "concept": "chain_min_coverage",
+     "value": 0.6,
+     "source": "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.min_coverage"
+    },
+    {
+     "name": "pcr_confirm",
+     "concept": "pcr_confirm",
+     "value": 1.3,
+     "source": "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.pcr_confirm"
+    },
+    {
+     "name": "pcr_contra",
+     "concept": "pcr_contra",
+     "value": 0.7,
+     "source": "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.pcr_contra"
+    },
+    {
+     "name": "marginal_ev_r",
+     "concept": "marginal_ev_r",
+     "value": 0.25,
+     "source": "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.marginal_ev_r"
+    },
+    {
+     "name": "marginal_score",
+     "concept": "marginal_score",
+     "value": 55.0,
+     "source": "py:app.engines.scalp_strategy:_CHAIN_GATE_DEFAULTS.marginal_score"
+    }
+   ],
+   "evidence": {
+    "kind": "NEGATIVE",
+    "refs": [
+     "tests/test_scalp_strategy_chain_gate.py"
+    ],
+    "note": "Walk-forward: candidate == baseline on n=10 OOS (memory autoscalp-optionchain-audit); stays dark."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "enabled",
+      "registered": false,
+      "actual": false,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_coverage",
+      "registered": 0.6,
+      "actual": 0.6,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "pcr_confirm",
+      "registered": 1.3,
+      "actual": 1.3,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "pcr_contra",
+      "registered": 0.7,
+      "actual": 0.7,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "marginal_ev_r",
+      "registered": 0.25,
+      "actual": 0.25,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "marginal_score",
+      "registered": 55.0,
+      "actual": 55.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_scalp_strategy_chain_gate.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-RISK-ENGINE",
+   "layer": "L2_strategy",
+   "name": "Risk engine entry/stop/RR/daily limits",
+   "effect": "LIMITS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/engines/risk_engine.py",
+    "symbol": "run_risk_engine"
+   },
+   "params": [
+    {
+     "name": "max_daily_loss_pct",
+     "concept": "daily_loss_cap",
+     "unit": "pct_of_capital",
+     "value": 3,
+     "source": "re:app/engines/risk_engine.py::\"max_daily_loss_pct\":.*else (?P<v>3),"
+    },
+    {
+     "name": "max_trades",
+     "concept": "max_trades_per_day",
+     "value": 10,
+     "source": "re:app/engines/risk_engine.py::\"max_trades\":.*else (?P<v>10),"
+    },
+    {
+     "name": "max_open_positions",
+     "concept": "max_open_positions",
+     "value": 3,
+     "source": "re:app/engines/risk_engine.py::\"max_open_positions\":.*else (?P<v>3),"
+    },
+    {
+     "name": "max_consecutive_losses",
+     "concept": "max_consecutive_losses",
+     "value": 3,
+     "source": "re:app/engines/risk_engine.py::\"max_consecutive_losses\":.*else (?P<v>3),"
+    },
+    {
+     "name": "max_volatility_pct",
+     "concept": "max_volatility_pct",
+     "value": 5,
+     "source": "re:app/engines/risk_engine.py::\"max_volatility_pct\":.*else (?P<v>5),"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_daily_loss_pct",
+      "registered": 3,
+      "actual": 3.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_trades",
+      "registered": 10,
+      "actual": 10.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_open_positions",
+      "registered": 3,
+      "actual": 3.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_consecutive_losses",
+      "registered": 3,
+      "actual": 3.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_volatility_pct",
+      "registered": 5,
+      "actual": 5.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "ST-NO-TRADE-CLASSIFIER",
+   "layer": "L2_strategy",
+   "name": "No-trade reason classifier (data / conflict / market-closed)",
+   "effect": "CLASSIFIER",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/autoscalp/data_quality.py",
+    "symbol": "classify_no_trade_reason"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "SIG-FINAL-GATE",
+   "layer": "L3_signal_gate",
+   "name": "High-confidence single-signal gate (score, RR, duplicate, cooldown, late-entry)",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "OFF_BY_DEFAULT",
+   "where": {
+    "file": "app/signal_gate/final_signal_gate.py",
+    "symbol": "evaluate_final_signal"
+   },
+   "switch": {
+    "kind": "config",
+    "name": "final_signal_gate.enabled (+ shadow_mode, default True when enabled)"
+   },
+   "params": [
+    {
+     "name": "MIN_SIGNAL_SCORE",
+     "concept": "min_signal_score",
+     "value": 80.0,
+     "source": "py:app.signal_gate.final_signal_gate:MIN_SIGNAL_SCORE"
+    },
+    {
+     "name": "MIN_RR",
+     "concept": "min_reward_risk",
+     "value": 1.5,
+     "source": "py:app.signal_gate.final_signal_gate:MIN_RR"
+    },
+    {
+     "name": "MIN_CALIBRATION_SAMPLES",
+     "concept": "min_calibration_samples",
+     "value": 40,
+     "source": "py:app.signal_gate.final_signal_gate:MIN_CALIBRATION_SAMPLES"
+    },
+    {
+     "name": "SIGNAL_COOLDOWN_SEC",
+     "concept": "signal_cooldown_sec",
+     "value": 600.0,
+     "source": "py:app.signal_gate.final_signal_gate:SIGNAL_COOLDOWN_SEC"
+    },
+    {
+     "name": "LATE_ENTRY_ATR_MULT",
+     "concept": "late_entry_atr_mult",
+     "value": 3.0,
+     "source": "py:app.signal_gate.final_signal_gate:LATE_ENTRY_ATR_MULT"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED",
+    "refs": [
+     "tests/test_autoscalp_final_signal_gate.py"
+    ],
+    "note": "Module docstring: threshold 80 pending its own out-of-sample validation."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "MIN_SIGNAL_SCORE",
+      "registered": 80.0,
+      "actual": 80.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "MIN_RR",
+      "registered": 1.5,
+      "actual": 1.5,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "MIN_CALIBRATION_SAMPLES",
+      "registered": 40,
+      "actual": 40,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "SIGNAL_COOLDOWN_SEC",
+      "registered": 600.0,
+      "actual": 600.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "LATE_ENTRY_ATR_MULT",
+      "registered": 3.0,
+      "actual": 3.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_autoscalp_final_signal_gate.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "HCS-VETO-LIQUIDITY",
+   "layer": "L4_hcs_shadow",
+   "name": "HCS veto - option spread",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hcs/filters.py",
+    "symbol": "run"
+   },
+   "params": [
+    {
+     "name": "max_opt_spread_pct",
+     "concept": "max_option_spread_pct",
+     "value": 1.2,
+     "source": "py:app.hcs.filters:DEFAULTS.max_opt_spread_pct"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "max_opt_spread_pct",
+      "registered": 1.2,
+      "actual": 1.2,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "HCS-VETO-RR",
+   "layer": "L4_hcs_shadow",
+   "name": "HCS veto - poor reward/risk",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hcs/filters.py",
+    "symbol": "run"
+   },
+   "params": [
+    {
+     "name": "min_rr",
+     "concept": "min_reward_risk",
+     "value": 1.3,
+     "source": "py:app.hcs.filters:DEFAULTS.min_rr"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "min_rr",
+      "registered": 1.3,
+      "actual": 1.3,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "HCS-VETO-DATA-QUALITY",
+   "layer": "L4_hcs_shadow",
+   "name": "HCS veto - data quality",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hcs/filters.py",
+    "symbol": "run"
+   },
+   "params": [
+    {
+     "name": "min_data_quality",
+     "concept": "min_data_quality",
+     "value": 0.35,
+     "source": "py:app.hcs.filters:DEFAULTS.min_data_quality"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "min_data_quality",
+      "registered": 0.35,
+      "actual": 0.35,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "HCS-VETO-NEARBY-SR",
+   "layer": "L4_hcs_shadow",
+   "name": "HCS veto - opposing S/R too close",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hcs/filters.py",
+    "symbol": "run"
+   },
+   "params": [
+    {
+     "name": "sr_block_atr",
+     "concept": "sr_block_atr",
+     "value": 0.35,
+     "source": "py:app.hcs.filters:DEFAULTS.sr_block_atr"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "sr_block_atr",
+      "registered": 0.35,
+      "actual": 0.35,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "HCS-VETO-POOR-EV",
+   "layer": "L4_hcs_shadow",
+   "name": "HCS veto - poor EV",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hcs/filters.py",
+    "symbol": "run"
+   },
+   "params": [
+    {
+     "name": "min_ev_r",
+     "concept": "min_ev_r",
+     "value": 0.05,
+     "source": "py:app.hcs.filters:DEFAULTS.min_ev_r"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "min_ev_r",
+      "registered": 0.05,
+      "actual": 0.05,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "HCS-VETO-OTHER",
+   "layer": "L4_hcs_shadow",
+   "name": "HCS vetoes: exhaustion, fake_breakout, mtf_conflict, noisy_calibration",
+   "effect": "FILTERS_SIGNAL",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hcs/filters.py",
+    "symbol": "run"
+   },
+   "evidence": {
+    "kind": "UNVALIDATED",
+    "note": "HCS calibration NOT VALIDATED over 6 sessions (memory hcs-engine)."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "OC-QUALIFY",
+   "layer": "L5_optionchain",
+   "name": "Option-chain gates G_DQ/G_STRUCTURE/G_DIRECTION/G_ANN/G_LOCATION/G_GEX/G_EXPIRY -> QUALIFIED|WATCH|NO_TRADE",
+   "effect": "ADVISORY",
+   "mode": "ADVISORY",
+   "where": {
+    "file": "app/optionchain/qualify.py",
+    "symbol": "qualify"
+   },
+   "params": [
+    {
+     "name": "dqs_hard_floor",
+     "concept": "min_data_quality_score",
+     "value": 45.0,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.dqs_hard_floor"
+    },
+    {
+     "name": "min_blocks_watch",
+     "concept": "min_structure_blocks",
+     "value": 3,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.min_blocks_watch"
+    },
+    {
+     "name": "bias_thr",
+     "concept": "structure_bias_threshold",
+     "value": 1.0,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.bias_thr"
+    },
+    {
+     "name": "ann_min",
+     "concept": "ann_min_p_win",
+     "value": 0.55,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.ann_min"
+    },
+    {
+     "name": "wall_room_min_pct",
+     "concept": "wall_room_min_pct",
+     "value": 0.35,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.wall_room_min_pct"
+    },
+    {
+     "name": "pin_band_pct",
+     "concept": "pin_band_pct",
+     "value": 0.2,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.pin_band_pct"
+    },
+    {
+     "name": "use_expiry_gate",
+     "concept": "use_expiry_gate",
+     "value": true,
+     "source": "py:app.optionchain.qualify:DEFAULT_CFG.use_expiry_gate"
+    }
+   ],
+   "evidence": {
+    "kind": "UNVALIDATED",
+    "refs": [
+     "tests/test_optionchain_qualify.py",
+     "tests/test_optionchain_qualified_watch.py"
+    ],
+    "note": "Display/advisory; wiring into entries was tested and rejected (ST-CHAIN-GATE)."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "dqs_hard_floor",
+      "registered": 45.0,
+      "actual": 45.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_blocks_watch",
+      "registered": 3,
+      "actual": 3,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "bias_thr",
+      "registered": 1.0,
+      "actual": 1.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "ann_min",
+      "registered": 0.55,
+      "actual": 0.55,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "wall_room_min_pct",
+      "registered": 0.35,
+      "actual": 0.35,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "pin_band_pct",
+      "registered": 0.2,
+      "actual": 0.2,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "use_expiry_gate",
+      "registered": true,
+      "actual": true,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_optionchain_qualify.py",
+      "exists": true
+     },
+     {
+      "ref": "tests/test_optionchain_qualified_watch.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "HOF-POLICY-RISK",
+   "layer": "L6_hybrid_orderflow",
+   "name": "Hybrid order-flow policy risk limits (shadow runner)",
+   "effect": "LIMITS",
+   "mode": "SHADOW",
+   "where": {
+    "file": "app/hybrid_orderflow/trade_engine.py",
+    "symbol": "RiskManager"
+   },
+   "switch": {
+    "kind": "env",
+    "name": "HYBRID_ORDERFLOW_SHADOW"
+   },
+   "params": [
+    {
+     "name": "risk_per_trade_pct",
+     "concept": "risk_per_trade_pct",
+     "value": 0.5,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#risk.risk_per_trade_pct"
+    },
+    {
+     "name": "daily_loss_limit_pct",
+     "concept": "daily_loss_cap",
+     "unit": "pct_of_capital",
+     "value": 2.0,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#risk.daily_loss_limit_pct"
+    },
+    {
+     "name": "max_trades_per_day",
+     "concept": "max_trades_per_day",
+     "value": 6,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#risk.max_trades_per_day"
+    },
+    {
+     "name": "cooldown_after_loss_min",
+     "concept": "cooldown_after_loss_min",
+     "value": 15,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#risk.cooldown_after_loss_min"
+    },
+    {
+     "name": "min_reward_risk_t1",
+     "concept": "min_reward_risk",
+     "value": 1.3,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#risk.min_reward_risk_t1"
+    }
+   ],
+   "evidence": {
+    "kind": "DRAFT",
+    "refs": [
+     "tests/test_hybrid_orderflow_policy.py"
+    ],
+    "note": "policy_version 1.2.0 validation_status DRAFT_UNVALIDATED; live orders can never be enabled by this policy (validator fails closed)."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "risk_per_trade_pct",
+      "registered": 0.5,
+      "actual": 0.5,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "daily_loss_limit_pct",
+      "registered": 2.0,
+      "actual": 2.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "max_trades_per_day",
+      "registered": 6,
+      "actual": 6,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "cooldown_after_loss_min",
+      "registered": 15,
+      "actual": 15,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_reward_risk_t1",
+      "registered": 1.3,
+      "actual": 1.3,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_hybrid_orderflow_policy.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "HOF-POLICY-EXECUTION",
+   "layer": "L6_hybrid_orderflow",
+   "name": "Policy execution mode is PAPER",
+   "live orders disabled": null,
+   "effect": "BLOCKS_ORDERS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/hybrid_orderflow/policy.py",
+    "symbol": "validate"
+   },
+   "params": [
+    {
+     "name": "mode",
+     "concept": "execution_mode",
+     "value": "PAPER",
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#execution.mode"
+    },
+    {
+     "name": "live_orders_enabled",
+     "concept": "live_orders_enabled",
+     "value": false,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#execution.live_orders_enabled"
+    }
+   ],
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_hybrid_orderflow_policy.py"
+    ]
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "mode",
+      "registered": "PAPER",
+      "actual": "PAPER",
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "live_orders_enabled",
+      "registered": false,
+      "actual": false,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_hybrid_orderflow_policy.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "PROMO-GATE",
+   "layer": "L7_offline_gates",
+   "name": "Promotion gate for any new strategy (net-of-cost, folds, stress, concentration)",
+   "effect": "OFFLINE_GATE",
+   "mode": "OFFLINE",
+   "where": {
+    "file": "app/strategy_lab/gate.py",
+    "symbol": "evaluate"
+   },
+   "params": [
+    {
+     "name": "min_trades",
+     "concept": "promo_min_trades",
+     "value": 200,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#promotion.min_trades"
+    },
+    {
+     "name": "min_distinct_days",
+     "concept": "promo_min_days",
+     "value": 40,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#promotion.min_distinct_days"
+    },
+    {
+     "name": "min_net_mean_bps",
+     "concept": "promo_min_net_bps",
+     "value": 1.0,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#promotion.min_net_mean_bps"
+    },
+    {
+     "name": "cost_stress_multiplier",
+     "concept": "promo_cost_stress",
+     "value": 1.5,
+     "source": "json:app/hybrid_orderflow/strategy_policy.json#promotion.cost_stress_multiplier"
+    }
+   ],
+   "evidence": {
+    "kind": "SAFETY_RAIL",
+    "refs": [
+     "tests/test_strategy_gate.py"
+    ],
+    "note": "Result so far: PROMOTED = NONE (Hybrid MP, SmartBoS, PA, expiry pin all fail)."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [
+     {
+      "name": "min_trades",
+      "registered": 200,
+      "actual": 200,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_distinct_days",
+      "registered": 40,
+      "actual": 40,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "min_net_mean_bps",
+      "registered": 1.0,
+      "actual": 1.0,
+      "resolved": true,
+      "match": true,
+      "error": null
+     },
+     {
+      "name": "cost_stress_multiplier",
+      "registered": 1.5,
+      "actual": 1.5,
+      "resolved": true,
+      "match": true,
+      "error": null
+     }
+    ],
+    "evidence_refs": [
+     {
+      "ref": "tests/test_strategy_gate.py",
+      "exists": true
+     }
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "SB-ADAPTATION",
+   "layer": "L8_dark",
+   "name": "Structural-break adaptation (can halt/tighten safeguards)",
+   "effect": "LIMITS",
+   "mode": "DARK",
+   "where": {
+    "file": "app/structural_break/adaptation.py",
+    "symbol": "apply_to_safeguards"
+   },
+   "evidence": {
+    "kind": "UNVALIDATED",
+    "note": "No non-test caller of apply_to_safeguards: not wired into the runner."
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": []
+   },
+   "ok": true
+  },
+  {
+   "id": "AI-BREAKER",
+   "layer": "L8_dark",
+   "name": "AI-provider circuit breaker (AI layer degrades, rules keep running)",
+   "effect": "LIMITS",
+   "mode": "ENFORCED",
+   "where": {
+    "file": "app/ai/ai_client.py",
+    "symbol": "breaker_status"
+   },
+   "switch": {
+    "kind": "env",
+    "name": "AI_BREAKER_FORCE"
+   },
+   "evidence": {
+    "kind": "SAFETY_RAIL"
+   },
+   "checks": {
+    "file_exists": true,
+    "symbol_exists": true,
+    "params": [],
+    "evidence_refs": []
+   },
+   "ok": true
+  }
+ ],
+ "env": [
+  {
+   "name": "AI_BREAKER_FORCE",
+   "category": "SAFETY_SWITCH",
+   "rule": "AI-BREAKER",
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/ai/ai_client.py:45"
+   ]
+  },
+  {
+   "name": "ANGEL_API_KEY",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/angelone.py:126"
+   ]
+  },
+  {
+   "name": "ANGEL_CLIENT_ID",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/angelone.py:127"
+   ]
+  },
+  {
+   "name": "ANGEL_PASSWORD",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/angelone.py:128"
+   ]
+  },
+  {
+   "name": "ANGEL_TOTP_SECRET",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/angelone.py:129"
+   ]
+  },
+  {
+   "name": "CHANAKYA_ADMIN_PASSWORD",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/main.py:76"
+   ]
+  },
+  {
+   "name": "CHANAKYA_ADMIN_USERNAME",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/main.py:75"
+   ]
+  },
+  {
+   "name": "CHANAKYA_ALLOW_LIVE",
+   "category": "SAFETY_SWITCH",
+   "rule": "EXEC-LIVE-GATE",
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/scalper.py:243",
+    "app/execution/angelone_broker.py:65",
+    "app/execution/angelone_broker.py:73"
+   ]
+  },
+  {
+   "name": "CHANAKYA_API_TOKEN",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/main.py:69"
+   ]
+  },
+  {
+   "name": "CHANAKYA_CANDLE_CACHE_TTL_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "5"
+   ],
+   "where": [
+    "app/connectors/angelone.py:195"
+   ]
+  },
+  {
+   "name": "CHANAKYA_CORS_ORIGINS",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "https://chanakya.datacarepoint.com"
+   ],
+   "where": [
+    "app/main.py:55"
+   ]
+  },
+  {
+   "name": "CHANAKYA_DB_LOCK_WARN_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "1.5"
+   ],
+   "where": [
+    "app/db.py:482"
+   ]
+  },
+  {
+   "name": "CHANAKYA_DB_PATH",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/db.py:26"
+   ]
+  },
+  {
+   "name": "CHANAKYA_ENV_FILE",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    ".env"
+   ],
+   "where": [
+    "app/mcp_server.py:31"
+   ]
+  },
+  {
+   "name": "CHANAKYA_GREEKS_STALE_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "90"
+   ],
+   "where": [
+    "app/greeks_engine/engine.py:30"
+   ]
+  },
+  {
+   "name": "CHANAKYA_HIST_DB_PATH",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>",
+    null
+   ],
+   "where": [
+    "app/histcap/store.py:24",
+    "app/optionchain/history_analytics.py:56",
+    "app/optionchain/ann_backtest.py:60"
+   ]
+  },
+  {
+   "name": "CHANAKYA_HIST_OPTIONS_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>"
+   ],
+   "where": [
+    "app/hist_options/expiry_store.py:18",
+    "app/hist_options/store.py:54"
+   ]
+  },
+  {
+   "name": "CHANAKYA_INSTITUTIONAL_EDGE_DB_PATH",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/institutional_edge/store.py:75"
+   ]
+  },
+  {
+   "name": "CHANAKYA_INSTRUMENT_MASTER",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "./data/instrument_master.json"
+   ],
+   "where": [
+    "app/instruments.py:73"
+   ]
+  },
+  {
+   "name": "CHANAKYA_LIVE_CONFIRM_TOKEN",
+   "category": "SAFETY_SWITCH",
+   "rule": "EXEC-LIVE-GATE",
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/execution/angelone_broker.py:55"
+   ]
+  },
+  {
+   "name": "CHANAKYA_MARKET_HOLIDAYS",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>"
+   ],
+   "where": [
+    "app/market_calendar.py:90"
+   ]
+  },
+  {
+   "name": "CHANAKYA_MARKET_WINDOWS",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/market_calendar.py:68"
+   ]
+  },
+  {
+   "name": "CHANAKYA_MATH_CTX_TTL_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "12"
+   ],
+   "where": [
+    "app/mathematical_confluence/context.py:30"
+   ]
+  },
+  {
+   "name": "CHANAKYA_MAX_DATA_AGE_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "900"
+   ],
+   "where": [
+    "app/orchestrator.py:142",
+    "app/orchestrator.py:50",
+    "app/connectors/angelone.py:99"
+   ]
+  },
+  {
+   "name": "CHANAKYA_PCR_GOOD_COVERAGE",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "0.8"
+   ],
+   "where": [
+    "app/autoscalp/runner.py:362"
+   ]
+  },
+  {
+   "name": "CHANAKYA_PCR_MIN_COVERAGE",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "0.6"
+   ],
+   "where": [
+    "app/autoscalp/runner.py:361"
+   ]
+  },
+  {
+   "name": "CHANAKYA_PLATFORM_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/platform/config.py:22"
+   ]
+  },
+  {
+   "name": "CHANAKYA_PLATFORM_TICKS_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/platform/config.py:30"
+   ]
+  },
+  {
+   "name": "CHANAKYA_RENKO_SHADOW",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/autoscalp/renko_shadow.py:56"
+   ]
+  },
+  {
+   "name": "CHANAKYA_RENKO_SHADOW_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>",
+    null
+   ],
+   "where": [
+    "app/autoscalp/renko_shadow.py:66",
+    "app/autoscalp/renko_shadow.py:60"
+   ]
+  },
+  {
+   "name": "CHANAKYA_STRUCTURAL_BREAK_DB_PATH",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/structural_break/audit_log.py:75"
+   ]
+  },
+  {
+   "name": "DHAN_APP_ID",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/dhan_client.py:41"
+   ]
+  },
+  {
+   "name": "DHAN_APP_SECRET",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/dhan_client.py:42"
+   ]
+  },
+  {
+   "name": "DHAN_CLIENT_ID",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/dhan_client.py:49",
+    "app/optionchain/sources/dhan_chain.py:123"
+   ]
+  },
+  {
+   "name": "DHAN_ORDERFLOW_AUTO_FUTURES",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/dhan_ws.py:78"
+   ]
+  },
+  {
+   "name": "DHAN_ORDERFLOW_TICKS_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>"
+   ],
+   "where": [
+    "app/pa_of_lab/ticks.py:22",
+    "app/engines/orderflow_store.py:30"
+   ]
+  },
+  {
+   "name": "DHAN_POSTBACK_SECRET",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/api/dhan_routes.py:41"
+   ]
+  },
+  {
+   "name": "GROQ_API_KEY",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/ai/groq_client.py:52"
+   ]
+  },
+  {
+   "name": "GROQ_BASE_URL",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    "https://api.groq.com/openai/v1"
+   ],
+   "where": [
+    "app/ai/groq_client.py:40"
+   ]
+  },
+  {
+   "name": "GROQ_MAX_RETRIES",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/ai/groq_client.py:56"
+   ]
+  },
+  {
+   "name": "GROQ_MODEL",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    ""
+   ],
+   "where": [
+    "app/ai/groq_client.py:53"
+   ]
+  },
+  {
+   "name": "GROQ_TIMEOUT_SEC",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    "8.0"
+   ],
+   "where": [
+    "app/ai/groq_client.py:55"
+   ]
+  },
+  {
+   "name": "HUB_BARS_FALLBACK_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "240"
+   ],
+   "where": [
+    "app/market_hub.py:46"
+   ]
+  },
+  {
+   "name": "HUB_BARS_MAX_AGE_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "600"
+   ],
+   "where": [
+    "app/market_hub.py:49"
+   ]
+  },
+  {
+   "name": "HUB_CHAIN_FALLBACK_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "25"
+   ],
+   "where": [
+    "app/market_hub.py:45"
+   ]
+  },
+  {
+   "name": "HUB_CHAIN_MAX_AGE_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "300"
+   ],
+   "where": [
+    "app/market_hub.py:48"
+   ]
+  },
+  {
+   "name": "HUB_REST_MIN_GAP_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "0.4"
+   ],
+   "where": [
+    "app/market_hub.py:47"
+   ]
+  },
+  {
+   "name": "HYBRID_MP_ENABLED",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/main.py:307"
+   ]
+  },
+  {
+   "name": "HYBRID_ORDERFLOW_SHADOW",
+   "category": "FEATURE_FLAG",
+   "rule": "HOF-POLICY-RISK",
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/hybrid_orderflow/shadow.py:31"
+   ]
+  },
+  {
+   "name": "L2_CAPTURE_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/l2capture/store.py:97"
+   ]
+  },
+  {
+   "name": "L2_CAPTURE_SYMBOLS",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "NIFTY,CRUDEOIL,NATURALGAS"
+   ],
+   "where": [
+    "app/l2capture/__main__.py:31"
+   ]
+  },
+  {
+   "name": "OI_HISTORY_DB",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>"
+   ],
+   "where": [
+    "app/backtest/oi_history_adapter.py:53"
+   ]
+  },
+  {
+   "name": "OPENAI_API_KEY",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/ai/openai_client.py:47"
+   ]
+  },
+  {
+   "name": "OPENAI_BASE_URL",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    "https://api.openai.com/v1"
+   ],
+   "where": [
+    "app/ai/openai_client.py:40"
+   ]
+  },
+  {
+   "name": "OPENAI_MAX_RETRIES",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/ai/openai_client.py:50"
+   ]
+  },
+  {
+   "name": "OPENAI_MODEL",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    ""
+   ],
+   "where": [
+    "app/ai/openai_client.py:48"
+   ]
+  },
+  {
+   "name": "OPENAI_TIMEOUT_SEC",
+   "category": "AI_PROVIDER_CONFIG",
+   "rule": null,
+   "defaults": [
+    "8.0"
+   ],
+   "where": [
+    "app/ai/openai_client.py:49"
+   ]
+  },
+  {
+   "name": "ORDERFLOW_H1H7_SHADOW_CSV",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/orderflow/h1h7_state.py:673"
+   ]
+  },
+  {
+   "name": "PA_OF_LAB",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/main.py:317",
+    "app/pa_of_lab/api.py:138",
+    "app/pa_of_lab/api.py:147"
+   ]
+  },
+  {
+   "name": "PLATFORM_STREAM",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/platform/live.py:40"
+   ]
+  },
+  {
+   "name": "PYTEST_CURRENT_TEST",
+   "category": "TEST_ONLY",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/ai/ai_client.py:45"
+   ]
+  },
+  {
+   "name": "RULES_REGISTRY",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    "1"
+   ],
+   "where": [
+    "app/main.py:325",
+    "app/rules_registry/api.py:17"
+   ]
+  },
+  {
+   "name": "SMART_SCALPER_AUTO_ARM",
+   "category": "FEATURE_FLAG",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/smart_index_scalper/scheduler.py:155"
+   ]
+  },
+  {
+   "name": "SMART_SCALPER_POLL_SEC",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "60"
+   ],
+   "where": [
+    "app/smart_index_scalper/scheduler.py:40"
+   ]
+  },
+  {
+   "name": "SMART_SCALPER_PROFILE",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "BALANCED"
+   ],
+   "where": [
+    "app/smart_index_scalper/profiles.py:42"
+   ]
+  },
+  {
+   "name": "SMART_SCALPER_PROFILE_OVERRIDES",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/smart_index_scalper/profiles.py:48"
+   ]
+  },
+  {
+   "name": "SMART_SCALPER_UNIVERSE",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "NIFTY,BANKNIFTY,FINNIFTY,SENSEX,MIDCPNIFTY,BANKEX",
+    "NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY,SENSEX,BANKEX"
+   ],
+   "where": [
+    "app/smart_index_scalper/universe.py:14",
+    "app/mathematical_confluence/context.py:41"
+   ]
+  },
+  {
+   "name": "TELEGRAM_BOT_TOKEN",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/orderflow/notify.py:142",
+    "app/orderflow/notify.py:156",
+    "app/connectors/telegram.py:14"
+   ]
+  },
+  {
+   "name": "TELEGRAM_CHAT_ID",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/scalper.py:1082",
+    "app/scalper.py:1060",
+    "app/scalper.py:1114"
+   ]
+  },
+  {
+   "name": "TELEGRAM_SIGNALS_CHANNEL_ID",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/pipeline_core.py:48",
+    "app/orderflow/notify.py:113",
+    "app/connectors/telegram.py:67"
+   ]
+  },
+  {
+   "name": "TEST_DATABASE_URL",
+   "category": "TEST_ONLY",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/db.py:25"
+   ]
+  },
+  {
+   "name": "UPSTOX_ACCESS_TOKEN",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/upstox.py:83"
+   ]
+  },
+  {
+   "name": "UPSTOX_ANALYTICS_TOKEN",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/upstox.py:82"
+   ]
+  },
+  {
+   "name": "UPSTOX_API_KEY",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/upstox.py:61",
+    "app/connectors/upstox.py:85"
+   ]
+  },
+  {
+   "name": "UPSTOX_API_SECRET",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/upstox.py:86"
+   ]
+  },
+  {
+   "name": "UPSTOX_REDIRECT_URI",
+   "category": "SECRET_OR_ID",
+   "rule": null,
+   "defaults": [
+    null
+   ],
+   "where": [
+    "app/connectors/upstox.py:91"
+   ]
+  },
+  {
+   "name": "Z2H_DB_PATH",
+   "category": "PATH_OR_DATA",
+   "rule": null,
+   "defaults": [
+    "<expr>"
+   ],
+   "where": [
+    "app/expiry_zero_to_hero/store.py:22"
+   ]
+  },
+  {
+   "name": "Z2H_EXPIRY_CLOSE",
+   "category": "TUNING",
+   "rule": null,
+   "defaults": [
+    "15:30"
+   ],
+   "where": [
+    "app/expiry_zero_to_hero/data_collector.py:44"
+   ]
+  }
+ ],
+ "unclassified_env": [],
+ "conflicts": [
+  {
+   "concept": "daily_loss_cap",
+   "values": [
+    3000.0,
+    3,
+    2.0
+   ],
+   "items": [
+    {
+     "rule": "SG-DAILY-LOSS",
+     "value": 3000.0,
+     "unit": "INR",
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "ST-RISK-ENGINE",
+     "value": 3,
+     "unit": "pct_of_capital",
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "HOF-POLICY-RISK",
+     "value": 2.0,
+     "unit": "pct_of_capital",
+     "mode": "SHADOW"
+    }
+   ],
+   "severity": "REVIEW_UNITS"
+  },
+  {
+   "concept": "max_consecutive_losses",
+   "values": [
+    4,
+    3
+   ],
+   "items": [
+    {
+     "rule": "SG-CONSEC-LOSSES",
+     "value": 4,
+     "unit": null,
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "ST-RISK-ENGINE",
+     "value": 3,
+     "unit": null,
+     "mode": "ENFORCED"
+    }
+   ],
+   "severity": "ENFORCED_CONFLICT"
+  },
+  {
+   "concept": "max_feed_age_sec",
+   "values": [
+    20.0,
+    12
+   ],
+   "items": [
+    {
+     "rule": "EXEC-STALENESS",
+     "value": 20.0,
+     "unit": null,
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "SG-FEED-FRESH",
+     "value": 12,
+     "unit": null,
+     "mode": "ENFORCED"
+    }
+   ],
+   "severity": "ENFORCED_CONFLICT"
+  },
+  {
+   "concept": "max_trades_per_day",
+   "values": [
+    18,
+    10,
+    6
+   ],
+   "items": [
+    {
+     "rule": "SG-MAX-TRADES",
+     "value": 18,
+     "unit": null,
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "ST-RISK-ENGINE",
+     "value": 10,
+     "unit": null,
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "HOF-POLICY-RISK",
+     "value": 6,
+     "unit": null,
+     "mode": "SHADOW"
+    }
+   ],
+   "severity": "ENFORCED_CONFLICT"
+  },
+  {
+   "concept": "min_ev_r",
+   "values": [
+    0.12,
+    0.05
+   ],
+   "items": [
+    {
+     "rule": "ST-EV-GATE",
+     "value": 0.12,
+     "unit": null,
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "HCS-VETO-POOR-EV",
+     "value": 0.05,
+     "unit": null,
+     "mode": "SHADOW"
+    }
+   ],
+   "severity": "INFO"
+  },
+  {
+   "concept": "min_reward_risk",
+   "values": [
+    1.3,
+    1.5
+   ],
+   "items": [
+    {
+     "rule": "ST-EV-GATE",
+     "value": 1.3,
+     "unit": null,
+     "mode": "ENFORCED"
+    },
+    {
+     "rule": "SIG-FINAL-GATE",
+     "value": 1.5,
+     "unit": null,
+     "mode": "OFF_BY_DEFAULT"
+    },
+    {
+     "rule": "HCS-VETO-RR",
+     "value": 1.3,
+     "unit": null,
+     "mode": "SHADOW"
+    },
+    {
+     "rule": "HOF-POLICY-RISK",
+     "value": 1.3,
+     "unit": null,
+     "mode": "SHADOW"
+    }
+   ],
+   "severity": "INFO"
+  }
+ ],
+ "problems": [],
+ "not_yet_inventoried": [
+  {
+   "path": "app/engines/scalp_strategy.py",
+   "why": "decide_from_context internals beyond the filter defaults (score blending, MTF/regime weights, option selection) are not enumerated rule-by-rule"
+  },
+  {
+   "path": "app/engines/state_classifier.py",
+   "why": "signal-state classification rules"
+  },
+  {
+   "path": "app/engines/option_engine.py",
+   "why": "select_option / analyse_leg quality rules"
+  },
+  {
+   "path": "app/nse_official/controls.py",
+   "why": "production_gate"
+  },
+  {
+   "path": "app/hedging/runner.py",
+   "why": "_kill_switch_breach"
+  },
+  {
+   "path": "app/platform/marketdata/service.py",
+   "why": "trading_blocked"
+  },
+  {
+   "path": "app/mathematical_confluence",
+   "why": "research-only confluence engine"
+  },
+  {
+   "path": "app/institutional_edge",
+   "why": "edge-score state machine (research)"
+  },
+  {
+   "path": "app/liquidity_sweep",
+   "why": "NOT READY strategy (research)"
+  }
+ ]
+}

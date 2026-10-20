@@ -320,6 +320,14 @@ try:
 except Exception as _e:
     print(f"[pa_of_lab] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Rules registry: READ-ONLY inventory of every trading rule/gate (scan of the code vs rules.yaml). Kill switch: RULES_REGISTRY=0 ----
+try:
+    if os.environ.get("RULES_REGISTRY", "1").strip().lower() not in ("0", "false", "off", "no"):
+        from .rules_registry import api as _rules_registry_api
+        app.include_router(_rules_registry_api.router)
+except Exception as _e:
+    print(f"[rules_registry] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:
