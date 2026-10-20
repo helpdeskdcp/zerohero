@@ -22,7 +22,7 @@ Open the **Submit** tab and fill:
 | Underlying | one of the five | NIFTY |
 | Expiry | `27OCT2026` or `2026-10-27` | 27OCT2026 |
 | Strike / CE or PE | the option you would buy | 23000 CE |
-| Entry mode | **ABOVE**: buy only if the option trades up to your price; **NEAR**: buy at the next available price; **MARKET**: same as NEAR | ABOVE |
+| Entry mode | **LIMIT**: a buy limit — you are filled as soon as the ask comes down to your entry or lower (valid until session end); **ABOVE**: buy only when the option trades up to your price; **NEAR / MARKET**: buy at the next available ask | LIMIT |
 | Entry | option premium (not the index level) | 100 |
 | Stop-loss | premium; must be below entry | 85 |
 | Targets | premium(s) above entry, comma separated | 120, 140 |
@@ -31,11 +31,19 @@ Open the **Submit** tab and fill:
 Tick **"I have not entered this trade yet"** and press Submit. The server stamps the time. You get an id (H00001 …) and a hash. **You cannot edit or delete** a submitted signal; if you changed your mind, submit a new one (the old one still counts).
 A trade you did not submit before entering **does not exist** for scoring.
 
+## 4b. Managing the trade after entry (amend, trail, emergency exit)
+In **My signals → Manage a signal** you can, at any time while the exchange is open:
+- **Change targets** (e.g. move the target further if it is not being reached) — **Change stop-loss** — **Trailing stop** (by points or %, follows the highest bid since entry) — **Emergency exit** (sell at the next bid) — **Cancel** a still-pending entry.
+Each action is recorded with the **server time** and takes effect **20 seconds later** (the same delay everything has). It is never applied retroactively and cannot be undone; a signal can have at most 20 actions. The same rules are applied to the AI: its own real-time management (stops, trailing, time exit) is replayed as the same kind of timed events, so both sides are managed under the same mechanics.
+
+## 4c. Information barrier (the AI cannot see your signals)
+The AI engine is frozen (code hashes in the forward-test manifest) and **no trading module imports the arena code**: a test fails if any engine file refers to it. Your signals are readable only with your token and by the two referees. The AI side's trades are timestamped by the platform before you can compare them.
+
 ## 5. How every signal is settled (same for you and the AI)
 1. Execution starts **20 seconds after** your submission time (first recorded quote after that).
 2. You **buy at the ask**; you **sell at the bid**. Where a recorded quote has no bid/ask, a half-spread is used (measured where we have data, otherwise a stated assumption; shown in the Standings tab).
-3. ABOVE waits until the traded price reaches your entry, then fills at the higher of the ask and your entry. NEAR/MARKET fills at the next ask, unless it is already more than 5% above your entry (then it is MISSED).
-4. Exit at the **first** recorded quote where the sell price is at or below your stop (gap = that price), or at/above your **first target (T1)**; otherwise at the session end (NSE/BSE 15:15, MCX 23:15).
+3. LIMIT fills at the ask once the ask is at or below your entry. ABOVE waits until the traded price reaches your entry, then fills at the higher of the ask and your entry. NEAR/MARKET fills at the next ask, unless it is already more than 5% above your entry (then it is MISSED).
+4. Exit at the **first** recorded quote where the sell price is at or below your (current or trailing) stop (gap = that price), or at/above your **current first target**, or on your emergency exit; otherwise at the session end (NSE/BSE 15:15, MCX 23:15).
 5. **Costs:** brokerage, STT, exchange, SEBI fee, stamp duty and GST are deducted; slippage is already inside the bid/ask fills.
 6. If there is not enough recorded data to settle a signal, it is shown as NO_DATA with the reason and is reported for both sides.
 

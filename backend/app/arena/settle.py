@@ -2,7 +2,8 @@
   * execution delay: first snapshot at/after signal time + LATENCY_SEC (same for both sides).
   * BUY fills at the ASK (observed); SELL (SL / target / time exit) at the BID. Where a snapshot has no usable bid/ask (all SENSEX and MCX option rows today), the fill is LTP -/+ the
     instrument's half-spread from spread_model (measured where data exists, else a stated fallback) - applied to BOTH sides.
-  * ABOVE x: waits for ltp >= x, fills at max(ask, x). NEAR/MARKET: next snapshot ask; MISSED if it is >5% above the stated entry high.
+  * ABOVE x: waits for ltp >= x, fills at max(ask, x). LIMIT x: buy limit, fills at the ask once ask <= x (valid to session end). NEAR/MARKET: next snapshot ask; MISSED if it is >5% above the stated entry high.
+  * management events (amend SL / targets, trailing stop, emergency exit, cancel) take effect 20 s after their server timestamp, never retroactively; the AI's own recorded management is replayed as the same event types.
   * exit on the first snapshot whose sell price <= SL (gap: that price) or >= target (T1 policy by default; 'LAST' = last target); forced exit at session end.
   * resolution is the snapshot interval (about 1-3 minutes per strike): brief spikes between snapshots are NOT seen, for either side.
   * costs: brokerage + STT/exchange/SEBI/stamp/GST via the cost models, slippage already inside the fills (not added twice). One lot per signal."""
@@ -59,8 +60,19 @@ def cost_points(und: str, entry: float, exit_: float, lot: int) -> float | None:
     return estimate_index_option_cost(entry, max(exit_, 0.05), lot, lots=1, slippage_points=0.0)["total_cost_points"]
 
 
+def _apply(ev: dict, st: dict) -> None:
+    a = ev["action"]
+    if a == "AMEND_SL": st["sl"] = float(ev["sl"])
+    elif a == "AMEND_TARGETS": st["targets"] = sorted({float(x) for x in ev["targets"]})
+    elif a == "TRAIL_SL": st["trail_points"] = ev.get("trail_points"); st["trail_pct"] = ev.get("trail_pct")
+    elif a == "CANCEL" or a == "EXIT_NOW": st[a] = True
+
+
 def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T1", latency: int = LATENCY_SEC) -> dict:
-    """sig: underlying, strike, option_type, entry_mode, entry (low), entry_hi (opt), sl, targets[], t (epoch). Returns a result dict (status SETTLED|MISSED|NOT_TRIGGERED|NO_DATA)."""
+    """Event-driven. sig: underlying, strike, option_type, entry_mode (ABOVE|NEAR|MARKET|LIMIT), entry (low), entry_hi (opt), sl, targets[], t (epoch) and optional events[]
+    ({t, action: AMEND_SL|AMEND_TARGETS|TRAIL_SL|EXIT_NOW|CANCEL, ...}). An event is effective on the first snapshot at/after event.t + latency (same delay for every action, both sides);
+    events never act retroactively and are ignored once the trade is closed. LIMIT: a buy limit at `entry`, fills at the ask as soon as ask <= entry (valid to session end).
+    Returns status SETTLED | MISSED | NOT_TRIGGERED | CANCELLED | NO_DATA:reason."""
     und = sig["underlying"]; base = {"id": sig.get("id"), "participant": sig.get("participant"), "underlying": und, "strike": sig["strike"], "type": sig["option_type"], "t": sig["t"], "entry_mode": sig["entry_mode"]}
     try: lot = int(get_instrument_profile(und).lot_size.value)
     except Exception: lot = None
@@ -68,31 +80,46 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     exch = "MCX" if und in MCX else "NSE"; end_min = SESSION_END_MIN[exch]; t0 = sig["t"] + latency
     live = [s for s in snaps if s["t"] >= t0]
     if not live: return {**base, "status": "NO_DATA:no_snapshot_after_signal"}
-    fill = None; used_real_fill = False; j = None
-    if sig["entry_mode"] == "ABOVE":
-        for i, s in enumerate(live):
-            if _mod(s["t"]) >= end_min - 5: break
-            if s["ltp"] >= sig["entry"]:
-                p, real = buy_px(s, half_spread); fill, used_real_fill, j = max(p, sig["entry"]), real, i; break
-        if fill is None: return {**base, "status": "NOT_TRIGGERED"}
-    else:
-        p, real = buy_px(live[0], half_spread)
-        if p > sig.get("entry_hi", sig["entry"]) * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}
-        fill, used_real_fill, j = p, real, 0
-    tgt = (sig["targets"][0] if policy == "T1" else sig["targets"][-1]) if sig["targets"] else None
-    px = why = None; k_exit = j; real_exit = False
+    evs = sorted(({**e, "t_eff": e["t"] + latency} for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
+    st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None}
+    applied = 0
+
+    def drain(upto: float):
+        nonlocal ei, applied
+        while ei < len(evs) and evs[ei]["t_eff"] <= upto: _apply(evs[ei], st); ei += 1; applied += 1
+
+    fill = None; real_fill = False; j = None
+    for i, s in enumerate(live):
+        if _mod(s["t"]) >= end_min - 5: break
+        drain(s["t"])
+        if st.get("CANCEL") or st.get("EXIT_NOW"): return {**base, "status": "CANCELLED", "events_applied": applied}
+        mode = sig["entry_mode"]; p, real = buy_px(s, half_spread)
+        if mode == "ABOVE":
+            if s["ltp"] >= sig["entry"]: fill, real_fill, j = max(p, sig["entry"]), real, i; break
+        elif mode == "LIMIT":
+            if p <= sig["entry"]: fill, real_fill, j = p, real, i; break
+        else:                                                    # NEAR / MARKET: first snapshot only
+            if p > sig.get("entry_hi", sig["entry"]) * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}
+            fill, real_fill, j = p, real, i; break
+    if fill is None: return {**base, "status": "NOT_TRIGGERED", "events_applied": applied}
+    hwm = sell_px(live[j], half_spread)[0]; px = why = None; k_exit = j; real_exit = False
     for k in range(j + 1, len(live)):
-        s = live[k]
-        if _mod(s["t"]) >= end_min: px, real_exit = sell_px(s, half_spread); why = "TIME"; k_exit = k; break
-        sp, real = sell_px(s, half_spread); k_exit = k
-        if sig["sl"] is not None and sp <= sig["sl"]: px, why, real_exit = sp, "SL", real; break
-        if tgt is not None and sp >= tgt: px, why, real_exit = sp, "TARGET", real; break
+        s = live[k]; sp, real = sell_px(s, half_spread); k_exit = k; drain(s["t"]); hwm = max(hwm, sp)
+        if _mod(s["t"]) >= end_min: px, real_exit, why = sp, real, "TIME"; break
+        if st.get("EXIT_NOW"): px, real_exit, why = sp, real, "EMERGENCY"; break
+        trail = None
+        if st["trail_points"]: trail = hwm - float(st["trail_points"])
+        elif st["trail_pct"]: trail = hwm * (1 - float(st["trail_pct"]) / 100.0)
+        eff_sl = st["sl"] if trail is None else max(st["sl"] if st["sl"] is not None else -1e18, trail)
+        if eff_sl is not None and sp <= eff_sl: px, real_exit, why = sp, real, ("TRAIL" if (trail is not None and trail >= (st["sl"] or -1e18)) else "SL"); break
+        tg = (st["targets"][0] if policy == "T1" else st["targets"][-1]) if st["targets"] else None
+        if tg is not None and sp >= tg: px, real_exit, why = sp, real, "TARGET"; break
     if px is None: return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill}
     c = cost_points(und, fill, px, lot)
     if c is None: return {**base, "status": "NO_DATA:no_cost_model"}
     gross = (px - fill) * lot; cost = c * lot
-    return {**base, "status": "SETTLED", "fill": fill, "exit": px, "exit_reason": why, "fill_real_quote": used_real_fill, "exit_real_quote": real_exit, "lot": lot, "gross_rs": gross, "cost_rs": cost,
-            "net_rs": gross - cost, "hold_sec": live[k_exit]["t"] - live[j]["t"], "fill_t": live[j]["t"]}
+    return {**base, "status": "SETTLED", "fill": fill, "exit": px, "exit_reason": why, "fill_real_quote": real_fill, "exit_real_quote": real_exit, "lot": lot, "gross_rs": gross, "cost_rs": cost,
+            "net_rs": gross - cost, "hold_sec": live[k_exit]["t"] - live[j]["t"], "fill_t": live[j]["t"], "events_applied": applied}
 
 
 def summarize(results: list[dict], capital: float = 50000.0) -> dict:

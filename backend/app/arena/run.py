@@ -14,7 +14,7 @@ CAPITAL = 50000.0
 def ai_signals(chanakya_db: str, since_date: str, until_date: str | None = None) -> list[dict]:
     c = sqlite3.connect(f"file:{chanakya_db}?mode=ro", uri=True, timeout=30); c.row_factory = sqlite3.Row
     try:
-        rows = c.execute("SELECT trade_id,underlying,expiry,strike,option_type,opened_ts,entry,stop_loss,target_1,target_2 FROM ai_paper_trades WHERE strategy='AUTOSCALP' AND entry>0 "
+        rows = c.execute("SELECT trade_id,underlying,expiry,strike,option_type,opened_ts,closed_ts,entry,stop_loss,target_1,target_2 FROM ai_paper_trades WHERE strategy='AUTOSCALP' AND entry>0 "
                          "AND stop_loss>0 AND target_1>0 AND substr(opened_ts,1,10)>=? AND substr(opened_ts,1,10)<=? ORDER BY opened_ts", (since_date, until_date or "9999-12-31")).fetchall()
     finally:
         c.close()
@@ -23,17 +23,21 @@ def ai_signals(chanakya_db: str, since_date: str, until_date: str | None = None)
         try: exp = SU.norm_expiry(r["expiry"])
         except Exception: continue
         t = datetime.fromisoformat(r["opened_ts"]).timestamp()
+        ev = [{"t": datetime.fromisoformat(r["closed_ts"]).timestamp(), "action": "EXIT_NOW"}] if r["closed_ts"] else []         # the AI's own recorded exit decision (TIME/TRAIL/...), replayed as the same event type
         out.append({"id": r["trade_id"], "participant": "ZEROHERO_AI", "underlying": r["underlying"], "expiry": exp, "strike": r["strike"], "option_type": r["option_type"], "entry_mode": "NEAR",
-                    "entry": r["entry"], "entry_hi": r["entry"], "sl": r["stop_loss"], "targets": [x for x in (r["target_1"], r["target_2"]) if x], "t": t})
+                    "entry": r["entry"], "entry_hi": r["entry"], "sl": r["stop_loss"], "targets": [x for x in (r["target_1"], r["target_2"]) if x], "t": t, "events": ev})
     return out
 
 
 def human_signals(path: str | None = None, start: str | None = None, end: str | None = None, include_practice: bool = False) -> list[dict]:
     """Scoring set: practice entries and anything outside [start, end] (IST dates) never count."""
     def day(r): return datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
-    rows = [r for r in SU.load(path) if (include_practice or not r.get("practice")) and (not start or day(r) >= start) and (not end or day(r) <= end)]
+    allrecs = SU.load(path); evs: dict[str, list] = {}
+    for r in allrecs:
+        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct") if k in r} | {"t": r["server_ts"]})
+    rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or not r.get("practice")) and (not start or day(r) >= start) and (not end or day(r) <= end)]
     return [{"id": r["id"], "participant": r["participant"], "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
-             "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": r["server_ts"]} for r in rows]
+             "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": r["server_ts"], "events": evs.get(r["id"], [])} for r in rows]
 
 
 def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", capital: float = CAPITAL) -> dict:

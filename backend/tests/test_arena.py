@@ -118,14 +118,17 @@ def test_run_settles_both_sides_identically(tmp_path):
     assert ra["status"] == rb["status"] == "SETTLED" and ra["net_rs"] == rb["net_rs"] and ra["spread_source"].startswith("MEASURED")
 
 
-def test_ai_signal_loader_reads_only_autoscalp_since_date(tmp_path):
+def test_ai_signal_loader_reads_only_autoscalp_since_date_and_replays_exit_as_event(tmp_path):
     p = str(tmp_path / "c.db"); c = sqlite3.connect(p)
-    c.execute("CREATE TABLE ai_paper_trades (trade_id TEXT, underlying TEXT, expiry TEXT, strike REAL, option_type TEXT, opened_ts TEXT, entry REAL, stop_loss REAL, target_1 REAL, target_2 REAL, strategy TEXT)")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('a','NIFTY','27OCT2026',23000,'CE','2026-10-21T04:30:00+00:00',100,85,120,140,'AUTOSCALP')")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('b','NIFTY','27OCT2026',23000,'CE','2026-10-21T04:30:00+00:00',100,85,120,140,'MANUAL')")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('c','NIFTY','27OCT2026',23000,'CE','2026-10-19T04:30:00+00:00',100,85,120,140,'AUTOSCALP')")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('d','NIFTY','27OCT2026',23000,'CE','2026-10-21T04:30:00+00:00',100,NULL,NULL,NULL,'AUTOSCALP')"); c.commit(); c.close()
+    c.execute("CREATE TABLE ai_paper_trades (trade_id TEXT, underlying TEXT, expiry TEXT, strike REAL, option_type TEXT, opened_ts TEXT, closed_ts TEXT, entry REAL, stop_loss REAL, target_1 REAL, target_2 REAL, strategy TEXT)")
+    ins = "INSERT INTO ai_paper_trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+    c.execute(ins, ("a", "NIFTY", "27OCT2026", 23000, "CE", "2026-10-21T04:30:00+00:00", "2026-10-21T04:55:00+00:00", 100, 85, 120, 140, "AUTOSCALP"))
+    c.execute(ins, ("b", "NIFTY", "27OCT2026", 23000, "CE", "2026-10-21T04:30:00+00:00", None, 100, 85, 120, 140, "MANUAL"))
+    c.execute(ins, ("c", "NIFTY", "27OCT2026", 23000, "CE", "2026-10-19T04:30:00+00:00", None, 100, 85, 120, 140, "AUTOSCALP"))
+    c.execute(ins, ("d", "NIFTY", "27OCT2026", 23000, "CE", "2026-10-21T04:30:00+00:00", None, 100, None, None, None, "AUTOSCALP"))
+    c.commit(); c.close()
     got = R.ai_signals(p, "2026-10-21"); assert [g["id"] for g in got] == ["a"] and got[0]["participant"] == "ZEROHERO_AI" and got[0]["expiry"] == "2026-10-27"
+    assert got[0]["events"] == [{"t": datetime.fromisoformat("2026-10-21T04:55:00+00:00").timestamp(), "action": "EXIT_NOW"}]
 
 
 def test_modules_are_read_only_and_have_no_order_or_network_code():
@@ -134,3 +137,93 @@ def test_modules_are_read_only_and_have_no_order_or_network_code():
         s = open(os.path.join(d, f)).read()
         for bad in ("requests", "urllib", "socket", "app.execution", "place_order", "subprocess"): assert bad not in s, (f, bad)
     assert "mode=ro" in open(os.path.join(d, "settle.py")).read() and "mode=ro" in open(os.path.join(d, "spread_model.py")).read()
+
+
+# ---------------- order types and management events ----------------
+def ev(hhmm, action, **kw): return {"t": ep(hhmm), "action": action, **kw}
+
+
+def test_limit_buy_waits_for_the_price_to_come_down_and_fills_at_ask():
+    sn = snaps([("10:01", 110, 109, 111), ("10:03", 104, 103, 105), ("10:05", 99, 98, 99.5), ("10:10", 125, 124, 126)])
+    r = S.settle(sig(entry_mode="LIMIT", entry=100.0, sl=90.0, targets=[120.0]), sn, half_spread=H)
+    assert r["status"] == "SETTLED" and r["fill"] == 99.5 and r["fill_t"] == ep("10:05") and r["exit_reason"] == "TARGET"
+    assert S.settle(sig(entry_mode="LIMIT", entry=80.0), sn, half_spread=H)["status"] == "NOT_TRIGGERED"
+
+
+def test_cancel_before_fill_and_exit_now_before_fill_cancel():
+    sn = snaps([("10:01", 110, 109, 111), ("10:05", 104, 103, 105), ("10:10", 99, 98, 99.5)])
+    for a in ("CANCEL", "EXIT_NOW"):
+        r = S.settle(sig(entry_mode="LIMIT", entry=100.0, events=[ev("10:02", a)]), sn, half_spread=H); assert r["status"] == "CANCELLED"
+    r = S.settle(sig(entry_mode="LIMIT", entry=100.0, sl=90.0, targets=[200.0], events=[ev("10:09", "CANCEL")]), sn, half_spread=H)
+    assert r["status"] == "CANCELLED"                                                                          # cancel effective before the 10:10 fill snapshot
+
+
+def test_events_have_the_same_20s_delay_and_are_never_retroactive():
+    sn = snaps([("10:01", 100, 99, 101), ("10:02", 100, 99, 101), ("10:03", 90, 89, 91), ("10:05", 130, 129, 131)])
+    # SL raised to 95 at 10:02:50 would only apply from 10:03:10 -> the 10:03 snapshot (bid 89) is the first affected one, but 10:03 < 10:03:10, so the old SL 85 holds there
+    late = {"t": ep("10:02") + 50, "action": "AMEND_SL", "sl": 95.0}
+    r = S.settle(sig(events=[late]), sn, half_spread=H); assert r["exit_reason"] == "TARGET"                         # 10:03 bid 89 is above old SL 85: not stopped; target hit later
+    early = {"t": ep("10:02") - 10, "action": "AMEND_SL", "sl": 95.0}
+    r = S.settle(sig(events=[early]), sn, half_spread=H); assert r["exit_reason"] == "SL" and r["exit"] == 89 and r["events_applied"] == 1
+
+
+def test_amend_targets_extends_the_ride_and_amend_sl_locks_profit():
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 118, 117, 119), ("10:10", 121, 120, 122), ("10:15", 160, 159, 161), ("10:20", 150, 149, 151)])
+    base = S.settle(sig(), sn, half_spread=H); assert base["exit"] == 120 and base["exit_reason"] == "TARGET"
+    r = S.settle(sig(events=[ev("10:06", "AMEND_TARGETS", targets=[155.0])]), sn, half_spread=H); assert r["exit"] == 159 and r["exit_reason"] == "TARGET" and r["net_rs"] > base["net_rs"]
+    sn2 = snaps([("10:01", 100, 99, 101), ("10:05", 115, 114, 116), ("10:10", 108, 107, 109), ("10:15", 130, 129, 131)])
+    r = S.settle(sig(targets=[150.0], events=[ev("10:06", "AMEND_SL", sl=110.0)]), sn2, half_spread=H); assert r["exit_reason"] == "SL" and r["exit"] == 107       # stop moved above entry, gap fills at bid
+
+
+def test_trailing_stop_points_and_pct():
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 120, 119, 121), ("10:10", 140, 139, 141), ("10:15", 128, 127, 129), ("10:20", 150, 149, 151)])
+    r = S.settle(sig(targets=[200.0], events=[ev("10:02", "TRAIL_SL", trail_points=10.0)]), sn, half_spread=H)
+    assert r["exit_reason"] == "TRAIL" and r["exit"] == 127                                                       # hwm 139 - 10 = 129 >= bid 127
+    r = S.settle(sig(targets=[200.0], events=[ev("10:02", "TRAIL_SL", trail_pct=5.0)]), sn, half_spread=H)
+    assert r["exit_reason"] == "TRAIL" and r["exit"] == 127                                                       # 139*0.95 = 132.05
+    r = S.settle(sig(targets=[200.0], events=[ev("10:02", "TRAIL_SL", trail_pct=30.0)]), sn, half_spread=H)
+    assert r["status"] == "NO_DATA:no_exit_snapshot"                                                              # wide trail never triggered and no session-end snapshot: unsettled, not guessed
+
+
+def test_emergency_exit_sells_at_bid_after_delay_and_later_events_are_ignored():
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 108, 107, 109), ("10:10", 90, 89, 91), ("10:15", 130, 129, 131)])
+    r = S.settle(sig(targets=[200.0], events=[ev("10:04", "EXIT_NOW"), ev("10:12", "AMEND_SL", sl=1.0)]), sn, half_spread=H)
+    assert r["exit_reason"] == "EMERGENCY" and r["exit"] == 107 and r["fill_t"] == ep("10:01") and r["events_applied"] >= 1
+
+
+def test_ai_exit_event_backstop_does_not_override_an_earlier_stop():
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 80, 79, 81), ("10:30", 95, 94, 96)])
+    r = S.settle(sig(events=[ev("10:25", "EXIT_NOW")]), sn, half_spread=H); assert r["exit_reason"] == "SL" and r["exit"] == 79
+
+
+def test_event_validation_and_submission(tmp_path):
+    p = str(tmp_path / "h.jsonl"); s1 = SU.submit({**GOODSUB, "entry_mode": "limit"}, p, now=ep("10:00"))
+    e1 = SU.submit_event({"signal_id": s1["id"], "action": "amend_sl", "sl": 95}, "SEBI_TRADER", p, now=ep("10:05"))
+    e2 = SU.submit_event({"signal_id": s1["id"], "action": "TRAIL_SL", "trail_pct": 5}, "SEBI_TRADER", p, now=ep("10:06"))
+    assert e1["id"] == "E00001" and e2["id"] == "E00002" and e1["action"] == "AMEND_SL" and L.verify_chain(p)[0] and s1["entry_mode"] == "LIMIT"
+    for bad in ({"action": "BUY_MORE"}, {"action": "AMEND_SL", "sl": 0}, {"action": "AMEND_TARGETS", "targets": []}, {"action": "TRAIL_SL"}, {"action": "TRAIL_SL", "trail_points": 1, "trail_pct": 5}, {"action": "TRAIL_SL", "trail_pct": 100}, {"signal_id": "H99999", "action": "CANCEL"}):
+        with pytest.raises(SU.SubmissionError): SU.submit_event({"signal_id": s1["id"], "action": "CANCEL", **bad}, "SEBI_TRADER", p)
+    with pytest.raises(SU.SubmissionError): SU.submit_event({"signal_id": s1["id"], "action": "CANCEL"}, "SOMEONE_ELSE", p)                    # not their signal
+    for i in range(SU.MAX_EVENTS_PER_SIGNAL - 2): SU.submit_event({"signal_id": s1["id"], "action": "EXIT_NOW"}, "SEBI_TRADER", p)
+    with pytest.raises(SU.SubmissionError, match="at most"): SU.submit_event({"signal_id": s1["id"], "action": "EXIT_NOW"}, "SEBI_TRADER", p)
+
+
+def test_human_loader_attaches_events_and_signal_ids_ignore_events(tmp_path):
+    p = str(tmp_path / "h.jsonl"); day = lambda d: datetime.fromisoformat(f"{d}T05:00:00+00:00").timestamp()
+    a = SU.submit(GOODSUB, p, now=day("2026-10-27")); SU.submit_event({"signal_id": a["id"], "action": "AMEND_SL", "sl": 90}, "SEBI_TRADER", p, now=day("2026-10-27") + 60)
+    b = SU.submit(GOODSUB, p, now=day("2026-10-27") + 120); assert b["id"] == "H00002"
+    got = R.human_signals(p, start="2026-10-26", end="2026-11-25"); assert [g["id"] for g in got] == ["H00001", "H00002"] and got[0]["events"] == [{"action": "AMEND_SL", "sl": 90.0, "t": day("2026-10-27") + 60}] and got[1]["events"] == []
+    assert SU.load(p)[1]["type"] == "HUMAN_EVENT"
+
+
+def test_information_barrier_no_trading_code_imports_the_arena():
+    """The AI engine must be unable to read the human side's signals: nothing outside app/arena imports it (except the router mount and the auth-exempt hook)."""
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app"); bad = []
+    for dp, _, fs in os.walk(root):
+        if "__pycache__" in dp or os.sep + "arena" in dp: continue
+        for f in fs:
+            if not f.endswith(".py"): continue
+            src = open(os.path.join(dp, f), encoding="utf-8").read()
+            if ("arena" in src.lower()) and f not in ("main.py", "dhan_routes.py", "rules.yaml") and "rules_registry" not in dp: bad.append(os.path.relpath(os.path.join(dp, f), root))
+    assert bad == [], f"modules referencing the arena (information barrier): {bad}"
+    for f in ("app/autoscalp/runner.py", "app/engines/scalp_strategy.py", "app/rules_engine/shadow.py"): assert "arena" not in open(os.path.join(os.path.dirname(root), f)).read().lower()

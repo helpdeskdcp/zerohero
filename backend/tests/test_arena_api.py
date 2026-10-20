@@ -121,3 +121,43 @@ def test_compare_draw_ahead_and_insufficient():
     noisy_a, noisy_b = _res([500, -400, 300, -200, 100, 50, -100, 400]), _res([-300, 450, -100, 200, -50, 120, 80, -350])
     assert CMP.compare(noisy_a, noisy_b)["verdict"] == "DRAW"
     assert CMP.compare(_res([300, 310, 290, 305, 295, 300, 310, 290]), _res([-10, -5, -12, -8, -9, -11, -7, -6]))["verdict"] == "A_AHEAD"
+
+
+# ---------------- management events ----------------
+def _sub(client, **kw):
+    r = client.post("/api/arena/public/submit", json={**GOOD, "entry_mode": "LIMIT", **kw}, headers=H); assert r.status_code == 200, r.text; return r.json()["id"]
+
+
+def test_amend_flow_events_listed_and_validated(client):
+    sid = _sub(client)
+    assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "AMEND_SL", "sl": 95}).status_code == 401
+    r = client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "AMEND_TARGETS", "targets": [150, 180]}, headers=H); assert r.status_code == 200 and r.json()["practice"] is True and r.json()["id"] == "E00001"
+    assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "TRAIL_SL", "trail_pct": 5}, headers=H).status_code == 200
+    assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "EXIT_NOW"}, headers=H).status_code == 200
+    for bad in ({"action": "AMEND_SL", "sl": 0}, {"action": "HACK"}, {"signal_id": "H99999", "action": "CANCEL"}, {"action": "TRAIL_SL", "trail_points": 1, "trail_pct": 5}):
+        assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "CANCEL", **bad}, headers=H).status_code == 422
+    sig = client.get("/api/arena/public/signals", headers=H).json()["signals"][0]
+    assert sig["entry_mode"] == "LIMIT" and [e["action"] for e in sig["events"]] == ["AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW"]
+    assert L.verify_chain(SU.PATH)[0] and len(client.get("/api/arena/public/signals", headers=H).json()["signals"]) == 1                      # events are not signals
+
+
+def test_amend_live_mode_needs_open_market_and_ended_rejects(client, monkeypatch):
+    sid = _sub(client)                                                                                            # practice signal
+    monkeypatch.setenv("ARENA_START", "2000-01-01"); monkeypatch.setenv("ARENA_END", "2999-01-01")
+    from app import market_calendar as mc
+    monkeypatch.setattr(mc, "is_trading", lambda ex, *a, **k: False)
+    assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "EXIT_NOW"}, headers=H).status_code == 409
+    monkeypatch.setattr(mc, "is_trading", lambda ex, *a, **k: True)
+    assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "EXIT_NOW"}, headers=H).status_code == 200
+    monkeypatch.setenv("ARENA_END", "2000-02-01"); assert client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "EXIT_NOW"}, headers=H).status_code == 409
+
+
+def test_events_flow_into_scored_signals_and_settlement(tmp_path):
+    from app.arena import settle as S
+    p = str(tmp_path / "h.jsonl"); day = lambda hhmm: datetime.fromisoformat(f"2026-10-27T{hhmm}:00+05:30").timestamp()
+    base = {k: v for k, v in GOOD.items() if k != "participant"}
+    a = SU.submit({**base, "participant": "SEBI_TRADER", "entry_mode": "LIMIT", "entry": 100, "sl": 90, "targets": [120]}, p, now=day("10:00"))
+    SU.submit_event({"signal_id": a["id"], "action": "AMEND_TARGETS", "targets": [150]}, "SEBI_TRADER", p, now=day("10:04"))
+    sig = R.human_signals(p, start="2026-10-26", end="2026-11-25")[0]
+    sn = [{"t": day(t), "ltp": l, "bid": b, "ask": k} for t, l, b, k in [("10:01", 100, 99, 100), ("10:05", 125, 124, 126), ("10:10", 151, 150, 152), ("10:15", 140, 139, 141)]]
+    r = S.settle(sig, sn, half_spread=0.01); assert r["status"] == "SETTLED" and r["exit"] == 150 and r["exit_reason"] == "TARGET" and r["events_applied"] == 1

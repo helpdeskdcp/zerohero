@@ -59,7 +59,25 @@ function verdictText(c, humanName) {
   return (c.verdict === "A_AHEAD" ? "ZeroHero AI is ahead" : `${humanName} is ahead`) + " in this period: " + gap + ". Ahead ≠ proven.";
 }
 
-if (typeof module !== "undefined") module.exports = { validateForm, renderMarkdown, sideCard, verdictText, rs, pct, esc, ALLOWED };
+/* management event form -> {ok, errors, payload} (mirrors submit.validate_event) */
+function validateEvent(v) {
+  const err = [], a = String(v.action || "").toUpperCase(), n = (k) => (v[k] === "" || v[k] === undefined ? NaN : Number(v[k]));
+  if (!v.signal_id) err.push("Choose a signal");
+  if (!["AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL"].includes(a)) err.push("Choose an action");
+  const payload = { signal_id: v.signal_id, action: a };
+  if (a === "AMEND_SL") { if (!(n("sl") > 0)) err.push("New stop-loss must be > 0"); else payload.sl = n("sl"); }
+  if (a === "AMEND_TARGETS") { const t = String(v.targets || "").split(",").map((x) => x.trim()).filter(Boolean).map(Number); if (!t.length || t.some((x) => !(x > 0))) err.push("Give one or more targets (> 0)"); else payload.targets = [...new Set(t)].sort((x, y) => x - y); }
+  if (a === "TRAIL_SL") {
+    const pts = n("trail_points"), pct = n("trail_pct");
+    if (!Number.isNaN(pts) === !Number.isNaN(pct)) err.push("Give exactly one of: trail points, trail %");
+    else if (!Number.isNaN(pts)) { if (!(pts > 0)) err.push("Trail points must be > 0"); else payload.trail_points = pts; }
+    else { if (!(pct > 0 && pct < 100)) err.push("Trail % must be between 0 and 100"); else payload.trail_pct = pct; }
+  }
+  if (!v.confirm) err.push("Tick the confirmation: this cannot be undone");
+  return { ok: err.length === 0, errors: err, payload };
+}
+
+if (typeof module !== "undefined") module.exports = { validateForm, validateEvent, renderMarkdown, sideCard, verdictText, rs, pct, esc, ALLOWED };
 
 if (typeof window !== "undefined" && typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id);
@@ -81,7 +99,9 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   async function loadMine() {
     const tb = $("mine"); tb.replaceChildren();
     try { const j = await api("/signals"); if (!j.signals.length) { tb.insertRow().insertCell().textContent = "nothing submitted yet"; return; }
-      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, r.server_iso.replace("T", " ").slice(0, 19), r.practice ? "PRACTICE" : "SCORED", `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "), r.hash.slice(0, 10)].forEach((v) => (tr.insertCell().textContent = v)); } }
+      const sel = $("mgSignal"); sel.replaceChildren(...j.signals.slice().reverse().map((r) => { const o = document.createElement("option"); o.value = r.id; o.textContent = `${r.id} · ${r.underlying} ${r.strike}${r.option_type} ${r.entry_mode} ${r.entry}`; return o; }));
+      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, r.server_iso.replace("T", " ").slice(0, 19), r.practice ? "PRACTICE" : "SCORED", `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "),
+        (r.events || []).map((e) => e.action + (e.sl ? " " + e.sl : "") + (e.targets ? " " + e.targets.join("/") : "") + (e.trail_points ? " " + e.trail_points + "pt" : "") + (e.trail_pct ? " " + e.trail_pct + "%" : "")).join(" → ") || "—", r.hash.slice(0, 10)].forEach((v) => (tr.insertCell().textContent = v)); } }
     catch (e) { tb.insertRow().insertCell().textContent = e.message; }
   }
   function resultsTable(el, rows) {
@@ -103,5 +123,11 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   form.onsubmit = async (ev) => { ev.preventDefault(); const r = validateForm(readForm()); if (!r.ok) return msg("submsg", r.errors.join(" · "), true);
     $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.`, false); form.reset(); preview(); }
     catch (e) { msg("submsg", e.message, true); } finally { $("go").disabled = false; } };
+  const mg = $("mg"); const showMg = () => { const a = mg.action.value; mg.querySelectorAll("[data-for]").forEach((d) => (d.hidden = !d.dataset.for.split(" ").includes(a))); };
+  mg.oninput = showMg; showMg();
+  mg.onsubmit = async (ev) => { ev.preventDefault(); const v = { signal_id: mg.signal_id.value, action: mg.action.value, sl: mg.sl.value, targets: mg.targets.value, trail_points: mg.trail_points.value, trail_pct: mg.trail_pct.value, confirm: mg.confirm.checked };
+    const r = validateEvent(v); if (!r.ok) return msg("mgmsg", r.errors.join(" · "), true); $("mgGo").disabled = true;
+    try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE)" : ""} — takes effect ~20 s later, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
+    catch (e) { msg("mgmsg", e.message, true); } finally { $("mgGo").disabled = false; } };
   $("tokenIn").value = token; if (token) loadState().then((s) => { if (s) { loadGuide(); show("guide"); } });
 })();

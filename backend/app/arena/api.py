@@ -82,10 +82,37 @@ async def submit(request: Request):
     return {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
 
 
+@router.post("/amend")
+async def amend(request: Request):
+    """Management event for an already submitted signal: AMEND_SL | AMEND_TARGETS | TRAIL_SL | EXIT_NOW | CANCEL. Effective from the server timestamp + execution delay, never retroactive."""
+    c = _auth(request)
+    if int(request.headers.get("content-length") or 0) > MAX_BODY: raise HTTPException(413, "body too large")
+    try: body = await request.json()
+    except Exception: raise HTTPException(400, "invalid JSON")
+    if not isinstance(body, dict): raise HTTPException(400, "object expected")
+    m = mode(c)
+    if m == "ENDED": raise HTTPException(409, "arena has ended")
+    if m == "ARENA_LIVE":
+        sig = next((r for r in SU.load() if r.get("type") == "HUMAN_SIGNAL" and r["id"] == str(body.get("signal_id", ""))), None)
+        try:
+            from .. import market_calendar as mc
+            if sig and sig["underlying"] in EXCH and not mc.is_trading(EXCH[sig["underlying"]]): raise HTTPException(409, f"{EXCH[sig['underlying']]} is not open")
+        except HTTPException: raise
+        except Exception: pass
+    try: rec = SU.submit_event(body, c["name"])
+    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    _cache["v"] = None
+    return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "server_iso", "practice", "hash")}
+
+
 @router.get("/signals")
 def signals(request: Request):
     _auth(request)
-    return {"signals": [{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")} for r in SU.load()]}
+    recs = SU.load(); evs: dict[str, list] = {}
+    for r in recs:
+        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r.get(k) for k in ("id", "server_iso", "action", "sl", "targets", "trail_points", "trail_pct", "hash")})
+    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")}, "events": evs.get(r["id"], [])}
+                        for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL"]}
 
 
 @router.get("/standings")

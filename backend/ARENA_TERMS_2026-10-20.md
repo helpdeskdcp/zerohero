@@ -4,6 +4,8 @@
 
 ## 1. Who and what
 - **Entrants:** (A) ZeroHero AI = the frozen AUTOSCALP engine exactly as in `data/forward_test/frozen_manifest.json` (no manual intervention). A pre-declared exhibition line **ZeroHero AI-V2** = the same trades filtered by the unified policy v1.0.0 (a subset, reported separately; it cannot replace A). (B) The human trader, who submits signals manually.
+- **Order types and management (amended 2026-10-20 at the SEBI side's request):** entry LIMIT / ABOVE / NEAR / MARKET; after entry the human may amend targets or stop-loss, set a trailing stop, emergency-exit or cancel a pending entry. Every action is a server-timestamped, hash-chained event effective after the same 20 s delay, never retroactive, max 20 per signal. The AI's own recorded management (stops, trailing, time exit) is replayed as the same event types so both sides are managed under identical mechanics.
+- **Information barrier:** the AI engine is frozen and no trading module imports the arena (enforced by a test); the human side's signals are readable only by the human (token) and the two referees.
 - **Instruments:** BUY of options on NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL (nearest expiry); long only; one lot per signal; no averaging; no re-use of a stopped signal.
 - **Period:** 22 trading days. **Proposed start: Monday 2026-10-26** (a week to fix capture issues below); end 2026-11-25. Capital notionally Rs 50,000 each.
 

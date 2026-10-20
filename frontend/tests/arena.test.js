@@ -28,3 +28,13 @@ test("side card handles empty and populated summaries", () => {
   const c = A.sideCard("AI", { signals: 3, settled: 2, by_status: { SETTLED: 2, MISSED: 1 }, net_rs: -500, return_pct: -1, capital: 50000, win_rate: 0.5, profit_factor: null, max_drawdown_rs: 700, max_drawdown_pct: 1.4, gross_rs: -400, cost_rs: 100, real_quote_fill_share: 1 });
   assert.ok(c.lines.some((l) => l.includes("net −₹500")) && c.lines.some((l) => l.includes("PF —")));
 });
+
+test("management event form mirrors server rules", () => {
+  const base = { signal_id: "H00001", confirm: true };
+  assert.deepEqual(A.validateEvent({ ...base, action: "EXIT_NOW" }).payload, { signal_id: "H00001", action: "EXIT_NOW" });
+  assert.deepEqual(A.validateEvent({ ...base, action: "AMEND_TARGETS", targets: "180, 150,150" }).payload.targets, [150, 180]);
+  assert.equal(A.validateEvent({ ...base, action: "TRAIL_SL", trail_pct: "5" }).payload.trail_pct, 5);
+  for (const bad of [{ action: "AMEND_SL", sl: "" }, { action: "AMEND_TARGETS", targets: "" }, { action: "TRAIL_SL" }, { action: "TRAIL_SL", trail_points: "1", trail_pct: "5" }, { action: "TRAIL_SL", trail_pct: "100" }, { action: "NOPE" }, { action: "CANCEL", confirm: false }, { action: "CANCEL", signal_id: "" }]) {
+    assert.equal(A.validateEvent({ ...base, ...bad }).ok, false, JSON.stringify(bad));
+  }
+});
