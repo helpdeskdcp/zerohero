@@ -25,7 +25,7 @@
     try { _hedgeAutoRefresh(view === "hedging"); } catch (e) {}
   }
   document.querySelectorAll(".nav-item, .tab-item").forEach(btn => {
-    btn.addEventListener("click", () => { if (btn.dataset.view) setView(btn.dataset.view); });   // external links (e.g. SEBI Arena) have no data-view
+    btn.addEventListener("click", () => { if (btn.dataset.view) setView(btn.dataset.view); });   // external links (e.g. Institution Arena) have no data-view
   });
 
   // ---------------- Helpers ----------------

@@ -98,3 +98,12 @@ def test_no_sebi_wording_in_arena_facing_material():
     bad = [f for f in files if os.path.exists(os.path.join(root, f)) and "sebi" in open(os.path.join(root, f), encoding="utf-8").read().lower()]
     assert bad == [], f"arena-facing files must not use the SEBI name: {bad}"
     assert not os.path.exists(os.path.join(root, "backend", "SEBI_ARENA_GUIDE.md"))
+
+
+def test_chat_id_priority_with_hot_file(tmp_path, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "111"); monkeypatch.setenv("TELEGRAM_SIGNALS_CHANNEL_ID", "-100222"); monkeypatch.delenv("EVIDENCE_CHAT_ID", raising=False)
+    monkeypatch.setattr(EV, "CHAT_FILE", str(tmp_path / "chat_id.txt"))
+    assert EV.chat_id() == "-100222"                                                  # no evidence group yet: signals channel
+    (tmp_path / "chat_id.txt").write_text("-100777\n"); assert EV.chat_id() == "-100777"                       # hot file, no restart
+    monkeypatch.setenv("EVIDENCE_CHAT_ID", "-100888"); assert EV.chat_id() == "-100888"                       # env wins
+    monkeypatch.delenv("TELEGRAM_SIGNALS_CHANNEL_ID"); monkeypatch.delenv("EVIDENCE_CHAT_ID"); (tmp_path / "chat_id.txt").unlink(); assert EV.chat_id() == "111"

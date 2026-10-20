@@ -21,8 +21,17 @@ def enabled() -> bool:
     return v not in ("0", "false", "off", "no")
 
 
+CHAT_FILE = os.path.join(os.path.dirname(PATH), "chat_id.txt")
+
+
+def _file_chat() -> str:
+    try: return open(CHAT_FILE).read().strip()
+    except OSError: return ""
+
+
 def chat_id() -> str:
-    return (os.environ.get("EVIDENCE_CHAT_ID") or os.environ.get("TELEGRAM_SIGNALS_CHANNEL_ID") or os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
+    """EVIDENCE_CHAT_ID env, else data/evidence_feed/chat_id.txt (hot-configurable, written by scripts/telegram_find_chat.py, no restart needed), else the signals channel, else the private chat."""
+    return (os.environ.get("EVIDENCE_CHAT_ID") or _file_chat() or os.environ.get("TELEGRAM_SIGNALS_CHANNEL_ID") or os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
 
 
 def fmt_time(ts: float) -> str: return datetime.fromtimestamp(ts, tz=IST).strftime("%Y-%m-%d %H:%M:%S IST")
@@ -43,7 +52,7 @@ def _post(kind: str, rid: str, text: str, ts: float, sender=None, path: str | No
         sender = lambda t, c: telegram._send(t, c, evidence=True)
     cid = chat_id(); res = sender(text, cid) if cid else {"ok": False, "reason": "NO_CHAT_ID"}
     with _lock:
-        return L.append(path or PATH, {"type": "EVIDENCE_POST", "kind": kind, "id": rid, "signal_ts": ts, "posted_ts": time.time(), "text": text, "chat": "evidence" if os.environ.get("EVIDENCE_CHAT_ID") else "signals_or_private",
+        return L.append(path or PATH, {"type": "EVIDENCE_POST", "kind": kind, "id": rid, "signal_ts": ts, "posted_ts": time.time(), "text": text, "chat": "evidence" if (os.environ.get("EVIDENCE_CHAT_ID") or _file_chat()) else "signals_or_private",
                                        "telegram": {k: res.get(k) for k in ("ok", "message_id", "status_code", "reason")}})
 
 
