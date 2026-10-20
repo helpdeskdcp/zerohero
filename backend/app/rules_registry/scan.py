@@ -52,8 +52,8 @@ def resolve_param(src: str):
             mod, call = rest.split(":", 1); fn, arg = re.match(r"(\w+)\((\w+)\)", call).groups()
             d = inspect.signature(getattr(importlib.import_module(mod), fn)).parameters[arg].default
             return (d is not inspect.Parameter.empty), d, None
-        if kind == "json":
-            f, path = rest.split("#", 1); v = json.load(open(_rel(f), encoding="utf-8"))
+        if kind in ("json", "yaml"):
+            f, path = rest.split("#", 1); v = (json.load if kind == "json" else yaml.safe_load)(open(_rel(f), encoding="utf-8"))
             for k in path.split("."): v = v[k]
             return True, v, None
         if kind == "re":

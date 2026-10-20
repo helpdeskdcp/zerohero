@@ -1,0 +1,80 @@
+{
+ "spec_commit": "3b5ab6a",
+ "primary": {
+  "label": "PRIMARY: all closed trades",
+  "n": 25,
+  "days": 9,
+  "win_rate": 0.4,
+  "wilson95": [
+   0.23403057664190918,
+   0.5926087221487266
+  ],
+  "breakeven_win_rate": 0.4930070325012954,
+  "mean_net": -136.246648,
+  "se": 213.660049753571,
+  "t": -0.6376795669435757,
+  "p_day_clustered_one_sided": 0.7626628218376682,
+  "sum_net": -3406.1661999999997,
+  "profit_factor": 0.6855790878904248,
+  "max_drawdown": 6731.477999999999,
+  "avg_win": 742.6975199999999,
+  "avg_loss": 722.2094266666667,
+  "flat": 0,
+  "gross_sum": -3384.6,
+  "cost_sum": 21.566200000000013
+ },
+ "C1_verdict": "INCONCLUSIVE",
+ "calibration_claim_pass": false,
+ "exploratory": [
+  {
+   "label": "EXPLORATORY MCX",
+   "n": 25,
+   "days": 9,
+   "win_rate": 0.4,
+   "wilson95": [
+    0.23403057664190918,
+    0.5926087221487266
+   ],
+   "breakeven_win_rate": 0.4930070325012954,
+   "mean_net": -136.246648,
+   "se": 213.660049753571,
+   "t": -0.6376795669435757,
+   "p_day_clustered_one_sided": 0.7626628218376682,
+   "sum_net": -3406.1661999999997,
+   "profit_factor": 0.6855790878904248,
+   "max_drawdown": 6731.477999999999,
+   "avg_win": 742.6975199999999,
+   "avg_loss": 722.2094266666667,
+   "flat": 0,
+   "gross_sum": -3384.6,
+   "cost_sum": 21.566200000000013
+  },
+  {
+   "label": "EXPLORATORY closed on/after 2026-09-21 (post calibration fix)",
+   "n": 25,
+   "days": 9,
+   "win_rate": 0.4,
+   "wilson95": [
+    0.23403057664190918,
+    0.5926087221487266
+   ],
+   "breakeven_win_rate": 0.4930070325012954,
+   "mean_net": -136.246648,
+   "se": 213.660049753571,
+   "t": -0.6376795669435757,
+   "p_day_clustered_one_sided": 0.7626628218376682,
+   "sum_net": -3406.1661999999997,
+   "profit_factor": 0.6855790878904248,
+   "max_drawdown": 6731.477999999999,
+   "avg_win": 742.6975199999999,
+   "avg_loss": 722.2094266666667,
+   "flat": 0,
+   "gross_sum": -3384.6,
+   "cost_sum": 21.566200000000013
+  }
+ ],
+ "period": [
+  "2026-09-21",
+  "2026-10-20"
+ ]
+}

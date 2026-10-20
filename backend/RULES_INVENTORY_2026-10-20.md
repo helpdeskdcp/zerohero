@@ -1,10 +1,10 @@
 # ZeroHero rules inventory
 
-registry 2026-10-20 · 34 rules · drift problems: **0** · unclassified env flags: **0**
+registry 2026-10-20 · 35 rules · drift problems: **0** · unclassified env flags: **0**
 
-- by mode: {'ENFORCED': 21, 'OFF_BY_DEFAULT': 3, 'SHADOW': 7, 'ADVISORY': 1, 'OFFLINE': 1, 'DARK': 1}
-- by evidence: {'SAFETY_RAIL': 14, 'UNVALIDATED': 17, 'DERIVED_FROM_LIVE_OUTCOMES': 1, 'NEGATIVE': 1, 'DRAFT': 1}
-- by layer: {'L0_execution': 6, 'L1_runner_safeguards': 8, 'L2_strategy': 7, 'L3_signal_gate': 1, 'L4_hcs_shadow': 6, 'L5_optionchain': 1, 'L6_hybrid_orderflow': 2, 'L7_offline_gates': 1, 'L8_dark': 2}
+- by mode: {'ENFORCED': 21, 'OFF_BY_DEFAULT': 3, 'SHADOW': 7, 'ADVISORY': 1, 'OFFLINE': 1, 'DARK': 2}
+- by evidence: {'SAFETY_RAIL': 14, 'UNVALIDATED': 17, 'DERIVED_FROM_LIVE_OUTCOMES': 1, 'NEGATIVE': 1, 'DRAFT': 2}
+- by layer: {'L0_execution': 6, 'L1_runner_safeguards': 8, 'L2_strategy': 7, 'L3_signal_gate': 1, 'L4_hcs_shadow': 6, 'L5_optionchain': 1, 'L6_hybrid_orderflow': 2, 'L7_offline_gates': 1, 'L8_dark': 2, 'L9_rules_engine': 1}
 
 ## 1. Enforced on the default paper path but NOT validated as alpha (evidence != safety rail)
 
@@ -25,12 +25,12 @@ These rules change which trades are taken; none has independent out-of-sample, n
 
 | concept | severity | values (rule=value unit mode) |
 |---|---|---|
-| daily_loss_cap | REVIEW_UNITS | SG-DAILY-LOSS=3000.0 INR [ENFORCED]; ST-RISK-ENGINE=3 pct_of_capital [ENFORCED]; HOF-POLICY-RISK=2.0 pct_of_capital [SHADOW] |
-| max_consecutive_losses | ENFORCED_CONFLICT | SG-CONSEC-LOSSES=4 [ENFORCED]; ST-RISK-ENGINE=3 [ENFORCED] |
-| max_feed_age_sec | ENFORCED_CONFLICT | EXEC-STALENESS=20.0 [ENFORCED]; SG-FEED-FRESH=12 [ENFORCED] |
-| max_trades_per_day | ENFORCED_CONFLICT | SG-MAX-TRADES=18 [ENFORCED]; ST-RISK-ENGINE=10 [ENFORCED]; HOF-POLICY-RISK=6 [SHADOW] |
+| daily_loss_cap | REVIEW_UNITS | SG-DAILY-LOSS=3000.0 INR [ENFORCED]; ST-RISK-ENGINE=3 pct_of_capital [ENFORCED]; HOF-POLICY-RISK=2.0 pct_of_capital [SHADOW]; RE-UNIFIED-POLICY=2.0 pct_of_capital [DARK] |
+| max_consecutive_losses | ENFORCED_CONFLICT | SG-CONSEC-LOSSES=4 [ENFORCED]; ST-RISK-ENGINE=3 [ENFORCED]; RE-UNIFIED-POLICY=3 [DARK] |
+| max_feed_age_sec | ENFORCED_CONFLICT | EXEC-STALENESS=20.0 [ENFORCED]; SG-FEED-FRESH=12 [ENFORCED]; RE-UNIFIED-POLICY=12 [DARK] |
+| max_trades_per_day | ENFORCED_CONFLICT | SG-MAX-TRADES=18 [ENFORCED]; ST-RISK-ENGINE=10 [ENFORCED]; HOF-POLICY-RISK=6 [SHADOW]; RE-UNIFIED-POLICY=6 [DARK] |
 | min_ev_r | INFO | ST-EV-GATE=0.12 [ENFORCED]; HCS-VETO-POOR-EV=0.05 [SHADOW] |
-| min_reward_risk | INFO | ST-EV-GATE=1.3 [ENFORCED]; SIG-FINAL-GATE=1.5 [OFF_BY_DEFAULT]; HCS-VETO-RR=1.3 [SHADOW]; HOF-POLICY-RISK=1.3 [SHADOW] |
+| min_reward_risk | INFO | ST-EV-GATE=1.3 [ENFORCED]; SIG-FINAL-GATE=1.5 [OFF_BY_DEFAULT]; HCS-VETO-RR=1.3 [SHADOW]; HOF-POLICY-RISK=1.3 [SHADOW]; RE-UNIFIED-POLICY=1.3 [DARK] |
 
 ## 3. Shadow / dark / offline (computed or present, but not blocking trades)
 
@@ -44,6 +44,7 @@ These rules change which trades are taken; none has independent out-of-sample, n
 - **HOF-POLICY-RISK** [SHADOW] Hybrid order-flow policy risk limits (shadow runner) — policy_version 1.2.0 validation_status DRAFT_UNVALIDATED; live orders can never be enabled by this policy (validator fails closed).
 - **PROMO-GATE** [OFFLINE] Promotion gate for any new strategy (net-of-cost, folds, stress, concentration) — Result so far: PROMOTED = NONE (Hybrid MP, SmartBoS, PA, expiry pin all fail).
 - **SB-ADAPTATION** [DARK] Structural-break adaptation (can halt/tighten safeguards) — No non-test caller of apply_to_safeguards: not wired into the runner.
+- **RE-UNIFIED-POLICY** [DARK] Unified entry policy (single owner of every limit; fail-closed; paper only) — Offline replay + tests only; NOT wired into the runner. Replay on the paper ledger is a diagnostic, not evidence of edge (data/research/rule
 
 ## 4. Off by default (code exists, switch off)
 
@@ -95,7 +96,7 @@ These rules change which trades are taken; none has independent out-of-sample, n
 | RULES_REGISTRY | FEATURE_FLAG |  | ['1'] | app/main.py:325 |
 | SMART_SCALPER_AUTO_ARM | FEATURE_FLAG |  | [None] | app/smart_index_scalper/scheduler.py:155 |
 
-(+ 67 secret/path/tuning/provider variables, classified by pattern)
+(+ 68 secret/path/tuning/provider variables, classified by pattern)
 
 ## 8. Drift problems
 

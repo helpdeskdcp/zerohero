@@ -1,0 +1,41 @@
+# ZeroHero unified entry policy v1.0.0 — DRAFT_UNVALIDATED. ONE owner for every limit concept (replaces the 18/10/6 trades-per-day, 4/3 losses, 20s/12s feed-age split).
+# Evaluated offline (replay) now; shadow later; enforcement only after an explicit decision. Paper only: live_orders_requested is always BLOCKED and the validator refuses any other execution mode.
+policy_version: 1.0.0
+validation_status: DRAFT_UNVALIDATED
+execution: {mode: PAPER, live_orders_enabled: false}
+limits:                                   # referenced in conditions as L_<name>
+  max_trades_per_day: 6                   # was 18 (runner) / 10 (risk engine) / 6 (hybrid policy)
+  max_consecutive_losses: 3               # was 4 (runner) / 3 (risk engine)
+  daily_loss_cap_pct: 2.0                 # % of capital; was Rs3000 (runner) / 3% (risk engine) / 2% (hybrid policy)
+  max_feed_age_sec: 12                    # entry-time bar; EXEC-STALENESS (20s) stays as the execution-layer backstop
+  max_concurrent: 3
+  cooldown_after_loss_min: 15
+  min_reward_risk: 1.3
+  min_ev_r: 0.12
+  max_option_spread_pct: 1.2
+  min_option_premium: 8.0
+  max_option_premium_pct_of_spot: 8.0
+  nse_open_min: 560                       # 09:20 IST
+  nse_cutoff_min: 900                     # 15:00 IST
+  mcx_open_min: 540
+  mcx_cutoff_min: 1380                    # 23:00 IST
+rules:
+  - {id: R-LIVE-NEVER, when: "live_orders_requested", action: BLOCK, reason: "live orders are never allowed by this policy"}
+  - {id: R-KILLSWITCH, when: "kill_switch_active", action: BLOCK, reason: "kill switch active"}
+  - {id: R-CALENDAR, when: "is_holiday", action: BLOCK, reason: "weekend / exchange holiday"}
+  - {id: R-SESSION-NSE, when: "exchange in ['NSE','NFO','BSE','BFO'] and (minute_of_day < L_nse_open_min or minute_of_day >= L_nse_cutoff_min)", action: BLOCK, reason: "outside NSE/BSE entry window"}
+  - {id: R-SESSION-MCX, when: "exchange == 'MCX' and (minute_of_day < L_mcx_open_min or minute_of_day >= L_mcx_cutoff_min)", action: BLOCK, reason: "outside MCX entry window"}
+  - {id: R-FEED-CONNECTED, when: "not feed_connected", action: BLOCK, reason: "market-data feed not connected"}
+  - {id: R-FEED-FRESH, when: "feed_age_sec > L_max_feed_age_sec", action: BLOCK, reason: "feed stale"}
+  - {id: R-MAX-TRADES, when: "trades_today >= L_max_trades_per_day", action: BLOCK, reason: "max trades per day"}
+  - {id: R-CONSEC-LOSSES, when: "consecutive_losses >= L_max_consecutive_losses", action: BLOCK, reason: "consecutive-loss halt"}
+  - {id: R-DAILY-LOSS, when: "daily_pnl_pct <= -L_daily_loss_cap_pct", action: BLOCK, reason: "daily loss cap hit"}
+  - {id: R-CONCURRENT, when: "open_positions >= L_max_concurrent", action: BLOCK, reason: "max concurrent positions"}
+  - {id: R-DUPLICATE, when: "duplicate_open_position", action: BLOCK, reason: "same underlying/side already open"}
+  - {id: R-COOLDOWN, when: "minutes_since_last_loss < L_cooldown_after_loss_min", action: BLOCK, reason: "cooldown after a loss"}
+  - {id: R-SPREAD, when: "option_spread_pct > L_max_option_spread_pct", action: BLOCK, reason: "option spread too wide"}
+  - {id: R-PREMIUM-MIN, when: "premium < L_min_option_premium", action: BLOCK, reason: "premium below minimum"}
+  - {id: R-PREMIUM-MAX, when: "premium > spot * L_max_option_premium_pct_of_spot / 100", action: BLOCK, reason: "premium too rich vs spot"}
+  - {id: R-RR, when: "reward_risk < L_min_reward_risk", action: BLOCK, reason: "reward/risk below minimum"}
+  - {id: R-EV, when: "ev_r < L_min_ev_r", action: BLOCK, reason: "EV below minimum after costs"}
+  - {id: W-NO-VALIDATED-EDGE, when: "evidence_status != 'VALIDATED_OOS'", action: WARN, reason: "strategy has no independent out-of-sample net-of-cost evidence"}

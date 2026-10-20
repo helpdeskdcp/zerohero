@@ -1,0 +1,1871 @@
+{
+ "rows": [
+  {
+   "trade_id": "TRD-1a055f052d1-69f51",
+   "pnl": 12.65,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0560807db-dfc9a",
+   "pnl": 1.15,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0569eaded-d6dec",
+   "pnl": 7.65,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a056ba07dd-7e1e",
+   "pnl": -0.5,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0579a3d73-9ba76",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a057d40525-b5946",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a057efa5d2-4e6d6",
+   "pnl": 1.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05823c85d-80093",
+   "pnl": -0.5,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05871525d-bb28a",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0587927b5-14a89",
+   "pnl": -0.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0588d8bc8-a12d7",
+   "pnl": 0.35,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-08-31",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05b7b7b19-fccfc",
+   "pnl": -0.45,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05c55d816-68d5b",
+   "pnl": 0.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05c70a55e-2075d",
+   "pnl": -0.25,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05c7f19d6-c8cd5",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05c998ed0-8f3c2",
+   "pnl": 0.35,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05ca7628e-f5084",
+   "pnl": 0.35,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05cae186c-16897",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05caff739-fd435",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05cb2da32-71ff0",
+   "pnl": 0.45,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05d177bcf-ca756",
+   "pnl": 0.05,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05d39f2fb-5cd07",
+   "pnl": -0.5,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05d470800-a9847",
+   "pnl": 0.05,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05deefd3b-9b3db",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a05e04bb25-d5f8d",
+   "pnl": 0.05,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0602b0496-b053f",
+   "pnl": -0.35,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06064b6de-3dcf7",
+   "pnl": -0.25,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a060654b6e-e763c",
+   "pnl": -7.7,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0606f9655-5c1e4",
+   "pnl": 0.2,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a060a6994c-d1b03",
+   "pnl": -5.85,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a060d487a0-2a041",
+   "pnl": -51.6,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a060ebef22-4b884",
+   "pnl": 1.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a060eece1f-1de04",
+   "pnl": 9.5,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a061196e05-a7c88",
+   "pnl": 20.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a061bc08d6-7552b",
+   "pnl": -0.15,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a061c2c0c9-aa9c4",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a061c44f9e-16c42",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a061dfc1d5-b6c49",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-02",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a065681c6e-e51fc",
+   "pnl": 1.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0658897b8-ceb7a",
+   "pnl": 7.5,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06591fb5e-889d8",
+   "pnl": -23.95,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06602d1ac-255ab",
+   "pnl": 3.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06603dbe7-8298e",
+   "pnl": 0.65,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066084114-c2b0f",
+   "pnl": 14.55,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0662700c3-61ce6",
+   "pnl": 0.25,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0662da247-55572",
+   "pnl": -7.4,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0662ddb52-88ad2",
+   "pnl": 16.6,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066451ab6-2103f",
+   "pnl": -0.15,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066bf8de7-8a9f0",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066ed260c-28182",
+   "pnl": 0.05,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066ee961e-d85a8",
+   "pnl": -0.5,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066f36be8-6498e",
+   "pnl": -0.6,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066f66227-81b50",
+   "pnl": -23.8,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a066f7b68c-81d72",
+   "pnl": -0.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0670d7f1e-d8d9b",
+   "pnl": 3.6,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06711a53f-b2f21",
+   "pnl": 0.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-03",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06a8f78ef-11f40",
+   "pnl": 3.65,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06aa193ec-d2917",
+   "pnl": -1.2,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b0a1aff-eae78",
+   "pnl": -12.2,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b0a3586-4cf45",
+   "pnl": 0.55,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b0a61fe-7fec4",
+   "pnl": -1.7,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b163f6c-3f6a9",
+   "pnl": 0.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b1d8396-2b83",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b2ecfc9-b043b",
+   "pnl": 0.45,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b3490ab-8e1f3",
+   "pnl": 0.65,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b4ea630-19dd9",
+   "pnl": 9.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b53803c-b1cc3",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06b5b158e-b94c6",
+   "pnl": -5.5,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06bc0eb64-28762",
+   "pnl": 0.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06bc100b5-faa8",
+   "pnl": -12.1,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06bc16177-3384f",
+   "pnl": -0.45,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06bd78e6c-2e1e7",
+   "pnl": 0.15,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06beeebda-9322c",
+   "pnl": 3.1,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a06bf80662-1571c",
+   "pnl": -0.15,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-04",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a079fd026a-399a2",
+   "pnl": 14.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a079fd7979-a14f7",
+   "pnl": -1.35,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a01bd72-d0b95",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a14d7b0-baf03",
+   "pnl": 9.65,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a18a718-40efc",
+   "pnl": 16.3,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a2f3696-f870d",
+   "pnl": 1.55,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a2fabb4-7b19",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a30306d-ad4c5",
+   "pnl": -1.4,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a466b41-4b224",
+   "pnl": 11.8,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a4aba44-a073a",
+   "pnl": 4.95,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a5d7cf6-d3036",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a708daf-49278",
+   "pnl": 1.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a71833d-18c02",
+   "pnl": -7.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a789462-d5a",
+   "pnl": 1.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a7d54f5-ec51d",
+   "pnl": -6.8,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a88e09d-1bf02",
+   "pnl": 0.05,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07a8f4956-81a0b",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07aa189f2-2a316",
+   "pnl": -0.05,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-07",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07f83a380-e6b2",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07f9a669e-ac0a2",
+   "pnl": 11.35,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07fb5a570-758bb",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07fba6954-e1ada",
+   "pnl": -2.45,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07fc1f0f6-27785",
+   "pnl": -11.4,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a07fe7fed4-ac7c3",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08091d74a-ac506",
+   "pnl": -0.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a080a8601a-28882",
+   "pnl": -6.1,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a080d65323-33973",
+   "pnl": -5.6,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a080d7cf30-fbd8e",
+   "pnl": -2.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a081c89c29-58a6e",
+   "pnl": -0.2,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a081c998d0-7670a",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08449d131-e67b3",
+   "pnl": -9.75,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08449d9c5-e350e",
+   "pnl": 3.6,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08464fc70-46caf",
+   "pnl": 4.45,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08469be6a-48acb",
+   "pnl": -36.5,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0846e798e-6ab26",
+   "pnl": -0.35,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08492b926-dd7e9",
+   "pnl": -26.1,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a084ae8901-17886",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a084eeb984-96cde",
+   "pnl": -45.15,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0860b6c09-a7052",
+   "pnl": 0.4,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0860f2e84-2eb26",
+   "pnl": -0.4,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0862364f4-75585",
+   "pnl": -0.45,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a087061e1d-9c026",
+   "pnl": 0.55,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08718676b-3a3d",
+   "pnl": 4.4,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-09",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08974d125-bb336",
+   "pnl": -8.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-10",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08974ee81-ee507",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-10",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08994ac9a-ce1c3",
+   "pnl": -1.15,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-10",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08994add0-2840d",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-10",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a08994d211-2fcd5",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN",
+    "R-RR"
+   ],
+   "date": "2026-09-10",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a366eca6-22798",
+   "pnl": 46.2,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a374822f-6f8c2",
+   "pnl": 3.45,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a37e1876-59e0f",
+   "pnl": 31.95,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a38cd835-ad247",
+   "pnl": -0.15,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a39481a2-253b4",
+   "pnl": -3.3,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a395776a-ea6b9",
+   "pnl": -15.95,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a39d968f-156a",
+   "pnl": 0.2,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a3a25b44-68490",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a3a53246-be6c9",
+   "pnl": -3.4,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a3b9260e-58b58",
+   "pnl": 6.5,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-15",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a90d3352-4f885",
+   "pnl": 5.2,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a9d220bf-a427b",
+   "pnl": 5.7,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0a9e4611a-56c1c",
+   "pnl": -2.5,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aa16fd2c-abb6d",
+   "pnl": -27.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aa7ba720-c707c",
+   "pnl": 7.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aa815ebf-c44f2",
+   "pnl": -14.7,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aa87f8c2-234c4",
+   "pnl": 24.8,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aac0601a-e181d",
+   "pnl": 7.0,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aac334ce-4d67a",
+   "pnl": -42.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aae07059-13e26",
+   "pnl": 8.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aae9e9b6-b12bd",
+   "pnl": -32.3,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-16",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad6eaef8-14b10",
+   "pnl": -3.8,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad6f2956-c3405",
+   "pnl": -3.3,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad7018d3-3d535",
+   "pnl": -3.3,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad7109de-c6758",
+   "pnl": 1.4,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad72eb49-d12ab",
+   "pnl": -3.4,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad782f69-bd2c4",
+   "pnl": -6.4,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad7938e8-357e2",
+   "pnl": 0.7,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad7b202e-453b7",
+   "pnl": -5.4,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad7ba236-1373d",
+   "pnl": -6.9,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad7c15ee-ae025",
+   "pnl": -5.5,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ad81c567-40c0b",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0adb37653-8c957",
+   "pnl": -21.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0adc13dba-2d79c",
+   "pnl": 7.5,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ae5d9535-ed53d",
+   "pnl": 37.6,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0ae600199-9767f",
+   "pnl": 35.3,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aed11eb6-fa0e6",
+   "pnl": 0.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0aefe3358-722d1",
+   "pnl": -0.25,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0af090985-f45a0",
+   "pnl": 0.1,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-17",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2a44cba-8f0e1",
+   "pnl": -5.8,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2a4d7bd-2f64f",
+   "pnl": -5.75,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2a8944a-75f8d",
+   "pnl": 8.85,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2aa7db6-caf42",
+   "pnl": 2.45,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2b98f4f-e655d",
+   "pnl": 3.0,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2bd5c8c-51424",
+   "pnl": -0.55,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2beccbc-4e962",
+   "pnl": 1.85,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2bf5ea9-f0e39",
+   "pnl": -12.35,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2c0ce36-d87f4",
+   "pnl": -6.55,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2d081fb-542",
+   "pnl": -6.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2e3076c-dd225",
+   "pnl": -0.3,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2e65093-1d67",
+   "pnl": -18.6,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2e95678-752a1",
+   "pnl": 5.3,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2ee6098-eb877",
+   "pnl": -0.5,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2f1a8b9-2a6c4",
+   "pnl": 1.55,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES",
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2f38e26-5bb43",
+   "pnl": 0.75,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2f4f5e4-1da60",
+   "pnl": 2.3,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0b2fefbdd-56f0",
+   "pnl": 0.0,
+   "allow": false,
+   "blocked_by": [
+    "R-CONSEC-LOSSES"
+   ],
+   "date": "2026-09-18",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0c2bf794f-fe4ae",
+   "pnl": -1.1,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-21",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0c2e3d828-f6485",
+   "pnl": -31.0,
+   "allow": false,
+   "blocked_by": [
+    "R-COOLDOWN"
+   ],
+   "date": "2026-09-21",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0c35da381-2ef38",
+   "pnl": 7.4,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-21",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0d6c1cd91-52ac8",
+   "pnl": -3.95,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-25",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0d6f44fe1-db394",
+   "pnl": -14.25,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-25",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e62bd863-a67fd",
+   "pnl": 85.4,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e64344c9-f5635",
+   "pnl": 19.15,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e65af1c1-eb47",
+   "pnl": 22.1,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e6723c70-74312",
+   "pnl": 12.75,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e6b05ce2-e185a",
+   "pnl": -14.75,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e6d9f53b-1f5c0",
+   "pnl": 21.3,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e6f13424-698db",
+   "pnl": 7.4,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0e6f4f0b2-400c8",
+   "pnl": -36.85,
+   "allow": false,
+   "blocked_by": [
+    "R-MAX-TRADES"
+   ],
+   "date": "2026-09-28",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0eb499a3c-89e6b",
+   "pnl": 130.85,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-29",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0eb62139a-510aa",
+   "pnl": 20.25,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-29",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0eb7b8f08-788d4",
+   "pnl": -27.05,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-29",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0f0ddfef3-c94e0",
+   "pnl": -49.1,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-09-30",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a0f630dde8-27e4a",
+   "pnl": 34.85,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-10-01",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a119e345bd-a439d",
+   "pnl": 29.95,
+   "allow": false,
+   "blocked_by": [
+    "R-RR"
+   ],
+   "date": "2026-10-08",
+   "strategy": "AUTOSCALP"
+  },
+  {
+   "trade_id": "TRD-1a13964a39a-4049f",
+   "pnl": -74.95,
+   "allow": true,
+   "blocked_by": [],
+   "date": "2026-10-14",
+   "strategy": "AUTOSCALP"
+  }
+ ],
+ "summary": {
+  "trades": 199,
+  "days": 21,
+  "all": {
+   "n": 199,
+   "sum": 8.9,
+   "mean": 0.04,
+   "win_rate": 0.4322
+  },
+  "allowed": {
+   "n": 84,
+   "sum": 177.85,
+   "mean": 2.12,
+   "win_rate": 0.4524
+  },
+  "blocked": {
+   "n": 115,
+   "sum": -168.95,
+   "mean": -1.47,
+   "win_rate": 0.4174
+  },
+  "blocked_by_rule": {
+   "R-MAX-TRADES": 66,
+   "R-COOLDOWN": 37,
+   "R-CONSEC-LOSSES": 12,
+   "R-RR": 10
+  }
+ },
+ "not_evaluable": [
+  "R-EV",
+  "R-FEED-CONNECTED",
+  "R-FEED-FRESH",
+  "R-PREMIUM-MAX",
+  "R-SPREAD"
+ ]
+}
