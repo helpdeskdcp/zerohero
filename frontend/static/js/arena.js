@@ -109,7 +109,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   }
   async function loadStandings() {
     try { const s = await api("/standings"); const put = (id, c) => { const e = $(id); e.replaceChildren(); const h = document.createElement("h3"); h.textContent = c.label; e.append(h); for (const l of c.lines) { const d = document.createElement("div"); d.textContent = l; e.append(d); } };
-      put("aiCard", sideCard("ZeroHero AI (frozen AUTOSCALP)", s.ai)); put("huCard", sideCard(s.human_name, s.human)); $("verdict").textContent = verdictText(s.comparison, s.human_name);
+      put("aiCard", sideCard("ZeroHero AI (frozen AUTOSCALP)", s.ai)); if (s.active) { const c = sideCard("ZeroHero AI — ACTIVE arm (filters removed; exploratory, shadow)", s.active.summary); c.lines.push(`${(s.active.trades_per_day || 0).toFixed(2)} trades/day · COMMON ${(s.active.groups.COMMON || {}).settled || 0} · ACTIVE-ONLY ${(s.active.groups.ACTIVE_ONLY || {}).settled || 0} · verdict ${s.active.verdict}`); put("acCard", c); } put("huCard", sideCard(s.human_name, s.human)); $("verdict").textContent = verdictText(s.comparison, s.human_name);
       $("caveats").replaceChildren(...s.caveats.map((c) => { const li = document.createElement("li"); li.textContent = c; return li; })); $("spread").textContent = "spread models: " + JSON.stringify(s.spread_models);
       resultsTable($("aiRows"), s.ai_results); resultsTable($("huRows"), s.human_results); }
     catch (e) { $("verdict").textContent = e.message; }

@@ -730,6 +730,15 @@ class AutoScalpRunner:
             avg_win=_avg_win, avg_loss=_avg_loss, leg_bars_fn=_leg_fn,
             tod_bucket=tod, config=strat_cfg)
         sig["ev_mode"] = _ev_mode
+        # ACTIVE arm (SHADOW ONLY, app.active_arm.shadow; spec ACTIVE_ARM_SPEC_2026-10-20.md): re-runs the same decision with only the 2026-09-29 filter blocks removed and LOGS it beside
+        # the frozen decision. Works on deep copies, never raises, never changes `sig` or opens a trade. ACTIVE_ARM_SHADOW=0 disables.
+        try:
+            from ..active_arm import shadow as _arm_shadow
+            if _arm_shadow.enabled():
+                await asyncio.to_thread(_arm_shadow.observe, sym, sig, strat_cfg, bars, chain, atm=atm, calib=self.calibration(), avg_win=_avg_win, avg_loss=_avg_loss,
+                                        leg_bars_fn=_leg_fn, tod=tod, exchange=smeta["exchange"])
+        except Exception:
+            pass
         # Phase F: deterministic, auditable effective-profile line -- pure
         # function of (symbol, regime, is_expiry_day), all already known at
         # this point, so this cannot introduce any look-ahead.

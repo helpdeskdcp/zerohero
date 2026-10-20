@@ -122,7 +122,14 @@ def standings(request: Request):
         sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"])
         out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
         ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
-        _cache.update(t=time.time(), v={"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
+        try:
+            from ..active_arm import run as _arm
+            lo = datetime.fromisoformat(c["start"] + "T00:00:00+05:30").timestamp(); hi = datetime.fromisoformat(c["end"] + "T23:59:59+05:30").timestamp()
+            a = _arm.run(market_db=os.path.join(BASE, "data", "market_history.db"), since_ts=lo, until_ts=hi)
+            active = {"summary": a["summary"]["all"], "groups": a["summary"]["groups"], "trades_per_day": a["summary"]["trades_per_day"], "verdict": a["summary"]["verdict"], "results": a["results"][-200:]}
+        except Exception as e:
+            active = {"summary": {}, "groups": {}, "trades_per_day": 0.0, "verdict": "UNAVAILABLE", "results": [], "error": f"{type(e).__name__}"}
+        _cache.update(t=time.time(), v={"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
                                         "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
                                         "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
                                                     "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})

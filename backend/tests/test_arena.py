@@ -224,6 +224,10 @@ def test_information_barrier_no_trading_code_imports_the_arena():
         for f in fs:
             if not f.endswith(".py"): continue
             src = open(os.path.join(dp, f), encoding="utf-8").read()
-            if ("arena" in src.lower()) and f not in ("main.py", "dhan_routes.py", "rules.yaml") and "rules_registry" not in dp: bad.append(os.path.relpath(os.path.join(dp, f), root))
+            rel = os.path.relpath(os.path.join(dp, f), root)
+            if rel == os.path.join("active_arm", "run.py"): continue          # reporting/settlement side of the ACTIVE arm (uses the arena settlement ENGINE only; never imported by the runner)
+            if ("arena" in src.lower()) and f not in ("main.py", "dhan_routes.py", "rules.yaml") and "rules_registry" not in dp: bad.append(rel)
     assert bad == [], f"modules referencing the arena (information barrier): {bad}"
-    for f in ("app/autoscalp/runner.py", "app/engines/scalp_strategy.py", "app/rules_engine/shadow.py"): assert "arena" not in open(os.path.join(os.path.dirname(root), f)).read().lower()
+    for f in ("app/autoscalp/runner.py", "app/engines/scalp_strategy.py", "app/rules_engine/shadow.py", "app/active_arm/shadow.py", "app/active_arm/__init__.py"): assert "arena" not in open(os.path.join(os.path.dirname(root), f)).read().lower()
+    runner = open(os.path.join(os.path.dirname(root), "app/autoscalp/runner.py")).read()
+    assert "active_arm.run" not in runner and "from ..active_arm import run" not in runner                                   # the runner only ever imports the log-only shadow module
