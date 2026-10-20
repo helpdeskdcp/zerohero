@@ -9,3 +9,7 @@
 - **Decision (evaluated only when n >= 100 AND distinct days >= 30 inside one epoch):** `PASS_FOR_NEXT_STAGE` iff mean net return > 0, day-clustered one-sided p <= 0.05, AND Wilson 95% lower bound of win rate (net>0) > break-even win rate. Otherwise `FAIL`. Before that: `ACCUMULATING`, and **no performance claim of any kind is made**.
 - **Never:** compare with "SEBI trainers", call anything "proven", or publish a probability not backed by calibration. A PASS only licenses a longer, larger forward paper stage.
 - **Baseline expectation (disclosed, not a result):** the in-sample ledger shows AUTOSCALP gross ~ -0.34%/trade and modelled net negative (see CLAIM_TEST_RESULT_2026-10-20.md); the forward test is expected to FAIL unless the engine changes.
+
+
+## Addendum (2026-10-20, before the epoch started)
+`rules_engine/policy.yaml` was removed from the frozen-file list: it is a SHADOW policy that does not influence AUTOSCALP's trades, so editing it must not restart the epoch. The ledger now also records **Candidate V2** (the same AUTOSCALP trades filtered by the unified policy v1.0.0; a subset, evaluated alongside, never replacing the frozen engine). Its thresholds are those in policy.yaml as of this commit (max 6 trades/day, 3 consecutive losses, 15-min cooldown, RR>=1.3, premium>=8, session windows).

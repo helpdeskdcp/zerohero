@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FROZEN_FILES = ["app/autoscalp/safeguards.py", "app/engines/scalp_strategy.py", "app/engines/option_engine.py", "app/engines/risk_engine.py", "app/signal_gate/final_signal_gate.py",
-                "app/engines/state_classifier.py", "app/engines/sr_engine.py", "app/engines/regime_mtf.py", "app/rules_engine/policy.yaml"]
+                "app/engines/state_classifier.py", "app/engines/sr_engine.py", "app/engines/regime_mtf.py"]      # rules_engine/policy*.yaml are SHADOW/candidate files, not part of the frozen AUTOSCALP
 MIN_N, MIN_DAYS, ALPHA = 100, 30, 0.05
 IDX = {"NIFTY", "BANKNIFTY", "SENSEX"}; MCX = {"NATURALGAS": "NATURALGAS_OPTION", "CRUDEOIL": "CRUDEOIL_OPTION"}
 
@@ -34,7 +34,7 @@ def git_head(root: str = ROOT) -> str | None:
 def load_trades(db_path: str, since_date: str) -> list[dict]:
     c = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=30); c.row_factory = sqlite3.Row
     try:
-        return [dict(r) for r in c.execute("SELECT trade_id,opened_ts,closed_ts,underlying,entry,exit_price FROM ai_paper_trades WHERE status='CLOSED' AND strategy='AUTOSCALP' "
+        return [dict(r) for r in c.execute("SELECT trade_id,opened_ts,closed_ts,market,underlying,option_type,direction,strategy,entry,exit_price,stop_loss,target_1,pnl FROM ai_paper_trades WHERE status='CLOSED' AND strategy='AUTOSCALP' "
                                            "AND entry>0 AND exit_price IS NOT NULL AND substr(opened_ts,1,10)>=? ORDER BY opened_ts", (since_date,))]
     finally:
         c.close()
@@ -112,3 +112,16 @@ def verify_chain(path: str) -> tuple[bool, int, str | None]:
 
 
 def now_iso() -> str: return datetime.now(timezone.utc).isoformat()
+
+
+def candidate_v2(trades: list[dict], lot_of=None, capital: float = 200000.0) -> dict:
+    """CANDIDATE V2 (pre-registered, evaluated alongside the frozen engine, never replaces it): the SAME AUTOSCALP trades filtered by the unified rules-engine policy v1.0.0
+    (max 6 trades/day, 3 consecutive losses, 15-min cooldown after a loss, RR >= 1.3, premium >= 8, session windows, duplicates, concurrency). A filter can only remove trades,
+    so V2 is by construction a subset of the frozen engine's trades; the sequential state uses only the trades V2 allows (path dependence ignored, as in the replay)."""
+    from ..rules_engine.engine import Engine
+    from ..rules_engine.replay import replay
+    rows = [t for t in trades if t.get("pnl") is not None]
+    rep = replay(rows, Engine.load(), capital=capital)
+    allowed = {r["trade_id"] for r in rep["rows"] if r["allow"]}
+    res = evaluate([t for t in trades if t["trade_id"] in allowed], lot_of); res["candidate"] = "V2_unified_policy_v1.0.0"; res["blocked"] = len(rows) - len(allowed)
+    return res

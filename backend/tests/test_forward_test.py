@@ -49,10 +49,10 @@ def test_frozen_files_exist_and_loader_is_read_only(tmp_path):
     import sqlite3
     for f, h in L.file_hashes().items(): assert h is not None, f
     p = str(tmp_path / "t.db"); c = sqlite3.connect(p)
-    c.execute("CREATE TABLE ai_paper_trades (trade_id TEXT, opened_ts TEXT, closed_ts TEXT, status TEXT, strategy TEXT, underlying TEXT, entry REAL, exit_price REAL)")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('a','2026-10-21T04:00:00+00:00','2026-10-21T05:00:00+00:00','CLOSED','AUTOSCALP','NIFTY',100,110)")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('b','2026-10-21T04:00:00+00:00','2026-10-21T05:00:00+00:00','CLOSED','MANUAL','NIFTY',100,110)")
-    c.execute("INSERT INTO ai_paper_trades VALUES ('c','2026-10-20T04:00:00+00:00','2026-10-20T05:00:00+00:00','CLOSED','AUTOSCALP','NIFTY',100,110)"); c.commit(); c.close()
+    c.execute("CREATE TABLE ai_paper_trades (trade_id TEXT, opened_ts TEXT, closed_ts TEXT, status TEXT, strategy TEXT, underlying TEXT, entry REAL, exit_price REAL, market TEXT, option_type TEXT, direction TEXT, stop_loss REAL, target_1 REAL, pnl REAL)")
+    c.execute("INSERT INTO ai_paper_trades VALUES ('a','2026-10-21T04:00:00+00:00','2026-10-21T05:00:00+00:00','CLOSED','AUTOSCALP','NIFTY',100,110,'NFO','CE','BUY',80,140,10)")
+    c.execute("INSERT INTO ai_paper_trades VALUES ('b','2026-10-21T04:00:00+00:00','2026-10-21T05:00:00+00:00','CLOSED','MANUAL','NIFTY',100,110,'NFO','CE','BUY',80,140,10)")
+    c.execute("INSERT INTO ai_paper_trades VALUES ('c','2026-10-20T04:00:00+00:00','2026-10-20T05:00:00+00:00','CLOSED','AUTOSCALP','NIFTY',100,110,'NFO','CE','BUY',80,140,10)"); c.commit(); c.close()
     assert [t["trade_id"] for t in L.load_trades(p, "2026-10-21")] == ["a"]                                                          # AUTOSCALP only, on/after epoch start
     with pytest.raises(sqlite3.OperationalError):
         c = sqlite3.connect(f"file:{p}?mode=ro", uri=True); c.execute("DELETE FROM ai_paper_trades")
@@ -61,3 +61,13 @@ def test_frozen_files_exist_and_loader_is_read_only(tmp_path):
 def test_module_has_no_network_or_order_code():
     s = open(L.__file__).read()
     for bad in ("requests", "urllib", "socket", "app.execution", "place_order"): assert bad not in s
+
+
+def test_candidate_v2_is_a_subset_filtered_by_unified_policy():
+    def t(i, o, c, pnl):
+        return {"trade_id": f"v{i}", "opened_ts": f"2026-10-21T04:{o}:00+00:00", "closed_ts": f"2026-10-21T04:{c}:00+00:00", "market": "NFO", "underlying": "NIFTY", "option_type": "CE", "direction": "BUY",
+                "strategy": "AUTOSCALP", "entry": 100.0, "exit_price": 100.0 + pnl, "stop_loss": 80.0, "target_1": 140.0, "pnl": pnl}
+    trades = [t(i, f"{10 + i * 4:02d}", f"{12 + i * 4:02d}", 3.0) for i in range(9)]                 # 9 wins, 4 minutes apart: policy allows 6 per day
+    r = L.candidate_v2(trades, LOT)
+    assert r["n"] == 6 and r["blocked"] == 3 and r["candidate"].startswith("V2")
+    assert L.evaluate(trades, LOT)["n"] == 9
