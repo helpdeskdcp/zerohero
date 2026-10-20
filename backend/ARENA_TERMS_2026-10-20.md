@@ -32,3 +32,4 @@ The AI's own signals (the frozen AUTOSCALP entrant, and the exploratory ACTIVE a
 - Results (including losses) are published unedited: `data/arena/RESULT_*.md/json`, human ledger, forward-test ledger (`verify_chain()`).
 - Stakes are reputational only. No money changes hands. Nobody agrees to quit anything "forever": a loss means the losing engine/approach is revised or retired and re-tested.
 - Referees: the project owner and a institution-side nominee, both with read access and the right to re-run the scripts.
+- Channel reading (added 2026-10-20): the institution side may allow the platform's bot to read its own Telegram channels so that its signals are recorded without double entry. Posts are used only for the arena ledger and settlement; they are never supplied to the AI engine, and the AI side does not use the institution's signals or technique during or after the contest. Removing the bot from a channel ends the reading immediately.

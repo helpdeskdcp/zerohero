@@ -65,3 +65,8 @@ backend/data/research/order_pressure/_run*.log
 backend/data/backups/
 backend/data/arena/INSTITUTION_ACCESS.txt
 backend/data/evidence_feed/chat_id.txt
+
+# arena channel ingestion: raw institution post text/state (private audit, never committed)
+backend/data/arena/channel_ingest_log.jsonl
+backend/data/arena/channel_ingest_state.json
+backend/data/arena/channel_ingest_cron.log
