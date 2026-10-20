@@ -134,7 +134,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
       const curExp = ex || j.expiries[0].raw; form.expiry.replaceChildren(...j.expiries.map((e) => { const o = document.createElement("option"); o.value = e.raw; o.textContent = roleLabel(e); return o; })); form.expiry.value = curExp;
       const keep = form.strike.value; form.strike.replaceChildren(...j.rows.map((r) => { const o = document.createElement("option"); o.value = r.strike; o.textContent = rowLabel(r); return o; }));
       form.strike.value = keep && j.rows.some((r) => String(r.strike) === keep) ? keep : String(j.atm);
-      $("hint").textContent = j.spot ? `${u} price ${j.spot} (${String(j.spot_source).replace("T", " ").slice(0, 40)}) · ATM ${j.atm} · step ${j.step}` : (j.problems || []).join(" · ");
+      $("hint").textContent = j.spot ? `${u} price ${j.spot} (${String(j.spot_source).replace(/(\d)T(\d)/, "$1 $2").replace(/\.\d+Z?$/, "").slice(0, 44)}) · ATM ${j.atm} · step ${j.step}` : (j.problems || []).join(" · ");
       suggestEntry();
     } catch (e) { $("hint").textContent = e.message; }
   }
