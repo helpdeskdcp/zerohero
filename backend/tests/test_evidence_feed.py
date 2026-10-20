@@ -14,7 +14,8 @@ SIG = {"decision": "BUY_CE", "strike": 23000.0, "expiry": "27OCT2026", "entry": 
 
 
 @pytest.fixture
-def env(monkeypatch):
+def env(monkeypatch, tmp_path):
+    monkeypatch.setattr(EV, "CHAT_FILE", str(tmp_path / "no_chat_id.txt"))                                   # never read the real hot-config file
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "t"); monkeypatch.setenv("TELEGRAM_CHAT_ID", "111"); monkeypatch.setenv("TELEGRAM_SIGNALS_CHANNEL_ID", "-100222")
     monkeypatch.delenv("EVIDENCE_CHAT_ID", raising=False); monkeypatch.delenv("TELEGRAM_EVIDENCE_ONLY", raising=False)
     posted = []

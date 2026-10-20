@@ -7,7 +7,7 @@
 - **Order types and management (amended 2026-10-20 at the institution side's request):** entry LIMIT / ABOVE / NEAR / MARKET; after entry the human may amend targets or stop-loss, set a trailing stop, emergency-exit or cancel a pending entry. Every action is a server-timestamped, hash-chained event effective after the same 20 s delay, never retroactive, max 20 per signal. The AI's own recorded management (stops, trailing, time exit) is replayed as the same event types so both sides are managed under identical mechanics.
 - **Information barrier:** the AI engine is frozen and no trading module imports the arena (enforced by a test); the human side's signals are readable only by the human (token) and the two referees.
 - **Instruments:** BUY of options on NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL (nearest expiry); long only; one lot per signal; no averaging; no re-use of a stopped signal.
-- **Period:** 22 trading days. **Proposed start: Monday 2026-10-26** (a week to fix capture issues below); end 2026-11-25. Capital notionally Rs 50,000 each.
+- **Period:** **2026-10-20 to 2026-11-25** (start moved from the proposed 2026-10-26; see ARENA_RULE_CHANGES.md). Capital notionally Rs 50,000 each.
 
 ## 2. How signals count (anti-hindsight)
 - The human submits EVERY signal BEFORE entering, with `scripts/arena_submit.py` (server timestamp, hash-chained, cannot be edited; corrections are new entries). Fields: instrument, expiry, strike, CE/PE, entry (ABOVE / NEAR / MARKET), stop-loss, targets. Unsubmitted trades do not exist.

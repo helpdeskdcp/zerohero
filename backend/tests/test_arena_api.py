@@ -205,3 +205,24 @@ def test_tight_stop_inside_the_spread_is_warned(tmp_path):
     p = _mkdb(tmp_path); CT._cache.clear()                                                                  # fixture quotes: bid = ltp-1, ask = ltp+1 (spread 2)
     r = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 534.0, "NEAR", sl=533.0, day="2026-10-20", path=p); assert any("likely to be hit immediately" in w for w in r["warnings"])
     r = CT.check("CRUDEOIL", "2026-11-17", 9500.0, "CE", 534.0, "NEAR", sl=480.0, day="2026-10-20", path=p); assert not any("hit immediately" in w for w in r["warnings"])
+
+
+# ---------------- window decides scoring (start moved earlier by agreement) ----------------
+def test_window_decides_not_the_stored_practice_flag_and_excluded_ids(tmp_path):
+    p = str(tmp_path / "h.jsonl"); day = lambda d: datetime.fromisoformat(f"{d}T13:00:00+00:00").timestamp()
+    base = {k: v for k, v in GOOD.items() if k != "participant"}
+    a = SU.submit({**base, "participant": "X"}, p, now=day("2026-10-20"), practice=True)              # stored as practice when it was submitted
+    b = SU.submit({**base, "participant": "X"}, p, now=day("2026-10-20"), practice=True)
+    c = SU.submit({**base, "participant": "X"}, p, now=day("2026-10-19"), practice=True)              # before the (moved) start
+    got = R.human_signals(p, start="2026-10-20", end="2026-11-25", exclude_ids={a["id"]})
+    assert [g["id"] for g in got] == [b["id"]]                                                          # a excluded by agreement, c outside the window, b counts despite its stored practice flag
+    assert [g["id"] for g in R.human_signals(p)] == []                                                  # no window: practice entries stay excluded
+    assert len(R.human_signals(p, include_practice=True)) == 3
+
+
+def test_signals_endpoint_reports_scored_and_excluded(client, monkeypatch):
+    monkeypatch.setenv("ARENA_START", "2000-01-01"); monkeypatch.setenv("ARENA_END", "2999-01-01"); monkeypatch.setenv("ARENA_EXCLUDE_IDS", "H00001")
+    from app import market_calendar as mc; monkeypatch.setattr(mc, "is_trading", lambda ex, *a, **k: True)
+    for _ in range(2): assert client.post("/api/arena/public/submit", json=GOOD, headers=H).status_code == 200
+    j = client.get("/api/arena/public/signals", headers=H).json()["signals"]
+    assert [(s["id"], s["scored"], s["excluded"]) for s in j] == [("H00001", False, True), ("H00002", True, False)]

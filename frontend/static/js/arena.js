@@ -100,7 +100,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     const tb = $("mine"); tb.replaceChildren();
     try { const j = await api("/signals"); if (!j.signals.length) { tb.insertRow().insertCell().textContent = "nothing submitted yet"; return; }
       const sel = $("mgSignal"); sel.replaceChildren(...j.signals.slice().reverse().map((r) => { const o = document.createElement("option"); o.value = r.id; o.textContent = `${r.id} · ${r.underlying} ${r.strike}${r.option_type} ${r.entry_mode} ${r.entry}`; return o; }));
-      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, r.server_iso.replace("T", " ").slice(0, 19), r.practice ? "PRACTICE" : "SCORED", `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "),
+      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, r.server_iso.replace("T", " ").slice(0, 19), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "),
         (r.events || []).map((e) => e.action + (e.sl ? " " + e.sl : "") + (e.targets ? " " + e.targets.join("/") : "") + (e.trail_points ? " " + e.trail_points + "pt" : "") + (e.trail_pct ? " " + e.trail_pct + "%" : "")).join(" → ") || "—", r.hash.slice(0, 10)].forEach((v) => (tr.insertCell().textContent = v)); } }
     catch (e) { tb.insertRow().insertCell().textContent = e.message; }
   }

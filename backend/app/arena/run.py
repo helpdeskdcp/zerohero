@@ -29,13 +29,15 @@ def ai_signals(chanakya_db: str, since_date: str, until_date: str | None = None)
     return out
 
 
-def human_signals(path: str | None = None, start: str | None = None, end: str | None = None, include_practice: bool = False) -> list[dict]:
-    """Scoring set: practice entries and anything outside [start, end] (IST dates) never count."""
+def human_signals(path: str | None = None, start: str | None = None, end: str | None = None, include_practice: bool = False, exclude_ids: set | None = None) -> list[dict]:
+    """Scoring set. With a window (start/end, IST dates) the WINDOW decides: anything outside it never counts, anything inside counts regardless of the `practice` flag stored at submission time
+    (the flag records the mode when it was submitted; if the start date is moved earlier by agreement, signals already inside the new window count). `exclude_ids` = entries the parties agreed
+    were tests (ledger rows are immutable, so they are excluded here, publicly, via ARENA_EXCLUDE_IDS). Without a window, practice entries are excluded unless include_practice."""
     def day(r): return datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
     allrecs = SU.load(path); evs: dict[str, list] = {}
     for r in allrecs:
         if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct") if k in r} | {"t": r["server_ts"]})
-    rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or not r.get("practice")) and (not start or day(r) >= start) and (not end or day(r) <= end)]
+    rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or (start is not None or end is not None) or not r.get("practice")) and r["id"] not in (exclude_ids or set()) and (not start or day(r) >= start) and (not end or day(r) <= end)]
     return [{"id": r["id"], "participant": r["participant"], "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
              "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": r["server_ts"], "events": evs.get(r["id"], [])} for r in rows]
 

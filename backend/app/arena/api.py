@@ -31,7 +31,8 @@ def is_public_path(path: str) -> bool:
 
 def cfg() -> dict:
     return {"token": (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip(), "name": (os.environ.get("ARENA_HUMAN_NAME") or "INSTITUTION_TRADER").strip(),
-            "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25")}
+            "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25"),
+            "exclude": {x.strip() for x in (os.environ.get("ARENA_EXCLUDE_IDS") or "").split(",") if x.strip()}}
 
 
 def _auth(request: Request) -> dict:
@@ -133,11 +134,13 @@ async def amend(request: Request):
 
 @router.get("/signals")
 def signals(request: Request):
-    _auth(request)
+    c = _auth(request)
     recs = SU.load(); evs: dict[str, list] = {}
+    day = lambda r: datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
     for r in recs:
         if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r.get(k) for k in ("id", "server_iso", "action", "sl", "targets", "trail_points", "trail_pct", "hash")})
-    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")}, "events": evs.get(r["id"], [])}
+    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")}, "events": evs.get(r["id"], []),
+                         "scored": c["start"] <= day(r) <= c["end"] and r["id"] not in c["exclude"], "excluded": r["id"] in c["exclude"]}
                         for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL"]}
 
 
@@ -145,7 +148,7 @@ def signals(request: Request):
 def standings(request: Request):
     c = _auth(request)
     if time.time() - _cache["t"] > 120 or _cache["v"] is None:
-        sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"])
+        sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
         out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
         ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
         try:

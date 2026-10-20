@@ -10,8 +10,8 @@ You and the ZeroHero AI trade the **same market on paper**, and both are scored 
 Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised, with its ID and time (Telegram's own server time is on every message), and recorded in a hash-chained list (`data/evidence_feed/posts.jsonl`) that referees can compare with the chat. All other automated signal posts are switched off. These posts are PAPER-trading evidence records, not recommendations.
 
 ## 2. Dates
-- **Practice:** until the start date. Everything you submit is stored but **never scored**. Use it to learn the form.
-- **Arena:** Monday 26 Oct 2026 to 25 Nov 2026 (22 trading days). Entries outside this window are never scored.
+- **Arena window:** **20 Oct 2026 to 25 Nov 2026** (start moved earlier on 2026-10-20 by the project owner; see `ARENA_RULE_CHANGES.md`). Every signal you submit inside this window is scored. Entries outside it are never scored.
+- Your first signal H00001 (crude, 27-Oct expiry) was a test and is **excluded**; H00002 counts.
 
 ## 3. What you may trade
 - BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL**, nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.

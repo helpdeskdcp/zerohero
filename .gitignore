@@ -64,3 +64,4 @@ backend/data/research/order_pressure/_cache/
 backend/data/research/order_pressure/_run*.log
 backend/data/backups/
 backend/data/arena/INSTITUTION_ACCESS.txt
+backend/data/evidence_feed/chat_id.txt
