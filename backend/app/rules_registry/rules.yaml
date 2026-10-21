@@ -223,6 +223,7 @@ env_flags:
   - {name: ARENA_PUBLIC, category: FEATURE_FLAG, note: "SEBI-side arena public API + 2 static files (kill switch)"}
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
+  - {name: TG_CHANNEL_PARTICIPANTS, category: TUNING, note: "channel id -> arena participant mapping for the read-only reader"}
   - {name: ARENA_EXTRA_PARTICIPANTS, category: TUNING, note: "comma list of additional arena participants, each with its own token"}
   - {name: ARENA_TOKEN_NEERAJ_JOSHI, category: SECRET_OR_ID}
   - {name: ARENA_START, category: TUNING}

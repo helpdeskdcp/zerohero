@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZeroHero Arena Leaderboard</title>
+<style>
+:root{--bg:#0f1420;--card:#171e2e;--fg:#e6ebf5;--mut:#8b97b3;--ok:#26c281;--bad:#ef5350;--gold:#f5c542;--line:#27324a}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#f4f6fb;--card:#fff;--fg:#1b2438;--mut:#667394;--line:#dfe4f0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:6px 0}.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+button,input{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 12px}
+button.on{border-color:var(--gold);color:var(--gold)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:10px 8px;text-align:right;border-bottom:1px solid var(--line)}th:nth-child(2),td:nth-child(2){text-align:left}th{color:var(--mut);font-weight:600;font-size:12px}
+tr.me td{background:rgba(245,197,66,.10)}.pos{color:var(--ok)}.neg{color:var(--bad)}.rank{font-weight:700;width:46px;text-align:center}.mut{color:var(--mut)}
+.note{color:var(--mut);font-size:12px;margin-top:12px}#err{color:var(--bad);margin:8px 0}
+</style></head><body><div class="wrap">
+<h1>🏆 Arena leaderboard</h1><div class="sub" id="sub">Ranked by net profit after costs (same settlement rules for everyone). Paper trading.</div>
+<div class="bar"><button id="t" class="on">Today</button><button id="a">Overall</button><input id="tok" type="password" placeholder="your access token" size="28"><button id="go">Show</button></div>
+<div id="err"></div><table><thead><tr><th>#</th><th>Participant</th><th>Net ₹</th><th>Return</th><th>Trades</th><th>Win</th></tr></thead><tbody id="rows"></tbody></table>
+<div class="note" id="note"></div></div>
+<script>
+let scope="today";const $=id=>document.getElementById(id);
+try{$("tok").value=localStorage.getItem("arena_tok")||""}catch(e){}
+const fmt=n=>n==null?"–":(n<0?"-":"")+"₹"+Math.abs(Math.round(n)).toLocaleString("en-IN");
+async function load(){
+  $("err").textContent="";const tk=$("tok").value.trim();if(!tk){$("err").textContent="Enter your access token.";return}
+  try{localStorage.setItem("arena_tok",tk)}catch(e){}
+  try{const r=await fetch("/api/arena/public/leaderboard?scope="+scope,{headers:{"X-Arena-Token":tk}});
+    if(!r.ok){$("err").textContent=r.status==401?"Wrong token.":"Error "+r.status;return}
+    const d=await r.json();const medal=["🥇","🥈","🥉"];
+    $("sub").textContent=(scope=="today"?"Today ("+d.day+")":"Whole contest window")+" · updated "+d.generated_at.slice(11,19)+" IST · "+d.n_participants+" participants";
+    $("rows").innerHTML=d.rows.map(x=>{const me=x.participant==d.you?' class="me"':"";const c=x.net_rs==null?"mut":x.net_rs>=0?"pos":"neg";
+      return `<tr${me}><td class="rank">${x.rank?(medal[x.rank-1]||x.rank):"–"}</td><td>${x.display}${me?" (you)":""}</td><td class="${c}">${fmt(x.net_rs)}</td><td class="${c}">${x.return_pct==null?"–":x.return_pct+"%"}</td><td>${x.settled?x.settled:'<span class="mut">no settled trades</span>'}${x.not_filled?` <span class="mut">(+${x.not_filled} not filled)</span>`:""}</td><td>${x.win_rate==null?"–":Math.round(x.win_rate*100)+"%"}</td></tr>`}).join("");
+    $("note").textContent=d.note}catch(e){$("err").textContent="Could not load."}}
+$("go").onclick=load;$("t").onclick=()=>{scope="today";$("t").className="on";$("a").className="";load()};$("a").onclick=()=>{scope="all";$("a").className="on";$("t").className="";load()};
+setInterval(()=>{if($("tok").value.trim())load()},60000);if($("tok").value.trim())load();
+</script></body></html>

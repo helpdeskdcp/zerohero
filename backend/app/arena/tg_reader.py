@@ -29,6 +29,14 @@ def source_ids() -> set[str]:
     return {x.strip() for x in (os.environ.get("TG_SOURCE_CHANNEL_IDS") or "").split(",") if x.strip()}
 
 
+def participant_for(chat_id, default: str) -> str:
+    """Which arena participant a channel belongs to: TG_CHANNEL_PARTICIPANTS='<channel id>:<NAME>,...'; unlisted channels fall back to the default participant."""
+    m = {}
+    for x in (os.environ.get("TG_CHANNEL_PARTICIPANTS") or "").split(","):
+        if ":" in x: k, v = x.split(":", 1); m[k.strip()] = v.strip().upper()
+    return m.get(str(chat_id), default)
+
+
 def submit_enabled() -> bool:
     return (os.environ.get("TG_INGEST_SUBMIT") or "").strip().lower() in ("1", "true", "on", "yes")
 
@@ -90,7 +98,7 @@ async def run() -> None:                                                       #
         try:
             post = to_post(ev.chat_id, ev.message)
             if str(post["chat"]["id"]) not in ids: return                        # belt and braces: never touch a non-listed chat
-            r = process(post, state, edited=edited, participant=c["name"], mode_fn=lambda: api.mode(c))
+            r = process(post, state, edited=edited, participant=participant_for(post["chat"]["id"], c["name"]), mode_fn=lambda: api.mode(c))
             json.dump(state, open(CI.STATE, "w")); write_status(connected=True, last_event=time.time())
             log.info("channel=%s msg=%s outcome=%s", post["chat"]["id"], post["message_id"], r["outcome"])
         except Exception as e:

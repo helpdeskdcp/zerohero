@@ -2,7 +2,9 @@
 a rate limit, a body-size limit, server-side participant naming and an append-only ledger. Reads market data read-only; no order path. Kill switch: ARENA_PUBLIC=0."""
 from __future__ import annotations
 
+import hashlib
 import hmac
+import json
 import os
 import threading
 import time
@@ -17,7 +19,7 @@ router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 IST = timezone(timedelta(hours=5, minutes=30))
 EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
-PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js")
+PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY, RATE_PER_MIN = 4096, 60
 
@@ -29,13 +31,23 @@ def is_public_path(path: str) -> bool:
     return enabled() and (path.startswith("/api/arena/public/") or path in PUBLIC_STATIC)
 
 
+PARTICIPANTS_FILE = os.path.join(BASE, "data", "arena", "participants.json")
+
+
+def _participants_file() -> dict:
+    try: return json.load(open(PARTICIPANTS_FILE, encoding="utf-8"))
+    except Exception: return {}
+
+
 def cfg() -> dict:
     name = (os.environ.get("ARENA_HUMAN_NAME") or "INSTITUTION_TRADER").strip(); tok = (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip()
     parts = {name: tok}
     for x in (os.environ.get("ARENA_EXTRA_PARTICIPANTS") or "").split(","):
         x = x.strip().upper()
         if x and x != name: parts[x] = (os.environ.get("ARENA_TOKEN_" + x) or "").strip()
-    return {"participants": parts, "token": tok, "name": name,
+    pf = _participants_file(); hashes = {k.upper(): v["token_sha256"] for k, v in pf.items() if isinstance(v, dict) and v.get("token_sha256") and k.upper() not in parts}
+    display = {k.upper(): (v.get("display") or k) for k, v in pf.items() if isinstance(v, dict)}
+    return {"participants": parts, "hashes": hashes, "display": display, "token": tok, "name": name,
             "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25"),
             "exclude": {x.strip() for x in (os.environ.get("ARENA_EXCLUDE_IDS") or "").split(",") if x.strip()}}
 
@@ -43,7 +55,7 @@ def cfg() -> dict:
 def _auth(request: Request) -> dict:
     if not enabled(): raise HTTPException(404, "not found")
     c = cfg()
-    if not any(c["participants"].values()): raise HTTPException(503, "arena not configured")
+    if not any(c["participants"].values()) and not c["hashes"]: raise HTTPException(503, "arena not configured")
     ip = request.client.host if request.client else "?"; now = time.time()
     with _lock:
         q = _hits[ip]
@@ -53,6 +65,10 @@ def _auth(request: Request) -> dict:
     given = request.headers.get("x-arena-token", "").encode(); who = None
     for nm, tk in c["participants"].items():
         if tk and hmac.compare_digest(given, tk.encode()): who = nm
+    if who is None and given:
+        h = hashlib.sha256(given).hexdigest()
+        for nm, hv in c["hashes"].items():
+            if hmac.compare_digest(h.encode(), hv.encode()): who = nm
     if who is None: raise HTTPException(401, "bad arena token")
     return {**c, "name": who}
 
@@ -130,7 +146,7 @@ async def submit(request: Request):
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))
     try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
-    _cache["by"] = {}
+    _cache["by"] = {}; _cache["lb"] = {}
     out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
     if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]; out["available_expiries"] = chk["available_expiries"]
     return out
@@ -155,7 +171,7 @@ async def amend(request: Request):
         except Exception: pass
     try: rec = SU.submit_event(body, c["name"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
-    _cache["by"] = {}
+    _cache["by"] = {}; _cache["lb"] = {}
     return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "server_iso", "practice", "hash")}
 
 
@@ -199,6 +215,24 @@ def standings(request: Request):
                                         "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
                                                     "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
     return _cache["by"][c["name"]][1]
+
+
+@router.get("/leaderboard")
+def leaderboard(request: Request, scope: str = "today"):
+    """Ranking of every participant (the AI included) by net profit after costs. Shows totals only: never another participant's signals. scope = today | all."""
+    c = _auth(request)
+    if scope not in ("today", "all"): raise HTTPException(422, "scope must be today or all")
+    ent = _cache.setdefault("lb", {}).get(scope)
+    if ent is None or time.time() - ent[0] > 90:
+        from . import leaderboard as LB
+        sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
+        today = datetime.now(IST).strftime("%Y-%m-%d")
+        names = list(dict.fromkeys(["ZEROHERO_AI", *c["participants"], *c["hashes"]]))
+        v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)
+        v.update(mode=mode(c), generated_at=datetime.now(IST).isoformat(timespec="seconds"), you=None)
+        _cache["lb"][scope] = (time.time(), v)
+    return {**_cache["lb"][scope][1], "you": c["name"]}
 
 
 @router.get("/guide")
