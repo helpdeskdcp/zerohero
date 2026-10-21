@@ -81,3 +81,14 @@ def submit_event(d: dict, participant: str, path: str | None = None, now: float 
     ev.update(type="HUMAN_EVENT", participant=participant, practice=bool(sig.get("practice")), id=f"E{sum(1 for r in recs if r.get('type') == 'HUMAN_EVENT') + 1:05d}", server_ts=t,
               server_iso=datetime.fromtimestamp(t, tz=timezone.utc).isoformat())
     return L.append(p, ev)
+
+
+def submit_ts_correction(signal_id: str, effective_ts: float, reason: str, path: str | None = None) -> dict:
+    """Corrects the effective instant of a CHANNEL-INGESTED signal to the Telegram post time. EARLIER only (an infrastructure-latency fix: a late reader must not penalise the poster); it can never move a signal later."""
+    p = path or PATH; recs = load(p)
+    sig = next((r for r in recs if r.get("type") == "HUMAN_SIGNAL" and r["id"] == signal_id), None)
+    if sig is None: raise SubmissionError("unknown signal_id")
+    if "via channel post" not in (sig.get("note") or ""): raise SubmissionError("only channel-ingested signals can be corrected")
+    if not (effective_ts < sig["server_ts"]): raise SubmissionError("the corrected time must be earlier than the recorded server time")
+    n = sum(1 for r in recs if r.get("type") == "HUMAN_TS_CORRECTION")
+    return L.append(p, {"type": "HUMAN_TS_CORRECTION", "id": f"C{n + 1:05d}", "signal_id": signal_id, "effective_ts": float(effective_ts), "reason": reason[:300], "server_ts": time.time()})

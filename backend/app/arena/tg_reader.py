@@ -65,7 +65,7 @@ def process(post: dict, state: dict, *, edited: bool = False, participant: str, 
     if edited:
         rec = {"outcome": "EDIT_IGNORED", "chat_id": str(post["chat"]["id"]), "message_id": post.get("message_id"), "text": text[:1500]}
         CI._log(rec, kw.get("log", CI.LOG)); _quarantine({**rec, "why": "edited post, never re-submitted"}); _bump("edit_ignored"); return rec
-    out = CI.handle_post(post, state, participant=participant, mode_fn=mode_fn, now=now, dry_run=not submit_enabled(), **kw)
+    out = CI.handle_post(post, state, participant=participant, mode_fn=mode_fn, now=now, dry_run=not submit_enabled(), use_post_time=True, **kw)
     _bump(out["outcome"].lower())
     if out["outcome"] == "IGNORED_NOT_A_SIGNAL" and LOOKS_LIKE_SIGNAL.search(text): _quarantine({**out, "why": "looks like a signal but did not parse"}); _bump("quarantined")
     return out

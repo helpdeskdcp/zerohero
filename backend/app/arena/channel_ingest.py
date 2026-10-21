@@ -47,19 +47,27 @@ def _market_open(und: str) -> bool:
         return False
 
 
-def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None, dry_run: bool = False) -> dict:
-    """One channel_post -> outcome dict (also appended to the log). Mutates `state['seen']`."""
+def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None, dry_run: bool = False, use_post_time: bool = False) -> dict:
+    """One channel_post -> outcome dict (also appended to the log). Mutates `state['seen']`.
+    use_post_time: the ledger stamp is Telegram's own time of the post (the instant the signal became public), never later than receipt, so a late reader cannot penalise the poster;
+    a post read more than STALE_SEC after it was posted is logged and NOT submitted."""
     chat = str(post["chat"]["id"]); mid = post.get("message_id"); key = f"{chat}:{mid}"
-    t = now or time.time(); text = post.get("text") or post.get("caption") or ""
-    base = {"key": key, "chat_id": chat, "message_id": mid, "tg_date": datetime.fromtimestamp(post.get("date", t), tz=timezone.utc).isoformat(), "received_iso": datetime.fromtimestamp(t, tz=timezone.utc).isoformat(), "text": text[:1500]}
+    t_recv = now or time.time(); text = post.get("text") or post.get("caption") or ""
+    t = min(float(post["date"]), t_recv) if (use_post_time and post.get("date")) else t_recv
+    stale = bool(use_post_time and t_recv - t > STALE_SEC)
+    base = {"key": key, "chat_id": chat, "message_id": mid, "tg_date": datetime.fromtimestamp(post.get("date", t), tz=timezone.utc).isoformat(), "received_iso": datetime.fromtimestamp(t_recv, tz=timezone.utc).isoformat(),
+            "latency_sec": round(t_recv - t, 1), "text": text[:1500]}
     if key in state["seen"]: return {"outcome": "DUPLICATE", **base}
-    out = _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run)
+    out = _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run, stale)
     state["seen"][key] = out.get("signal_id") or out["outcome"]
     _log({**base, **out}, log)
     return {**base, **out}
 
 
-def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run=False) -> dict:
+STALE_SEC = 1800                                   # a post read more than 30 min after it was posted is logged, not submitted
+
+
+def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run=False, stale=False) -> dict:
     if not text.strip(): return {"outcome": "IGNORED_NO_TEXT"}
     r = CP.parse_signal(text)
     if not r["ok"]:
@@ -75,6 +83,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
         return {"outcome": "CANCEL_SUBMITTED", "event_id": ev["id"], "signal_id": sid}
     s = r["signal"]
     if not s["supported"]: return {"outcome": "UNSUPPORTED_INSTRUMENT", "underlying": s["underlying"]}
+    if stale: return {"outcome": "STALE_NOT_SUBMITTED", "underlying": s["underlying"]}
     und = s["underlying"]
     if mode_fn() == "ENDED": return {"outcome": "ARENA_ENDED"}
     scored = mode_fn() == "ARENA_LIVE"
