@@ -26,7 +26,9 @@ def parse_signal(text: str) -> dict:
     """-> {"ok": True, "signal": {...}} or {"ok": False, "reason": ...}"""
     s = norm(text)
     m = re.search(r"#\s*([A-Z0-9_ ]*?)\s*_\s*(\d{3,6})\s*(CE|PE)\b", s) or re.search(r"#\s*([A-Z0-9_]+)\s+(\d{3,6})\s*(CE|PE)\b", s)
-    if not m: return parse_mcx(s)
+    if not m:
+        r = parse_expiry_header(s)
+        return r if r is not None else parse_mcx(s)
     tag, strike, ot = m.group(1), float(m.group(2)), m.group(3)
     und = underlying_of(tag)
     if und is None: return {"ok": False, "reason": f"unknown underlying in tag {tag!r}"}
@@ -47,6 +49,36 @@ def parse_signal(text: str) -> dict:
     targets = [t for t in targets if t > entry]
     if not targets: return {"ok": False, "reason": "no target above the entry"}
     return {"ok": True, "signal": {"underlying": und, "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "entry_range": [lo, hi], "sl": sl, "targets": targets, "horizon": horizon, "tag": tag.strip("_ "), "supported": und in ALLOWED}}
+
+
+MONTHS = {"JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6, "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12}
+
+
+def parse_expiry_header(s: str) -> dict | None:
+    """Header carrying its own expiry, e.g. `NIFTY 17 JULY 25350 PE` (sample from Neeraj Joshi's channel). Entry / stop / targets must be given with explicit keywords
+    (ABOVE|BUY|NEAR|ENTRY [lo-hi], SL|STOPLOSS x, TARGET|TGT|TP a/b/c); otherwise the post is refused (-> quarantine), never guessed. The expiry YEAR is not in the post:
+    the ingest layer picks the captured expiry with that day and month on/after the post date."""
+    m = re.search(r"\b([A-Z]{3,12})\s+(\d{1,2})\s*(?:ST|ND|RD|TH)?\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+(\d{3,6})\s*(CE|PE)\b", s)
+    if not m: return None
+    und = underlying_of(m.group(1))
+    if und is None: return {"ok": False, "reason": f"unknown underlying in {m.group(1)!r}"}
+    day, mon, strike, ot = int(m.group(2)), MONTHS[m.group(3)], float(m.group(4)), m.group(5)
+    rest = s[m.end():]
+    em = re.search(rf"(ABOVE|BUY|NEAR|ENTRY|CMP)\s*(?:RANGE|LEVEL|PRICE|AT|ON)?\s*[:\-=]?\s*{NUM}(?:\s*(?:-|TO|/)\s*{NUM})?", rest)
+    if not em: return {"ok": False, "reason": "no explicit entry keyword (ABOVE|BUY|NEAR|ENTRY)"}
+    lo = float(em.group(2)); hi = float(em.group(3)) if em.group(3) else lo
+    if hi < lo: lo, hi = hi, lo
+    mode, entry = ("ABOVE", lo) if em.group(1) == "ABOVE" else (("NEAR", lo) if em.group(1) in ("NEAR", "CMP") else ("LIMIT", hi))
+    tm = re.search(r"(?:TARGETS?|TGT|TP)\s*[:\-=]?\s*((?:\d+(?:\.\d+)?\s*[/,&\-]?\s*)+)", rest)
+    targets = sorted({float(x) for x in re.findall(r"\d+(?:\.\d+)?", tm.group(1))}) if tm else []
+    sm = re.search(rf"(?:STOP\s*LOSS|STOPLOSS|\bSL\b)\s*[:\-=]?\s*{NUM}", rest)
+    if not sm: return {"ok": False, "reason": "no stop-loss line"}
+    sl = float(sm.group(1))
+    if not (0 < sl < entry): return {"ok": False, "reason": f"inconsistent: stop-loss {sl:g} must be below the entry {entry:g}"}
+    targets = [t for t in targets if t > entry]
+    if not targets: return {"ok": False, "reason": "no target above the entry"}
+    return {"ok": True, "signal": {"underlying": und, "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "entry_range": [lo, hi], "sl": sl, "targets": targets, "horizon": None,
+                                  "expiry_hint": {"day": day, "month": mon}, "tag": und, "supported": und in ALLOWED}}
 
 
 def parse_mcx(s: str) -> dict:

@@ -89,7 +89,13 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     scored = mode_fn() == "ARENA_LIVE"
     if scored and not _market_open(und): return {"outcome": "MARKET_CLOSED_NOT_SUBMITTED", "underlying": und}
     today = datetime.fromtimestamp(t, tz=IST).date().isoformat()
-    exp = pick_expiry(und, today, db_path)
+    hint = s.get("expiry_hint")
+    if hint:                                                                                  # the post names day + month: use ONLY a captured expiry with exactly that day and month on/after the post date
+        cands = [e for e in sorted(CT.captured(und, None, db_path)["expiries"]) if e >= today and int(e[8:10]) == hint["day"] and int(e[5:7]) == hint["month"]]
+        exp = cands[0] if cands else None
+        if not exp: return {"outcome": "NO_CAPTURED_EXPIRY_FOR_POST", "underlying": und, "hint": hint}
+    else:
+        exp = pick_expiry(und, today, db_path)
     if not exp: return {"outcome": "NO_CAPTURED_EXPIRY", "underlying": und}
     chk = CT.check(und, exp, s["strike"], s["option_type"], s["entry"], s["entry_mode"], sl=s["sl"], path=db_path)
     if chk["problems"] and scored: return {"outcome": "UNSCORABLE_NOT_SUBMITTED", "problems": chk["problems"], "parsed": s, "expiry": exp}

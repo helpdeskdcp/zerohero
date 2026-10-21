@@ -58,3 +58,12 @@ def test_goldm_mcx_samples():
                                         ("Book full profit now", "EXIT", None), ("Good morning everyone", None, None)])
 def test_updates(txt, kind, n):
     u = CP.parse_update(txt); assert (u["kind"], u["n_target"]) == (kind, n) if kind else u is None
+
+
+def test_explicit_expiry_header_from_neeraj_sample_synthetic_body():
+    # the header line is the real sample (NIFTY 17 JULY 25350 PE); the body lines are SYNTHETIC until a full sample is supplied
+    r = CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200/250/300\nSL 120")["signal"]
+    assert (r["underlying"], r["strike"], r["option_type"], r["entry_mode"], r["entry"], r["sl"], r["targets"], r["expiry_hint"]) == ("NIFTY", 25350.0, "PE", "ABOVE", 150.0, 120.0, [200.0, 250.0, 300.0], {"day": 17, "month": 7})
+    assert CP.parse_signal("BANKNIFTY 21st OCT 52000 CE\nBUY 100-110\nTGT 140\nSTOPLOSS 80")["signal"]["entry"] == 110.0
+    for bad in ("NIFTY 17 JULY 25350 PE\nTARGET 200\nSL 120", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200", "NIFTY 17 JULY 25350 PE", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200\nSL 160"):
+        assert not CP.parse_signal(bad)["ok"]                                                    # missing pieces are refused, never guessed
