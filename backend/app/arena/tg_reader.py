@@ -19,6 +19,8 @@ DIR = os.path.join(HERE, "data", "tg")
 SESSION = os.path.join(DIR, "reader")
 STATUS = os.path.join(DIR, "status.json")
 QUARANTINE = os.path.join(CI.DIR, "channel_quarantine.jsonl")
+LAST_IDS = os.path.join(DIR, "last_ids.json")
+POLL_SEC = 15
 LOOKS_LIKE_SIGNAL = re.compile(r"\b(CE|PE|TARGET|STOP\s*LOSS|STOPLOSS|BUY\s*(RANGE|ABOVE)|NEAR\s*LEVEL)\b", re.I)
 _counts: dict = {}
 
@@ -94,6 +96,30 @@ async def run() -> None:                                                       #
         except Exception as e:
             _bump("errors"); write_status(last_error=type(e).__name__); log.exception("handler failed (%s)", type(e).__name__)
 
+    def handle_msg(cid, m):
+        class _E: pass
+        e = _E(); e.chat_id = cid; e.message = m; handle(e, False)
+
+    async def poll_loop():
+        # Telegram pushes channel posts to this session only in ~30-minute batches, so every POLL_SEC seconds the new messages are fetched directly.
+        # Read-only; ids are persisted so a restart back-fills only the gap (the per-post dedupe makes overlap with the push events harmless).
+        last = CI._load(LAST_IDS, {})
+        while True:
+            try:
+                for cid in chats:
+                    k = str(cid)
+                    if k not in last:
+                        top = await client.get_messages(cid, limit=1); last[k] = top[0].id if top else 0; json.dump(last, open(LAST_IDS, "w")); continue
+                    new = await client.get_messages(cid, limit=20, min_id=last[k])
+                    for m in sorted(new, key=lambda x: x.id):
+                        handle_msg(cid, m); last[k] = max(last[k], m.id); json.dump(last, open(LAST_IDS, "w"))
+                write_status(connected=True, last_poll=time.time())
+            except FloodWaitError as e:
+                _bump("flood_wait"); await asyncio.sleep(min(int(e.seconds) + 5, 3600))
+            except Exception as e:
+                _bump("poll_errors"); write_status(last_error=type(e).__name__)
+            await asyncio.sleep(POLL_SEC)
+
     client.add_event_handler(lambda ev: handle(ev, False), events.NewMessage(chats=chats))
     client.add_event_handler(lambda ev: handle(ev, True), events.MessageEdited(chats=chats))
     backoff = 5
@@ -102,8 +128,10 @@ async def run() -> None:                                                       #
             await client.connect()
             if not await client.is_user_authorized(): write_status(connected=False, last_error="NOT_AUTHORIZED"); raise SystemExit("session is not authorized: run scripts/telethon_login.py")
             write_status(connected=True, last_error=None, started=time.time()); backoff = 5
+            poller = asyncio.ensure_future(poll_loop())
             while client.is_connected():
                 write_status(connected=True); await asyncio.sleep(30)
+            poller.cancel()
         except FloodWaitError as e:
             wait = min(int(e.seconds) + 5, 3600); _bump("flood_wait"); write_status(connected=False, last_error=f"FLOOD_WAIT_{wait}s"); await asyncio.sleep(wait)
         except SystemExit: raise
