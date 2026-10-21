@@ -11,7 +11,7 @@ Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised
 
 ## 2. Dates
 - **Arena window:** **20 Oct 2026 to 25 Nov 2026** (start moved earlier on 2026-10-20 by the project owner; see `ARENA_RULE_CHANGES.md`). Every signal you submit inside this window is scored. Entries outside it are never scored.
-- Your first signal H00001 (crude, 27-Oct expiry) was a test and is **excluded**; H00002 counts.
+- Signals agreed by the parties as tests are **excluded** from scoring and listed in `ARENA_RULE_CHANGES.md` (currently H00001 and H00007); every other signal inside the window counts.
 
 ## 3. What you may trade
 - BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL**, nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.

@@ -14,13 +14,13 @@ th,td{padding:10px 8px;text-align:right;border-bottom:1px solid var(--line)}th:n
 tr.me td{background:rgba(245,197,66,.10)}.pos{color:var(--ok)}.neg{color:var(--bad)}.rank{font-weight:700;width:46px;text-align:center}.mut{color:var(--mut)}
 .note{color:var(--mut);font-size:12px;margin-top:12px}#err{color:var(--bad);margin:8px 0}
 </style></head><body><div class="wrap">
-<h1>🏆 Arena leaderboard</h1><div class="sub" id="sub">Ranked by net profit after costs (same settlement rules for everyone). Paper trading.</div>
+<h1>🏆 Arena leaderboard</h1><a href="/static/arena.html" style="color:var(--mut);font-size:13px">← back to the arena</a><div class="sub" id="sub">Ranked by net profit after costs (same settlement rules for everyone). Paper trading.</div>
 <div class="bar"><button id="t" class="on">Today</button><button id="a">Overall</button><input id="tok" type="password" placeholder="your access token" size="28"><button id="go">Show</button></div>
 <div id="err"></div><table><thead><tr><th>#</th><th>Participant</th><th>Net ₹</th><th>Return</th><th>Trades</th><th>Win</th></tr></thead><tbody id="rows"></tbody></table>
 <div class="note" id="note"></div></div>
 <script>
 let scope="today";const $=id=>document.getElementById(id);
-try{$("tok").value=localStorage.getItem("arena_tok")||""}catch(e){}
+try{$("tok").value=sessionStorage.getItem("arena_token")||localStorage.getItem("arena_tok")||""}catch(e){}
 const fmt=n=>n==null?"–":(n<0?"-":"")+"₹"+Math.abs(Math.round(n)).toLocaleString("en-IN");
 async function load(){
   $("err").textContent="";const tk=$("tok").value.trim();if(!tk){$("err").textContent="Enter your access token.";return}
