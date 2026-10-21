@@ -35,11 +35,12 @@ def human_signals(path: str | None = None, start: str | None = None, end: str | 
     were tests (ledger rows are immutable, so they are excluded here, publicly, via ARENA_EXCLUDE_IDS). Without a window, practice entries are excluded unless include_practice."""
     def day(r): return datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
     allrecs = SU.load(path); evs: dict[str, list] = {}
+    pmap = SU.participant_map(allrecs)
     corr = {r["signal_id"]: r["effective_ts"] for r in allrecs if r.get("type") == "HUMAN_TS_CORRECTION"}         # earlier-only latency corrections for channel-ingested signals
     for r in allrecs:
         if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct") if k in r} | {"t": r["server_ts"]})
     rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or (start is not None or end is not None) or not r.get("practice")) and r["id"] not in (exclude_ids or set()) and (not start or day(r) >= start) and (not end or day(r) <= end)]
-    return [{"id": r["id"], "participant": r["participant"], "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
+    return [{"id": r["id"], "participant": pmap.get(r["id"], r["participant"]), "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
              "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], [])} for r in rows]
 
 

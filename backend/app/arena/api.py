@@ -18,7 +18,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 IST = timezone(timedelta(hours=5, minutes=30))
 EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js")
-_hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None}
+_hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY, RATE_PER_MIN = 4096, 60
 
 
@@ -30,7 +30,12 @@ def is_public_path(path: str) -> bool:
 
 
 def cfg() -> dict:
-    return {"token": (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip(), "name": (os.environ.get("ARENA_HUMAN_NAME") or "INSTITUTION_TRADER").strip(),
+    name = (os.environ.get("ARENA_HUMAN_NAME") or "INSTITUTION_TRADER").strip(); tok = (os.environ.get("ARENA_TOKEN_HUMAN") or "").strip()
+    parts = {name: tok}
+    for x in (os.environ.get("ARENA_EXTRA_PARTICIPANTS") or "").split(","):
+        x = x.strip().upper()
+        if x and x != name: parts[x] = (os.environ.get("ARENA_TOKEN_" + x) or "").strip()
+    return {"participants": parts, "token": tok, "name": name,
             "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25"),
             "exclude": {x.strip() for x in (os.environ.get("ARENA_EXCLUDE_IDS") or "").split(",") if x.strip()}}
 
@@ -38,15 +43,18 @@ def cfg() -> dict:
 def _auth(request: Request) -> dict:
     if not enabled(): raise HTTPException(404, "not found")
     c = cfg()
-    if not c["token"]: raise HTTPException(503, "arena not configured")
+    if not any(c["participants"].values()): raise HTTPException(503, "arena not configured")
     ip = request.client.host if request.client else "?"; now = time.time()
     with _lock:
         q = _hits[ip]
         while q and now - q[0] > 60: q.popleft()
         if len(q) >= RATE_PER_MIN: raise HTTPException(429, "rate limit")
         q.append(now)
-    if not hmac.compare_digest(request.headers.get("x-arena-token", "").encode(), c["token"].encode()): raise HTTPException(401, "bad arena token")
-    return c
+    given = request.headers.get("x-arena-token", "").encode(); who = None
+    for nm, tk in c["participants"].items():
+        if tk and hmac.compare_digest(given, tk.encode()): who = nm
+    if who is None: raise HTTPException(401, "bad arena token")
+    return {**c, "name": who}
 
 
 def mode(c: dict, now: datetime | None = None) -> str:
@@ -122,7 +130,7 @@ async def submit(request: Request):
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))
     try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
-    _cache["v"] = None
+    _cache["by"] = {}
     out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
     if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]; out["available_expiries"] = chk["available_expiries"]
     return out
@@ -147,7 +155,7 @@ async def amend(request: Request):
         except Exception: pass
     try: rec = SU.submit_event(body, c["name"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
-    _cache["v"] = None
+    _cache["by"] = {}
     return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "server_iso", "practice", "hash")}
 
 
@@ -162,19 +170,20 @@ def ingest_status(request: Request):
 @router.get("/signals")
 def signals(request: Request):
     c = _auth(request)
-    recs = SU.load(); evs: dict[str, list] = {}
+    recs = SU.load(); evs: dict[str, list] = {}; pm = SU.participant_map(recs)
     day = lambda r: datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
     for r in recs:
         if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r.get(k) for k in ("id", "server_iso", "action", "sl", "targets", "trail_points", "trail_pct", "hash")})
     return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")}, "events": evs.get(r["id"], []),
                          "scored": c["start"] <= day(r) <= c["end"] and r["id"] not in c["exclude"], "excluded": r["id"] in c["exclude"]}
-                        for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL"]}
+                        for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and pm.get(r["id"]) == c["name"]]}
 
 
 @router.get("/standings")
 def standings(request: Request):
     c = _auth(request)
-    if time.time() - _cache["t"] > 120 or _cache["v"] is None:
+    ent = _cache.setdefault("by", {}).get(c["name"])
+    if ent is None or time.time() - ent[0] > 120:
         sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
         out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
         ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
@@ -185,11 +194,11 @@ def standings(request: Request):
             active = {"summary": a["summary"]["all"], "groups": a["summary"]["groups"], "trades_per_day": a["summary"]["trades_per_day"], "verdict": a["summary"]["verdict"], "results": a["results"][-200:]}
         except Exception as e:
             active = {"summary": {}, "groups": {}, "trades_per_day": 0.0, "verdict": "UNAVAILABLE", "results": [], "error": f"{type(e).__name__}"}
-        _cache.update(t=time.time(), v={"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
+        _cache["by"][c["name"]] = (time.time(), {"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
                                         "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
                                         "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
                                                     "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
-    return _cache["v"]
+    return _cache["by"][c["name"]][1]
 
 
 @router.get("/guide")

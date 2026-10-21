@@ -73,7 +73,8 @@ def validate_event(d: dict) -> dict:
 
 def submit_event(d: dict, participant: str, path: str | None = None, now: float | None = None) -> dict:
     p = path or PATH; ev = validate_event(d); recs = load(p)
-    sig = next((r for r in recs if r.get("type") == "HUMAN_SIGNAL" and r["id"] == ev["signal_id"] and r["participant"] == participant), None)
+    pm = participant_map(recs)
+    sig = next((r for r in recs if r.get("type") == "HUMAN_SIGNAL" and r["id"] == ev["signal_id"] and pm.get(r["id"]) == participant), None)
     if sig is None: raise SubmissionError("unknown signal_id for this participant")
     nev = [r for r in recs if r.get("type") == "HUMAN_EVENT" and r["signal_id"] == ev["signal_id"]]
     if len(nev) >= MAX_EVENTS_PER_SIGNAL: raise SubmissionError(f"at most {MAX_EVENTS_PER_SIGNAL} management events per signal")
@@ -92,3 +93,22 @@ def submit_ts_correction(signal_id: str, effective_ts: float, reason: str, path:
     if not (effective_ts < sig["server_ts"]): raise SubmissionError("the corrected time must be earlier than the recorded server time")
     n = sum(1 for r in recs if r.get("type") == "HUMAN_TS_CORRECTION")
     return L.append(p, {"type": "HUMAN_TS_CORRECTION", "id": f"C{n + 1:05d}", "signal_id": signal_id, "effective_ts": float(effective_ts), "reason": reason[:300], "server_ts": time.time()})
+
+
+def participant_map(recs: list[dict]) -> dict:
+    """signal id -> effective participant (the original, unless a HUMAN_PARTICIPANT_CORRECTION re-attributed it)."""
+    m = {r["id"]: r["participant"] for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL"}
+    for r in recs:
+        if r.get("type") == "HUMAN_PARTICIPANT_CORRECTION" and r["signal_id"] in m: m[r["signal_id"]] = r["participant"]
+    return m
+
+
+def submit_participant_correction(signal_id: str, participant: str, reason: str, path: str | None = None) -> dict:
+    """Re-attributes a manually submitted signal to the participant who really made it (the ledger row itself stays immutable). Channel-ingested signals cannot be re-attributed."""
+    p = path or PATH; recs = load(p)
+    sig = next((r for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and r["id"] == signal_id), None)
+    if sig is None: raise SubmissionError("unknown signal_id")
+    if "via channel post" in (sig.get("note") or ""): raise SubmissionError("channel-ingested signals cannot be re-attributed")
+    if not str(participant).strip(): raise SubmissionError("participant required")
+    n = sum(1 for r in recs if r.get("type") == "HUMAN_PARTICIPANT_CORRECTION")
+    return L.append(p, {"type": "HUMAN_PARTICIPANT_CORRECTION", "id": f"P{n + 1:05d}", "signal_id": signal_id, "participant": str(participant).strip().upper(), "reason": reason[:300], "server_ts": time.time()})
