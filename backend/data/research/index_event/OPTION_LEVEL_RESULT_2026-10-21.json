@@ -1,0 +1,123 @@
+{
+ "spec": "SPEC_OPTION_LEVEL_2026-10-21.md",
+ "lot": 65,
+ "n_expiries_in_db": 60,
+ "s=0.015": {
+  "n_used": 60,
+  "mean_net_rs": -260.88892916666657,
+  "ci975": [
+   -851.7203906249997,
+   389.9060072916666
+  ],
+  "median_net_rs": -518.617125,
+  "win_rate": 0.35,
+  "mean_first_half": -238.26129166666644,
+  "mean_second_half": -283.51656666666645,
+  "mean_entry_premium_rs_per_unit": 53.526025,
+  "mean_costs_rs": 102.34325833333334,
+  "by_era": {
+   "THU": {
+    "n": 1,
+    "mean_net": 741.2047500000004
+   },
+   "TUE": {
+    "n": 59,
+    "mean_net": -277.87356779661
+   }
+  },
+  "control_prev_day_mean_net": -532.4927291666658,
+  "n_control": 60,
+  "skipped": []
+ },
+ "s=0.000": {
+  "n_used": 60,
+  "mean_net_rs": -158.97992500000012,
+  "ci975": [
+   -765.3061947916667,
+   534.9132953124998
+  ],
+  "median_net_rs": -371.9852500000002,
+  "win_rate": 0.35,
+  "mean_first_half": -145.89488333333344,
+  "mean_second_half": -172.06496666666666,
+  "mean_entry_premium_rs_per_unit": 52.73500000000001,
+  "mean_costs_rs": 102.41909166666666,
+  "by_era": {
+   "THU": {
+    "n": 1,
+    "mean_net": 836.6085
+   },
+   "TUE": {
+    "n": 59,
+    "mean_net": -175.85430508474587
+   }
+  },
+  "control_prev_day_mean_net": -192.8293249999999,
+  "n_control": 60,
+  "skipped": []
+ },
+ "s=0.010": {
+  "n_used": 60,
+  "mean_net_rs": -226.91998333333348,
+  "ci975": [
+   -824.3351160416668,
+   446.6238020833329
+  ],
+  "median_net_rs": -468.3282500000005,
+  "win_rate": 0.35,
+  "mean_first_half": -207.47328333333354,
+  "mean_second_half": -246.3666833333335,
+  "mean_entry_premium_rs_per_unit": 53.262350000000005,
+  "mean_costs_rs": 102.36925833333333,
+  "by_era": {
+   "THU": {
+    "n": 1,
+    "mean_net": 773.0060000000002
+   },
+   "TUE": {
+    "n": 59,
+    "mean_net": -243.8678813559323
+   }
+  },
+  "control_prev_day_mean_net": -419.2708000000002,
+  "n_control": 60,
+  "skipped": []
+ },
+ "s=0.020": {
+  "n_used": 60,
+  "mean_net_rs": -294.86036666666683,
+  "ci975": [
+   -904.7203289583335,
+   375.9351347916664
+  ],
+  "median_net_rs": -568.8930000000003,
+  "win_rate": 0.3333333333333333,
+  "mean_first_half": -269.0521166666669,
+  "mean_second_half": -320.66861666666676,
+  "mean_entry_premium_rs_per_unit": 53.7897,
+  "mean_costs_rs": 102.31974999999997,
+  "by_era": {
+   "THU": {
+    "n": 1,
+    "mean_net": 709.3970000000002
+   },
+   "TUE": {
+    "n": 59,
+    "mean_net": -311.8816779661019
+   }
+  },
+  "control_prev_day_mean_net": -645.7127083333336,
+  "n_control": 60,
+  "skipped": []
+ },
+ "gate": {
+  "checks": {
+   "n>=30": true,
+   "mean>0": false,
+   "ci_lo>0": false,
+   "both_halves>0": false,
+   "s1.0pct_mean>0": false
+  },
+  "premise_holds": false
+ }
+}
