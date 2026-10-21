@@ -1,0 +1,124 @@
+{
+ "underlying": "SENSEX",
+ "spec": "SPEC_OPTION_LEVEL_2026-10-21.md",
+ "lot": 20,
+ "n_expiries_in_db": 60,
+ "s=0.015": {
+  "n_used": 60,
+  "mean_net_rs": -535.9706666666664,
+  "ci975": [
+   -1154.1587010416663,
+   151.50072916666693
+  ],
+  "median_net_rs": -546.4299999999998,
+  "win_rate": 0.3,
+  "mean_first_half": -299.0351666666663,
+  "mean_second_half": -772.9061666666663,
+  "mean_entry_premium_rs_per_unit": 213.39529166666668,
+  "mean_costs_rs": 103.68766666666667,
+  "by_era": {
+   "OLD": {
+    "n": 1,
+    "mean_net": 2112.86
+   },
+   "NEW": {
+    "n": 59,
+    "mean_net": -580.866101694915
+   }
+  },
+  "control_prev_day_mean_net": -635.2347457627109,
+  "n_control": 59,
+  "skipped": []
+ },
+ "s=0.000": {
+  "n_used": 60,
+  "mean_net_rs": -414.5723333333334,
+  "ci975": [
+   -1029.6874270833332,
+   268.6454166666654
+  ],
+  "median_net_rs": -471.09000000000026,
+  "win_rate": 0.35,
+  "mean_first_half": -188.38833333333343,
+  "mean_second_half": -640.7563333333334,
+  "mean_entry_premium_rs_per_unit": 210.24166666666665,
+  "mean_costs_rs": 103.77233333333334,
+  "by_era": {
+   "OLD": {
+    "n": 1,
+    "mean_net": 2213.9
+   },
+   "NEW": {
+    "n": 59,
+    "mean_net": -459.1227118644069
+   }
+  },
+  "control_prev_day_mean_net": -315.41406779661014,
+  "n_control": 59,
+  "skipped": []
+ },
+ "s=0.010": {
+  "n_used": 60,
+  "mean_net_rs": -495.5048333333334,
+  "ci975": [
+   -1104.0636708333336,
+   170.94462916666643
+  ],
+  "median_net_rs": -521.3100000000003,
+  "win_rate": 0.31666666666666665,
+  "mean_first_half": -262.1523333333334,
+  "mean_second_half": -728.8573333333335,
+  "mean_entry_premium_rs_per_unit": 212.34408333333334,
+  "mean_costs_rs": 103.71616666666667,
+  "by_era": {
+   "OLD": {
+    "n": 1,
+    "mean_net": 2146.54
+   },
+   "NEW": {
+    "n": 59,
+    "mean_net": -540.2852542372882
+   }
+  },
+  "control_prev_day_mean_net": -528.6272881355933,
+  "n_control": 59,
+  "skipped": []
+ },
+ "s=0.020": {
+  "n_used": 60,
+  "mean_net_rs": -576.4386666666669,
+  "ci975": [
+   -1196.50691875,
+   61.887845833332925
+  ],
+  "median_net_rs": -571.5450000000003,
+  "win_rate": 0.3,
+  "mean_first_half": -335.9190000000002,
+  "mean_second_half": -816.9583333333336,
+  "mean_entry_premium_rs_per_unit": 214.44650000000001,
+  "mean_costs_rs": 103.66133333333332,
+  "by_era": {
+   "OLD": {
+    "n": 1,
+    "mean_net": 2079.1700000000005
+   },
+   "NEW": {
+    "n": 59,
+    "mean_net": -621.4489830508477
+   }
+  },
+  "control_prev_day_mean_net": -741.8413559322037,
+  "n_control": 59,
+  "skipped": []
+ },
+ "gate": {
+  "checks": {
+   "n>=30": true,
+   "mean>0": false,
+   "ci_lo>0": false,
+   "both_halves>0": false,
+   "s1.0pct_mean>0": false
+  },
+  "premise_holds": false
+ }
+}
