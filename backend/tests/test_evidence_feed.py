@@ -96,7 +96,12 @@ def test_no_sebi_wording_in_arena_facing_material():
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     files = ["backend/ARENA_TERMS_2026-10-20.md", "backend/INSTITUTION_ARENA_GUIDE.md", "backend/HEAD_TO_HEAD_ARENA_PROPOSAL_2026-10-20.md", "frontend/static/arena.html", "frontend/static/js/arena.js", "frontend/index.html",
              "backend/app/arena/api.py", "backend/app/arena/settle.py", "backend/app/arena/submit.py", "backend/app/arena/run.py", "backend/data/arena/INSTITUTION_ACCESS.txt", "backend/scripts/arena_submit.py", "backend/scripts/arena_run.py"]
-    bad = [f for f in files if os.path.exists(os.path.join(root, f)) and "sebi" in open(os.path.join(root, f), encoding="utf-8").read().lower()]
+    import glob
+    for pat in ("backend/app/arena/*.py", "backend/app/energy_event/*.py", "backend/app/sl_detector/*.py", "backend/scripts/arena_*.py", "backend/scripts/energy_event*.py", "backend/scripts/neeraj_rr_report.py", "backend/scripts/sl_detector_truth.py",
+                "backend/scripts/telethon_login.py", "backend/data/arena/ACCESS_*.txt", "backend/ARENA_*.md", "backend/data/research/energy_event/*.md", "backend/data/research/index_event/*.md", "backend/data/research/sl_detector/*.md",
+                "frontend/static/leaderboard.html", "backend/app/main.py", "backend/app/api/dhan_routes.py", "backend/app/rules_registry/rules.yaml"):
+        files += [os.path.relpath(x, root) for x in glob.glob(os.path.join(root, pat))]
+    bad = [f for f in dict.fromkeys(files) if os.path.exists(os.path.join(root, f)) and "sebi" in open(os.path.join(root, f), encoding="utf-8").read().lower()]
     assert bad == [], f"arena-facing files must not use the SEBI name: {bad}"
     assert not os.path.exists(os.path.join(root, "backend", "SEBI_ARENA_GUIDE.md"))
 

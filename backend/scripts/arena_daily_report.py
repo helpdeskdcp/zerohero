@@ -25,6 +25,21 @@ for p, rs in sorted(res.items()):
         if LB._day(r) != day: continue
         n += 1; lines.append(f"- {p} {r['id']} {r['underlying']} {r['strike']:g} {r['type']} stamp {f(r['t'])}: {r['status']}" + (f", fill {r['fill']:.2f}@{f(r['fill_t'])}, exit {r['exit']:.2f} ({r['exit_reason']}), net Rs {r['net_rs']:.0f}" if r["status"] == "SETTLED" else ""))
 if not n: lines.append("- none")
+day_sigs = [x for x in sigs if datetime.fromtimestamp(x["t"], tz=IST).strftime("%Y-%m-%d") == day]
+if day_sigs:
+    lines += ["## Exit-rule variants (DESCRIPTIVE only, never ranked)", "",
+              "Official scoring exits at the FIRST target. The variants below only show how the same signals would have ended under other exit habits (parameters chosen once when this report was written, not tuned): "
+              "LAST = exit at the last target; LAST+TRAIL = last target with a 25% trailing stop from the fill (the trail event is applied after the usual delay). Same stop, same fills, same costs.", "",
+              "| Participant | Official (first target) | LAST target | LAST + 25% trail |", "|---|---|---|---|"]
+    def tot(sg, pol):
+        o = R.run(sg, market_db=os.path.join(HERE, "data", "market_history.db"), policy=pol)
+        return {k: (sum(r["net_rs"] for r in v["results"] if r["status"] == "SETTLED"), sum(1 for r in v["results"] if r["status"] == "SETTLED")) for k, v in o.items() if not k.startswith("_")}
+    trail = [{**x, "events": list(x.get("events") or []) + [{"t": x["t"], "action": "TRAIL_SL", "trail_pct": 25}]} for x in day_sigs]
+    v1, v2, v3 = tot(day_sigs, "T1"), tot(day_sigs, "LAST"), tot(trail, "LAST")
+    for p in sorted(v1):
+        cell = lambda v: f"Rs {v[p][0]:.0f} ({v[p][1]} settled)" if p in v else "-"
+        lines.append(f"| {c['display'].get(p) or LB.DEFAULT_DISPLAY.get(p) or p} | {cell(v1)} | {cell(v2)} | {cell(v3)} |")
+    lines += ["", "A single day is noise; these columns are about exit habits, not about who is better.", ""]
 log = [json.loads(x) for x in open(os.path.join(HERE, "data", "arena", "channel_ingest_log.jsonl"))] if os.path.exists(os.path.join(HERE, "data", "arena", "channel_ingest_log.jsonl")) else []
 day_log = [r for r in log if datetime.fromisoformat(r["tg_date"]).astimezone(IST).strftime("%Y-%m-%d") == day]
 cnt = {}

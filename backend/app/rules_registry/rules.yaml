@@ -220,7 +220,7 @@ env_flags:
   - {name: TELEGRAM_EVIDENCE_ONLY, category: SAFETY_SWITCH, note: "signals channel receives ONLY AI evidence posts (default on)"}
   - {name: EVIDENCE_FEED, category: FEATURE_FLAG, note: "hash-chained Telegram evidence posts of the AI's paper signals"}
   - {name: ACTIVE_ARM_SHADOW, category: FEATURE_FLAG, note: "ACTIVE arm shadow recorder (log only)"}
-  - {name: ARENA_PUBLIC, category: FEATURE_FLAG, note: "SEBI-side arena public API + 2 static files (kill switch)"}
+  - {name: ARENA_PUBLIC, category: FEATURE_FLAG, note: "Institution-side arena public API + its static files (kill switch)"}
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: TG_CHANNEL_PARTICIPANTS, category: TUNING, note: "channel id -> arena participant mapping for the read-only reader"}

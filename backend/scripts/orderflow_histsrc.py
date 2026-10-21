@@ -157,7 +157,10 @@ def session_oi_series(sym: str, date: str, src: str = None):
     if src == "zerohero":
         from app import market_hub
         raw = market_hub.session_option_quotes(sym, date)  # {(strike,side): [(ts,ltp)]}
-        return {k: [(t, v, None, None, None) for t, v in ser] for k, ser in raw.items()}
+        # Legacy five-field projection. The canonical reader now supplies
+        # attributed records and returns no series without expiry evidence.
+        return {k: [(r["timestamp"], r["ltp"], None, None, None) for r in ser]
+                for k, ser in raw.items()}
     return _od_oi_series(sym, date)
 
 

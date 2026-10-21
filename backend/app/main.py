@@ -146,6 +146,25 @@ class _AuthGateMiddleware:
 app.add_middleware(_AuthGateMiddleware)
 
 
+class _ArenaNoCacheMiddleware:
+    """Pure ASGI: the arena pages/script are always revalidated (a participant must never see a stale page after a wording or rule change)."""
+    _PATHS = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
+
+    def __init__(self, app): self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("path") not in self._PATHS: return await self.app(scope, receive, send)
+
+        async def _send(message):
+            if message["type"] == "http.response.start":
+                message = {**message, "headers": [h for h in message.get("headers", []) if h[0].lower() != b"cache-control"] + [(b"cache-control", b"no-cache, must-revalidate")]}
+            await send(message)
+        await self.app(scope, receive, _send)
+
+
+app.add_middleware(_ArenaNoCacheMiddleware)
+
+
 # ---------------------------------------------------------------- route modules
 from .api import (
     analysis_routes,
@@ -328,7 +347,7 @@ try:
 except Exception as _e:
     print(f"[rules_registry] router disabled: {type(_e).__name__}: {_e}")
 
-# ---- Arena (paper head-to-head, SEBI-side participant): own token-protected public API; append-only submission ledger; no order path. Kill switch: ARENA_PUBLIC=0 ----
+# ---- Arena (paper head-to-head, Institution-side participants): own token-protected public API; append-only submission ledger; no order path. Kill switch: ARENA_PUBLIC=0 ----
 try:
     if os.environ.get("ARENA_PUBLIC", "1").strip().lower() not in ("0", "false", "off", "no"):
         from .arena import api as _arena_api

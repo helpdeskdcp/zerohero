@@ -10,5 +10,5 @@ if d.get(name, {}).get("token_sha256"): sys.exit(f"{name} already has a token (d
 tok = secrets.token_urlsafe(32); d[name] = {**d.get(name, {}), "display": display, "token_sha256": hashlib.sha256(tok.encode()).hexdigest()}
 json.dump(d, open(P, "w"), indent=1); os.chmod(P, 0o600)
 A = os.path.join(HERE, "data", "arena", f"ACCESS_{name}.txt")
-open(A, "w").write(f"ZeroHero Arena - participant {display} ({name})\nSeparate profile: your signals and results are never mixed with another participant's.\nPage: /static/arena.html   Leaderboard: /static/leaderboard.html\nToken (send as header X-Arena-Token / enter on the page): {tok}\n"); os.chmod(A, 0o600)
+open(A, "w").write(f"ZeroHero Arena - participant {display} ({name})\nSeparate profile: your signals and results are never mixed with another participant's.\nPage: https://chanakya.datacarepoint.com/static/arena.html   Leaderboard: https://chanakya.datacarepoint.com/static/leaderboard.html\nToken (send as header X-Arena-Token / enter on the page): {tok}\n"); os.chmod(A, 0o600)
 print(f"added {name} ({display}); access file: {A}")
