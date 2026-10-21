@@ -30,3 +30,10 @@ For days that trigger: continuation = sign(price(R+30) - price(R+3)) equals sign
 
 ## F. What this spec does not claim
 No profitability is claimed. Stage 1 shows that volatility expands after the release; it says nothing about direction or about option pricing. Long single options pay theta and spread; the expansion may already be priced into implied volatility. Only the forward ledger can answer that.
+
+---
+## Addendum 2026-10-21 (implementation, before the first activation; no outcome seen)
+- Futures data in the live runner: platform live-stream 1-minute candles of the NG front future (`platform_ticks.db`), the same bar definition as stage 1; the stage-1/2a numbers used captured Angel/Dhan bars.
+- SL and target are computed from the REFERENCE ask (first captured option snapshot after the decision at R+3 min), not from the later 20-second-delayed fill. Everything else in section C is unchanged.
+- "No quote within 90 s": the runner waits up to 90 s after the decision for a captured option snapshot; none => NO_TRADE.
+- Every Thursday gets exactly one hash-chained row (INACTIVE / NO_TRIGGER / NO_TRADE / SIGNAL) in `data/energy_event/activations.jsonl`, so empty days are visible. Cron at 20:03 and 21:03 IST on Thursdays; kill switch `ENERGY_EVENT=0`.

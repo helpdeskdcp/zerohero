@@ -224,6 +224,7 @@ env_flags:
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: ARENA_START, category: TUNING}
+  - {name: ENERGY_EVENT, category: FEATURE_FLAG, note: "H-EV-NG Thursday shadow module kill switch (paper, log-only)"}
   - {name: TG_API_ID, category: SECRET_OR_ID}
   - {name: TG_API_HASH, category: SECRET_OR_ID}
   - {name: TG_SOURCE_CHANNEL_IDS, category: TUNING, note: "verified numeric ids of the only channels the read-only reader may touch"}
