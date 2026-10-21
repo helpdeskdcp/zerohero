@@ -73,3 +73,6 @@ backend/data/arena/channel_ingest_cron.log
 
 # telegram reader session + keys (never commit)
 backend/data/tg/
+
+# arena per-participant access files (tokens)
+backend/data/arena/ACCESS_*.txt
