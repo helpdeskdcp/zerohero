@@ -67,3 +67,13 @@ def test_explicit_expiry_header_from_neeraj_sample_synthetic_body():
     assert CP.parse_signal("BANKNIFTY 21st OCT 52000 CE\nBUY 100-110\nTGT 140\nSTOPLOSS 80")["signal"]["entry"] == 110.0
     for bad in ("NIFTY 17 JULY 25350 PE\nTARGET 200\nSL 120", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200", "NIFTY 17 JULY 25350 PE", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200\nSL 160"):
         assert not CP.parse_signal(bad)["ok"]                                                    # missing pieces are refused, never guessed
+
+
+def test_neeraj_format_colon_dash_and_unpublished_vip_stoploss():
+    # real lines: "ABOVE :- 405", "STOPLOSS :- VIP", headers "SENSEX 15 JULY 82800 CE" / "NIFTY 17 JULY 25350 PE"; the TARGET line is synthetic until a full sample arrives
+    r = CP.parse_signal("SENSEX 15 JULY 82800 CE\nABOVE :- 405\nTARGET :- 500/600\nSTOPLOSS :- VIP")["signal"]
+    assert (r["underlying"], r["strike"], r["entry_mode"], r["entry"], r["sl"], r["sl_published"], r["targets"], r["expiry_hint"]) == ("SENSEX", 82800.0, "ABOVE", 405.0, None, False, [500.0, 600.0], {"day": 15, "month": 7})
+    assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 200\nSTOPLOSS : PREMIUM")["signal"]["sl_published"] is False
+    r = CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 200/250\nSL :- 140")["signal"]; assert r["sl"] == 140.0 and r["sl_published"] is True
+    assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 200\nSTOP LOSS :- 190")["ok"] is False                      # a published SL above the entry is still refused
+    assert CP.parse_signal("SENSEX 15 JULY 82800 CE\nABOVE :- 405\nSTOPLOSS :- VIP")["ok"] is False                                      # no target line => refused, not guessed

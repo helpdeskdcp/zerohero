@@ -64,3 +64,9 @@ def test_expiry_hint_uses_only_the_matching_captured_expiry(env, monkeypatch):
     monkeypatch.setattr(CI.CT, "captured", lambda u, d, p=None: {"expiries": {"2026-10-22": {"strikes": []}, "2026-10-27": {"strikes": [25350.0]}}})
     r = CI.handle_post(post(21, msg), env["st"], **env["kw"]); assert r["outcome"] == "SUBMITTED" and r["expiry"] == "2026-10-27"
     r = CI.handle_post(post(22, msg.replace("27 OCT", "17 JULY")), env["st"], **env["kw"]); assert r["outcome"] == "NO_CAPTURED_EXPIRY_FOR_POST"
+
+
+def test_unpublished_stoploss_gets_the_fixed_default_not_an_ai_value(env, monkeypatch):
+    monkeypatch.setattr(CI.CT, "captured", lambda u, d, p=None: {"expiries": {"2026-10-27": {"strikes": [25350.0]}}})
+    r = CI.handle_post(post(31, "NIFTY 27 OCT 25350 PE\nABOVE :- 160\nTARGET :- 200/250\nSTOPLOSS :- VIP"), env["st"], **env["kw"]); assert r["outcome"] == "SUBMITTED"
+    rec = SU.load(env["kw"]["ledger"])[-1]; assert rec["sl"] == 112.0 and "arena default stop" in rec["note"]                    # 160 * 0.70

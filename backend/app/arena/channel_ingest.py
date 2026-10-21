@@ -64,6 +64,7 @@ def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: s
     return {**base, **out}
 
 
+DEFAULT_SL_FRAC = 0.70                              # default stop when a post publishes none: 30% below the entry (fixed in advance, same for everyone, not an AI output)
 STALE_SEC = 1800                                   # a post read more than 30 min after it was posted is logged, not submitted
 
 
@@ -84,6 +85,8 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     s = r["signal"]
     if not s["supported"]: return {"outcome": "UNSUPPORTED_INSTRUMENT", "underlying": s["underlying"]}
     if stale: return {"outcome": "STALE_NOT_SUBMITTED", "underlying": s["underlying"]}
+    default_sl = s.get("sl") is None
+    if default_sl: s["sl"] = round(s["entry"] * DEFAULT_SL_FRAC, 2)                          # the channel does not publish its stop ("STOPLOSS :- VIP"): the pre-registered arena default applies, NOT the AI
     und = s["underlying"]
     if mode_fn() == "ENDED": return {"outcome": "ARENA_ENDED"}
     scored = mode_fn() == "ARENA_LIVE"
@@ -102,7 +105,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     if dry_run: return {"outcome": "WOULD_SUBMIT", "parsed": s, "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
     try:
         rec = SU.submit({"participant": participant, "underlying": und, "expiry": exp, "strike": s["strike"], "option_type": s["option_type"], "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"],
-                         "targets": s["targets"], "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured)"},
+                         "targets": s["targets"], "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; SL not published, arena default stop -30%' if default_sl else ''})"},
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]
