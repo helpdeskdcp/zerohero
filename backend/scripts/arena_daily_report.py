@@ -43,7 +43,7 @@ if day_sigs:
         lines.append(f"| {c['display'].get(p) or LB.DEFAULT_DISPLAY.get(p) or p} | {cell(v1)} | {cell(v2)} | {cell(v3)} |")
     lines += ["", "A single day is noise; these columns are about exit habits, not about who is better.", ""]
 log = [json.loads(x) for x in open(os.path.join(HERE, "data", "arena", "channel_ingest_log.jsonl"))] if os.path.exists(os.path.join(HERE, "data", "arena", "channel_ingest_log.jsonl")) else []
-day_log = [r for r in log if datetime.fromisoformat(r["tg_date"]).astimezone(IST).strftime("%Y-%m-%d") == day]
+day_log = [r for r in log if r.get("tg_date") and datetime.fromisoformat(r["tg_date"]).astimezone(IST).strftime("%Y-%m-%d") == day]            # edit/other rows carry no Telegram date
 cnt = {}
 for r in day_log: cnt[r["outcome"]] = cnt.get(r["outcome"], 0) + 1
 lines += ["", "## Channel reader", "", f"- posts read: {len(day_log)}; by outcome: {cnt or 'none'}", "- claims ('target hit', 'gaining') are recorded, never scored.", ""]

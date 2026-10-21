@@ -55,3 +55,9 @@ def test_runtime_participant_token_works_without_restart_and_leaderboard_lists_e
     names = {r["participant"] for r in d.json()["rows"]}; assert {"ZEROHERO_AI", "INSTITUTION_TRADER", "DHANANJAY_DALVI"} <= names
     assert client.get("/api/arena/public/leaderboard?scope=bad", headers=H).status_code == 422 and client.get("/api/arena/public/leaderboard").status_code == 401
 
+
+
+def test_daily_report_script_tolerates_log_rows_without_a_telegram_date():
+    import os
+    src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "arena_daily_report.py")).read()
+    assert 'r.get("tg_date") and' in src                      # regression: edit-ignored rows have no tg_date and crashed the 23:40 report
