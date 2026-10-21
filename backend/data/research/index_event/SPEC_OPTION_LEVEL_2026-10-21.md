@@ -9,3 +9,10 @@
 **Gate (premise holds only if ALL).** (1) n_used >= 30; (2) mean net per straddle > 0; (3) the 97.5% two-sided bootstrap interval of the mean net (5000 resamples, seed 7; 97.5% leaves room for a second index, SENSEX) has a lower bound > 0; (4) mean net > 0 in BOTH halves of the sample (split at the median date); (5) the mean net is still > 0 with s = 1.0%. Reported also: s = 0 (gross), s = 2.0%, median, win rate, per-regime split (Thursday-expiry era before 2025-09-01 vs Tuesday-expiry era).
 **Not claimed.** A pass is a premise only: no directional edge, no live fills (5-minute bars, assumed spread), no capacity. A fail drops NIFTY expiry-day long-option buying. Result written unedited to `data/research/index_event/`.
 **Next.** SENSEX would need a separate Upstox pull; only if NIFTY passes.
+
+---
+## Addendum 2026-10-21 (SENSEX, requested by the project owner after the NIFTY result; written before any SENSEX option data was pulled)
+- Same hypothesis, rule, gate and costs for SENSEX (BSE), with the SENSEX lot size (20) and `cost_points("SENSEX", ...)`. Expiries = those the Upstox expired-instruments API lists for `BSE_INDEX|SENSEX` from 2025-08-22 to 2026-10-15, one row each; no expiry added or dropped after seeing results.
+- Pull window per expiry E: E-3 .. E (5-minute bars), strikes within +/-8 steps of the previous close. The ATM rule picks the strike at 14:25 from the bars themselves; if that strike lies outside the pulled band the day is skipped and LISTED (not replaced).
+- The CI level stays 97.5% (family of 2: NIFTY, SENSEX). The NIFTY verdict is not reopened by this addendum.
+- Era note: SENSEX weekly expiry moved from Friday to Thursday in Sep 2025; era split is reported, not corrected.
