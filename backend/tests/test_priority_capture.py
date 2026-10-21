@@ -15,6 +15,7 @@ class FakeStore:
 
 class FakeSdk:
     def __init__(self): self.calls = []
+    def authenticate(self): return True
     def get_quotes_batch(self, by_ex, mode="FULL"):
         self.calls.append((dict(by_ex), mode))
         return {t: {"ltp": 100.0 + i, "depth": {"buy": [{"price": 99.5, "quantity": 50}], "sell": [{"price": 100.5, "quantity": 60}]}, "exchangeTimestamp": "21-Oct-2026 13:53:11"} for i, ts in enumerate(by_ex.values()) for t in ts}

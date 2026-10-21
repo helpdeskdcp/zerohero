@@ -50,7 +50,7 @@ class PriorityCapture:
     def __init__(self, store=None, sdk_provider=None, meta_fn=None, interval: float | None = None, path: str | None = None):
         self.store = store; self._sdk_provider = sdk_provider; self._meta_fn = meta_fn or self._meta_from_db
         self.interval = float(interval if interval is not None else os.environ.get("PRIORITY_POLL_SEC", "3")); self.path = path or WATCH
-        self._meta_cache: dict = {}; self._run_id = None; self._run_day = None; self.last_error = None; self.written = 0; self.cycles = 0; self.last_cycle = None
+        self._meta_cache: dict = {}; self._run_id = None; self._run_day = None; self.last_error = None; self.last_note = None; self._auth_ts = 0.0; self.written = 0; self.cycles = 0; self.last_cycle = None
 
     def _store(self):
         if self.store is None:
@@ -78,11 +78,16 @@ class PriorityCapture:
 
     def step(self, now: float | None = None) -> int:
         t = now or time.time(); active = [e for e in _load(self.path) if e.get("until", 0) > t]
-        if not active: return 0
+        if not active: self.last_note = "idle: empty watch list"; return 0
         metas = [m for m in (self._meta(e) for e in active[:MAX_TOKENS]) if m]
-        if not metas: return 0
+        if not metas: self.last_note = "no watched contract resolvable from the captured chain yet"; return 0
         sdk = self._sdk()
-        if sdk is None: return 0
+        if sdk is None: self.last_note = "no market SDK"; return 0
+        if t - self._auth_ts > 60:                                                              # same session check the normal capture does, at most once a minute (cached login, no new session)
+            self._auth_ts = t
+            try: ok = bool(sdk.authenticate())
+            except Exception: ok = False
+            if not ok: self.last_note = "broker session not authenticated"; return 0
         by_ex: dict[str, list] = {}
         for m in metas: by_ex.setdefault(m["exchange"], []).append(m["token"])
         quotes = sdk.get_quotes_batch(by_ex, mode="FULL"); recv = N.now_utc_iso(); rows = []
@@ -91,11 +96,11 @@ class PriorityCapture:
             if not isinstance(q, dict): continue
             nq = N.norm_quote(q, m, recv)
             if nq.get("ltp") is not None: rows.append(nq)
-        if not rows: return 0
+        if not rows: self.last_note = f"broker returned no usable quote for {len(metas)} contract(s)"; return 0
         st = self._store(); day = datetime.now(IST).strftime("%Y-%m-%d")
         if self._run_id is None or self._run_day != day: self._run_id = st.start_run("PRIORITY_WATCH", {}, True); self._run_day = day
         with st.transaction() as conn: n = st.write_quotes(conn, rows, self._run_id, {"issues": [], "rejected": [], "flagged": 0})
-        self.written += n; self.cycles += 1; self.last_cycle = t; return n
+        self.written += n; self.cycles += 1; self.last_cycle = t; self.last_note = f"ok: {n} row(s) from {len(metas)} contract(s)"; return n
 
     def run_forever(self) -> None:                                                              # pragma: no cover (thread)
         while True:
@@ -105,7 +110,7 @@ class PriorityCapture:
                 self.last_error = f"{type(e).__name__}: {str(e)[:120]}"; time.sleep(max(self.interval * 5, 15))      # back off on any broker error (rate limit etc.)
 
     def status(self) -> dict:
-        return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_error": self.last_error, "interval_sec": self.interval}
+        return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval}
 
 
 _instance: PriorityCapture | None = None
