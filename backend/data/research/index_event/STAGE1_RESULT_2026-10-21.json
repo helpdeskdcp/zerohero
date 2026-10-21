@@ -1,0 +1,56 @@
+{
+ "spec": "SPEC_2026-10-21.md",
+ "alpha": 0.0033333333333333335,
+ "NIFTY": {
+  "n_listed_expiries": 104,
+  "n_used": 104,
+  "skipped": [],
+  "median_ratio": 0.9480395380964604,
+  "ci95": [
+   0.8587432571341014,
+   1.0690051197892305
+  ],
+  "wilcoxon_p_one_sided": 0.6727456358039006,
+  "median_first_half": 0.9298868859853197,
+  "median_second_half": 0.9640354980666996,
+  "first_date": "2024-10-03",
+  "last_date": "2026-09-22",
+  "share_ratio_gt1": 0.47115384615384615,
+  "checks": {
+   "median>=1.30": false,
+   "ci_lo>1.10": false,
+   "p<0.0033": false,
+   "both_halves>1.15": false
+  },
+  "premise_holds": false
+ },
+ "BANKNIFTY": {
+  "n_listed_expiries": 29,
+  "n_used": 29,
+  "skipped": [],
+  "premise_holds": "INSUFFICIENT"
+ },
+ "SENSEX": {
+  "n_listed_expiries": 103,
+  "n_used": 103,
+  "skipped": [],
+  "median_ratio": 1.2132270504572207,
+  "ci95": [
+   1.0713550318746319,
+   1.3329365800809014
+  ],
+  "wilcoxon_p_one_sided": 7.335710356542151e-05,
+  "median_first_half": 1.1015441534734292,
+  "median_second_half": 1.242855894246767,
+  "first_date": "2024-10-04",
+  "last_date": "2026-09-24",
+  "share_ratio_gt1": 0.6601941747572816,
+  "checks": {
+   "median>=1.30": false,
+   "ci_lo>1.10": false,
+   "p<0.0033": true,
+   "both_halves>1.15": false
+  },
+  "premise_holds": false
+ }
+}
