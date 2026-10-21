@@ -37,6 +37,22 @@ def support_status(underlying: str) -> str:
     return "NOT_VERIFIED"
 
 
+def session_ok(timeout: float = 15.0, session=None) -> bool:
+    """True iff Dhan accepts the stored session right now (cheap expiry-list call).
+    Distinguishes an expired/missing token from 'no data' so a backfill never
+    records auth failures as empty windows."""
+    headers = _dc._headers()
+    if headers is None:
+        return False
+    try:
+        r = (session or requests.Session()).post(
+            f"{_dc._BASE}/optionchain/expirylist", json={"UnderlyingScrip": 13, "UnderlyingSeg": "IDX_I"},
+            headers=headers, timeout=timeout)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
 def fetch_side(underlying: str, option_type: str, from_date: str, to_date: str, *, strike: str = "ATM",
                interval: int = 1, expiry_flag: str = "WEEK", expiry_code: int = 1,
                timeout: float = 30.0, session=None) -> dict | None:
@@ -84,7 +100,7 @@ def resolver_expiry_for(underlying: str, *, flag: str = "WEEK", code: int = 1, r
 
 def normalize(side: dict, *, underlying: str, option_type: str, interval_min: int = 1,
               expiry_for: Callable[[date], date | None] | None = None,
-              r: float = 0.0, q: float = 0.0) -> list[dict]:
+              r: float = 0.0, q: float = 0.0, rate_source: str = "UNSOURCED_ZERO_DEFAULT") -> list[dict]:
     """Bars -> rows in the spec's schema. `expiry_for(bar_date)` returns the
     expiry date in force for that bar (caller-owned assumption, recorded in
     inputs); None => Greeks UNAVAILABLE."""
@@ -107,19 +123,29 @@ def normalize(side: dict, *, underlying: str, option_type: str, interval_min: in
         ivd = (iv[i] / 100.0) if iv[i] not in (None, 0) else None
         bdate = ts_utc.astimezone(_IST).date()          # trading date is the IST date
         exp = expiry_for(bdate) if expiry_for else None
-        if exp is not None and ivd and spot[i] and strike:
-            T = max(1e-6, (datetime(exp.year, exp.month, exp.day, 10, 0, tzinfo=timezone.utc) - ts_utc)
-                    .total_seconds() / (365.0 * 86400.0))       # 15:30 IST = 10:00 UTC
+        # This adapter supports NSE/BSE index options only: 15:30 IST cutoff.
+        # Never turn an expired contract into a live one by flooring T > 0.
+        T = ((datetime(exp.year, exp.month, exp.day, 10, 0, tzinfo=timezone.utc) - ts_utc)
+             .total_seconds() / (365.0 * 86400.0)) if exp is not None else None
+        if T is not None and T <= 0:
+            g = gm._unavailable("NON_POSITIVE_TIME_TO_EXPIRY",
+                                {"T": T, "iv": ivd, "spot": spot[i], "strike": strike})
+        elif exp is not None and ivd and spot[i] and strike:
             g = gm.reconstruct(spot[i], strike, T, ivd, option_type == "CE", model="BS_CARRY", r=r, q=q,
                                iv_source="DIRECT")
-            g["inputs"]["expiry_date"] = exp.isoformat()
-            er = getattr(expiry_for, "results", {}).get(bdate)
-            if er is not None:
-                g["inputs"].update(expiry_status=er.expiry_status, expiry_source=er.expiry_source,
-                                   expiry_rule_version=er.rule_version)
         else:
             g = gm._unavailable("NO_EXPIRY_DATE" if exp is None else "MISSING_IV_OR_SPOT",
                                 {"iv": ivd, "spot": spot[i], "strike": strike})
+        if exp is not None:
+            g["inputs"]["expiry_date"] = exp.isoformat()
+        er = getattr(expiry_for, "results", {}).get(bdate)
+        if er is not None:
+            g["inputs"].update(expiry_status=er.expiry_status, expiry_source=er.expiry_source,
+                               expiry_rule_version=er.rule_version)
+        g["inputs"]["rate_source"] = rate_source          # r/q are inputs, not facts: record where they came from
+        g["inputs"]["rate_status"] = "ASSUMED_UNVERIFIED" if rate_source.startswith("UNSOURCED") else "SOURCED"
+        if g["reason"]:
+            g["inputs"]["unavailable_reason"] = g["reason"]  # survives store round-trip
         rows.append({
             "timestamp": ts_utc.isoformat(), "timeframe": tf, "exchange": exch, "underlying": u,
             "expiry": exp.isoformat() if exp else None, "strike": strike, "option_type": option_type,

@@ -37,3 +37,13 @@ def test_channel_ingested_entries_carry_the_15_minute_window(tmp_path, monkeypat
     kw = dict(participant="INSTITUTION_TRADER", mode_fn=lambda: "ARENA_LIVE", ledger=str(tmp_path / "l.jsonl"), log=str(tmp_path / "log.jsonl"))
     r = CI.handle_post(post(1, HERO), {"seen": {}, "by_msg": {}, "last_by_chat": {}}, **kw); assert r["outcome"] == "SUBMITTED"
     assert SU.load(kw["ledger"])[0]["valid_sec"] == 900
+
+
+def test_validity_correction_only_for_channel_signals_and_is_applied(tmp_path):
+    led = str(tmp_path / "l.jsonl"); base = {"participant": "P", "underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "LIMIT", "entry": 100, "sl": 80, "targets": [120]}
+    ch = SU.submit({**base, "note": "via channel post 5"}, path=led, practice=True); manual = SU.submit(base, path=led, practice=True); win = SU.submit({**base, "valid_sec": 600, "note": "via channel post 6"}, path=led, practice=True)
+    SU.submit_validity_correction(ch["id"], 900, "rehearsal re-score", path=led)
+    for bad in (manual["id"], win["id"]):
+        with pytest.raises(SU.SubmissionError): SU.submit_validity_correction(bad, 900, "x", path=led)
+    got = {s["id"]: s.get("valid_sec") for s in R.human_signals(led, include_practice=True)}
+    assert got == {ch["id"]: 900, manual["id"]: None, win["id"]: 600}

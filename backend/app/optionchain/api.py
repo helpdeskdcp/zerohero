@@ -71,37 +71,42 @@ def _f(x):
 @router.get("/{underlying}")
 def api_optionchain(underlying: str, expiry: str = "AUTO", live: int = 1,
                     atm_window: int = 12, realized_vol: float | None = None,
-                    baseline: str | None = None):
+                    baseline: str | None = None, provider: str | None = None,
+                    as_of: str | None = None):
     u = str(underlying or "").upper()
     exp = str(expiry or "AUTO").upper()
-    allow_net = bool(int(live))
+    allow_net = bool(int(live)) and as_of is None
+    provider = provider.upper() if provider else None
+    if provider not in (None, "DHAN", "ANGELONE"):
+        return {"status": "NO_DATA", "reason": "UNSUPPORTED_PROVIDER", "underlying": u}
+    requested_expiry, provider_expiries = exp, {}
     try:
         atm_window = max(1, min(40, int(atm_window)))
     except (TypeError, ValueError):
         atm_window = 12
     realized_vol = _f(realized_vol)
 
-    # Resolve an abstract AUTO/NEXT/LATEST/CURRENT token to a real expiry date
-    # from the live broker instrument master BEFORE calling any chain source,
-    # for NSE-index underlyings only (NFO instrument master -- SENSEX/BANKEX
-    # are BFO, MCX symbols aren't in this master at all, both untouched).
-    # Found 2026-09-29: without this, "NEXT" fell through to each source's
-    # own limited view -- angelone_captured only knows expiries it has
-    # actually captured (silently returning the SAME, already-expired
-    # current expiry when no next one had been captured yet), and the live
-    # keyless sources (upstox_open/nse_v3) don't understand the literal
-    # string "NEXT" at all. One authoritative resolution here fixes both.
-    if exp in ("AUTO", "NEXT", "LATEST", "CURRENT") and u in _GROUPS["NSE"]:
-        from ..instruments import list_nse_option_expiries
-        info = list_nse_option_expiries(u)
-        if info.get("status") == "OK":
-            resolved = {"AUTO": info["current_expiry"], "CURRENT": info["current_expiry"],
-                       "NEXT": info.get("next_expiry") or info["current_expiry"],
-                       "LATEST": info["latest_expiry"]}[exp]
-            if resolved:
-                exp = resolved
+    # Resolve against the primary provider's own listed contracts for each
+    # exchange. Offline requests stay entirely within the captured database.
+    if allow_net and exp in ("AUTO", "NEXT", "LATEST", "CURRENT"):
+        from .sources import dhan_chain
+        iso = dhan_chain.resolve_expiry(u, exp) if provider != "ANGELONE" else None
+        if iso:
+            exp = dhan_chain._to_canonical_expiry(iso)
+            provider_expiries["DHAN"] = exp
+        elif provider != "DHAN" and u in _GROUPS["NSE"]:
+            # Preserve NSE network fallback when Dhan is unavailable. This
+            # master does not cover BSE/MCX; never apply it to those symbols.
+            from ..instruments import list_nse_option_expiries
+            info = list_nse_option_expiries(u)
+            if info.get("status") == "OK":
+                resolved = {"AUTO": info.get("current_expiry"), "CURRENT": info.get("current_expiry"),
+                            "NEXT": info.get("next_expiry"), "LATEST": info.get("latest_expiry")}[exp]
+                if resolved:
+                    exp = resolved
+                    provider_expiries["ANGELONE"] = exp
 
-    key = (u, exp, int(allow_net), atm_window, realized_vol)
+    key = (u, exp, requested_expiry, int(allow_net), atm_window, realized_vol, provider, as_of)
     now = time.time()
 
     if not baseline:
@@ -109,10 +114,16 @@ def api_optionchain(underlying: str, expiry: str = "AUTO", live: int = 1,
         if hit and now - hit["ts"] < _TTL:
             return hit["data"]
 
-    chain = get_chain(u, exp, allow_network=allow_net, atm_window=atm_window)
+    chain = get_chain(u, exp, allow_network=allow_net, atm_window=atm_window,
+                      provider=provider, at_ts=as_of, expiry_request=requested_expiry,
+                      provider_expiries=provider_expiries)
     if chain is None or not chain.rows:
         out = {"status": "NO_DATA", "underlying": u, "expiry": exp,
                "note": "no captured chain and no network source returned data"}
+        if not allow_net and requested_expiry in ("AUTO", "CURRENT", "NEXT", "LATEST"):
+            # No reviewed provider calendar is installed for this HTTP reader.
+            # Explicit dates still work; never turn today's master into history.
+            out["reason"] = "CALENDAR_EVIDENCE_UNAVAILABLE"
         if not baseline:
             _cache[key] = {"ts": now, "data": out}
         return out
@@ -138,7 +149,9 @@ def api_optionchain(underlying: str, expiry: str = "AUTO", live: int = 1,
 
     if baseline:
         try:
-            base = get_chain(u, chain.expiry, allow_network=False, at_ts=baseline,
+            baseline_provider = chain.capability.get("provider") or (
+                "DHAN" if chain.source.startswith("dhan") else "ANGELONE" if chain.source.startswith("angelone") else None)
+            base = get_chain(u, chain.expiry, allow_network=False, at_ts=baseline, provider=baseline_provider,
                              atm_window=atm_window)
             out["oi_baseline"] = (oi_change_vs_baseline(chain, base) if base
                                   else {"status": "no_baseline",
@@ -178,24 +191,26 @@ def _hist_cached(key, fn):
 
 
 @router.get("/{underlying}/vol-surface")
-def api_vol_surface(underlying: str, max_expiries: int = 6):
+def api_vol_surface(underlying: str, max_expiries: int = 6,
+                    provider: str | None = None, as_of: str | None = None):
     u = str(underlying or "").upper()
     max_expiries = max(1, min(12, int(max_expiries)))
-    return _hist_cached(("vs", u, max_expiries),
-                         lambda: _vol_surface(u, max_expiries=max_expiries))
+    return _hist_cached(("vs", u, max_expiries, provider, as_of),
+                         lambda: _vol_surface(u, max_expiries=max_expiries, provider=provider, as_of=as_of))
 
 
 @router.get("/{underlying}/straddle-pnl")
 def api_straddle_pnl(underlying: str, expiry: str, entry_ts: str | None = None,
-                     strike: float | None = None):
+                     strike: float | None = None, provider: str | None = None, as_of: str | None = None):
     u = str(underlying or "").upper()
-    return _hist_cached(("sp", u, expiry, entry_ts, strike),
-                         lambda: _straddle_pnl(u, expiry, entry_ts=entry_ts, strike=strike))
+    return _hist_cached(("sp", u, expiry, entry_ts, strike, provider, as_of),
+                         lambda: _straddle_pnl(u, expiry, entry_ts=entry_ts, strike=strike, provider=provider, as_of=as_of))
 
 
 @router.get("/{underlying}/oi-profile")
-def api_oi_profile(underlying: str, expiry: str, top_n_strikes: int = 8):
+def api_oi_profile(underlying: str, expiry: str, top_n_strikes: int = 8,
+                   provider: str | None = None, as_of: str | None = None):
     u = str(underlying or "").upper()
     top_n_strikes = max(1, min(20, int(top_n_strikes)))
-    return _hist_cached(("op", u, expiry, top_n_strikes),
-                         lambda: _oi_profile(u, expiry, top_n_strikes=top_n_strikes))
+    return _hist_cached(("op", u, expiry, top_n_strikes, provider, as_of),
+                         lambda: _oi_profile(u, expiry, top_n_strikes=top_n_strikes, provider=provider, as_of=as_of))

@@ -115,3 +115,15 @@ def submit_participant_correction(signal_id: str, participant: str, reason: str,
     if not str(participant).strip(): raise SubmissionError("participant required")
     n = sum(1 for r in recs if r.get("type") == "HUMAN_PARTICIPANT_CORRECTION")
     return L.append(p, {"type": "HUMAN_PARTICIPANT_CORRECTION", "id": f"P{n + 1:05d}", "signal_id": signal_id, "participant": str(participant).strip().upper(), "reason": reason[:300], "server_ts": time.time()})
+
+
+def submit_validity_correction(signal_id: str, valid_sec: int, reason: str, path: str | None = None) -> dict:
+    """Applies the fill window (valid_sec) to a CHANNEL-INGESTED signal that was ingested before the window existed (pre-competition rehearsal). Channel signals only; never overrides a validity the row already has."""
+    p = path or PATH; recs = load(p)
+    sig = next((r for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and r["id"] == signal_id), None)
+    if sig is None: raise SubmissionError("unknown signal_id")
+    if "via channel post" not in (sig.get("note") or ""): raise SubmissionError("only channel-ingested signals")
+    if sig.get("valid_sec"): raise SubmissionError("this signal already has a validity window")
+    if not (60 <= int(valid_sec) <= 28800): raise SubmissionError("valid_sec between 60 and 28800")
+    n = sum(1 for r in recs if r.get("type") == "HUMAN_VALIDITY_CORRECTION")
+    return L.append(p, {"type": "HUMAN_VALIDITY_CORRECTION", "id": f"V{n + 1:05d}", "signal_id": signal_id, "valid_sec": int(valid_sec), "reason": reason[:300], "server_ts": time.time()})

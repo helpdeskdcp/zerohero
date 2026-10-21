@@ -206,3 +206,13 @@ def candles(prices, start=None, step=60, vol=1000):
         out.append([start + i * step, round(o, 2), round(hi, 2), round(lo, 2), round(c, 2), vol])
         prev = c
     return out
+
+
+@pytest.fixture(autouse=True)
+def _isolated_priority_watch(tmp_path, monkeypatch):
+    """Tests must never write the production priority-capture watch list (data/priority_watch.json)."""
+    try:
+        from app.histcap import priority
+        monkeypatch.setattr(priority, "WATCH", str(tmp_path / "priority_watch_test.json"))
+    except Exception:
+        pass

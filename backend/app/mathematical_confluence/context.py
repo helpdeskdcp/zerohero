@@ -83,55 +83,44 @@ def _feed_spot(sym: str, sdk) -> float | None:
         return None
 
 
-def _spot_from_histcap(symbol: str, max_age_sec: float = 180.0) -> dict | None:
-    """Latest captured index/future quote from market_history.db — a broker-free
-    spot when the live get_quote is being rate-limited. Returns
-    {ltp, open, high, low} or None if nothing recent enough."""
+def _spot_from_histcap(symbol: str, max_age_sec: float = 180.0, *, provider=None, as_of=None) -> dict | None:
+    """Provider-bound backward quote lookup; missing/ambiguous means no data."""
+    from ..histcap import read_contract as rc
     try:
         import sqlite3
-
         from ..histcap.store import DB_PATH as _HDB
+        cutoff = as_of or datetime.now(timezone.utc).isoformat()
         with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
             c.row_factory = sqlite3.Row
-            r = c.execute(
-                "SELECT ltp, open, high, low, received_ts FROM quote_snapshots "
-                "WHERE symbol=? AND kind IN ('INDEX','FUTURE') AND ltp IS NOT NULL "
-                "ORDER BY received_ts DESC LIMIT 1", (symbol,)).fetchone()
-        if not r:
-            return None
-        ts = datetime.fromisoformat(str(r["received_ts"]).replace("Z", "+00:00"))
-        if (datetime.now(timezone.utc) - ts).total_seconds() > max_age_sec:
-            return None
-        return {"ltp": r["ltp"], "open": r["open"], "high": r["high"], "low": r["low"]}
-    except Exception as e:
-        _log.debug("_spot_from_histcap(%s) failed: %r", symbol, e)
+            result = rc.spot(c, symbol, provider=provider, as_of=cutoff, max_age_sec=max_age_sec)
+            return result["rows"][0] if result["rows"] else None
+    except (sqlite3.Error, ValueError, TypeError):
         return None
 
 
-def _prevday_from_histcap(symbol: str, before_date: str) -> dict | None:
-    """Aggregate the previous captured session's OHLC from market_history.db —
-    a broker-free fallback when the live daily-candle call fails."""
+def _prevday_from_histcap(symbol: str, before_date: str, *, provider=None) -> dict | None:
+    """Previous complete captured session from one provider, INDEX then FUTURE."""
+    import sqlite3
+    from ..histcap import read_contract as rc
+    from ..histcap.store import DB_PATH as _HDB
     try:
-        import sqlite3
-
-        from ..histcap.store import DB_PATH as _HDB
+        cutoff = datetime.now(timezone.utc).isoformat()
         with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
             c.row_factory = sqlite3.Row
-            for kind in ("INDEX", "FUTURE"):
-                r = c.execute(
-                    "SELECT MAX(h) hi, MIN(l) lo FROM market_candles WHERE symbol=? AND kind=? "
-                    "AND session_date_ist < ? GROUP BY session_date_ist "
-                    "ORDER BY session_date_ist DESC LIMIT 1", (symbol, kind, before_date)).fetchone()
-                if not r or r["hi"] is None:
+            for p in rc.providers(provider):
+                days = c.execute("SELECT DISTINCT session_date_ist FROM market_candles "
+                    "WHERE symbol=? AND source=? AND tf='5m' AND session_date_ist<? "
+                    "ORDER BY session_date_ist DESC", (symbol.upper(), rc.SOURCES[p]["candles"], before_date)).fetchall()
+                if not days:
                     continue
-                lc = c.execute(
-                    "SELECT c FROM market_candles WHERE symbol=? AND kind=? AND session_date_ist=("
-                    "  SELECT MAX(session_date_ist) FROM market_candles WHERE symbol=? AND kind=? "
-                    "  AND session_date_ist < ?) ORDER BY bar_start DESC LIMIT 1",
-                    (symbol, kind, symbol, kind, before_date)).fetchone()
-                return {"high": r["hi"], "low": r["lo"], "close": lc["c"] if lc else r["hi"]}
-    except Exception as e:
-        _log.debug("_prevday_from_histcap(%s) failed: %r", symbol, e)
+                data = rc.bars(c, symbol, days[0][0], tf="5m", provider=p, expiry=None,
+                               as_of=cutoff, kinds=("INDEX", "FUTURE"))
+                rows = data["rows"]
+                if rows:
+                    return {"high": max(r["h"] for r in rows), "low": min(r["l"] for r in rows),
+                            "close": rows[-1]["c"], "provider": p, "source": data["source"],
+                            "fallback_used": provider is None and p == "ANGELONE"}
+    except (sqlite3.Error, ValueError, TypeError):
         return None
     return None
 

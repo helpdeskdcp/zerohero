@@ -213,6 +213,27 @@ class HistStore:
                 f"SELECT * FROM quote_snapshots WHERE {' AND '.join(clauses)} "
                 f"ORDER BY COALESCE(exch_ts, received_ts) ASC LIMIT ?", p).fetchall()]
 
+    def latest_provider_quotes(self, symbol: str, expiry: str, *, since: str,
+                               as_of: str, limit: int = 5000) -> list[dict]:
+        """Latest applicable capture per provider/leg BEFORE limiting results.
+
+        received_ts controls availability, exch_ts controls market time. Both
+        must be <= as_of. id breaks same-time ties deterministically.
+        """
+        with self._conn() as c:
+            return [dict(r) for r in c.execute(
+                "WITH ranked AS (SELECT *, ROW_NUMBER() OVER ("
+                "PARTITION BY source, exchange, strike, option_type "
+                "ORDER BY julianday(received_ts) DESC, id DESC) AS observation_rank "
+                "FROM quote_snapshots WHERE symbol=? AND expiry=? AND kind='OPTION' "
+                "AND source IN ('DHAN_CHAIN','ANGELONE_QUOTE_FULL') "
+                "AND julianday(received_ts)<=julianday(?) "
+                "AND julianday(COALESCE(exch_ts,received_ts))<=julianday(?) "
+                "AND julianday(COALESCE(exch_ts,received_ts))>julianday(?)) "
+                "SELECT * FROM ranked WHERE observation_rank=1 "
+                "ORDER BY strike, option_type, source, exchange LIMIT ?",
+                (symbol.upper(), expiry, as_of, as_of, since, limit)).fetchall()]
+
     def get_greeks(self, underlying: str, *, as_of: str | None = None, expiry: str | None = None,
                    strike: float | None = None, option_type: str | None = None,
                    limit: int = 5000) -> list[dict]:

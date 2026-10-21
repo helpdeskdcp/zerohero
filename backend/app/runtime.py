@@ -137,8 +137,10 @@ def _autoscalp_chain(symbol, atm, window, market="NSE", expiry_mode="AUTO"):
         # TIME_NODATA sweeps on real SENSEX AUTOSCALP signals after the
         # runner.py fix was already deployed.
         et = {"MCX": 5, "BSE": 4}.get(mkt, 2)
+        # This adapter subscribes AngelOne tokens and merges AngelOne Greeks.
+        # Keep its provider explicit when the general historical default changes.
         gc = market_hub.get_chain(symbol, window=window, allow_rest_fallback=True,
-                                  expiry_mode=str(expiry_mode or "AUTO"))
+                                  expiry_mode=str(expiry_mode or "AUTO"), provider="ANGELONE")
         rows = gc.get("chain") or []
         if not rows:
             return []

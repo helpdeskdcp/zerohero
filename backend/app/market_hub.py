@@ -78,174 +78,169 @@ def _now_ist_date() -> str:
 
 
 # ---- histcap-backed slices ------------------------------------------------
-def _hist_chain(sym: str, session_date: str) -> dict | None:
-    """Latest captured option snapshot per (strike, side) -> chain rows in the
-    shape market_context produces. ΔOI is derived by differencing vs the
-    snapshot ~5 min earlier (histcap does not store oi_change).
+def _hist_chain(sym: str, session_date: str, *, provider=None, expiry=None,
+                as_of=None, expiry_dates=None) -> dict | None:
+    """One captured provider/expiry only. OI deltas use that same contract.
 
-    `token`/`exchange` are carried through (histcap captures both, see
-    histcap/schema.py's quote_snapshots) so a caller that needs to actually
-    trade the leg -- not just read its OI -- has what it needs without a
-    second, separate broker call. This has no effect on read-only consumers
-    that never look at those keys."""
-    try:
-        with _ro() as c:
-            rows = c.execute(
-                "SELECT received_ts, strike, option_type, ltp, oi, volume, expiry, "
-                "token, exchange "
-                "FROM quote_snapshots WHERE symbol=? AND kind='OPTION' "
-                "AND session_date_ist=? AND strike IS NOT NULL "
-                "ORDER BY received_ts", (sym, session_date)).fetchall()
-    except Exception as e:
-        _log.debug("_hist_chain(%s) read failed: %r", sym, e)
-        return None
+    An omitted expiry requires provider calendar evidence; captured subsets
+    are not expiry calendars. Live/as-of freshness is measured backwards.
+    """
+    from .histcap import read_contract as rc
+    cutoff = as_of or datetime.now(timezone.utc).isoformat()
+    result = session_option_quotes_result(sym, session_date, provider=provider,
+        expiry=expiry, as_of=cutoff, expiry_dates=expiry_dates, max_age_sec=_HIST_CHAIN_MAX_AGE)
+    rows = result["rows"]
     if not rows:
         return None
-    newest_ts = datetime.fromisoformat(rows[-1]["received_ts"].replace("Z", "+00:00"))
-    if (datetime.now(timezone.utc) - newest_ts).total_seconds() > _HIST_CHAIN_MAX_AGE:
-        return None
-    cut_prev = (newest_ts - timedelta(minutes=5)).isoformat()
-    latest: dict = {}
-    prior: dict = {}
+    newest = rc.instant(rows[-1]["timestamp"])
+    latest = {}
     for r in rows:
-        k = (float(r["strike"]), str(r["option_type"]).upper())
-        latest[k] = r
-        if r["received_ts"] <= cut_prev and r["oi"] is not None:
-            prior[k] = float(r["oi"])
-    by_strike: dict = {}
+        key = (float(r["strike"]), r["option_type"])
+        latest[key] = r
+    by_strike = {}
     for (strike, side), r in latest.items():
-        d = by_strike.setdefault(strike, {"strike": strike})
+        cut = rc.instant(r["timestamp"]) - timedelta(minutes=5)
+        # Baseline must be from this exact provider/expiry/leg, never a future quote.
+        prior_rows = [x for x in rows if x["strike"] == strike and x["option_type"] == side
+                      and rc.instant(x["timestamp"]) <= cut and x["oi"] is not None]
+        base = prior_rows[-1]["oi"] if prior_rows else None
+        d = by_strike.setdefault(strike, {"strike": strike, "expiry": result["expiry"],
+            "provider": result["provider"], "source": result["source"],
+            "fallback_used": result["fallback_used"], "fallback_reason": result["fallback_reason"],
+            "as_of": cutoff, "calendar": result.get("calendar")})
         pfx = "ce" if side == "CE" else "pe"
-        oi = float(r["oi"]) if r["oi"] is not None else None
-        base = prior.get((strike, side))
-        d[f"{pfx}_ltp"] = float(r["ltp"]) if r["ltp"] is not None else None
-        d[f"{pfx}_oi"] = oi
-        d[f"{pfx}_oi_change"] = (oi - base) if (oi is not None and base is not None) else None
-        d[f"{pfx}_volume"] = float(r["volume"]) if r["volume"] is not None else None
-        d[f"{pfx}_oi_status"] = "AVAILABLE" if oi is not None else "MISSING"
-        d[f"{pfx}_oi_source"] = "HISTCAP" if oi is not None else None
-        d[f"{pfx}_oi_timestamp"] = r["received_ts"] if oi is not None else None
-        d[f"{pfx}_token"] = r["token"]
-        d[f"{pfx}_exchange"] = r["exchange"]
+        for field in ("ltp", "oi", "volume", "token", "exchange", "instrument_key"):
+            d[f"{pfx}_{field}"] = r[field]
+        d[f"{pfx}_oi_change"] = r["oi"] - base if r["oi"] is not None and base is not None else None
+        d[f"{pfx}_oi_status"] = "AVAILABLE" if r["oi"] is not None else "MISSING"
+        d[f"{pfx}_oi_source"] = r["source"]
+        d[f"{pfx}_oi_timestamp"] = r["timestamp"]
+        d[f"{pfx}_quote_source"] = r["source"]
+        d[f"{pfx}_timestamp"] = r["timestamp"]
+        d[f"{pfx}_quote_id"] = r["id"]
+        d[f"{pfx}_raw_id"] = r["raw_id"]
         for g in ("delta", "gamma", "theta", "vega", "iv"):
             d[f"{pfx}_{g}"] = None
         d[f"{pfx}_greeks_source"] = "UNAVAILABLE"
-    expiry = next((r["expiry"] for r in rows if r["expiry"]), None)
     chain = [by_strike[k] for k in sorted(by_strike)]
-    for r in chain:
-        r["expiry"] = expiry
-    have = sum(1 for r in chain if r.get("ce_oi") is not None and r.get("pe_oi") is not None)
-    return {"chain": chain, "source": "HISTCAP", "expiry": expiry,
-            "age_sec": round((datetime.now(timezone.utc) - newest_ts).total_seconds()),
+    have = sum(r.get(f"{side}_oi") is not None for r in chain for side in ("ce", "pe"))
+    return {**{k: v for k, v in result.items() if k != "rows"}, "chain": chain,
+            "age_sec": round((rc.instant(cutoff) - newest).total_seconds()),
             "oi_coverage": {"legs": len(chain) * 2, "with_oi": have,
-                            "ratio": round(have / len(chain), 3) if chain else 0.0}}
+                            "ratio": round(have / (2 * len(chain)), 3)}}
 
 
-def session_bars(sym: str, session_date: str, *, tf: str = "5m") -> list:
-    """ALL captured bars for one IST session date, oldest-first, for historical
-    analysis (volume/market profile). Unlike `_hist_bars` this has NO freshness
-    gate -- a completed past session is exactly what a profile wants. Prefers
-    the FUTURE contract (real traded volume) over the cash INDEX (which carries
-    no volume on NSE). Read-only; empty list when nothing captured.
+def session_bars_result(sym: str, session_date: str, *, tf="5m", provider=None,
+                        expiry=None, as_of=None) -> dict:
+    """Metadata-bearing historical session read; no REST or database writes.
 
-    Rows: {"bar_start", "o", "h", "l", "c", "v"}. This is the one place
-    order-flow profiling reads market_history.db from -- it does not open its
-    own connection (keeps market_hub the single owner of that DB path).
-
-    Deduplicated by `bar_start` (one row per timestamp): market_candles'
-    real UNIQUE constraint is (instrument_key, tf, bar_start), not
-    (symbol, kind, tf, bar_start) -- a contract rollover means a HISTORICAL
-    date's front-month FUTURE can get re-captured/backfilled under a NEW
-    instrument_key after the original contract expires, inserting a second,
-    genuine-duplicate copy of the same real bar under a different contract
-    identity (found 2026-09-22: CRUDEOIL 2026-09-21 had ~2h of bars doubled
-    this way after its 21-Sep contract expired). Keep the lowest `rowid` per
-    bar_start -- the earliest insert, i.e. the original live capture, not a
-    later backfill's stale-contract duplicate. `rowid` (not the `id` column
-    name) so this works on any rowid table regardless of whether it names
-    an explicit INTEGER PRIMARY KEY column `id`."""
-    sym = sym.upper()
+    Default precedence: DHAN_HISTORICAL -> ANGELONE_CANDLES. Explicit
+    provider requests never fall through. FUTURE -> INDEX preference and
+    earliest-capture rollover dedup operate WITHIN the selected provider.
+    With expiry, this is a FUTURE contract read, not a continuous series.
+    as_of caps market bar CLOSE time, not the later backfill ingestion time.
+    Empty results have an explicit reason; no missing bars are fabricated.
+    """
+    from .histcap import read_contract as rc
+    cutoff = as_of or datetime.now(timezone.utc).isoformat()
     try:
         with _ro() as c:
-            for kind in ("FUTURE", "INDEX"):
-                rows = c.execute(
-                    "SELECT bar_start, o, h, l, c, v FROM market_candles "
-                    "WHERE rowid IN (SELECT MIN(rowid) FROM market_candles "
-                    "                WHERE symbol=? AND kind=? AND tf=? AND session_date_ist=? "
-                    "                GROUP BY bar_start) "
-                    "ORDER BY bar_start ASC", (sym, kind, tf, session_date)).fetchall()
-                if rows:
-                    return [{"bar_start": r["bar_start"], "o": r["o"], "h": r["h"],
-                             "l": r["l"], "c": r["c"], "v": r["v"]} for r in rows]
-    except Exception as e:
-        _log.debug("session_bars(%s, %s) read failed: %r", sym, session_date, e)
-    return []
+            return rc.bars(c, sym, session_date, tf=tf, provider=provider, expiry=expiry, as_of=cutoff)
+    except sqlite3.Error:
+        return {**rc.result(sym, provider, cutoff), "reason": "HISTORY_UNAVAILABLE"}
 
 
-def session_dates(sym: str, *, tf: str = "5m", limit: int = 30) -> list:
-    """Distinct IST session dates that have captured bars for `sym`, newest
-    first — for a dashboard date picker. Read-only."""
+def session_bars(sym: str, session_date: str, *, tf="5m", provider=None,
+                 expiry=None, as_of=None) -> list:
+    """Compatibility list view of session_bars_result; every bar retains provenance.
+
+    UNDERLYING_SESSION preserves the original futures/index research view.
+    It is not an adjusted continuous-futures contract or an option series.
+    Use expiry for CONTRACT reads and session_bars_result for no-data reasons.
+    """
+    return session_bars_result(sym, session_date, tf=tf, provider=provider,
+                               expiry=expiry, as_of=as_of)["rows"]
+
+
+def session_dates(sym: str, *, tf: str = "5m", limit: int = 30,
+                  provider=None, expiry=None, as_of=None) -> list:
+    """Dates with a valid session_bars result, newest first. Read-only.
+
+    Each date independently follows the same explicit/default provider policy.
+    A date index contains no merged market values; its bars retain provenance.
+    """
+    from .histcap import read_contract as rc
     sym = sym.upper()
+    cutoff = as_of or datetime.now(timezone.utc).isoformat()
     try:
+        rc.instant(cutoff)
+        sources = [rc.SOURCES[p]["candles"] for p in rc.providers(provider)]
         with _ro() as c:
             rows = c.execute(
                 "SELECT DISTINCT session_date_ist d FROM market_candles "
                 "WHERE symbol=? AND tf=? AND kind IN ('FUTURE','INDEX') "
-                "ORDER BY d DESC LIMIT ?", (sym, tf, limit)).fetchall()
-        return [r["d"] for r in rows]
-    except Exception as e:
+                f"AND source IN ({','.join('?' for _ in sources)}) "
+                "AND julianday(bar_start)<=julianday(?) ORDER BY d DESC",
+                (sym, tf, *sources, cutoff)).fetchall()
+            dates = []
+            for r in rows:
+                if len(dates) >= max(0, limit):
+                    break
+                if rc.bars(c, sym, r["d"], tf=tf, provider=provider, expiry=expiry, as_of=cutoff)["rows"]:
+                    dates.append(r["d"])
+        return dates
+    except (sqlite3.Error, ValueError, TypeError) as e:
         _log.debug("session_dates(%s) read failed: %r", sym, e)
         return []
 
 
-def session_option_quotes(sym: str, session_date: str) -> dict:
-    """All captured OPTION LTP ticks for one IST session, grouped by leg:
+def session_option_quotes_result(sym: str, session_date: str, *, provider=None,
+                                 expiry=None, as_of=None, expiry_dates=None,
+                                 max_age_sec=None) -> dict:
+    """One provider and one expiry, with quote/OI/raw-id provenance.
 
-        {(strike_float, "CE"|"PE"): [(received_ts_iso, ltp_float), ...], ...}
-
-    each list oldest-first. For the order-flow backtest's premium-basis
-    re-walk (re-price an index-triggered setup on the option actually
-    traded). Read-only, market_history.db only, empty dict when nothing
-    captured. market_hub stays the single owner of that DB path."""
-    sym = sym.upper()
-    out: dict = {}
+    Explicit dates win. The legacy expiry_dates keyword now accepts verified
+    ProviderCalendars only. Bare lists cannot prove historical availability.
+    """
+    from .histcap import read_contract as rc
+    cutoff = as_of or datetime.now(timezone.utc).isoformat()
     try:
         with _ro() as c:
-            rows = c.execute(
-                "SELECT received_ts, strike, option_type, ltp FROM quote_snapshots "
-                "WHERE symbol=? AND kind='OPTION' AND session_date_ist=? "
-                "AND strike IS NOT NULL AND ltp IS NOT NULL "
-                "ORDER BY received_ts ASC", (sym, session_date)).fetchall()
-    except Exception as e:
-        _log.debug("session_option_quotes(%s, %s) read failed: %r", sym, session_date, e)
-        return {}
-    for r in rows:
-        try:
-            k = (float(r["strike"]), str(r["option_type"]).upper())
-        except (TypeError, ValueError):
-            continue
-        out.setdefault(k, []).append((r["received_ts"], float(r["ltp"])))
+            return rc.options(c, sym, session_date, provider=provider, expiry=expiry,
+                              as_of=cutoff, expiry_dates=expiry_dates, max_age_sec=max_age_sec)
+    except sqlite3.Error:
+        return {**rc.result(sym, provider, cutoff), "reason": "HISTORY_UNAVAILABLE"}
+
+
+def session_option_quotes(sym: str, session_date: str, *, provider=None,
+                          expiry=None, as_of=None, expiry_dates=None) -> dict:
+    """(strike, side) -> ordered quote RECORDS including provider/expiry/time.
+
+    Replaces the lossy two-value premium tuples. Consumers must preserve the
+    records' provenance; pure premium-walk fixtures may still use tuple input.
+    No expiry evidence means no data, rather than mixing captured contracts.
+    """
+    result = session_option_quotes_result(sym, session_date, provider=provider,
+                    expiry=expiry, as_of=as_of, expiry_dates=expiry_dates)
+    out = {}
+    for r in result["rows"]:
+        out.setdefault((float(r["strike"]), r["option_type"]), []).append(r)
     return out
 
 
-def _hist_bars(sym: str, session_date: str) -> list | None:
+def _hist_bars(sym: str, session_date: str, *, provider=None) -> list | None:
+    from .histcap import read_contract as rc
+    cutoff = datetime.now(timezone.utc).isoformat()
     try:
         with _ro() as c:
-            for kind in ("INDEX", "FUTURE"):
-                rows = c.execute(
-                    "SELECT bar_start, o, h, l, c, v FROM market_candles WHERE symbol=? "
-                    "AND kind=? AND tf='5m' AND session_date_ist=? ORDER BY bar_start",
-                    (sym, kind, session_date)).fetchall()
-                if not rows:
-                    continue
-                last = datetime.fromisoformat(rows[-1]["bar_start"].replace("Z", "+00:00"))
-                if (datetime.now(timezone.utc) - last).total_seconds() > _HIST_BARS_MAX_AGE + 300:
-                    return None
-                return [{"high": r["h"], "low": r["l"], "close": r["c"], "volume": r["v"]} for r in rows]
-    except Exception as e:
-        _log.debug("_hist_bars(%s) read failed: %r", sym, e)
+            result = rc.bars(c, sym, session_date, tf="5m", provider=provider, expiry=None,
+                             as_of=cutoff, kinds=("INDEX", "FUTURE"))
+        rows = result["rows"]
+        if not rows or (rc.instant(cutoff) - rc.instant(rows[-1]["bar_start"])).total_seconds() > _HIST_BARS_MAX_AGE + 300:
+            return None
+        return [{**r, "high": r["h"], "low": r["l"], "close": r["c"], "volume": r["v"]} for r in rows]
+    except (sqlite3.Error, ValueError, TypeError):
         return None
-    return None
 
 
 # ---- assembly -----------------------------------------------------------------
@@ -278,9 +273,11 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
         ctx["spot"] = spot
         ctx["data_quality"]["spot"] = "ACTUAL (WS feed)"
     else:
-        hq = _ctx._spot_from_histcap(sym)
+        hq = _ctx._spot_from_histcap(sym, provider="ANGELONE")
         if hq and hq.get("ltp") is not None:
             ctx["spot"] = hq["ltp"]
+            ctx["spot_source"] = hq["source"]
+            ctx["spot_timestamp"] = hq["received_ts"]
             ctx["data_quality"]["spot"] = "ACTUAL (histcap)"
             if hq.get("open") is not None:
                 ctx["today_open"] = hq["open"]
@@ -293,7 +290,7 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
         ctx["prev_day"] = dict(pdc[1])
         ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (day-cached)"
     else:
-        hp = _ctx._prevday_from_histcap(sym, sess)
+        hp = _ctx._prevday_from_histcap(sym, sess, provider="ANGELONE")
         if hp:
             ctx["prev_day"] = hp
             ctx["data_quality"]["prev_day_ohlc"] = "ACTUAL (histcap)"
@@ -304,7 +301,7 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
     # pdh/pdl/pdc + spot are the only hard requirements). This is what kept
     # market-map latency spiky — a slow FIVE_MINUTE fetch for symbols histcap
     # hasn't back-filled yet.
-    hb = _hist_bars(sym, sess)
+    hb = _hist_bars(sym, sess, provider="ANGELONE")
     if hb:
         ctx["bars"] = hb
         ctx["data_quality"]["intraday_bars"] = f"ACTUAL (histcap x{len(hb)})"
@@ -334,7 +331,7 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
             ctx["avg_volume"] = sum(vols[-20:-1]) / max(1, len(vols[-20:-1]))
 
     # 4. OPTION CHAIN / OI — histcap -> throttled REST (selection_snapshot)
-    gc = get_chain(sym, window=window, allow_rest_fallback=allow_rest_fallback, sdk=sdk)
+    gc = get_chain(sym, window=window, allow_rest_fallback=allow_rest_fallback, sdk=sdk, provider="ANGELONE")
     if gc["chain"]:
         ctx["chain"] = gc["chain"]
         ctx["expiry"] = gc.get("expiry")
@@ -355,56 +352,112 @@ def snapshot(sym: str, *, window: int = 6, allow_rest_fallback: bool = True) -> 
 
 
 def get_chain(sym: str, *, window: int = 6, allow_rest_fallback: bool = True,
-             expiry_mode: str = "AUTO", sdk=None) -> dict:
-    """The option-chain-only slice of `snapshot()`, factored out so a caller
-    that needs JUST the chain (autoscalp's per-tick decision loop) does not
-    pay for spot/bars/prev-day work it already tracks itself via its own
-    CandleAggregator. This is the ONE broker-facing chain read both the
-    read-only mathematics surface (via `snapshot()`) and the autoscalp
-    trading loop (via `_autoscalp_chain` in app/runtime.py) go through.
+             expiry_mode: str = "AUTO", sdk=None, provider=None, as_of=None,
+             expiry_dates=None) -> dict:
+    """One provider per chain: default DHAN -> ANGELONE; explicit means only.
 
-    `expiry_mode="AUTO_ROLL"` (skip the 0-DTE contract on an NSE/BSE index's
-    own expiry day) has no histcap equivalent -- the capture worker doesn't
-    distinguish roll intent, it just captures whatever expiry is currently
-    configured -- so that mode always bypasses the histcap shortcut and goes
-    straight to the throttled REST fallback, which does honour it.
+    Historical/as-of calls are captured-only, even if REST was requested.
+    AUTO/NEXT is resolved independently by each provider. Captured reads need
+    expiry_dates evidence; a live provider resolves its own aliases. AUTO_ROLL
+    remains the AngelOne SDK contract and never uses a captured shortcut.
     """
+    from .histcap import read_contract as rc
     sym = sym.upper()
     mkt = _MKT.get(sym, "NSE")
-    sess = _now_ist_date()
-    out = {"chain": [], "expiry": None, "atm": None, "spot": None,
-          "oi_coverage": None, "data_quality_note": "MISSING", "error": None}
-
-    if sdk is None and allow_rest_fallback:
-        try:
-            from .connectors.angelone import _market_sdk
-            sdk = _market_sdk(require_auth=True)
-        except Exception as e:
-            _log.debug("get_chain(%s): broker SDK unavailable: %r", sym, e)
-
-    hc = None if expiry_mode == "AUTO_ROLL" else _hist_chain(sym, sess)
-    if hc:
-        out["chain"] = hc["chain"]
-        out["expiry"] = hc.get("expiry")
-        out["oi_coverage"] = hc["oi_coverage"]
-        out["data_quality_note"] = f"ACTUAL (histcap, {hc['age_sec']}s)"
+    cutoff = as_of or datetime.now(timezone.utc).isoformat()
+    out = {**rc.result(sym, provider, cutoff), "chain": [], "expiry": None, "atm": None,
+           "spot": None, "oi_coverage": None, "data_quality_note": "MISSING", "error": None}
+    try:
+        order = rc.providers(provider)
+        sess = rc.instant(cutoff).astimezone(IST).date().isoformat()
+        alias = str(expiry_mode or "AUTO").upper()
+        explicit = None if alias in ("AUTO", "CURRENT", "NEXT", "LATEST", "AUTO_ROLL") else rc.expiry_date(expiry_mode)
+    except (ValueError, TypeError):
+        out["reason"] = "INVALID_REQUEST"
         return out
-
-    if allow_rest_fallback and sdk and _throttle((sym, "chain")):
-        try:
-            from . import market_data
-            snap = market_data.selection_snapshot(
-                sdk, mkt, sym, expiry=expiry_mode, option_type="BOTH", window=window,
-                instrument="OPTION" if mkt in ("MCX", "BSE") else None)
-            out["expiry"] = snap.get("expiry")
-            out["atm"] = snap.get("atm")
-            out["spot"] = snap.get("spot") or snap.get("atm")
-            out["chain"] = _rows_from_snap(snap)
-            out["oi_coverage"] = snap.get("oi_coverage")
-            out["data_quality_note"] = "ACTUAL (REST)" if out["chain"] else "MISSING"
-        except Exception as e:
-            out["error"] = f"{type(e).__name__}: {e}"
+    rest_allowed = None
+    for p in order:
+        fallback = provider is None and p == "ANGELONE"
+        if (as_of is not None or not allow_rest_fallback) and alias in ("AUTO", "CURRENT", "NEXT", "LATEST"):
+            try:
+                rc.resolve_expiry(expiry_mode, p, rc.instant(cutoff), expiry_dates, underlying=sym)
+            except (ValueError, TypeError) as exc:
+                rc.unavailable(out, p, str(exc))
+                continue
+        hc = None if alias == "AUTO_ROLL" else _hist_chain(sym, sess, provider=p,
+                expiry=expiry_mode, as_of=cutoff, expiry_dates=expiry_dates)
+        if hc:
+            attempts = out["attempts"]
+            out.update(hc, data_quality_note=f"ACTUAL (histcap, {hc['age_sec']}s)")
+            out.update(attempts=attempts, requested_provider=provider)
+        elif allow_rest_fallback and as_of is None:
+            if rest_allowed is None:
+                rest_allowed = _throttle((sym, "chain"))
+            if rest_allowed:
+                try:
+                    if p == "DHAN":
+                        if alias == "AUTO_ROLL":
+                            rc.unavailable(out, p, "UNSUPPORTED_EXPIRY_MODE")
+                            continue
+                        from .optionchain.sources import dhan_chain
+                        chain = dhan_chain.fetch(sym, expiry_mode)
+                        if chain and chain.rows:
+                            out.update(_dhan_chain_result(chain, mkt))
+                    else:
+                        if sdk is None:
+                            from .connectors.angelone import _market_sdk
+                            sdk = _market_sdk(require_auth=True)
+                        if sdk:
+                            from . import market_data
+                            snap = market_data.selection_snapshot(sdk, mkt, sym, expiry=expiry_mode,
+                                option_type="BOTH", window=window,
+                                instrument="OPTION" if mkt in ("MCX", "BSE") else None)
+                            out.update(expiry=snap.get("expiry"), atm=snap.get("atm"),
+                                       spot=snap.get("spot"), chain=_rows_from_snap(snap),
+                                       oi_coverage=snap.get("oi_coverage"), source="ANGELONE_QUOTE_FULL")
+                    if out["chain"]:
+                        if explicit and rc.expiry_date(out["expiry"]) != explicit:
+                            out["chain"] = []
+                            rc.unavailable(out, p, "EXPIRY_MISMATCH")
+                            continue
+                        out["data_quality_note"] = "ACTUAL (REST)"
+                except Exception as e:
+                    # Never include broker exception payloads/credentials in the result.
+                    out["error"] = type(e).__name__
+        if out["chain"]:
+            reason = out["attempts"][0]["reason"] if fallback and out["attempts"] else None
+            out.update(status="OK", reason=None, provider=p, fallback_used=fallback, fallback_reason=reason)
+            for row in out["chain"]:
+                row.update(provider=p, source=out["source"], fallback_used=fallback,
+                           fallback_reason=reason, as_of=as_of)
+            return out
+        rc.unavailable(out, p, "NO_VALID_CAPTURE_OR_PROVIDER_RESPONSE")
     return out
+
+
+def _dhan_chain_result(chain, market):
+    """Keep Dhan identifiers and field attribution; no AngelOne Greek merge."""
+    from .histcap.read_contract import finite
+    rows = []
+    exchange = {"NSE": "NFO", "BSE": "BFO", "MCX": "MCX"}[market]
+    for strike in chain.rows:
+        row = {"strike": strike.strike, "expiry": chain.expiry}
+        for side in ("ce", "pe"):
+            leg = getattr(strike, side)
+            if leg is None:
+                continue
+            if not finite(leg.ltp, positive=True):
+                return {"chain": []}
+            for field in ("ltp", "oi", "volume", "iv", "delta", "gamma", "theta", "vega", "oi_change"):
+                row[f"{side}_{field}"] = getattr(leg, field)
+            row.update({f"{side}_token": leg.security_id, f"{side}_exchange": exchange,
+                        f"{side}_oi_source": "DHAN_CHAIN", f"{side}_quote_source": "DHAN_CHAIN",
+                        f"{side}_oi_timestamp": chain.ts, f"{side}_timestamp": chain.ts,
+                        f"{side}_oi_status": "AVAILABLE" if leg.oi is not None else "MISSING",
+                        f"{side}_greeks_source": "DHAN_OPTION_GREEK" if leg.delta is not None else "UNAVAILABLE"})
+        rows.append(row)
+    return {"chain": rows, "expiry": chain.expiry, "spot": chain.spot,
+            "spot_source": "DHAN_CHAIN", "atm": chain.atm_strike, "source": "DHAN_CHAIN"}
 
 
 def _rows_from_snap(snap: dict) -> list:

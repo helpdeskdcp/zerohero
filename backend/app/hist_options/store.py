@@ -13,12 +13,40 @@ COLS = ("timestamp", "timeframe", "exchange", "underlying", "expiry", "strike", 
         "previous_oi", "oi_change", "oi_change_source", "iv", "iv_source", "delta", "gamma", "theta",
         "vega", "greek_source", "greek_model", "greek_inputs", "greek_calc_ts", "vwap", "open", "high",
         "low", "close", "source")
-_SCHEMA = f"""CREATE TABLE IF NOT EXISTS hist_option_bars (
+_TABLE = f"""CREATE TABLE IF NOT EXISTS hist_option_bars (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  {', '.join(c + ' TEXT' if c in ('timestamp','timeframe','exchange','underlying','expiry','option_type','security_id','oi_change_source','iv_source','greek_source','greek_model','greek_inputs','greek_calc_ts','source') else c + ' REAL' for c in COLS)},
-  UNIQUE(underlying, option_type, strike, timestamp, timeframe, source)
-);
-CREATE INDEX IF NOT EXISTS ix_hob_lookup ON hist_option_bars(underlying, option_type, timestamp);"""
+  {', '.join(c + ' TEXT' if c in ('timestamp','timeframe','exchange','underlying','expiry','option_type','security_id','oi_change_source','iv_source','greek_source','greek_model','greek_inputs','greek_calc_ts','source') else c + ' REAL' for c in COLS)}
+)"""
+_LEGACY_KEY = ("underlying", "option_type", "strike", "timestamp", "timeframe", "source")
+
+
+def _init_schema(c):
+    # SQLite cannot drop a table-level UNIQUE constraint. Rebuild only v1,
+    # under one write transaction; errors roll back the entire migration.
+    c.execute("BEGIN IMMEDIATE")
+    c.execute(_TABLE)
+    legacy = any(tuple(r[2] for r in c.execute(f'PRAGMA index_info("{idx[1]}")')) == _LEGACY_KEY
+                 for idx in c.execute("PRAGMA index_list(hist_option_bars)") if idx[2])
+    if legacy:
+        if {r[1] for r in c.execute("PRAGMA table_info(hist_option_bars)")} != {"id", *COLS}:
+            raise RuntimeError("Unrecognized historical option schema; migration requires review")
+        extras = [r[0] for r in c.execute(
+            "SELECT sql FROM sqlite_master WHERE tbl_name='hist_option_bars' "
+            "AND type IN ('index','trigger') AND sql IS NOT NULL")]
+        seq = c.execute("SELECT seq FROM sqlite_sequence WHERE name='hist_option_bars'").fetchone()
+        c.execute(_TABLE.replace("hist_option_bars", "hist_option_bars_expiry_migration", 1))
+        cols = "id," + ",".join(COLS)
+        c.execute(f"INSERT INTO hist_option_bars_expiry_migration ({cols}) SELECT {cols} FROM hist_option_bars")
+        c.execute("DROP TABLE hist_option_bars")
+        c.execute("ALTER TABLE hist_option_bars_expiry_migration RENAME TO hist_option_bars")
+        if seq:
+            c.execute("UPDATE sqlite_sequence SET seq=MAX(seq, ?) WHERE name='hist_option_bars'", (seq[0],))
+        for sql in extras:
+            c.execute(sql)
+    # NULL expiry means unresolved, not an unlimited number of duplicate rows.
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_hob_contract ON hist_option_bars "
+              "(underlying, COALESCE(expiry,''), option_type, strike, timestamp, timeframe, source)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_hob_lookup ON hist_option_bars(underlying, option_type, timestamp)")
 
 
 class HistOptionStore:
@@ -26,7 +54,7 @@ class HistOptionStore:
         self.path = path or os.environ.get("CHANAKYA_HIST_OPTIONS_DB", _DEFAULT)
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with self._c() as c:
-            c.executescript(_SCHEMA)
+            _init_schema(c)
 
     def _c(self):
         c = sqlite3.connect(self.path, timeout=30)

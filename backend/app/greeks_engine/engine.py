@@ -4,6 +4,10 @@ GreeksEngine — derives exposure metrics from histcap-captured broker Greeks + 
 Reads `option_greeks` (broker) + `quote_snapshots` (OI, underlying price) from the
 shared `market_history.db`; writes derived snapshots to `greek_exposure`
 (append-only). No broker fetch, no fabrication, no trading-logic touch.
+
+The output contract is AngelOne-derived: only explicitly attributed AngelOne
+Greeks and quotes may contribute. Other/unknown sources remain in histcap but
+cannot supply missing inputs or select this engine's capture timestamp.
 """
 from __future__ import annotations
 
@@ -24,6 +28,8 @@ except Exception:                                    # pragma: no cover
         os.path.abspath(__file__)))), "data", "market_history.db")
 
 STALE_SEC = float(os.environ.get("CHANAKYA_GREEKS_STALE_SEC", "90"))
+_GREEK_SOURCE = "ANGELONE_OPTION_GREEK"
+_QUOTE_SOURCE = "ANGELONE_QUOTE_FULL"
 
 
 def _now() -> str:
@@ -46,48 +52,76 @@ class GreeksEngine:
 
     # ------------------------------------------------------------------ read helpers
     def _expiries(self, conn, underlying: str, session_date_ist: str | None) -> list[str]:
-        q = ("SELECT DISTINCT expiry FROM option_greeks WHERE underlying=? AND broker_status='OK'"
+        q = ("SELECT DISTINCT expiry FROM option_greeks WHERE underlying=? AND source=? "
+             "AND broker_status='OK'"
              + (" AND session_date_ist=?" if session_date_ist else ""))
-        p = [underlying.upper()] + ([session_date_ist] if session_date_ist else [])
+        p = [underlying.upper(), _GREEK_SOURCE] + ([session_date_ist] if session_date_ist else [])
         return [r["expiry"] for r in conn.execute(q, p).fetchall()]
 
     def _target_ts(self, conn, underlying: str, expiry: str, as_of: str | None) -> str | None:
-        if as_of:
-            r = conn.execute(
-                "SELECT MAX(received_ts) t FROM option_greeks WHERE underlying=? AND expiry=? "
-                "AND broker_status='OK' AND received_ts<=?", (underlying.upper(), expiry, as_of)).fetchone()
-        else:
-            r = conn.execute(
-                "SELECT MAX(received_ts) t FROM option_greeks WHERE underlying=? AND expiry=? "
-                "AND broker_status='OK'", (underlying.upper(), expiry)).fetchone()
+        r = conn.execute(
+            "SELECT received_ts t FROM option_greeks WHERE underlying=? AND expiry=? "
+            "AND source=? AND broker_status='OK' AND julianday(received_ts)<=julianday(?) "
+            "AND (server_ts IS NULL OR julianday(server_ts)<=julianday(received_ts)) "
+            "ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1",
+            (underlying.upper(), expiry, _GREEK_SOURCE, as_of or _now())).fetchone()
         return r["t"] if r and r["t"] else None
 
     def _greek_rows(self, conn, underlying: str, expiry: str, ts: str) -> list[dict]:
         return [dict(r) for r in conn.execute(
             "SELECT strike, option_type, delta, gamma, theta, vega, iv, server_ts "
             "FROM option_greeks WHERE underlying=? AND expiry=? AND broker_status='OK' "
-            "AND received_ts=?", (underlying.upper(), expiry, ts)).fetchall()]
+            "AND received_ts=? AND source=? "
+            "AND (server_ts IS NULL OR julianday(server_ts)<=julianday(received_ts))",
+            (underlying.upper(), expiry, ts, _GREEK_SOURCE)).fetchall()]
 
     def _oi_map(self, conn, underlying: str, expiry: str, ts: str) -> tuple[dict, float | None, float | None]:
         """{(strike, side): oi} at exactly `ts` (same capture cycle), plus the
         min/max option strike captured (for the coverage band)."""
         rows = conn.execute(
             "SELECT strike, option_type, oi FROM quote_snapshots WHERE symbol=? AND expiry=? "
-            "AND kind='OPTION' AND received_ts=?", (underlying.upper(), expiry, ts)).fetchall()
+            "AND kind='OPTION' AND received_ts=? AND source=? "
+            "AND (exch_ts IS NULL OR julianday(exch_ts)<=julianday(received_ts))",
+            (underlying.upper(), expiry, ts, _QUOTE_SOURCE)).fetchall()
         m = {(float(r["strike"]), str(r["option_type"]).upper()): r["oi"]
              for r in rows if r["strike"] is not None}
         strikes = [float(r["strike"]) for r in rows if r["strike"] is not None]
         return m, (min(strikes) if strikes else None), (max(strikes) if strikes else None)
 
     def _underlying_price(self, conn, underlying: str, ts: str) -> tuple[float | None, str | None]:
+        quote = self._underlying_quote(conn, underlying, ts)
+        return (float(quote["ltp"]), f"ANGELONE_QUOTE:{quote['kind']}") if quote else (None, None)
+
+    def _underlying_quote(self, conn, underlying: str, ts: str) -> dict | None:
+        """Latest valid AngelOne quote at/before capture, within STALE_SEC.
+
+        Multiple eligible futures identities need an explicit mapping; use an
+        index quote instead of guessing which future underlies the option.
+        """
+        from ..histcap.read_contract import IST, expiry_date, finite, instant
+        day = instant(ts).astimezone(IST).date()
         for kind in ("FUTURE", "INDEX"):
-            r = conn.execute(
-                "SELECT ltp FROM quote_snapshots WHERE symbol=? AND kind=? "
-                "ORDER BY ABS(julianday(received_ts)-julianday(?)) LIMIT 1",
-                (underlying.upper(), kind, ts)).fetchone()
-            if r and r["ltp"] is not None:
-                return float(r["ltp"]), f"ANGELONE_QUOTE:{kind}"
-        return None, None
+            rows = conn.execute(
+                "SELECT * FROM quote_snapshots WHERE symbol=? AND kind=? AND source=? "
+                "AND julianday(received_ts)<=julianday(?) "
+                "AND julianday(received_ts)>=julianday(?)-?/86400.0 "
+                "AND (exch_ts IS NULL OR julianday(exch_ts)<=julianday(?)) "
+                "ORDER BY julianday(received_ts) DESC, id DESC",
+                (underlying.upper(), kind, _QUOTE_SOURCE, ts, ts, STALE_SEC, ts)).fetchall()
+            valid = []
+            for r in rows:
+                if not finite(r["ltp"], positive=True):
+                    continue
+                if kind == "FUTURE":
+                    try:
+                        if expiry_date(r["expiry"]) < day:
+                            continue
+                    except ValueError:
+                        continue
+                valid.append(dict(r))
+            if len({(r["instrument_key"], r["expiry"]) for r in valid}) == 1:
+                return valid[0]
+        return None
 
     # ------------------------------------------------------------------ run
     def run_once(self, underlying: str = "NIFTY", expiries: list[str] | None = None,
@@ -101,7 +135,7 @@ class GreeksEngine:
             conn.commit()
 
             exps = expiries or self._expiries(conn, underlying, session_date_ist)
-            written, quality, errors = 0, {}, []
+            written, quality, errors, provenance = 0, {}, [], {}
             for exp in exps:
                 try:
                     ts = self._target_ts(conn, underlying, exp, as_of)
@@ -111,7 +145,14 @@ class GreeksEngine:
                         continue
                     greeks = self._greek_rows(conn, underlying, exp, ts)
                     oi_map, s_lo, s_hi = self._oi_map(conn, underlying, exp, ts)
-                    px, px_src = self._underlying_price(conn, underlying, ts)
+                    uq = self._underlying_quote(conn, underlying, ts)
+                    px = float(uq["ltp"]) if uq else None
+                    px_src = f"ANGELONE_QUOTE:{uq['kind']}" if uq else None
+                    provenance[exp] = {"greek_source": _GREEK_SOURCE, "iv_source": _GREEK_SOURCE,
+                        "oi_source": _QUOTE_SOURCE, "capture_timestamp": ts, "expiry": exp,
+                        "underlying_quote": {k: uq[k] for k in
+                            ("id", "source", "instrument_key", "expiry", "received_ts", "exch_ts", "raw_id")}
+                            if uq else {"status": "UNAVAILABLE", "reason": "NO_UNAMBIGUOUS_ASOF_QUOTE"}}
 
                     band = [g for g in greeks
                             if s_lo is not None and s_hi is not None
@@ -136,7 +177,7 @@ class GreeksEngine:
                 "UPDATE greek_engine_runs SET ended_ts=?, snapshots_written=?, quality_json=?, "
                 "errors_json=?, notes=? WHERE id=?",
                 (_now(), written, json.dumps(quality), json.dumps(errors),
-                 f"expiries={exps}", rid))
+                 json.dumps({"expiries": exps, "input_provenance": provenance}), rid))
             conn.commit()
             return {"run_id": rid, "underlying": underlying.upper(), "expiries": exps,
                     "snapshots_written": written, "quality": quality, "errors": errors}
@@ -169,9 +210,9 @@ class GreeksEngine:
         if expiry:
             clauses.append("expiry=?"); p.append(expiry)
         if as_of:
-            clauses.append("as_of_ts <= ?"); p.append(as_of)
+            clauses.append("julianday(as_of_ts) <= julianday(?)"); p.append(as_of)
         if since:
-            clauses.append("as_of_ts >= ?"); p.append(since)
+            clauses.append("julianday(as_of_ts) >= julianday(?)"); p.append(since)
         p.append(limit)
         with self._conn() as c:
             return [_decode(dict(r)) for r in c.execute(

@@ -38,9 +38,10 @@ def _asof(series: list, ts: str):
     return series[i - 1][1] if i > 0 else None
 
 
-def _pick_atm(opt_map: dict, ref_price: float, option_type: str) -> float | None:
+def _pick_atm(opt_map: dict, ref_price: float, option_type: str, as_of=None) -> float | None:
     """Nearest captured strike to `ref_price` that has a series for this side."""
-    strikes = sorted({k[0] for k in opt_map if k[1] == option_type and opt_map.get(k)})
+    strikes = sorted({k[0] for k in opt_map if k[1] == option_type and opt_map.get(k)
+                      and (as_of is None or _asof(opt_map[k], as_of) is not None)})
     if not strikes:
         return None
     return min(strikes, key=lambda s: abs(s - ref_price))
@@ -70,8 +71,27 @@ def rewalk_leg(opt_map: dict, *, entry_price: float, side: str,
     """
     if not opt_map or not entry_ts or not exit_ts:
         return None
+    # Historical reader records carry provenance. Keep the legacy pair-only
+    # input for pure callers, without assigning it an invented provider.
+    provenance = {}
+    if any(isinstance(r, dict) for series in opt_map.values() for r in series):
+        from ..histcap.read_contract import instant, finite
+        try:
+            records = [r for series in opt_map.values() for r in series]
+            identities = {(r["provider"], r["source"], r["expiry"]) for r in records}
+            if len(identities) != 1 or not all(finite(r["ltp"], positive=True) for r in records):
+                return None
+            provider, source, expiry = next(iter(identities))
+            provenance = {"premium_provider": provider, "premium_source": source, "premium_expiry": expiry,
+                          "premium_fallback_used": any(r.get("fallback_used") for r in records)}
+            entry_ts = instant(entry_ts).isoformat()
+            exit_ts = instant(exit_ts).isoformat()
+            opt_map = {k: sorted((instant(r["timestamp"]).isoformat(), r["ltp"]) for r in series)
+                       for k, series in opt_map.items()}
+        except (ValueError, TypeError, KeyError):
+            return None
     option_type = "CE" if str(side).upper() == "BUY" else "PE"
-    strike = _pick_atm(opt_map, float(entry_price), option_type)
+    strike = _pick_atm(opt_map, float(entry_price), option_type, as_of=entry_ts)
     if strike is None:
         return None
     series = opt_map.get((strike, option_type)) or []
@@ -108,6 +128,7 @@ def rewalk_leg(opt_map: dict, *, entry_price: float, side: str,
 
     pts = round(p_exit - p_entry, 4)
     return {
+        **provenance,
         "basis": "PREMIUM",
         "strike": strike,
         "option_type": option_type,

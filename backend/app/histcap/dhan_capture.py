@@ -5,14 +5,10 @@ on-demand reads (app.optionchain.resolve); this wires the SAME already-
 verified dhan_chain.fetch() into the CONTINUOUS background capture too,
 alongside -- never replacing -- AngelOne's.
 
-Row-level append-only safety is automatic, not something this module has
-to enforce: quote_snapshots' UNIQUE(token, snap_key) and option_greeks'
-UNIQUE(underlying, expiry, strike, option_type, snap_key) key on `token`/
-the strike identity, and Dhan's real security_id (when present) or this
-module's synthetic fallback token are always disjoint from AngelOne's own
-symboltoken namespace -- the two providers' rows for "the same" real
-contract can never collide or overwrite each other, they're just two
-permanently distinct rows tagged by `source`.
+Row-level append-only safety is enforced by source-aware UNIQUE keys in
+histcap.schema. Real numeric security IDs may overlap between brokers;
+keep them unchanged and distinguish the rows by source (and exchange for
+quotes). Legacy tables are migrated without rewriting their stored IDs.
 
 Dhan's real capability boundary (verified live 2026-09-30, not assumed):
 /v2/optionchain has no historical/timestamp parameter -- current-state-
@@ -69,8 +65,8 @@ def capture_dhan_chain(sym: str, expiry: str, *, received_ts: str | None = None)
     def _token(leg, strike, ot) -> str:
         # Real Dhan security_id when the source gave one (it does for a
         # live /v2/optionchain leg -- see sources/dhan_chain.py); a
-        # deterministic synthetic identifier otherwise, still guaranteed
-        # disjoint from AngelOne's own (purely numeric) token namespace.
+        # deterministic synthetic identifier otherwise. Source-aware storage
+        # keys provide isolation even when the real numeric IDs overlap.
         return leg.security_id or f"DHAN-{sym}-{expiry}-{strike}-{ot}"
 
     for row in chain.rows:

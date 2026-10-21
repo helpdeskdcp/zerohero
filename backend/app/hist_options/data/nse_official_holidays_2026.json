@@ -1,0 +1,154 @@
+{
+"source": "NSE official API https://www.nseindia.com/api/holiday-master?type=trading (fetched 2026-09-30). Current calendar year only. COM = NSE 'commodity derivatives' list: mapping to MCX NOT verified (SECONDARY for MCX).",
+"FO": [
+"15-Jan-2026",
+"26-Jan-2026",
+"15-Feb-2026",
+"03-Mar-2026",
+"21-Mar-2026",
+"26-Mar-2026",
+"31-Mar-2026",
+"03-Apr-2026",
+"14-Apr-2026",
+"01-May-2026",
+"28-May-2026",
+"26-Jun-2026",
+"15-Aug-2026",
+"14-Sep-2026",
+"02-Oct-2026",
+"20-Oct-2026",
+"08-Nov-2026",
+"10-Nov-2026",
+"24-Nov-2026",
+"25-Dec-2026"
+],
+"FO_desc": {
+"15-Jan-2026": "Municipal Corporation Election - Maharashtra",
+"26-Jan-2026": "Republic Day",
+"15-Feb-2026": "Mahashivratri",
+"03-Mar-2026": "Holi",
+"21-Mar-2026": "Id-Ul-Fitr (Ramadan Eid)",
+"26-Mar-2026": "Shri Ram Navami",
+"31-Mar-2026": "Shri Mahavir Jayanti",
+"03-Apr-2026": "Good Friday",
+"14-Apr-2026": "Dr. Baba Saheb Ambedkar Jayanti",
+"01-May-2026": "Maharashtra Day",
+"28-May-2026": "Bakri Id",
+"26-Jun-2026": "Muharram",
+"15-Aug-2026": "Independence Day",
+"14-Sep-2026": "Ganesh Chaturthi",
+"02-Oct-2026": "Mahatma Gandhi Jayanti",
+"20-Oct-2026": "Dussehra",
+"08-Nov-2026": "Diwali Laxmi Pujan*",
+"10-Nov-2026": "Diwali-Balipratipada",
+"24-Nov-2026": "Prakash Gurpurb Sri Guru Nanak Dev",
+"25-Dec-2026": "Christmas"
+},
+"COM": {
+"01-Jan-2026": {
+"desc": "New year",
+"morning": "Open",
+"evening": "Closed"
+},
+"15-Jan-2026": {
+"desc": "Municipal Corporation Election - Maharashtra",
+"morning": "Closed",
+"evening": "Open"
+},
+"26-Jan-2026": {
+"desc": "Republic Day",
+"morning": "Closed",
+"evening": "Closed"
+},
+"15-Feb-2026": {
+"desc": "Mahashivratri",
+"morning": "Closed",
+"evening": "Closed"
+},
+"03-Mar-2026": {
+"desc": "Holi",
+"morning": "Closed",
+"evening": "Open"
+},
+"21-Mar-2026": {
+"desc": "Id-Ul-Fitr (Ramadan Eid)",
+"morning": "Closed",
+"evening": "Closed"
+},
+"26-Mar-2026": {
+"desc": "Shri Ram Navami",
+"morning": "Closed",
+"evening": "Open"
+},
+"31-Mar-2026": {
+"desc": "Shri Mahavir Jayanti",
+"morning": "Closed",
+"evening": "Open"
+},
+"03-Apr-2026": {
+"desc": "Good Friday",
+"morning": "Closed",
+"evening": "Closed"
+},
+"14-Apr-2026": {
+"desc": "Dr. Baba Saheb Ambedkar Jayanti",
+"morning": "Closed",
+"evening": "Open"
+},
+"01-May-2026": {
+"desc": "Maharashtra Day",
+"morning": "Closed",
+"evening": "Open"
+},
+"28-May-2026": {
+"desc": "Bakri Id",
+"morning": "Closed",
+"evening": "Open"
+},
+"26-Jun-2026": {
+"desc": "Muharram",
+"morning": "Closed",
+"evening": "Open"
+},
+"15-Aug-2026": {
+"desc": "Independence Day",
+"morning": "Closed",
+"evening": "Closed"
+},
+"14-Sep-2026": {
+"desc": "Ganesh Chaturthi",
+"morning": "Closed",
+"evening": "Open"
+},
+"02-Oct-2026": {
+"desc": "Mahatma Gandhi Jayanti",
+"morning": "Closed",
+"evening": "Closed"
+},
+"20-Oct-2026": {
+"desc": "Dussehra",
+"morning": "Closed",
+"evening": "Open"
+},
+"08-Nov-2026": {
+"desc": "Diwali Laxmi Pujan*",
+"morning": "Closed",
+"evening": "Closed"
+},
+"10-Nov-2026": {
+"desc": "Diwali-Balipratipada",
+"morning": "Closed",
+"evening": "Open"
+},
+"24-Nov-2026": {
+"desc": "Prakash Gurpurb Sri Guru Nanak Dev",
+"morning": "Closed",
+"evening": "Open"
+},
+"25-Dec-2026": {
+"desc": "Christmas",
+"morning": "Closed",
+"evening": "Closed"
+}
+}
+}

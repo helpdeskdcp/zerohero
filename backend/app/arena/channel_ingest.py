@@ -115,6 +115,11 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]
+    try:                                                                                      # dense (~3 s) quotes for this contract until the exchange closes, so its fill/exit can be resolved precisely
+        from ..histcap import priority
+        priority.request_watch(und, exp, s["strike"], s["option_type"])
+    except Exception:
+        pass
     if risk_module and not s.get("sl_published", True):                                          # experiment only (data/research/sl_detector/SPEC_2026-10-21.md): never affects the score, never blocks ingest
         try:
             from .. import sl_detector

@@ -1,43 +1,26 @@
+"""Provider-aware chain resolution.
+
+Default: Dhan live/captured -> AngelOne captured. Explicit provider selects
+only its own sources; an as-of query always disables live network access.
+Expiry aliases are resolved within each provider. Missing Greeks stay missing,
+never borrowed from another provider. `prefer` remains a legacy ordering hint;
+use `provider` for a strict contract. All reads retain source provenance.
 """
-Source ordering + failover + Greek-merge.
-
-`get_chain(underlying, expiry="AUTO")` -- live (allow_network=True) order:
-  1. try dhan_chain        (live HTTP, OAuth)                  -- PRIMARY
-  2. try angelone_captured (offline, from the capture DB)      -- FALLBACK
-  3. try upstox_open       (keyless HTTP)                      -- further fallback
-  4. try nse_v3            (keyless HTTP, cookie-primed)       -- further fallback
-First non-empty chain wins. If the winner lacks Greeks and a later source has
-them, Greeks are merged onto the winner's rows by (strike, side).
-
-Dhan promoted to PRIMARY 2026-09-30 (explicit decision, MCP 3.3 section 2:
-"Dhan is the preferred primary market-data provider... Angel One is
-FALLBACK only"), after dhan_chain was verified live end-to-end (real
-238-strike NIFTY chain, 100% Greek coverage, real bid/ask -- see
-sources/dhan_chain.py's own docstring). Dhan's OAuth token expires
-~24-30h and needs a human reconnect (app.dhan_client) -- when it's
-expired/invalid, dhan_chain.fetch() returns None (fails closed, never
-fabricates) and this immediately falls through to angelone_captured, so a
-lapsed Dhan session degrades to the previous (still fully working)
-behavior rather than breaking anything.
-
-`allow_network=False` restricts to angelone_captured -> deterministic +
-offline (what hedging/tests/cron use, unchanged by the primary/fallback
-reorder above -- that flag is specifically for callers that want a
-same-answer-every-time captured read, never a live network round-trip
-regardless of which source would otherwise be tried first)."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
 from .chain import OptionChain
 from .quality import score as _quality
-from .sources import angelone_chain, dhan_chain, nse_v3, upstox_open
+from .sources import angelone_chain, dhan_chain, dhan_captured, nse_v3, upstox_open
 
 _ORDER = ("dhan_chain", "angelone_captured", "upstox_open", "nse_v3")
 _FETCH = {
+    "dhan_captured": lambda u, e, kw: dhan_captured.fetch(u, e, db_path=kw.get("db_path"),
+        at_ts=kw.get("at_ts"), expiry_dates=kw.get("expiry_dates")),
     "dhan_chain": lambda u, e, kw: dhan_chain.fetch(u, e),
     "angelone_captured": lambda u, e, kw: angelone_chain.fetch(u, e, db_path=kw.get("db_path"),
-                                                               at_ts=kw.get("at_ts")),
+        at_ts=kw.get("at_ts"), expiry_dates=kw.get("expiry_dates")),
     "upstox_open": lambda u, e, kw: upstox_open.fetch(u, e, session=kw.get("session")),
     "nse_v3": lambda u, e, kw: nse_v3.fetch(u, e, session=kw.get("session")),
 }
@@ -61,16 +44,39 @@ def _merge_greeks(dst: OptionChain, src: OptionChain) -> int:
 
 
 def get_chain(underlying: str, expiry: str = "AUTO", *, prefer: str | None = None,
-              allow_network: bool = True, atm_window: int = 10, **kw) -> OptionChain | None:
-    order = ([prefer] + [s for s in _ORDER if s != prefer]) if prefer in _ORDER else list(_ORDER)
+              allow_network: bool = True, atm_window: int = 10, provider: str | None = None, **kw) -> OptionChain | None:
+    # An as-of query can never be answered by a live network response.
+    if kw.get("at_ts") is not None:
+        from ..histcap.read_contract import instant
+        try:
+            instant(kw["at_ts"])
+        except (ValueError, TypeError):
+            return None
+        allow_network = False
+    if provider is not None:
+        p = str(provider).upper()
+        if p not in ("DHAN", "ANGELONE"):
+            return None
+        order = (["dhan_chain", "dhan_captured"] if allow_network else ["dhan_captured"]) if p == "DHAN" else ["angelone_captured"]
+    elif prefer in _ORDER:
+        # Existing prefer is an ordering hint, not an explicit provider constraint.
+        order = [prefer] + [s for s in _ORDER if s != prefer]
+    else:
+        order = ["dhan_chain", "dhan_captured", "angelone_captured"]
     if not allow_network:
-        order = [s for s in order if s == "angelone_captured"]
+        order = [s for s in order if s in ("dhan_captured", "angelone_captured")]
 
     chain = None
     tried = []
     for name in order:
         try:
-            c = _FETCH[name](underlying, expiry, kw)
+            p = "DHAN" if name.startswith("dhan") else "ANGELONE" if name.startswith("angelone") else name
+            requested_expiry = kw.get("provider_expiries", {}).get(p, kw.get("expiry_request", expiry))
+            if not allow_network:
+                # Live discovery overrides cannot smuggle today's calendar into
+                # an offline/as-of alias request. Explicit dates remain exact.
+                requested_expiry = expiry
+            c = _FETCH[name](underlying, requested_expiry, kw)
         except Exception as e:                    # a source must never break the resolver
             tried.append(f"{name}: ERR {type(e).__name__}")
             continue
@@ -81,24 +87,21 @@ def get_chain(underlying: str, expiry: str = "AUTO", *, prefer: str | None = Non
     if chain is None:
         return None
 
-    # ---- Greek merge if the winner has none ----
-    if not (chain.capability or {}).get("has_greeks") and allow_network:
-        for name in order:
-            if name == chain.source.split("+")[0]:
-                continue
-            try:
-                g = _FETCH[name](underlying, chain.expiry, kw)
-            except Exception:
-                g = None
-            if g and (g.capability or {}).get("has_greeks"):
-                merged = _merge_greeks(chain, g)
-                if merged:
-                    chain.source = f"{chain.source}+greeks:{name}"
-                    chain.capability["has_greeks"] = True
-                    chain.capability["greek_coverage"] = round(merged / (2 * len(chain.rows)), 3)
-                    chain.notes.append(f"Greeks merged from {name} ({merged} legs)")
-                    chain.compute_atm()
-                break
+    # A provider-constrained chain must not borrow Greeks from another broker.
+    selected_provider = "DHAN" if chain.source.startswith("dhan") else "ANGELONE" if chain.source.startswith("angelone") else chain.source
+    chain.capability["provider"] = selected_provider
+    chain.capability["fallback_used"] = provider is None and selected_provider == "ANGELONE"
+    if chain.capability["fallback_used"]:
+        chain.capability["fallback_reason"] = "DHAN_UNAVAILABLE"
+    for row in chain.rows:
+        for leg in (row.ce, row.pe):
+            if leg is not None and leg.provenance is None:
+                leg.provenance = {"provider": selected_provider, "source": chain.source,
+                                  "expiry": chain.expiry, "timestamp": chain.ts,
+                                  "fallback_used": chain.capability["fallback_used"]}
+            if leg is not None:
+                leg.provenance.update(fallback_used=chain.capability["fallback_used"],
+                    fallback_reason=chain.capability.get("fallback_reason"), requested_as_of=kw.get("at_ts"))
 
     chain.notes.append("resolve order: " + " -> ".join(tried))
     chain.quality = _quality(chain, atm_window=atm_window)
@@ -126,7 +129,7 @@ def check_data_conflict(underlying: str, *, tolerance_pct: float = DEFAULT_CONFL
     something that already works, which is a separate decision from
     exposing this check as a real, available capability."""
     u = str(underlying or "").upper()
-    ang = get_chain(u, "AUTO", allow_network=False)
+    ang = get_chain(u, "AUTO", allow_network=False, provider="ANGELONE")
     if ang is None or not ang.rows or ang.spot is None:
         return {"status": "UNAVAILABLE", "reason": "no angelone_captured chain (or no spot)"}
 
@@ -134,7 +137,7 @@ def check_data_conflict(underlying: str, *, tolerance_pct: float = DEFAULT_CONFL
     try:
         dhan = _dhan.fetch(u, ang.expiry)
     except Exception as e:
-        return {"status": "UNAVAILABLE", "reason": f"dhan_chain fetch failed: {type(e).__name__}: {e}",
+        return {"status": "UNAVAILABLE", "reason": f"dhan_chain fetch failed: {type(e).__name__}",
                "angelone_expiry": ang.expiry}
     if dhan is None or not dhan.rows or dhan.spot is None:
         return {"status": "UNAVAILABLE", "reason": "no dhan_chain data (or no spot) for this expiry",

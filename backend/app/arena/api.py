@@ -147,6 +147,11 @@ async def submit(request: Request):
     try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _cache["by"] = {}; _cache["lb"] = {}
+    try:
+        from ..histcap import priority
+        priority.request_watch(rec["underlying"], rec["expiry"], rec["strike"], rec["option_type"])         # dense quotes for this contract until the exchange closes
+    except Exception:
+        pass
     out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
     if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]; out["available_expiries"] = chk["available_expiries"]
     return out
@@ -180,7 +185,13 @@ def ingest_status(request: Request):
     """Health of the read-only channel reader (no message contents, no ids)."""
     _auth(request)
     from . import tg_reader
-    return tg_reader.public_status()
+    out = tg_reader.public_status()
+    try:
+        from ..histcap import priority
+        out["priority_capture"] = priority._instance.status() if priority._instance else {"enabled": priority.enabled(), "running": False}
+    except Exception:
+        out["priority_capture"] = {"running": False}
+    return out
 
 
 @router.get("/signals")

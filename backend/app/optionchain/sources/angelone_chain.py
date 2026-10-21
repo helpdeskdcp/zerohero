@@ -1,5 +1,5 @@
 """
-PRIMARY source -- assemble the option chain from data IDaddy already captures.
+AngelOne-only captured chain, used explicitly or as the Dhan fallback.
 
 Reads `market_history.db` READ-ONLY. Three captured tables, three roles:
 
@@ -25,6 +25,7 @@ markov404/AngelOneOptionChainSmartApi (MIT).
 from __future__ import annotations
 
 import json
+import math
 import os
 import sqlite3
 import statistics
@@ -50,16 +51,48 @@ def _db_path(override: str | None) -> str:
     return override or os.environ.get("CHANAKYA_HIST_DB_PATH") or _HIST_DB
 
 
-def _ro(path: str):
+def _ro(path: str, at_ts: str | None = None, *, listed_at: str | None = None,
+        calendar_exchange: str | None = None):
     con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
     con.row_factory = sqlite3.Row
+    # Connection-local views keep EVERY read (expiry discovery, spine, quotes,
+    # spot, OI baseline, cadence) provider-specific. No persistent DB writes.
+    # Source-less exports are unknown, not implicitly AngelOne.
+    cutoff = at_ts or datetime.now(timezone.utc).isoformat()
+    # Parameterized TEMP table avoids embedding caller-supplied timestamps in DDL.
+    con.execute("CREATE TEMP TABLE read_cutoff(ts TEXT)")
+    con.execute("INSERT INTO read_cutoff VALUES (?)", (cutoff,))
+    con.execute("CREATE TEMP TABLE calendar_listing(ts TEXT, exchange TEXT)")
+    con.execute("INSERT INTO calendar_listing VALUES (?,?)", (listed_at, calendar_exchange))
+    for table, source in (("quote_snapshots", "ANGELONE_QUOTE_FULL"),
+                          ("option_greeks", "ANGELONE_OPTION_GREEK")):
+        cols = {r[1] for r in con.execute(f"PRAGMA main.table_info({table})")}
+        clauses = ["julianday(received_ts)<=julianday((SELECT ts FROM read_cutoff))"]
+        if listed_at is not None:
+            # Calendar-bound aliases may not consume pre-listing captures.
+            clauses.append("julianday(received_ts)>=julianday((SELECT ts FROM calendar_listing))")
+        if calendar_exchange is not None and table == "quote_snapshots":
+            clauses.append("(CASE exchange WHEN 'NFO' THEN 'NSE' WHEN 'NSE_FNO' THEN 'NSE' "
+                           "WHEN 'BFO' THEN 'BSE' WHEN 'BSE_FNO' THEN 'BSE' WHEN 'MCX_COMM' THEN 'MCX' "
+                           "ELSE exchange END)=(SELECT exchange FROM calendar_listing)" if "exchange" in cols else "0")
+        if "source" in cols:
+            clauses.append(f"source='{source}'")
+        else:
+            clauses.append("0")
+        for field in ("exch_ts", "server_ts"):
+            if field in cols:
+                clauses.append(f"({field} IS NULL OR julianday({field})<=julianday((SELECT ts FROM read_cutoff)))")
+        con.execute(f"CREATE TEMP VIEW {table} AS SELECT * FROM main.{table} WHERE " + " AND ".join(clauses))
+    if con.execute("SELECT 1 FROM main.sqlite_master WHERE name='greek_exposure'").fetchone():
+        con.execute("CREATE TEMP VIEW greek_exposure AS SELECT * FROM main.greek_exposure "
+                    "WHERE julianday(as_of_ts)<=julianday((SELECT ts FROM read_cutoff))")
     return con
 
 
 def _num(v):
     try:
         f = float(v)
-        return f if f == f else None
+        return f if math.isfinite(f) else None
     except (TypeError, ValueError):
         return None
 
@@ -100,6 +133,10 @@ def _pick_expiry(con, underlying: str, want: str) -> str | None:
         "UNION SELECT DISTINCT expiry FROM option_greeks "
         "WHERE underlying=? AND expiry IS NOT NULL AND expiry!=''",
         (underlying, underlying)).fetchall()
+    w = str(want or "AUTO").upper()
+    if w not in ("AUTO", "CURRENT", "NEXT", "LATEST"):
+        requested = _expiry_date(w)
+        return next((r["expiry"] for r in rows if requested and _expiry_date(r["expiry"]) == requested), None)
     today = datetime.now(timezone.utc).date()
     dated = sorted({(d, r["expiry"]) for r in rows
                     if (d := _expiry_date(r["expiry"])) and d >= today})
@@ -140,11 +177,12 @@ def _pick_expiry(con, underlying: str, want: str) -> str | None:
 #  spine: option_greeks, one snap_key                                          #
 # --------------------------------------------------------------------------- #
 def _latest_greek_snap(con, u: str, exp: str, at_ts: str | None) -> str | None:
-    q = ("SELECT MAX(snap_key) FROM option_greeks WHERE underlying=? AND expiry=?")
+    q = ("SELECT snap_key FROM option_greeks WHERE underlying=? AND expiry=?")
     args = [u, exp]
     if at_ts:
-        q += " AND received_ts<=?"
+        q += " AND julianday(received_ts)<=julianday(?)"
         args.append(at_ts)
+    q += " ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1"
     row = con.execute(q, args).fetchone()
     return row[0] if row and row[0] else None
 
@@ -153,7 +191,7 @@ def _greek_spine(con, u: str, exp: str, snap_key: str) -> tuple[dict, str | None
     rows_by_k: dict[float, StrikeRow] = {}
     max_rts = None
     for r in con.execute(
-        "SELECT received_ts, strike, option_type, delta, gamma, theta, vega, iv, "
+        "SELECT id, received_ts, strike, option_type, delta, gamma, theta, vega, iv, "
         "iv_pct, trade_volume FROM option_greeks "
         "WHERE underlying=? AND expiry=? AND snap_key=? AND strike IS NOT NULL",
         (u, exp, snap_key)):
@@ -164,7 +202,10 @@ def _greek_spine(con, u: str, exp: str, snap_key: str) -> tuple[dict, str | None
             max_rts = r["received_ts"]
         leg = OptionLeg(
             delta=_num(r["delta"]), gamma=_num(r["gamma"]), theta=_num(r["theta"]),
-            vega=_num(r["vega"]), iv=_num(r["iv"]), volume=_num(r["trade_volume"]))
+            vega=_num(r["vega"]), iv=_num(r["iv"]), volume=_num(r["trade_volume"]),
+            provenance={"provider": "ANGELONE", "expiry": exp,
+                        "greeks_source": "ANGELONE_OPTION_GREEK", "iv_source": "ANGELONE_OPTION_GREEK",
+                        "greek_timestamp": r["received_ts"], "greek_id": r["id"]})
         row = rows_by_k.setdefault(k, StrikeRow(strike=k))
         if str(r["option_type"]).upper() == "CE":
             row.ce = leg
@@ -180,17 +221,10 @@ def _quote_overlay(con, u: str, exp: str, ref_ts: str | None) -> dict:
     ref = ref_ts or datetime.now(timezone.utc).isoformat()
     out: dict[tuple, sqlite3.Row] = {}
     for r in con.execute(
-        "SELECT q.strike, q.option_type, q.ltp, q.bid, q.ask, q.bid_qty, q.ask_qty, "
-        "       q.oi, q.oi_change, q.volume, q.received_ts "
-        "FROM quote_snapshots q JOIN ("
-        "  SELECT strike, option_type, MAX(received_ts) mts FROM quote_snapshots "
-        "  WHERE symbol=? AND kind='OPTION' AND expiry=? AND received_ts<=? "
-        "    AND received_ts>=datetime(?, ?) "
-        "  GROUP BY strike, option_type"
-        ") m ON q.strike=m.strike AND q.option_type=m.option_type "
-        "     AND q.received_ts=m.mts "
-        "WHERE q.symbol=? AND q.kind='OPTION' AND q.expiry=?",
-        (u, exp, ref, ref, f"-{_QUOTE_WINDOW_MIN} minutes", u, exp)):
+        "SELECT * FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? "
+        "AND julianday(received_ts)<=julianday(?) "
+        "AND julianday(received_ts)>=julianday(?)-?/1440.0 "
+        "ORDER BY julianday(received_ts), id", (u, exp, ref, ref, _QUOTE_WINDOW_MIN)):
         k = _num(r["strike"])
         if k is None:
             continue
@@ -202,21 +236,38 @@ def _quote_overlay(con, u: str, exp: str, ref_ts: str | None) -> dict:
 #  wing overlay: greek_exposure.per_strike_json                               #
 # --------------------------------------------------------------------------- #
 def _oi_overlay(con, u: str, exp: str, at_ts: str | None) -> tuple[dict, dict]:
-    q = ("SELECT as_of_ts, underlying_price, pcr_oi, ce_oi_total, pe_oi_total, "
+    # Never silently certify old snapshots. Only runs with explicit input
+    # provenance can supply an overlay; raw/legacy snapshots remain untouched.
+    if ("run_id" not in {r[1] for r in con.execute("PRAGMA main.table_info(greek_exposure)")}
+            or not con.execute("SELECT 1 FROM main.sqlite_master WHERE name='greek_engine_runs'").fetchone()):
+        return {}, {}
+    for table, column, source in (("quote_snapshots", "symbol", "ANGELONE_QUOTE_FULL"),
+                                  ("option_greeks", "underlying", "ANGELONE_OPTION_GREEK")):
+        if "source" in {r[1] for r in con.execute(f"PRAGMA main.table_info({table})")}:
+            if con.execute(f"SELECT 1 FROM main.{table} WHERE {column}=? AND expiry=? "
+                           "AND (source IS NULL OR source!=?) LIMIT 1", (u, exp, source)).fetchone():
+                return {}, {}
+    q = ("SELECT as_of_ts, underlying_price, pcr_oi, ce_oi_total, pe_oi_total, run_id, "
          "per_strike_json FROM greek_exposure "
          "WHERE underlying=? AND expiry=? AND per_strike_json IS NOT NULL "
          "  AND per_strike_json NOT IN ('', '[]')")
     args = [u, exp]
     if at_ts:
-        q += " AND as_of_ts<=?"
+        q += " AND julianday(as_of_ts)<=julianday(?)"
         args.append(at_ts)
     q += " ORDER BY id DESC LIMIT 1"
     row = con.execute(q, args).fetchone()
     if not row:
         return {}, {}
     try:
+        run = con.execute("SELECT notes FROM main.greek_engine_runs WHERE id=?", (row["run_id"],)).fetchone()
+        provenance = json.loads(run["notes"])["input_provenance"][exp] if run else {}
+        if (provenance.get("greek_source") != "ANGELONE_OPTION_GREEK"
+                or provenance.get("oi_source") != "ANGELONE_QUOTE_FULL"
+                or provenance.get("expiry") != exp):
+            return {}, {}
         arr = json.loads(row["per_strike_json"])
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, KeyError):
         return {}, {}
     oi: dict[tuple, float] = {}
     for it in arr if isinstance(arr, list) else []:
@@ -228,7 +279,9 @@ def _oi_overlay(con, u: str, exp: str, at_ts: str | None) -> tuple[dict, dict]:
             v = _num(node.get("oi"))
             if v is not None:
                 oi[(k, side.upper())] = v
-    meta = {"as_of_ts": row["as_of_ts"], "underlying_price": _num(row["underlying_price"]),
+    uq = provenance.get("underlying_quote") or {}
+    meta = {"as_of_ts": row["as_of_ts"], "run_id": row["run_id"],
+            "underlying_price": _num(row["underlying_price"]) if uq.get("source") == "ANGELONE_QUOTE_FULL" else None,
             "pcr_oi": _num(row["pcr_oi"]), "ce_oi_total": _num(row["ce_oi_total"]),
             "pe_oi_total": _num(row["pe_oi_total"])}
     return oi, meta
@@ -277,14 +330,22 @@ def _cadence_sec(con, u: str, exp: str) -> float | None:
 
 
 def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
-          at_ts: str | None = None) -> OptionChain | None:
+          at_ts: str | None = None, expiry_dates=None) -> OptionChain | None:
     u = str(underlying or "").upper()
     path = _db_path(db_path)
     if not os.path.exists(path):
         return None
-    con = _ro(path)
+    from ...histcap.read_contract import instant
+    from ...hist_options.provider_calendar import resolve
     try:
-        exp = _pick_expiry(con, u, expiry)
+        cutoff = instant(at_ts or datetime.now(timezone.utc))
+        resolved, calendar = resolve(expiry, "ANGELONE", u, cutoff, expiry_dates)
+        wanted = resolved.strftime("%d%b%Y").upper()
+    except (ValueError, TypeError):
+        return None
+    con = _ro(path, at_ts, listed_at=calendar.get("listed_at"), calendar_exchange=calendar.get("exchange"))
+    try:
+        exp = _pick_expiry(con, u, wanted)
         if not exp:
             return None
 
@@ -297,6 +358,14 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
         else:
             rows_by_k, ref_ts = {}, at_ts
             notes.append("no option_greeks capture -> thin quote-only chain")
+        if not ref_ts:
+            latest = con.execute("SELECT received_ts FROM quote_snapshots WHERE symbol=? AND expiry=? "
+                "AND kind='OPTION' ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1", (u, exp)).fetchone()
+            ref_ts = latest[0] if latest else None
+        # All overlays and baselines describe the selected observation, not a
+        # later capture merely available by the request's wall-clock cutoff.
+        if ref_ts:
+            con.execute("UPDATE read_cutoff SET ts=?", (ref_ts,))
 
         # near-money price/oi overlay from the live quote capture
         q_ov = _quote_overlay(con, u, exp, ref_ts)
@@ -307,13 +376,16 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 row = rows_by_k.setdefault(k, StrikeRow(strike=k))
             leg = getattr(row, side.lower())
             if leg is None:
-                leg = OptionLeg()
+                leg = OptionLeg(provenance={"provider": "ANGELONE", "expiry": exp})
                 setattr(row, side.lower(), leg)
+            leg.provenance.update(quote_source="ANGELONE_QUOTE_FULL", quote_id=r["id"],
+                                  quote_timestamp=r["received_ts"])
             leg.ltp = _num(r["ltp"]) if leg.ltp is None else leg.ltp
             leg.bid, leg.ask = _num(r["bid"]), _num(r["ask"])
             leg.bid_qty, leg.ask_qty = _num(r["bid_qty"]), _num(r["ask_qty"])
             if _num(r["oi"]) is not None:
                 leg.oi = _num(r["oi"])
+                leg.provenance.update(oi_source="ANGELONE_QUOTE_FULL", oi_timestamp=r["received_ts"])
             if _num(r["oi_change"]) is not None:
                 leg.oi_change = _num(r["oi_change"])
             if _num(r["volume"]) is not None:
@@ -322,7 +394,7 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 n_ltp += 1
 
         # wing OI overlay from the greek engine's per-strike snapshot
-        oi_ov, oi_meta = _oi_overlay(con, u, exp, at_ts)
+        oi_ov, oi_meta = _oi_overlay(con, u, exp, ref_ts)
         n_oi_filled = 0
         for (k, side), v in oi_ov.items():
             row = rows_by_k.get(k)
@@ -331,6 +403,8 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
             leg = getattr(row, side.lower())
             if leg is not None and leg.oi is None:
                 leg.oi = v
+                leg.provenance.update(oi_source="ANGELONE_GREEK_EXPOSURE", oi_timestamp=oi_meta["as_of_ts"],
+                                      oi_run_id=oi_meta["run_id"])
                 n_oi_filled += 1
         oi_stale = False
         if oi_meta.get("as_of_ts") and ref_ts:
@@ -357,25 +431,33 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
         if not rows_by_k:
             return None
 
-        # ---- spot: freshest captured index print; for MCX (no index) the front
-        # future is the reference; then the greek-engine underlying; else a
-        # put-call-parity proxy off the chain itself ----
+        # A captured underlying needs one unambiguous identity. A parity ATM
+        # helper may still locate a strike, but it is never labelled spot data.
         def _last_ltp(kind):
-            r = con.execute(
-                f"SELECT ltp FROM quote_snapshots WHERE symbol=? AND kind='{kind}' "
-                + ("AND received_ts<=? " if ref_ts else "")
-                + "ORDER BY received_ts DESC LIMIT 1",
-                ((u, ref_ts) if ref_ts else (u,))).fetchone()
-            return _num(r["ltp"]) if r else None
+            rows = con.execute("SELECT * FROM quote_snapshots WHERE symbol=? AND kind=? "
+                "AND julianday(received_ts)<=julianday(?) "
+                "AND julianday(received_ts)>=julianday(?)-?/1440.0 "
+                "ORDER BY julianday(received_ts) DESC, id DESC", (u, kind, ref_ts, ref_ts, _QUOTE_WINDOW_MIN))
+            valid = []
+            for raw in rows:
+                r = dict(raw)
+                if _num(r["ltp"]) is None or r["ltp"] <= 0:
+                    continue
+                if kind == "FUTURE":
+                    exp_date = _expiry_date(r["expiry"])
+                    if not exp_date or exp_date < instant(ref_ts).astimezone(_IST).date():
+                        continue
+                valid.append(r)
+            identities = {(r.get("instrument_key"), r.get("exchange"), r.get("expiry")) for r in valid}
+            return valid[0] if len(identities) == 1 else None
 
-        spot, spot_src = _last_ltp("INDEX"), "captured_index"
+        from ...histcap.read_contract import IST as _IST
+        uq, spot_src = _last_ltp("INDEX"), "captured_index"
+        if uq is None:
+            uq, spot_src = _last_ltp("FUTURE"), "captured_future"
+        spot = _num(uq["ltp"]) if uq else None
         if spot is None:
-            spot = _last_ltp("FUTURE")
-            spot_src = "captured_future"
-        if spot is None and oi_meta.get("underlying_price") is not None:
-            spot, spot_src = oi_meta["underlying_price"], "greek_engine_underlying"
-        if spot is None:
-            spot_src = "parity_proxy"
+            spot_src = "UNAVAILABLE"
 
         n = len(rows_by_k)
         legs = [l for r in rows_by_k.values() for l in (r.ce, r.pe) if l is not None]
@@ -385,6 +467,7 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
             underlying=u, expiry=exp, ts=ref_ts or datetime.now(timezone.utc).isoformat(),
             source="angelone_captured", spot=spot, rows=list(rows_by_k.values()),
             capability={
+                "calendar": calendar,
                 "has_greeks": n_greek > 0,
                 "greek_coverage": round(n_greek / max(1, len(legs)), 3),
                 "has_iv": any(l.iv is not None for l in legs),
@@ -403,6 +486,10 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 "ltp_coverage": round(n_ltp / max(1, len(legs)), 3),
                 "ltp_band_strikes": len({k for (k, _s) in q_ov}),
                 "spot_source": spot_src,
+                "underlying_provenance": ({"provider": "ANGELONE", "source": "ANGELONE_QUOTE_FULL",
+                    "quote_id": uq["id"], "timestamp": uq["received_ts"], "expiry": uq["expiry"],
+                    "instrument_key": uq.get("instrument_key"), "kind": uq["kind"]} if uq else
+                    {"status": "UNAVAILABLE", "reason": "NO_UNAMBIGUOUS_ASOF_QUOTE"}),
                 "cadence_sec": _cadence_sec(con, u, exp),
                 "oi_source": ("greek_exposure" if n_oi_filled else
                               "quote_snapshots" if n_oi else None),
@@ -424,7 +511,11 @@ def fetch(underlying: str, expiry: str = "AUTO", *, db_path: str | None = None,
                 f"spot {spot} ({spot_src})",
             ],
         )
-        chain.available_expiries = _available_expiries(con, u)
+        for leg in legs:
+            if leg.provenance is not None:
+                leg.provenance["calendar"] = calendar
+        chain.available_expiries = ([_expiry_date(e).strftime("%d%b%Y").upper() for e in calendar["available_expiries"]]
+                                    if calendar.get("verification_status") == "VERIFIED" else _available_expiries(con, u))
         return chain.sort().compute_atm().with_expiry_ctx()
     finally:
         con.close()

@@ -504,6 +504,11 @@ async def _lifespan(_app: FastAPI):
             histcap_worker.start()
         except Exception as e:
             print(f"[histcap] start failed: {type(e).__name__}: {e}")
+    try:
+        from .histcap import priority as _priority          # ~3 s quotes for contracts that have a registered signal (no-op while the watch list is empty; PRIORITY_CAPTURE=0 disables)
+        _priority.start_background()
+    except Exception as e:
+        print(f"[priority-capture] start failed: {type(e).__name__}: {e}")
     if l2_capture_worker is not None:
         try:
             l2_capture_worker.start()   # no-op unless L2_CAPTURE_ENABLED=1

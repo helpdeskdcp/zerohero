@@ -50,46 +50,43 @@ DEFAULT_LOOKBACK_MIN = 15.0
 
 
 def compare_captured_quotes(symbol: str, expiry: str, *, since: str | None = None,
-                            limit: int = 5000, store: HistStore | None = None) -> dict:
+                            limit: int = 5000, store: HistStore | None = None,
+                            as_of: str | None = None) -> dict:
     """{"matched": N, "angelone_only": N, "dhan_only": N, "pairs": [...],
     "summary": {avg/max abs diffs for ltp/oi/volume/bid/ask, avg/max
     timestamp drift}} -- every number here is a real measurement of rows
     already in quote_snapshots, or None when there's nothing to measure
     (never a fabricated 0).
 
-    `since` defaults to DEFAULT_LOOKBACK_MIN minutes ago, not "all
-    history" -- HistStore.get_quotes()'s own docstring already documents
-    why an unbounded query is wrong here: it orders ASC and applies
-    `limit`, so a long-lived strike/expiry with more history than `limit`
-    silently returns its OLDEST rows, not its most recent (the exact same
-    bug class found 2026-09-21 elsewhere in this codebase). A "cross-
-    broker agreement" check is inherently about recent capture cycles, so
-    an unbounded default would silently compare stale, pre-Dhan-capture
-    AngelOne history against nothing."""
+    `since` defaults to DEFAULT_LOOKBACK_MIN minutes before as_of (now if
+    omitted). Latest rows are selected per provider/exchange/leg before
+    applying limit; both capture and market timestamps must be <= as_of.
+    Equal timestamps are resolved by row ID, never arbitrary query order.
+    """
     store = store or hist_store()
     u = str(symbol or "").upper()
+    from datetime import datetime, timedelta, timezone
+    from .read_contract import instant
+    cutoff = instant(as_of) if as_of else datetime.now(timezone.utc)
     if since is None:
-        from datetime import datetime, timedelta, timezone
-        since = (datetime.now(timezone.utc) - timedelta(minutes=DEFAULT_LOOKBACK_MIN)).isoformat()
-    rows = store.get_quotes(u, kind="OPTION", expiry=expiry, since=since, limit=limit)
+        since = (cutoff - timedelta(minutes=DEFAULT_LOOKBACK_MIN)).isoformat()
+    rows = store.latest_provider_quotes(u, expiry, since=since, as_of=cutoff.isoformat(), limit=limit)
 
     latest: dict[tuple, dict] = {}
     for r in rows:
         if r.get("source") not in (_ANGEL_SOURCE, _DHAN_SOURCE):
             continue
-        key = (r["strike"], r["option_type"], r["source"])
-        prev = latest.get(key)
-        if prev is None or (r.get("received_ts") or "") > (prev.get("received_ts") or ""):
-            latest[key] = r
+        key = (r["exchange"], r["strike"], r["option_type"], r["source"])
+        latest[key] = r  # the storage query already deterministically selected rank 1
 
-    strikes = sorted({(k[0], k[1]) for k in latest})
+    strikes = sorted({k[:3] for k in latest}, key=repr)
     pairs, angel_only, dhan_only = [], [], []
-    for strike, ot in strikes:
-        a = latest.get((strike, ot, _ANGEL_SOURCE))
-        d = latest.get((strike, ot, _DHAN_SOURCE))
+    for exchange, strike, ot in strikes:
+        a = latest.get((exchange, strike, ot, _ANGEL_SOURCE))
+        d = latest.get((exchange, strike, ot, _DHAN_SOURCE))
         if a and d:
             pairs.append({
-                "strike": strike, "option_type": ot,
+                "strike": strike, "option_type": ot, "exchange": exchange,
                 "angelone_ltp": a.get("ltp"), "dhan_ltp": d.get("ltp"),
                 "ltp_diff_pct": _diff_pct(a.get("ltp"), d.get("ltp")),
                 "angelone_oi": a.get("oi"), "dhan_oi": d.get("oi"),
@@ -116,7 +113,7 @@ def compare_captured_quotes(symbol: str, expiry: str, *, since: str | None = Non
         return {"avg": round(mean(vals), 4), "max_abs": round(max(abs(v) for v in vals), 4), "n": len(vals)}
 
     return {
-        "symbol": u, "expiry": expiry,
+        "symbol": u, "expiry": expiry, "as_of": cutoff.isoformat(),
         "matched": len(pairs), "angelone_only": len(angel_only), "dhan_only": len(dhan_only),
         "pairs": pairs, "angelone_only_strikes": angel_only, "dhan_only_strikes": dhan_only,
         "summary": {

@@ -31,7 +31,8 @@ separate operational decision this file does not make.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+import math
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -84,13 +85,19 @@ def _num(v):
 
 
 def _iv(v):
-    """Dhan sends implied_volatility as a percent (12.25 = 12.25%) --
-    normalise to this codebase's decimal convention (0.1225), same
-    convention sources/upstox_open.py's own _iv() already uses."""
-    f = _num(v)
-    if f is None:
+    """Dhan percentage points -> internal fraction, independent of magnitude.
+
+    https://dhanhq.co/docs/v2/option-chain/ (checked 2026-10-01) gives
+    9.789193798280868 in its response example; matches the captured fixtures
+    and the percentage convention documented for this adapter. The field
+    description does not explicitly name a unit; never infer one per value.
+    """
+    if isinstance(v, bool):
         return None
-    return f / 100.0 if f > 1.5 else f
+    f = _num(v)
+    if f is None or not math.isfinite(f) or f <= 0:
+        return None
+    return f / 100.0
 
 
 def _to_iso_date(expiry: str) -> str | None:
@@ -144,6 +151,29 @@ def expiry_list(underlying: str, *, timeout: float = 10.0, session=None) -> list
         return list(data) if isinstance(data, list) else None
     except Exception:
         return None
+
+
+def resolve_expiry(underlying: str, expiry: str = "AUTO", *, timeout: float = 10.0,
+                   session=None) -> str | None:
+    """Resolve to ISO using this underlying's Dhan contract list, never a weekday.
+
+    NSE/BSE indices use their index scrip; MCX uses its futures scrip via
+    expiry_list(). NEXT means the next distinct listed expiry, not next week
+    or month. Explicit dates are passed through without substituting a contract.
+    """
+    want = str(expiry or "AUTO").strip().upper()
+    if want not in ("AUTO", "CURRENT", "NEXT", "LATEST"):
+        return _to_iso_date(want)
+    dates = expiry_list(underlying, timeout=timeout, session=session)
+    if not dates:
+        return None
+    parsed = [_to_iso_date(d) for d in dates]
+    if any(d is None for d in parsed):
+        return None  # a malformed list cannot reliably define NEXT
+    today = datetime.now(timezone(timedelta(hours=5, minutes=30))).date().isoformat()
+    listed = sorted({d for d in parsed if d >= today})
+    index = 1 if want == "NEXT" else -1 if want == "LATEST" else 0
+    return listed[index] if len(listed) > (1 if want == "NEXT" else 0) else None
 
 
 def parse(obj: dict, underlying: str, expiry: str, *, ts: str | None = None) -> OptionChain | None:
@@ -209,7 +239,7 @@ def fetch_raw(underlying: str, expiry: str, *, timeout: float = 15.0, session=No
     und = _underlying(u)
     if und is None:
         return None
-    iso = _to_iso_date(expiry)
+    iso = resolve_expiry(u, expiry, timeout=timeout, session=session)
     if not iso:
         return None
     headers = _headers()
@@ -233,10 +263,10 @@ def fetch(underlying: str, expiry: str, *, timeout: float = 15.0, session=None) 
     source must never fabricate a chain, matching every other source
     here (angelone_chain/upstox_open/nse_v3)."""
     u = str(underlying or "").upper()
-    iso = _to_iso_date(expiry)
+    iso = resolve_expiry(u, expiry, timeout=timeout, session=session)
     if not iso:
         return None
-    raw = fetch_raw(underlying, expiry, timeout=timeout, session=session)
+    raw = fetch_raw(underlying, iso, timeout=timeout, session=session)
     if raw is None:
         return None
     return parse(raw, u, _to_canonical_expiry(iso))

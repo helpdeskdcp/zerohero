@@ -1,6 +1,8 @@
 """Append-only schema for the historical market-data store. Idempotent."""
 from __future__ import annotations
 
+import re
+
 SCHEMA = """
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
@@ -79,7 +81,7 @@ CREATE TABLE IF NOT EXISTS quote_snapshots (
     raw_id         INTEGER REFERENCES raw_responses(id),
     flags          TEXT,
     run_id         INTEGER,
-    UNIQUE(token, snap_key)
+    UNIQUE(source, exchange, token, snap_key)
 );
 CREATE INDEX IF NOT EXISTS ix_quotes_lookup ON quote_snapshots(symbol, kind, exch_ts);
 CREATE INDEX IF NOT EXISTS ix_quotes_opt    ON quote_snapshots(symbol, expiry, strike, option_type, exch_ts);
@@ -105,7 +107,7 @@ CREATE TABLE IF NOT EXISTS option_greeks (
     raw_id        INTEGER REFERENCES raw_responses(id),
     flags         TEXT,
     run_id        INTEGER,
-    UNIQUE(underlying, expiry, strike, option_type, snap_key)
+    UNIQUE(source, underlying, expiry, strike, option_type, snap_key)
 );
 CREATE INDEX IF NOT EXISTS ix_greeks_lookup ON option_greeks(underlying, expiry, strike, option_type, received_ts);
 CREATE INDEX IF NOT EXISTS ix_greeks_day    ON option_greeks(session_date_ist, underlying);
@@ -133,4 +135,46 @@ CREATE INDEX IF NOT EXISTS ix_runs_started ON capture_runs(started_ts);
 
 def init(conn) -> None:
     conn.executescript(SCHEMA)
-    conn.commit()
+    # Retention can leave old raw_id references dangling. Copy these unchanged;
+    # do not enforce new FK checks on historical rows during the table rebuild.
+    fk = conn.execute("PRAGMA foreign_keys").fetchone()[0]
+    conn.execute("PRAGMA foreign_keys=OFF")
+    try:
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            _migrate_key(conn, "quote_snapshots", ("token", "snap_key"),
+                         ("source", "exchange", "token", "snap_key"))
+            _migrate_key(conn, "option_greeks", ("underlying", "expiry", "strike", "option_type", "snap_key"),
+                         ("source", "underlying", "expiry", "strike", "option_type", "snap_key"))
+    finally:
+        conn.execute(f"PRAGMA foreign_keys={int(fk)}")
+
+
+def _migrate_key(conn, table, old_key, new_key):
+    """Rebuild the original UNIQUE constraint atomically; retain IDs and DDL.
+
+    No INSERT OR IGNORE here: an unexpected schema or copy failure must abort,
+    never silently discard historical records. Reopening a migrated DB is a no-op.
+    """
+    legacy = any(tuple(r[2] for r in conn.execute(f'PRAGMA index_info("{idx[1]}")')) == old_key
+                 for idx in conn.execute(f"PRAGMA index_list({table})") if idx[2])
+    if not legacy:
+        return
+    original = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()[0]
+    pattern = r"UNIQUE\s*\(\s*" + r"\s*,\s*".join(old_key) + r"\s*\)"
+    ddl, changed = re.subn(pattern, "UNIQUE(" + ", ".join(new_key) + ")", original, flags=re.I)
+    if changed != 1:
+        raise RuntimeError(f"Unrecognized {table} identity constraint; migration requires review")
+    extras = [r[0] for r in conn.execute(
+        "SELECT sql FROM sqlite_master WHERE tbl_name=? AND type IN ('index','trigger') AND sql IS NOT NULL",
+        (table,))]
+    seq = conn.execute("SELECT seq FROM sqlite_sequence WHERE name=?", (table,)).fetchone()
+    temporary = table + "_source_migration"
+    conn.execute(ddl.replace(table, temporary, 1))
+    conn.execute(f"INSERT INTO {temporary} SELECT * FROM {table}")
+    conn.execute(f"DROP TABLE {table}")
+    conn.execute(f"ALTER TABLE {temporary} RENAME TO {table}")
+    if seq:
+        conn.execute("UPDATE sqlite_sequence SET seq=MAX(seq, ?) WHERE name=?", (seq[0], table))
+    for sql in extras:
+        conn.execute(sql)

@@ -103,6 +103,7 @@ def _trade_from_leg(session: str, spike: dict, side: str, *,
                         premium_stop_pts=premium_stop_pts)
     if not rw:
         row["basis"] = "INDEX_FALLBACK"     # no captured option series for this window
+        row["premium_unavailable_reason"] = "NO_VALID_OPTION_SERIES_FOR_WINDOW"
         return row
     row.update(rw)                          # basis="PREMIUM" + strike/premium_*
     row["index_points"] = idx_points
@@ -133,7 +134,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
              basis: str = "index",
              premium_stop_pct: float = 0.0, premium_stop_pts: float = 0.0,
              max_hold_bars: int | None = None, entry_mode: str = "breakout",
-             sessions: int | list | None = None) -> dict:
+             sessions: int | list | None = None, provider=None, expiry=None) -> dict:
     """`sessions`: None -> all captured; an int -> that many most-recent; a list
     -> exactly those IST dates.
 
@@ -180,7 +181,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     if isinstance(sessions, list):
         dates = [str(d).strip() for d in sessions if str(d).strip()]
     else:
-        all_dates = market_hub.session_dates(sym, tf=tf, limit=400)
+        all_dates = market_hub.session_dates(sym, tf=tf, limit=400, **({"provider": provider} if provider else {}))
         dates = all_dates[:sessions] if isinstance(sessions, int) and sessions > 0 else all_dates
     dates = sorted(set(dates))            # chronological
 
@@ -188,7 +189,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
     per_session: dict = {}
     scanned = 0
     for d in dates:
-        bars = market_hub.session_bars(sym, d, tf=tf)
+        bars = market_hub.session_bars(sym, d, tf=tf, **({"provider": provider} if provider else {}))
         if not bars:
             continue
         scanned += 1
@@ -198,7 +199,14 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
                                     max_hold_bars=max_hold_bars, entry_mode=entry_mode)
         if sm.get("status") != "OK":
             continue
-        opt_map = market_hub.session_option_quotes(sym, d) if basis == "premium" else None
+        selected_provider = provider or bars[0].get("provider")
+        contract = {k: v for k, v in {"provider": selected_provider, "expiry": expiry}.items() if v is not None}
+        opt_map = market_hub.session_option_quotes(sym, d, **contract) if basis == "premium" else None
+        underlying_provenance = {"provider": bars[0].get("provider"), "source": bars[0].get("source"),
+            "series_type": bars[0].get("series_type"), "timeframe": tf, "session": d,
+            "fallback_used": bars[0].get("fallback_used"), "fallback_reason": bars[0].get("fallback_reason"),
+            "contracts": [dict(instrument_key=k, expiry=e) for k, e in
+                          sorted({(b.get("instrument_key"), b.get("expiry")) for b in bars}, key=repr)]}
         s_trades = []
         for spike in sm.get("setups", []):
             for side in ("buy", "sell"):
@@ -206,6 +214,7 @@ def backtest(symbol: str, *, tf: str = "5m", volume_mult: float = 2.0, rr: float
                                     premium_stop_pct=premium_stop_pct,
                                     premium_stop_pts=premium_stop_pts)
                 if t:
+                    t["underlying_provenance"] = underlying_provenance
                     s_trades.append(t)
         trades.extend(s_trades)
         if s_trades:

@@ -76,6 +76,7 @@ class OptionLeg:
     # sources that don't (AngelOne's captured chain resolves its own token
     # separately, via app.instruments; upstox_open/nse_v3 don't expose one).
     security_id: str | None = None
+    provenance: dict | None = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in asdict(self).items() if v is not None}
