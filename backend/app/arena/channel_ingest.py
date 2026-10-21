@@ -64,6 +64,7 @@ def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: s
     return {**base, **out}
 
 
+FILL_WINDOW_SEC = 900                               # a channel entry (range / limit / above) that is not filled within 15 minutes of the post expires
 STALE_SEC = 1800                                   # a post read more than 30 min after it was posted is logged, not submitted
 
 
@@ -110,7 +111,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     if dry_run: return {"outcome": "WOULD_SUBMIT", "parsed": s, "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
     try:
         rec = SU.submit({"participant": participant, "underlying": und, "expiry": exp, "strike": s["strike"], "option_type": s["option_type"], "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"],
-                         "targets": s["targets"], "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
+                         "targets": s["targets"], "valid_sec": FILL_WINDOW_SEC, "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]

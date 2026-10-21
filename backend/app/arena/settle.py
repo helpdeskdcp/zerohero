@@ -106,6 +106,8 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         if _mod(s["t"]) >= end_min - 5: break
         drain(s["t"])
         if st.get("CANCEL") or st.get("EXIT_NOW"): return {**base, "status": "CANCELLED", "events_applied": applied}
+        vs = sig.get("valid_sec")
+        if vs and s["t"] - sig["t"] > vs: break                      # a range/limit entry that is not filled inside its validity window EXPIRES (never filled hours later)
         mode = sig["entry_mode"]; p, real = buy_px(s, half_spread)
         if mode == "ABOVE":
             if s["ltp"] >= sig["entry"]: fill, real_fill, j = max(p, sig["entry"]), real, i; break

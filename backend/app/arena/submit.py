@@ -38,8 +38,11 @@ def validate(d: dict) -> dict:
     need(strike and strike > 0, "strike > 0"); need(entry and entry > 0, "entry > 0"); need(sl is not None and 0 < sl < entry, "0 < sl < entry (long options only)")
     tg = sorted({float(x) for x in (d.get("targets") or [])}); need(tg and all(x > entry for x in tg), "at least one target, all above entry")
     need(str(d.get("participant", "")).strip(), "participant required")
-    return {"participant": str(d["participant"]).strip(), "underlying": u, "expiry": norm_expiry(str(d["expiry"])), "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "sl": sl,
-            "targets": tg, "note": str(d.get("note", ""))[:300]}
+    out = {"participant": str(d["participant"]).strip(), "underlying": u, "expiry": norm_expiry(str(d["expiry"])), "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "sl": sl,
+           "targets": tg, "note": str(d.get("note", ""))[:300]}
+    if d.get("valid_sec") is not None:
+        vs = int(d["valid_sec"]); need(60 <= vs <= 28800, "valid_sec between 60 and 28800"); out["valid_sec"] = vs
+    return out
 
 
 def submit(d: dict, path: str | None = None, now: float | None = None, practice: bool = False) -> dict:

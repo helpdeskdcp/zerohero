@@ -78,3 +78,8 @@ backend/data/tg/
 backend/data/arena/ACCESS_*.txt
 
 backend/data/arena/daily_report_cron.log
+
+# arena evidence packs: keep the per-signal files local, commit only the manifests (sha256 of every file)
+backend/data/arena/evidence/*/H*.json
+backend/data/arena/evidence/*/E*.json
+backend/data/arena/evidence/*/TRD-*.json
