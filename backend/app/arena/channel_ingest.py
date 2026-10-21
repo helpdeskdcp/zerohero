@@ -64,7 +64,6 @@ def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: s
     return {**base, **out}
 
 
-DEFAULT_SL_FRAC = 0.70                              # default stop when a post publishes none: 30% below the entry (fixed in advance, same for everyone, not an AI output)
 STALE_SEC = 1800                                   # a post read more than 30 min after it was posted is logged, not submitted
 
 
@@ -85,8 +84,6 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     s = r["signal"]
     if not s["supported"]: return {"outcome": "UNSUPPORTED_INSTRUMENT", "underlying": s["underlying"]}
     if stale: return {"outcome": "STALE_NOT_SUBMITTED", "underlying": s["underlying"]}
-    default_sl = s.get("sl") is None
-    if default_sl: s["sl"] = round(s["entry"] * DEFAULT_SL_FRAC, 2)                          # the channel does not publish its stop ("STOPLOSS :- VIP"): the pre-registered arena default applies, NOT the AI
     und = s["underlying"]
     if mode_fn() == "ENDED": return {"outcome": "ARENA_ENDED"}
     scored = mode_fn() == "ARENA_LIVE"
@@ -100,16 +97,24 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     else:
         exp = pick_expiry(und, today, db_path)
     if not exp: return {"outcome": "NO_CAPTURED_EXPIRY", "underlying": und}
+    risk_module = s.get("sl") is None or not s.get("targets")
+    if risk_module:                                                                           # entry-only channel: ZeroHero's rule-based risk module sets the stop and the 1R/2R/3R ladder (spec addendum in data/research/sl_detector)
+        from .. import sl_detector
+        try: ltps = sl_detector.prior_ltps(und, exp, s["strike"], s["option_type"], t, db_path)
+        except Exception: ltps = []
+        if s.get("sl") is None: est = sl_detector.estimate(s["entry"], ltps); s["sl"] = est["sl"]
+        if not s.get("targets"):
+            r = s["entry"] - s["sl"]; s["targets"] = [round(round((s["entry"] + k * r) / 0.05) * 0.05, 2) for k in (1, 2, 3)]
     chk = CT.check(und, exp, s["strike"], s["option_type"], s["entry"], s["entry_mode"], sl=s["sl"], path=db_path)
     if chk["problems"] and scored: return {"outcome": "UNSCORABLE_NOT_SUBMITTED", "problems": chk["problems"], "parsed": s, "expiry": exp}
     if dry_run: return {"outcome": "WOULD_SUBMIT", "parsed": s, "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
     try:
         rec = SU.submit({"participant": participant, "underlying": und, "expiry": exp, "strike": s["strike"], "option_type": s["option_type"], "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"],
-                         "targets": s["targets"], "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; SL not published, arena default stop -30%' if default_sl else ''})"},
+                         "targets": s["targets"], "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]
-    if default_sl:                                                                            # experiment only (data/research/sl_detector/SPEC_2026-10-21.md): never affects the score, never blocks ingest
+    if risk_module and not s.get("sl_published", True):                                          # experiment only (data/research/sl_detector/SPEC_2026-10-21.md): never affects the score, never blocks ingest
         try:
             from .. import sl_detector
             sl_detector.record_prediction(rec["id"], und, exp, s["strike"], s["option_type"], s["entry"], t)

@@ -72,13 +72,12 @@ def parse_expiry_header(s: str) -> dict | None:
     tm = re.search(r"(?:TARGETS?|TGT|TP)\s*[:\-=]*\s*((?:\d+(?:\.\d+)?\s*[/,&\-]?\s*)+)", rest)
     targets = sorted({float(x) for x in re.findall(r"\d+(?:\.\d+)?", tm.group(1))}) if tm else []
     sm = re.search(rf"(?:STOP\s*LOSS|STOPLOSS|\bSL\b)\s*[:\-=]*\s*(?:{NUM}|(VIP|PREMIUM|PAID|PRIVATE|HIDDEN))", rest)
-    if not sm: return {"ok": False, "reason": "no stop-loss line"}
-    sl_published = sm.group(1) is not None                      # "STOPLOSS :- VIP" = the channel does not publish it (members only)
+    sl_published = bool(sm and sm.group(1) is not None)          # absent line or "STOPLOSS :- VIP" = not published: the risk module sets it (entry-only channels)
     sl = float(sm.group(1)) if sl_published else None
     if sl_published and not (0 < sl < entry): return {"ok": False, "reason": f"inconsistent: stop-loss {sl:g} must be below the entry {entry:g}"}
+    if tm and targets and not [t for t in targets if t > entry]: return {"ok": False, "reason": "no target above the entry"}          # a target line that exists must make sense
     targets = [t for t in targets if t > entry]
-    if not targets: return {"ok": False, "reason": "no target above the entry"}
-    return {"ok": True, "signal": {"underlying": und, "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "entry_range": [lo, hi], "sl": sl, "targets": targets, "horizon": None, "sl_published": sl_published,
+    return {"ok": True, "signal": {"underlying": und, "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "entry_range": [lo, hi], "sl": sl, "targets": targets, "horizon": None, "sl_published": sl_published, "targets_published": bool(targets),
                                   "expiry_hint": {"day": day, "month": mon}, "tag": und, "supported": und in ALLOWED}}
 
 

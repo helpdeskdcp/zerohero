@@ -65,7 +65,7 @@ def test_explicit_expiry_header_from_neeraj_sample_synthetic_body():
     r = CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200/250/300\nSL 120")["signal"]
     assert (r["underlying"], r["strike"], r["option_type"], r["entry_mode"], r["entry"], r["sl"], r["targets"], r["expiry_hint"]) == ("NIFTY", 25350.0, "PE", "ABOVE", 150.0, 120.0, [200.0, 250.0, 300.0], {"day": 17, "month": 7})
     assert CP.parse_signal("BANKNIFTY 21st OCT 52000 CE\nBUY 100-110\nTGT 140\nSTOPLOSS 80")["signal"]["entry"] == 110.0
-    for bad in ("NIFTY 17 JULY 25350 PE\nTARGET 200\nSL 120", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200", "NIFTY 17 JULY 25350 PE", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200\nSL 160"):
+    for bad in ("NIFTY 17 JULY 25350 PE\nTARGET 200\nSL 120", "NIFTY 17 JULY 25350 PE", "NIFTY 17 JULY 25350 PE\nABOVE 150\nTARGET 200\nSL 160"):
         assert not CP.parse_signal(bad)["ok"]                                                    # missing pieces are refused, never guessed
 
 
@@ -76,4 +76,7 @@ def test_neeraj_format_colon_dash_and_unpublished_vip_stoploss():
     assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 200\nSTOPLOSS : PREMIUM")["signal"]["sl_published"] is False
     r = CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 200/250\nSL :- 140")["signal"]; assert r["sl"] == 140.0 and r["sl_published"] is True
     assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 200\nSTOP LOSS :- 190")["ok"] is False                      # a published SL above the entry is still refused
-    assert CP.parse_signal("SENSEX 15 JULY 82800 CE\nABOVE :- 405\nSTOPLOSS :- VIP")["ok"] is False                                      # no target line => refused, not guessed
+    e = CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160")["signal"]                                                      # entry-only post (Neeraj publishes no stop / targets)
+    assert (e["entry"], e["sl"], e["targets"], e["sl_published"], e["targets_published"]) == (160.0, None, [], False, False)
+    assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 100")["ok"] is False                                  # a target line that exists must be above the entry
+    assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nsome chatter without an entry keyword")["ok"] is False
