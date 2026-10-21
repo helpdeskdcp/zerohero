@@ -255,12 +255,9 @@ class _FakeSDK:
 def _worker(store, monkeypatch, sdk):
     monkeypatch.setattr(market_calendar, "status_all",
                         lambda *a, **k: {"segments": {"MCX": "OPEN", "NSE": "CLOSED"}})
-    # dhan_auth_checker defaults to True so _capture_dhan_all() (now called
-    # unconditionally from run_once()) never touches the real app.db-backed
-    # Dhan token store in tests that don't care about Dhan at all -- those
-    # tests use a Dhan-unsupported symbol (NATURALGAS) so capture_dhan_chain
-    # is still never actually invoked. Tests exercising Dhan auth failure
-    # override w._dhan_auth_checker explicitly.
+    # MCX is now supported. Isolate expiry lookup as well as authentication;
+    # tests exercising Dhan capture supply their own explicit expiry.
+    monkeypatch.setattr(WK._dhan, "expiry_list", lambda *a, **kw: None)
     w = CaptureWorker(sdk_provider=lambda: sdk, store=store, dhan_auth_checker=lambda: True)
     w.cfg = {**w.cfg, "symbols": ["NATURALGAS"], "chain_window": 2, "tfs": ["5m"], "option_candles": False}
     return w
@@ -366,7 +363,8 @@ _DHAN_FAKE_OUT = {
 def test_capture_dhan_skips_unsupported_symbol(store, monkeypatch):
     called = {"n": 0}
     monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
-    w = _worker(store, monkeypatch, _FakeSDK())   # _worker's symbol is NATURALGAS -- not Dhan-supported
+    w = _worker(store, monkeypatch, _FakeSDK())
+    w.cfg = {**w.cfg, "symbols": ["UNSUPPORTED"]}
     w._capture_dhan_all(N.now_utc_iso(), 1, {"raw": 0}, {}, [])
     assert called["n"] == 0
 
@@ -416,9 +414,8 @@ def test_capture_dhan_respects_the_kill_switch(store, monkeypatch):
     assert called["n"] == 0
 
 
-def test_capture_dhan_never_runs_via_run_once_for_natural_gas_symbol(store, monkeypatch):
-    # end-to-end: run_once() with the real per-symbol loop must not attempt
-    # Dhan at all for a symbol Dhan doesn't support (no accidental network call).
+def test_capture_dhan_skips_missing_expiry_via_run_once(store, monkeypatch):
+    # NATURALGAS is supported, but this fixture has no resolved Dhan expiry.
     called = {"n": 0}
     monkeypatch.setattr(WK, "capture_dhan_chain", lambda *a, **k: called.__setitem__("n", called["n"] + 1))
     w = _worker(store, monkeypatch, _FakeSDK())
@@ -539,6 +536,9 @@ def test_dhan_capture_timestamp_mismatch_between_symbols_is_independent(store, m
 
 
 def test_run_once_is_idempotent_second_cycle_adds_nothing(store, monkeypatch):
+    # The test requires the same observation, even across a wall-clock second.
+    captured_at = N.now_utc_iso()
+    monkeypatch.setattr(N, "now_utc_iso", lambda: captured_at)
     sdk = _FakeSDK()
     w = _worker(store, monkeypatch, sdk)
     r1 = w.run_once("POLL_ONCE", do_candles=True)

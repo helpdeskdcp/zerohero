@@ -50,6 +50,16 @@ def test_compare_matches_a_real_pair_and_computes_real_diffs(store):
     assert p["timestamp_drift_sec"] == pytest.approx(5.0)
 
 
+def test_compare_does_not_pair_different_exchanges(store):
+    """Equal strike/expiry does not make different exchange instruments comparable."""
+    _seed_pair(store)
+    with store.transaction() as c:
+        c.execute("UPDATE quote_snapshots SET exchange='BFO' WHERE source='DHAN_CHAIN'")
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
+    assert out["matched"] == 0
+    assert out["angelone_only"] == out["dhan_only"] == 1
+
+
 def test_compare_reports_angelone_only_strike(store):
     _insert(store, received_ts="2026-09-30T10:45:00Z", exch_ts="2026-09-30T10:45:00Z",
            snap_key="k1", instrument_key="NFO:1", symbol="NIFTY", kind="OPTION", exchange="NFO",
@@ -95,6 +105,25 @@ def test_compare_ignores_other_sources(store):
            source="UPSTOX_OPEN")
     out = CB.compare_captured_quotes("NIFTY", "06OCT2026", since="2020-01-01T00:00:00Z", store=store)
     assert out["matched"] == 0 and out["angelone_only"] == 0 and out["dhan_only"] == 0
+
+
+def test_latest_selection_happens_before_limit_and_excludes_future(store):
+    """>5,000 observations of one leg must not crowd out its newest capture."""
+    _seed_pair(store, a_ts="2026-09-30T10:40:00Z", d_ts="2026-09-30T10:40:00Z")
+    with store.transaction() as c:
+        template = dict(c.execute("SELECT * FROM quote_snapshots WHERE source='ANGELONE_QUOTE_FULL'").fetchone())
+        cols = [k for k in template if k != "id"]
+        records = []
+        for i in range(5001):
+            r = {**template, "snap_key": f"old-{i}"}
+            records.append(tuple(r[k] for k in cols))
+        c.executemany(f"INSERT INTO quote_snapshots({','.join(cols)}) VALUES ({','.join('?' for _ in cols)})", records)
+    _seed_pair(store, a_ltp=200, d_ltp=201)
+    _seed_pair(store, a_ltp=999, d_ltp=999, a_ts="2026-09-30T10:46:00Z", d_ts="2026-09-30T10:46:00Z")
+    out = CB.compare_captured_quotes("NIFTY", "06OCT2026", store=store,
+                                    since="2026-09-30T10:39:00Z", as_of="2026-09-30T16:15:10+05:30")
+    assert out["matched"] == 1
+    assert out["pairs"][0]["angelone_ltp"] == 200 and out["pairs"][0]["dhan_ltp"] == 201
 
 
 def test_default_since_excludes_stale_history_not_just_all_time(store):

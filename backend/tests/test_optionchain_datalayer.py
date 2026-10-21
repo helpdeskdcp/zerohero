@@ -9,8 +9,11 @@ Covers:
   * resolve.get_chain(allow_network=False) -> primary-only, deterministic
   * static: the module imports nothing from app.main / autoscalp / execution
 """
+from calendar_fixtures import synthetic_calendars
+
 import ast
 import pathlib
+import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
@@ -83,16 +86,17 @@ def hist_db(tmp_path):
           id INTEGER PRIMARY KEY, symbol TEXT, kind TEXT, exchange TEXT, expiry TEXT,
           strike REAL, option_type TEXT, ltp REAL, oi REAL, oi_change REAL, volume REAL,
           bid REAL, ask REAL, bid_qty REAL, ask_qty REAL, session_date_ist TEXT,
-          received_ts TEXT);
+          received_ts TEXT, source TEXT DEFAULT 'ANGELONE_QUOTE_FULL');
         CREATE TABLE option_greeks(
           id INTEGER PRIMARY KEY, received_ts TEXT, snap_key TEXT, underlying TEXT,
           expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT,
           delta REAL, gamma REAL, theta REAL, vega REAL, iv REAL, iv_pct REAL,
-          trade_volume REAL);
+          trade_volume REAL, source TEXT DEFAULT 'ANGELONE_OPTION_GREEK');
         CREATE TABLE greek_exposure(
           id INTEGER PRIMARY KEY, as_of_ts TEXT, computed_ts TEXT, underlying TEXT,
           expiry TEXT, underlying_price REAL, pcr_oi REAL, ce_oi_total REAL,
-          pe_oi_total REAL, per_strike_json TEXT);
+          pe_oi_total REAL, per_strike_json TEXT, run_id INTEGER DEFAULT 1);
+        CREATE TABLE greek_engine_runs(id INTEGER PRIMARY KEY, notes TEXT);
     """)
     exp = "15SEP2026"
     # ---- full-chain greeks spine: two snap_keys, 23000..24000 both sides ----
@@ -138,13 +142,17 @@ def hist_db(tmp_path):
                 "underlying_price,pcr_oi,ce_oi_total,pe_oi_total,per_strike_json) "
                 "VALUES('2026-09-09T09:30:00+00:00','2026-09-09T09:30:05Z','NIFTY',?,"
                 "23450.0,0.78,9.3e7,7.2e7,?)", (exp, psj))
+    # This overlay explicitly represents a run with validated AngelOne inputs.
+    con.execute("INSERT INTO greek_engine_runs VALUES (1, ?)", (json.dumps({
+        "input_provenance": {exp: {"expiry": exp, "greek_source": "ANGELONE_OPTION_GREEK",
+        "oi_source": "ANGELONE_QUOTE_FULL"}}}),))
     con.commit()
     con.close()
     return str(p)
 
 
 def test_angelone_chain_assembles_spine_plus_overlays(hist_db):
-    c = angelone_chain.fetch("NIFTY", "AUTO", db_path=hist_db)
+    c = angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db)
     assert c is not None
     assert c.expiry == "15SEP2026"
     assert len(c.rows) == 21                                   # full greek spine
@@ -178,11 +186,52 @@ def test_angelone_chain_none_when_db_missing(tmp_path):
     assert angelone_chain.fetch("NIFTY", db_path=str(tmp_path / "nope.db")) is None
 
 
+def test_angelone_explicit_uncaptured_expiry_never_returns_another_expired_contract(hist_db):
+    assert angelone_chain.fetch("NIFTY", "01JAN2020", db_path=hist_db) is None
+
+
+def test_angelone_asof_offset_cannot_see_later_utc_captures(hist_db):
+    # 10:01 IST = 04:31 UTC, before all of this session's 10:00 UTC records.
+    chain = angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db,
+                                at_ts="2026-09-09T10:01:00+05:30")
+    if chain:
+        assert not chain.capability["has_greeks"]
+        assert chain.spot != 23485.0
+
+
+def test_angelone_chain_excludes_other_provider_rows_and_ambiguous_exposure(hist_db):
+    with sqlite3.connect(hist_db) as c:
+        # Other provider arrives later and also has a different listed expiry.
+        c.execute("INSERT INTO option_greeks(received_ts,snap_key,underlying,expiry,strike,option_type,"
+                  "delta,source) VALUES ('2026-09-09T10:01:00Z','2026-09-09T10:01:00','NIFTY',"
+                  "'15SEP2026',23500,'CE',0.99,'DHAN_OPTION_GREEK')")
+        for day, kind, ltp in (("09", "OPTION", 999), ("08", "OPTION", 999), ("09", "INDEX", 99999)):
+            c.execute("INSERT INTO quote_snapshots(symbol,kind,expiry,strike,option_type,ltp,oi,"
+                      "session_date_ist,received_ts,source) VALUES ('NIFTY',?,'15SEP2026',23500,'CE',?,"
+                      "999,?,?, 'DHAN_CHAIN')", (kind, ltp, f"2026-09-{day}", f"2026-09-{day}T10:00:40Z"))
+        c.execute("INSERT INTO option_greeks(underlying,expiry,source) VALUES ('NIFTY','01JAN2031','DHAN_OPTION_GREEK')")
+    chain = angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db)
+    assert chain.expiry == "15SEP2026"
+    assert chain.leg(23500, "CE").delta == 0.5
+    assert chain.leg(23500, "CE").ltp == 101.0
+    assert chain.leg(23500, "CE").oi_change == 111000.0 - 400.0
+    assert chain.spot == 23485.0
+    # The derived table has no trustworthy input-provider provenance.
+    assert chain.leg(23000, "CE").oi is None
+
+
+def test_angelone_chain_does_not_mislabel_dhan_only_history(hist_db):
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET source='DHAN_CHAIN'")
+        c.execute("UPDATE option_greeks SET source='DHAN_OPTION_GREEK'")
+    assert angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db) is None
+
+
 def test_resolve_offline_uses_primary_only(hist_db, monkeypatch):
     called = {"net": 0}
     monkeypatch.setattr(upstox_open, "fetch", lambda *a, **k: called.__setitem__("net", called["net"] + 1))
     monkeypatch.setattr(nse_v3, "fetch", lambda *a, **k: called.__setitem__("net", called["net"] + 1))
-    c = get_chain("NIFTY", "AUTO", allow_network=False, db_path=hist_db)
+    c = get_chain("NIFTY", "15SEP2026", allow_network=False, db_path=hist_db)
     assert c is not None and c.source == "angelone_captured"
     assert called["net"] == 0
     assert c.quality["verdict"] in ("PASS", "WARN", "FAIL")
@@ -208,8 +257,56 @@ def test_resolve_falls_through_to_angelone_when_dhan_session_invalid(hist_db, mo
     # fabricated chain.
     from app.optionchain.sources import dhan_chain as _dhan
     monkeypatch.setattr(_dhan, "fetch", lambda u, e: None)
-    c = get_chain("NIFTY", "AUTO", allow_network=True, db_path=hist_db)
+    c = get_chain("NIFTY", "15SEP2026", allow_network=True, db_path=hist_db)
     assert c is not None and c.source == "angelone_captured"
+
+
+def test_angelone_unknown_provider_export_is_unavailable(hist_db):
+    """A table without attribution is not evidence of AngelOne origin."""
+    with sqlite3.connect(hist_db) as c:
+        for table in ("quote_snapshots", "option_greeks"):
+            cols = {r[1] for r in c.execute(f"PRAGMA table_info({table})")}
+            if "source" in cols:
+                c.execute(f"ALTER TABLE {table} DROP COLUMN source")
+    assert angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db) is None
+
+
+def test_angelone_does_not_trust_unproven_legacy_derived_oi(hist_db):
+    """Old derived snapshots remain stored, but cannot supply attributed inputs."""
+    with sqlite3.connect(hist_db) as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(greek_exposure)")}
+        if "run_id" in cols:
+            c.execute("UPDATE greek_exposure SET run_id=NULL")
+    chain = angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db)
+    assert chain.leg(23000, "CE").oi is None
+    with sqlite3.connect(hist_db) as c:
+        assert c.execute("SELECT COUNT(*) FROM greek_exposure").fetchone()[0] == 1
+
+
+def test_angelone_asof_alias_requires_provider_calendar_evidence(hist_db):
+    """A captured subset cannot prove which expiry was AUTO or NEXT historically."""
+    assert angelone_chain.fetch("NIFTY", "AUTO", db_path=hist_db,
+                                at_ts="2026-09-09T10:00:41Z") is None
+    chain = angelone_chain.fetch("NIFTY", "AUTO", db_path=hist_db,
+        at_ts="2026-09-09T10:00:41Z", expiry_dates=synthetic_calendars({"ANGELONE": ["15SEP2026", "22SEP2026"]}))
+    assert chain.expiry == "15SEP2026"
+    assert chain.capability["calendar"]["provider"] == "ANGELONE"
+    assert chain.capability["calendar"]["verification_status"] == "VERIFIED"
+    assert chain.leg(23000, "CE").provenance["calendar"] == chain.capability["calendar"]
+    assert chain.available_expiries == ["15SEP2026", "22SEP2026"]
+
+
+def test_angelone_underlying_refuses_ambiguous_futures(hist_db):
+    """Two futures are not an implicit mapping from an option to its underlying."""
+    with sqlite3.connect(hist_db) as c:
+        c.execute("DELETE FROM quote_snapshots WHERE kind='INDEX'")
+        for exp, px in (("29SEP2026", 23400), ("27OCT2026", 23500)):
+            c.execute("INSERT INTO quote_snapshots(symbol,kind,expiry,ltp,received_ts) "
+                      "VALUES ('NIFTY','FUTURE',?,?,'2026-09-09T10:00:38Z')", (exp, px))
+    chain = angelone_chain.fetch("NIFTY", "15SEP2026", db_path=hist_db,
+                                at_ts="2026-09-09T10:00:41Z")
+    assert chain.spot is None
+    assert chain.capability["spot_source"] == "UNAVAILABLE"
 
 
 # --------------------------------------------------------------------------- #

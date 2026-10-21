@@ -133,7 +133,8 @@ def hist_db(tmp_path):
     return p
 
 
-def _seed(db, *, ts, expiry="09SEP2026", underlying="NIFTY"):
+def _seed(db, *, ts, expiry="09SEP2026", underlying="NIFTY",
+          greek_source="ANGELONE_OPTION_GREEK", quote_source="ANGELONE_QUOTE_FULL"):
     c = sqlite3.connect(db)
     ist = "2026-09-02"
     # broker greeks at 5 strikes CE+PE
@@ -147,7 +148,7 @@ def _seed(db, *, ts, expiry="09SEP2026", underlying="NIFTY"):
                   "expiry,strike,option_type,session_date_ist,delta,gamma,theta,vega,iv,iv_pct,"
                   "trade_volume,broker_status,source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                   (ts, ts, ts[:19], underlying, expiry, k, typ, ist, d, g, -1.5, 2.5, iv,
-                   iv*100, 100, "OK", "ANGELONE_OPTION_GREEK"))
+                   iv*100, 100, "OK", greek_source))
     # OI quotes for 4 of the 5 strikes (24000 deliberately absent -> PARTIAL-ish but still >80% of band? band=those with OI)
     oi = {(23800, "CE"): 30000, (23800, "PE"): 500000, (23850, "CE"): 45000, (23850, "PE"): 460000,
           (23900, "CE"): 220000, (23900, "PE"): 380000, (23950, "CE"): 610000, (23950, "PE"): 90000}
@@ -156,12 +157,25 @@ def _seed(db, *, ts, expiry="09SEP2026", underlying="NIFTY"):
                   "kind,exchange,token,expiry,strike,option_type,session_date_ist,ltp,oi,source) "
                   "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                   (ts, ts[:19], f"NFO:T{k}{typ}", underlying, "OPTION", "NFO", f"T{k}{typ}",
-                   expiry, k, typ, ist, 100.0, v, "ANGELONE_QUOTE_FULL"))
+                   expiry, k, typ, ist, 100.0, v, quote_source))
     # underlying future price
     c.execute("INSERT OR IGNORE INTO quote_snapshots(received_ts,snap_key,instrument_key,symbol,kind,"
-              "exchange,token,session_date_ist,ltp,source) VALUES (?,?,?,?,?,?,?,?,?,?)",
-              (ts, ts[:19], "NFO:FUT", underlying, "FUTURE", "NFO", "FUT", ist, 23875.5, "ANGELONE_QUOTE_FULL"))
+              "exchange,token,session_date_ist,ltp,source,expiry) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+              (ts, ts[:19], "NFO:FUT", underlying, "FUTURE", "NFO", "FUT", ist, 23875.5, quote_source,
+               (datetime.fromisoformat(ts.replace("Z", "+00:00")) + timedelta(days=30)).strftime("%d%b%Y").upper()))
     c.commit(); c.close()
+
+
+@pytest.mark.parametrize("expiry", [None, "01SEP2026"])
+def test_underlying_future_requires_valid_unexpired_identity(hist_db, expiry):
+    """An unattributed/expired future cannot supply the AngelOne underlying price."""
+    ts = "2026-09-02T04:30:00Z"
+    _seed(hist_db, ts=ts)
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET expiry=? WHERE kind='FUTURE'", (expiry,))
+    eng = GreeksEngine(hist_db)
+    with eng._conn() as c:
+        assert eng._underlying_price(c, "NIFTY", ts) == (None, None)
 
 
 def test_engine_run_once_derives_and_persists(hist_db):
@@ -228,3 +242,122 @@ def test_engine_status_shape(hist_db):
     eng.run_once("NIFTY")
     st = eng.status()
     assert st["exposure_snapshots"] == 1 and "by_quality" in st and st["runs"] >= 1
+
+
+@pytest.mark.parametrize("greek_source", ["DHAN_OPTION_GREEK", "OTHER_PROVIDER", ""])
+@pytest.mark.parametrize("explicit_expiry", [False, True])
+def test_engine_does_not_attribute_other_or_unknown_greeks_to_angelone(
+        hist_db, greek_source, explicit_expiry):
+    _seed(hist_db, ts="2026-09-02T04:30:00Z", greek_source=greek_source)
+    eng = GreeksEngine(hist_db)
+    result = eng.run_once("NIFTY", expiries=["09SEP2026"] if explicit_expiry else None,
+                          session_date_ist="2026-09-02")
+    assert result["snapshots_written"] == 0
+    assert eng.latest("NIFTY") is None
+    if explicit_expiry:
+        assert result["quality"] == {"09SEP2026": "NO_DATA"}
+        assert result["errors"] == [{"expiry": "09SEP2026", "reason": "no OK greek rows"}]
+    else:
+        assert result["expiries"] == []
+
+
+@pytest.mark.parametrize("dhan_ts", ["2026-09-02T04:30:00Z", "2026-09-02T04:31:00Z"])
+@pytest.mark.parametrize("as_of", [None, "2026-09-02T04:32:00Z"])
+def test_engine_mixed_provider_inputs_match_angelone_only(hist_db, tmp_path, dhan_ts, as_of):
+    ts = "2026-09-02T04:30:00Z"
+    reference_db = str(tmp_path / "angelone_only.db")
+    HistStore(reference_db)
+    _seed(reference_db, ts=ts)
+    reference = GreeksEngine(reference_db)
+    reference.run_once("NIFTY", as_of=as_of)
+    expected = reference.latest("NIFTY")
+
+    # Same identifiers and timestamps are legal across providers after Phase 1.
+    _seed(hist_db, ts=dhan_ts, greek_source="DHAN_OPTION_GREEK", quote_source="DHAN_CHAIN")
+    _seed(hist_db, ts=ts)
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE option_greeks SET delta=0.9, gamma=0.5, iv=0.8 "
+                  "WHERE source='DHAN_OPTION_GREEK'")
+        c.execute("UPDATE quote_snapshots SET oi=9999999, ltp=99000 WHERE source='DHAN_CHAIN'")
+    eng = GreeksEngine(hist_db)
+    assert eng.run_once("NIFTY", as_of=as_of)["snapshots_written"] == 1
+    actual = eng.latest("NIFTY")
+    # Compare every persisted value except database/run bookkeeping and wall clock fields.
+    excluded = {"id", "run_id", "computed_ts", "stale_sec"}
+    assert {k: v for k, v in actual.items() if k not in excluded} == {
+        k: v for k, v in expected.items() if k not in excluded}
+    with sqlite3.connect(hist_db) as c:
+        assert c.execute("SELECT COUNT(*) FROM option_greeks").fetchone()[0] == 20
+        assert c.execute("SELECT COUNT(*) FROM quote_snapshots").fetchone()[0] == 18
+
+
+def test_engine_missing_angelone_quotes_does_not_borrow_dhan_quotes(hist_db):
+    _seed(hist_db, ts="2026-09-02T04:30:00Z", quote_source="DHAN_CHAIN")
+    eng = GreeksEngine(hist_db)
+    assert eng.run_once("NIFTY")["snapshots_written"] == 1
+    snap = eng.latest("NIFTY")
+    assert snap["quality"] == "NO_DATA"
+    assert snap["n_pairs_used"] == 0
+    assert snap["ce_oi_total"] is None and snap["net_delta_exp"] is None
+    assert snap["underlying_price"] is None and snap["underlying_price_src"] is None
+
+
+def test_engine_angelone_index_is_not_displaced_by_other_provider_future(hist_db):
+    ts = "2026-09-02T04:30:00Z"
+    _seed(hist_db, ts=ts, greek_source="DHAN_OPTION_GREEK", quote_source="DHAN_CHAIN")
+    _seed(hist_db, ts=ts)
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET kind='INDEX', ltp=23800 "
+                  "WHERE source='ANGELONE_QUOTE_FULL' AND kind='FUTURE'")
+        c.execute("UPDATE quote_snapshots SET ltp=99000 WHERE source='DHAN_CHAIN'")
+    eng = GreeksEngine(hist_db)
+    eng.run_once("NIFTY")
+    snap = eng.latest("NIFTY")
+    assert snap["underlying_price"] == 23800
+    assert snap["underlying_price_src"] == "ANGELONE_QUOTE:INDEX"
+
+
+@pytest.mark.parametrize("quote_time,expected", [
+    ("2026-09-02T04:29:30Z", 23875.5),
+    ("2026-09-02T04:30:00Z", 23875.5),
+    ("2026-09-02T10:00:00+05:30", 23875.5),
+    ("2026-09-02T04:30:01Z", None),
+    ("2026-09-02T04:20:00Z", None),
+])
+def test_underlying_quote_is_provider_bound_backward_and_bounded(hist_db, quote_time, expected):
+    """No symmetric nearest lookup; stale or future-only inputs are unavailable."""
+    _seed(hist_db, ts="2026-09-02T04:30:00Z")
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET received_ts=? WHERE kind='FUTURE'", (quote_time,))
+    eng = GreeksEngine(hist_db)
+    eng.run_once("NIFTY", as_of="2026-09-02T04:30:00Z")
+    assert eng.latest("NIFTY")["underlying_price"] == expected
+
+
+def test_underlying_prefers_past_over_equally_near_future(hist_db):
+    _seed(hist_db, ts="2026-09-02T04:29:30Z")
+    _seed(hist_db, ts="2026-09-02T04:30:30Z")
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET ltp=99999 WHERE kind='FUTURE' AND received_ts>?",
+                  ("2026-09-02T04:30:00Z",))
+    eng = GreeksEngine(hist_db)
+    with eng._conn() as c:
+        assert eng._underlying_price(c, "NIFTY", "2026-09-02T04:30:00Z")[0] == 23875.5
+
+
+def test_oi_exchange_timestamp_cannot_be_in_the_future(hist_db):
+    ts = "2026-09-02T04:30:00Z"
+    _seed(hist_db, ts=ts)
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET exch_ts='2026-09-02T04:31:00Z' WHERE kind='OPTION'")
+    eng = GreeksEngine(hist_db)
+    eng.run_once("NIFTY", as_of=ts)
+    snap = eng.latest("NIFTY")
+    assert snap["quality"] == "NO_DATA" and snap["ce_oi_total"] is None
+
+
+def test_greek_capture_cutoff_understands_timezone_offsets(hist_db):
+    _seed(hist_db, ts="2026-09-02T04:30:00Z")
+    eng = GreeksEngine(hist_db)
+    # 09:59 IST is BEFORE the 04:30 UTC capture, despite sorting after it as text.
+    assert eng.run_once("NIFTY", as_of="2026-09-02T09:59:00+05:30")["snapshots_written"] == 0

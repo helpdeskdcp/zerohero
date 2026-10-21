@@ -1,6 +1,8 @@
 """Historical option engine: Greek reconstruction provenance, rolling-option
 normalization, quality report, store. Pure/offline."""
 import math
+import sqlite3
+import json
 from datetime import date, datetime, timezone
 
 import pytest
@@ -46,7 +48,7 @@ def test_provenance_and_inputs_are_recorded():
     assert g["inputs"]["iv_source"] == "DIRECT" and g["inputs"]["r"] == 0.05 and g["calculation_timestamp"]
 
 
-@pytest.mark.parametrize("bad", [dict(S=None), dict(K=0), dict(T=-1), dict(iv=0), dict(iv=9)])
+@pytest.mark.parametrize("bad", [dict(S=None), dict(K=0), dict(T=0), dict(T=-1), dict(iv=0), dict(iv=9)])
 def test_bad_inputs_are_unavailable_never_guessed(bad):
     a = dict(S=100, K=100, T=0.1, iv=0.2); a.update(bad)
     g = gm.reconstruct(a["S"], a["K"], a["T"], a["iv"], True, model="BS_CARRY")
@@ -104,7 +106,10 @@ def test_support_status_mcx_is_unsupported_not_substituted(monkeypatch):
 
 
 def test_quality_report_flags_gaps_dupes_and_missing_greeks():
-    rows = rolling.normalize(_side(), underlying="NIFTY", option_type="CE")
+    side = _side()
+    # A missing interval must be bounded by observations of the SAME contract.
+    side["strike"] = [24000] * 4
+    rows = rolling.normalize(side, underlying="NIFTY", option_type="CE")
     rows.append(dict(rows[0]))                              # duplicate
     del rows[2]                                             # gap between bar 2 and 4
     rep = quality.build_report(rows)
@@ -121,6 +126,59 @@ def test_store_is_append_only_idempotent_and_roundtrips_provenance(tmp_path):
     got = st.read("NIFTY", "CE")
     assert len(got) == 4 and got[0]["greek_inputs"]["expiry_date"] == "2026-09-08"
     assert got[0]["source"] == "DHAN_ROLLING" and got[0]["greek_source"] == "RECONSTRUCTED"
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_store_expiry_identity_preserves_contracts_and_legacy_rows(tmp_path, legacy):
+    from app.hist_options.store import COLS
+    path = str(tmp_path / "expiry.db")
+    first = rolling.normalize(_side(1), underlying="NIFTY", option_type="CE",
+                              expiry_for=lambda d: date(2026, 9, 8))[0]
+    second = {**first, "expiry": "2026-09-15", "close": 20.5}
+    if legacy:
+        with sqlite3.connect(path) as c:
+            # Original v1 key, independent of the implementation's current DDL.
+            c.execute("CREATE TABLE hist_option_bars (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                      + ",".join(COLS) + ", UNIQUE(underlying, option_type, strike, timestamp, timeframe, source))")
+            c.execute("INSERT INTO hist_option_bars (id," + ",".join(COLS) + ") VALUES (41,"
+                      + ",".join("?" for _ in COLS) + ")",
+                      [json.dumps(first[k]) if k == "greek_inputs" else first.get(k) for k in COLS])
+            c.execute("UPDATE sqlite_sequence SET seq=80 WHERE name='hist_option_bars'")
+    st = HistOptionStore(path)
+    if not legacy:
+        assert st.write([first]) == 1
+    before = st.read("NIFTY")[0]
+    assert st.write([first, second]) == 1
+    unresolved = {**first, "expiry": None}
+    assert st.write([unresolved, unresolved]) == 1
+    reopened = HistOptionStore(path)
+    got = reopened.read("NIFTY")
+    assert len(got) == 3
+    assert {r["expiry"] for r in got} == {None, "2026-09-08", "2026-09-15"}
+    assert next(r for r in got if r["expiry"] == first["expiry"]) == before
+    if legacy:
+        assert before["id"] == 41
+        assert min(r["id"] for r in got if r["id"] != 41) > 80
+    assert reopened.write([first, second, unresolved]) == 0
+
+
+def test_hist_option_migration_failure_preserves_original_table(tmp_path):
+    from app.hist_options import store as module
+    with sqlite3.connect(str(tmp_path / "rollback.db")) as c:
+        c.execute("CREATE TABLE hist_option_bars (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                  + ",".join(module.COLS) + ", UNIQUE(underlying, option_type, strike, timestamp, timeframe, source))")
+        c.execute("INSERT INTO hist_option_bars(id,underlying,close) VALUES (41,'NIFTY',100)")
+        c.commit()
+        original = c.execute("SELECT sql FROM sqlite_master WHERE name='hist_option_bars'").fetchone()
+        def deny_index(action, name, *args):
+            return sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_CREATE_INDEX and name == "ix_hob_contract" else sqlite3.SQLITE_OK
+        c.set_authorizer(deny_index)
+        with pytest.raises(sqlite3.DatabaseError):
+            with c:
+                module._init_schema(c)
+        c.set_authorizer(None)
+        assert c.execute("SELECT sql FROM sqlite_master WHERE name='hist_option_bars'").fetchone() == original
+        assert c.execute("SELECT id,underlying,close FROM hist_option_bars").fetchall() == [(41, "NIFTY", 100)]
 
 
 def test_normalize_with_verified_resolver_records_expiry_provenance():
@@ -145,3 +203,32 @@ def test_raw_values_are_not_overwritten_by_reconstruction():
     assert [r["iv"] * 100 for r in rows[:2]] == pytest.approx(side["iv"][:2])       # direct IV untouched
     assert [r["oi"] for r in rows] == side["oi"] and [r["spot"] for r in rows] == side["spot"]
     assert all(r["iv_source"] in ("DIRECT", "UNAVAILABLE") for r in rows)          # never RECONSTRUCTED here
+
+
+@pytest.mark.parametrize("symbol", ["NIFTY", "SENSEX"])
+@pytest.mark.parametrize("seconds_to_expiry", [1, 0, -1, -86400])
+def test_normalize_never_reconstructs_at_or_after_expiry(monkeypatch, symbol, seconds_to_expiry):
+    expiry = date(2026, 9, 1)
+    cutoff = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc).timestamp()
+    side = _side(1)
+    side["timestamp"] = [int(cutoff - seconds_to_expiry)]
+    calls = []
+    original = gm.reconstruct
+    def checked(S, K, T, *args, **kwargs):
+        assert T > 0, "Expired contracts must not reach the reconstruction model"
+        calls.append(T)
+        return original(S, K, T, *args, **kwargs)
+    monkeypatch.setattr(gm, "reconstruct", checked)
+    row = rolling.normalize(side, underlying=symbol, option_type="CE", expiry_for=lambda d: expiry)[0]
+    assert row["expiry"] == expiry.isoformat()
+    assert row["close"] == side["close"][0] and row["oi"] == side["oi"][0]
+    assert row["iv"] == side["iv"][0] / 100
+    if seconds_to_expiry > 0:
+        assert row["greek_source"] == "RECONSTRUCTED"
+        assert calls == [pytest.approx(seconds_to_expiry / (365 * 86400))]
+    else:
+        assert calls == []
+        assert row["greek_source"] == "UNAVAILABLE"
+        assert all(row[k] is None for k in ("delta", "gamma", "theta", "vega"))
+        assert row["greek_inputs"]["T"] <= 0
+        assert row["greek_inputs"]["unavailable_reason"] == "NON_POSITIVE_TIME_TO_EXPIRY"

@@ -128,59 +128,54 @@ def test_market_profile_letters_assigned_per_bracket():
 
 
 # ---------------------------------------------------------------- market_hub.session_bars
+def _captured_candle_db(path, records):
+    # Exercise the real schema: provider-less miniature tables cannot establish provenance.
+    from app.histcap.store import HistStore
+    HistStore(str(path))
+    with sqlite3.connect(path) as con:
+        for symbol, kind, day, ts, token, expiry, volume in records:
+            exchange = "MCX" if symbol == "CRUDEOIL" else "NFO" if kind == "FUTURE" else "NSE"
+            con.execute("INSERT INTO market_candles(received_ts,instrument_key,symbol,kind,exchange,token,"
+                        "expiry,tf,bar_start,session_date_ist,o,h,l,c,v,source) "
+                        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (ts, exchange + ":" + token, symbol, kind, exchange, token, expiry, "5m", ts,
+                         day, 100, 101, 99, 100, volume, "ANGELONE_CANDLES"))
+
+
 def test_session_bars_prefers_future_over_index(monkeypatch, tmp_path):
     db = tmp_path / "mh.db"
-    con = sqlite3.connect(db)
-    con.executescript(
-        "CREATE TABLE market_candles (symbol TEXT, kind TEXT, tf TEXT, "
-        "session_date_ist TEXT, bar_start TEXT, o REAL, h REAL, l REAL, c REAL, v REAL);")
-    con.execute("INSERT INTO market_candles VALUES ('NIFTY','INDEX','5m','2026-09-04',"
-                "'2026-09-04T04:00:00Z',100,101,99,100,NULL)")
-    con.execute("INSERT INTO market_candles VALUES ('NIFTY','FUTURE','5m','2026-09-04',"
-                "'2026-09-04T04:00:00Z',100,101,99,100,12345)")
-    con.commit(); con.close()
-
+    _captured_candle_db(db, [
+        ("NIFTY", "INDEX", "2026-09-04", "2026-09-04T04:00:00Z", "INDEX", None, None),
+        ("NIFTY", "FUTURE", "2026-09-04", "2026-09-04T04:00:00Z", "FUT", "29SEP2026", 12345),
+    ])
     import app.market_hub as mh
     monkeypatch.setattr(mh, "_HDB", str(db))
     rows = mh.session_bars("NIFTY", "2026-09-04", tf="5m")
     assert len(rows) == 1
-    assert rows[0]["v"] == 12345      # FUTURE row, not the volumeless INDEX row
+    assert rows[0]["v"] == 12345
+    assert rows[0]["source"] == "ANGELONE_CANDLES" and rows[0]["fallback_used"]
 
 
 def test_session_bars_dedups_a_contract_rollover_duplicate(monkeypatch, tmp_path):
-    """Real incident (2026-09-22): market_candles' real UNIQUE constraint is
-    (instrument_key, tf, bar_start), not (symbol, kind, tf, bar_start) -- a
-    contract rollover let a historical date's FUTURE bars get re-captured
-    under a NEW instrument_key after the original contract expired,
-    doubling real bars for the same timestamp. session_bars() must keep
-    exactly one row per bar_start (the earliest insert)."""
+    """Retain the original captured bar in the legacy underlying/session view.
+    Contract-specific reads must instead retain the requested expiry identity.
+    """
     db = tmp_path / "mh.db"
-    con = sqlite3.connect(db)
-    con.executescript(
-        "CREATE TABLE market_candles (symbol TEXT, kind TEXT, tf TEXT, "
-        "session_date_ist TEXT, bar_start TEXT, o REAL, h REAL, l REAL, c REAL, v REAL, "
-        "instrument_key TEXT);")
-    # original live capture (older contract, inserted first -> lower rowid)
-    con.execute("INSERT INTO market_candles VALUES ('CRUDEOIL','FUTURE','5m','2026-09-21',"
-                "'2026-09-21T08:20:00Z',9417,9417,9380,9380,168,'MCX:565899')")
-    # later backfill duplicate under the rolled-over contract's new token
-    con.execute("INSERT INTO market_candles VALUES ('CRUDEOIL','FUTURE','5m','2026-09-21',"
-                "'2026-09-21T08:20:00Z',9417,9417,9380,9380,168,'MCX:569900')")
-    con.commit(); con.close()
-
+    _captured_candle_db(db, [
+        ("CRUDEOIL", "FUTURE", "2026-09-21", "2026-09-21T08:20:00Z", "565899", "21SEP2026", 168),
+        ("CRUDEOIL", "FUTURE", "2026-09-21", "2026-09-21T08:20:00Z", "569900", "19OCT2026", 168),
+    ])
     import app.market_hub as mh
     monkeypatch.setattr(mh, "_HDB", str(db))
     rows = mh.session_bars("CRUDEOIL", "2026-09-21", tf="5m")
-    assert len(rows) == 1              # not 2 -- the duplicate is collapsed
+    assert len(rows) == 1
     assert rows[0]["bar_start"] == "2026-09-21T08:20:00Z"
+    assert rows[0]["token"] == "565899"
 
 
 def test_session_bars_empty_when_nothing_captured(monkeypatch, tmp_path):
     db = tmp_path / "mh2.db"
-    con = sqlite3.connect(db)
-    con.execute("CREATE TABLE market_candles (symbol TEXT, kind TEXT, tf TEXT, "
-                "session_date_ist TEXT, bar_start TEXT, o REAL, h REAL, l REAL, c REAL, v REAL)")
-    con.commit(); con.close()
+    _captured_candle_db(db, [])
     import app.market_hub as mh
     monkeypatch.setattr(mh, "_HDB", str(db))
     assert mh.session_bars("NIFTY", "2026-09-04") == []

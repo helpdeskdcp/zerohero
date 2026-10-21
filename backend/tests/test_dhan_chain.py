@@ -4,6 +4,7 @@ shaped exactly like the real Dhan v2 /optionchain response (verified live
 network, no auth -- fetch()'s HTTP/auth path is exercised only by the
 live verification, not the automated suite."""
 import pytest
+from datetime import datetime, timezone
 
 from app.optionchain.sources import dhan_chain as dc
 
@@ -169,3 +170,70 @@ def test_mcx_underlying_unresolvable_is_none_never_guessed(monkeypatch):
     assert dc._underlying("NATURALGAS") is None
     monkeypatch.setattr(dc, "_headers", lambda: {"x": "y"})
     assert dc.fetch_raw("NATURALGAS", "23OCT2026") is None
+
+
+@pytest.fixture
+def expiry_http(monkeypatch):
+    from app.connectors import dhan_instruments as di
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 9, 30, 20, tzinfo=timezone.utc).astimezone(tz)  # Oct 1 IST
+    monkeypatch.setattr(dc, "datetime", Clock)
+    monkeypatch.setattr(dc, "_headers", lambda: {"test": "offline"})
+    monkeypatch.setattr(di, "resolve_front_month_future",
+                        lambda sym, **kw: {"security_id": "569900", "expiry": "2026-10-19"})
+    class Response:
+        status_code = 200
+        def __init__(self, payload): self.payload = payload
+        def json(self): return self.payload
+    class Session:
+        dates = []
+        def __init__(self): self.calls = []
+        def post(self, url, json, **kw):
+            self.calls.append((url, json))
+            return Response({"status": "success", "data": self.dates}
+                            if url.endswith("/expirylist") else _REAL_SHAPED)
+    return Session()
+
+
+@pytest.mark.parametrize("symbol,scrip,segment,dates", [
+    ("NIFTY", 13, "IDX_I", ["2026-10-06", "2026-10-13"]),
+    ("BANKNIFTY", 25, "IDX_I", ["2026-10-27", "2026-11-24"]),
+    ("SENSEX", 51, "IDX_I", ["2026-10-01", "2026-10-08"]),
+    ("CRUDEOIL", 569900, "MCX_COMM", ["2026-10-15", "2026-11-17"]),
+])
+@pytest.mark.parametrize("expiry_request", ["AUTO", "NEXT", "EXPLICIT", "ISO"])
+def test_fetch_resolves_listed_expiry_per_underlying(expiry_http, symbol, scrip, segment, dates, expiry_request):
+    expiry_http.dates = [dates[1], "2026-09-30", dates[0], dates[0]]  # unsorted, expired, duplicate
+    wanted = dates[0] if expiry_request == "AUTO" else dates[1]
+    expiry = dc._to_canonical_expiry(wanted) if expiry_request == "EXPLICIT" else wanted if expiry_request == "ISO" else expiry_request
+    chain = dc.fetch(symbol, expiry, session=expiry_http)
+    assert chain is not None and chain.expiry == dc._to_canonical_expiry(wanted)
+    assert expiry_http.calls[-1][1] == {"UnderlyingScrip": scrip, "UnderlyingSeg": segment, "Expiry": wanted}
+    assert len(expiry_http.calls) == (2 if expiry_request in ("AUTO", "NEXT") else 1)
+
+
+@pytest.mark.parametrize("dates,expiry_request", [([], "AUTO"), (["2026-09-30"], "AUTO"),
+                                         (["2026-10-06"], "NEXT"), (["bad-date"], "AUTO")])
+def test_missing_listed_expiry_never_substitutes_another_contract(expiry_http, dates, expiry_request):
+    expiry_http.dates = dates
+    assert dc.fetch("NIFTY", expiry_request, session=expiry_http) is None
+    assert len(expiry_http.calls) == 1 and expiry_http.calls[0][0].endswith("/expirylist")
+
+
+@pytest.mark.parametrize("raw,decimal", [(0.25, 0.0025), (1.0, 0.01), (1.5, 0.015),
+                                       (12.25, 0.1225), ("1.0", 0.01), (" 9.789193798280868 ", 0.09789193798280868)])
+def test_iv_is_always_a_percentage_not_a_magnitude_guess(raw, decimal):
+    # Dhan v2 option-chain documentation uses 9.789193798280868 in its
+    # response example. Our internal schema consistently uses fractions.
+    from copy import deepcopy
+    body = deepcopy(_REAL_SHAPED)
+    body["data"]["oc"]["22750.000000"]["ce"]["implied_volatility"] = raw
+    assert dc.parse(body, "NIFTY", "06OCT2026").leg(22750, "CE").iv == pytest.approx(decimal)
+
+
+@pytest.mark.parametrize("raw", [None, "", "bad", {}, [], True, False, float("nan"),
+                                float("inf"), float("-inf"), "NaN", "Infinity", -1.0, 0.0])
+def test_invalid_iv_is_unavailable(raw):
+    assert dc._iv(raw) is None

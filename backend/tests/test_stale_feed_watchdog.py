@@ -10,7 +10,6 @@ against the real DB when present.
 """
 import importlib.util
 import sqlite3
-import subprocess
 import sys
 from pathlib import Path
 
@@ -126,11 +125,21 @@ def test_classifier_pure():
     assert sfw._is_known_preclose("2026-06-01T06:30:00Z", "2026-06-01T06:45:00Z") is False
 
 
-def test_selftest_entrypoint_passes():
-    """--self-test must exit 0 (it self-skips the DB portion if the file/rows
-    are absent, and asserts KNOWN_PRECLOSE tagging when present)."""
-    r = subprocess.run(
-        [sys.executable, str(_ROOT / "scripts" / "stale_feed_watchdog.py"), "--self-test"],
-        capture_output=True, text=True, timeout=120)
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert "SELF-TEST: PASS" in r.stdout
+def test_selftest_entrypoint_passes(tmp_path, monkeypatch, capsys):
+    """Run the real CLI parser/self-test under the same guards, with no DB skips."""
+    con = _db()
+    for symbol, price in [('SENSEX',74629.50),('NIFTY',23000),('BANKNIFTY',50000),('BANKEX',63000)]:
+        _add_index(con, symbol, '2026-09-10', '15:16', 15, 60, price)
+        _add_options_moving(con, symbol, '2026-09-10', '15:16', 15, 60)
+    con.commit()
+    path = tmp_path / 'market.db'
+    with sqlite3.connect(path) as target:
+        con.backup(target)
+    con.close()
+    monkeypatch.setattr(sfw, '_DB', path)
+    monkeypatch.setattr(sys, 'argv', [str(_ROOT / 'scripts/stale_feed_watchdog.py'), '--self-test'])
+    result = sfw.main()
+    stdout = capsys.readouterr().out
+    assert result == 0, stdout
+    assert 'SELF-TEST: PASS' in stdout
+    assert 'SKIP' not in stdout

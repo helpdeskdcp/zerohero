@@ -181,6 +181,19 @@ def fresh_db(monkeypatch):
             pass
 
 
+@pytest.fixture(autouse=True)
+def _isolate_secondary_storage(request, monkeypatch, tmp_path):
+    """These unit fixtures must not depend on the VPS's captured depth or lock file."""
+    module = request.module.__name__.rsplit('.', 1)[-1]
+    if module in {'test_ai_shadow', 'test_shadow_notify', 'test_phase_h_five_symbol_pipeline',
+                  'test_reverse_engineering_status_report'}:
+        from app.orderflow import depth
+        monkeypatch.setattr(depth, 'L2_DB_PATH', str(tmp_path / 'missing_l2.db'))
+    if module == 'test_hedging_runner':
+        from app.hedging import runner
+        monkeypatch.setattr(runner, '_LOCK_PATH', str(tmp_path / 'scan.lock'))
+
+
 def candles(prices, start=None, step=60, vol=1000):
     """[t,o,h,l,c,v] rows from a close-price list (o≈prev close, small wick)."""
     start = start or (int(time.time()) - len(prices) * step)

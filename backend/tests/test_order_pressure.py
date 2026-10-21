@@ -134,8 +134,11 @@ def test_models_are_deterministic():
 
 
 # ------------------------------------------------------------- honesty / isolation
-def test_coverage_report_is_honest():
+def test_coverage_report_is_honest(tmp_path, monkeypatch):
     from app.research_engines.order_pressure import data as D
+    monkeypatch.setattr(D, '_MH_DB', str(tmp_path / 'missing_market.db'))
+    monkeypatch.setattr(D, '_KAGGLE_SPOT', {})
+    monkeypatch.setattr(D, '_CACHE_DIR', str(tmp_path / 'cache'))
     cov = D.coverage_report()
     assert "spot" in cov and "option" in cov and "unavailable" in cov
     assert len(cov["unavailable"]) >= 3

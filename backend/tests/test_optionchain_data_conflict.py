@@ -12,7 +12,7 @@ def _chain(spot, source="angelone_captured"):
 
 
 def test_conflict_detected_when_spots_disagree_beyond_tolerance(monkeypatch):
-    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True: _chain(22750.0))
+    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True, provider=None: _chain(22750.0))
     monkeypatch.setattr(_dhan, "fetch", lambda u, e: _chain(23000.0, "dhan_chain"))
     out = R.check_data_conflict("NIFTY")
     assert out["status"] == "CONFLICT"
@@ -21,27 +21,27 @@ def test_conflict_detected_when_spots_disagree_beyond_tolerance(monkeypatch):
 
 
 def test_ok_when_spots_agree_within_tolerance(monkeypatch):
-    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True: _chain(22750.0))
+    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True, provider=None: _chain(22750.0))
     monkeypatch.setattr(_dhan, "fetch", lambda u, e: _chain(22755.0, "dhan_chain"))
     out = R.check_data_conflict("NIFTY")
     assert out["status"] == "OK"
 
 
 def test_unavailable_when_angelone_chain_missing(monkeypatch):
-    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True: None)
+    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True, provider=None: None)
     out = R.check_data_conflict("NIFTY")
     assert out["status"] == "UNAVAILABLE"
 
 
 def test_unavailable_when_dhan_chain_missing(monkeypatch):
-    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True: _chain(22750.0))
+    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True, provider=None: _chain(22750.0))
     monkeypatch.setattr(_dhan, "fetch", lambda u, e: None)
     out = R.check_data_conflict("NIFTY")
     assert out["status"] == "UNAVAILABLE"
 
 
 def test_unavailable_when_dhan_fetch_raises(monkeypatch):
-    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True: _chain(22750.0))
+    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True, provider=None: _chain(22750.0))
 
     def _boom(u, e):
         raise RuntimeError("boom")
@@ -51,7 +51,19 @@ def test_unavailable_when_dhan_fetch_raises(monkeypatch):
 
 
 def test_tolerance_is_configurable(monkeypatch):
-    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True: _chain(22750.0))
+    monkeypatch.setattr(R, "get_chain", lambda u, e, allow_network=True, provider=None: _chain(22750.0))
     monkeypatch.setattr(_dhan, "fetch", lambda u, e: _chain(22800.0, "dhan_chain"))
     assert R.check_data_conflict("NIFTY")["status"] == "OK"                              # default 0.5%
     assert R.check_data_conflict("NIFTY", tolerance_pct=0.1)["status"] == "CONFLICT"      # tighter
+
+
+def test_comparison_explicitly_selects_angelone(monkeypatch):
+    """Dhan-primary defaults must never turn an independent comparison into self-comparison."""
+    seen = {}
+    def captured(u, e, **kw):
+        seen.update(kw)
+        return _chain(22750)
+    monkeypatch.setattr(R, "get_chain", captured)
+    monkeypatch.setattr(_dhan, "fetch", lambda u, e: _chain(22750, "dhan_chain"))
+    assert R.check_data_conflict("NIFTY")["status"] == "OK"
+    assert seen == {"allow_network": False, "provider": "ANGELONE"}

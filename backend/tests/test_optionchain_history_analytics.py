@@ -26,13 +26,14 @@ def hist_db(tmp_path, monkeypatch):
         CREATE TABLE quote_snapshots(
           id INTEGER PRIMARY KEY, symbol TEXT, kind TEXT, exchange TEXT, expiry TEXT,
           strike REAL, option_type TEXT, ltp REAL, oi REAL, oi_change REAL, volume REAL,
-          session_date_ist TEXT, received_ts TEXT);
+          session_date_ist TEXT, received_ts TEXT, source TEXT DEFAULT 'ANGELONE_QUOTE_FULL');
         CREATE TABLE option_greeks(
           id INTEGER PRIMARY KEY, received_ts TEXT, snap_key TEXT, underlying TEXT, expiry TEXT,
-          strike REAL, option_type TEXT, session_date_ist TEXT, iv REAL, broker_status TEXT);
+          strike REAL, option_type TEXT, session_date_ist TEXT, iv REAL, broker_status TEXT, source TEXT DEFAULT 'ANGELONE_OPTION_GREEK');
         CREATE TABLE market_candles(
           id INTEGER PRIMARY KEY, symbol TEXT, kind TEXT, tf TEXT, bar_start TEXT,
-          o REAL, h REAL, l REAL, c REAL);
+          o REAL, h REAL, l REAL, c REAL, source TEXT DEFAULT 'ANGELONE_CANDLES',
+          expiry TEXT DEFAULT '29SEP2026', exchange TEXT DEFAULT 'NFO', instrument_key TEXT DEFAULT 'NFO:FUT');
     """)
 
     # --- option_greeks: two expiries, a simple smile shape (PE IV rises as strike falls) ---
@@ -178,7 +179,7 @@ def vol_hist_db(tmp_path, monkeypatch):
     con.executescript("""
         CREATE TABLE quote_snapshots(
           id INTEGER PRIMARY KEY, symbol TEXT, kind TEXT, expiry TEXT,
-          strike REAL, option_type TEXT, volume REAL, session_date_ist TEXT, received_ts TEXT);
+          strike REAL, option_type TEXT, volume REAL, session_date_ist TEXT, received_ts TEXT, source TEXT DEFAULT 'ANGELONE_QUOTE_FULL');
     """)
     # Three real captured sessions, cumulative-intraday volume (several polls
     # per session, only the MAX per strike/option_type counts, same
@@ -226,3 +227,107 @@ def test_volume_spike_ratio_insufficient_history_is_not_a_crash(vol_hist_db):
     r = volume_spike_ratio("NIFTY", db_path=p)
     assert r.status == "insufficient_history"
     assert r.today_volume == 4000.0 + 3500.0
+
+
+def test_history_readers_use_one_provider_and_preserve_provenance(hist_db):
+    """Each analytical result selects Dhan, or a whole AngelOne fallback."""
+    with sqlite3.connect(hist_db) as c:
+        for side in ('CE', 'PE'):
+            c.execute("INSERT INTO quote_snapshots(symbol,kind,expiry,strike,option_type,ltp,oi,"
+                "received_ts,source) VALUES ('NIFTY','OPTION','15SEP2026',23500,?,300,7000,"
+                "'2026-09-09T09:00:00Z','DHAN_CHAIN')", (side,))
+    r = straddle_pnl("NIFTY", "15SEP2026", strike=23500, as_of="2026-09-09T09:10:00Z")
+    assert r.entry_premium == 600 and r.provenance["provider"] == "DHAN"
+    assert {x["provider"] for x in r.series} == {"DHAN"}
+    a = straddle_pnl("NIFTY", "15SEP2026", strike=23500, provider="ANGELONE")
+    assert a.entry_premium == 230 and not a.provenance["fallback_used"]
+    surface = vol_surface("NIFTY", provider="DHAN")
+    assert surface.status == "no_data"
+    surface = vol_surface("NIFTY")
+    assert surface.provenance["provider"] == "ANGELONE" and surface.provenance["fallback_used"]
+    profile = oi_profile("NIFTY", "15SEP2026")
+    assert profile.oi_series[0]["ce_oi"] == 7000
+    assert profile.underlying_candles == []  # no Dhan candles: no AngelOne substitution
+
+
+def test_history_atm_cannot_use_future_underlying_or_future_only_strike(hist_db):
+    """Entry-time ATM selection has no permission to look ahead."""
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET received_ts='2026-09-09T09:00:01Z' WHERE kind='INDEX'")
+    r = straddle_pnl("NIFTY", "15SEP2026", entry_ts="2026-09-09T09:00:00Z")
+    assert r.status == "no_data" and r.entry_premium is None
+
+
+def test_history_explicit_entry_requires_observation_at_or_before_entry(hist_db):
+    """A future-only premium must not become the entry premium."""
+    r = straddle_pnl("NIFTY", "15SEP2026", strike=23500, entry_ts="2026-09-09T08:59:00Z")
+    assert r.status == "no_data" and r.entry_premium is None
+
+
+def test_volume_aggregate_keeps_expiry_identity(vol_hist_db):
+    """The documented whole-chain aggregate sums contracts; it cannot collapse expiries by strike."""
+    with sqlite3.connect(vol_hist_db) as c:
+        c.execute("INSERT INTO quote_snapshots(symbol,kind,expiry,strike,option_type,volume,"
+                  "session_date_ist,received_ts) VALUES ('NIFTY','OPTION','22SEP2026',23500,'CE',500,"
+                  "'2026-09-10','2026-09-10T09:00:00Z')")
+    r = volume_spike_ratio("NIFTY")
+    assert r.today_volume == 8000
+    assert r.expiries == ["15SEP2026", "22SEP2026"]
+
+
+def test_history_api_cache_is_provider_and_time_specific(hist_db):
+    """Cached AngelOne history cannot satisfy an explicit Dhan or earlier query."""
+    a = OCAPI.api_straddle_pnl("NIFTY", "15SEP2026", strike=23500,
+                              provider="ANGELONE", as_of="2026-09-09T09:05:00Z")
+    assert a["status"] == "ok" and len(a["series"]) == 2
+    d = OCAPI.api_straddle_pnl("NIFTY", "15SEP2026", strike=23500,
+                              provider="DHAN", as_of="2026-09-09T09:05:00Z")
+    assert d["status"] == "no_data"
+    past = OCAPI.api_straddle_pnl("NIFTY", "15SEP2026", strike=23500,
+                                 provider="ANGELONE", as_of="2026-09-09T08:59:00Z")
+    assert past["status"] == "no_data"
+
+
+def test_history_surface_excludes_future_provider_capture(hist_db):
+    """A future Dhan IV capture cannot beat valid past AngelOne observations."""
+    with sqlite3.connect(hist_db) as c:
+        c.execute("INSERT INTO option_greeks(underlying,expiry,strike,option_type,iv,received_ts,"
+                  "snap_key,broker_status,source) VALUES ('NIFTY','15SEP2026',23500,'CE',0.9,"
+                  "'2026-09-09T09:02:00Z','2026-09-09T09:02:00','OK','DHAN_OPTION_GREEK')")
+    r = vol_surface("NIFTY", as_of="2026-09-09T09:01:00Z")
+    assert r.provenance["provider"] == "ANGELONE" and all(p["iv"] < 0.9 for p in r.points)
+    assert vol_surface("NIFTY", as_of="2026-09-09T09:01:00Z", provider="DHAN").status == "no_data"
+
+
+def test_history_rejects_captures_after_contract_expiry(hist_db):
+    """Late captures of a dead contract cannot become a later premium series."""
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET received_ts='2026-09-16T09:00:00Z' WHERE kind='OPTION'")
+    r = straddle_pnl("NIFTY", "15SEP2026", strike=23500, as_of="2026-09-16T09:01:00Z")
+    assert r.status == "no_data"
+
+
+@pytest.mark.parametrize("bad_oi", [-1, float('inf')])
+def test_invalid_primary_oi_cannot_mask_valid_fallback(hist_db, bad_oi):
+    """An empty profile after validation is unavailable, not a successful primary result."""
+    with sqlite3.connect(hist_db) as c:
+        c.execute("INSERT INTO quote_snapshots(symbol,kind,expiry,strike,option_type,oi,received_ts,source) "
+                  "VALUES ('NIFTY','OPTION','15SEP2026',23500,'CE',?,'2026-09-09T09:00:00Z','DHAN_CHAIN')", (bad_oi,))
+    r = oi_profile('NIFTY', '15SEP2026')
+    assert r.status == 'ok' and r.provenance['provider'] == 'ANGELONE'
+
+
+def test_invalid_entry_quote_cannot_move_entry_into_the_future(hist_db):
+    """Reject a bad entry instead of silently starting at a later valid premium."""
+    with sqlite3.connect(hist_db) as c:
+        c.execute("UPDATE quote_snapshots SET ltp=-1 WHERE kind='OPTION' AND option_type='CE' "
+                  "AND received_ts='2026-09-09T09:00:00Z'")
+    r = straddle_pnl('NIFTY', '15SEP2026', strike=23500, entry_ts='2026-09-09T09:00:00Z')
+    assert r.status == 'no_data' and r.entry_premium is None
+
+
+def test_entry_selection_precedes_series_limit(hist_db):
+    """Old captures must not consume the limit before selecting the requested entry."""
+    r = straddle_pnl('NIFTY', '15SEP2026', strike=23500, entry_ts='2026-09-09T09:10:00Z', limit=2)
+    assert r.entry_ts == '2026-09-09T09:10:00Z'
+    assert r.entry_premium == 235

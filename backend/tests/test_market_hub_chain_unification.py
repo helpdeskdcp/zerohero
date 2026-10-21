@@ -29,13 +29,13 @@ def test_get_chain_prefers_histcap_and_carries_token(monkeypatch):
         "source": "HISTCAP", "expiry": "10SEP2026", "age_sec": 12,
         "oi_coverage": {"legs": 2, "with_oi": 2, "ratio": 1.0},
     }
-    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess: hc_result)
+    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess, **kw: hc_result)
 
     def _boom(*a, **kw):
         raise AssertionError("REST fallback must not be reached when histcap answers")
     monkeypatch.setattr(market_hub, "_throttle", _boom)
 
-    out = market_hub.get_chain("NIFTY", window=2, allow_rest_fallback=True)
+    out = market_hub.get_chain("NIFTY", provider="ANGELONE", window=2, allow_rest_fallback=True)
     assert out["chain"][0]["ce_token"] == "111"
     assert out["chain"][0]["ce_oi_source"] == "HISTCAP"
     assert out["expiry"] == "10SEP2026"
@@ -47,7 +47,7 @@ def test_get_chain_auto_roll_bypasses_histcap_even_if_fresh(monkeypatch):
     always go to the REST fallback, which does honour expiry_mode."""
     called = {"hist_chain": 0}
 
-    def _hc(sym, sess):
+    def _hc(sym, sess, **kw):
         called["hist_chain"] += 1
         return {"chain": [{"strike": 1.0}], "expiry": "X", "age_sec": 1,
                 "oi_coverage": {}}
@@ -61,14 +61,14 @@ def test_get_chain_auto_roll_bypasses_histcap_even_if_fresh(monkeypatch):
                 "oi_coverage": {}}
     monkeypatch.setattr(market_data, "selection_snapshot", _fake_selection_snapshot)
 
-    out = market_hub.get_chain("NIFTY", expiry_mode="AUTO_ROLL", sdk=object())
+    out = market_hub.get_chain("NIFTY", provider="ANGELONE", expiry_mode="AUTO_ROLL", sdk=object())
     assert called["hist_chain"] == 0, "histcap shortcut must be skipped for AUTO_ROLL"
     assert seen["expiry"] == "AUTO_ROLL"
     assert out["expiry"] == "17SEP2026"
 
 
 def test_get_chain_rest_fallback_when_histcap_empty(monkeypatch):
-    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess: None)
+    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess, **kw: None)
     monkeypatch.setattr(market_hub, "_throttle", lambda key: True)
 
     def _fake_selection_snapshot(sdk, mkt, sym, *, expiry, option_type, window, instrument):
@@ -77,16 +77,16 @@ def test_get_chain_rest_fallback_when_histcap_empty(monkeypatch):
                 "expiry": "10SEP2026", "atm": 24000, "spot": 24005, "oi_coverage": {}}
     monkeypatch.setattr(market_data, "selection_snapshot", _fake_selection_snapshot)
 
-    out = market_hub.get_chain("NIFTY", sdk=object())
+    out = market_hub.get_chain("NIFTY", provider="ANGELONE", sdk=object())
     assert out["chain"][0]["ce_token"] == "999"
     assert out["chain"][0]["ce_oi_source"] == "ANGELONE_OPTION_GREEK"
     assert out["data_quality_note"] == "ACTUAL (REST)"
 
 
 def test_get_chain_throttled_returns_empty_not_error(monkeypatch):
-    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess: None)
+    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess, **kw: None)
     monkeypatch.setattr(market_hub, "_throttle", lambda key: False)   # rate-limited
-    out = market_hub.get_chain("NIFTY", sdk=object())
+    out = market_hub.get_chain("NIFTY", provider="ANGELONE", sdk=object())
     assert out["chain"] == []
     assert out["error"] is None
 
@@ -98,14 +98,14 @@ def test_get_chain_no_sdk_no_fallback_returns_empty(monkeypatch):
     succeed and made a REAL broker call. Explicitly force resolution to fail
     so this stays offline regardless of what credentials happen to be
     present in the environment it runs in."""
-    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess: None)
+    monkeypatch.setattr(market_hub, "_hist_chain", lambda sym, sess, **kw: None)
     import app.connectors.angelone as angelone_mod
 
     def _no_sdk(require_auth=False):
         return None
     monkeypatch.setattr(angelone_mod, "_market_sdk", _no_sdk)
 
-    out = market_hub.get_chain("NIFTY", allow_rest_fallback=True, sdk=None)
+    out = market_hub.get_chain("NIFTY", provider="ANGELONE", allow_rest_fallback=True, sdk=None)
     assert out["chain"] == []
 
 
@@ -224,11 +224,11 @@ def test_autoscalp_chain_does_not_merge_greeks_when_already_present(monkeypatch)
 
 def test_autoscalp_chain_passes_expiry_mode_and_window_through(monkeypatch):
     seen = {}
-    def _fake_get_chain(sym, *, window, allow_rest_fallback, expiry_mode):
+    def _fake_get_chain(sym, *, window, allow_rest_fallback, expiry_mode, provider):
         seen.update(sym=sym, window=window, allow_rest_fallback=allow_rest_fallback,
-                    expiry_mode=expiry_mode)
+                    expiry_mode=expiry_mode, provider=provider)
         return {"chain": [], "expiry": None}
     monkeypatch.setattr(runtime.market_hub, "get_chain", _fake_get_chain)
     runtime._autoscalp_chain("NIFTY", 24000, 3, market="NSE", expiry_mode="AUTO_ROLL")
     assert seen == {"sym": "NIFTY", "window": 3, "allow_rest_fallback": True,
-                    "expiry_mode": "AUTO_ROLL"}
+                    "expiry_mode": "AUTO_ROLL", "provider": "ANGELONE"}

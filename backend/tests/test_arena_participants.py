@@ -11,6 +11,7 @@ BODY = {"underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_t
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(SU, "PATH", str(tmp_path / "h.jsonl"))
+    monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(tmp_path / "no_participants.json"))                      # tests never read the real participants file
     monkeypatch.setenv("ARENA_TOKEN_HUMAN", T1); monkeypatch.setenv("ARENA_HUMAN_NAME", "INSTITUTION_TRADER")
     monkeypatch.setenv("ARENA_EXTRA_PARTICIPANTS", "NEERAJ_JOSHI"); monkeypatch.setenv("ARENA_TOKEN_NEERAJ_JOSHI", T2)
     monkeypatch.setenv("ARENA_START", "2999-01-01"); monkeypatch.setenv("ARENA_END", "2999-02-01"); monkeypatch.delenv("ARENA_PUBLIC", raising=False)

@@ -13,6 +13,20 @@ from app import db, main
 from app.api import dhan_routes
 
 
+@pytest.fixture(autouse=True)
+def isolated_orderflow(monkeypatch, tmp_path):
+    """Exercise real data-only components without booting workers or opening the live tick DB."""
+    from app.connectors.dhan_ws import DhanOrderflowWorker
+    from app.engines.orderflow_engine import OrderflowEngine
+    from app.engines.orderflow_store import TickStore
+    worker = DhanOrderflowWorker(instruments=[])
+    worker.enabled = False
+    engine = OrderflowEngine(worker.queue, tick_store=TickStore(str(tmp_path / 'ticks.db')),
+                             meta_provider=lambda: worker._instrument_meta)
+    monkeypatch.setattr(main, 'dhan_orderflow_worker', worker)
+    monkeypatch.setattr(main, 'dhan_orderflow_engine', engine)
+
+
 def _client(monkeypatch, secret="real-secret-value"):
     monkeypatch.setattr(dhan_routes, "POSTBACK_SECRET", secret)
     monkeypatch.setattr(main, "ADMIN_USERNAME", "opuser")

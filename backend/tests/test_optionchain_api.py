@@ -19,11 +19,11 @@ def hist_db(tmp_path, monkeypatch):
         CREATE TABLE quote_snapshots(
           id INTEGER PRIMARY KEY, symbol TEXT, kind TEXT, exchange TEXT, expiry TEXT,
           strike REAL, option_type TEXT, ltp REAL, oi REAL, oi_change REAL, volume REAL,
-          bid REAL, ask REAL, bid_qty REAL, ask_qty REAL, session_date_ist TEXT, received_ts TEXT);
+          bid REAL, ask REAL, bid_qty REAL, ask_qty REAL, session_date_ist TEXT, received_ts TEXT, source TEXT DEFAULT 'ANGELONE_QUOTE_FULL');
         CREATE TABLE option_greeks(
           id INTEGER PRIMARY KEY, received_ts TEXT, snap_key TEXT, underlying TEXT, expiry TEXT,
           strike REAL, option_type TEXT, session_date_ist TEXT, delta REAL, gamma REAL,
-          theta REAL, vega REAL, iv REAL, iv_pct REAL, trade_volume REAL);
+          theta REAL, vega REAL, iv REAL, iv_pct REAL, trade_volume REAL, source TEXT DEFAULT 'ANGELONE_OPTION_GREEK');
         CREATE TABLE greek_exposure(
           id INTEGER PRIMARY KEY, as_of_ts TEXT, computed_ts TEXT, underlying TEXT, expiry TEXT,
           underlying_price REAL, pcr_oi REAL, ce_oi_total REAL, pe_oi_total REAL, per_strike_json TEXT);
@@ -73,8 +73,58 @@ def test_underlyings_list():
     assert set(r["underlyings"]) == {s for g in r["groups"].values() for s in g}
 
 
+def test_api_historical_provider_is_strict_and_disables_live_resolution(monkeypatch):
+    from app.optionchain.sources import dhan_chain
+    def forbidden(*a, **kw):
+        raise AssertionError("an as-of request cannot resolve a live expiry list")
+    monkeypatch.setattr(dhan_chain, "resolve_expiry", forbidden)
+    seen = []
+    monkeypatch.setattr(OCAPI, "get_chain", lambda u, e, **kw: seen.append((e, kw)))
+    OCAPI._cache.clear()
+    api_optionchain("NIFTY", expiry="08SEP2026", provider="ANGELONE",
+                    as_of="2026-09-02T04:30:00Z", live=1)
+    assert seen[0][0] == "08SEP2026"
+    assert seen[0][1]["provider"] == "ANGELONE" and not seen[0][1]["allow_network"]
+    OCAPI._cache.clear()
+
+
+@pytest.mark.parametrize("expiry", ["AUTO", "NEXT"])
+def test_historical_api_reports_calendar_unavailable_without_live_lookup(hist_db, monkeypatch, expiry):
+    """Captured contracts and today's broker cannot certify a historical alias."""
+    from app.optionchain.sources import dhan_chain
+    calls = []
+    def forbidden(*a, **kw):
+        calls.append(True)
+        raise AssertionError("no live calendar lookup")
+    monkeypatch.setattr(dhan_chain, "fetch", forbidden)
+    monkeypatch.setattr(dhan_chain, "resolve_expiry", forbidden)
+    result = api_optionchain("NIFTY", expiry=expiry, live=1, as_of="2026-09-09T09:00:41Z")
+    assert result["status"] == "NO_DATA"
+    assert result["reason"] == "CALENDAR_EVIDENCE_UNAVAILABLE"
+    assert calls == []
+
+
+@pytest.mark.parametrize("symbol,dates", [("NIFTY", ["2031-01-07", "2031-01-14"]),
+                                        ("SENSEX", ["2031-01-02", "2031-01-09"]),
+                                        ("CRUDEOIL", ["2031-01-15", "2031-02-17"])])
+@pytest.mark.parametrize("expiry,index", [("AUTO", 0), ("NEXT", 1), ("2031-01-23", None)])
+def test_route_resolves_dhan_expiry_without_angel_master(monkeypatch, symbol, dates, expiry, index):
+    from app.optionchain.sources import dhan_chain
+    from app import instruments
+    monkeypatch.setattr(dhan_chain, "expiry_list", lambda *a, **kw: dates)
+    def forbidden(*a, **kw):
+        pytest.fail("Dhan expiry must not depend on AngelOne instrument master")
+    monkeypatch.setattr(instruments, "list_nse_option_expiries", forbidden)
+    seen = []
+    monkeypatch.setattr(OCAPI, "get_chain", lambda u, e, **kw: seen.append(e))
+    OCAPI._cache.clear()
+    api_optionchain(symbol, expiry=expiry, live=1)
+    assert seen == [dhan_chain._to_canonical_expiry(dates[index]) if index is not None else expiry]
+    OCAPI._cache.clear()
+
+
 def test_route_returns_the_five_sections(hist_db):
-    j = api_optionchain("NIFTY", live=0, atm_window=8, realized_vol=0.11)
+    j = api_optionchain("NIFTY", expiry="15SEP2026", live=0, atm_window=8, realized_vol=0.11)
     assert j["status"] == "OK" and j["source"] == "angelone_captured"
     assert j["expiry"] == "15SEP2026" and j["spot"] == 23485.0
     for key in ("chain", "analytics", "structure", "quality", "qualification", "capability"):
@@ -89,10 +139,10 @@ def test_route_returns_the_five_sections(hist_db):
 
 
 def test_route_is_cached_then_bypassed_for_baseline(hist_db):
-    a = api_optionchain("NIFTY", live=0)
-    b = api_optionchain("NIFTY", live=0)
+    a = api_optionchain("NIFTY", expiry="15SEP2026", live=0)
+    b = api_optionchain("NIFTY", expiry="15SEP2026", live=0)
     assert a is b                                    # same cached object
-    c = api_optionchain("NIFTY", live=0, baseline="2026-09-09T09:00:20Z")
+    c = api_optionchain("NIFTY", expiry="15SEP2026", live=0, baseline="2026-09-09T09:00:20Z")
     assert c is not a and "oi_baseline" in c and "oi_buildup" in c
     assert c["oi_baseline"]["status"] in ("ok", "no_baseline", "no_overlap")
     assert c["oi_buildup"]["status"] in ("ok", "no_baseline", "no_spot")
@@ -103,7 +153,7 @@ def test_route_computes_oi_buildup_regime_from_two_snapshots(hist_db):
     # never called from this route -- found during a frontend/backend data
     # audit. Wired alongside the existing oi_baseline block, reusing the
     # same fetched baseline chain (no extra DB read).
-    j = api_optionchain("NIFTY", live=0, baseline="2026-09-09T08:59:31Z")
+    j = api_optionchain("NIFTY", expiry="15SEP2026", live=0, baseline="2026-09-09T08:59:31Z")
     assert j["status"] == "OK"
     bu = j["oi_buildup"]
     assert bu["status"] == "ok"
@@ -120,14 +170,14 @@ def test_unknown_underlying_is_no_data_not_500(hist_db):
 
 
 def test_bad_baseline_ts_does_not_raise(hist_db):
-    j = api_optionchain("NIFTY", live=0, baseline="not-a-timestamp")
+    j = api_optionchain("NIFTY", expiry="15SEP2026", live=0, baseline="not-a-timestamp")
     assert j["status"] == "OK"
     assert j["oi_baseline"]["status"] in ("error", "no_baseline", "no_overlap", "ok")
     assert j["oi_buildup"]["status"] in ("error", "no_baseline", "no_spot", "ok")
 
 
 def test_atm_window_is_clamped(hist_db):
-    j = api_optionchain("NIFTY", live=0, atm_window=9999)
+    j = api_optionchain("NIFTY", expiry="15SEP2026", live=0, atm_window=9999)
     assert j["status"] == "OK"                       # clamped, no slice/þrow
 
 

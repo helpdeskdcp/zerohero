@@ -19,6 +19,22 @@ def _series(*pairs):
     return list(pairs)
 
 
+def test_attributed_premiums_retain_contract_and_exclude_future_atm_candidates():
+    """The ATM universe at entry cannot include a strike first captured later."""
+    def quote(ts, value, expiry="08SEP2026", provider="DHAN"):
+        return {"timestamp": ts, "ltp": value, "provider": provider, "source": "DHAN_CHAIN",
+                "expiry": expiry, "instrument_key": "NFO:1", "fallback_used": False}
+    entry, exit = "2026-09-02T04:30:00Z", "2026-09-02T04:31:00Z"
+    result = PW.rewalk_leg({
+        (24000, "CE"): [quote(entry, 100), quote(exit, 110)],
+        (24050, "CE"): [quote(exit, 10)],
+    }, entry_price=24050, side="BUY", entry_ts="2026-09-02T10:00:00+05:30", exit_ts=exit)
+    assert result["strike"] == 24000 and result["premium_points"] == 10
+    assert result["premium_provider"] == "DHAN" and result["premium_expiry"] == "08SEP2026"
+    assert PW.rewalk_leg({(24000, "CE"): [quote(entry, 100), quote(exit, 110, provider="ANGELONE")]},
+        entry_price=24000, side="BUY", entry_ts=entry, exit_ts=exit) is None
+
+
 def test_asof_returns_last_at_or_before():
     s = _series(("a", 1.0), ("m", 2.0), ("z", 3.0))
     assert PW._asof(s, "a") == 1.0
@@ -222,3 +238,21 @@ def test_backtest_index_basis_unchanged_and_default(monkeypatch):
     for t in bt["trades"]:
         assert t["basis"] == "INDEX"
     assert bt["overall"]["net_points"] == 20.0
+
+
+def test_backtest_keeps_premiums_in_the_session_provider_and_records_provenance(monkeypatch):
+    """Research cannot join Dhan bars to implicit AngelOne premiums."""
+    _wire_premium(monkeypatch, [_spike("2026-09-04T04:00:00Z", "TARGET_HIT", "STOP_HIT")], {})
+    monkeypatch.setattr(BT.market_hub, "session_bars", lambda *a, **kw: [
+        {"provider": "DHAN", "source": "DHAN_HISTORICAL", "expiry": "29SEP2026",
+         "instrument_key": "DHAN:FUT", "series_type": "UNDERLYING_SESSION", "fallback_used": False}])
+    seen = {}
+    def options(*a, **kw):
+        seen.update(kw)
+        return {}
+    monkeypatch.setattr(BT.market_hub, "session_option_quotes", options)
+    out = BT.backtest("NIFTY", basis="premium", expiry="08SEP2026")
+    assert seen == {"provider": "DHAN", "expiry": "08SEP2026"}
+    for row in out["trades"]:
+        assert row["underlying_provenance"]["provider"] == "DHAN"
+        assert row["premium_unavailable_reason"] == "NO_VALID_OPTION_SERIES_FOR_WINDOW"
