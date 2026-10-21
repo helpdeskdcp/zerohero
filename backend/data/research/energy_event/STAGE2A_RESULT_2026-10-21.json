@@ -1,0 +1,104 @@
+{
+ "n_event_days_used": 14,
+ "skipped_missing_bars": [],
+ "n_trigger": 8,
+ "continuation_rate": 0.625,
+ "mean_signed_ret_pct": -0.20025,
+ "rows": [
+  {
+   "date": "2026-07-02",
+   "move_pct": 0.0,
+   "trigger": false
+  },
+  {
+   "date": "2026-07-09",
+   "move_pct": 0.127,
+   "trigger": false
+  },
+  {
+   "date": "2026-07-16",
+   "move_pct": -0.98,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": 1.154,
+   "continued": true
+  },
+  {
+   "date": "2026-07-23",
+   "move_pct": -0.161,
+   "trigger": false
+  },
+  {
+   "date": "2026-07-30",
+   "move_pct": 0.515,
+   "trigger": true,
+   "dir": "CE",
+   "signed_ret_pct": -0.137,
+   "continued": false
+  },
+  {
+   "date": "2026-08-06",
+   "move_pct": -0.496,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": 0.249,
+   "continued": true
+  },
+  {
+   "date": "2026-08-13",
+   "move_pct": -0.721,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": -0.554,
+   "continued": false
+  },
+  {
+   "date": "2026-08-20",
+   "move_pct": 0.035,
+   "trigger": false
+  },
+  {
+   "date": "2026-08-27",
+   "move_pct": -0.899,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": 0.201,
+   "continued": true
+  },
+  {
+   "date": "2026-09-03",
+   "move_pct": 0.071,
+   "trigger": false
+  },
+  {
+   "date": "2026-09-17",
+   "move_pct": -0.567,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": 0.143,
+   "continued": true
+  },
+  {
+   "date": "2026-09-24",
+   "move_pct": -0.413,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": -3.107,
+   "continued": false
+  },
+  {
+   "date": "2026-10-01",
+   "move_pct": -0.583,
+   "trigger": true,
+   "dir": "PE",
+   "signed_ret_pct": 0.449,
+   "continued": true
+  },
+  {
+   "date": "2026-10-08",
+   "move_pct": -0.224,
+   "trigger": false
+  }
+ ],
+ "decision_per_spec": "PROCEED to forward shadow only (not validated)"
+}
