@@ -237,9 +237,14 @@ def leaderboard(request: Request, scope: str = "today"):
     if ent is None or time.time() - ent[0] > 90:
         from . import leaderboard as LB
         sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+        try:
+            from ..energy_event import shadow as _ev
+            sigs += _ev.scoring_signals(c["start"], c["end"])                                       # the NG event rule: a separate, disclosed AI line
+        except Exception:
+            pass
         out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
         today = datetime.now(IST).strftime("%Y-%m-%d")
-        names = list(dict.fromkeys(["ZEROHERO_AI", *c["participants"], *c["hashes"]]))
+        names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
         v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)
         v.update(mode=mode(c), generated_at=datetime.now(IST).isoformat(timespec="seconds"), you=None)
         _cache["lb"][scope] = (time.time(), v)

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from . import settle as S
 
 IST = timezone(timedelta(hours=5, minutes=30))
-DEFAULT_DISPLAY = {"ZEROHERO_AI": "ZeroHero AI", "INSTITUTION_TRADER": "Mohit Agrawal", "NEERAJ_JOSHI": "Neeraj Joshi", "DHANANJAY_DALVI": "Dhananjay Dalvi"}
+DEFAULT_DISPLAY = {"ZEROHERO_AI": "ZeroHero AI", "ZEROHERO_AI_EVENT": "ZeroHero AI - NG event rule (separate shadow line)", "INSTITUTION_TRADER": "Mohit Agrawal", "NEERAJ_JOSHI": "Neeraj Joshi", "DHANANJAY_DALVI": "Dhananjay Dalvi"}
 
 
 def _day(r: dict) -> str:

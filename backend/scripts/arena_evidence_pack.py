@@ -12,6 +12,8 @@ IST = timezone(timedelta(hours=5, minutes=30)); c = api.cfg()
 day = sys.argv[sys.argv.index("--date") + 1] if "--date" in sys.argv else datetime.now(IST).strftime("%Y-%m-%d")
 mdb = os.path.join(HERE, "data", "market_history.db")
 sigs = R.ai_signals(os.path.join(HERE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+from app.energy_event import shadow as _ev
+sigs += _ev.scoring_signals(c["start"], c["end"])
 sigs = [s for s in sigs if datetime.fromtimestamp(s["t"], tz=IST).strftime("%Y-%m-%d") == day]
 iso = lambda x: datetime.fromtimestamp(x, tz=IST).isoformat(timespec="seconds")
 git = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=HERE, capture_output=True, text=True).stdout.strip()

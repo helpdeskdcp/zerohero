@@ -56,3 +56,14 @@ def test_every_empty_branch_is_recorded(tmp_path):
 def test_outside_window_and_non_thursday_write_nothing(tmp_path):
     assert run(tmp_path, now=R_EP + 60)["status"] == "OUTSIDE_WINDOW"
     assert SH.run_day(datetime(2026, 10, 21, 20, 5, tzinfo=R.IST).timestamp(), ledger=str(tmp_path / "x.jsonl"))["status"] == "NOT_THURSDAY" and not (tmp_path / "x.jsonl").exists()
+
+
+def test_dense_capture_is_requested_for_the_chosen_contract_and_signal_is_exposed_for_scoring(tmp_path, monkeypatch):
+    from app.histcap import priority
+    calls = []; monkeypatch.setattr(priority, "request_watch", lambda *a, **k: calls.append(a))
+    snaps = lambda: [{"t": R_EP + 200, "bid": 9.8, "ask": 10.0}]
+    r = run(tmp_path, snaps=snaps); assert r["status"] == "SIGNAL" and calls == [("NATURALGAS", "2026-10-23", 280.0, "CE")]
+    sigs = SH.scoring_signals("2026-10-01", "2026-12-31", path=str(tmp_path / "a.jsonl")); assert len(sigs) == 1 and sigs[0]["participant"] == "ZEROHERO_AI_EVENT" and sigs[0]["id"] == "EV-2026-10-22"
+    assert SH.scoring_signals("2026-11-01", "2026-12-31", path=str(tmp_path / "a.jsonl")) == []
+    from app.arena import leaderboard as LB
+    assert "ZEROHERO_AI_EVENT" in LB.DEFAULT_DISPLAY and "separate" in LB.DEFAULT_DISPLAY["ZEROHERO_AI_EVENT"]

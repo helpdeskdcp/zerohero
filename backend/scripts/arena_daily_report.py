@@ -10,8 +10,10 @@ from app.arena import api, leaderboard as LB, run as R, submit as SU
 IST = timezone(timedelta(hours=5, minutes=30)); c = api.cfg()
 day = sys.argv[sys.argv.index("--date") + 1] if "--date" in sys.argv else datetime.now(IST).strftime("%Y-%m-%d")
 sigs = R.ai_signals(os.path.join(HERE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+from app.energy_event import shadow as _ev
+sigs += _ev.scoring_signals(c["start"], c["end"])
 out = R.run(sigs, market_db=os.path.join(HERE, "data", "market_history.db")); res = {k: v["results"] for k, v in out.items() if not k.startswith("_")}
-names = list(dict.fromkeys(["ZEROHERO_AI", *c["participants"], *c["hashes"]]))
+names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
 t = LB.build(res, names, c["display"], scope="today", today=day, capital=R.CAPITAL); a = LB.build(res, names, c["display"], scope="all", today=day, capital=R.CAPITAL)
 f = lambda x: datetime.fromtimestamp(x, IST).strftime("%H:%M:%S") if x else "-"
 lines = [f"# Arena daily report {day}", "", "Paper trading, identical settlement for everyone (ask in / bid out, 20 s delay, SL / first target, costs). Small samples prove nothing.", ""]

@@ -110,6 +110,11 @@ def run_day(now_epoch: float | None = None, *, bars_fn=live_bars, key_fn=future_
     iso = next((e for e in sorted(ex) if e >= d.isoformat()), None)
     if not iso: return L.append(ledger, _row(d, "NO_TRADE", reason="no captured expiry", **base))
     strike = R.nearest_strike(ex[iso]["strikes"], bars[2][4]); ot = trig["dir"]; t_dec = r_ep + 180
+    try:                                                                                          # dense (~3 s) quotes for the chosen contract from now on; the reference quote then arrives within seconds
+        from ..histcap import priority
+        priority.request_watch(UNDERLYING, iso, strike, ot)
+    except Exception:
+        pass
     snap = None; fetch = snaps_fn or (lambda: option_snaps(iso, strike, ot, d.isoformat()))
     deadline = time.time() + R.QUOTE_WAIT_SEC if now_epoch is None else 0
     while True:
@@ -123,3 +128,11 @@ def run_day(now_epoch: float | None = None, *, bars_fn=live_bars, key_fn=future_
     sig = {"id": f"EV-{d.isoformat()}", "participant": PARTICIPANT, "underlying": UNDERLYING, "expiry": iso, "strike": strike, "option_type": ot, "entry_mode": "MARKET", "entry": ref, "entry_hi": ref,
            "sl": pl["sl"], "targets": pl["targets"], "t": t_dec, "events": [{"t": r_ep + 60 * R.HOLD_MIN, "action": "EXIT_NOW"}]}
     return L.append(ledger, _row(d, "SIGNAL", ref_ask=ref, signal=sig, **info))
+
+
+def scoring_signals(start: str, end: str, path: str = LEDGER) -> list[dict]:
+    """The SIGNAL rows of the activation ledger as settle-ready signals (participant ZEROHERO_AI_EVENT), for IST dates start..end. A separate, disclosed line: never blended into the AUTOSCALP score."""
+    out = []
+    for r in read_rows(path):
+        if r.get("status") == "SIGNAL" and start <= r["date"] <= end: out.append(r["signal"])
+    return out
