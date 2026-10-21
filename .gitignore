@@ -76,3 +76,5 @@ backend/data/tg/
 
 # arena per-participant access files (tokens)
 backend/data/arena/ACCESS_*.txt
+
+backend/data/arena/daily_report_cron.log
