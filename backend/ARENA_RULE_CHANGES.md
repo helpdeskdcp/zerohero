@@ -42,3 +42,6 @@
 - Participant ARUSH_CHOPRA (default 1 lot, entry-only feed: stop/targets by the ZeroHero risk module). Group -1001383836599 whitelisted (read-only).
 - The group's admin posts are anonymous: only messages without a user sender count (TG_ANON_ONLY_CHATS); ordinary members' messages are ignored.
 - Result posts ("Call no NN … HIGH -- … profit done") are claims, never scored. "TGT paid / SL paid" = no published stop/targets.
+
+## 2026-10-23 01:25 IST — Per-lot ranking accepted by Mohit Agrawal (verbal, relayed by the owner)
+- The owner reports that Mohit accepted the per-lot ranking (rank by net per lot, default 1 lot, Mohit 2 lots, change only before the trade is active) and said the arena is good. No rule changed. Not a written confirmation: ask for a message/screenshot if a record is wanted before 2026-11-02.
