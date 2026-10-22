@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from ..forward_test import ledger as L
 
-ALLOWED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL")
+ALLOWED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM")
 MODES = ("ABOVE", "NEAR", "MARKET", "LIMIT")
 ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL")
 MAX_EVENTS_PER_SIGNAL = 20

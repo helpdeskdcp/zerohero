@@ -7,7 +7,7 @@ import sqlite3
 import statistics
 
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
-BANDS = {"NIFTY": (40, 400), "BANKNIFTY": (100, 900), "FINNIFTY": (30, 300), "SENSEX": (60, 700), "BANKEX": (60, 700), "NATURALGAS": (3, 60), "CRUDEOIL": (80, 800)}
+BANDS = {"NIFTY": (40, 400), "BANKNIFTY": (100, 900), "FINNIFTY": (30, 300), "SENSEX": (60, 700), "BANKEX": (60, 700), "NATURALGAS": (3, 60), "CRUDEOIL": (80, 800), "GOLDM": (500, 8000)}
 PROXY = {"SENSEX": "NIFTY", "BANKEX": "BANKNIFTY"}            # no bid/ask captured for these: use the closest index-option liquidity class (ASSUMPTION)
 FALLBACK_HALF = 0.02                                             # 2% per leg when nothing measurable exists (deliberately conservative)
 MIN_ROWS = 200

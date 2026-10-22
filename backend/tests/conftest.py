@@ -226,3 +226,13 @@ def _isolated_contest_file(tmp_path, monkeypatch):
         monkeypatch.setattr(api, "CONTEST_FILE", str(tmp_path / "no_contest.json"))
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _isolated_captured_cache(tmp_path, monkeypatch):
+    """Tests must not read or write the production captured-chain cache file (data/arena/captured_cache.json)."""
+    try:
+        from app.arena import contracts
+        monkeypatch.setattr(contracts, "_CACHE_FILE", str(tmp_path / "captured_cache_test.json")); monkeypatch.setattr(contracts, "_file_loaded", [True])
+    except Exception:
+        pass

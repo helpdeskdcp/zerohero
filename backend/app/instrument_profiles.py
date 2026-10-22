@@ -215,6 +215,14 @@ REGISTRY: dict[str, InstrumentProfile] = {
                      "model (Rs113.50/lot round-trip) -> net=-6.83 pts total. Roughly "
                      "flat gross, negative net -- not a validated edge."),
     ),
+    "GOLDM": InstrumentProfile(
+        symbol="GOLDM", exchange="MCX", segment="GOLDM_OPTION",
+        lot_size=Param(10, ParamStatus.DERIVED,
+                       "AngelOne instrument master (GOLDM OPTFUT lotsize 100 g, tick 0.50) + MCX quotation unit (Rs per 10 g)",
+                       "P&L multiplier per lot = 100 g / 10 g = 10 price units. NOT the 100 g contract size: premiums and strikes are quoted per 10 g, so "
+                       "one rupee of premium is worth Rs 10 per lot."),
+        params={}, cost_model_status=_cost_status("GOLDM"), validation_status=ParamStatus.UNVALIDATED,
+        sample_note="Added for the Institution contest (2026-10-22); no strategy parameters, costs are PROVISIONAL (see the contest settlement module)."),
     "CRUDEOIL": InstrumentProfile(
         symbol="CRUDEOIL", exchange="MCX", segment="CRUDEOIL_OPTION",
         lot_size=Param(100, ParamStatus.VERIFIED,

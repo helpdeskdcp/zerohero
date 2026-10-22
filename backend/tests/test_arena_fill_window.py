@@ -85,3 +85,14 @@ def test_cutover_moves_the_window_only_on_or_after_the_official_start(tmp_path):
     r = cutover.apply(p, "2026-11-02"); assert r["done"] and r["old_start"] == "2026-10-20" and json.load(open(p))["start"] == "2026-11-02"
     assert cutover.apply(p, "2026-11-03")["done"] is False                                                                      # idempotent
     assert cutover.apply(str(tmp_path / "none.json"), "2026-11-02")["done"] is False
+
+
+def test_goldm_settles_with_the_per_10g_multiplier_and_provisional_costs():
+    from app.instrument_profiles import get_instrument_profile
+    assert int(get_instrument_profile("GOLDM").lot_size.value) == 10 and "GOLDM" in SU.ALLOWED
+    c = S.cost_points("GOLDM", 2450.0, 3000.0, 10)
+    assert 5 < c < 15                                                                    # a few rupees per unit on a Rs 2,450 premium (about Rs 90 per lot round trip), not Rs 0 and not Rs 100
+    t0 = 1_760_000_000.0; sig = {"id": "G", "participant": "P", "underlying": "GOLDM", "expiry": "2026-10-29", "strike": 146000.0, "option_type": "PE", "entry_mode": "NEAR", "entry": 2450.0, "entry_hi": 2450.0, "sl": 1950.0, "targets": [3050.0], "t": t0, "events": []}
+    sn = [{"t": t0 + 30, "ltp": 2450, "bid": 2440, "ask": 2450}, {"t": t0 + 300, "ltp": 3060, "bid": 3060, "ask": 3070}]
+    r = S.settle(sig, sn, half_spread=0.0)
+    assert r["status"] == "SETTLED" and r["lot"] == 10 and abs(r["gross_rs"] - (3060 - 2450) * 10) < 1e-6 and "PROVISIONAL" in r["cost_note"]

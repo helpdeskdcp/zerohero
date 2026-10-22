@@ -9,7 +9,7 @@ import re
 
 from ..signal_audit.parse import norm
 
-ALLOWED = {"NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL"}
+ALLOWED = {"NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM"}
 ALIASES = [("GOLDM", "GOLDM"), ("BANKNIFTY", "BANKNIFTY"), ("BANK NIFTY", "BANKNIFTY"), ("MIDCPNIFTY", "MIDCPNIFTY"), ("FINNIFTY", "FINNIFTY"), ("BANKEX", "BANKEX"), ("NIFTY", "NIFTY"), ("SENSEX", "SENSEX"),
            ("NATURALGAS", "NATURALGAS"), ("NATURAL GAS", "NATURALGAS"), ("NATGASMINI", "NATGASMINI"), ("NATGAS", "NATURALGAS"), ("CRUDEOILM", "CRUDEOILM"), ("CRUDEOIL", "CRUDEOIL"), ("CRUDE OIL", "CRUDEOIL"), ("CRUDE", "CRUDEOIL")]
 NUM = r"(\d+(?:\.\d+)?)"
@@ -99,7 +99,8 @@ def parse_mcx(s: str) -> dict:
     if not (0 < sl < entry): return {"ok": False, "reason": f"inconsistent: stop-loss {sl:g} must be below the entry {entry:g}"}
     targets = [t for t in targets if t > entry]
     if not targets: return {"ok": False, "reason": "no target above the entry"}
-    return {"ok": True, "signal": {"underlying": und, "strike": float(m.group(2)), "option_type": m.group(3), "entry_mode": mode, "entry": entry, "entry_range": [entry, entry], "sl": sl, "targets": targets, "horizon": "POSITIONAL" if "POSITIONAL" in s else None, "expiry_month": xm.group(1) if xm else None, "tag": und, "supported": und in ALLOWED}}
+    return {"ok": True, "signal": {"underlying": und, "strike": float(m.group(2)), "option_type": m.group(3), "entry_mode": mode, "entry": entry, "entry_range": [entry, entry], "sl": sl, "targets": targets, "horizon": "POSITIONAL" if "POSITIONAL" in s else None, "expiry_month": xm.group(1) if xm else None, "tag": und, "supported": und in ALLOWED,
+                                  **({"expiry_hint": {"month": MONTHS[xm.group(1)[:3]]}} if xm and xm.group(1)[:3] in MONTHS else {})}}
 
 
 UPDATES = [("CANCEL", r"\b(TRADE\s*)?CANCEL(L?ED)?\b|\bCANCEL\s*(THIS|THE)?\s*(TRADE|CALL)\b|\bIGNORE\s*(THIS)?\s*(TRADE|CALL)\b"),

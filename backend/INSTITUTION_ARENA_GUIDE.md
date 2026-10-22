@@ -15,7 +15,7 @@ Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised
 - Signals agreed by the parties as tests are **excluded** from scoring and listed in `ARENA_RULE_CHANGES.md` (currently H00001 and H00007).
 
 ## 3. What you may trade
-- BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL**, nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.
+- BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL, GOLDM** (MCX gold mini), nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.
 - Scored signals can be submitted only while that exchange is trading.
 
 ## 4. How to submit a signal — BEFORE you take the trade
@@ -57,6 +57,8 @@ Each institution-side participant has **their own access token and their own pro
 **Fill window and proof.** A signal read from a Telegram channel is a *range / limit / above* entry that stays valid for **15 minutes** after the post: if the ask is not at or inside your range within that time, the signal expires unfilled (it is never filled hours later). Forms you submit yourself stay valid until the session end unless you set a validity. Every day an **evidence pack** is written for every signal (your row, the source post and its Telegram time, the captured bid/ask around the trade, the settlement, the rules and the code version) with a sha256 manifest, so any number on the leaderboard can be re-checked.
 
 **Entry-only profile and preview.** A profile can be set up as *entry-only*: you give the contract and the entry, and ZeroHero's rule-based risk module sets the stop-loss and the targets (1:1 / 1:2 / 1:3). On that profile you may leave both fields blank in the form; whatever you do fill in is kept. Press **Preview stop & targets** to see what the module would set before you submit (nothing is recorded by the preview). Entries of such a profile are valid for 15 minutes, like channel entries.
+
+**Gold (GOLDM).** MCX gold-mini options are in the contest (traded 09:00-23:30, scored like the other MCX contracts, session-end exit 23:15). Strikes and premiums are in rupees per 10 g; one lot is 100 g, so **one rupee of premium is worth Rs 10 per lot**. The current monthly expiry (for example 29 Oct 2026) is the one quotes are captured for. **The gold cost model is PROVISIONAL**: it uses the public charge schedule (brokerage, CTT, exchange, GST, stamp) and has not yet been validated against a real contract note, so every gold result carries that label. A real contract note for a gold option trade will let us validate it.
 
 ## 5. How every signal is settled (same for you and the AI)
 1. Execution starts **20 seconds after** your submission time (first recorded quote after that).

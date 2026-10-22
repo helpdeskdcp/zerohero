@@ -37,7 +37,7 @@ def test_submit_dedupe_and_cancel(env):
 
 def test_not_submitted_cases(env, monkeypatch):
     assert CI.handle_post(post(5, "Good morning"), env["st"], **env["kw"])["outcome"] == "IGNORED_NOT_A_SIGNAL"
-    assert CI.handle_post(post(6, "POSITIONAL GOLDM 147000 PE\nNEAR LEVEL 2550\nTARGET -3050\nSTOPLOSS - 2050"), env["st"], **env["kw"])["outcome"] == "UNSUPPORTED_INSTRUMENT"
+    assert CI.handle_post(post(6, "POSITIONAL SILVERM 147000 PE\nNEAR LEVEL 2550\nTARGET -3050\nSTOPLOSS - 2050"), env["st"], **env["kw"])["outcome"] in ("IGNORED_NOT_A_SIGNAL", "UNSUPPORTED_INSTRUMENT")        # not in the contest list
     monkeypatch.setattr(CI, "_market_open", lambda u: False)
     assert CI.handle_post(post(7, MCX), env["st"], **env["kw"])["outcome"] == "MARKET_CLOSED_NOT_SUBMITTED"
     monkeypatch.setattr(CI, "_market_open", lambda u: True)

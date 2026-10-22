@@ -18,7 +18,7 @@ from . import compare as CMP, contracts as CT, run as R, submit as SU
 router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 IST = timezone(timedelta(hours=5, minutes=30))
-EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
+EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY, RATE_PER_MIN = 4096, 300                                   # per IP; many participants may share one office address

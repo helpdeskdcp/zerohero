@@ -1,6 +1,6 @@
 /* Institution arena page. Pure helpers are exported for node tests; DOM wiring runs only in a browser. All API calls carry the arena token (header X-Arena-Token); no dashboard login. */
 "use strict";
-const ALLOWED = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL"];
+const ALLOWED = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM"];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rs = (x, d = 0) => (x === null || x === undefined || Number.isNaN(x) ? "—" : (x < 0 ? "−" : x > 0 ? "+" : "") + "₹" + Math.abs(x).toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: d }));
 const pct = (x, d = 1) => (x === null || x === undefined ? "—" : (x * 100).toFixed(d) + "%");

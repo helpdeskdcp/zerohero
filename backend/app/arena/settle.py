@@ -23,7 +23,7 @@ LATENCY_SEC = 20
 RUNAWAY = 0.05
 IST_SEC = 19800
 SESSION_END_MIN = {"NSE": 15 * 60 + 15, "MCX": 23 * 60 + 15}
-MCX = {"NATURALGAS": "NATURALGAS_OPTION", "CRUDEOIL": "CRUDEOIL_OPTION"}
+MCX = {"NATURALGAS": "NATURALGAS_OPTION", "CRUDEOIL": "CRUDEOIL_OPTION", "GOLDM": "GOLDM_OPTION"}
 MON = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
 
 
@@ -55,7 +55,17 @@ def sell_px(s: dict, h: float) -> tuple[float, bool]:
 def _mod(t: float) -> int: return int((t + IST_SEC) // 60) % 1440
 
 
+PROVISIONAL_COSTS = {"GOLDM": "PROVISIONAL gold-option charges (public rate schedule: brokerage Rs 20/order, CTT 0.05% of the sell premium, exchange 0.0418%, regulatory fee, stamp 0.003% of buy, GST 18%); not yet validated against a real contract note"}
+
+
+def _gold_cost_points(entry: float, exit_: float, lot: int) -> float:
+    buy, sell = entry * lot, max(exit_, 0.05) * lot
+    brokerage = 2 * 20.0; exch = (buy + sell) * 0.000418; regfee = (buy + sell) * 0.000001; ctt = sell * 0.0005; stamp = buy * 0.00003; gst = 0.18 * (brokerage + exch + regfee)
+    return (brokerage + exch + regfee + ctt + stamp + gst) / lot
+
+
 def cost_points(und: str, entry: float, exit_: float, lot: int) -> float | None:
+    if und == "GOLDM": return _gold_cost_points(entry, exit_, lot)
     if und in MCX:
         e = estimate_cost("MCX", MCX[und], slippage_points=0.0); return e.total_cost_points
     return estimate_index_option_cost(entry, max(exit_, 0.05), lot, lots=1, slippage_points=0.0)["total_cost_points"]
@@ -138,7 +148,7 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     if c is None: return {**base, "status": "NO_DATA:no_cost_model"}
     gross = (px - fill) * lot; cost = c * lot
     return {**base, "status": "SETTLED", "fill": fill, "exit": px, "exit_reason": why, "fill_real_quote": real_fill, "exit_real_quote": real_exit, "lot": lot, "gross_rs": gross, "cost_rs": cost,
-            "net_rs": gross - cost, "hold_sec": live[k_exit]["t"] - live[j]["t"], "fill_t": live[j]["t"], "events_applied": applied}
+            "net_rs": gross - cost, "hold_sec": live[k_exit]["t"] - live[j]["t"], "fill_t": live[j]["t"], "events_applied": applied, **({"cost_note": PROVISIONAL_COSTS[und]} if und in PROVISIONAL_COSTS else {})}
 
 
 def summarize(results: list[dict], capital: float = 50000.0) -> dict:

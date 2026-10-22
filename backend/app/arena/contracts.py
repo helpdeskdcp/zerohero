@@ -167,7 +167,7 @@ def chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path: 
     out = _chain(underlying, expiry_iso, option_type, n, path); _chain_cache[(underlying, expiry_iso, option_type, n, path)] = (time.time(), out); return out
 
 
-def warm(underlyings=("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL"), path: str | None = None) -> None:
+def warm(underlyings=("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM"), path: str | None = None) -> None:
     """Touch the latest quote pages of every underlying so the first user click is fast (cold page cache on the 12 GB file costs seconds). Never raises."""
     for u in underlyings:
         try:

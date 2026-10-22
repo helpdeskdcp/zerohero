@@ -49,7 +49,7 @@ def test_refuses_to_guess():
 
 def test_goldm_mcx_samples():
     a = CP.parse_signal("POSITIONAL GOLDM 147000 PE\n\nNEAR LEVEL  2550\n\nTARGET -3050/3250/3650\n\nSTOPLOSS - 2050\n\nEXPIRY - OCT   🌁 COMMODITY MCX TRADE🌉")["signal"]
-    assert (a["underlying"], a["strike"], a["option_type"], a["entry_mode"], a["entry"], a["sl"], a["targets"], a["expiry_month"], a["supported"]) == ("GOLDM", 147000.0, "PE", "NEAR", 2550.0, 2050.0, [3050.0, 3250.0, 3650.0], "OCT", False)
+    assert (a["underlying"], a["strike"], a["option_type"], a["entry_mode"], a["entry"], a["sl"], a["targets"], a["expiry_month"], a["supported"]) == ("GOLDM", 147000.0, "PE", "NEAR", 2550.0, 2050.0, [3050.0, 3250.0, 3650.0], "OCT", True)
     b = CP.parse_signal("POSITIONAL GOLDM 146000 PE\n\nNEAR LEVEL  2600\n\nTARGET -3050/3250/3650\n\nSTOPLOSS - 2150\n\nEXPIRY - OCT")["signal"]
     assert b["strike"] == 146000.0 and b["entry"] == 2600.0 and b["sl"] == 2150.0
 
@@ -80,3 +80,8 @@ def test_neeraj_format_colon_dash_and_unpublished_vip_stoploss():
     assert (e["entry"], e["sl"], e["targets"], e["sl_published"], e["targets_published"]) == (160.0, None, [], False, False)
     assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nABOVE :- 160\nTARGET :- 100")["ok"] is False                                  # a target line that exists must be above the entry
     assert CP.parse_signal("NIFTY 17 JULY 25350 PE\nsome chatter without an entry keyword")["ok"] is False
+
+
+def test_goldm_is_supported_and_month_only_expiry_becomes_a_hint():
+    r = CP.parse_signal("POSITIONAL GOLDM 146000 PE\n\nNEAR LEVEL  2450\n\nTARGET -3050/3650/4250\n\nSTOPLOSS - 1950\n\nEXPIRY - OCT")["signal"]
+    assert (r["underlying"], r["strike"], r["entry_mode"], r["entry"], r["sl"], r["targets"], r["supported"], r["expiry_hint"]) == ("GOLDM", 146000.0, "NEAR", 2450.0, 1950.0, [3050.0, 3650.0, 4250.0], True, {"month": 10})

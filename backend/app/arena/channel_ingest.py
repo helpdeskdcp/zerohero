@@ -17,7 +17,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena")
 STATE = os.path.join(DIR, "channel_ingest_state.json")
 LOG = os.path.join(DIR, "channel_ingest_log.jsonl")
-EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
+EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
 
 
 def channel_ids() -> set[str]:
@@ -92,7 +92,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     today = datetime.fromtimestamp(t, tz=IST).date().isoformat()
     hint = s.get("expiry_hint")
     if hint:                                                                                  # the post names day + month: use ONLY a captured expiry with exactly that day and month on/after the post date
-        cands = [e for e in sorted(CT.captured(und, None, db_path)["expiries"]) if e >= today and int(e[8:10]) == hint["day"] and int(e[5:7]) == hint["month"]]
+        cands = [e for e in sorted(CT.captured(und, None, db_path)["expiries"]) if e >= today and int(e[5:7]) == hint["month"] and (hint.get("day") is None or int(e[8:10]) == hint["day"])]       # month-only posts ("EXPIRY - OCT"): the captured expiry of that month
         exp = cands[0] if cands else None
         if not exp: return {"outcome": "NO_CAPTURED_EXPIRY_FOR_POST", "underlying": und, "hint": hint}
     else:
