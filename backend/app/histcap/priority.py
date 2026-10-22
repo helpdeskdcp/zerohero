@@ -69,10 +69,11 @@ class PriorityCapture:
         return CaptureWorker._default_sdk()
 
     def _meta_from_db(self, e: dict) -> dict | None:
-        st = self._store(); day = datetime.now(IST).strftime("%Y-%m-%d")
+        """Token / exchange of the contract from its LATEST captured row (any day: a contract's token does not change), via the (symbol, expiry, strike, option_type, exch_ts) index."""
+        st = self._store()
         with st._conn() as c:
-            r = c.execute("SELECT exchange, token, instrument_key FROM quote_snapshots WHERE session_date_ist=? AND symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? LIMIT 1",
-                          (day, e["symbol"], e["expiry"], e["strike"], e["option_type"])).fetchone()
+            r = c.execute("SELECT exchange, token, instrument_key FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' ORDER BY exch_ts DESC LIMIT 1",
+                          (e["symbol"], e["expiry"], e["strike"], e["option_type"])).fetchone()
         return {"instrument_key": r[2], "symbol": e["symbol"], "kind": "OPTION", "exchange": r[0], "token": str(r[1]), "expiry": e["expiry"], "strike": e["strike"], "option_type": e["option_type"]} if r else None
 
     def _meta(self, e: dict) -> dict | None:
