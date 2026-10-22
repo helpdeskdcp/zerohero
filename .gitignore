@@ -83,3 +83,4 @@ backend/data/arena/daily_report_cron.log
 backend/data/arena/evidence/*/H*.json
 backend/data/arena/evidence/*/E*.json
 backend/data/arena/evidence/*/TRD-*.json
+backend/data/arena/cutover_cron.log

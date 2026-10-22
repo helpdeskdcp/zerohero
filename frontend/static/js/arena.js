@@ -91,7 +91,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   const msg = (id, text, bad) => { const e = $(id); e.textContent = text; e.className = "msg " + (bad ? "bad" : "ok"); e.hidden = !text; };
   const show = (tab) => { document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== tab)); document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); if (tab === "mine") loadMine(); if (tab === "standings") loadStandings(); };
   async function loadState() {
-    try { const s = await api("/state"); $("mode").textContent = s.mode === "PRACTICE" ? `PRACTICE until ${s.start} — entries are stored but NOT scored` : s.mode === "ARENA_LIVE" ? `ARENA LIVE (${s.start} → ${s.end})` : "ARENA ENDED";
+    try { const s = await api("/state"); $("mode").textContent = s.mode === "PRACTICE" ? `PRACTICE until ${s.start} — entries are stored but NOT scored` : s.mode === "ARENA_LIVE" ? (s.phase === "REHEARSAL" ? `REHEARSAL until ${s.official_start} — official contest starts ${s.official_start} (ends ${s.end})` : `OFFICIAL CONTEST (${s.start} → ${s.end})`) : "ARENA ENDED";
       $("mode").className = "banner " + (s.mode === "ARENA_LIVE" ? "live" : "prac"); $("who").textContent = s.participant + " · " + s.now_ist.replace("T", " ") + " IST"; $("conn").hidden = true; $("app").hidden = false; return s; }
     catch (e) { $("app").hidden = true; $("conn").hidden = false; msg("connmsg", e.message, true); return null; }
   }

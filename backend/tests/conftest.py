@@ -216,3 +216,13 @@ def _isolated_priority_watch(tmp_path, monkeypatch):
         monkeypatch.setattr(priority, "WATCH", str(tmp_path / "priority_watch_test.json"))
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _isolated_contest_file(tmp_path, monkeypatch):
+    """Tests must not read the production contest dates (data/arena/contest.json); they set ARENA_START / ARENA_END via env."""
+    try:
+        from app.arena import api
+        monkeypatch.setattr(api, "CONTEST_FILE", str(tmp_path / "no_contest.json"))
+    except Exception:
+        pass

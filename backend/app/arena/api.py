@@ -40,10 +40,16 @@ def is_public_path(path: str) -> bool:
 
 
 PARTICIPANTS_FILE = os.path.join(BASE, "data", "arena", "participants.json")
+CONTEST_FILE = os.path.join(BASE, "data", "arena", "contest.json")                      # runtime contest dates (start / end / official_start): changed without a restart
 
 
 def _participants_file() -> dict:
     try: return json.load(open(PARTICIPANTS_FILE, encoding="utf-8"))
+    except Exception: return {}
+
+
+def _contest_file() -> dict:
+    try: return json.load(open(CONTEST_FILE, encoding="utf-8"))
     except Exception: return {}
 
 
@@ -56,7 +62,8 @@ def cfg() -> dict:
     pf = _participants_file(); hashes = {k.upper(): v["token_sha256"] for k, v in pf.items() if isinstance(v, dict) and v.get("token_sha256") and k.upper() not in parts}
     display = {k.upper(): (v.get("display") or k) for k, v in pf.items() if isinstance(v, dict)}
     return {"participants": parts, "hashes": hashes, "display": display, "token": tok, "name": name,
-            "start": os.environ.get("ARENA_START", "2026-10-26"), "end": os.environ.get("ARENA_END", "2026-11-25"),
+            "start": _contest_file().get("start") or os.environ.get("ARENA_START", "2026-10-26"), "end": _contest_file().get("end") or os.environ.get("ARENA_END", "2026-11-25"),
+            "official_start": _contest_file().get("official_start"),
             "exclude": {x.strip() for x in (os.environ.get("ARENA_EXCLUDE_IDS") or "").split(",") if x.strip()}}
 
 
@@ -94,7 +101,7 @@ def state(request: Request):
     c = _auth(request)
     if time.time() - _warm["t"] > 120:                                                  # keep the quote pages hot so contract/strike pickers answer instantly
         _warm["t"] = time.time(); threading.Thread(target=CT.warm, daemon=True).start()
-    return {"mode": mode(c), "start": c["start"], "end": c["end"], "participant": c["name"], "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
+    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
             "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
 
 

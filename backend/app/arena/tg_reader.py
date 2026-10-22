@@ -98,7 +98,7 @@ async def run() -> None:                                                       #
         try:
             post = to_post(ev.chat_id, ev.message)
             if str(post["chat"]["id"]) not in ids: return                        # belt and braces: never touch a non-listed chat
-            r = process(post, state, edited=edited, participant=participant_for(post["chat"]["id"], c["name"]), mode_fn=lambda: api.mode(c))
+            r = process(post, state, edited=edited, participant=participant_for(post["chat"]["id"], c["name"]), mode_fn=lambda: api.mode(api.cfg()))
             json.dump(state, open(CI.STATE, "w")); write_status(connected=True, last_event=time.time())
             log.info("channel=%s msg=%s outcome=%s", post["chat"]["id"], post["message_id"], r["outcome"])
         except Exception as e:

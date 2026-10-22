@@ -10,8 +10,9 @@ You and the ZeroHero AI trade the **same market on paper**, and both are scored 
 Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised, with its ID and time (Telegram's own server time is on every message), and recorded in a hash-chained list (`data/evidence_feed/posts.jsonl`) that referees can compare with the chat. All other automated signal posts are switched off. These posts are PAPER-trading evidence records, not recommendations.
 
 ## 2. Dates
-- **Arena window:** **20 Oct 2026 to 25 Nov 2026** (start moved earlier on 2026-10-20 by the project owner; see `ARENA_RULE_CHANGES.md`). Every signal you submit inside this window is scored. Entries outside it are never scored.
-- Signals agreed by the parties as tests are **excluded** from scoring and listed in `ARENA_RULE_CHANGES.md` (currently H00001 and H00007); every other signal inside the window counts.
+- **Rehearsal: 22 Oct to 1 Nov 2026** (the arena has been running since 20 Oct). Signals in this period are scored on the leaderboard for practice, so everyone can test the system; they are **not part of the official result**.
+- **Official contest: from Monday 2 Nov 2026** (1 Nov is a Sunday) to the end date shown on the page. Only signals from the official start count. At the cut-over the rehearsal standings are saved (`REHEARSAL_FINAL.md`) and the scoreboard starts again from zero.
+- Signals agreed by the parties as tests are **excluded** from scoring and listed in `ARENA_RULE_CHANGES.md` (currently H00001 and H00007).
 
 ## 3. What you may trade
 - BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL**, nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.

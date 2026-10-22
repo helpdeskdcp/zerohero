@@ -75,3 +75,13 @@ def test_captured_is_stale_while_revalidate(monkeypatch, tmp_path):
     stale = CT.captured("NIFTY"); assert stale is first and time.time() - t < 0.5                                                          # stale answer returned at once
     stale2 = CT.captured("NIFTY"); assert stale2 is first and len(n) == 2                                                                  # one background refresher only
     gate.set(); time.sleep(0.3); assert CT.captured("NIFTY")["expiries"]["2026-10-27"]["strikes"] == [2.0]                                  # refreshed value arrives
+
+
+def test_cutover_moves_the_window_only_on_or_after_the_official_start(tmp_path):
+    import json
+    from app.arena import cutover
+    p = str(tmp_path / "contest.json"); json.dump({"start": "2026-10-20", "end": "2026-11-25", "official_start": "2026-11-02"}, open(p, "w"))
+    assert cutover.apply(p, "2026-11-01")["done"] is False and json.load(open(p))["start"] == "2026-10-20"                    # the day before: nothing changes
+    r = cutover.apply(p, "2026-11-02"); assert r["done"] and r["old_start"] == "2026-10-20" and json.load(open(p))["start"] == "2026-11-02"
+    assert cutover.apply(p, "2026-11-03")["done"] is False                                                                      # idempotent
+    assert cutover.apply(str(tmp_path / "none.json"), "2026-11-02")["done"] is False
