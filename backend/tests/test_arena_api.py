@@ -50,7 +50,7 @@ def test_submit_practice_forces_server_participant_and_hash_chain(client):
     assert len(client.get("/api/arena/public/signals", headers=H).json()["signals"]) == 1
 
 
-@pytest.mark.parametrize("bad", [{"sl": 120}, {"underlying": "TCS"}, {"targets": []}, {"entry": 0}, {"expiry": "soon"}, {"option_type": "XX"}])
+@pytest.mark.parametrize("bad", [{"sl": 120}, {"underlying": "TCS"}, {"targets": [90]}, {"entry": 0}, {"expiry": "soon"}, {"option_type": "XX"}])
 def test_invalid_submissions_rejected_422_and_not_stored(client, bad):
     r = client.post("/api/arena/public/submit", json={**GOOD, **bad}, headers=H); assert r.status_code == 422 and SU.load() == []
 

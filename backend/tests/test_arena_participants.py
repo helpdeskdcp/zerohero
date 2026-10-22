@@ -64,10 +64,11 @@ def test_risk_module_profile_may_leave_stop_and_targets_blank_others_may_not(cli
     rec = SU.load()[-1]; assert rec["participant"] == "TEST_PROFILE" and rec["valid_sec"] == 900 and "risk module" in rec["note"]
     keep = client.post("/api/arena/public/submit", json={**body, "sl": 140, "targets": [200]}, headers=H2).json(); assert keep["sl"] == 140.0 and keep["targets"] == [200.0]          # what the participant gives is kept
     assert client.get("/api/arena/public/state", headers={"X-Arena-Token": T1}).json()["risk_module"] is False
-    assert client.post("/api/arena/public/submit", json=body, headers={"X-Arena-Token": T1}).status_code == 422                                                                    # a normal profile still needs its own stop and targets
+    assert client.post("/api/arena/public/submit", json=body, headers={"X-Arena-Token": T1}).status_code == 200          # stop and targets are optional for every profile now (the entry-only profile gets them filled by the module)
     names = [x["participant"] for x in client.get("/api/arena/public/leaderboard?scope=all", headers={"X-Arena-Token": T1}).json()["rows"]]; assert "TEST_PROFILE" not in names           # hidden test profile
+    n_rows = len(SU.load())
     pv = client.get("/api/arena/public/risk-preview?underlying=NIFTY&option_type=CE&strike=23000&entry=160&expiry=27OCT2026", headers=H2).json()
-    assert pv["sl"] == 126.1 and pv["targets"] == [193.9, 227.8, 261.7] and len(SU.load()) == 2                                                                                  # preview records nothing
+    assert pv["sl"] == 126.1 and pv["targets"] == [193.9, 227.8, 261.7] and len(SU.load()) == n_rows                                                                                  # preview records nothing
 
 
 def test_live_endpoint_waiting_active_closed_and_the_open_pnl(client, monkeypatch):

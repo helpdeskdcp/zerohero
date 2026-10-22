@@ -109,3 +109,13 @@ def test_stop_loss_is_optional_and_a_trade_without_one_runs_to_its_target_or_the
     held = S.settle(sig, fall[:2], half_spread=0.0); assert held["status"].startswith("NO_DATA")                                                                  # still open, no stop triggered
     late = S.settle({**sig, "events": [{"t": t0 + 150, "action": "AMEND_SL", "sl": 50.0}]}, fall, half_spread=0.0)                                                # a stop added later works from then on, never retroactively
     assert late["exit_reason"] == "TARGET"                                                                                                                       # price was above 50 after the amendment
+
+
+def test_targets_are_optional_a_no_target_no_stop_trade_runs_to_the_session_end():
+    base = {"participant": "P", "underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "NEAR", "entry": 100}
+    assert SU.validate(base)["targets"] == [] and SU.validate({**base, "targets": [130]})["targets"] == [130.0]
+    with pytest.raises(SU.SubmissionError): SU.validate({**base, "targets": [90]})                                              # a target that is given must be above the entry
+    t0 = 1_760_000_000.0; sig = {"id": "N2", "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": "NEAR", "entry": 100.0, "entry_hi": 100.0, "sl": None, "targets": [], "t": t0, "events": []}
+    r = S.settle(sig, [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 120, "ltp": 300, "bid": 299, "ask": 301}], half_spread=0.0); assert r["status"].startswith("NO_DATA")        # never exits by itself, however far it runs
+    r = S.settle({**sig, "events": [{"t": t0 + 100, "action": "EXIT_NOW"}]}, [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 200, "ltp": 300, "bid": 299, "ask": 301}], half_spread=0.0)
+    assert r["status"] == "SETTLED" and r["exit_reason"] == "EMERGENCY" and r["exit"] == 299.0                                  # a manual exit-now closes it

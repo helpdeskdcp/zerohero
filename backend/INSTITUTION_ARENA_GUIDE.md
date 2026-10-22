@@ -29,7 +29,7 @@ Open the **Submit** tab and fill:
 | Entry mode | **LIMIT**: a buy limit — you are filled as soon as the ask comes down to your entry or lower (valid until session end); **ABOVE**: buy only when the option trades up to your price; **NEAR / MARKET**: buy at the next available ask | LIMIT |
 | Entry | option premium (not the index level) | 100 |
 | Stop-loss | premium; **optional** (leave blank for none); if given it must be below entry | 85 |
-| Targets | premium(s) above entry, comma separated | 120, 140 |
+| Targets | premium(s) above entry, comma separated; **optional** (leave blank for none) | 120, 140 |
 | Note | optional (your reason) | "breakout over VWAP" |
 
 **Check the hint line under the form**: it lists the expiries and strikes for which quotes are captured, and the last price of the contract you typed. A contract with no captured quotes cannot be scored; during the arena window such a submission is **rejected** (in practice mode it is accepted with a warning). Premiums are the OPTION price (e.g. crude ATM is about 500, not the futures level).
@@ -60,7 +60,7 @@ Each institution-side participant has **their own access token and their own pro
 
 **Gold (GOLDM).** MCX gold-mini options are in the contest (traded 09:00-23:30, scored like the other MCX contracts, session-end exit 23:15). Strikes and premiums are in rupees per 10 g; one lot is 100 g, so **one rupee of premium is worth Rs 10 per lot**. The current monthly expiry (for example 29 Oct 2026) is the one quotes are captured for. **The gold cost model is PROVISIONAL**: it uses the public charge schedule (brokerage, CTT, exchange, GST, stamp) and has not yet been validated against a real contract note, so every gold result carries that label. A real contract note for a gold option trade will let us validate it.
 
-**The stop-loss is optional.** You may submit a signal with no stop-loss and add one after the trade is on ("Change stop-loss" in *My signals*), or never. Without a stop the trade ends at its target, at an "exit now" you send, or at the session end (23:15 MCX, 15:15 NSE/BSE); a stop you add later works only from the moment it takes effect (same 20-second delay as every change, never retroactive). Risk is yours: a trade without a stop can lose the whole premium, and that result counts exactly as it falls. The settlement rules are the same for everybody.
+**The stop-loss and the targets are optional.** You may submit a signal with no stop-loss (and/or no targets) and add one after the trade is on ("Change stop-loss" in *My signals*), or never. Without a stop and without a target the trade ends only at an "exit now" you send or at the session end; with only a target it ends at that target, an "exit now" or the session end. Targets can be added later too ("Change targets") (23:15 MCX, 15:15 NSE/BSE); a stop you add later works only from the moment it takes effect (same 20-second delay as every change, never retroactive). Risk is yours: a trade without a stop can lose the whole premium, and that result counts exactly as it falls. The settlement rules are the same for everybody.
 
 ## 5. How every signal is settled (same for you and the AI)
 1. Execution starts **20 seconds after** your submission time (first recorded quote after that).

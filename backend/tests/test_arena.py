@@ -83,7 +83,7 @@ def test_submission_validation_and_hash_chain(tmp_path):
     p = str(tmp_path / "h.jsonl")
     a = SU.submit(GOODSUB, p, now=ep("10:00")); b = SU.submit({**GOODSUB, "strike": 23100}, p, now=ep("10:05"))
     assert a["id"] == "H00001" and b["id"] == "H00002" and a["expiry"] == "2026-10-27" and a["underlying"] == "NIFTY" and L.verify_chain(p)[0]
-    for bad in ({"underlying": "TCS"}, {"sl": 120}, {"targets": []}, {"targets": [90]}, {"option_type": "XX"}, {"participant": ""}, {"entry": 0}, {"expiry": "soon"}):
+    for bad in ({"underlying": "TCS"}, {"sl": 120}, {"targets": [90]}, {"option_type": "XX"}, {"participant": ""}, {"entry": 0}, {"expiry": "soon"}):
         with pytest.raises(SU.SubmissionError): SU.submit({**GOODSUB, **bad}, p)
     lines = open(p).read().splitlines(); t = json.loads(lines[0]); t["entry"] = 1; open(p, "w").write(json.dumps(t, sort_keys=True) + "\n" + lines[1] + "\n")
     assert not L.verify_chain(p)[0]                                                                              # editing a submitted signal is detected

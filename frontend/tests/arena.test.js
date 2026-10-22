@@ -9,7 +9,7 @@ test("valid form -> normalised payload and preview", () => {
 });
 test("every server rule is mirrored client-side", () => {
   for (const [patch, frag] of [[{ underlying: "TCS" }, "Underlying"], [{ expiry: "soon" }, "Expiry"], [{ strike: "" }, "Strike"], [{ entry: "0" }, "Entry"], [{ sl: "120" }, "Stop-loss"], [{ sl: "0" }, "Stop-loss"],
-    [{ targets: "" }, "target"], [{ targets: "90" }, "target"], [{ option_type: "XX" }, "CE or PE"], [{ confirmNotEntered: false }, "not entered"]]) {
+    [{ targets: "90" }, "target"], [{ option_type: "XX" }, "CE or PE"], [{ confirmNotEntered: false }, "not entered"]]) {
     const r = A.validateForm({ ...ok, ...patch }); assert.equal(r.ok, false, JSON.stringify(patch)); assert.ok(r.errors.join(" ").includes(frag), frag);
   }
 });
@@ -46,10 +46,10 @@ test("every time on the page is India Standard Time (UTC+5:30), never UTC", () =
 });
 test("entry-only profile: stop and targets may be blank, everyone else still needs them", () => {
   const blank = { ...ok, sl: "", targets: "" };
-  assert.equal(A.validateForm(blank).ok, false); A.setRiskModule(true);
+  assert.equal(A.validateForm(blank).ok, true); A.setRiskModule(true);                         // stop and targets are optional for everybody now; the entry-only profile additionally gets them filled by the risk module
   assert.equal(A.validateForm(blank).ok, true);
   assert.equal(A.validateForm({ ...ok, sl: "120" }).ok, false, "a stop that is given must still be below the entry");
-  A.setRiskModule(false); assert.equal(A.validateForm(blank).ok, false);
+  A.setRiskModule(false); assert.equal(A.validateForm(blank).ok, true);
 });
 
 test("live watch rows: WAITING stays amber with the reason, ACTIVE shows ltp and green/red open P&L, nothing for empty", () => {
@@ -70,4 +70,10 @@ test("stop-loss is optional for everyone; a stop that is given must still be bel
   const none = { ...ok, sl: "" }; assert.equal(A.validateForm(none).ok, true); assert.ok(Number.isNaN(A.validateForm(none).payload.sl) || A.validateForm(none).payload.sl === null || A.validateForm(none).payload.sl === undefined);
   assert.equal(A.validateForm({ ...ok, sl: "120" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "0" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "85" }).ok, true);
   assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H9", label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, to_sl: null, targets: [6], to_t1: 1, pnl_rs: 0, posted_ist: "1" }] }).includes("no stop-loss set"));
+});
+
+test("targets are optional; any target that is given must be above the entry", () => {
+  assert.equal(A.validateForm({ ...ok, targets: "" }).ok, true); assert.deepEqual(A.validateForm({ ...ok, targets: "" }).payload.targets, []);
+  assert.equal(A.validateForm({ ...ok, targets: "90" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "", targets: "" }).ok, true);
+  assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H8", label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, targets: [], to_sl: null, to_t1: null, pnl_rs: 0, posted_ist: "1" }] }).includes("no target"));
 });
