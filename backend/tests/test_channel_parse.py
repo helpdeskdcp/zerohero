@@ -98,3 +98,13 @@ def test_neeraj_active_channel_formats_real_posts():
     assert CP.parse_signal("BUY NIFTY 24150 PE\nsome words but no entry keyword")["ok"] is False
     assert CP.parse_signal("BUY NIFTY 24150 PE\nABOVE 190\nSL - 200")["ok"] is False                                                        # a published stop above the entry is refused
     assert CP.parse_signal("Good morning doston")["ok"] is False
+
+
+def test_signal_edge_real_posts_call_put_shortened_range_numbered_targets_and_result_posts_refused():
+    a = CP.parse_signal("SENSEX 72800 CALL \\nEntry: Above 570 - 75.\\nTarget 1: 600\\nTarget 2: 630\\nTarget 3: 650\\nStop Loss: 540".replace("\\\\n", "\\n"))["signal"]
+    assert (a["underlying"], a["strike"], a["option_type"], a["entry_mode"], a["entry"], a["entry_range"], a["sl"], a["targets"]) == ("SENSEX", 72800.0, "CE", "ABOVE", 570.0, [570.0, 575.0], 540.0, [600.0, 630.0, 650.0])
+    b = CP.parse_signal("SENSEX 73400 PUT\\nEntry: Above 500 - 505\\nTarget 1: 530\\nTarget 2: 550\\nTarget 3: 580++\\nStop Loss: 470")["signal"]
+    assert (b["option_type"], b["entry_range"], b["targets"], b["sl"]) == ("PE", [500.0, 505.0], [530.0, 550.0, 580.0], 470.0)
+    for claim in ("\\U0001f4ca TODAY\\u2019S COMBINED TRADE REPORT\\n1. SENSEX 73400 PUT\\nEntry: 500 \\u2192 High: 528\\nResult: Stop-Loss Hit at 470",
+                  "\\U0001f4ca SENSEX 74500 PUT (22 OCT Expiry)\\n\\u27a1 Entry: Above 500 (After Confirmation)\\nT1: 530 \\u2014 Achieved\\nT2: 550 \\u2014 Achieved"):
+        r = CP.parse_signal(claim); assert r["ok"] is False and "claim" in r["reason"]                                    # results are claims, never entries

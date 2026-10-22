@@ -41,6 +41,9 @@ def validate(d: dict) -> dict:
     need(str(d.get("participant", "")).strip(), "participant required")
     out = {"participant": str(d["participant"]).strip(), "underlying": u, "expiry": norm_expiry(str(d["expiry"])), "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "sl": sl,
            "targets": tg, "note": str(d.get("note", ""))[:300]}
+    if d.get("entry_hi") is not None:                                                    # "Above 570 - 575": trigger at 570, never buy above 575 (the zone)
+        eh = float(d["entry_hi"]); need(eh >= entry, "entry zone upper end must be at or above the entry")
+        if eh > entry: out["entry_hi"] = eh
     if d.get("lots") is not None:
         try: lots = int(d["lots"])
         except (TypeError, ValueError): lots = 0

@@ -142,3 +142,15 @@ def test_quantity_can_change_only_before_the_trade_is_active():
         with pytest.raises(SU.SubmissionError): SU.validate({"participant": "P", "underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "NEAR", "entry": 100, "lots": bad})
     with pytest.raises(SU.SubmissionError): SU.validate_event({"signal_id": "X", "action": "AMEND_LOTS", "lots": 0})
     assert SU.validate_event({"signal_id": "X", "action": "AMEND_LOTS", "lots": 3})["lots"] == 3
+
+
+def test_above_entry_zone_does_not_chase_above_its_upper_end():
+    t0 = 1_760_000_000.0
+    sig = {"id": "Z", "participant": "P", "underlying": "SENSEX", "expiry": "2026-10-22", "strike": 72800.0, "option_type": "CE", "entry_mode": "ABOVE", "entry": 570.0, "entry_hi": 575.0, "sl": 540.0, "targets": [600.0], "t": t0, "valid_sec": 900, "events": []}
+    gap = [{"t": t0 + 30, "ltp": 580, "bid": 579, "ask": 581}, {"t": t0 + 100, "ltp": 590, "bid": 589, "ask": 591}]
+    assert S.settle(sig, gap, half_spread=0.0)["status"] == "NOT_TRIGGERED"                                                # ran past the zone: not bought
+    back = gap + [{"t": t0 + 200, "ltp": 574, "bid": 573, "ask": 574.5}, {"t": t0 + 300, "ltp": 601, "bid": 600.5, "ask": 601.5}]
+    r = S.settle(sig, back, half_spread=0.0); assert r["status"] == "SETTLED" and r["fill"] == 574.5                        # back inside the zone: bought there
+    assert S.settle({k: v for k, v in sig.items() if k != "entry_hi"}, gap, half_spread=0.0)["status"] != "NOT_TRIGGERED"   # without a zone (all older signals) the old behaviour is unchanged
+    assert SU.validate({"participant": "P", "underlying": "SENSEX", "expiry": "22OCT2026", "strike": 72800, "option_type": "CE", "entry_mode": "ABOVE", "entry": 570, "entry_hi": 575})["entry_hi"] == 575.0
+    with pytest.raises(SU.SubmissionError): SU.validate({"participant": "P", "underlying": "SENSEX", "expiry": "22OCT2026", "strike": 72800, "option_type": "CE", "entry_mode": "ABOVE", "entry": 570, "entry_hi": 560})

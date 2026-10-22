@@ -140,7 +140,10 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         if vs and s["t"] - sig["t"] > vs: break                      # a range/limit entry that is not filled inside its validity window EXPIRES (never filled hours later)
         mode = sig["entry_mode"]; p, real = buy_px(s, half_spread)
         if mode == "ABOVE":
-            if s["ltp"] >= sig["entry"]: fill, real_fill, j = max(p, sig["entry"]), real, i; break
+            if s["ltp"] >= sig["entry"]:
+                top = sig.get("entry_hi")                                                              # an entry ZONE (above 570 - 575): no chasing above its upper end, wait until the ask is back inside
+                if top and top > sig["entry"] and p > top: continue
+                fill, real_fill, j = max(p, sig["entry"]), real, i; break
         elif mode == "LIMIT":
             if p <= sig["entry"]: fill, real_fill, j = p, real, i; break
         else:                                                    # NEAR / MARKET: first snapshot only

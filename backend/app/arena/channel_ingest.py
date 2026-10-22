@@ -119,7 +119,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     if dry_run: return {"outcome": "WOULD_SUBMIT", "parsed": s, "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
     try:
         rec = SU.submit({"participant": participant, "underlying": und, "expiry": exp, "strike": s["strike"], "option_type": s["option_type"], "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"],
-                         "targets": s["targets"], "valid_sec": FILL_WINDOW_SEC, "lots": _default_lots(participant), "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
+                         "targets": s["targets"], **({"entry_hi": s["entry_range"][1]} if (s["entry_mode"] == "ABOVE" and s["entry_range"][1] > s["entry"]) else {}), "valid_sec": FILL_WINDOW_SEC, "lots": _default_lots(participant), "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]

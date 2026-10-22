@@ -24,5 +24,9 @@
  "ANWAR_HUSSAIN": {
   "display": "Anwar Hussain",
   "token_sha256": "47bb8b4f0100d98ac41a761b078be752aa0fc679b13ae6a1403c6650b3301f06"
+ },
+ "MACMONEY": {
+  "display": "Macmoney",
+  "token_sha256": "abc7f5e37f9668368a5353c83058b09515a2e9b0f75e345a411774965e6ee0bb"
  }
 }
