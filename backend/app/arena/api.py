@@ -306,11 +306,16 @@ def live(request: Request):
     base = ent[1] if ent else []
     from . import settle as _S
     now = time.time(); rows = []
+    try:                                                                                             # contracts under dense capture are polled every ~3 s: "checked N s ago" is what matters on a quiet market
+        from ..histcap import priority as _pr
+        chk = (now - _pr._instance.last_cycle) if (_pr._instance and _pr._instance.last_cycle) else None
+    except Exception:
+        chk = None
     for s, r in base:
         q = CT.latest_quote(s["underlying"], s["expiry"], s["strike"], s["option_type"]) if s.get("expiry") else None
         st = str(r.get("status", "")); label = f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})"
         row = {"id": s["id"], "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
-               "quote_age_s": round(now - q["t"], 1) if q else None, "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
+               "quote_age_s": (round(min(now - q["t"], chk) if chk is not None else now - q["t"], 1) if q else None), "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
         elif st == "CANCELLED": row.update(state="CANCELLED")
@@ -331,6 +336,7 @@ def live(request: Request):
             elif q and s["entry_mode"] == "ABOVE" and q.get("ltp"): need = f"waiting for the price to trade up to {s['entry']:g} (ltp now {q['ltp']:g})"
             row.update(state="WAITING" if still else "EXPIRED", waiting_note=need if still else "not filled inside its validity: expired", valid_until_ist=(datetime.fromtimestamp(vu, tz=IST).strftime("%H:%M:%S") if vu else None))
         elif st == "MISSED": row.update(state="MISSED")
+        elif st.startswith("NO_DATA:no_snapshot_after_signal"): row.update(state="WAITING", waiting_note="order is being placed: it reaches the market after the 20 s execution delay, then fills at the next quote", valid_until_ist=None)
         else: row.update(state="NO DATA", why=st)
         rows.append(row)
     order = {"ACTIVE": 0, "WAITING": 1, "CLOSED": 2, "EXPIRED": 3, "CANCELLED": 3, "MISSED": 3}

@@ -59,3 +59,14 @@ def test_view_watches_expire_signals_do_not_and_signals_are_fetched_first(tmp_pa
     P.request_watch("NIFTY", "2026-10-27", 23050, "CE", now=t + 230, path=w, ttl_sec=300)
     items = [e for e in json.load(open(w))]; items.sort(key=lambda e: (e.get("kind") != "signal", -e.get("added", 0))); assert [e["strike"] for e in items] == [23000.0, 23050.0]
     assert [e for e in json.load(open(w)) if e["until"] > t + 4000 and e["kind"] == "view"] == []                                                                    # views are short-lived
+
+
+def test_unchanged_quote_is_stored_as_a_light_heartbeat_every_15_s_only(tmp_path):
+    w = str(tmp_path / "w.json"); now = time.time()
+    json.dump([{"symbol": "SENSEX", "expiry": "22OCT2026", "strike": 73800.0, "option_type": "PE", "until": now + 600, "kind": "signal"}], open(w, "w"))
+    st, sdk = FakeStore(), FakeSdk(); cap = P.PriorityCapture(store=st, sdk_provider=lambda: sdk, meta_fn=meta, interval=3, path=w)
+    assert cap.step(now) == 1                                              # first sight: stored
+    assert cap.step(now + 4) == 0 and cap.step(now + 10) == 0              # same exchange timestamp, less than 15 s later: nothing new to store
+    assert cap.step(now + 16) == 1                                         # 15 s passed: a heartbeat row says "the quote is still standing"
+    hb = st.rows[-1][1]; assert hb["snap_key"].startswith("HB|") and hb["depth_json"] is None and hb["bid"] == 99.5
+    assert cap.status()["last_cycle_age_s"] is not None

@@ -18,6 +18,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 MCX_SYMS = {"NATURALGAS", "CRUDEOIL", "CRUDEOILM", "NATGASMINI", "GOLDM", "GOLD", "SILVER", "SILVERM", "COPPER", "ZINC"}
 CLOSE = {"NSE": (15, 35), "MCX": (23, 35)}
+HEARTBEAT_SEC = 15                                # an unchanged quote is stored again every 15 s (light row) so a settlement can see that it was still standing
 MAX_TOKENS = 50                                  # one batched broker request carries up to 50 tokens
 _lock = threading.Lock()
 
@@ -55,7 +56,7 @@ class PriorityCapture:
     def __init__(self, store=None, sdk_provider=None, meta_fn=None, interval: float | None = None, path: str | None = None):
         self.store = store; self._sdk_provider = sdk_provider; self._meta_fn = meta_fn or self._meta_from_db
         self.interval = float(interval if interval is not None else os.environ.get("PRIORITY_POLL_SEC", "3")); self.path = path or WATCH
-        self._meta_cache: dict = {}; self._run_id = None; self._run_day = None; self.last_error = None; self.last_note = None; self._auth_ts = 0.0; self.written = 0; self.cycles = 0; self.last_cycle = None
+        self._meta_cache: dict = {}; self._run_id = None; self._run_day = None; self.last_error = None; self.last_note = None; self._auth_ts = 0.0; self.written = 0; self.cycles = 0; self._seen: dict = {}; self.last_cycle = None
 
     def _store(self):
         if self.store is None:
@@ -103,7 +104,15 @@ class PriorityCapture:
             if not isinstance(q, dict): continue
             nq = N.norm_quote(q, m, recv)
             if nq.get("ltp") is not None: rows.append(nq)
-        if not rows: self.last_note = f"broker returned no usable quote for {len(metas)} contract(s)"; return 0
+        keep = []
+        for nq in rows:                                                                              # the table's dedup key drops a row whose exchange timestamp did not change: store a light heartbeat every HEARTBEAT_SEC instead
+            k = nq["instrument_key"]; last = self._seen.get(k); ex = nq.get("exch_ts")
+            if last and last[0] == ex:
+                if t - last[1] < HEARTBEAT_SEC: continue
+                nq = {**nq, "snap_key": "HB|" + str(nq["received_ts"])[:19], "depth_json": None}
+            keep.append(nq); self._seen[k] = (ex, t)
+        rows = keep
+        if not rows: self.last_note = f"{len(metas)} contract(s) polled, no new quote to store"; self.last_cycle = t; return 0
         st = self._store(); day = datetime.now(IST).strftime("%Y-%m-%d")
         if self._run_id is None or self._run_day != day: self._run_id = st.start_run("PRIORITY_WATCH", {}, True); self._run_day = day
         with st.transaction() as conn: n = st.write_quotes(conn, rows, self._run_id, {"issues": [], "rejected": [], "flagged": 0})
@@ -117,7 +126,7 @@ class PriorityCapture:
                 self.last_error = f"{type(e).__name__}: {str(e)[:120]}"; time.sleep(max(self.interval * 5, 15))      # back off on any broker error (rate limit etc.)
 
     def status(self) -> dict:
-        return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval}
+        return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_cycle_age_s": (round(time.time() - self.last_cycle, 1) if self.last_cycle else None), "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval}
 
 
 _instance: PriorityCapture | None = None

@@ -21,7 +21,7 @@ function liveRows(d) {
     if (r.state === "WAITING") nums.push(`<span>${esc(r.entry_mode)} <b>${f(r.entry)}</b></span>`, `<span>SL <b>${f(r.sl)}</b></span>`, `<span>T1 <b>${f((r.targets || [])[0])}</b></span>`, r.valid_until_ist ? `<span>valid till <b>${esc(r.valid_until_ist)}</b></span>` : "");
     if (r.state === "CLOSED") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, `<span>exit <b>${f(r.exit)}</b> (${esc(r.why)})</span>`);
     const note = r.waiting_note ? `<div class="nums mut">${esc(r.waiting_note)}</div>` : r.why && r.state !== "CLOSED" ? `<div class="nums mut">${esc(r.why)}</div>` : "";
-    o += `<div class="row"><span class="chip ${esc(r.state)}">${esc(r.state)}</span><div><b>${esc(r.label)}</b> <span class="mut">${esc(r.id)} · posted ${esc(r.posted_ist)}</span>${stale ? ' <span class="pnlneg">quote ' + Math.round(age) + ' s old</span>' : age != null && live ? ' <span class="mut">· quote ' + Math.round(age) + ' s</span>' : ""}</div>${big}<div class="nums">${nums.join("")}</div>${note}</div>`;
+    o += `<div class="row"><span class="chip ${esc(r.state)}">${esc(r.state)}</span><div><b>${esc(r.label)}</b> <span class="mut">${esc(r.id)} · posted ${esc(r.posted_ist)}</span>${stale ? ' <span class="pnlneg">price not refreshed for ' + Math.round(age) + ' s</span>' : age != null && live ? ' <span class="mut">· checked ' + Math.round(age) + ' s ago</span>' : ""}</div>${big}<div class="nums">${nums.join("")}</div>${note}</div>`;
   }
   return o + '<div class="mut" style="font-size:11px;margin-top:4px">Open P&amp;L = (bid − fill) × lot − estimated costs. The final result is booked by the contest rules at the exit. Prices are the latest captured quotes (a few seconds old).</div>';
 }

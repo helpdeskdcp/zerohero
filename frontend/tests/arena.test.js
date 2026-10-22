@@ -59,7 +59,7 @@ test("live watch rows: WAITING stays amber with the reason, ACTIVE shows ltp and
     { id: "H3", label: "NG 270 CE (23/10)", state: "ACTIVE", ltp: 5, bid: 4.9, ask: 5, fill: 5.4, sl: 4.5, targets: [6], pnl_rs: -640, pnl_pct: -9, to_sl: 0.4, to_t1: 1.1, quote_age_s: 80, posted_ist: "10:00:00" }] };
   const h = A.liveRows(d);
   assert.ok(h.includes("chip ACTIVE") && h.includes("chip WAITING") && h.includes("pnlpos") && h.includes("pnlneg") && h.includes("+₹1,200") && h.includes("−₹640"));
-  assert.ok(h.includes("waiting for the ask to come down to 175") && h.includes("valid till") && h.includes("quote 80 s old"));
+  assert.ok(h.includes("waiting for the ask to come down to 175") && h.includes("valid till") && h.includes("price not refreshed for 80 s"));
   assert.ok(A.liveRows({ ...d, rows: [] }).includes("No signals today yet"));
   const d2 = { ...d, rows: [{ ...d.rows[0], ltp: 565 }] }; assert.ok(A.liveRows(d2).includes("tickup"), "an up-tick flashes");                // second render with a higher ltp
   const d3 = { ...d, rows: [{ ...d.rows[0], ltp: 561 }] }; assert.ok(A.liveRows(d3).includes("tickdn"), "a down-tick flashes");
