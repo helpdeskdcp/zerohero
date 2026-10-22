@@ -1,0 +1,15 @@
+{
+  "source_id": "nifty_options_elt_bundle",
+  "url": "https://codeload.github.com/shayakbanerjee99/nifty-options-elt/tar.gz/refs/heads/main",
+  "retrieved_at": "2026-10-02T14:41:06.543477+00:00",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://codeload.github.com/shayakbanerjee99/nifty-options-elt/tar.gz/refs/heads/main",
+  "content_type": "application/x-gzip",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/static_sources_20261002/nifty_options_elt_bundle.body",
+  "sha256": "91dd927040cdd5adc8cce0396c06350d19407a704091198ba622f6635afe1a7c",
+  "bytes": 87682,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

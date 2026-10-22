@@ -1,0 +1,19 @@
+{
+  "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "NSE",
+  "dataset": "PRIOR_FAILED_SOURCE",
+  "cache_key": "50afcee3677624db2ebba293fbaa3cb2044b821e9609cb0b82fc1833a706d7d2",
+  "acquired_at": "2026-10-02T14:26:41.766935+00:00",
+  "http_status": 0,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "bytes": 0,
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "acquisition_status": "FAILED",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

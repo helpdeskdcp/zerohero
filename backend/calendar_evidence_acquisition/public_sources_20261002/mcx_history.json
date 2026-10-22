@@ -1,0 +1,13 @@
+{
+  "url": "https://www.mcxindia.com/market-data/contract-available-for-trading",
+  "retrieved_at": "2026-10-02T13:53:14.162607+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "403",
+  "effective_url": "https://www.mcxindia.com/market-data/contract-available-for-trading",
+  "content_type": "text/html",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/mcx_history.body",
+  "sha256": "be43aa16198f9d33f53bcd86ff2d8fb780ad1a3bd559118100ba8ca4c611a6d0",
+  "bytes": 432
+}

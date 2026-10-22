@@ -21,14 +21,14 @@ IST = timezone(timedelta(hours=5, minutes=30))
 EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
-MAX_BODY, RATE_PER_MIN = 4096, 300                                   # per IP; many participants may share one office address
+MAX_BODY, RATE_PER_MIN = 4096, 900                                   # per IP; many participants may share one office address
 _sf: dict = defaultdict(threading.Lock)                                  # single-flight: only ONE request recomputes a stale entry, the others get the previous value (or wait if there is none)
 RESULT_CACHE: dict = {}                                                  # final settlement results, reused across refreshes (see run.run)
 TTL_SEC = 20                                                             # standings / leaderboard are recomputed at most every 20 s (only OPEN signals are re-settled)
 
 
 def _stale_all() -> None:
-    for k in ("by", "lb"):
+    for k in ("by", "lb", "live"):
         _cache[k] = {n: (0.0, v[1]) for n, v in _cache.get(k, {}).items()}
 
 
@@ -283,6 +283,59 @@ def standings(request: Request):
         elif ent is None:
             with lk: pass                                                                       # first request ever: wait for the in-flight computation
     return _cache["by"][c["name"]][1]
+
+
+@router.get("/live")
+def live(request: Request):
+    """Broker-style watch of the caller's signals of TODAY: WAITING (not filled yet) / ACTIVE (live ltp, bid/ask, open P&L) / CLOSED (final) / EXPIRED / CANCELLED. The settlement part is cached 5 s, the quote overlay is ~1 s fresh."""
+    c = _auth(request); name = c["name"]; today = datetime.now(IST).strftime("%Y-%m-%d"); now = time.time()
+    ent = _cache.setdefault("live", {}).get(name)
+    if ent is None or now - ent[0] > 5:
+        lk = _sf[("live", name)]
+        if lk.acquire(blocking=False):
+            try:
+                day = lambda s: datetime.fromtimestamp(s["t"], tz=IST).strftime("%Y-%m-%d")
+                sigs = [s for s in R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"]) if s["participant"] == name and day(s) == today]
+                res = {r["id"]: r for r in R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE).get(name, {"results": []})["results"]} if sigs else {}
+                _cache["live"][name] = (time.time(), [(s, res.get(s["id"], {})) for s in sigs]); ent = _cache["live"][name]
+            finally:
+                lk.release()
+        elif ent is None:
+            with lk: pass
+            ent = _cache["live"].get(name)
+    base = ent[1] if ent else []
+    from . import settle as _S
+    now = time.time(); rows = []
+    for s, r in base:
+        q = CT.latest_quote(s["underlying"], s["expiry"], s["strike"], s["option_type"]) if s.get("expiry") else None
+        st = str(r.get("status", "")); label = f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})"
+        row = {"id": s["id"], "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
+               "quote_age_s": round(now - q["t"], 1) if q else None, "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
+        if st == "SETTLED":
+            row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
+        elif st == "CANCELLED": row.update(state="CANCELLED")
+        elif st.startswith("NO_DATA:no_exit_snapshot"):
+            lot = r.get("lot") or 1; bid = (q or {}).get("bid") or (r.get("last") or {}).get("bid"); fill = r["fill"]
+            pnl = None if not bid else round((bid - fill) * lot - _S.cost_points(s["underlying"], fill, bid, lot) * lot, 1)
+            row.update(state="ACTIVE", fill=fill, sl=r.get("sl_now", s["sl"]), targets=r.get("targets_now", s["targets"]), pnl_rs=pnl, pnl_pct=(round(100 * (bid - fill) / fill, 2) if bid else None), lot=lot,
+                       to_sl=(round(bid - r.get("sl_now", s["sl"]), 2) if bid else None), to_t1=(round((r.get("targets_now") or s["targets"])[0] - bid, 2) if bid else None), pnl_note="open P&L = (bid - fill) x lot - estimated costs; the final result follows the contest rules at exit")
+        elif st == "NOT_TRIGGERED":
+            vu = r.get("valid_until"); still = (now < vu) if vu else True
+            try:
+                from .. import market_calendar as mc
+                still = still and mc.is_trading(EXCH.get(s["underlying"], "NSE"))
+            except Exception:
+                pass
+            need = None
+            if q and s["entry_mode"] == "LIMIT" and q.get("ask"): need = f"waiting for the ask to come down to {s['entry']:g} (ask now {q['ask']:g})"
+            elif q and s["entry_mode"] == "ABOVE" and q.get("ltp"): need = f"waiting for the price to trade up to {s['entry']:g} (ltp now {q['ltp']:g})"
+            row.update(state="WAITING" if still else "EXPIRED", waiting_note=need if still else "not filled inside its validity: expired", valid_until_ist=(datetime.fromtimestamp(vu, tz=IST).strftime("%H:%M:%S") if vu else None))
+        elif st == "MISSED": row.update(state="MISSED")
+        else: row.update(state="NO DATA", why=st)
+        rows.append(row)
+    order = {"ACTIVE": 0, "WAITING": 1, "CLOSED": 2, "EXPIRED": 3, "CANCELLED": 3, "MISSED": 3}
+    rows.sort(key=lambda x: (order.get(x["state"], 4), x["posted_ist"]), reverse=False)
+    return {"now_ist": datetime.now(IST).strftime("%H:%M:%S"), "date": today, "rows": rows, "total_open_pnl_rs": round(sum(x.get("pnl_rs") or 0 for x in rows if x["state"] == "ACTIVE"), 1), "realised_today_rs": round(sum(x.get("pnl_rs") or 0 for x in rows if x["state"] == "CLOSED"), 1)}
 
 
 @router.get("/leaderboard")

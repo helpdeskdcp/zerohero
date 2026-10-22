@@ -1,0 +1,2293 @@
+{
+  "status": "PASS",
+  "complete": false,
+  "reason": "Eight pre-existing real-session research skips; evidence/production gates remain separate",
+  "full_backend": {
+    "tests": 2712,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 8,
+    "passed": 2704,
+    "files": 220,
+    "timeouts": 0,
+    "nonzero_files": 0
+  },
+  "relevant": {
+    "passed": 961,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "warnings": 0,
+    "includes_phase2_diagnostics": 4
+  },
+  "targeted_nse": {
+    "passed": 94,
+    "failed": 0
+  },
+  "original_failures_fixed": 32,
+  "additional_fixture_failures_fixed": 3,
+  "new_regression_cases": 20,
+  "unexpected_failures": 0,
+  "errors": 0,
+  "timeouts": 0,
+  "existing_skips": [
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_replay_is_causal_on_every_real_session[CRUDEOIL]",
+      "reason": "no captured sessions for CRUDEOIL"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_replay_is_causal_on_every_real_session[NIFTY]",
+      "reason": "no captured sessions for NIFTY"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_replay_is_causal_on_every_real_session[NATURALGAS]",
+      "reason": "no captured sessions for NATURALGAS"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_replay_states_and_actions_are_all_in_the_allowed_set[CRUDEOIL]",
+      "reason": "no captured sessions for CRUDEOIL"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_replay_states_and_actions_are_all_in_the_allowed_set[NIFTY]",
+      "reason": "no captured sessions for NIFTY"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_replay_states_and_actions_are_all_in_the_allowed_set[NATURALGAS]",
+      "reason": "no captured sessions for NATURALGAS"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_h7_band_parity_with_stage7_events_csv",
+      "reason": "engine produced no events (no captured bars)"
+    },
+    {
+      "test_name": "tests/test_orderflow_h1h7_replay.py::test_stage7_h7_label_rows_are_never_continuation_candidates",
+      "reason": "no overlapping Stage-7 H7 rows with captured bars"
+    }
+  ],
+  "files": [
+    {
+      "file": "tests/signal_gate/test_final_signal_gate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 23
+      },
+      "xml_sha256": "b658d7cc5040cc9b20f9fd4fe78e220175d9adbd6d6aa36725f463592a44865d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/signal_gate/test_final_signal_gate/result.xml"
+    },
+    {
+      "file": "tests/signal_gate/test_shadow_analysis.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 2
+      },
+      "xml_sha256": "2862bcbd6713fd8692bc7a57a1b6c8c2a86e46229161fd7af3e22e192d4e6d14",
+      "xml_path": "/tmp/nse-completion-full-final/tests/signal_gate/test_shadow_analysis/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_api.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "02c520b03d3e4d9ac65ea0a22a261860d41cbe3a812ec18d5a7ba7bb4e16052e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_api/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_breakout.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "d4c9772be7aa677bc6ddc41c12e066186818c9ba3e7c6494ca76e9f85023ea23",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_breakout/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_clustering.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "13002daf6b55fa14c81353652c6fb3da61a331b993038a35c5a97ee4a41a73ca",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_clustering/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "e5e8b47bad8e58615bd0f55fd4e4ae8a7eaf9d835bab9e0f34d70665435d3c3b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_engine/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_live_state.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "abe5b5b4518f7067089f87452708045d6926138b803f6f5902ea2ef9189c1b7d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_live_state/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_mtf_confirm.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "15949ac034a6d77afb17ad3edfa41c3531059290b169994ebd2599eb307b5c69",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_mtf_confirm/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_pivots.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "23cea45fdec32712d1a772fe0cbe9c0dc5035b9cf28bf6be24470171b5bfd1a4",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_pivots/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_scoring.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "6d3d3b905328bea58c8c834684d5dffacb2fd302e1e767fe2f9a01da7c31108e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_scoring/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_signal_confirm.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 11
+      },
+      "xml_sha256": "6f8ca25d0767943241fdab8b18c79904ff7cb0058287a3c9e020a07c4658c660",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_signal_confirm/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_touches.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "70d404b67fe5af7205a81fe552f0648c578d7b15251c470f3472eb5e32a69ac0",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_touches/result.xml"
+    },
+    {
+      "file": "tests/sr_dynamic/test_visits.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "6284adff2c480ac5f17c814ba70ba8d8de1d5aa376773148352b3935285a658b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/sr_dynamic/test_visits/result.xml"
+    },
+    {
+      "file": "tests/strategy/test_ce_strategy.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "0489d00ce83d6cc00bf25a1db52a3984e973d22d366659467e2431b78ec56bc6",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy/test_ce_strategy/result.xml"
+    },
+    {
+      "file": "tests/strategy/test_conflict.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "ee6cf901b8c09285ec785645f52abd06d80675ef0cb003079b47e1683c605136",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy/test_conflict/result.xml"
+    },
+    {
+      "file": "tests/strategy/test_no_lookahead.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "8338c1f6759f71003a2de1240c78d4a590fe70a1d57c612181da8aab54e61e56",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy/test_no_lookahead/result.xml"
+    },
+    {
+      "file": "tests/strategy/test_pe_strategy.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "5f559f81890d74b50e0db2b45b4bd14a2188d4ab963bdaf98fba60f448207b44",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy/test_pe_strategy/result.xml"
+    },
+    {
+      "file": "tests/strategy/test_scoring.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "71415f6cb41f46647ed69cb0cf31c008b3c0ce57a3bc0bb85cdf0e3f25ee73f1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy/test_scoring/result.xml"
+    },
+    {
+      "file": "tests/strategy/test_verifier.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "f1e4cbca86068e94216b3d587170271a212d6903f9938dc1c48b41b774416696",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy/test_verifier/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_entry_quality.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "01d765db95509457e1ba17c7a5dc207d0dc2616169bdbde8962bb4b670b5d7e3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_entry_quality/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_fvg_candle.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "41d037c6abed1173c5193a860cac986e32b1747db2615955191f122b6a4c4f60",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_fvg_candle/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_htf_resample_no_lookahead.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "e5b94c7d706198e66101f4ea31d392de74a2f0b6f69be3d8f7bcf1e4838efb64",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_htf_resample_no_lookahead/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_mtf_aggregator.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "84645611bae22e0d4422e48123e7af55f5c5115b6c8966f3e2a39ee4541d3be2",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_mtf_aggregator/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_mtf_verifier.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "e4e10a996de5ab0e204c0444b9584369c426778a84c348ab48f59c9641da9635",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_mtf_verifier/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_prev_day_levels.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "8b4763318eef6a012380689fa9361d6986f8405b3dba74662d40a8d068253bf9",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_prev_day_levels/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_target_stop.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "4debbcf5ee0041849651e02d18466074d325262257e287ac80f869d61ff8624d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_target_stop/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_timeframe_bias.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "91c9e11ed6e705b834e1fe386fbc5e002f0c8711561f7693872219afae30aded",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_timeframe_bias/result.xml"
+    },
+    {
+      "file": "tests/strategy_mtf/test_zth_sideways_gate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "640791095bfa5f22c6277020cd51aea8228d8d867c20b0ffc9b9c4d51aaedf08",
+      "xml_path": "/tmp/nse-completion-full-final/tests/strategy_mtf/test_zth_sideways_gate/result.xml"
+    },
+    {
+      "file": "tests/test_ai_behavior_and_fusion.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 19
+      },
+      "xml_sha256": "9513ead8454d803b954f9b06c1a5fc782b2f087a4c7a68a1e96b62e8765e7bf1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_ai_behavior_and_fusion/result.xml"
+    },
+    {
+      "file": "tests/test_ai_client_fallback.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "b63fa7c1fe5bc75b59fd01574c22580da4c1d53680cc50e3d3173e609001e2ba",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_ai_client_fallback/result.xml"
+    },
+    {
+      "file": "tests/test_ai_shadow.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "0d61b8ddf23c9eb65b30208317ba385e586a2faa9bc2337fb54561f6a13b98ac",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_ai_shadow/result.xml"
+    },
+    {
+      "file": "tests/test_alternative_calendar_evidence.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "58c909dafbd36836700b701bf782505c72e2ea8a2638d3518514b4946723f301",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_alternative_calendar_evidence/result.xml"
+    },
+    {
+      "file": "tests/test_angelone_greeks_adapter.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 29
+      },
+      "xml_sha256": "4b3f57bebeeb5e6075785dca273861c1c06ef634f05494f9eea0381b18741d5b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_angelone_greeks_adapter/result.xml"
+    },
+    {
+      "file": "tests/test_autoscalp.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 44
+      },
+      "xml_sha256": "d7e3f0f5f4114605b99c4ae06322847eb0a7b2f0d54bf14b316b1ccd9e39a6a2",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_autoscalp/result.xml"
+    },
+    {
+      "file": "tests/test_autoscalp_api_ui.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "2248d63a02eec0b00fc130b118423ae62afcc4b3280dacff0b78eae21c9ab954",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_autoscalp_api_ui/result.xml"
+    },
+    {
+      "file": "tests/test_autoscalp_final_signal_gate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "d88d78a801fd5512472a906148ab118052929c2a82139462dfcd9ed50e92e75c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_autoscalp_final_signal_gate/result.xml"
+    },
+    {
+      "file": "tests/test_autoscalp_optionchain_wiring_audit.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "d3f6ac80041c94f5856c6a8f5e6c5c0445b31d719cf13ca043b1040a34da471e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_autoscalp_optionchain_wiring_audit/result.xml"
+    },
+    {
+      "file": "tests/test_behavior_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "3ed7fc6472d9b6d6c5a58a80308cf34fc100caabc79f461d9d44ae7f1fde4bce",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_behavior_engine/result.xml"
+    },
+    {
+      "file": "tests/test_bfo_sensex_adapter.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 2
+      },
+      "xml_sha256": "a8599391fa89e469e4e817f2946c5c49ffc13bfdff39c8e27eff96d407b2eb11",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_bfo_sensex_adapter/result.xml"
+    },
+    {
+      "file": "tests/test_broker_adapter.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 19
+      },
+      "xml_sha256": "f47ca612e6837fa3af16a871bb5cadc115c3441165580138c8b93ddce36efde3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_broker_adapter/result.xml"
+    },
+    {
+      "file": "tests/test_calendar_coverage_plan.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "3f63b3176176619791622806a8d73fbbf72cc31377c49d525ab4ca1ec45b3bce",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_calendar_coverage_plan/result.xml"
+    },
+    {
+      "file": "tests/test_calendar_evidence_acquisition.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "36440bbe325239db7f574ac6460f9ad4a671dec53f21cd18b224f8f08fababd1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_calendar_evidence_acquisition/result.xml"
+    },
+    {
+      "file": "tests/test_calibration_backtest.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "8a019a82fc92399b0a725dd6ceb5524dda70f59a31611988c191139154999dcd",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_calibration_backtest/result.xml"
+    },
+    {
+      "file": "tests/test_core.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 20
+      },
+      "xml_sha256": "90a202c424a7df6fec425c4cfbefee8aa8a3679ac9e1c63160e1ca66a007d042",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_core/result.xml"
+    },
+    {
+      "file": "tests/test_cross_broker.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "3a57973974ad7d42c5e180cdfe008f27865f912596268f72bdc75c3194539297",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_cross_broker/result.xml"
+    },
+    {
+      "file": "tests/test_db_update_allowlist.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "dba551bb2e249b6c982fa4d830c88053596267f898a99963503f84adae72727c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_db_update_allowlist/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_capture.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 11
+      },
+      "xml_sha256": "1f6d8a58360371e91f146e0d36193bc3abd3dc23143b9fcca1f2c0f05faf1e8d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_capture/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_chain.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 56
+      },
+      "xml_sha256": "39e816caf4fb8b1a33705a216af63f939c5786fae32d2708ff227f9ec38d7086",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_chain/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_client.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "2e4d6d9795a91f48a4208d537bd8386260dc185257f1f62911f84c8e4d4006c7",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_client/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_connector.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 43
+      },
+      "xml_sha256": "c0a3998d0627022a35c4114779629b4a47be912000425abe331920e7b653e474",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_connector/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_historical.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 17
+      },
+      "xml_sha256": "c2019fbedc2c9fa6aadcaddcb53c3fd384db86b6e8bbd4976bf827b89c8efb35",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_historical/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_instruments.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 18
+      },
+      "xml_sha256": "faf18eda550e133db867caa9d71105ae1a58c4d09185ac6ef9d8ab3f3b8e0359",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_instruments/result.xml"
+    },
+    {
+      "file": "tests/test_dhan_postback.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 19
+      },
+      "xml_sha256": "47e6b96b2816870df25dded0eaa4887e903add77c80b367a9a1e68e28f30a33d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_dhan_postback/result.xml"
+    },
+    {
+      "file": "tests/test_engines.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 18
+      },
+      "xml_sha256": "c2516fd05cd439dce770bbfe0f0cc86d1450a9ebb854f3f14905030211ecc443",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_engines/result.xml"
+    },
+    {
+      "file": "tests/test_epm_surface.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "87fdb226a46373ece0c83aaf8ec65a8de87d72f44d47b253ec83e1b7772676ee",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_epm_surface/result.xml"
+    },
+    {
+      "file": "tests/test_evidence_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 20
+      },
+      "xml_sha256": "35b6c508b53e5b655573eab4285b73ce3f2c29da36021cfaa9db20645750f5b0",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_evidence_engine/result.xml"
+    },
+    {
+      "file": "tests/test_evidence_staging.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 48
+      },
+      "xml_sha256": "2384afe59675591093bfe6c78bb3c1e4dac71c3f298c115379983af64ccc3964",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_evidence_staging/result.xml"
+    },
+    {
+      "file": "tests/test_execution_broker_base.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "fa944c96d05492411e35cccfde449ecd0927fd4675231c4d0fe749fff53e28d8",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_execution_broker_base/result.xml"
+    },
+    {
+      "file": "tests/test_execution_idempotency.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "90fc1c3203e54a9aa54ee7f0fae0efa0b15e273288217edd715bed208f82a759",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_execution_idempotency/result.xml"
+    },
+    {
+      "file": "tests/test_execution_killswitch.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "e81ee51fe6d3eed7c95c55dbce47f00183e8d5d2285c73d07791b8ab69a1414b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_execution_killswitch/result.xml"
+    },
+    {
+      "file": "tests/test_execution_live_gate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "65541b019732a62ee3512dad8f7ab60f06963385c1757ab66436d36661db6dad",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_execution_live_gate/result.xml"
+    },
+    {
+      "file": "tests/test_execution_ratelimit.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 12
+      },
+      "xml_sha256": "4b2078551fe78419d112a80e9ecde6be72ab1db9dd2f886e3225efafaf3bd8e8",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_execution_ratelimit/result.xml"
+    },
+    {
+      "file": "tests/test_execution_staleness.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "fe7fe654ba9e8093c4d9ce402f03efd6ca0e03ff0860243c4bd7aed59bd32026",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_execution_staleness/result.xml"
+    },
+    {
+      "file": "tests/test_expiry_z2h_oi.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "cbb4e36c6653d4b806ba62b1f9d427429e9eb7b68ae159b0745abf3c934ae325",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_expiry_z2h_oi/result.xml"
+    },
+    {
+      "file": "tests/test_expiry_zero_to_hero.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "1e1329bfe68d864eeead00ed50bdc2658238155f75ce790395326f0c337cdb86",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_expiry_zero_to_hero/result.xml"
+    },
+    {
+      "file": "tests/test_fetch_candles_retry.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "1cec2141523ca5c2eadd831a848e3e21af96e331cfb69664b6fa6dc5ea4c200a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_fetch_candles_retry/result.xml"
+    },
+    {
+      "file": "tests/test_fsg_shadow_log_db.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "2942672cefdd21b8be5bffe06477f1be0356cf15dbe8ef711d4da23542d93c07",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_fsg_shadow_log_db/result.xml"
+    },
+    {
+      "file": "tests/test_greeks_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 35
+      },
+      "xml_sha256": "2e15f4244a5d112b254f7b45b83109af6e7bea76eaf4947d4828c243b8b506c2",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_greeks_engine/result.xml"
+    },
+    {
+      "file": "tests/test_groq_client.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 17
+      },
+      "xml_sha256": "926d0a5d610ca2162606a00c3af18b64e83bee00f698ce807496a91732986b35",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_groq_client/result.xml"
+    },
+    {
+      "file": "tests/test_hcs_adaptive_mc.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "16184a1e23c93f3a8a00d8827cbf952f74e5ab36221fefa4f04fc220a6670035",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hcs_adaptive_mc/result.xml"
+    },
+    {
+      "file": "tests/test_hcs_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 18
+      },
+      "xml_sha256": "4fb3461d54f66d200290f97bcd5bfd5cd08cce47cb59b4bb201f7c802ac779bf",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hcs_engine/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_capital.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "3fa16408a795f642f65f2a537c12a360048d34e4454f981023e92e2f7eb29b08",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_capital/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_position.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 12
+      },
+      "xml_sha256": "775dc99fe5c120b699de17d2bf9aa927bd5c16166ffd0c7907bdf2e952312c2f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_position/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_primary_selector.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "6b4c214c8da5eb1f627fc9144fe8470fd6c66502dd7d76adc98e1e751b1bfd93",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_primary_selector/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_risk.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "d0c69c8d4f6389053888020991bc939610ccc00dd5af35e73bff40923d237ab4",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_risk/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_routes.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "12f0e5758d9ab67e3d835852fca74cc9e53dc0e0a17c9d1b25d9cc657fc1c6be",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_routes/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_runner.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 17
+      },
+      "xml_sha256": "2c986d08038b872597a1d2c6eda25ad7b0c1d650b8138faba6f5ded387b9e9e2",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_runner/result.xml"
+    },
+    {
+      "file": "tests/test_hedging_selector.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "afd42827745e53a5ffa45cfa1dbb8f7379e01b1ea10a6ae45d67b8d3a0ecd578",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hedging_selector/result.xml"
+    },
+    {
+      "file": "tests/test_hist_expiry.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 32
+      },
+      "xml_sha256": "0785215228293567d92a578f3d64d88d304232ff9cbdcdc36ea1820065347443",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hist_expiry/result.xml"
+    },
+    {
+      "file": "tests/test_hist_options.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 35
+      },
+      "xml_sha256": "5a09edec44d933cbabb59bc7218491289cf3712a08cd81b23956d078ca895ebb",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_hist_options/result.xml"
+    },
+    {
+      "file": "tests/test_histcap.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 38
+      },
+      "xml_sha256": "ce976b7385a0a851dee63de70aa669c5b4f64fe27400ac5903950944cd2ddd79",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_histcap/result.xml"
+    },
+    {
+      "file": "tests/test_historical_quality_contract.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "db9bce2d3079832a9fbc8cd9cb089a7eafa50d730d509b5f3422125c587b301e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_historical_quality_contract/result.xml"
+    },
+    {
+      "file": "tests/test_historical_read_contract.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 64
+      },
+      "xml_sha256": "76b0ac0691f5a6f3d3c0988561f339a9072774f8c9b0397917301ebeaa7c94e0",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_historical_read_contract/result.xml"
+    },
+    {
+      "file": "tests/test_index_signal_research_evaluate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "27cf53ed636184166c524851e298754f80787af6e0b409b7068ac78ba34882af",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_index_signal_research_evaluate/result.xml"
+    },
+    {
+      "file": "tests/test_index_signal_research_features.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "4c0060201c57b2270026cee3f64275396e7ab7c87b6a6b9589a8f8ba6ab566fa",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_index_signal_research_features/result.xml"
+    },
+    {
+      "file": "tests/test_index_signal_research_hypotheses.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "889fcb16a65c69259e3ebbdf941b832b514fac45ec67dad27187b0a130f74437",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_index_signal_research_hypotheses/result.xml"
+    },
+    {
+      "file": "tests/test_index_signal_research_labels.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "ec368f5bd0b791eb8f17ae5e4e0fa09b086e6c2b0702eafb30342ef8e42dac09",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_index_signal_research_labels/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_api.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "772f9208677de28bafc9694122f8e0b7e6109d867df57b1fe16e02575c1678a3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_api/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_conditional_edge.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "94da3b5dceaa9c6389ed27ee2bc19b15b9fa133d4a01272c9b7ec03c95644f36",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_conditional_edge/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_conditions.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "f558934700132e0761c0424442b14685fc46e77cd8d8dea1a8fc0fc376ee429e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_conditions/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_costs.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "0f9e65ce7ff681cb6eae88042a3ede62a91623c3b06e88fc66d9ca80ddf2ad93",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_costs/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_ev.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "c73bb9ed21ebc46250617ac8dfacc137bfd2f875dbf401050ebf43022a04272d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_ev/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_evaluator.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "9d0b3b612a49769dea5f0d7bea711b282d3e1c2d4dd16f1aa05d0da17288f932",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_evaluator/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_score.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 12
+      },
+      "xml_sha256": "1697d008b91a369aed4d4a93e98b8cb5140a9a6e9552fd2d2489dcdd0dfd872a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_score/result.xml"
+    },
+    {
+      "file": "tests/test_institutional_edge_store.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "0a0e19512631fc344c4a660277bf55ad4fbef42d101dfacc95f85136c0b5df6b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_institutional_edge_store/result.xml"
+    },
+    {
+      "file": "tests/test_instrument_profiles.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 25
+      },
+      "xml_sha256": "5b9179e465c1006d4260b03327018ab4aaf13e2d30769ee468e2d6244848de59",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_instrument_profiles/result.xml"
+    },
+    {
+      "file": "tests/test_instruments_registry.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "e23f95a83b5be1bca6f83b7d9a4b6f1e3ac8b3d485652acf2cf0c51c1d3468d0",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_instruments_registry/result.xml"
+    },
+    {
+      "file": "tests/test_l2capture_health.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "3adb4187e503ae587d17c02f307881cbd759440974bfec4f6e8df3512e1abfa2",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_l2capture_health/result.xml"
+    },
+    {
+      "file": "tests/test_l2capture_snapquote.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "ad9217d078614bbdcd4f7b21e3847bd0b7394dc967eab42b06836fc7de2b45ca",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_l2capture_snapquote/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_backtest.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "b459a4f395ed97ab4a79e69a8410afcc60afa51a6e67df90618b2d0bc16fbe6f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_backtest/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_confirmation.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 12
+      },
+      "xml_sha256": "8a377386876ad122deb9a5b6ea9cd9dac96ca8a9ba13f6d235fcb4f75458d4fb",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_confirmation/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "edf04fdebae42001ec8d88c39d4f1d244720418ec9d5b4306dec01505143014d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_engine/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_feature_analysis.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 11
+      },
+      "xml_sha256": "8d1aaa147a331709dc6e5b72b93525f8a27eb5d98f1db9b9464e20af7b606e60",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_feature_analysis/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_indicators.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "d8d54d5b97cdd73baa7e4c9f5a42d519d60687300e42640e315ba94299d6363d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_indicators/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_lookahead.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "237b8b4282396ace1169a76ccc8cb8e7f4154382af6337b26d5bd40cc2377a37",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_lookahead/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_model_check.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "97c74dd9c40a71363363a9f53119b269c8d2374ca545f36aecc27c0b67c11325",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_model_check/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_probability.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "f09930f28c05ae2e11f241b43e6ed522a0bb192e765b8fc3dcf39ce407d4dd0f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_probability/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_resample.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "c3b26aa1ace708520591e2583e105b7dceffad699abc021b5c7af6c4a1cdd6f1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_resample/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_risk.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "0eb41c82a3e586a8983349c33e868301870d377581238fd362bb9839b9d95472",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_risk/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_setup_score.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "5255be35e90eace814631ea305a7b34497a980f17c90b60c3ffadc9c70c5a93f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_setup_score/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_strikes.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "89ec1b04075396c1e9d752feeea414250c4240d47949fbb5948344e716e05038",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_strikes/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_structure.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "e0786f9714791781d7839075a4d3449910b611e3ace76fc80a0dc281294c7fe8",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_structure/result.xml"
+    },
+    {
+      "file": "tests/test_liquidity_sweep_sweep.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "ad27fab988982d629e35c7334f38bc8b7c1990a5f247335b9b15c3baa6f5bfe3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_liquidity_sweep_sweep/result.xml"
+    },
+    {
+      "file": "tests/test_live_db_untouched.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "fb8d4727e1147081e25f72592966843f43827899dd2c7664b81f4e9b5e6c388e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_live_db_untouched/result.xml"
+    },
+    {
+      "file": "tests/test_live_flow.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "c57beaad65aeea2e046b873ec266f1fd82c5493b31ce7f65061b980f9552a85a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_live_flow/result.xml"
+    },
+    {
+      "file": "tests/test_live_monitor.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 23
+      },
+      "xml_sha256": "a83429a735a9bf68c01e339e31b066a3a88e3d0ce1b284a5e345b006d0f6b7c4",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_live_monitor/result.xml"
+    },
+    {
+      "file": "tests/test_main_auth.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "55cda8c1eb8fcb5277ebde4e5eef595c26a64730114ddbfadef504cf24a580d1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_main_auth/result.xml"
+    },
+    {
+      "file": "tests/test_market_calendar.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "b1df5a2982054064a9e875c477c39061dd8aba7ba3921f98001b334ce1dacb37",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_market_calendar/result.xml"
+    },
+    {
+      "file": "tests/test_market_data_selection.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "4aa35698547d4a9447bfd45e27722cf508d6fc1e1adcff6fd83dcb7ba18006a1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_market_data_selection/result.xml"
+    },
+    {
+      "file": "tests/test_market_hub_chain_unification.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "159f5d25f64c9a53dbd0f02669aed5593bcc07424940569b9b4a469c3d37785f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_market_hub_chain_unification/result.xml"
+    },
+    {
+      "file": "tests/test_market_regime.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "89b518e01ed86faf9289721e44e396c80a4ca16a82d641ed311a1689daf35013",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_market_regime/result.xml"
+    },
+    {
+      "file": "tests/test_market_snapshot.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "5ddfbd848c0834dcd614871faa4300f2d9e0a2431d9998759043f59c543c7594",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_market_snapshot/result.xml"
+    },
+    {
+      "file": "tests/test_market_snapshot_routes.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "e6b005d11a786515eec9cd9a69c003acbe0ed55d1acd163030bda9c7974556c4",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_market_snapshot_routes/result.xml"
+    },
+    {
+      "file": "tests/test_mathematical_confluence.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "24f642afe460a4d886e8a7d4de7ac3ea94d213b4cb30e7d2e5aeb4ecf7dde48d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_mathematical_confluence/result.xml"
+    },
+    {
+      "file": "tests/test_microstructure_api.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "1f33af73ef419ec2767dc19013ba29f2cd5d9516c29d3874bc9b1887ce910a4e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_microstructure_api/result.xml"
+    },
+    {
+      "file": "tests/test_microstructure_evaluator.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "4a7ba9a06097d217d65170ea5a8fa890feab2fec0a50018184cfdce0acc3d99d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_microstructure_evaluator/result.xml"
+    },
+    {
+      "file": "tests/test_microstructure_state.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 17
+      },
+      "xml_sha256": "2fece0bf69e3ca75852c5dc45776568e211734048c5018a3e768d5c25bd852f2",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_microstructure_state/result.xml"
+    },
+    {
+      "file": "tests/test_nse_completion.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 20
+      },
+      "xml_sha256": "6dd8ad1864b01e85a4a295e3d9e67b8b470bd2d726460a6432d51eab18370a55",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_completion/result.xml"
+    },
+    {
+      "file": "tests/test_nse_downloader.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 66
+      },
+      "xml_sha256": "002d0a67086c1089cd5c860ff3da33399851d9f042989ee64ab81479a594e0d5",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_downloader/result.xml"
+    },
+    {
+      "file": "tests/test_nse_mcx_pipeline_audit.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "3c1569ccdd976447f674eab30011d79d2122cafd57980748f85809205465d08c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_mcx_pipeline_audit/result.xml"
+    },
+    {
+      "file": "tests/test_nse_observed_sources.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "740a94becd4f09ad23b97fea169e28508e307a056058e9d9c94cbed8d6958b95",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_observed_sources/result.xml"
+    },
+    {
+      "file": "tests/test_nse_official.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 60
+      },
+      "xml_sha256": "2f2d99a9ed7761992554e2770bea3b3c2db74cf797e38c9318788badf90ed9ae",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_official/result.xml"
+    },
+    {
+      "file": "tests/test_nse_official_chain.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "f6faf0bb1ea7944a865a920907f92e3763a52ae498ea78435429b7e7755f65de",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_official_chain/result.xml"
+    },
+    {
+      "file": "tests/test_nse_transport.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 33
+      },
+      "xml_sha256": "e5715cbb8a10ef66f3e931d0b8fadd5ffce9c15b025e598415517a5a9d2b3d4b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_nse_transport/result.xml"
+    },
+    {
+      "file": "tests/test_official_eod_evidence.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 22
+      },
+      "xml_sha256": "9e7de80acb4a727a892b6a3017c4c190e6f627c21c992678a67839fc3bb96385",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_official_eod_evidence/result.xml"
+    },
+    {
+      "file": "tests/test_oi_history_adapter.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "d20a82a939dc9554722d18231659ddafca7f1400fb41f02078788c7249bd921e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_oi_history_adapter/result.xml"
+    },
+    {
+      "file": "tests/test_oi_math.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "b98ed56167b3b06e76dd419faa2580214f5a5750ea7466e469d26a9dbfa67482",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_oi_math/result.xml"
+    },
+    {
+      "file": "tests/test_openai_client.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "3af20524617e0adaf425ece04297053d27ac246e67fe40f28f8e10a758290704",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_openai_client/result.xml"
+    },
+    {
+      "file": "tests/test_option_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "430e6baa658a2a941939f4cc5e0494368cfcf30d92d42d1bf736d9050d9a2699",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_option_engine/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_analytics_extra.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "8141597bded9b29baedc37f5507b9dd51d209c15a8e9e630db083562ba815628",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_analytics_extra/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_ann.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "77c7e64894c07dca571eb137f8021fa8567454ca62f63da357c1da4267bc2c89",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_ann/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_api.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 20
+      },
+      "xml_sha256": "0eb4290e57d083e5abce2d9d4d7641bd1b2acf89eaa529be83dbf0029b1b4dc3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_api/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_data_conflict.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "6453ed81640f7fd7f298116f0a888d3289fbbc59b21d9bb00eb6105ebcd1b22e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_data_conflict/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_datalayer.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 24
+      },
+      "xml_sha256": "bcb403d6f3e845950f0480811455921f315142fa0bcca61b754baba86e24316b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_datalayer/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_history_analytics.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 25
+      },
+      "xml_sha256": "9529604061561f63f26b2dd1de2b74bd2a7618338ff1193352074dfaf1e08a47",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_history_analytics/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_qualified_watch.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "fe35ab53546ac1f8743125afe36122acada79938ae6ccab8fb3b323727fab470",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_qualified_watch/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_qualify.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 19
+      },
+      "xml_sha256": "e01838aa50c356902ffcb950c6f494b75edb448be6f72932d3b42b04dbf50e3f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_qualify/result.xml"
+    },
+    {
+      "file": "tests/test_optionchain_structure.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 18
+      },
+      "xml_sha256": "3a357b274c6fe1c9e2dc9bdce51fa1c8f38fbb395d7083f65ef9d833db56e72d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_optionchain_structure/result.xml"
+    },
+    {
+      "file": "tests/test_order_manager.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 18
+      },
+      "xml_sha256": "2abc940d8921019c5a2d16fbf34afbf1fe7181f5e5cd597f7ebd29117874b296",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_order_manager/result.xml"
+    },
+    {
+      "file": "tests/test_order_pressure.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "3ef81806050fab31f7ff98592f480d4444c3bcd7e88f40499851441d9d81fe25",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_order_pressure/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_backtest.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "2d447613cc84f9af06c458526f53a11707db5a6ce0fb1de649350048babf86cc",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_backtest/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_depth.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "8d243eef81d42c33ad90b38ef54521505e4100985aafc5896c3d27f963aaf820",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_depth/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "SKIPPED": 8
+      },
+      "xml_sha256": "f2de677cc1b9a7415d9a35b773705778a6c9a0a77dc6d012a9d0a802bbdd5551",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_h1h7_replay/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_state.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 42
+      },
+      "xml_sha256": "6b87dbb5c67f595428afcbd2f15c07f6b87c6ba696dedda57bbb6a42426262d3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_h1h7_state/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_premium_walk.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 16
+      },
+      "xml_sha256": "230aaf10d96313540b3c0decbbb5b0de4a99e003a1dff661ff0695f06e5e3ee3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_premium_walk/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_profile.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "1e8dcebdd3e917eb092b03b0867538b8f220004c3957867043bf692f3d81750a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_profile/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_smart_money.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 25
+      },
+      "xml_sha256": "945d9ff15b010e77d6200ccf549a3b410fabeac8d778e4a52e205dba808aef64",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_smart_money/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_store.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "b13b2e455a4e73e156ce399172de6643a603f30b42eeaeec8ba1bf4adcde3fbc",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_store/result.xml"
+    },
+    {
+      "file": "tests/test_orderflow_v1.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "dc617525cee12d492ac01c60bc8572ee02db253c4fbf43a7d4747386581513a1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_orderflow_v1/result.xml"
+    },
+    {
+      "file": "tests/test_p61_filters_ablation.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "c0340e6806d132aac59d4ed89fa88e69cb1d3802db3f100d652c633badd36eb3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_p61_filters_ablation/result.xml"
+    },
+    {
+      "file": "tests/test_paper_trading_ev_and_costs.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "4779752dd0a52e360c13031efcf53c06f22ea42816c2779565997956da2e3f1e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_paper_trading_ev_and_costs/result.xml"
+    },
+    {
+      "file": "tests/test_phase10_14_prob_calib.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "9c990d05a87500d94ce07dc144286902174ff443d574ba3d9f800cd416e065db",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_phase10_14_prob_calib/result.xml"
+    },
+    {
+      "file": "tests/test_phase2_live_greeks.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "d0cf1ecd6515c4b5fa2cf00c2c5a9f127375f4e2219fbfd57de706248ad98b40",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_phase2_live_greeks/result.xml"
+    },
+    {
+      "file": "tests/test_phase3_7_data_quality.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "c62f764a6367f08ba55451ca3bd264953b3c352af1ec8fb3ef55229dee369ae6",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_phase3_7_data_quality/result.xml"
+    },
+    {
+      "file": "tests/test_phase8_9_trade_features.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 3
+      },
+      "xml_sha256": "2ff13a5b4df761234cd075cdb075dfc78b23ba768a3d6b0f089f92cc775c189e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_phase8_9_trade_features/result.xml"
+    },
+    {
+      "file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 27
+      },
+      "xml_sha256": "e0534c6234d243080e2533e75d80e5c33e7b7c09dd88b48c8109555693850d29",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_phase_h_five_symbol_pipeline/result.xml"
+    },
+    {
+      "file": "tests/test_pipeline_core_symboltoken.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "77646f620b4ec45589d960d29fd9b9719464c9ac3c38421eb9e6c247534f6f5c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_pipeline_core_symboltoken/result.xml"
+    },
+    {
+      "file": "tests/test_premium_decoupling.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "956fb3e450847cdf06be4ad71b3958548f4a50dbfa8bd8a8b2f8733e510f49b1",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_premium_decoupling/result.xml"
+    },
+    {
+      "file": "tests/test_profile_routes.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "a0131b7f17ab6d5a5363429fdfac4de20f1aea882c23674a526b7f7c06750881",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_profile_routes/result.xml"
+    },
+    {
+      "file": "tests/test_provider_calendar.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 119
+      },
+      "xml_sha256": "33a8ebf3e1c78d86cecdd119301d7925f648916922f105309e7f81bbb5ea7b31",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_provider_calendar/result.xml"
+    },
+    {
+      "file": "tests/test_reconciliation.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "24249aa99fab49ea5c171521668a33ac3fd8ff5a6fc936bbd2f6a577f340bc9e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reconciliation/result.xml"
+    },
+    {
+      "file": "tests/test_regime_mtf.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 11
+      },
+      "xml_sha256": "1dfccaaf43273f9848a9b3c5a416aefe98491a19a20839a1a5113b3e0e67d939",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_regime_mtf/result.xml"
+    },
+    {
+      "file": "tests/test_replay_harness.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 15
+      },
+      "xml_sha256": "6da8a0c2a110dc8d93209cdeebc5f89ad716c79f51c4d09fda58b18c2caa0ae7",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_replay_harness/result.xml"
+    },
+    {
+      "file": "tests/test_research.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "3fbda2a8624eb91025a0a618f922e027a155aadb87bdf90de00ef3d3d2b6ddf6",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_research/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_capture.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "b2017c973313397785963885be6d5a8ffb23f2fad57d20e5209d4ed8a98805b7",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_capture/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_confirmation.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "ae55a8ce934b4b963b335c2470485705f35c65ec29126b78449b69f9a1249ffc",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_confirmation/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_groq_verify.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "794a2d697a374c5eb1d4e7e52a480fffce5cb897669d72ceeca232bc7dd7a393",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_groq_verify/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_ml_prep.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "51524919a442f7f75305a6d0c4fc9239fc5af2235c90db2d7056500e96663c5a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_ml_prep/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_orderflow_features.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "c9dbf4065eb695a3c777b9d0f2b94b7d1f6f3fbe3941f78f671364d2cfca0bd9",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_orderflow_features/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_regime.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "34098c04b47f3ecba4ae82fa6d0affe98dc3f080772c326af21c40302e13655b",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_regime/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_replay.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "0744d99373cb81f2d0d6e1df8c14fbe374ca74b4fcc9ccdc7dd882646fae16f6",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_replay/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_schema.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "b34188cdd43dd326c6228f7182da9afec12e07cf205315149e794a4f62c42ec0",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_schema/result.xml"
+    },
+    {
+      "file": "tests/test_reverse_engineering_status_report.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 2
+      },
+      "xml_sha256": "c8cdd210343927436c3602f381c931bfb433d95a04faf6e0592a193d00138324",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_reverse_engineering_status_report/result.xml"
+    },
+    {
+      "file": "tests/test_scalp_pipeline_risk_target.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 1
+      },
+      "xml_sha256": "91633bb028d86a1d072ba41a48a6d69c6bed81c1c6360dada57a5d79b92e0c6d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_scalp_pipeline_risk_target/result.xml"
+    },
+    {
+      "file": "tests/test_scalp_strategy_chain_gate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 15
+      },
+      "xml_sha256": "8269177ac26e6b76944336f875453e358d638254383eb6d8571bfc2e1378184e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_scalp_strategy_chain_gate/result.xml"
+    },
+    {
+      "file": "tests/test_scalp_strategy_sr_gate.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "0eccab0f438a146b5fdc27b02b069d6d50a28adbff23a63bced015f0cd1af316",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_scalp_strategy_sr_gate/result.xml"
+    },
+    {
+      "file": "tests/test_sdk_candle_metadata.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "8ffe99cf9c718aedb20dca898c1b3e04f881589ca1327bec1bdd7b0f9dd44a94",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_sdk_candle_metadata/result.xml"
+    },
+    {
+      "file": "tests/test_shadow_notify.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "27ca0a9ca0a467a3ee02b354accbf295b52e40d71dfb70380e05164132a810a6",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_shadow_notify/result.xml"
+    },
+    {
+      "file": "tests/test_shadow_outcome.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 20
+      },
+      "xml_sha256": "8e20b12989775ce3fae0825ed8dd9b039def624e6fa5801347088fecadf11c22",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_shadow_outcome/result.xml"
+    },
+    {
+      "file": "tests/test_shared_research_harness.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 18
+      },
+      "xml_sha256": "1783f0b6d921699ee50c86e35213794cf750ac5f5659bfceec70ba9d88ce117f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_shared_research_harness/result.xml"
+    },
+    {
+      "file": "tests/test_signals_dashboard.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "96811215ce0e8decd9ccc6fe15882e58c215cec0b824bb46ddebb5982fa6f7d0",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_signals_dashboard/result.xml"
+    },
+    {
+      "file": "tests/test_signals_final_debug_endpoints.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "b7bdd2fef5cd237e8846b929d0bc10cc0fb8decc2f4380e558141bf0f5c55a55",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_signals_final_debug_endpoints/result.xml"
+    },
+    {
+      "file": "tests/test_signals_gate_analysis_endpoint.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 2
+      },
+      "xml_sha256": "4e81271d78b2558587b0be6489a0eb193c747a097ad7219f1198e6844009b335",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_signals_gate_analysis_endpoint/result.xml"
+    },
+    {
+      "file": "tests/test_sl_hit_analysis.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "29741e74e9300f9bba764ca89eb74bde50a707c1baa0018d6b845f4ee04fbe53",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_sl_hit_analysis/result.xml"
+    },
+    {
+      "file": "tests/test_smart_index_scalper.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 11
+      },
+      "xml_sha256": "257055f53ef3912205eb5f365ac7beb8c4b1d238cc6f2fd223ad1d7d96ef045c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_smart_index_scalper/result.xml"
+    },
+    {
+      "file": "tests/test_smart_scalper_paper.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "84eddcfc9ed13e8c3910395de0ea553dd36a914221f206cc162bcaad1f8ca450",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_smart_scalper_paper/result.xml"
+    },
+    {
+      "file": "tests/test_smart_scalper_replay.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "42bb293a167d98c80156f1f24e174a3d653611536a9d8e712eee2de1a39b0b24",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_smart_scalper_replay/result.xml"
+    },
+    {
+      "file": "tests/test_smart_scalper_scheduler.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "effdbcd0fce05a07b1d6f9ab3f0026c69a0342c9205090b3483df1b55cfec636",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_smart_scalper_scheduler/result.xml"
+    },
+    {
+      "file": "tests/test_sr_engine.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 28
+      },
+      "xml_sha256": "7dd47c12207511cdf7c7172c27ad2ab3bcc47d87ee8dd816d26049bb3408da00",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_sr_engine/result.xml"
+    },
+    {
+      "file": "tests/test_stale_feed_watchdog.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "a0fe7465f8424da40f25a5fe2dd550a5e14741a9530b56a8e40258b86380518a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_stale_feed_watchdog/result.xml"
+    },
+    {
+      "file": "tests/test_standalone_angelone.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 4
+      },
+      "xml_sha256": "c6d28a8ac6c13b960d28cd8340774fa42a64d93ebe376793e9a10cbc02f44b30",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_standalone_angelone/result.xml"
+    },
+    {
+      "file": "tests/test_state_classifier.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "f35082a788421539c0a1373f12731539fd76f540b4f603c12b7a7d9fc163f28a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_state_classifier/result.xml"
+    },
+    {
+      "file": "tests/test_static_calendar_archives.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 24
+      },
+      "xml_sha256": "e2bac404c1e063dd37974ff4a13dedb44367f666e02421c3acaabf88393b567e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_static_calendar_archives/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_adaptation.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "dd48db1ebb1980feb752dcedb07b5765bc33afe7dd6d9a3c38008b01f3513330",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_adaptation/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_api.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "7e517d485333f3f9ca92a706b235deb112293a7e06cb43d443dde39b962d9786",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_api/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_audit_log.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 5
+      },
+      "xml_sha256": "995ed074e22cf067503200c51417593025293cb3bedc114fd3ca4aa231d6c41d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_audit_log/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_backtest_compare.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "1e059a546d93237fcb839c0002a470db2ad780e320f22f7895f44c6c2308f04f",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_backtest_compare/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_drift.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "5b9dfa137d0a910b334b3919b676c67c14eeacf4d2ef43db2c0e50df4cb9cc5e",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_drift/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_evaluator.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "a43576b802f6ee7f27ef21df8a1f9ddee53d08473923c6d4ef5c1e7ca241269c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_evaluator/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_feature_drift.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "8d106bccc38d9381510569ea528da3ee32eb6590bada32a2cb87c1da949cf49d",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_feature_drift/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_performance_monitor.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 10
+      },
+      "xml_sha256": "f7ea05923aabd61f8f6d2364320986b01437a862c7926a59ed492d078c9411c3",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_performance_monitor/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_prediction_drift.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "bb629eb0bcaa2427623fd575a12c0aa25421ce627a95cf13924df6b14c6a1747",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_prediction_drift/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_regime_profiles.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 8
+      },
+      "xml_sha256": "6eadd868352c1260268b9a1cbefa39159fe878ec185603724c83f6d21915d58a",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_regime_profiles/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_score.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 16
+      },
+      "xml_sha256": "ee0ba9a403b936c58512484dd8e6f3d87b3d2609bd43007339c50dbbeadd0907",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_score/result.xml"
+    },
+    {
+      "file": "tests/test_structural_break_shadow.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "a422c873e88dc31acda1567624711e558cf36a9563b9a012e57a8194c7d606e9",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_structural_break_shadow/result.xml"
+    },
+    {
+      "file": "tests/test_telegram_dispatcher.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 13
+      },
+      "xml_sha256": "fc1fb04b1079f9b525c6efae3558afe11276a41a35cdc6e1a160b6f7044f959c",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_telegram_dispatcher/result.xml"
+    },
+    {
+      "file": "tests/test_trend_swing.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 6
+      },
+      "xml_sha256": "6fb3dccaea00fd2745867007ae8c7be82294d90f2990c076f5f322d107106cd7",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_trend_swing/result.xml"
+    },
+    {
+      "file": "tests/test_tri_compare.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 7
+      },
+      "xml_sha256": "fa163fa36bf1e9ca1e8e4bb04f1d560dfa4afbf3ce66c9fc2aabb9ea7caaa425",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_tri_compare/result.xml"
+    },
+    {
+      "file": "tests/test_turning_point.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 9
+      },
+      "xml_sha256": "ad4c923874d6c0237aebaf97ae4dda97298ac84ed07374a3f234be316b202aae",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_turning_point/result.xml"
+    },
+    {
+      "file": "tests/test_upstox_adapter.py",
+      "exit_code": 0,
+      "status": "COMPLETED",
+      "counts": {
+        "PASSED": 14
+      },
+      "xml_sha256": "3ff1d4174a71e2aa55a4f3ff382c477ee03437a11968abcd5fbfae0e1caccf35",
+      "xml_path": "/tmp/nse-completion-full-final/tests/test_upstox_adapter/result.xml"
+    }
+  ],
+  "mypy": {
+    "status": "PASS",
+    "modules": 11,
+    "options": [
+      "--follow-imports=skip",
+      "--ignore-missing-imports",
+      "--check-untyped-defs"
+    ]
+  },
+  "syntax_files": 13,
+  "source_checksums_passed": 246,
+  "git_diff_check": "PASS",
+  "production": "BLOCKED",
+  "auto_next": "FAIL-CLOSED",
+  "production_calendar": "NOT_INSTALLED",
+  "production_ingestion": false,
+  "broker_calls": 0,
+  "orders": 0,
+  "migrations": 0,
+  "restarts": 0,
+  "archive_sha256": {
+    "BhavCopy_NSE_FO_20261001.csv.zip": "d44a052b79a3961910f74783960ebbd5043696dbed39e7fb86ec84929fd60338",
+    "Reports-Archives-Multiple-01102026.zip": "2c5aae28b3d6682ee8dc2c7162041acfbf5c6999233d653a2efd157450f40fb0"
+  }
+}

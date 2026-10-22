@@ -1,0 +1,972 @@
+{
+  "package_version": "2026-10-02.6",
+  "title": "CALENDAR EXCHANGE EVIDENCE REPORT",
+  "combinations": [
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "NIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-01",
+          "end": "2026-10-01",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 1,
+      "secondary_candidates": [
+        {
+          "source_url": "https://codeload.github.com/shayakbanerjee99/nifty-options-elt/tar.gz/refs/heads/main",
+          "source_hash": "91dd927040cdd5adc8cce0396c06350d19407a704091198ba622f6635afe1a7c",
+          "dataset_hash": "fad3bd0f88293976d9ec1af2ac19a72d953e685cd358b189d26f1865a36c8f3d",
+          "source_class": "SECONDARY_DATASET",
+          "observed_dates": [
+            "2026-08-13"
+          ],
+          "candidate_expiry_dates": [
+            "2026-08-18",
+            "2026-08-25",
+            "2026-09-01",
+            "2026-09-08",
+            "2026-09-15",
+            "2026-09-29",
+            "2026-10-27",
+            "2026-12-29",
+            "2027-03-30",
+            "2027-06-29",
+            "2027-12-28",
+            "2028-06-27",
+            "2028-12-26",
+            "2029-06-26",
+            "2029-12-24",
+            "2030-06-25",
+            "2030-12-31",
+            "2031-06-24"
+          ],
+          "limitations": [
+            "Secondary repository copy; exchange-origin authenticity not independently established.",
+            "Bhavcopy-like row is not a complete historical listed universe or publication/cutoff proof.",
+            "A test_data filename and README provenance claim do not prove that values were not edited/synthesized."
+          ]
+        }
+      ],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "NIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-01",
+          "end": "2026-10-01",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 1,
+      "secondary_candidates": [
+        {
+          "source_url": "https://codeload.github.com/shayakbanerjee99/nifty-options-elt/tar.gz/refs/heads/main",
+          "source_hash": "91dd927040cdd5adc8cce0396c06350d19407a704091198ba622f6635afe1a7c",
+          "dataset_hash": "fad3bd0f88293976d9ec1af2ac19a72d953e685cd358b189d26f1865a36c8f3d",
+          "source_class": "SECONDARY_DATASET",
+          "observed_dates": [
+            "2026-08-13"
+          ],
+          "candidate_expiry_dates": [
+            "2026-08-18",
+            "2026-08-25",
+            "2026-09-01",
+            "2026-09-08",
+            "2026-09-15",
+            "2026-09-29",
+            "2026-10-27",
+            "2026-12-29",
+            "2027-03-30",
+            "2027-06-29",
+            "2027-12-28",
+            "2028-06-27",
+            "2028-12-26",
+            "2029-06-26",
+            "2029-12-24",
+            "2030-06-25",
+            "2030-12-31",
+            "2031-06-24"
+          ],
+          "limitations": [
+            "Secondary repository copy; exchange-origin authenticity not independently established.",
+            "Bhavcopy-like row is not a complete historical listed universe or publication/cutoff proof.",
+            "A test_data filename and README provenance claim do not prove that values were not edited/synthesized."
+          ]
+        }
+      ],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "BANKNIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-24",
+          "end": "2026-10-01",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "BANKNIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-24",
+          "end": "2026-10-01",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "FINNIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "FINNIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "MIDCPNIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "MIDCPNIFTY",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.nseindia.com/all-reports-derivatives",
+        "sha256": null,
+        "http_status": "000",
+        "curl_exit": 92,
+        "retained_path": null,
+        "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)"
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "BSE",
+      "instrument": "SENSEX",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-03",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+        "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "BSE",
+      "instrument": "SENSEX",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-03",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+        "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "BSE",
+      "instrument": "BANKEX",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+        "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "BSE",
+      "instrument": "BANKEX",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+        "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-02",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-01",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-01",
+          "reason": "NO_OFFICIAL_OBSERVATIONS_ACQUIRED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "No validated official downloadable report; historical observations, complete interval and publication/cutoff evidence missing. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "CRUDEOILMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "CRUDEOILMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "GOLD",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "GOLD",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "GOLDMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "GOLDMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "SILVER",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "SILVER",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "SILVERMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "SILVERMINI",
+      "status": "UNVERIFIED",
+      "observed_expiry_dates": [],
+      "covered_trading_date_range": null,
+      "covered_trading_dates": [],
+      "source_count": 0,
+      "official_source_count": 0,
+      "source_count_definition": "Qualifying official EOD/contract datasets in required scope; discovery responses excluded",
+      "missing_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "Official trading-day/session evidence unavailable; do not infer weekdays as sessions",
+      "provenance": [],
+      "sha256_evidence": [],
+      "discovery_provenance": {
+        "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+        "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+        "http_status": "403",
+        "curl_exit": 0,
+        "retained_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+        "error": ""
+      },
+      "secondary_source_count": 0,
+      "secondary_candidates": [],
+      "remaining_blocker": "Required historical window and instrument type not established; no validated official downloadable report. Provider listings remain separately unverified."
+    }
+  ],
+  "status_counts": {
+    "VERIFIED": 0,
+    "PARTIALLY_VERIFIED": 0,
+    "UNVERIFIED": 28,
+    "CONFLICTING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "official_datasets_acquired": 0,
+  "endpoint_discovery_path": "backend/calendar_evidence_acquisition/parsed/official_endpoint_discovery.json",
+  "production_calendar": "NOT INSTALLED",
+  "AUTO_NEXT": "FAIL-CLOSED",
+  "broker_calls": 0,
+  "orders": 0,
+  "production_migrations": 0,
+  "production_restarts": 0,
+  "coverage_policy": "Only official exchange-origin EOD/contract observations qualify for historical verification; retained secondary datasets are candidates only."
+}

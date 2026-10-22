@@ -1,0 +1,27 @@
+{
+ "INSTITUTION_TRADER": {
+  "display": "Mohit Agrawal"
+ },
+ "NEERAJ_JOSHI": {
+  "display": "Neeraj Joshi (entry) + ZeroHero stop/targets"
+ },
+ "DHANANJAY_DALVI": {
+  "display": "Dhananjay Dalvi",
+  "token_sha256": "4f8ce8257fc1cb82b1de712f63de0561b8b8cf81fc4130abf80596091bccd5ca"
+ },
+ "AVINASH_TEST": {
+  "display": "Avinash (test) - entry + ZeroHero stop/targets",
+  "token_sha256": "734cf3865c05a543729acb037bdf215f4dea29009b3410fb44c7d9eb6413172c",
+  "risk_module": true,
+  "hidden": true
+ },
+ "NIRAJ_JOSHI_ORIGINAL": {
+  "display": "Niraj Joshi (Original channel) - entry + ZeroHero stop/targets",
+  "token_sha256": "015d2de8db48d0f5a91862f06f5f4ae1cd9b29feeb61c9c8be0feda0557d5d89",
+  "risk_module": true
+ },
+ "ANWAR_HUSSAIN": {
+  "display": "Anwar Hussain",
+  "token_sha256": "47bb8b4f0100d98ac41a761b078be752aa0fc679b13ae6a1403c6650b3301f06"
+ }
+}

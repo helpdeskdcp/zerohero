@@ -1,0 +1,86 @@
+{
+  "relevant_tests": {
+    "tests": 1104,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "passed": 1104,
+  "phase2_diagnostics_included": 4,
+  "warnings": 0,
+  "warnings_as_errors": true,
+  "new_tests": 0,
+  "application_changes": false,
+  "mypy": {
+    "status": "PASS",
+    "files_checked": 4
+  },
+  "junit_path": "/tmp/mcx-specifications-relevant/result.xml",
+  "junit_sha256": "66c25ca49169fe23ea1613219960ae3bd57350cb941af45ad748285fb7ba5d69",
+  "git_diff_check": "PASS",
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-product-20261004/SHA256SUMS",
+      "passed": 2,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-specifications-20261004/SHA256SUMS",
+      "passed": 6,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-direct-20261004/SHA256SUMS",
+      "passed": 23,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6,
+      "returncode": 0
+    }
+  ],
+  "archive_hashes": {
+    "BhavCopy_NSE_FO_20261001.csv.zip": "d44a052b79a3961910f74783960ebbd5043696dbed39e7fb86ec84929fd60338",
+    "Reports-Archives-Multiple-01102026.zip": "2c5aae28b3d6682ee8dc2c7162041acfbf5c6999233d653a2efd157450f40fb0"
+  },
+  "official_pdf_acquisitions": 0,
+  "expiry_observations_added": 0,
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED"
+}

@@ -1,0 +1,125 @@
+{
+  "full_backend_run": {
+    "tests": 2819,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 8,
+    "passed": 2811,
+    "files": 222,
+    "timeouts": 0,
+    "nonzero_files": 0
+  },
+  "full_backend_report_dir": "/tmp/own-exchange-fallback-full-20261004",
+  "full_backend_runs_sha256": "46e4db3d6e108320d9a60e54b532a96f127ce9f0723fe88502588e00597cebd6",
+  "supplemental_new_file": {
+    "file": "tests/test_own_exchange_fallback_evidence.py",
+    "passed": 10,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "recorded_in": "/tmp/own-exchange-fallback-relevant/result.xml",
+    "reason": "Created after full runner enumerated files; run separately and in relevant suite"
+  },
+  "combined_backend_coverage": {
+    "files": 223,
+    "passed": 2821,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 8,
+    "timeouts": 0,
+    "missing_files": []
+  },
+  "relevant_suite": {
+    "passed": 1078,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "phase2_diagnostics_included": 4,
+    "warnings_as_errors": true
+  },
+  "existing_skips": [
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_replay_is_causal_on_every_real_session[CRUDEOIL]",
+      "reason": "no captured sessions for CRUDEOIL"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_replay_is_causal_on_every_real_session[NIFTY]",
+      "reason": "no captured sessions for NIFTY"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_replay_is_causal_on_every_real_session[NATURALGAS]",
+      "reason": "no captured sessions for NATURALGAS"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_replay_states_and_actions_are_all_in_the_allowed_set[CRUDEOIL]",
+      "reason": "no captured sessions for CRUDEOIL"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_replay_states_and_actions_are_all_in_the_allowed_set[NIFTY]",
+      "reason": "no captured sessions for NIFTY"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_replay_states_and_actions_are_all_in_the_allowed_set[NATURALGAS]",
+      "reason": "no captured sessions for NATURALGAS"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_h7_band_parity_with_stage7_events_csv",
+      "reason": "engine produced no events (no captured bars)"
+    },
+    {
+      "file": "tests/test_orderflow_h1h7_replay.py",
+      "test": "test_stage7_h7_label_rows_are_never_continuation_candidates",
+      "reason": "no overlapping Stage-7 H7 rows with captured bars"
+    }
+  ],
+  "warning_summary_files": [],
+  "checksum_results": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21
+    }
+  ],
+  "git_diff_check": "PASS",
+  "october_archives_unchanged": true,
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "live_broker_calls": 0,
+  "orders": 0,
+  "production_migrations": 0,
+  "restarts": 0
+}

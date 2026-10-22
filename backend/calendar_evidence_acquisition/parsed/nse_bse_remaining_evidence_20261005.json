@@ -1,0 +1,431 @@
+{
+  "schema": "nse-bse-remaining-evidence-review/v1",
+  "review_date": "2026-10-05",
+  "status": "INDEPENDENT_REVIEW_REQUIRED",
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "scope": {
+    "exchanges_reviewed": [
+      "NSE",
+      "BSE"
+    ],
+    "MCX": "DISABLED / OUT_OF_SCOPE; unchanged; no evidence required"
+  },
+  "acquisitions": [
+    {
+      "source_url": "https://www.nseindia.com/trade/platform-services-neat-trading-system",
+      "retrieved_at": "2026-10-05T02:18:36.962522+00:00",
+      "exchange": "NSE",
+      "redirects_followed": false,
+      "retries": 0,
+      "http_status": 301,
+      "discovery_parent": "artifacts/staging/nse-calendar-review-20261003/548bdc3344aabe97e44cd7737f5fb46fc6cd7e462a0aeac0faa208328e8b145a.raw",
+      "discovery_parent_sha256": "548bdc3344aabe97e44cd7737f5fb46fc6cd7e462a0aeac0faa208328e8b145a",
+      "discovery_method": "LITERAL_OFFICIAL_HTML_HREF",
+      "response_headers": {
+        "Location": "/static/trade/platform-services-neat-trading-system",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Length": "85"
+      },
+      "sha256": "8dc656ad001b0428a8749aafd8f084a07a755bdd283ab91611609ca386b151af",
+      "bytes": 85,
+      "raw_path": "artifacts/staging/nse-bse-requirements-20261005/77d03cc3bb6163db3dd3.body",
+      "evidence_status": "UNVERIFIED"
+    },
+    {
+      "source_url": "https://www.nseindia.com/robots.txt",
+      "retrieved_at": "2026-10-05T02:18:36.492026+00:00",
+      "exchange": "NSE",
+      "redirects_followed": false,
+      "retries": 0,
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Length": "96"
+      },
+      "sha256": "318df6884989e0386b3cfa7bd4f227fb8879892bb6be0272d6621c1909445d6a",
+      "bytes": 96,
+      "raw_path": "artifacts/staging/nse-bse-requirements-20261005/9402c64d404525236f8d.body",
+      "evidence_status": "UNVERIFIED"
+    },
+    {
+      "source_url": "https://www.nseindia.com/static/resources/consolidated-master-circulars",
+      "retrieved_at": "2026-10-05T02:18:36.592402+00:00",
+      "exchange": "NSE",
+      "redirects_followed": false,
+      "retries": 0,
+      "http_status": 200,
+      "discovery_parent": "artifacts/staging/nse-calendar-review-20261003/022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227.raw",
+      "discovery_parent_sha256": "022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227",
+      "discovery_method": "LITERAL_OFFICIAL_HTML_HREF",
+      "response_headers": {
+        "Content-Type": "text/html; charset=utf-8"
+      },
+      "sha256": "923ae7f613fa50d12ce204f2e2af29a8cdbcabdcad845ead54a07386dfd20700",
+      "bytes": 326860,
+      "raw_path": "artifacts/staging/nse-bse-requirements-20261005/b97722fb25702322f8f1.body",
+      "evidence_status": "UNVERIFIED"
+    },
+    {
+      "source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP73928.zip",
+      "retrieved_at": "2026-10-05T02:19:26.375855+00:00",
+      "exchange": "NSE",
+      "redirects_followed": false,
+      "retries": 0,
+      "http_status": 200,
+      "discovery_parent": "artifacts/staging/nse-bse-requirements-20261005/b97722fb25702322f8f1.body",
+      "discovery_parent_sha256": "923ae7f613fa50d12ce204f2e2af29a8cdbcabdcad845ead54a07386dfd20700",
+      "discovery_method": "LITERAL_OFFICIAL_HTML_HREF",
+      "response_headers": {
+        "Last-Modified": "Tue, 28 Apr 2026 10:36:09 GMT",
+        "Content-Type": "application/zip",
+        "Content-Length": "987315"
+      },
+      "sha256": "faf73ca3a85e84f3275673a27e546a7b9852236455aa85d0db7639d394f45365",
+      "bytes": 987315,
+      "raw_path": "artifacts/staging/nse-bse-requirements-20261005/be5fadb6a8203b917339.body",
+      "evidence_status": "UNVERIFIED"
+    },
+    {
+      "source_url": "https://nsearchives.nseindia.com/robots.txt",
+      "retrieved_at": "2026-10-05T02:19:25.795223+00:00",
+      "exchange": "NSE",
+      "redirects_followed": false,
+      "retries": 0,
+      "http_status": 404,
+      "response_headers": {
+        "Content-Type": "text/html;charset=UTF-8",
+        "Content-Length": "3425"
+      },
+      "sha256": "41fd81290608a684e8c2e9912890d5e77734a2f4f631ab9e4298274e485fa4e1",
+      "bytes": 3425,
+      "raw_path": "artifacts/staging/nse-bse-requirements-20261005/d967bf4322e7a80c7656.body",
+      "evidence_status": "UNVERIFIED"
+    }
+  ],
+  "nse_consolidated": {
+    "source": {
+      "source_url": "https://nsearchives.nseindia.com/content/circulars/FAOP73928.zip",
+      "retrieved_at": "2026-10-05T02:19:26.375855+00:00",
+      "exchange": "NSE",
+      "redirects_followed": false,
+      "retries": 0,
+      "http_status": 200,
+      "discovery_parent": "artifacts/staging/nse-bse-requirements-20261005/b97722fb25702322f8f1.body",
+      "discovery_parent_sha256": "923ae7f613fa50d12ce204f2e2af29a8cdbcabdcad845ead54a07386dfd20700",
+      "discovery_method": "LITERAL_OFFICIAL_HTML_HREF",
+      "response_headers": {
+        "Last-Modified": "Tue, 28 Apr 2026 10:36:09 GMT",
+        "Content-Type": "application/zip",
+        "Content-Length": "987315"
+      },
+      "sha256": "faf73ca3a85e84f3275673a27e546a7b9852236455aa85d0db7639d394f45365",
+      "bytes": 987315,
+      "raw_path": "artifacts/staging/nse-bse-requirements-20261005/be5fadb6a8203b917339.body",
+      "evidence_status": "UNVERIFIED"
+    },
+    "members": [
+      {
+        "filename": "FAOP73928.pdf",
+        "bytes": 1068284,
+        "sha256": "2889bb2c455474aa96619ef6e10ab33bd71cc4501effd92de455897169c96c71"
+      },
+      {
+        "filename": "PART-D.xlsx",
+        "bytes": 146686,
+        "sha256": "92355a84460f1f8858be70200b50d0dfe199ad1926ea33dadaf2f4d5db6ff2a9"
+      },
+      {
+        "filename": "PART-E.docx",
+        "bytes": 25539,
+        "sha256": "39e149a51e1f3c0e9fa9f29235f2a5df845a7eadcc24237a5b2b453ab2791486"
+      },
+      {
+        "filename": "PART-F.docx",
+        "bytes": 26422,
+        "sha256": "cc74a5f7da4c03b3c2363ccb1ebe79e1c93eb5783aab0479c3a68cce8b7cb3e4"
+      }
+    ],
+    "document_id": "NSE/FAOP/73928",
+    "publication_date": "2026-04-28",
+    "title": "F&O Consolidated Circular",
+    "text_path": "artifacts/staging/nse-bse-requirements-20261005/nse-73928-2889bb2c4554.txt",
+    "text_sha256": "f669525a8fbe68e20dcb54f47d3b3dace929fec85ff29b1fcf746621112a37e9",
+    "pdf_claims": [
+      {
+        "claim": "CIRCULAR_ID_AND_PUBLICATION",
+        "page_number": 1,
+        "excerpt": "National Stock Exchange of India Limited\n\nCircular\n Department: FUTURES & OPTIONS\n\nDownload Ref No: NSE/FAOP/73928                              Date: April 28, 2026\n\nCircular Ref. No: 51/2026\n\n\n    All Members,\n\n    F&O Consolidated Circular\n\n    Exchange has been issuing various circulars from time to time for content relating to F&O consolidated circular.\n    This consolidated circular replaces earlier consolidated circular NSE/FO/67775 dated April 30, 2025, on the\n    captioned subject. This consolidated circular is prepared which is a compilation of subsequent circulars related\n    to F&O Consolidated Circular issued till March 31, 2026. This consolidated circular encapsulates regulations /\n    instructions of all earlier circulars issued by Exchange from time to time and new instructions as applicable.\n\n    For the convenience of members, circular is categorized as following:\n\n     Part – A   List of Important circulars issued during the period April 01, 2025 – March 31, 2026\n     Part – B   List of rescinded sections or items of relevant circulars during the period April 01, 2025 –\n                March 31, 2026 with recissions\n     Part – C   Contents of Consolidated Circular\n     Part – D   Format of various reports and files provided by the Exchange\n     Part – E   Format for Contingency Pool trading facility\n     Part – F   Format and checklist of Proprietary Undertaking\n\n\n\n    For and on behalf of\n    National Stock Exchange of India Limited\n\n    Khushal Shah\n    Associate Vice President\n\n     Toll Free No                                       Email id\n     1800-266-0050 (Option 1)                           msm@nse.co.in\n"
+      },
+      {
+        "claim": "HOLIDAYS_2026_AND_MUHURAT_LIMITATION",
+        "page_number": 45,
+        "excerpt": "National Stock Exchange of India Limited                                                      Go to Index\n\n   The Futures and Options segment shall remain closed on Saturday and Sunday, unless it is explicitly stated\n   otherwise. The trading holidays for the calendar year 2026 are as below.\n\n   https://www.nseindia.com/resources/exchange-communication-holidays\n\n    Sr. No.   Date                      Day             Holiday Description\n    1         January 26, 2026          Monday          Republic Day\n    2         March 03, 2026            Tuesday         Holi\n    3         March 26, 2026            Thursday        Shri Ram Navami\n    4         March 31, 2026            Tuesday         Shri Mahavir Jayanti\n    5         April 03, 2026            Friday          Good Friday\n    6         April 14, 2026            Tuesday         Dr. Baba Saheb Ambedkar Jayanti\n    7         May 01, 2026              Friday          Maharashtra Day\n    8         May 28, 2026              Thursday        Bakri Id\n    9         June 26, 2026             Friday          Muharram\n    10        September 14, 2026        Monday          Ganesh Chaturthi\n    11        October 02, 2026          Friday          Mahatma Gandhi Jayanti\n    12        October 20, 2026          Tuesday         Dussehra\n    13        November 10, 2026         Tuesday         Diwali-Balipratipada\n    14        November 24, 2026         Tuesday         Prakash Gurpurb Sri Guru Nanak Dev\n    15        December 25, 2026         Friday          Christmas\n\n\n   The holidays falling on Saturday / Sunday are as follows:\n\n    Sr. No. Date                       Day           Description\n    1         February 15, 2026        Sunday        Mahashivratri\n    2         March 21, 2026           Saturday      Id-Ul-Fitr (Ramadan Eid)\n    3         August 15, 2026          Saturday      Independence Day\n    4         November 08, 2026        Sunday        Diwali Laxmi Pujan*\n   *Muhurat Trading will be conducted on Sunday, November 08,2026. Timings of Muhurat Trading shall be\n   notified subsequently.\n\n\n   Relevant Circular:\n\n    Download No.               Date\n\n    NSE/FAOP/71777             December 12, 2025\n\n\n   2.2 Trading Hours\n\n   In pursuance of clause 2.4 of Regulation (F&O Segment), the trading hours for the Futures & Options Segment\n                                                                                                 Page 45 of 74\n"
+      },
+      {
+        "claim": "NORMAL_MARKET_HOURS_NOT_CONTRACT_SPECIFIC_CUTOFF",
+        "page_number": 46,
+        "excerpt": "National Stock Exchange of India Limited                                                             Go to Index\n   of the Exchange is given below:\n\n      Pre-open session Open Time                                             09:00 hrs.\n\n      Pre-open session Close Time                                            09:08 hrs.\n\n      Normal Market Open Time                                                 09:15 hrs.\n\n      Normal Market Close Time                                               15:30 hrs.\n\n      Trade Modification End Time                                            16:15 hrs.\n\n   Further, Exchange shall endeavor to provide the trading system access by around 02:30 am on all trading days\n   for users to login and check connectivity. Members are advised to login as early as possible to avoid any\n   inconvenience.\n\n\n   The pre-open session shall be conducted using call auction mechanism for duration of 15 minutes i.e., from\n   9:00 am to 9:15 am. The pre-open schedule shall be as follows:\n\n            Session            Time                        Remark\n\n            Order Entry        9:00 am - 9:08 am (*)       •   Order entry, Modification and Cancellation\n\n            Period                                         •   (*) System driven Random closure between 7th\n\n                                                               and 8th minute\n\n                                                           •   Random closure of equity segment preopen &\n                                                               equity derivatives segment preopen will be\n\n                                                               independent.\n\n            Order Matching     9:08 am (*) – 9:12 am       •   (*) Order matching period will start immediately\n            & trade                                            after completion of order entry period.\n\n            Confirmation                                   •   Opening price determination.\n            Period                                         •   Order matching and trade confirmation.\n\n            Buffer Period      9:12 am - 9:15 am           •   Transition from pre-open to continuous trading\n\n                                                               session\n           Note: In case of index-based market-wide circuit filter breach or any outage (stopping of trading, either\n           suo moto by Exchange or by virtue of reasons beyond control of stock exchange),the market shall open\n           with a pre-open session and its timings shall be informed separately on that day.\n\n\n   2.3 Index Circuit Filter\n\n\n                                                                                                         Page 46 of 74\n"
+      }
+    ],
+    "holidays": [
+      {
+        "date": "2026-01-26",
+        "published_date": "January 26, 2026",
+        "weekday": "Monday",
+        "description": "Republic Day",
+        "page_number": 45,
+        "source_line": "1         January 26, 2026          Monday          Republic Day"
+      },
+      {
+        "date": "2026-03-03",
+        "published_date": "March 03, 2026",
+        "weekday": "Tuesday",
+        "description": "Holi",
+        "page_number": 45,
+        "source_line": "2         March 03, 2026            Tuesday         Holi"
+      },
+      {
+        "date": "2026-03-26",
+        "published_date": "March 26, 2026",
+        "weekday": "Thursday",
+        "description": "Shri Ram Navami",
+        "page_number": 45,
+        "source_line": "3         March 26, 2026            Thursday        Shri Ram Navami"
+      },
+      {
+        "date": "2026-03-31",
+        "published_date": "March 31, 2026",
+        "weekday": "Tuesday",
+        "description": "Shri Mahavir Jayanti",
+        "page_number": 45,
+        "source_line": "4         March 31, 2026            Tuesday         Shri Mahavir Jayanti"
+      },
+      {
+        "date": "2026-04-03",
+        "published_date": "April 03, 2026",
+        "weekday": "Friday",
+        "description": "Good Friday",
+        "page_number": 45,
+        "source_line": "5         April 03, 2026            Friday          Good Friday"
+      },
+      {
+        "date": "2026-04-14",
+        "published_date": "April 14, 2026",
+        "weekday": "Tuesday",
+        "description": "Dr. Baba Saheb Ambedkar Jayanti",
+        "page_number": 45,
+        "source_line": "6         April 14, 2026            Tuesday         Dr. Baba Saheb Ambedkar Jayanti"
+      },
+      {
+        "date": "2026-05-01",
+        "published_date": "May 01, 2026",
+        "weekday": "Friday",
+        "description": "Maharashtra Day",
+        "page_number": 45,
+        "source_line": "7         May 01, 2026              Friday          Maharashtra Day"
+      },
+      {
+        "date": "2026-05-28",
+        "published_date": "May 28, 2026",
+        "weekday": "Thursday",
+        "description": "Bakri Id",
+        "page_number": 45,
+        "source_line": "8         May 28, 2026              Thursday        Bakri Id"
+      },
+      {
+        "date": "2026-06-26",
+        "published_date": "June 26, 2026",
+        "weekday": "Friday",
+        "description": "Muharram",
+        "page_number": 45,
+        "source_line": "9         June 26, 2026             Friday          Muharram"
+      },
+      {
+        "date": "2026-09-14",
+        "published_date": "September 14, 2026",
+        "weekday": "Monday",
+        "description": "Ganesh Chaturthi",
+        "page_number": 45,
+        "source_line": "10        September 14, 2026        Monday          Ganesh Chaturthi"
+      },
+      {
+        "date": "2026-10-02",
+        "published_date": "October 02, 2026",
+        "weekday": "Friday",
+        "description": "Mahatma Gandhi Jayanti",
+        "page_number": 45,
+        "source_line": "11        October 02, 2026          Friday          Mahatma Gandhi Jayanti"
+      },
+      {
+        "date": "2026-10-20",
+        "published_date": "October 20, 2026",
+        "weekday": "Tuesday",
+        "description": "Dussehra",
+        "page_number": 45,
+        "source_line": "12        October 20, 2026          Tuesday         Dussehra"
+      },
+      {
+        "date": "2026-11-10",
+        "published_date": "November 10, 2026",
+        "weekday": "Tuesday",
+        "description": "Diwali-Balipratipada",
+        "page_number": 45,
+        "source_line": "13        November 10, 2026         Tuesday         Diwali-Balipratipada"
+      },
+      {
+        "date": "2026-11-24",
+        "published_date": "November 24, 2026",
+        "weekday": "Tuesday",
+        "description": "Prakash Gurpurb Sri Guru Nanak Dev",
+        "page_number": 45,
+        "source_line": "14        November 24, 2026         Tuesday         Prakash Gurpurb Sri Guru Nanak Dev"
+      },
+      {
+        "date": "2026-12-25",
+        "published_date": "December 25, 2026",
+        "weekday": "Friday",
+        "description": "Christmas",
+        "page_number": 45,
+        "source_line": "15        December 25, 2026         Friday          Christmas"
+      },
+      {
+        "date": "2026-02-15",
+        "published_date": "February 15, 2026",
+        "weekday": "Sunday",
+        "description": "Mahashivratri",
+        "page_number": 45,
+        "source_line": "1         February 15, 2026        Sunday        Mahashivratri"
+      },
+      {
+        "date": "2026-03-21",
+        "published_date": "March 21, 2026",
+        "weekday": "Saturday",
+        "description": "Id-Ul-Fitr (Ramadan Eid)",
+        "page_number": 45,
+        "source_line": "2         March 21, 2026           Saturday      Id-Ul-Fitr (Ramadan Eid)"
+      },
+      {
+        "date": "2026-08-15",
+        "published_date": "August 15, 2026",
+        "weekday": "Saturday",
+        "description": "Independence Day",
+        "page_number": 45,
+        "source_line": "3         August 15, 2026          Saturday      Independence Day"
+      },
+      {
+        "date": "2026-11-08",
+        "published_date": "November 08, 2026",
+        "weekday": "Sunday",
+        "description": "Diwali Laxmi Pujan*",
+        "page_number": 45,
+        "source_line": "4         November 08, 2026        Sunday        Diwali Laxmi Pujan*"
+      }
+    ],
+    "contract_layout": {
+      "member": "PART-D.xlsx",
+      "sha256": "92355a84460f1f8858be70200b50d0dfe199ad1926ea33dadaf2f4d5db6ff2a9",
+      "cells": {
+        "Annexure 1": {
+          "B1": "Generic File Name",
+          "C1": "Contract file from FTP Extranet",
+          "D1": "Go to Index",
+          "B2": "Nomenclature",
+          "C2": "contract.txt",
+          "A17": "7",
+          "B17": "expiry_date",
+          "C17": "Value should be expiry date of the contract in jiffy seconds",
+          "D17": "Expiry date indicates the last day till which a particular contract is available for trading. This value calculated as the time in seconds from 1st January 1980 to the required expiry.",
+          "A78": "27",
+          "B78": "issue_info.start_date",
+          "C78": "Value should be in jiffy seconds ",
+          "D78": "Indicates the date on which the particular contract was introduced",
+          "A80": "29",
+          "B80": "issue_info.maturity_date",
+          "C80": "Value should be in jiffy seconds ",
+          "D80": "It is same as the expiry date and indicates the last day upto which the contract is available for trading."
+        },
+        "Annexure 13": {
+          "B5": "File Name",
+          "C5": "NSE_FO_contract_ddmmyyyy.csv.gz",
+          "A9": "Sr. No.",
+          "B9": "NSE field Name from contract.txt file",
+          "C9": "Data type",
+          "D9": "ISO Tags",
+          "A14": "5",
+          "B14": "expiry_date",
+          "C14": "CHAR(12)",
+          "D14": "XpryDt",
+          "A21": "12",
+          "B21": "issue_info.start_date",
+          "C21": "CHAR(12)",
+          "D21": "StartDt",
+          "A23": "14",
+          "B23": "issue_info.maturity_date",
+          "C23": "LONG",
+          "D23": "MtrtyDt",
+          "A32": "23",
+          "B32": "exercise_start_date",
+          "C32": "CHAR(12)",
+          "D32": "ExrcStartDt"
+        }
+      }
+    },
+    "limitations": [
+      "Compilation states circulars through 2026-03-31; later amendments require applicability review.",
+      "General normal close 15:30 does not resolve retained current Equity Derivatives web close 15:40.",
+      "Annexure 1 documents seconds since 1980-01-01 for contract.txt. Annexure 13 maps expiry_date to XpryDt as CHAR(12); no timezone/cutoff inferred.",
+      "The retained operator-provided NSE master still lacks independently established download provenance.",
+      "No expiry dates generated from this specification or holiday list. No contract-specific cutoff assigned.",
+      "Muhurat trading timing is explicitly deferred to a later notification."
+    ]
+  },
+  "bse_bankex": {
+    "observations_path": "backend/calendar_evidence_acquisition/parsed/bse_bankex_master_observations_20261005.json.gz",
+    "observations_sha256": "376903b895704412f9af4a50a726589c3724f3ceb7e51b9465563c34e2299aa9",
+    "contract_count": 1049,
+    "counts_by_type": {
+      "OPTION": 1046,
+      "FUTURE": 3
+    },
+    "observed_expiries": [
+      "2026-10-29",
+      "2026-11-26",
+      "2026-12-31"
+    ],
+    "provenance": {
+      "source_url": "https://www.bseindia.com/downloads1/Live_Masters_for_Equity_Derivatives.zip",
+      "sha256": "bde5c37743a6a9aa55871a741e82e97f15067b52c4242edecc5741a5250b6c85",
+      "retrieved_at": "2026-10-04T08:34:18.050960+00:00",
+      "member": "BSE_EQD_CONTRACT_01102026.csv",
+      "member_sha256": "bfff42883359e6e38d3c8ff833b177eae514c9329287225290d37f35d13da7cc",
+      "discovery_url": "https://www.bseindia.com/assets/includenew/js/main-FB3J6BO4.js",
+      "discovery_sha256": "4f343512fd2bd532acb28143a64b0149a0ba6f7009eb970bc117a3abc5155692",
+      "schema_url": "https://www.bseindia.com/downloads1/EOD_FF_and_Sample_Files_BSE_Derivativ_segment.zip",
+      "schema_archive_sha256": "fc5bb15ac6508894e775804ee2741ece1ec1b37b970c6d978b2df6be8f1f1c80",
+      "schema_pdf_member": "EOD File Formats of F&O segment-December_v.14.2_BSE.pdf",
+      "schema_pdf_sha256": "83bf3f010e87e2b3c1ae04947547cef345409c4a216d2847e6f5e734124ab622"
+    },
+    "validated_production_expiries": [],
+    "complete_historical_calendar": false,
+    "limitations": [
+      "One dated master is not historical coverage or a publication/listing instant.",
+      "BANKEX-specific intraday cutoff/effective period and independent production review remain unavailable."
+    ]
+  },
+  "remaining_requirements": {
+    "NSE": [
+      "Independent provenance and reviewed numeric date/time mapping for the staged contract master.",
+      "Historical publication/listing intervals, complete coverage and per-contract cycle mapping.",
+      "Effective contract cutoff/timezone and applicable later amendments resolving 15:30 versus 15:40.",
+      "Hash-bound independent production review and all existing production gate reports."
+    ],
+    "BSE": [
+      "Historical contract snapshots/publication/listing intervals beyond the single retained master.",
+      "Applicable SENSEX and BANKEX expiry cutoff/timezone/effective periods and holiday amendments.",
+      "Resolve SENSEX specification 15:40 versus FAQ 15:30 applicability.",
+      "Hash-bound independent production review and all existing production gate reports."
+    ]
+  },
+  "new_validated_production_expiries": 0
+}

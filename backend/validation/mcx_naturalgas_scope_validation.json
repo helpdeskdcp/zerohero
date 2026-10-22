@@ -1,0 +1,98 @@
+{
+  "relevant_tests": {
+    "tests": 1160,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "passed": 1160,
+  "targeted_passed": 56,
+  "new_regression_cases": 15,
+  "warnings": 0,
+  "warnings_as_errors": true,
+  "phase2_diagnostics_included": 4,
+  "junit_path": "/tmp/mcx-naturalgas-scope-relevant-20261005/result.xml",
+  "junit_sha256": "5d778b780fcdbe7dc8bb0151d19d274e2c76069be06e2be49245aaf7f4f4975c",
+  "mypy": {
+    "status": "PASS",
+    "files_checked": 6
+  },
+  "syntax": "PASS",
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-product-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-specifications-20261004/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-direct-20261004/SHA256SUMS",
+      "passed": 23
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/SHA256SUMS",
+      "passed": 7
+    },
+    {
+      "manifest": "backend/validation/MCX_SPECIFICATION_SHA256SUMS",
+      "passed": 3
+    },
+    {
+      "manifest": "backend/validation/MCX_LOCAL_SPECIFICATION_SHA256SUMS",
+      "passed": 16
+    }
+  ],
+  "git_diff_check": "PASS",
+  "scope_readback": "PASS; only NATURALGAS FUTURE required; no active calendar; exclusions have no pending requirements",
+  "installed_calendar_readback": "NOT_APPLICABLE_INSTALLATION_BLOCKED",
+  "application_code_changed": false,
+  "production_installation_attempted": false,
+  "network_requests": 0,
+  "broker_calls": 0,
+  "orders": 0,
+  "migrations": 0,
+  "service_restarts": 0,
+  "pdfs_modified": false,
+  "october_archives_modified": false,
+  "changed_files": [
+    "backend/calendar_evidence_acquisition/production_scope.json",
+    "backend/MCX_NATURALGAS_INSTALLATION_REPORT.md",
+    "backend/tests/test_mcx_naturalgas_production_scope.py",
+    "backend/validation/mcx_naturalgas_scope_validation.json",
+    "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS"
+  ]
+}

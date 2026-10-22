@@ -1,0 +1,1123 @@
+{
+  "schema_version": "own-exchange-direct-evidence/v1",
+  "sources": [
+    {
+      "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+      "exchange": "MCX",
+      "retrieved_at": "2026-10-04T08:34:20.320555+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "398"
+      },
+      "sha256": "a5b24711cdb2484703e3cb22a1db4133c53b87c32c622e3abf8dece9968c606e",
+      "bytes": 398,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/2b737387bb32d49ba5fb.body",
+      "classification": "MISSING_EVIDENCE",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/2b737387bb32d49ba5fb.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-4TDC2PZO.js",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:40:19.660606+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/javascript",
+        "Last-Modified": "Tue, 22 Sep 2026 14:14:53 GMT"
+      },
+      "sha256": "9936cba0cd80a35ab8c40d7aa06335590bf0e0c3d72745a4270c63bba394bd71",
+      "bytes": 578034,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/3100ccd42910f8b4bbd8.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/3100ccd42910f8b4bbd8.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260415-34/20260415-34.pdf",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:43:22.527173+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/pdf",
+        "Last-Modified": "Wed, 15 Apr 2026 15:36:27 GMT",
+        "Content-Length": "96574"
+      },
+      "sha256": "792e27317b97ec9bb7622284d7713d6920f3b33b63575e4f8a16621ff656a9b2",
+      "bytes": 96574,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/42a504d231f4bb5e4705.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/42a504d231f4bb5e4705.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260702-38/20260702-38.pdf",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:43:22.739489+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/pdf",
+        "Last-Modified": "Thu, 02 Jul 2026 14:39:34 GMT",
+        "Content-Length": "120651"
+      },
+      "sha256": "d8ada2d72cd23340b9f26bf4133fecd8fba5360fcea0cfce7eac12783e16901c",
+      "bytes": 120651,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/4403db9df7e7027b28e2.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/4403db9df7e7027b28e2.json"
+    },
+    {
+      "source_url": "https://api.bseindia.com/BseIndiaAPI/api/ddlUnderlyingAsset/w?ProductType=IO&scrip_cd=0",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:40:19.845026+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "423"
+      },
+      "sha256": "1ff7686857e9353c88eb6101f529decb48820f1f9390de4209d91f46a15a4679",
+      "bytes": 423,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/44708852c5e49d34e61e.body",
+      "classification": "MISSING_EVIDENCE",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/44708852c5e49d34e61e.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/downloads1/Live_Masters_for_Equity_Derivatives.zip",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:34:18.050960+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/x-zip-compressed",
+        "Last-Modified": "Thu, 01 Oct 2026 13:55:58 GMT",
+        "Content-Length": "2349529"
+      },
+      "sha256": "bde5c37743a6a9aa55871a741e82e97f15067b52c4242edecc5741a5250b6c85",
+      "bytes": 2349529,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/9789880bf792034443e3.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/9789880bf792034443e3.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/downloads1/EOD_FF_and_Sample_Files_BSE_Derivativ_segment.zip",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:34:19.204886+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/x-zip-compressed",
+        "Last-Modified": "Tue, 09 Dec 2025 07:46:23 GMT",
+        "Content-Length": "3710767"
+      },
+      "sha256": "fc5bb15ac6508894e775804ee2741ece1ec1b37b970c6d978b2df6be8f1f1c80",
+      "bytes": 3710767,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/9b7b2e798dec2f9c37ba.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/9b7b2e798dec2f9c37ba.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-LPPH6725.js",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:39:01.983965+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/javascript",
+        "Last-Modified": "Tue, 22 Sep 2026 14:14:54 GMT"
+      },
+      "sha256": "a717433730b33092c0850e5259721cc7cc1d97debe0aaec802a4b6e72a42bc85",
+      "bytes": 746675,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/a5461e65582c495a4daa.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/a5461e65582c495a4daa.json"
+    },
+    {
+      "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-OSCYTWKO.js",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-04T08:39:02.247905+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "application/javascript",
+        "Last-Modified": "Tue, 29 Sep 2026 12:19:16 GMT"
+      },
+      "sha256": "8f39e5703afdc4237afa827d2d995a66893e9f97cf302ee2fc59a244c202e8d0",
+      "bytes": 290047,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/d1224750c6eeeb1b8211.body",
+      "classification": "OFFICIAL_PUBLISHED_SOURCE_REQUIRES_SCOPE_REVIEW",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/d1224750c6eeeb1b8211.json"
+    },
+    {
+      "source_url": "https://www.mcxindia.com/market-data/contract-available-for-trading",
+      "exchange": "MCX",
+      "retrieved_at": "2026-10-04T08:34:20.296130+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "acquisition_context": "Explicit user request to inspect actual official routes independently of robots diagnostics; no production policy change",
+      "evidence_classification": "UNVERIFIED",
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "432"
+      },
+      "sha256": "b4f4c80d83ad47628db8aa9f9f0a63c57cadeccc00de9b93f2feb1f8065bf3d3",
+      "bytes": 432,
+      "raw_path": "artifacts/staging/own-exchange-direct-20261004/f0f28f68af32807d204c.body",
+      "classification": "MISSING_EVIDENCE",
+      "metadata_path": "artifacts/staging/own-exchange-direct-20261004/f0f28f68af32807d204c.json"
+    }
+  ],
+  "archive_inventory": [
+    {
+      "source_url": "https://www.bseindia.com/downloads1/Live_Masters_for_Equity_Derivatives.zip",
+      "sha256": "bde5c37743a6a9aa55871a741e82e97f15067b52c4242edecc5741a5250b6c85",
+      "members": [
+        {
+          "name": "BSE_EQD_CONTRACT_01102026.csv",
+          "size": 12505547,
+          "crc32": 2601998891
+        },
+        {
+          "name": "BSE_EQD_SPDCONTRACT_01102026.csv",
+          "size": 281574,
+          "crc32": 3244459915
+        },
+        {
+          "name": "EQD_CO011026.csv",
+          "size": 10765624,
+          "crc32": 437239236
+        },
+        {
+          "name": "EQD_DP011026",
+          "size": 2280228,
+          "crc32": 2400512467
+        },
+        {
+          "name": "EQD_SPD_CO011026.csv",
+          "size": 248477,
+          "crc32": 722105522
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.bseindia.com/downloads1/EOD_FF_and_Sample_Files_BSE_Derivativ_segment.zip",
+      "sha256": "fc5bb15ac6508894e775804ee2741ece1ec1b37b970c6d978b2df6be8f1f1c80",
+      "members": [
+        {
+          "name": "Sample files/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Bhav Copy in UDiFF/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Bhav Copy in UDiFF/BhavCopy_BSE_FO_0_0_0_20250109_F_0000.CSV",
+          "size": 118913,
+          "crc32": 4008885037
+        },
+        {
+          "name": "Sample files/Contract Master/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Contract Master/EQD_CO081225.csv",
+          "size": 10142250,
+          "crc32": 4149785855
+        },
+        {
+          "name": "Sample files/Contract Master/EQD_SPD_CO081225.csv",
+          "size": 252315,
+          "crc32": 4261758212
+        },
+        {
+          "name": "Sample files/Daily Price Band File/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Daily Price Band File/EQD_DP070425",
+          "size": 3328802,
+          "crc32": 1627275215
+        },
+        {
+          "name": "Sample files/Market Summary File/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Market Summary File/MS_20250109-01.CSV",
+          "size": 108443,
+          "crc32": 3638954370
+        },
+        {
+          "name": "Sample files/Member Turnover File/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Member Turnover File/DTOCM_7000_20150608-01.csv",
+          "size": 477,
+          "crc32": 968652914
+        },
+        {
+          "name": "Sample files/Member Turnover File/DTOCM_9082_20150608-01.csv",
+          "size": 753,
+          "crc32": 558149415
+        },
+        {
+          "name": "Sample files/Member Turnover File/DTOCM_9084_20150608-01.csv",
+          "size": 722,
+          "crc32": 4223261770
+        },
+        {
+          "name": "Sample files/Member Turnover File/DTOTM_7000_20150608-01.csv",
+          "size": 1561,
+          "crc32": 3625570944
+        },
+        {
+          "name": "Sample files/Member Turnover File/DTOTM_7046_20150608-01.csv",
+          "size": 1732,
+          "crc32": 4203681089
+        },
+        {
+          "name": "Sample files/Online Trade File/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Online Trade File/EQD_ITRTM_1023_20240727.csv",
+          "size": 7798,
+          "crc32": 640498727
+        },
+        {
+          "name": "Sample files/Order Log File/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Order Log File/DOR070516.1025",
+          "size": 20447,
+          "crc32": 2592311367
+        },
+        {
+          "name": "Sample files/Participant Master File (CP code)/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Participant Master File (CP code)/EQD_PARTICIPANT09012025.TXT",
+          "size": 1334685,
+          "crc32": 938538054
+        },
+        {
+          "name": "Sample files/Standardized Contract Master/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Standardized Contract Master/BSE_EQD_CONTRACT_08122025.csv",
+          "size": 11781328,
+          "crc32": 3566309773
+        },
+        {
+          "name": "Sample files/Standardized Contract Master/BSE_EQD_SPDCONTRACT_08122025.csv",
+          "size": 285718,
+          "crc32": 372458817
+        },
+        {
+          "name": "Sample files/Trade File in UDiFF/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Trade File in UDiFF/Trade_BSE_FO_0_TM_9081_20231130_F_0000.csv",
+          "size": 13775,
+          "crc32": 2589757433
+        },
+        {
+          "name": "Sample files/Transaction Charges/",
+          "size": 0,
+          "crc32": 0
+        },
+        {
+          "name": "Sample files/Transaction Charges/DTSCM_7000_20170703.csv",
+          "size": 37,
+          "crc32": 2142364174
+        },
+        {
+          "name": "Sample files/Transaction Charges/DTSCM_9082_20170703.csv",
+          "size": 37,
+          "crc32": 365820531
+        },
+        {
+          "name": "Sample files/Transaction Charges/DTSCM_9084_20170703.csv",
+          "size": 74,
+          "crc32": 311837422
+        },
+        {
+          "name": "Sample files/Transaction Charges/DTSTM_7000_20170703.csv",
+          "size": 37,
+          "crc32": 2442805689
+        },
+        {
+          "name": "Sample files/Transaction Charges/DTSTM_7046_20170703.csv",
+          "size": 37,
+          "crc32": 1009210272
+        },
+        {
+          "name": "EOD File Formats of F&O segment-December_v.14.2_BSE.pdf",
+          "size": 893624,
+          "crc32": 3883749160
+        }
+      ]
+    }
+  ],
+  "bse_sensex": {
+    "observed_contracts": 4051,
+    "observed_distinct_expiries": 21,
+    "counts_by_type": {
+      "OPTION": 4048,
+      "FUTURE": 3
+    },
+    "duplicates": [],
+    "conflicts": [],
+    "expiry_groups": [
+      {
+        "expiry": "2026-10-01",
+        "contracts": 394,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "EXPIRED"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-10-08",
+        "contracts": 398,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-10-15",
+        "contracts": 390,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-10-22",
+        "contracts": 374,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-10-29",
+        "contracts": 425,
+        "contract_types": [
+          "FUTURE",
+          "OPTION"
+        ],
+        "cycles": [
+          "MONTHLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-11-05",
+        "contracts": 342,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-11-12",
+        "contracts": 322,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-11-19",
+        "contracts": 282,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "WEEKLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-11-26",
+        "contracts": 391,
+        "contract_types": [
+          "FUTURE",
+          "OPTION"
+        ],
+        "cycles": [
+          "MONTHLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2026-12-31",
+        "contracts": 347,
+        "contract_types": [
+          "FUTURE",
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY",
+          "MONTHLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2027-03-25",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "QUARTERLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2027-06-24",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2027-09-30",
+        "contracts": 26,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "QUARTERLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2027-12-30",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2028-06-29",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2028-12-28",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2029-06-28",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2029-12-27",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2030-06-27",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2030-12-26",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      },
+      {
+        "expiry": "2031-06-26",
+        "contracts": 36,
+        "contract_types": [
+          "OPTION"
+        ],
+        "cycles": [
+          "HALF_YEARLY"
+        ],
+        "states": [
+          "ACTIVE"
+        ],
+        "classification": "OBSERVED_OFFICIAL_EXPIRY",
+        "production_eligible": false
+      }
+    ],
+    "observations_path": "backend/calendar_evidence_acquisition/parsed/bse_sensex_master_observations_20261004.json.gz",
+    "observations_sha256": "40838d65170d63e2c501f0ed853810d6cf6ab7e3cd59b0ccf7984005dcc9c88d",
+    "provenance": {
+      "source_url": "https://www.bseindia.com/downloads1/Live_Masters_for_Equity_Derivatives.zip",
+      "sha256": "bde5c37743a6a9aa55871a741e82e97f15067b52c4242edecc5741a5250b6c85",
+      "retrieved_at": "2026-10-04T08:34:18.050960+00:00",
+      "member": "BSE_EQD_CONTRACT_01102026.csv",
+      "member_sha256": "bfff42883359e6e38d3c8ff833b177eae514c9329287225290d37f35d13da7cc",
+      "discovery_url": "https://www.bseindia.com/assets/includenew/js/main-FB3J6BO4.js",
+      "discovery_sha256": "4f343512fd2bd532acb28143a64b0149a0ba6f7009eb970bc117a3abc5155692",
+      "schema_url": "https://www.bseindia.com/downloads1/EOD_FF_and_Sample_Files_BSE_Derivativ_segment.zip",
+      "schema_archive_sha256": "fc5bb15ac6508894e775804ee2741ece1ec1b37b970c6d978b2df6be8f1f1c80",
+      "schema_pdf_member": "EOD File Formats of F&O segment-December_v.14.2_BSE.pdf",
+      "schema_pdf_sha256": "83bf3f010e87e2b3c1ae04947547cef345409c4a216d2847e6f5e734124ab622"
+    },
+    "maturity_semantics": "XpryDt=actual last-trading date; EndDt=settlement/expiry/maturity date; MtrtyDt=filler, not a date",
+    "source_snapshot_timestamp": null,
+    "snapshot_filename_claim": "BSE_EQD_CONTRACT_01102026.csv; filename is not a validated publication timestamp"
+  },
+  "bse_holidays": {
+    "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-LPPH6725.js",
+    "sha256": "a717433730b33092c0850e5259721cc7cc1d97debe0aaec802a4b6e72a42bc85",
+    "retrieved_at": "2026-10-04T08:39:01.983965+00:00",
+    "section": "info1: Trading Holidays for 2026 - Equity Segment, Equity Derivative Segment",
+    "source_start": 488033,
+    "source_end": 489535,
+    "observations": [
+      {
+        "holiday": "MCGM Election day",
+        "date": "2026-01-15",
+        "raw_date": "15-Jan-26",
+        "published_weekday": "Thursday"
+      },
+      {
+        "holiday": "Republic Day",
+        "date": "2026-01-26",
+        "raw_date": "26-Jan-26",
+        "published_weekday": "Monday"
+      },
+      {
+        "holiday": "Holi",
+        "date": "2026-03-03",
+        "raw_date": "03-Mar-26",
+        "published_weekday": "Tuesday"
+      },
+      {
+        "holiday": "Shri Ram Navami",
+        "date": "2026-03-26",
+        "raw_date": "26-Mar-26",
+        "published_weekday": "Thursday"
+      },
+      {
+        "holiday": "Shri Mahavir Jayanti",
+        "date": "2026-03-31",
+        "raw_date": "31-Mar-26",
+        "published_weekday": "Tuesday"
+      },
+      {
+        "holiday": "Good Friday",
+        "date": "2026-04-03",
+        "raw_date": "03-Apr-26",
+        "published_weekday": "Friday"
+      },
+      {
+        "holiday": "Dr. Baba Saheb Ambedkar Jayanti",
+        "date": "2026-04-14",
+        "raw_date": "14-Apr-26",
+        "published_weekday": "Tuesday"
+      },
+      {
+        "holiday": "Maharashtra Day",
+        "date": "2026-05-01",
+        "raw_date": "01-May-26",
+        "published_weekday": "Friday"
+      },
+      {
+        "holiday": "Bakri Id",
+        "date": "2026-05-28",
+        "raw_date": "28-May-26",
+        "published_weekday": "Thursday"
+      },
+      {
+        "holiday": "Muharram",
+        "date": "2026-06-26",
+        "raw_date": "26-Jun-26",
+        "published_weekday": "Friday"
+      },
+      {
+        "holiday": "Ganesh Chaturthi",
+        "date": "2026-09-14",
+        "raw_date": "14-Sep-26",
+        "published_weekday": "Monday"
+      },
+      {
+        "holiday": "Mahatma Gandhi Jayanti",
+        "date": "2026-10-02",
+        "raw_date": "02-Oct-26",
+        "published_weekday": "Friday"
+      },
+      {
+        "holiday": "Dussehra",
+        "date": "2026-10-20",
+        "raw_date": "20-Oct-26",
+        "published_weekday": "Tuesday"
+      },
+      {
+        "holiday": "Diwali Balipratipada",
+        "date": "2026-11-10",
+        "raw_date": "10-Nov-26",
+        "published_weekday": "Tuesday"
+      },
+      {
+        "holiday": "Prakash Gurpurb Sri Guru Nanak Dev",
+        "date": "2026-11-24",
+        "raw_date": "24-Nov-26",
+        "published_weekday": "Tuesday"
+      },
+      {
+        "holiday": "Christmas",
+        "date": "2026-12-25",
+        "raw_date": "25-Dec-26",
+        "published_weekday": "Friday"
+      }
+    ],
+    "limitations": [
+      "Subject to exchange amendment",
+      "Muhurat November 8 timing is separately notified",
+      "No expiry dates derived from these holidays"
+    ]
+  },
+  "bse_specification": {
+    "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-4TDC2PZO.js",
+    "sha256": "9936cba0cd80a35ab8c40d7aa06335590bf0e0c3d72745a4270c63bba394bd71",
+    "retrieved_at": "2026-10-04T08:40:19.660606+00:00",
+    "source_start": 99642,
+    "source_end": 102218,
+    "text_nodes": [
+      "Details of BSE SENSEX Index ",
+      "PARAMETERS",
+      "BSE SENSEX FUTURES",
+      "UNDERLYING",
+      "BSE SENSEX",
+      "ASSET CODE",
+      "BSX",
+      "LOT SIZE",
+      "20*",
+      "TICK SIZE",
+      "\u20b9 0.05",
+      "CONTRACT PERIOD",
+      "3 Serial Monthly",
+      "TRADING HOURS",
+      "09:00 AM to 03:40 PM",
+      "LAST TRADING / EXPIRATION DAY",
+      "Last Thursday of each contract maturity month",
+      "FINAL SETTLEMENT",
+      "Cash Settlement based on closing price on expiry day",
+      "Details of BSE SENSEX OPTIONS ",
+      "BSE SENSEX OPTIONS",
+      "UNDERLYING",
+      "BSE SENSEX",
+      "ASSET CODE",
+      "BSX",
+      "LOT SIZE",
+      "20*",
+      "TICK SIZE",
+      "\u20b9 0.05",
+      "CONTRACT PERIOD",
+      "7 Serial Weekly, 3 monthly, 3 quarterly and 8 Semi-annually contracts",
+      "PREMIUM QUOTATION",
+      "In \u20b9 per index value",
+      "TRADING HOURS",
+      "09:15 AM to 03:40 PM",
+      "EXERCISE TYPE",
+      "European Style",
+      "MINIMUM NUMBER OF STRIKES",
+      " Shall have a minimum of 101 strikes (50 in-the-money,1 At-the-money, 50 out-of-the-money) ",
+      "STRIKE PRICE INTERVAL",
+      "100 Index Points",
+      "LAST TRADING / EXPIRATION DAY",
+      " Last Thursday of each contract maturity month. (Thursday of the week for weekly contracts) ",
+      "FINAL SETTLEMENT",
+      " Cash Settlement based on the closing price of the underlying index on the day of expiry "
+    ],
+    "status": "INDEPENDENT_REVIEW_REQUIRED",
+    "limitations": [
+      "Current page says 03:40 PM; a separate FAQ component in same source says 3:30 pm; effective applicability must be reviewed",
+      "No weekday rule used to generate dates",
+      "No historical effective interval/cutoff installed"
+    ]
+  },
+  "excluded_circulars": [
+    {
+      "source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260415-34/20260415-34.pdf",
+      "sha256": "792e27317b97ec9bb7622284d7713d6920f3b33b63575e4f8a16621ff656a9b2",
+      "scope": "BSE FOCUSED IT, not SENSEX or MCX",
+      "exclusion_reason": "WRONG_UNDERLYING"
+    },
+    {
+      "source_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260702-38/20260702-38.pdf",
+      "sha256": "d8ada2d72cd23340b9f26bf4133fecd8fba5360fcea0cfce7eac12783e16901c",
+      "scope": "BSE FOCUSED IT, not SENSEX or MCX",
+      "exclusion_reason": "WRONG_UNDERLYING"
+    }
+  ],
+  "instruments": [
+    {
+      "exchange": "BSE",
+      "instrument": "SENSEX",
+      "observed_contracts": 4051,
+      "observed_expiries": [
+        "2026-10-01",
+        "2026-10-08",
+        "2026-10-15",
+        "2026-10-22",
+        "2026-10-29",
+        "2026-11-05",
+        "2026-11-12",
+        "2026-11-19",
+        "2026-11-26",
+        "2026-12-31",
+        "2027-03-25",
+        "2027-06-24",
+        "2027-09-30",
+        "2027-12-30",
+        "2028-06-29",
+        "2028-12-28",
+        "2029-06-28",
+        "2029-12-27",
+        "2030-06-27",
+        "2030-12-26",
+        "2031-06-26"
+      ],
+      "validated_production_expiries": [],
+      "classification": "OBSERVED_OFFICIAL_EXPIRY",
+      "ready": false,
+      "complete_historical_coverage": false,
+      "missing_evidence": [
+        "Historical snapshot coverage and effective publication/listing intervals",
+        "Contract-specific intraday expiry cutoff and timezone with effective dates",
+        "Independent review of specification timing differences and applicable amendments",
+        "Independent production completeness/freshness validation"
+      ]
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "observed_contracts": 0,
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "ready": false,
+      "complete_historical_coverage": false,
+      "missing_evidence": [
+        "Accessible first-party contract records with explicit identifiers/expiry",
+        "Official product specification and launch/circular evidence",
+        "Lifecycle/cutoff, holiday/adjustment rules and independent review"
+      ]
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOILM",
+      "observed_contracts": 0,
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "ready": false,
+      "complete_historical_coverage": false,
+      "missing_evidence": [
+        "Accessible first-party contract records with explicit identifiers/expiry",
+        "Official product specification and launch/circular evidence",
+        "Lifecycle/cutoff, holiday/adjustment rules and independent review"
+      ]
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "observed_contracts": 0,
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "ready": false,
+      "complete_historical_coverage": false,
+      "missing_evidence": [
+        "Accessible first-party contract records with explicit identifiers/expiry",
+        "Official product specification and launch/circular evidence",
+        "Lifecycle/cutoff, holiday/adjustment rules and independent review"
+      ]
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "observed_contracts": 0,
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "ready": false,
+      "complete_historical_coverage": false,
+      "missing_evidence": [
+        "Accessible first-party contract records with explicit identifiers/expiry",
+        "Official product specification and launch/circular evidence",
+        "Lifecycle/cutoff, holiday/adjustment rules and independent review"
+      ]
+    }
+  ],
+  "network": {
+    "requests": 10,
+    "successes": 7,
+    "http403": 3,
+    "redirects_followed": 0,
+    "automatic_retries": 0
+  },
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "broker_calls": 0,
+  "orders": 0,
+  "production_migrations": 0,
+  "scheduler_changes": 0,
+  "discovery_edges": [
+    {
+      "target_url": "https://www.bseindia.com/downloads1/Live_Masters_for_Equity_Derivatives.zip",
+      "parent_raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_app_index.body",
+      "parent_sha256": "4f343512fd2bd532acb28143a64b0149a0ba6f7009eb970bc117a3abc5155692",
+      "literal_reference": "/downloads1/Live_Masters_for_Equity_Derivatives.zip"
+    },
+    {
+      "target_url": "https://www.bseindia.com/downloads1/EOD_FF_and_Sample_Files_BSE_Derivativ_segment.zip",
+      "parent_raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_app_index.body",
+      "parent_sha256": "4f343512fd2bd532acb28143a64b0149a0ba6f7009eb970bc117a3abc5155692",
+      "literal_reference": "/downloads1/EOD_FF_and_Sample_Files_BSE_Derivativ_segment.zip"
+    },
+    {
+      "target_url": "https://www.bseindia.com/assets/includenew/js/chunk-LPPH6725.js",
+      "parent_raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_static_routes.body",
+      "parent_sha256": "5261a8aec1d6c56cb0254633b774dd5e52585a962a8fec042cb7bfb5d2aa0b0f",
+      "literal_reference": "./chunk-LPPH6725.js"
+    },
+    {
+      "target_url": "https://www.bseindia.com/assets/includenew/js/chunk-OSCYTWKO.js",
+      "parent_raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_markets_routes.body",
+      "parent_sha256": "943501d5c346726ed6de5eedddc32cefab237dbeb88d063db04eff948d22d5c4",
+      "literal_reference": "./chunk-OSCYTWKO.js"
+    },
+    {
+      "target_url": "https://www.bseindia.com/assets/includenew/js/chunk-4TDC2PZO.js",
+      "parent_raw_path": "artifacts/staging/own-exchange-direct-20261004/a5461e65582c495a4daa.body",
+      "parent_sha256": "a717433730b33092c0850e5259721cc7cc1d97debe0aaec802a4b6e72a42bc85",
+      "literal_reference": "./chunk-4TDC2PZO.js"
+    },
+    {
+      "target_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260415-34/20260415-34.pdf",
+      "parent_raw_path": "artifacts/staging/own-exchange-direct-20261004/3100ccd42910f8b4bbd8.body",
+      "parent_sha256": "9936cba0cd80a35ab8c40d7aa06335590bf0e0c3d72745a4270c63bba394bd71",
+      "literal_reference": "/downloads/UploadDocs/Notices/20260415-34/20260415-34.pdf"
+    },
+    {
+      "target_url": "https://www.bseindia.com/downloads/UploadDocs/Notices/20260702-38/20260702-38.pdf",
+      "parent_raw_path": "artifacts/staging/own-exchange-direct-20261004/3100ccd42910f8b4bbd8.body",
+      "parent_sha256": "9936cba0cd80a35ab8c40d7aa06335590bf0e0c3d72745a4270c63bba394bd71",
+      "literal_reference": "/downloads/UploadDocs/Notices/20260702-38/20260702-38.pdf"
+    }
+  ],
+  "bse_api_request_discovery": {
+    "source_response": "artifacts/staging/own-exchange-direct-20261004/44708852c5e49d34e61e.json",
+    "proofs": [
+      {
+        "parent_raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_public_config_data.body",
+        "parent_sha256": "2ca488b5c4c16426c796d266188c6994e7c2830a61b47c49cae123e2969ff334",
+        "literal_reference": "https://api.bseindia.com/BseIndiaAPI/api"
+      },
+      {
+        "parent_raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_endpoint_index.body",
+        "parent_sha256": "7637f2f2f5e903d5bd9813c74f43864ba7387bfa866854f088c12776b96453fe",
+        "literal_reference": "/ddlUnderlyingAsset/w"
+      },
+      {
+        "parent_raw_path": "artifacts/staging/own-exchange-direct-20261004/d1224750c6eeeb1b8211.body",
+        "parent_sha256": "8f39e5703afdc4237afa827d2d995a66893e9f97cf302ee2fc59a244c202e8d0",
+        "literal_reference": "ProductType:this.selectedInstrumentType,scrip_cd:\"0\""
+      }
+    ],
+    "request_parameters": {
+      "ProductType": "IO",
+      "scrip_cd": "0"
+    }
+  }
+}

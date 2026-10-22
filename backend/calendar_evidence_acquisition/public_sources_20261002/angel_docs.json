@@ -1,0 +1,13 @@
+{
+  "url": "https://smartapi.angelone.in/docs",
+  "retrieved_at": "2026-10-02T13:53:14.237900+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://smartapi.angelone.in/docs",
+  "content_type": "text/html",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/angel_docs.body",
+  "sha256": "51e446f9d3c494de1a97af319053a7d01dd388cfe4d5817688e3ceabdd609bab",
+  "bytes": 3891
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=Acquire public NSE FO evidence (no production calendar activation)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/zerohero
+ExecStart=/root/zerohero/backend/calendar_evidence_acquisition/.venv/bin/python -B -m backend.calendar_evidence_acquisition.nse_job
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PLAYWRIGHT_BROWSERS_PATH=/root/zerohero/backend/calendar_evidence_acquisition/.browsers
+UMask=0077
+TimeoutStartSec=600
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/root/zerohero/artifacts
+# Template only. Not installed/enabled by remediation. No application .env loaded.
+

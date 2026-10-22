@@ -1,0 +1,19 @@
+{
+  "source_url": "https://nsearchives.nseindia.com/content/fo/BhavCopy_NSE_FO_0_0_0_20260803_F_0000.csv.zip",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "NSE",
+  "dataset": "FO_BHAVCOPY",
+  "cache_key": "2130b0227181a83df72344d65a3f7670ed32682e69340bd7dfd2b479b148dbb9",
+  "acquired_at": "2026-10-02T14:40:08.851498+00:00",
+  "http_status": 0,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "bytes": 0,
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "acquisition_status": "FAILED",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

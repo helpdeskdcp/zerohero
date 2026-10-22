@@ -1,0 +1,629 @@
+{
+  "path": "backend/data/instrument_master.json",
+  "sha256": "e4b008a6d546f588e97f095e68802b9a5be281861f83d0f80a2c2b5166f1af38",
+  "inspected_at": "2026-10-02T13:59:05.503998+00:00",
+  "bytes": 36345898,
+  "reported_file_mtime_utc": "2026-10-02T01:30:10.317529+00:00",
+  "mtime_is_not_publication_time": true,
+  "fields": [
+    "token",
+    "symbol",
+    "name",
+    "expiry",
+    "strike",
+    "lotsize",
+    "instrumenttype",
+    "exch_seg",
+    "tick_size",
+    "freeze_qty",
+    "is_cas_enabled"
+  ],
+  "historical_publication_listing_fields_present": false,
+  "classification": "CURRENT_LOCAL_MASTER_NOT_HISTORICAL_ARCHIVE",
+  "instrument_inventory": [
+    {
+      "underlying_as_stored": "BANKEX",
+      "exchange_as_stored": "BFO",
+      "contract_type_as_stored": "FUTIDX",
+      "row_count": 3,
+      "expiry_min": "2026-10-29",
+      "expiry_max": "2026-12-31"
+    },
+    {
+      "underlying_as_stored": "BANKEX",
+      "exchange_as_stored": "BFO",
+      "contract_type_as_stored": "OPTIDX",
+      "row_count": 1046,
+      "expiry_min": "2026-10-29",
+      "expiry_max": "2026-12-31"
+    },
+    {
+      "underlying_as_stored": "BANKEX",
+      "exchange_as_stored": "BSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "BANKEX",
+      "exchange_as_stored": "BSE",
+      "contract_type_as_stored": "AMXIDX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "BANKNIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "FUTIDX",
+      "row_count": 3,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2026-12-29"
+    },
+    {
+      "underlying_as_stored": "BANKNIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "OPTIDX",
+      "row_count": 941,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-09-28"
+    },
+    {
+      "underlying_as_stored": "BANKNIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "BANKNIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "AMXIDX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 10,
+      "expiry_min": "2026-10-19",
+      "expiry_max": "2028-03-20"
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 1100,
+      "expiry_min": "2026-10-15",
+      "expiry_max": "2026-12-16"
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "NCDEX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTENR",
+      "row_count": 6,
+      "expiry_min": "2026-10-19",
+      "expiry_max": "2027-03-19"
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 822,
+      "expiry_min": "2026-10-08",
+      "expiry_max": "2026-12-09"
+    },
+    {
+      "underlying_as_stored": "CRUDEOIL",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "CRUDEOILM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "CRUDEOILM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 10,
+      "expiry_min": "2026-10-19",
+      "expiry_max": "2028-03-20"
+    },
+    {
+      "underlying_as_stored": "CRUDEOILM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 1100,
+      "expiry_min": "2026-10-15",
+      "expiry_max": "2026-12-16"
+    },
+    {
+      "underlying_as_stored": "CRUDEOILM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTENR",
+      "row_count": 6,
+      "expiry_min": "2026-10-19",
+      "expiry_max": "2027-03-19"
+    },
+    {
+      "underlying_as_stored": "CRUDEOILM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "FINNIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "FUTIDX",
+      "row_count": 3,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2026-12-29"
+    },
+    {
+      "underlying_as_stored": "FINNIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "OPTIDX",
+      "row_count": 424,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2026-12-29"
+    },
+    {
+      "underlying_as_stored": "FINNIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "FINNIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "AMXIDX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 6,
+      "expiry_min": "2026-10-05",
+      "expiry_max": "2027-08-05"
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 3368,
+      "expiry_min": "2026-10-30",
+      "expiry_max": "2027-07-29"
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "NCDEX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTBLN",
+      "row_count": 12,
+      "expiry_min": "2026-10-05",
+      "expiry_max": "2027-09-03"
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 7556,
+      "expiry_min": "2026-10-29",
+      "expiry_max": "2027-08-27"
+    },
+    {
+      "underlying_as_stored": "GOLD",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "GOLDM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "GOLDM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 6,
+      "expiry_min": "2026-10-05",
+      "expiry_max": "2027-03-05"
+    },
+    {
+      "underlying_as_stored": "GOLDM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 498,
+      "expiry_min": "2026-10-29",
+      "expiry_max": "2026-11-27"
+    },
+    {
+      "underlying_as_stored": "GOLDM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTBLN",
+      "row_count": 3,
+      "expiry_min": "2026-10-05",
+      "expiry_max": "2026-12-04"
+    },
+    {
+      "underlying_as_stored": "GOLDM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 682,
+      "expiry_min": "2026-10-29",
+      "expiry_max": "2026-11-27"
+    },
+    {
+      "underlying_as_stored": "GOLDM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "MIDCPNIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "FUTIDX",
+      "row_count": 3,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2026-12-29"
+    },
+    {
+      "underlying_as_stored": "MIDCPNIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "OPTIDX",
+      "row_count": 746,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2026-12-29"
+    },
+    {
+      "underlying_as_stored": "MIDCPNIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "MIDCPNIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "AMXIDX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NATGASMINI",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NATGASMINI",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 6,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-03-25"
+    },
+    {
+      "underlying_as_stored": "NATGASMINI",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 520,
+      "expiry_min": "2026-10-23",
+      "expiry_max": "2026-12-23"
+    },
+    {
+      "underlying_as_stored": "NATGASMINI",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTENR",
+      "row_count": 6,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-03-25"
+    },
+    {
+      "underlying_as_stored": "NATGASMINI",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NATURALGAS",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NATURALGAS",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 6,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-03-25"
+    },
+    {
+      "underlying_as_stored": "NATURALGAS",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 522,
+      "expiry_min": "2026-10-23",
+      "expiry_max": "2026-12-23"
+    },
+    {
+      "underlying_as_stored": "NATURALGAS",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTENR",
+      "row_count": 6,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-03-25"
+    },
+    {
+      "underlying_as_stored": "NATURALGAS",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 240,
+      "expiry_min": "2026-10-21",
+      "expiry_max": "2026-12-21"
+    },
+    {
+      "underlying_as_stored": "NATURALGAS",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NIFTY",
+      "exchange_as_stored": "CDS",
+      "contract_type_as_stored": "INDEX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "FUTIDX",
+      "row_count": 3,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2026-12-29"
+    },
+    {
+      "underlying_as_stored": "NIFTY",
+      "exchange_as_stored": "NFO",
+      "contract_type_as_stored": "OPTIDX",
+      "row_count": 1778,
+      "expiry_min": "2026-10-06",
+      "expiry_max": "2031-06-24"
+    },
+    {
+      "underlying_as_stored": "NIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "NIFTY",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "AMXIDX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SENSEX",
+      "exchange_as_stored": "BFO",
+      "contract_type_as_stored": "FUTIDX",
+      "row_count": 3,
+      "expiry_min": "2026-10-29",
+      "expiry_max": "2026-12-31"
+    },
+    {
+      "underlying_as_stored": "SENSEX",
+      "exchange_as_stored": "BFO",
+      "contract_type_as_stored": "OPTIDX",
+      "row_count": 3670,
+      "expiry_min": "2026-10-01",
+      "expiry_max": "2031-06-26"
+    },
+    {
+      "underlying_as_stored": "SENSEX",
+      "exchange_as_stored": "BSE",
+      "contract_type_as_stored": "AMXIDX",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "BSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 5,
+      "expiry_min": "2026-12-04",
+      "expiry_max": "2027-09-03"
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 3402,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-08-27"
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "NCDEX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTBLN",
+      "row_count": 5,
+      "expiry_min": "2026-12-04",
+      "expiry_max": "2027-09-03"
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "OPTBLN",
+      "row_count": 1170,
+      "expiry_min": "2026-12-01",
+      "expiry_max": "2027-03-02"
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVER",
+      "exchange_as_stored": "NSE",
+      "contract_type_as_stored": "",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVERM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "COMDTY",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    },
+    {
+      "underlying_as_stored": "SILVERM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "FUTCOM",
+      "row_count": 5,
+      "expiry_min": "2026-11-30",
+      "expiry_max": "2027-08-31"
+    },
+    {
+      "underlying_as_stored": "SILVERM",
+      "exchange_as_stored": "MCX",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 3306,
+      "expiry_min": "2026-10-27",
+      "expiry_max": "2027-08-24"
+    },
+    {
+      "underlying_as_stored": "SILVERM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "FUTBLN",
+      "row_count": 12,
+      "expiry_min": "2026-10-30",
+      "expiry_max": "2027-09-30"
+    },
+    {
+      "underlying_as_stored": "SILVERM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "OPTFUT",
+      "row_count": 10596,
+      "expiry_min": "2026-10-23",
+      "expiry_max": "2027-09-23"
+    },
+    {
+      "underlying_as_stored": "SILVERM",
+      "exchange_as_stored": "NCO",
+      "contract_type_as_stored": "UNDCOM",
+      "row_count": 1,
+      "expiry_min": null,
+      "expiry_max": null
+    }
+  ],
+  "retained_snapshot": "backend/calendar_evidence_acquisition/angelone_master_snapshot.json.gz",
+  "snapshot_encoding": "gzip",
+  "snapshot_sha256": "19399e21111e6988212ccc12b0b639e588f6b70ab48e84ff422ef7438fec3365",
+  "source_attribution": "AngelOne cache per repository instruments loader; original download/publication attestation absent"
+}

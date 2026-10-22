@@ -1,0 +1,13 @@
+{
+  "url": "https://www.bseindia.com/assets/includenew/js/chunk-LGSJJ22G.js",
+  "retrieved_at": "2026-10-02T13:56:18.255505+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://www.bseindia.com/assets/includenew/js/chunk-LGSJJ22G.js",
+  "content_type": "application/javascript",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_public_config.body",
+  "sha256": "de69e2a071201753a3f1aff86ea21556f789238beb1ef3284b7e284f690bf1b0",
+  "bytes": 249
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily acquisition of the latest observed completed NSE Final report
+
+[Timer]
+OnCalendar=*-*-* 07:00:00 Asia/Kolkata
+Persistent=true
+RandomizedDelaySec=300
+Unit=zerohero-nse-evidence.service
+
+[Install]
+WantedBy=timers.target

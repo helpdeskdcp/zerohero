@@ -1,0 +1,19 @@
+{
+  "source_url": "https://archives.nseindia.com/content/fo/NSE_FO_contract_03082026.csv.gz",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "NSE",
+  "dataset": "FO_CONTRACT_MASTER",
+  "cache_key": "31fc4c2b90290b323d2f23fcd5127a5fa93c161fc159df80e46613713dc1f1c6",
+  "acquired_at": "2026-10-02T14:40:08.848221+00:00",
+  "http_status": 0,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "bytes": 0,
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "acquisition_status": "FAILED",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

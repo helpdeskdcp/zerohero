@@ -1,0 +1,19 @@
+{
+  "source_url": "https://api.github.com/search/repositories?q=nifty+options+dataset&per_page=5",
+  "source_class": "SECONDARY_DATASET",
+  "exchange": "NSE",
+  "dataset": "DISCOVERY_INDEX",
+  "cache_key": "eb0f488192e1fdca12d41f3a793d652bcbe93c3a89a988ce64e6971711ac8c33",
+  "acquired_at": "2026-10-02T14:41:06.551268+00:00",
+  "http_status": 200,
+  "sha256": "583d358836ae634ed6d4674fd0c5f6eb66a41af949fd382b5b2a163866cddfc4",
+  "bytes": 6504,
+  "error": "",
+  "acquisition_status": "AVAILABLE",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "DISCOVERY_OR_CONTAINER_NOT_CSV"
+}

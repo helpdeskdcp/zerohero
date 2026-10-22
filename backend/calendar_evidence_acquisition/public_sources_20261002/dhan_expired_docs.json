@@ -1,0 +1,13 @@
+{
+  "url": "https://dhanhq.co/docs/v2/expired-options-data/",
+  "retrieved_at": "2026-10-02T13:53:14.234978+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://dhanhq.co/docs/v2/expired-options-data/",
+  "content_type": "text/html; charset=utf-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/dhan_expired_docs.body",
+  "sha256": "1b970d478be2950a40c5967a561e10c3d4d69a5f9765d61dd74ec251c443987b",
+  "bytes": 30233
+}

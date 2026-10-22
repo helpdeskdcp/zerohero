@@ -1,0 +1,1 @@
+var _={production:!1,BSE_Domain:"@BSE_Domain",BSE_Domain_APIUrl:"@BSE_Domain_APIUrl",BSE_Domain_RealtimeUrl:"@BSE_Domain_RealtimeUrl",BSE_SocketURL:"@BSE_SocketURL",BSE_India:"@BSE_India",BSE_Data:"@BSE_Data",BSE_Orgin:"@BSE_Orgin"};export{_ as a};

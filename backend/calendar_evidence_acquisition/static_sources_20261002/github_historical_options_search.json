@@ -1,0 +1,15 @@
+{
+  "source_id": "github_historical_options_search",
+  "url": "https://api.github.com/search/repositories?q=nifty+options+historical+data&per_page=5",
+  "retrieved_at": "2026-10-02T14:40:47.932369+00:00",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://api.github.com/search/repositories?q=nifty+options+historical+data&per_page=5",
+  "content_type": "application/json; charset=utf-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/static_sources_20261002/github_historical_options_search.body",
+  "sha256": "1e99d9a648fc55043e5484f2daca9b8f24491a3c51e1a9f1651ba1d387aff90d",
+  "bytes": 33841,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

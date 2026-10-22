@@ -1,0 +1,957 @@
+{
+  "schema_version": "staging-coverage/v1",
+  "combinations": [
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "NIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-01",
+        "end": "2026-10-01"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-01",
+          "end": "2026-10-01",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "NIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-01",
+        "end": "2026-10-01"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-01",
+          "end": "2026-10-01",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "BANKNIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-24",
+        "end": "2026-10-01"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-24",
+          "end": "2026-10-01",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "BANKNIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-24",
+        "end": "2026-10-01"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-24",
+          "end": "2026-10-01",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "FINNIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-04",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "FINNIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-04",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "NSE",
+      "instrument": "MIDCPNIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-04",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "NSE",
+      "instrument": "MIDCPNIFTY",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-04",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "BSE",
+      "instrument": "SENSEX",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-03",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-03",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "BSE",
+      "instrument": "SENSEX",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-03",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-03",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "BSE",
+      "instrument": "BANKEX",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-04",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "BSE",
+      "instrument": "BANKEX",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-09-04",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-09-04",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-13",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-13",
+        "end": "2026-10-02"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-02",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-13",
+        "end": "2026-10-01"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-01",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "status": "UNVERIFIED",
+      "required_range": {
+        "start": "2026-07-13",
+        "end": "2026-10-01"
+      },
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [
+        {
+          "start": "2026-07-13",
+          "end": "2026-10-01",
+          "reason": "OFFICIAL_COVERAGE_NOT_INDEPENDENTLY_VERIFIED"
+        }
+      ],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "CRUDEOILMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "CRUDEOILMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "GOLD",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "GOLD",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "GOLDMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "GOLDMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "SILVER",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "SILVER",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "DHAN",
+      "exchange": "MCX",
+      "instrument": "SILVERMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "provider": "ANGELONE",
+      "exchange": "MCX",
+      "instrument": "SILVERMINI",
+      "status": "UNVERIFIED",
+      "required_range": null,
+      "candidate_expiry_dates": [],
+      "observed_contract_types": [],
+      "official_observed_expiry_dates": [],
+      "first_observed_trading_date": null,
+      "last_observed_trading_date": null,
+      "observed_trading_dates": [],
+      "candidate_source_count": 0,
+      "qualifying_source_count": 0,
+      "sha256_evidence": [],
+      "provenance": [],
+      "missing_required_date_ranges": [],
+      "missing_trading_dates": null,
+      "missing_trading_dates_reason": "TRADING_SESSION_CALENDAR_UNAVAILABLE_NO_WEEKDAY_INFERENCE",
+      "provider_listing_status": "UNVERIFIED",
+      "blockers": [
+        "NO_PARSED_OBSERVATIONS_IN_REQUIRED_SCOPE",
+        "REQUIRED_SCOPE_UNESTABLISHED",
+        "INDEPENDENT_OFFICIAL_SOURCE_REVIEW_REQUIRED",
+        "COMPLETE_LISTED_UNIVERSE_AND_PUBLICATION_CUTOFF_EVIDENCE_REQUIRED",
+        "OFFICIAL_TRADING_SESSION_CALENDAR_REQUIRED",
+        "PROVIDER_HISTORICAL_LISTING_EVIDENCE_MISSING"
+      ]
+    }
+  ],
+  "counts": {
+    "VERIFIED": 0,
+    "PARTIALLY_VERIFIED": 0,
+    "UNVERIFIED": 28,
+    "CONFLICTING": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "production_calendar": "NOT INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "scope": "Acquisition ledger only; this command neither loads nor activates production calendars",
+  "activation_eligible": false,
+  "verification_policy": "Existing reviewed provider-calendar/v1 policy; staging cannot self-verify"
+}

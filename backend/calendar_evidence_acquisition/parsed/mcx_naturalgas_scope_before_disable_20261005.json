@@ -1,0 +1,98 @@
+{
+  "schema": "own-exchange-production-scope/v1",
+  "decision_date": "2026-10-05",
+  "purpose": "Current Natural Gas calendar release scope and installation assessment; not an installed calendar or an application activation mechanism.",
+  "required_calendars": [
+    {
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "status": "INSTALLATION_BLOCKED",
+      "published_schedule_count": 36,
+      "production_validated_count": 0
+    }
+  ],
+  "excluded_instruments": [
+    {
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "canonical_instrument": "NATGASMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "canonical_instrument": "CRUDEOIL",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOILM",
+      "canonical_instrument": "CRUDEOILMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    }
+  ],
+  "other_instruments_policy": "OUT_OF_SCOPE_DISABLED_FOR_THIS_RELEASE",
+  "active_calendars": [],
+  "auto_next_enabled_calendars": [],
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "installation_path": null,
+  "normalized_schedule_evidence": {
+    "path": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/evidence.json",
+    "sha256": "1a639808671238836e5bdeae4688ac6a1a10ccf7c122b7efd1ad1ad02b386dfd"
+  },
+  "production_requirement_failures": [
+    {
+      "code": "DATED_LISTING_AND_EXPIRY_CUTOFF_REQUIRED",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "missing": "Timezone-aware listed_at and last_trading_at for each entry. PDFs give launch dates and 09.00 am to 11.30/11.55 pm conditional on US daylight saving, but no dated DST/session cutoff mapping or explicit timezone.",
+      "evidence_pages": [
+        {
+          "year": 2025,
+          "page": 1
+        },
+        {
+          "year": 2026,
+          "page": 1
+        },
+        {
+          "year": 2027,
+          "page": 1
+        }
+      ],
+      "validator": "backend/app/hist_options/provider_calendar.py:CalendarEvidence.validated / ProviderCalendars.resolve"
+    },
+    {
+      "code": "HOLIDAY_EVIDENCE_REQUIRED",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "missing": "Hash-cited holiday_calendar and holiday_adjustment_rule claims required by the existing own-exchange validator. Explicit schedule dates are supported, but these PDFs do not document a holiday calendar/adjustment rule. No schedule date needs to be guessed or recalculated.",
+      "validator": "backend/app/nse_official/own_exchange.py:OwnExchangeCalendarEvidence.validated"
+    },
+    {
+      "code": "REVIEWED_PUBLICATION_EFFECTIVE_SCOPE_REQUIRED",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "missing": "Reviewed provenance attestation; actual retrieval/publication timestamps, complete effective interval/contract mapping and amendment/freshness review. Referenced circular dates and PDF creation timestamps do not by themselves establish these claims. Original operator retrieval timestamps remain unknown.",
+      "validator": "backend/app/nse_official/calendar.py:OfficialSource.validate / OfficialCalendarEvidence.validated"
+    }
+  ],
+  "note": "Historical acquisition manifests remain immutable evidence of prior scope; they are not the pending requirements for this release. No runtime provider, broker, research or trading support is removed."
+}

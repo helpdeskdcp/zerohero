@@ -1,0 +1,50 @@
+{
+  "baseline_passed": 1018,
+  "new_regression_cases": 50,
+  "focused_passed": 127,
+  "final_passed": 1068,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "warnings": 0,
+  "phase2_diagnostics_included": 4,
+  "junit_path": "/tmp/own-exchange-relevant/result.xml",
+  "mypy_modules_passed": 14,
+  "syntax": "PASS",
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21
+    }
+  ],
+  "archive_hashes": {
+    "BhavCopy_NSE_FO_20261001.csv.zip": "d44a052b79a3961910f74783960ebbd5043696dbed39e7fb86ec84929fd60338",
+    "Reports-Archives-Multiple-01102026.zip": "2c5aae28b3d6682ee8dc2c7162041acfbf5c6999233d653a2efd157450f40fb0"
+  },
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED"
+}

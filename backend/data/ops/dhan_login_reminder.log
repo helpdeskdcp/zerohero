@@ -1,0 +1,12 @@
+2026-10-19 08:20 IST need_login=True (token state EXPIRED)
+telegram: {'ok': True, 'status_code': 200}
+2026-10-19 08:50 IST need_login=True (token state EXPIRED)
+telegram: {'ok': True, 'status_code': 200}
+2026-10-20 08:20 IST need_login=False (token valid until Wed 21-Oct 01:04 IST)
+2026-10-20 08:50 IST need_login=False (token valid until Wed 21-Oct 01:04 IST)
+2026-10-21 08:20 IST need_login=False (token valid until Thu 22-Oct 07:31 IST)
+2026-10-21 08:50 IST need_login=False (token valid until Thu 22-Oct 07:31 IST)
+2026-10-22 08:20 IST need_login=True (token state UNCERTAIN)
+telegram: {'ok': True, 'status_code': 200}
+2026-10-22 08:50 IST need_login=True (token state UNCERTAIN)
+telegram: {'ok': True, 'status_code': 200}

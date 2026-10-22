@@ -1,0 +1,866 @@
+{
+  "package_schema": "validation-evidence-checklist/v1",
+  "scope": "Track A checklist, NOT a provider-calendar manifest or production data",
+  "prepared_on": "2026-10-02",
+  "external_requests_made": false,
+  "provider_calendar_schema_reviewed": "provider-calendar/v1",
+  "production_calendar_versions": [],
+  "requirements": {
+    "HISTORICAL_UNIVERSE": "Declare requested as-of coverage [start,end) first (owner has not specified a window). Obtain the complete provider-listed eligible expiry set at every T, including maturities beyond end for NEXT; include additions, withdrawals and corrections. Do not derive a weekday/monthly list.",
+    "TRADING_CALENDAR": "Archive official venue/segment trading dates, holidays, special sessions, emergency closures and dated contract-rule changes. Observed candle days or another exchange holiday list are insufficient.",
+    "PUBLICATION_LISTING": "Retain original provider response/master/document bytes, source locator, capture/publication timestamps with timezone, each contract listing/delisting timestamp, effective interval, version, completeness proof, and SHA-256. Publication by T must be proved independently of a later download.",
+    "EXPIRY_CUTOFF": "Obtain official last-trading date and exact time/timezone for each option contract, including holiday shifts/amendments. Do not assume 15:30, end-of-day, or futures expiry minus a business-day count.",
+    "DHAN_IDENTITY": "Archive Dhan instrument/underlying security IDs and segment mapping for the historical interval and original full expiry-list responses. Current successful live lists cannot establish past availability.",
+    "ANGEL_IDENTITY": "Archive AngelOne instrument master versions with token, name, instrumenttype, exchange segment, option expiry and publication/listing evidence. An individual captured option subset is not a complete calendar.",
+    "MCX_UNDERLYING": "For each main/mini product separately, prove the option-to-underlying-future mapping, dated futures security/token IDs and option cutoff. A futures expiry or main-contract calendar alone is insufficient for the option/mini.",
+    "INDEPENDENT_REVIEW": "An independent reviewer must compare every normalized field and completeness/temporal claim to retained source bytes; record reviewer, review date, locator, hashes and signed/traceable disposition. Never mark VERIFIED based on code comments, schema validity or synthetic tests."
+  },
+  "sources": {
+    "DHAN_EXPIRY": {
+      "url": "https://api.dhan.co/v2/optionchain/expirylist",
+      "method": "POST",
+      "repository_reference": "app/optionchain/sources/dhan_chain.py:expiry_list",
+      "evidence_type": "current endpoint implementation, not archived historical responses",
+      "historical_archive_present": false,
+      "independently_verified": false
+    },
+    "DHAN_MASTER": {
+      "url": "https://images.dhan.co/api-data/api-scrip-master.csv",
+      "repository_reference": "app/connectors/dhan_instruments.py:MASTER_URL",
+      "evidence_type": "current master endpoint; historical versions and publication proofs missing",
+      "historical_archive_present": false,
+      "independently_verified": false
+    },
+    "ANGEL_MASTER": {
+      "url": "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
+      "repository_reference": "app/instruments.py:MASTER_URL",
+      "evidence_type": "current cached master; historical complete-universe snapshots missing",
+      "historical_archive_present": false,
+      "independently_verified": false
+    },
+    "UPSTOX_EXPIRED": {
+      "api_route": "/v2/expired-instruments/expiries",
+      "repository_reference": "app/hist_options/data/expiry_metadata_upstox.json",
+      "reported_fetch_date": "2026-09-30",
+      "evidence_type": "third-provider retrospective expired-expiry list; not proof for Dhan/AngelOne",
+      "independently_verified": false,
+      "sha256": "f47398777e5c649cc786d1e5cef99d496e3af654f1f7d2b50478c4eb423b74ae"
+    },
+    "NSE_HOLIDAY": {
+      "url": "https://www.nseindia.com/api/holiday-master?type=trading",
+      "repository_reference": "app/hist_options/data/nse_official_holidays_2026.json",
+      "reported_fetch_date": "2026-09-30",
+      "coverage": "2026 only, as declared in artifact; independent authenticity review missing",
+      "evidence_type": "declared NSE holiday data; COM is not verified MCX",
+      "independently_verified": false,
+      "sha256": "70bf4ddd2bd5b014a1ceb4c881a012e68d522ae3511d765a3511ff887e4472a0"
+    },
+    "DHAN_DAYS": {
+      "api_route": "/v2/charts/historical",
+      "repository_reference": "app/hist_options/data/observed_trading_days.json",
+      "reported_fetch_date": "2026-09-30",
+      "evidence_type": "observed index trading days; no official holiday, complete contract universe or option cutoff proof",
+      "independently_verified": false,
+      "sha256": "7d4ef92788f7c731a98dd6ac942c9d9b8e39458ccbdff67be4c3fe5e59bb67d0"
+    },
+    "EXCHANGE_CIRCULARS": {
+      "url": null,
+      "document_ids": null,
+      "repository_reference": "HIST_OPTIONS_EXPIRY_AUDIT.md",
+      "evidence_type": "official dated NSE/BSE/MCX contract specifications, amendments, holiday/special-session and cutoff circulars must be obtained",
+      "independently_verified": false
+    }
+  },
+  "instruments": [
+    {
+      "exchange": "NSE",
+      "underlying": "NIFTY",
+      "display_identity": "NIFTY 50",
+      "contract_type": "index OPTION (OPTIDX); FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": {
+          "provider": "UPSTOX",
+          "count": 105,
+          "first": "2024-10-03",
+          "last": "2026-09-29",
+          "source": "UPSTOX_EXPIRED"
+        }
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": 13,
+          "current_code_segment": "IDX_I",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "NFO",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "NSE_HOLIDAY",
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "NSE",
+      "underlying": "BANKNIFTY",
+      "display_identity": "NIFTY BANK",
+      "contract_type": "index OPTION (OPTIDX); FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": {
+          "provider": "UPSTOX",
+          "count": 30,
+          "first": "2024-10-01",
+          "last": "2026-09-29",
+          "source": "UPSTOX_EXPIRED"
+        }
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": 25,
+          "current_code_segment": "IDX_I",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "NFO",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "NSE_HOLIDAY",
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "NSE",
+      "underlying": "FINNIFTY",
+      "display_identity": "NIFTY FINANCIAL SERVICES",
+      "contract_type": "index OPTION (OPTIDX); FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": {
+          "provider": "UPSTOX",
+          "count": 31,
+          "first": "2024-10-01",
+          "last": "2026-09-29",
+          "source": "UPSTOX_EXPIRED"
+        }
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": 27,
+          "current_code_segment": "IDX_I",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "NFO",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "NSE_HOLIDAY",
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "NSE",
+      "underlying": "MIDCPNIFTY",
+      "display_identity": "NIFTY MIDCAP SELECT",
+      "contract_type": "index OPTION (OPTIDX); FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": {
+          "provider": "UPSTOX",
+          "count": 31,
+          "first": "2024-09-30",
+          "last": "2026-09-29",
+          "source": "UPSTOX_EXPIRED"
+        }
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": 442,
+          "current_code_segment": "IDX_I",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "NFO",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "NSE_HOLIDAY",
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "BSE",
+      "underlying": "SENSEX",
+      "display_identity": "SENSEX",
+      "contract_type": "index OPTION (OPTIDX); FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": {
+          "provider": "UPSTOX",
+          "count": 103,
+          "first": "2024-10-04",
+          "last": "2026-09-24",
+          "source": "UPSTOX_EXPIRED"
+        }
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": 51,
+          "current_code_segment": "IDX_I",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "BFO",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "BSE",
+      "underlying": "BANKEX",
+      "display_identity": "BANKEX",
+      "contract_type": "index OPTION (OPTIDX); FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": {
+          "provider": "UPSTOX",
+          "count": 31,
+          "first": "2024-09-30",
+          "last": "2026-09-24",
+          "source": "UPSTOX_EXPIRED"
+        }
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": 69,
+          "current_code_segment": "IDX_I",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "BFO",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "NATURALGAS",
+      "display_identity": "NATGAS / NATURALGAS",
+      "contract_type": "OPTION on underlying future; FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "NATGASMINI",
+      "display_identity": "NATGASMINI",
+      "contract_type": "OPTION on underlying future; FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "CRUDEOIL",
+      "display_identity": "CRUDEOIL",
+      "contract_type": "OPTION on underlying future; FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "CRUDEOILMINI",
+      "display_identity": "CRUDEOILMINI / CRUDEOILM",
+      "contract_type": "OPTION on underlying future; FUTURE calendar separate",
+      "repository_support": "explicit Dhan adapter identity and/or index registry; no historical calendar verification",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "GOLD",
+      "display_identity": "GOLD",
+      "contract_type": "FUTURE registry identity; option contract type/feed support requires independent evidence",
+      "repository_support": "registry/calendar identity only; option-feed support not demonstrated",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "GOLDMINI",
+      "display_identity": "GOLDMINI",
+      "contract_type": "FUTURE registry identity; option contract type/feed support requires independent evidence",
+      "repository_support": "registry/calendar identity only; option-feed support not demonstrated",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "SILVER",
+      "display_identity": "SILVER",
+      "contract_type": "FUTURE registry identity; option contract type/feed support requires independent evidence",
+      "repository_support": "registry/calendar identity only; option-feed support not demonstrated",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    },
+    {
+      "exchange": "MCX",
+      "underlying": "SILVERMINI",
+      "display_identity": "SILVERMINI",
+      "contract_type": "FUTURE registry identity; option contract type/feed support requires independent evidence",
+      "repository_support": "registry/calendar identity only; option-feed support not demonstrated",
+      "historical_expiry_dates_required": {
+        "coverage_window": null,
+        "requirement": "HISTORICAL_UNIVERSE",
+        "verified_dhan_dates": null,
+        "verified_angelone_dates": null,
+        "third_provider_inventory": null
+      },
+      "trading_day_calendar_requirements": [
+        "TRADING_CALENDAR",
+        "MCX_UNDERLYING"
+      ],
+      "publication_listing_evidence": "PUBLICATION_LISTING",
+      "expiry_cutoff_evidence": "EXPIRY_CUTOFF",
+      "provider_specific_evidence": {
+        "DHAN": {
+          "requirements": [
+            "DHAN_IDENTITY"
+          ],
+          "source_refs": [
+            "DHAN_EXPIRY",
+            "DHAN_MASTER"
+          ],
+          "current_code_scrip": null,
+          "current_code_segment": "MCX_COMM; dated future ID required",
+          "historical_evidence_status": "UNAVAILABLE"
+        },
+        "ANGELONE": {
+          "requirements": [
+            "ANGEL_IDENTITY"
+          ],
+          "source_refs": [
+            "ANGEL_MASTER"
+          ],
+          "segment": "MCX",
+          "historical_evidence_status": "UNAVAILABLE"
+        }
+      },
+      "calendar_source_refs": [
+        "EXCHANGE_CIRCULARS"
+      ],
+      "actual_evidence_date_version": null,
+      "independent_review_requirement": "INDEPENDENT_REVIEW",
+      "independently_verified": false,
+      "reviewer": null,
+      "review_date": null,
+      "calendar_status": "UNAVAILABLE",
+      "production_calendar_installed": false
+    }
+  ]
+}

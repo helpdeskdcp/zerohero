@@ -1,0 +1,18 @@
+{
+  "source_url": "https://www.mcxindia.com/market-data/bhavcopy",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "MCX",
+  "dataset": "OFFICIAL_REPORT_DISCOVERY",
+  "cache_key": "2b737387bb32d49ba5fb377879ef05cc5ef81fc89ccd6ec15a0faa0a4db635f9",
+  "acquired_at": "2026-10-02T15:04:22.236757+00:00",
+  "http_status": 403,
+  "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+  "bytes": 396,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": true,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null
+}

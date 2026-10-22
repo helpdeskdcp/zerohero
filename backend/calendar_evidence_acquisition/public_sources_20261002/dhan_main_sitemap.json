@@ -1,0 +1,13 @@
+{
+  "url": "https://dhan.co/sitemap-main.xml",
+  "retrieved_at": "2026-10-02T13:56:18.256529+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://dhan.co/sitemap-main.xml",
+  "content_type": "application/xml",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/dhan_main_sitemap.body",
+  "sha256": "3749589280ca8c67a46e5200f8c9b3eeff2c78357811987d7510fe24fb42ffdf",
+  "bytes": 17442
+}

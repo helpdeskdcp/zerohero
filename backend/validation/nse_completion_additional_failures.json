@@ -1,0 +1,29 @@
+[
+  {
+    "test_name": "tests/test_dhan_postback.py::test_orderflow_status_reports_the_real_worker_and_engine",
+    "failure_class": "C",
+    "root_cause": "App import attempts the live tick DB; isolated runner correctly blocks it, leaving main.dhan_orderflow_engine=None. Test relied on initialized production-side globals.",
+    "affected_component": "test Dhan orderflow route fixture",
+    "proposed_fix": "Real unstarted worker and engine with a temporary TickStore; keep original assertions.",
+    "status": "FIXED_FULL_SUITE_PASS",
+    "validation_evidence": "/tmp/nse-completion-full-final/tests/test_dhan_postback/result.xml"
+  },
+  {
+    "test_name": "tests/test_dhan_postback.py::test_orderflow_snapshot_not_tracked_for_an_unknown_security_id",
+    "failure_class": "C",
+    "root_cause": "App import attempts the live tick DB; isolated runner correctly blocks it, leaving main.dhan_orderflow_engine=None. Test relied on initialized production-side globals.",
+    "affected_component": "test Dhan orderflow route fixture",
+    "proposed_fix": "Real unstarted worker and engine with a temporary TickStore; keep original assertions.",
+    "status": "FIXED_FULL_SUITE_PASS",
+    "validation_evidence": "/tmp/nse-completion-full-final/tests/test_dhan_postback/result.xml"
+  },
+  {
+    "test_name": "tests/test_dhan_postback.py::test_orderflow_snapshot_reports_ingested_ticks",
+    "failure_class": "C",
+    "root_cause": "App import attempts the live tick DB; isolated runner correctly blocks it, leaving main.dhan_orderflow_engine=None. Test relied on initialized production-side globals.",
+    "affected_component": "test Dhan orderflow route fixture",
+    "proposed_fix": "Real unstarted worker and engine with a temporary TickStore; keep original assertions.",
+    "status": "FIXED_FULL_SUITE_PASS",
+    "validation_evidence": "/tmp/nse-completion-full-final/tests/test_dhan_postback/result.xml"
+  }
+]

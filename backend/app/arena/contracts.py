@@ -209,3 +209,24 @@ def _chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path:
             itm = (d < 0) if option_type == "CE" else (d > 0); lab = ("ITM" if itm else "OTM") + str(abs(d))
         out["rows"].append({"strike": k, "label": lab, "quote": qs.get(k)})
     return out
+
+
+_lq_cache: dict = {}
+
+
+def latest_quote(underlying: str, expiry_iso: str, strike: float, ot: str, path: str | None = None) -> dict | None:
+    """Newest captured quote of ONE contract via the (symbol, expiry, strike, option_type, exch_ts) index: {"ltp","bid","ask","t"} or None. Cached for 1 s (many screens, one lookup)."""
+    from .settle import snap_expiry
+    key = (underlying, expiry_iso, float(strike), ot, path); hit = _lq_cache.get(key)
+    if hit and time.time() - hit[0] < 1.0: return hit[1]
+    c = _ro(path)
+    try:
+        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL ORDER BY exch_ts DESC LIMIT 1",
+                      (underlying, snap_expiry(expiry_iso), float(strike), ot)).fetchone()
+    finally:
+        c.close()
+    out = None
+    if r:
+        from datetime import datetime
+        out = {"ltp": r[0], "bid": r[1], "ask": r[2], "t": datetime.fromisoformat(r[3].replace("Z", "+00:00")).timestamp()}
+    _lq_cache[key] = (time.time(), out); return out

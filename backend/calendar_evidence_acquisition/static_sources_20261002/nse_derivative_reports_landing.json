@@ -1,0 +1,15 @@
+{
+  "source_id": "nse_derivative_reports_landing",
+  "url": "https://www.nseindia.com/all-reports-derivatives",
+  "retrieved_at": "2026-10-02T15:04:22.235239+00:00",
+  "curl_exit": 92,
+  "http_status": "000",
+  "effective_url": "https://www.nseindia.com/all-reports-derivatives",
+  "content_type": "",
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "path": null,
+  "sha256": null,
+  "bytes": 0,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

@@ -1,0 +1,18 @@
+{
+  "source_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "BSE",
+  "dataset": "OFFICIAL_REPORT_DISCOVERY",
+  "cache_key": "ea269277c177816de177cb318c0a107c26eae65b7b6a553bd7c651872dedf50c",
+  "acquired_at": "2026-10-02T15:04:22.241754+00:00",
+  "http_status": 403,
+  "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+  "bytes": 416,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": true,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null
+}

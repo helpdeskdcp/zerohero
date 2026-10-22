@@ -1,0 +1,457 @@
+{
+  "evidence": {
+    "counts": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 16
+    },
+    "junit_path": "/tmp/coverage-plan-tests/result.xml",
+    "junit_sha256": "c686664058be69bddce237d69b9499c3171ddbd7c6552746daa12acbeef9e2ac"
+  },
+  "calendar_and_evidence": {
+    "counts": {
+      "tests": 639,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 639
+    },
+    "junit_path": "/tmp/coverage-plan-final/result.xml",
+    "junit_sha256": "23fdf30be560afb44cd7349d319c29d90dc7378687936c33633e63a7aff66dc1"
+  },
+  "phase2_diagnostics": {
+    "counts": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 4
+    },
+    "junit_path": "/tmp/coverage-plan-diagnostics/result.xml",
+    "junit_sha256": "1fba2f7606231b90c04ad9ab4a921bfde15bbd1f83d6b86ab7362500452344b5"
+  },
+  "suite_files": [
+    "tests/test_cross_broker.py",
+    "tests/test_dhan_capture.py",
+    "tests/test_dhan_chain.py",
+    "tests/test_dhan_historical.py",
+    "tests/test_greeks_engine.py",
+    "tests/test_hist_expiry.py",
+    "tests/test_hist_options.py",
+    "tests/test_histcap.py",
+    "tests/test_historical_quality_contract.py",
+    "tests/test_historical_read_contract.py",
+    "tests/test_instruments_registry.py",
+    "tests/test_market_data_selection.py",
+    "tests/test_market_hub_chain_unification.py",
+    "tests/test_market_regime.py",
+    "tests/test_market_snapshot.py",
+    "tests/test_market_snapshot_routes.py",
+    "tests/test_mathematical_confluence.py",
+    "tests/test_optionchain_api.py",
+    "tests/test_optionchain_data_conflict.py",
+    "tests/test_optionchain_datalayer.py",
+    "tests/test_optionchain_history_analytics.py",
+    "tests/test_orderflow_backtest.py",
+    "tests/test_orderflow_premium_walk.py",
+    "tests/test_orderflow_profile.py",
+    "tests/test_orderflow_smart_money.py",
+    "tests/test_provider_calendar.py",
+    "tests/test_calendar_evidence_acquisition.py",
+    "tests/test_calendar_coverage_plan.py"
+  ],
+  "runner": "backend/validation/isolated_pytest.py",
+  "environment": "Clean environment; network/.env/subprocess blocked; SQLite temporary only; -W error",
+  "unrelated_full_suite_rerun": false,
+  "official_source_pass": {
+    "results": {
+      "calendar_and_evidence": {
+        "counts": {
+          "tests": 639,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "passed": 639
+        },
+        "junit_path": "/tmp/official-evidence-calendar-tests/result.xml",
+        "junit_sha256": "b7484ab3c83d988cc9c49428711b19a8c44642a6f98a319f408155e66c8b7fb8"
+      },
+      "phase2_diagnostics": {
+        "counts": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "passed": 4
+        },
+        "junit_path": "/tmp/official-evidence-diagnostics/result.xml",
+        "junit_sha256": "ee782a5805ba79b340f77b9beee8feddedf4a85b056f4d411ede5f7853472b6c"
+      }
+    },
+    "new_tests_added": 0,
+    "tests_changed": 0,
+    "source_body_hashes_checked": 21,
+    "local_master_compressed_and_decompressed_hashes_checked": true,
+    "pre_existing_app_test_files_checked": 596,
+    "pre_existing_app_test_files_changed": [],
+    "source_request_count": 23,
+    "source_unique_request_count": 23,
+    "broker_api_calls": 0,
+    "orders": 0,
+    "production_calendar_activated": false,
+    "production_migrations": 0,
+    "service_restarts": 0,
+    "warnings": "none with -W error",
+    "unrelated_full_suite_rerun": false
+  },
+  "alternative_source_pass": {
+    "package_version": "2026-10-02.4",
+    "validated_at": "2026-10-02T14:31:20.092342+00:00",
+    "results": {
+      "focused_evidence": {
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/alternative_validation_20261002/focused_evidence.xml",
+        "sha256": "b7c4920859d169d374aff98fc7671614b4db223cbed7b862a41e74849a19cb06"
+      },
+      "calendar_and_evidence": {
+        "tests": 645,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/alternative_validation_20261002/calendar_and_evidence.xml",
+        "sha256": "17cbcc7689ccfff18717e6704851fb704685a4d0e022c0e7337b672f6585732d"
+      },
+      "phase2_diagnostics": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/alternative_validation_20261002/phase2_diagnostics.xml",
+        "sha256": "f5b257809f4491a7dcd0a4c4a83010d35ffcb86c9ccc35fab66c5144b4a899ca"
+      }
+    },
+    "existing_calendar_and_historical_cases": 623,
+    "evidence_cases": 22,
+    "new_evidence_cases": 6,
+    "distinct_passed_including_diagnostics": 649,
+    "warnings_policy": "-W error; no warnings emitted",
+    "runner": "backend/validation/isolated_pytest.py",
+    "environment": "clean environment; outbound network blocked; environment-file reads blocked; writes/SQLite restricted to temporary paths",
+    "preexisting_application_and_test_hashes_unchanged": true,
+    "previous_source_bytes_unchanged": true,
+    "unrelated_full_suite_run": false,
+    "production_calendar_installed": false,
+    "calendar_behavior_changed": false,
+    "live_broker_calls": 0,
+    "orders": 0,
+    "production_migrations": 0,
+    "production_restarts": 0,
+    "git_diff_check": "PASSED",
+    "checksum_verification": "All entries in SHA256SUMS verified after generation",
+    "checksum_command": {
+      "command": "sha256sum --check --quiet SHA256SUMS",
+      "working_directory": "backend/calendar_evidence_acquisition",
+      "result": "PASSED: 70 artifacts",
+      "initial_invocation_correction": "First invocation from repository root could not resolve relative paths; rerun from evidence directory passed. No hash mismatch observed."
+    }
+  },
+  "static_archive_pass": {
+    "version": "2026-10-02.5",
+    "validated_at": "2026-10-02T14:49:57.499886+00:00",
+    "results": {
+      "focused": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/static_validation_20261002/focused.xml",
+        "sha256": "7d7f1104b8cbaa84725d97f2c92db156d8244f7d93b01fae7c632fee39ee911d"
+      },
+      "relevant": {
+        "tests": 669,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/static_validation_20261002/relevant.xml",
+        "sha256": "90e0e048734492e844470585b9a79fc8b843348ef7bca51493aef4c8c12edbb6"
+      },
+      "phase2_diagnostics": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/static_validation_20261002/phase2_diagnostics.xml",
+        "sha256": "28e71054bc28f3129f44b10715de29bb775335302545c7c54acd28808edc1e9a"
+      }
+    },
+    "distinct_tests_passed": 673,
+    "new_tests": 24,
+    "warnings": 0,
+    "warnings_policy": "-W error",
+    "before_implementation": "Expected module-not-found collection error in test-first run; no tests weakened",
+    "real_data_parse_issue": "17 secondary rows have undocumented numeric date encodings; preserved and quarantined without epoch inference",
+    "preexisting_application_and_test_hashes_unchanged": true,
+    "previous_raw_source_bytes_unchanged": true,
+    "production_resolver_unchanged": true,
+    "calendar_behavior_changed": false,
+    "production_calendar_installed": false,
+    "unrelated_full_suite_rerun": false,
+    "environment": "isolated_pytest.py: clean environment, network and .env reads blocked, temporary-only writes/databases",
+    "git_diff_check": "PASSED",
+    "checksum_command": "sha256sum --check --quiet SHA256SUMS (working directory backend/calendar_evidence_acquisition)",
+    "live_broker_calls": 0,
+    "orders": 0,
+    "production_migrations": 0,
+    "production_restarts": 0
+  },
+  "official_eod_pass": {
+    "package_version": "2026-10-02.6",
+    "validated_at": "2026-10-02T15:13:08.402489+00:00",
+    "results": {
+      "focused": {
+        "tests": 46,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/eod_validation_20261002/focused.xml",
+        "sha256": "6d1779b6e1c6111e2c28db3bbe9c2e074d9e013005aeb6e18657029d6475bf6a"
+      },
+      "relevant": {
+        "tests": 691,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/eod_validation_20261002/relevant.xml",
+        "sha256": "2b03838bc178826bb7b68f25ede2641c13631e5a545cb633cd2df03f8e219782"
+      },
+      "phase2": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/eod_validation_20261002/phase2.xml",
+        "sha256": "625ba91a375f0abe94e76af5421c68209f55fc8ed58059cd5392b8601a617127"
+      }
+    },
+    "new_eod_tests": 22,
+    "distinct_passed": 695,
+    "warnings": 0,
+    "warnings_policy": "-W error",
+    "test_first": "Expected missing-module collection error before implementation; two added corrupt-archive tests failed before fixing parser exception handling. Final suite green.",
+    "environment": "isolated_pytest: outbound network, .env reads, subprocesses and production DB access blocked; temp-only writes/databases",
+    "previous_application_and_test_content_unchanged": true,
+    "previous_raw_source_content_unchanged": true,
+    "unrelated_full_suite_run": false,
+    "git_diff_check": "PASSED",
+    "checksum_command": "sha256sum --check --quiet SHA256SUMS (run from evidence directory)",
+    "live_broker_calls": 0,
+    "orders": 0,
+    "production_migrations": 0,
+    "production_restarts": 0,
+    "production_calendar_installed": false,
+    "AUTO_NEXT": "FAIL-CLOSED (unchanged)"
+  },
+  "ingestion_engine_pass": {
+    "package_version": "2026-10-02.7",
+    "validated_at": "2026-10-02T15:32:19.561429+00:00",
+    "results": {
+      "focused": {
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/engine_validation_20261002/focused.xml",
+        "sha256": "e0f30fd2907ad3aa6fb140a3e3504d3456d5d12aed0eae1c3bdd2e8c88e8a856"
+      },
+      "relevant": {
+        "tests": 711,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/engine_validation_20261002/relevant.xml",
+        "sha256": "9e0a1892062d3a82fd6bf7c63296b488b528788dfa4dfeea4ca12d935e24928f"
+      },
+      "phase2": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "backend/calendar_evidence_acquisition/engine_validation_20261002/phase2.xml",
+        "sha256": "143f23547b9a745cf98d2644b90b395c63865f9ed6a5968b5bd65f33adbb136a"
+      }
+    },
+    "new_tests": 20,
+    "distinct_tests_passed": 715,
+    "warnings": 0,
+    "warnings_policy": "-W error",
+    "environment": "isolated_pytest.py; network/subprocess/credential-file reads blocked, temporary-only writes/databases",
+    "test_first": "Initial missing-module collection error before implementation. Added inventory-tamper test failed before enforcing hash verification on idempotent reuse; final suite green.",
+    "previous_app_and_test_files_unchanged": true,
+    "previous_raw_source_files_unchanged": true,
+    "browser_dependency_installed": false,
+    "browser_live_tested": false,
+    "network_requests": 0,
+    "broker_calls": 0,
+    "orders": 0,
+    "production_migrations": 0,
+    "production_restarts": 0,
+    "production_calendar_installed": false,
+    "production_AUTO_NEXT": "FAIL-CLOSED (unchanged)",
+    "git_diff_check": "PASSED",
+    "unrelated_full_suite_run": false
+  },
+  "operational_staging_pass": {
+    "results": {
+      "baseline": {
+        "tests": 66,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 66,
+        "path": "backend/calendar_evidence_acquisition/operational_validation_20261002/baseline.xml",
+        "sha256": "46bd652be4afda87b30402c90edfc902563f0672a8d0714bc000070ec372755b"
+      },
+      "test_first": {
+        "tests": 14,
+        "failures": 14,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 0,
+        "path": "backend/calendar_evidence_acquisition/operational_validation_20261002/test_first.xml",
+        "sha256": "f3ebe345d105e4c6e47d63f3dfc6fb388fa877ba02dada5f237093920db771f3"
+      },
+      "focused": {
+        "tests": 114,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 114,
+        "path": "backend/calendar_evidence_acquisition/operational_validation_20261002/focused.xml",
+        "sha256": "489bd10f9fa1be073a680cd3a6a7c8ee1e2cc9edef020a8343399290ebf7f236"
+      },
+      "relevant": {
+        "tests": 759,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 759,
+        "path": "backend/calendar_evidence_acquisition/operational_validation_20261002/relevant.xml",
+        "sha256": "7e301393e96fc26b547310b973aedd2b843f5a89d765beaa17b5c6d74efe1394"
+      },
+      "phase2": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 4,
+        "path": "backend/calendar_evidence_acquisition/operational_validation_20261002/phase2.xml",
+        "sha256": "6ff1355a3c180e4f98badb7d0ba79b3be09f23e30e7d8d55285347f8eace207a"
+      }
+    },
+    "new_regression_cases": 48,
+    "distinct_passing_cases": 763,
+    "warnings": 0,
+    "network_requests": 0,
+    "broker_calls": 0,
+    "orders": 0,
+    "production_migrations": 0,
+    "production_restarts": 0,
+    "production_calendar_installed": false,
+    "auto_next": "FAIL-CLOSED",
+    "official_archives_acquired": 0,
+    "staged_archives_acquired": 0,
+    "previous_app_test_files_checked": 600,
+    "previous_app_test_files_changed": [],
+    "playwright_installed": false,
+    "playwright_live_verified": false,
+    "guards": "Network, subprocess, credential reads blocked; temporary-only database/filesystem writes; -W error",
+    "unrelated_full_suite_run": false,
+    "git_diff_check": "PASSED",
+    "note": "14 initial new regression failures recorded before implementation; all final cases pass."
+  },
+  "nse_autonomous_pass": {
+    "results": {
+      "baseline": {
+        "tests": 114,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 114,
+        "path": "backend/calendar_evidence_acquisition/nse_validation_20261003/baseline.xml",
+        "sha256": "c3e7ea308f0dc9c23ed41d6e74860030ee2efffa7b85d26f2691730d684949eb"
+      },
+      "test_first": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0,
+        "passed": 0,
+        "path": "backend/calendar_evidence_acquisition/nse_validation_20261003/test_first.xml",
+        "sha256": "083185b14198c1eec8b5fad04758ad96c7226a1835a9c54c11d9518175d9d66c"
+      },
+      "targeted": {
+        "tests": 66,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 66,
+        "path": "backend/calendar_evidence_acquisition/nse_validation_20261003/targeted.xml",
+        "sha256": "77bb00af6a7e2b2dec2d8adaf185706ac68bcc044578a5c1f9939919529299cc"
+      },
+      "relevant": {
+        "tests": 825,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 825,
+        "path": "backend/calendar_evidence_acquisition/nse_validation_20261003/relevant.xml",
+        "sha256": "369455a6044ca903694dd5995ae74daf0e168f002b1346a65c8147378f881ae7"
+      },
+      "phase2": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 4,
+        "path": "backend/calendar_evidence_acquisition/nse_validation_20261003/phase2.xml",
+        "sha256": "0df9a62857c170c22bedb01165c8e67156767884c7527b9fb26eca41de248382"
+      }
+    },
+    "new_tests": 66,
+    "distinct_passed": 829,
+    "final_failures": 0,
+    "final_errors": 0,
+    "skipped": 0,
+    "warnings": 0,
+    "environment": "isolated_pytest.py; blocked network/subprocess/credential reads; temporary-only writes/SQLite; -W error",
+    "syntax_checked": 5,
+    "mypy_checked": 4,
+    "mypy_result": "PASS",
+    "systemd_unit_verification": "PASS",
+    "dependency_check": "PASS",
+    "git_diff_check": "PASS",
+    "live_result": {
+      "calendar_status": "UNVERIFIED",
+      "detail": "NSE_CONNECTION_FAILED",
+      "production_calendar": "NOT INSTALLED",
+      "reason": "SOURCE_METADATA_REQUIRED",
+      "status": "UNVERIFIED"
+    },
+    "live_archive_downloads": 0,
+    "broker_calls": 0,
+    "orders": 0,
+    "production_migrations": 0,
+    "production_restarts": 0,
+    "scheduler_installed": false,
+    "app_virtualenv_changed": false,
+    "old_app_tests_changed": [],
+    "original_archive_sha256": "d44a052b79a3961910f74783960ebbd5043696dbed39e7fb86ec84929fd60338",
+    "original_archive_rows_validated": 33250,
+    "unrelated_full_suite_run": false
+  }
+}

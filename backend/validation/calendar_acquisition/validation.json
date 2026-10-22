@@ -1,0 +1,88 @@
+{
+  "suite_files": [
+    "tests/test_cross_broker.py",
+    "tests/test_dhan_capture.py",
+    "tests/test_dhan_chain.py",
+    "tests/test_dhan_historical.py",
+    "tests/test_greeks_engine.py",
+    "tests/test_hist_expiry.py",
+    "tests/test_hist_options.py",
+    "tests/test_histcap.py",
+    "tests/test_historical_quality_contract.py",
+    "tests/test_historical_read_contract.py",
+    "tests/test_instruments_registry.py",
+    "tests/test_market_data_selection.py",
+    "tests/test_market_hub_chain_unification.py",
+    "tests/test_market_regime.py",
+    "tests/test_market_snapshot.py",
+    "tests/test_market_snapshot_routes.py",
+    "tests/test_mathematical_confluence.py",
+    "tests/test_optionchain_api.py",
+    "tests/test_optionchain_data_conflict.py",
+    "tests/test_optionchain_datalayer.py",
+    "tests/test_optionchain_history_analytics.py",
+    "tests/test_orderflow_backtest.py",
+    "tests/test_orderflow_premium_walk.py",
+    "tests/test_orderflow_profile.py",
+    "tests/test_orderflow_smart_money.py",
+    "tests/test_provider_calendar.py",
+    "tests/test_calendar_evidence_acquisition.py"
+  ],
+  "runner": "backend/validation/isolated_pytest.py",
+  "working_directory": "backend",
+  "command_template": "env -i PATH=/usr/bin:/bin VALIDATION_RUN_DIR=/tmp/<new-run> venv/bin/python -B validation/isolated_pytest.py -q -W error <suite_files> --tb=short --junitxml=/tmp/<new-run>/result.xml",
+  "diagnostic_file": "/tmp/test_phase2_continuation_audit.py",
+  "diagnostic_sha256": "9d8bcb605585fe67940ee4c99aa7ce49bcf05a9e4b3efb1421d69a1cfd56e4b8",
+  "runs": {
+    "calendar_baseline": {
+      "counts": {
+        "tests": 623,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 623
+      },
+      "junit_path": "/tmp/acquisition-calendar-validation/result.xml",
+      "junit_sha256": "0a1a3d6c24c64b5c3de4df5827a761785b1a4ac185ec1ae0f7eea3bc416d5241"
+    },
+    "evidence_tests": {
+      "counts": {
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 9
+      },
+      "junit_path": "/tmp/acquisition-evidence-tests/result.xml",
+      "junit_sha256": "c3c0ca536987431978a2188267e771251daa8e901f550f0b6ef115547ec1f5da"
+    },
+    "phase2_diagnostics": {
+      "counts": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 4
+      },
+      "junit_path": "/tmp/acquisition-phase2-diagnostics/result.xml",
+      "junit_sha256": "d41d341f7a1629b186b10535b808682bf49607cff063a61c7cdedec829fd984f"
+    },
+    "combined_relevant": {
+      "counts": {
+        "tests": 632,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 632
+      },
+      "junit_path": "/tmp/acquisition-final-validation/result.xml",
+      "junit_sha256": "2ba5ebad15d59fd4a68cab517860be2564895ff9eec9289a7fda2aad3e32d929"
+    }
+  },
+  "warnings_policy": "error; none reported",
+  "full_repository_suite": "Not rerun in this evidence-only task. Earlier failures/timeouts remain documented in PHASE3_VALIDATION_INVESTIGATION.md.",
+  "existing_code_test_report_files_hash_checked": 681,
+  "existing_files_changed": 0,
+  "git_diff_check": "passed",
+  "production_behavior_changed": false
+}

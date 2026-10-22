@@ -1,0 +1,18 @@
+{
+  "source_url": "https://www.nseindia.com/all-reports-derivatives",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "NSE",
+  "dataset": "OFFICIAL_REPORT_DISCOVERY",
+  "cache_key": "0139f67266bddad1d0bf5ca686225c909b02a9c659d2972a53be45b5021d5026",
+  "acquired_at": "2026-10-02T15:04:22.235239+00:00",
+  "http_status": 0,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "bytes": 0,
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "acquisition_status": "FAILED",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null
+}

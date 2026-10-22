@@ -1,0 +1,13 @@
+{
+  "url": "https://smartapi.angelone.in/static/js/main.f40b4a9b.chunk.js",
+  "retrieved_at": "2026-10-02T13:53:52.843608+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://smartapi.angelone.in/static/js/main.f40b4a9b.chunk.js",
+  "content_type": "application/javascript",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/angel_doc_bundle.body",
+  "sha256": "27f1e2df5f9e39aba07aac6516c787d48ccf2ed30a86a5f56c4b20ada1e9d53b",
+  "bytes": 642968
+}

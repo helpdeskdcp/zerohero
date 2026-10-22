@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.158" timestamp="2026-10-03T07:38:34.334721+05:30" hostname="srv1243704"><testcase classname="" name="tests.test_nse_downloader" time="0.000"><error message="collection failure">ImportError while importing test module '/root/zerohero/backend/tests/test_nse_downloader.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_nse_downloader.py:11: in &lt;module&gt;
+    from calendar_evidence_acquisition.nse_downloader import Acquisition, Failure, validate_archive
+E   ModuleNotFoundError: No module named 'calendar_evidence_acquisition.nse_downloader'</error></testcase></testsuite></testsuites>

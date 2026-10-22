@@ -1,0 +1,20 @@
+=== 2026-10-19 16:40 IST  corrected Hybrid MP, trades on sessions after 2026-10-18 (cost 2.0 bps) ===
+  NIFTY: forward trades 1, gross +22.93 bps, net@2 +20.93, net@4 +18.93, net@6.3 +16.63 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 100%  (latest trade day 2026-10-19)
+  BANKNIFTY: forward trades 0  (latest trade day 2026-10-15)
+  SENSEX: forward trades 1, gross +45.29 bps, net@2 +43.29, net@4 +41.29, net@6.3 +38.99 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 100%  (latest trade day 2026-10-19)
+  POOLED: n=2 distinct days=1 net=32.11321911838434 -> gate INSUFFICIENT_SAMPLE ['SAMPLE n=2<200']
+=== 2026-10-20 16:40 IST  corrected Hybrid MP, trades on sessions after 2026-10-18 (cost 2.0 bps) ===
+  NIFTY: forward trades 1, gross +22.93 bps, net@2 +20.93, net@4 +18.93, net@6.3 +16.63 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 100%  (latest trade day 2026-10-19)
+  BANKNIFTY: forward trades 0  (latest trade day 2026-10-15)
+  SENSEX: forward trades 1, gross +45.29 bps, net@2 +43.29, net@4 +41.29, net@6.3 +38.99 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 100%  (latest trade day 2026-10-19)
+  POOLED: n=2 distinct days=1 net=32.11321911838434 -> gate INSUFFICIENT_SAMPLE ['SAMPLE n=2<200']
+=== 2026-10-21 16:40 IST  corrected Hybrid MP, trades on sessions after 2026-10-18 (cost 2.0 bps) ===
+  NIFTY: forward trades 1, gross +22.93 bps, net@2 +20.93, net@4 +18.93, net@6.3 +16.63 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 100%  (latest trade day 2026-10-19)
+  BANKNIFTY: forward trades 1, gross -36.63 bps, net@2 -38.63, net@4 -40.63, net@6.3 -42.93 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 0%  (latest trade day 2026-10-21)
+  SENSEX: forward trades 2, gross +7.78 bps, net@2 +5.78, net@4 +3.78, net@6.3 +1.48 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 50%  (latest trade day 2026-10-21)
+  POOLED: n=4 distinct days=2 net=-1.5340133702979477 -> gate INSUFFICIENT_SAMPLE ['SAMPLE n=4<200']
+=== 2026-10-22 16:40 IST  corrected Hybrid MP, trades on sessions after 2026-10-18 (cost 2.0 bps) ===
+  NIFTY: forward trades 1, gross +22.93 bps, net@2 +20.93, net@4 +18.93, net@6.3 +16.63 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 100%  (latest trade day 2026-10-19)
+  BANKNIFTY: forward trades 1, gross -36.63 bps, net@2 -38.63, net@4 -40.63, net@6.3 -42.93 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 0%  (latest trade day 2026-10-21)
+  SENSEX: forward trades 3, gross -10.23 bps, net@2 -12.23, net@4 -14.23, net@6.3 -16.53 bps (REALISTIC NIFTY futures round trip since 2026-04-01 is ~6.3 bps: STT 0.05% on the sell side, see audit sec. 21), win@2 33%  (latest trade day 2026-10-22)
+  POOLED: n=5 distinct days=3 net=-10.879237049333899 -> gate INSUFFICIENT_SAMPLE ['SAMPLE n=5<200']

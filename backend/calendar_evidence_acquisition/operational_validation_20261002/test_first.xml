@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="14" skipped="0" tests="14" time="2.543" timestamp="2026-10-02T23:00:01.626759+05:30" hostname="srv1243704"><testcase classname="tests.test_evidence_staging" name="test_dry_run_parses_without_writing_any_artifacts" time="0.183"><failure message="AttributeError: 'EvidenceEngine' object has no attribute 'inspect'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_dry_run_parses_without_wr0')
+
+    def test_dry_run_parses_without_writing_any_artifacts(tmp_path):
+        engine, file = staged(tmp_path)
+        before = {str(p): p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
+&gt;       result = engine.inspect(file)
+                 ^^^^^^^^^^^^^^
+E       AttributeError: 'EvidenceEngine' object has no attribute 'inspect'
+
+tests/test_evidence_staging.py:15: AttributeError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_rejected_candidates_never_enter_ledger[PKbroken]" time="0.718"><failure message="AssertionError: assert not True&#10; +  where True = exists()&#10; +    where exists = PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never0/artifacts/evidence_ledger.json').exists&#10; +      where PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never0/artifacts/evidence_ledger.json') = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f172bad4350&gt;.ledger">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never0')
+raw = b'PKbroken'
+
+    @pytest.mark.parametrize('raw', [b'PKbroken', RAW.replace(b'NIFTY', b'UNSUPPORTED')])
+    def test_rejected_candidates_never_enter_ledger(tmp_path, raw):
+        engine, file = staged(tmp_path, raw)
+        result = engine.ingest(file)
+        assert result['reason'] in {'PARSER_REJECTED', 'NO_TARGET_RECORDS'}
+&gt;       assert not engine.ledger.exists()
+E       AssertionError: assert not True
+E        +  where True = exists()
+E        +    where exists = PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never0/artifacts/evidence_ledger.json').exists
+E        +      where PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never0/artifacts/evidence_ledger.json') = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f172bad4350&gt;.ledger
+
+tests/test_evidence_staging.py:26: AssertionError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_rejected_candidates_never_enter_ledger[TradDt,Src,Sgmt,TckrSymb,FinInstrmTp,XpryDt,FininstrmActlXpryDt,FinInstrmId,StrkPric,OptnTp\n2026-09-03,NSE,FO,UNSUPPORTED,IDO,2026-09-08,2026-09-08,123,25000,CE\n]" time="0.067"><failure message="AssertionError: assert not True&#10; +  where True = exists()&#10; +    where exists = PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never1/artifacts/evidence_ledger.json').exists&#10; +      where PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never1/artifacts/evidence_ledger.json') = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f172b15e8d0&gt;.ledger">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never1')
+raw = b'TradDt,Src,Sgmt,TckrSymb,FinInstrmTp,XpryDt,FininstrmActlXpryDt,FinInstrmId,StrkPric,OptnTp\n2026-09-03,NSE,FO,UNSUPPORTED,IDO,2026-09-08,2026-09-08,123,25000,CE\n'
+
+    @pytest.mark.parametrize('raw', [b'PKbroken', RAW.replace(b'NIFTY', b'UNSUPPORTED')])
+    def test_rejected_candidates_never_enter_ledger(tmp_path, raw):
+        engine, file = staged(tmp_path, raw)
+        result = engine.ingest(file)
+        assert result['reason'] in {'PARSER_REJECTED', 'NO_TARGET_RECORDS'}
+&gt;       assert not engine.ledger.exists()
+E       AssertionError: assert not True
+E        +  where True = exists()
+E        +    where exists = PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never1/artifacts/evidence_ledger.json').exists
+E        +      where PosixPath('/tmp/pytest-of-root/pytest-1943/test_rejected_candidates_never1/artifacts/evidence_ledger.json') = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f172b15e8d0&gt;.ledger
+
+tests/test_evidence_staging.py:26: AssertionError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_schema_detection_preserves_expiry_separate_from_maturity[BSE-SENSEX]" time="0.008"><failure message="KeyError: 'field_map'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_schema_detection_preserve0')
+exchange = 'BSE', symbol = 'SENSEX'
+
+    @pytest.mark.parametrize('exchange,symbol', [('BSE', 'SENSEX'), ('MCX', 'NATGASMINI')])
+    def test_schema_detection_preserves_expiry_separate_from_maturity(tmp_path, exchange, symbol):
+        raw = ('Trading Date,Symbol,Instrument,Expiry Date,Contract Maturity Date,Contract ID\n'
+               f'2026-09-03,{symbol},OPT,2026-09-24,2026-09-30,7\n').encode()
+        engine, file = staged(tmp_path, raw, name='download.csv', exchange=exchange,
+                              segment='COM' if exchange == 'MCX' else 'FO',
+                              provenance_url=f'https://www.{exchange.lower()}india.com/download.csv')
+&gt;       result = engine.ingest(file)
+                 ^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:244: in ingest
+    return self._ingest(path.read_bytes(), path.name, meta, "MANUAL")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f172c0076d0&gt;
+raw = b'Trading Date,Symbol,Instrument,Expiry Date,Contract Maturity Date,Contract ID\n2026-09-03,SENSEX,OPT,2026-09-24,2026-09-30,7\n'
+filename = 'download.csv'
+meta = {'exchange': 'BSE', 'provenance_url': 'https://www.bseindia.com/download.csv', 'report_name': 'Synthetic fixture, not exchange evidence', 'segment': 'FO', ...}
+route = 'MANUAL'
+
+    def _ingest(self, raw: bytes, filename: str, meta: dict, route: str) -&gt; dict:
+        if len(raw) &gt; MAX_BYTES or not raw:
+            raise ValueError("SOURCE_SIZE_INVALID")
+        exchange = meta["exchange"]
+        trading_date = date.fromisoformat(meta["trading_date"])
+        venue, _ = identify_filename(filename, trading_date)
+        if venue and venue != exchange:
+            raise ValueError("FILENAME_EXCHANGE_MISMATCH")
+        url = guarded_url(meta["provenance_url"], exchange)
+        sha = digest(raw)
+        if meta.get("sha256") and meta["sha256"] != sha:
+            raise ValueError("SOURCE_HASH_MISMATCH")
+&gt;       fields = (NSE_UDIFF if trading_date &gt;= NSE_UDIFF_START else NSE_LEGACY) if exchange == "NSE" else FieldMap(**meta["field_map"])
+                                                                                                                     ^^^^^^^^^^^^^^^^^
+E       KeyError: 'field_map'
+
+calendar_evidence_acquisition/evidence_engine.py:258: KeyError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_schema_detection_preserves_expiry_separate_from_maturity[MCX-NATGASMINI]" time="0.003"><failure message="KeyError: 'field_map'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_schema_detection_preserve1')
+exchange = 'MCX', symbol = 'NATGASMINI'
+
+    @pytest.mark.parametrize('exchange,symbol', [('BSE', 'SENSEX'), ('MCX', 'NATGASMINI')])
+    def test_schema_detection_preserves_expiry_separate_from_maturity(tmp_path, exchange, symbol):
+        raw = ('Trading Date,Symbol,Instrument,Expiry Date,Contract Maturity Date,Contract ID\n'
+               f'2026-09-03,{symbol},OPT,2026-09-24,2026-09-30,7\n').encode()
+        engine, file = staged(tmp_path, raw, name='download.csv', exchange=exchange,
+                              segment='COM' if exchange == 'MCX' else 'FO',
+                              provenance_url=f'https://www.{exchange.lower()}india.com/download.csv')
+&gt;       result = engine.ingest(file)
+                 ^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:244: in ingest
+    return self._ingest(path.read_bytes(), path.name, meta, "MANUAL")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f172b15e8d0&gt;
+raw = b'Trading Date,Symbol,Instrument,Expiry Date,Contract Maturity Date,Contract ID\n2026-09-03,NATGASMINI,OPT,2026-09-24,2026-09-30,7\n'
+filename = 'download.csv'
+meta = {'exchange': 'MCX', 'provenance_url': 'https://www.mcxindia.com/download.csv', 'report_name': 'Synthetic fixture, not exchange evidence', 'segment': 'COM', ...}
+route = 'MANUAL'
+
+    def _ingest(self, raw: bytes, filename: str, meta: dict, route: str) -&gt; dict:
+        if len(raw) &gt; MAX_BYTES or not raw:
+            raise ValueError("SOURCE_SIZE_INVALID")
+        exchange = meta["exchange"]
+        trading_date = date.fromisoformat(meta["trading_date"])
+        venue, _ = identify_filename(filename, trading_date)
+        if venue and venue != exchange:
+            raise ValueError("FILENAME_EXCHANGE_MISMATCH")
+        url = guarded_url(meta["provenance_url"], exchange)
+        sha = digest(raw)
+        if meta.get("sha256") and meta["sha256"] != sha:
+            raise ValueError("SOURCE_HASH_MISMATCH")
+&gt;       fields = (NSE_UDIFF if trading_date &gt;= NSE_UDIFF_START else NSE_LEGACY) if exchange == "NSE" else FieldMap(**meta["field_map"])
+                                                                                                                     ^^^^^^^^^^^^^^^^^
+E       KeyError: 'field_map'
+
+calendar_evidence_acquisition/evidence_engine.py:258: KeyError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_status_never_promotes_staging_or_provider_claims" time="0.076"><failure message="AttributeError: 'EvidenceEngine' object has no attribute 'status'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_status_never_promotes_sta0')
+
+    def test_status_never_promotes_staging_or_provider_claims(tmp_path):
+        engine, file = staged(tmp_path, status='VERIFIED', provider='DHAN')
+        engine.ingest(file)
+&gt;       report = engine.status()
+                 ^^^^^^^^^^^^^
+E       AttributeError: 'EvidenceEngine' object has no attribute 'status'
+
+tests/test_evidence_staging.py:47: AttributeError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_empty_status_is_read_only_and_shows_unknown_product_ranges" time="0.002"><failure message="AttributeError: 'EvidenceEngine' object has no attribute 'status'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_empty_status_is_read_only0')
+
+    def test_empty_status_is_read_only_and_shows_unknown_product_ranges(tmp_path):
+        engine = EvidenceEngine(tmp_path / 'absent')
+&gt;       report = engine.status()
+                 ^^^^^^^^^^^^^
+E       AttributeError: 'EvidenceEngine' object has no attribute 'status'
+
+tests/test_evidence_staging.py:63: AttributeError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_cli_flags_continue_after_bad_file_and_report_failure" time="0.007"><failure message="SystemExit: 2">self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+args = ['--staging', '/tmp/pytest-of-root/pytest-1943/test_cli_flags_continue_after_0/artifacts/staging', '--ingest']
+namespace = Namespace(artifacts=PosixPath('artifacts'), command=None)
+
+    def parse_known_args(self, args=None, namespace=None):
+        if args is None:
+            # args default to the system args
+            args = _sys.argv[1:]
+        else:
+            # make sure that args are mutable
+            args = list(args)
+    
+        # default Namespace built from parser defaults
+        if namespace is None:
+            namespace = Namespace()
+    
+        # add any action defaults that aren't present
+        for action in self._actions:
+            if action.dest is not SUPPRESS:
+                if not hasattr(namespace, action.dest):
+                    if action.default is not SUPPRESS:
+                        setattr(namespace, action.dest, action.default)
+    
+        # add any parser defaults that aren't present
+        for dest in self._defaults:
+            if not hasattr(namespace, dest):
+                setattr(namespace, dest, self._defaults[dest])
+    
+        # parse the arguments and exit if there are any errors
+        if self.exit_on_error:
+            try:
+&gt;               namespace, args = self._parse_known_args(args, namespace)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.11/argparse.py:1907: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.11/argparse.py:2101: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:2078: in consume_positionals
+    take_action(action, args)
+/usr/lib/python3.11/argparse.py:1967: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:2511: in _get_values
+    self._check_value(action, value[0])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+action = _SubParsersAction(option_strings=[], dest='command', nargs='A...', const=None, default=None, type=None, choices={'inge...ss=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)}, required=True, help=None, metavar=None)
+value = '/tmp/pytest-of-root/pytest-1943/test_cli_flags_continue_after_0/artifacts/staging'
+
+    def _check_value(self, action, value):
+        # converted value must be one of the choices (if specified)
+        if action.choices is not None and value not in action.choices:
+            args = {'value': value,
+                    'choices': ', '.join(map(repr, action.choices))}
+            msg = _('invalid choice: %(value)r (choose from %(choices)s)')
+&gt;           raise ArgumentError(action, msg % args)
+E           argparse.ArgumentError: argument command: invalid choice: '/tmp/pytest-of-root/pytest-1943/test_cli_flags_continue_after_0/artifacts/staging' (choose from 'ingest', 'browser')
+
+/usr/lib/python3.11/argparse.py:2558: ArgumentError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_cli_flags_continue_after_0')
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x7f171d4ecfd0&gt;
+
+    def test_cli_flags_continue_after_bad_file_and_report_failure(tmp_path, capsys):
+        engine, file = staged(tmp_path)
+        bad = engine.staging / 'bad.csv'
+        bad.write_bytes(b'invalid')
+&gt;       assert main(['--staging', str(engine.staging), '--ingest']) == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:74: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:364: in main
+    args = parser.parse_args(argv)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:1874: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:1909: in parse_known_args
+    self.error(str(err))
+/usr/lib/python3.11/argparse.py:2633: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+status = 2
+message = "isolated_pytest.py: error: argument command: invalid choice: '/tmp/pytest-of-root/pytest-1943/test_cli_flags_continue_after_0/artifacts/staging' (choose from 'ingest', 'browser')\n"
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+&gt;       _sys.exit(status)
+E       SystemExit: 2
+
+/usr/lib/python3.11/argparse.py:2620: SystemExit</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_cli_dry_run_never_creates_ledger" time="0.006"><failure message="SystemExit: 2">self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+args = ['--staging', '/tmp/pytest-of-root/pytest-1943/test_cli_dry_run_never_creates0/artifacts/staging', '--dry-run']
+namespace = Namespace(artifacts=PosixPath('artifacts'), command=None)
+
+    def parse_known_args(self, args=None, namespace=None):
+        if args is None:
+            # args default to the system args
+            args = _sys.argv[1:]
+        else:
+            # make sure that args are mutable
+            args = list(args)
+    
+        # default Namespace built from parser defaults
+        if namespace is None:
+            namespace = Namespace()
+    
+        # add any action defaults that aren't present
+        for action in self._actions:
+            if action.dest is not SUPPRESS:
+                if not hasattr(namespace, action.dest):
+                    if action.default is not SUPPRESS:
+                        setattr(namespace, action.dest, action.default)
+    
+        # add any parser defaults that aren't present
+        for dest in self._defaults:
+            if not hasattr(namespace, dest):
+                setattr(namespace, dest, self._defaults[dest])
+    
+        # parse the arguments and exit if there are any errors
+        if self.exit_on_error:
+            try:
+&gt;               namespace, args = self._parse_known_args(args, namespace)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.11/argparse.py:1907: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.11/argparse.py:2101: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:2078: in consume_positionals
+    take_action(action, args)
+/usr/lib/python3.11/argparse.py:1967: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:2511: in _get_values
+    self._check_value(action, value[0])
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+action = _SubParsersAction(option_strings=[], dest='command', nargs='A...', const=None, default=None, type=None, choices={'inge...ss=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)}, required=True, help=None, metavar=None)
+value = '/tmp/pytest-of-root/pytest-1943/test_cli_dry_run_never_creates0/artifacts/staging'
+
+    def _check_value(self, action, value):
+        # converted value must be one of the choices (if specified)
+        if action.choices is not None and value not in action.choices:
+            args = {'value': value,
+                    'choices': ', '.join(map(repr, action.choices))}
+            msg = _('invalid choice: %(value)r (choose from %(choices)s)')
+&gt;           raise ArgumentError(action, msg % args)
+E           argparse.ArgumentError: argument command: invalid choice: '/tmp/pytest-of-root/pytest-1943/test_cli_dry_run_never_creates0/artifacts/staging' (choose from 'ingest', 'browser')
+
+/usr/lib/python3.11/argparse.py:2558: ArgumentError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_cli_dry_run_never_creates0')
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x7f171d423a90&gt;
+
+    def test_cli_dry_run_never_creates_ledger(tmp_path, capsys):
+        engine, file = staged(tmp_path)
+&gt;       assert main(['--staging', str(engine.staging), '--dry-run']) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:364: in main
+    args = parser.parse_args(argv)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:1874: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:1909: in parse_known_args
+    self.error(str(err))
+/usr/lib/python3.11/argparse.py:2633: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+status = 2
+message = "isolated_pytest.py: error: argument command: invalid choice: '/tmp/pytest-of-root/pytest-1943/test_cli_dry_run_never_creates0/artifacts/staging' (choose from 'ingest', 'browser')\n"
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+&gt;       _sys.exit(status)
+E       SystemExit: 2
+
+/usr/lib/python3.11/argparse.py:2620: SystemExit</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_cli_status_reports_28_combinations_without_files" time="0.003"><failure message="SystemExit: 2">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_cli_status_reports_28_com0')
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x7f171d3ce110&gt;
+
+    def test_cli_status_reports_28_combinations_without_files(tmp_path, capsys):
+&gt;       assert main(['--artifacts', str(tmp_path / 'absent'), '--status']) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:88: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:364: in main
+    args = parser.parse_args(argv)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:1874: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:1907: in parse_known_args
+    namespace, args = self._parse_known_args(args, namespace)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/argparse.py:2147: in _parse_known_args
+    self.error(_('the following arguments are required: %s') %
+/usr/lib/python3.11/argparse.py:2633: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='isolated_pytest.py', usage=None, description='Browser/manual evidence acquisition CLI; no product...s calendar verification.\n', formatter_class=&lt;class 'argparse.HelpFormatter'&gt;, conflict_handler='error', add_help=True)
+status = 2
+message = 'isolated_pytest.py: error: the following arguments are required: command\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+&gt;       _sys.exit(status)
+E       SystemExit: 2
+
+/usr/lib/python3.11/argparse.py:2620: SystemExit</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_xlsx_ingestion_hashes_original_bytes_without_extracting_files[False]" time="0.085"><failure message="AssertionError: assert [] == ['2026-09-08']&#10;  &#10;  Right contains one more item: '2026-09-08'&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_xlsx_ingestion_hashes_ori0')
+outer_zip = False
+
+    @pytest.mark.parametrize('outer_zip', [False, True])
+    def test_xlsx_ingestion_hashes_original_bytes_without_extracting_files(tmp_path, outer_zip):
+        raw = xlsx()
+        if outer_zip:
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as archive:
+                archive.writestr('table.xlsx', raw)
+            raw = buffer.getvalue()
+        engine, file = staged(tmp_path, raw, name='data.zip' if outer_zip else 'data.xlsx')
+        result = engine.ingest(file)
+&gt;       assert result['expiry_dates_iso'] == ['2026-09-08']
+E       AssertionError: assert [] == ['2026-09-08']
+E         
+E         Right contains one more item: '2026-09-08'
+E         Use -v to get more diff
+
+tests/test_evidence_staging.py:122: AssertionError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_xlsx_ingestion_hashes_original_bytes_without_extracting_files[True]" time="0.047"><failure message="AssertionError: assert [] == ['2026-09-08']&#10;  &#10;  Right contains one more item: '2026-09-08'&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_xlsx_ingestion_hashes_ori1')
+outer_zip = True
+
+    @pytest.mark.parametrize('outer_zip', [False, True])
+    def test_xlsx_ingestion_hashes_original_bytes_without_extracting_files(tmp_path, outer_zip):
+        raw = xlsx()
+        if outer_zip:
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as archive:
+                archive.writestr('table.xlsx', raw)
+            raw = buffer.getvalue()
+        engine, file = staged(tmp_path, raw, name='data.zip' if outer_zip else 'data.xlsx')
+        result = engine.ingest(file)
+&gt;       assert result['expiry_dates_iso'] == ['2026-09-08']
+E       AssertionError: assert [] == ['2026-09-08']
+E         
+E         Right contains one more item: '2026-09-08'
+E         Use -v to get more diff
+
+tests/test_evidence_staging.py:122: AssertionError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_ambiguous_expiry_headers_fail_closed" time="0.007"><failure message="KeyError: 'field_map'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_ambiguous_expiry_headers_0')
+
+    def test_ambiguous_expiry_headers_fail_closed(tmp_path):
+        raw = b'Trading Date,Symbol,Instrument,Expiry Date,EXPDATE\n2026-09-03,SENSEX,OPT,2026-09-24,2026-09-25\n'
+        engine, file = staged(tmp_path, raw, name='bse.csv', exchange='BSE', provenance_url='https://www.bseindia.com/data.csv')
+&gt;       result = engine.ingest(file)
+                 ^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:244: in ingest
+    return self._ingest(path.read_bytes(), path.name, meta, "MANUAL")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f171d42cf50&gt;
+raw = b'Trading Date,Symbol,Instrument,Expiry Date,EXPDATE\n2026-09-03,SENSEX,OPT,2026-09-24,2026-09-25\n'
+filename = 'bse.csv'
+meta = {'exchange': 'BSE', 'provenance_url': 'https://www.bseindia.com/data.csv', 'report_name': 'Synthetic fixture, not exchange evidence', 'segment': 'FO', ...}
+route = 'MANUAL'
+
+    def _ingest(self, raw: bytes, filename: str, meta: dict, route: str) -&gt; dict:
+        if len(raw) &gt; MAX_BYTES or not raw:
+            raise ValueError("SOURCE_SIZE_INVALID")
+        exchange = meta["exchange"]
+        trading_date = date.fromisoformat(meta["trading_date"])
+        venue, _ = identify_filename(filename, trading_date)
+        if venue and venue != exchange:
+            raise ValueError("FILENAME_EXCHANGE_MISMATCH")
+        url = guarded_url(meta["provenance_url"], exchange)
+        sha = digest(raw)
+        if meta.get("sha256") and meta["sha256"] != sha:
+            raise ValueError("SOURCE_HASH_MISMATCH")
+&gt;       fields = (NSE_UDIFF if trading_date &gt;= NSE_UDIFF_START else NSE_LEGACY) if exchange == "NSE" else FieldMap(**meta["field_map"])
+                                                                                                                     ^^^^^^^^^^^^^^^^^
+E       KeyError: 'field_map'
+
+calendar_evidence_acquisition/evidence_engine.py:258: KeyError</failure></testcase><testcase classname="tests.test_evidence_staging" name="test_filename_and_rows_can_establish_context_but_not_source" time="0.012"><failure message="KeyError: 'exchange'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1943/test_filename_and_rows_can_est0')
+
+    def test_filename_and_rows_can_establish_context_but_not_source(tmp_path):
+        engine, file = staged(tmp_path)
+        sidecar = file.with_name(file.name + '.json')
+        meta = json.loads(sidecar.read_text())
+        del meta['exchange']
+        del meta['trading_date']
+        sidecar.write_text(json.dumps(meta))
+&gt;       assert engine.ingest(file)['trading_date'] == '2026-09-03'
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/test_evidence_staging.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+calendar_evidence_acquisition/evidence_engine.py:244: in ingest
+    return self._ingest(path.read_bytes(), path.name, meta, "MANUAL")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;calendar_evidence_acquisition.evidence_engine.EvidenceEngine object at 0x7f171d2d6610&gt;
+raw = b'TradDt,Src,Sgmt,TckrSymb,FinInstrmTp,XpryDt,FininstrmActlXpryDt,FinInstrmId,StrkPric,OptnTp\n2026-09-03,NSE,FO,NIFTY,IDO,2026-09-08,2026-09-08,123,25000,CE\n'
+filename = 'BhavCopy_NSE_FO_0_0_0_20260903_F_0000.csv'
+meta = {'provenance_url': 'https://nsearchives.nseindia.com/reports/BhavCopy_NSE_FO_0_0_0_20260903_F_0000.csv', 'report_name': 'Synthetic fixture, not exchange evidence', 'segment': 'FO'}
+route = 'MANUAL'
+
+    def _ingest(self, raw: bytes, filename: str, meta: dict, route: str) -&gt; dict:
+        if len(raw) &gt; MAX_BYTES or not raw:
+            raise ValueError("SOURCE_SIZE_INVALID")
+&gt;       exchange = meta["exchange"]
+                   ^^^^^^^^^^^^^^^^
+E       KeyError: 'exchange'
+
+calendar_evidence_acquisition/evidence_engine.py:249: KeyError</failure></testcase></testsuite></testsuites>

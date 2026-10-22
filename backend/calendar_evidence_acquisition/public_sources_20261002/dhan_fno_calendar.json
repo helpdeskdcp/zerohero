@@ -1,0 +1,13 @@
+{
+  "url": "https://dhan.co/fno-expiry-calendar/",
+  "retrieved_at": "2026-10-02T13:56:41.228498+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://dhan.co/fno-expiry-calendar/",
+  "content_type": "text/html; charset=utf-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/dhan_fno_calendar.body",
+  "sha256": "1e2cf6202a9442b5cdd5107340ff61aa956de87817c26f6cd8ead3a5d17ec62f",
+  "bytes": 409364
+}

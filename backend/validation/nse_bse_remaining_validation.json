@@ -1,0 +1,482 @@
+{
+  "phase": "NSE_BSE_REMAINING_EVIDENCE",
+  "completed_at": "2026-10-05T02:26:45.600139+00:00",
+  "status": "INSTALLATION_BLOCKED",
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "mcx": "DISABLED / OUT_OF_SCOPE; unchanged",
+  "relevant_tests": {
+    "passed": 1221,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "warnings": 0,
+    "warnings_as_errors": true,
+    "new_cases": 10,
+    "focused_passed": 36,
+    "previous_confirmed_baseline": 1211,
+    "suite_files": [
+      "tests/test_cross_broker.py",
+      "tests/test_dhan_capture.py",
+      "tests/test_dhan_chain.py",
+      "tests/test_dhan_historical.py",
+      "tests/test_greeks_engine.py",
+      "tests/test_hist_expiry.py",
+      "tests/test_hist_options.py",
+      "tests/test_histcap.py",
+      "tests/test_historical_quality_contract.py",
+      "tests/test_historical_read_contract.py",
+      "tests/test_instruments_registry.py",
+      "tests/test_market_data_selection.py",
+      "tests/test_market_hub_chain_unification.py",
+      "tests/test_market_regime.py",
+      "tests/test_market_snapshot.py",
+      "tests/test_market_snapshot_routes.py",
+      "tests/test_mathematical_confluence.py",
+      "tests/test_optionchain_api.py",
+      "tests/test_optionchain_data_conflict.py",
+      "tests/test_optionchain_datalayer.py",
+      "tests/test_optionchain_history_analytics.py",
+      "tests/test_orderflow_backtest.py",
+      "tests/test_orderflow_premium_walk.py",
+      "tests/test_orderflow_profile.py",
+      "tests/test_orderflow_smart_money.py",
+      "tests/test_provider_calendar.py",
+      "tests/test_calendar_evidence_acquisition.py",
+      "tests/test_calendar_coverage_plan.py",
+      "tests/test_alternative_calendar_evidence.py",
+      "tests/test_static_calendar_archives.py",
+      "tests/test_official_eod_evidence.py",
+      "tests/test_evidence_engine.py",
+      "tests/test_evidence_staging.py",
+      "tests/test_nse_downloader.py",
+      "tests/test_nse_transport.py",
+      "tests/test_nse_observed_sources.py",
+      "tests/test_nse_official.py",
+      "tests/test_nse_official_chain.py",
+      "tests/test_nse_completion.py",
+      "/tmp/test_phase2_continuation_audit.py",
+      "tests/test_official_expiry_calendar.py",
+      "tests/test_own_exchange_calendar.py",
+      "tests/test_own_exchange_fallback_evidence.py",
+      "tests/test_bse_master_evidence.py",
+      "tests/test_mcx_local_specification_evidence.py",
+      "tests/test_mcx_naturalgas_production_scope.py",
+      "tests/test_mcx_disabled_scope.py",
+      "tests/test_bse_bankex_evidence.py",
+      "tests/test_nse_bse_remaining_evidence.py"
+    ],
+    "junit_sha256": "ef8a4e98399c25906993c425ccaac01f6c43a877734d2449f7f4e2d8c136973c",
+    "saved_phase2_diagnostics": [
+      "test_angelone_default_must_not_return_dhan_only_records",
+      "test_ambiguous_expiries_must_not_be_collapsed",
+      "test_future_capture_must_not_answer_current_read",
+      "test_premium_series_must_not_collapse_provider_and_expiry"
+    ],
+    "command": "python3 /tmp/run_nse_bse_remaining_relevant.py (isolated_pytest.py; network/env access blocked; temporary DB/files)"
+  },
+  "mypy": {
+    "status": "PASS",
+    "checked_files": 6,
+    "options": [
+      "--follow-imports=skip",
+      "--ignore-missing-imports",
+      "--check-untyped-defs"
+    ],
+    "initial_errors": 3,
+    "initial_error_scope": "Optional XML element types in newly added test; fixed with explicit assertions"
+  },
+  "syntax": {
+    "status": "PASS",
+    "files": 3,
+    "method": "compile(bytes, filename, exec); no pycache writes"
+  },
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-product-20261004/SHA256SUMS",
+      "passed": 2,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-specifications-20261004/SHA256SUMS",
+      "passed": 6,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-direct-20261004/SHA256SUMS",
+      "passed": 23,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/MCX_LOCAL_SPECIFICATION_SHA256SUMS",
+      "passed": 16,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS",
+      "passed": 4,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/MCX_SPECIFICATION_SHA256SUMS",
+      "passed": 3,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/NSE_COMPLETION_SHA256SUMS",
+      "passed": 19,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+      "passed": 7,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+      "passed": 6,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_DIRECT_SHA256SUMS",
+      "passed": 6,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_FALLBACK_SHA256SUMS",
+      "passed": 4,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/SHA256SUMS",
+      "passed": 7,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "backend/validation/MCX_DISABLED_SHA256SUMS",
+      "passed": 32,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    },
+    {
+      "manifest": "artifacts/staging/nse-bse-requirements-20261005/SHA256SUMS",
+      "passed": 11,
+      "returncode": 0,
+      "failures": [],
+      "stderr": ""
+    }
+  ],
+  "checksum_entries_passed": 424,
+  "checksum_changes": "backend/validation/nse_bse_remaining_checksum_changes.json",
+  "gate_readback": {
+    "checked_at": "2026-10-05T02:25:02.422075+00:00",
+    "installed_calendars": [],
+    "active_auto_next": [],
+    "gates": {
+      "NSE": {
+        "PRODUCTION": "BLOCKED",
+        "AUTO/NEXT": "FAIL-CLOSED",
+        "LIVE_ORDERS": "DISABLED",
+        "eligible_for_review": false,
+        "missing_gates": [
+          "full_suite",
+          "contract_master",
+          "expiry_calendar",
+          "historical_ingestion",
+          "live_freshness",
+          "provenance",
+          "duplicates",
+          "discrepancy"
+        ],
+        "reason": "MANUAL_ACTIVATION_NOT_AUTHORIZED",
+        "calendar_installed": false
+      },
+      "BSE": {
+        "PRODUCTION": "BLOCKED",
+        "AUTO/NEXT": "FAIL-CLOSED",
+        "LIVE_ORDERS": "DISABLED",
+        "eligible_for_review": false,
+        "missing_gates": [
+          "full_suite",
+          "contract_master",
+          "expiry_calendar",
+          "historical_ingestion",
+          "live_freshness",
+          "provenance",
+          "duplicates",
+          "discrepancy"
+        ],
+        "reason": "MANUAL_ACTIVATION_NOT_AUTHORIZED",
+        "calendar_installed": false
+      },
+      "MCX": {
+        "PRODUCTION": "NOT_ENABLED",
+        "AUTO/NEXT": "DISABLED",
+        "LIVE_ORDERS": "DISABLED",
+        "eligible_for_review": false,
+        "missing_gates": [],
+        "pending_requirements": [],
+        "gate_required": false,
+        "scope": "OUT_OF_SCOPE",
+        "status": "DISABLED",
+        "reason": "CALENDAR_EXCHANGE_DISABLED",
+        "calendar_installed": false
+      }
+    },
+    "previews": {
+      "NIFTY": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        }
+      },
+      "BANKNIFTY": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        }
+      },
+      "FINNIFTY": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        }
+      },
+      "MIDCPNIFTY": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        }
+      },
+      "SENSEX": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        }
+      },
+      "BANKEX": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EVIDENCE_UNAVAILABLE",
+          "expiry": null,
+          "provenance": {},
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "FAIL-CLOSED",
+          "preview_only": true
+        }
+      }
+    }
+  },
+  "source_requests": {
+    "unique": 5,
+    "broker": 0,
+    "mcx": 0,
+    "retries": 0,
+    "redirects_followed": 0,
+    "http_status_counts": {
+      "200": 3,
+      "301": 1,
+      "404": 1
+    },
+    "calendar_evidence_obtained": "NSE consolidated circular/layout/holiday context only"
+  },
+  "immutable_archives": {
+    "artifacts/staging/BhavCopy_NSE_FO_20261001.csv.zip": "d44a052b79a3961910f74783960ebbd5043696dbed39e7fb86ec84929fd60338",
+    "artifacts/staging/Reports-Archives-Multiple-01102026.zip": "2c5aae28b3d6682ee8dc2c7162041acfbf5c6999233d653a2efd157450f40fb0"
+  },
+  "files_changed": [
+    "backend/calendar_evidence_acquisition/bse_master.py",
+    "backend/validation/OWN_EXCHANGE_DIRECT_SHA256SUMS",
+    "backend/tests/test_bse_bankex_evidence.py",
+    "backend/tests/test_nse_bse_remaining_evidence.py",
+    "backend/calendar_evidence_acquisition/parsed/bse_bankex_master_observations_20261005.json.gz",
+    "backend/calendar_evidence_acquisition/parsed/nse_bse_remaining_evidence_20261005.json",
+    "backend/NSE_BSE_REMAINING_EVIDENCE_REPORT.md",
+    "backend/validation/nse_bse_remaining_validation.json",
+    "backend/validation/nse_bse_remaining_checksum_changes.json",
+    "backend/validation/NSE_BSE_REMAINING_SHA256SUMS",
+    "artifacts/staging/nse-bse-requirements-20261005/77d03cc3bb6163db3dd3.body",
+    "artifacts/staging/nse-bse-requirements-20261005/77d03cc3bb6163db3dd3.json",
+    "artifacts/staging/nse-bse-requirements-20261005/9402c64d404525236f8d.body",
+    "artifacts/staging/nse-bse-requirements-20261005/9402c64d404525236f8d.json",
+    "artifacts/staging/nse-bse-requirements-20261005/b97722fb25702322f8f1.body",
+    "artifacts/staging/nse-bse-requirements-20261005/b97722fb25702322f8f1.json",
+    "artifacts/staging/nse-bse-requirements-20261005/be5fadb6a8203b917339.body",
+    "artifacts/staging/nse-bse-requirements-20261005/be5fadb6a8203b917339.json",
+    "artifacts/staging/nse-bse-requirements-20261005/d967bf4322e7a80c7656.body",
+    "artifacts/staging/nse-bse-requirements-20261005/d967bf4322e7a80c7656.json",
+    "artifacts/staging/nse-bse-requirements-20261005/nse-73928-2889bb2c4554.txt",
+    "artifacts/staging/nse-bse-requirements-20261005/SHA256SUMS"
+  ],
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "trading_changes": 0,
+    "migrations": 0,
+    "service_restarts": 0,
+    "production_installations": 0,
+    "mcx_changes": 0
+  },
+  "evidence_report": "backend/calendar_evidence_acquisition/parsed/nse_bse_remaining_evidence_20261005.json",
+  "git_diff_check": 0
+}

@@ -1,0 +1,19 @@
+{
+  "source_url": "https://www.mcxindia.com/market-data/contract-available-for-trading",
+  "source_class": "OFFICIAL_ARCHIVE",
+  "exchange": "MCX",
+  "dataset": "PRIOR_FAILED_SOURCE",
+  "cache_key": "f0f28f68af32807d204ceb8bceded0be81590585fc5bb7fbfa2e1bde06890b1f",
+  "acquired_at": "2026-10-02T13:53:14.162607+00:00",
+  "http_status": 403,
+  "sha256": "be43aa16198f9d33f53bcd86ff2d8fb780ad1a3bd559118100ba8ca4c611a6d0",
+  "bytes": 432,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": true,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

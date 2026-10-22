@@ -1,0 +1,108 @@
+                     Contract Specifications of Natural Gas Futures
+
+                     NATURALGAS
+Symbol
+                     NATURALGASMMMYY
+Description
+                     Contracts are available as per the Contract Launch Calendar.
+Contract Listing
+Contract             As per the Contract Launch Calendar.
+Start Day
+                     As per the Contract Launch Calendar.
+Last Trading Day
+                     Maximum of 6 months, at any point of time 6 calendar months will
+Contract Duration    be available for trading.
+
+Trading
+                     Mondays through Fridays
+Trading Period
+                     Mondays through Friday: 09.00 am to 11.30/ 11.55 pm*
+Trading Session      * based on US daylight saving time period.
+
+                     1,250 mmBtu
+Trading Unit
+Quotation/ Base      Rs. per mmBtu
+Value
+Maximum Order        60,000 mmBtu
+Size
+Tick Size
+                     10 paise (0.10 rupees)
+(minimum price
+movement)
+
+                     The Exchange has implemented a narrower slab of 4%. Whenever
+                     the narrower slab is breached, the relaxation will be allowed up to
+                     6% without any cooling off period in the trade. In case the daily
+                     price limit of 6% is also breached, then after a cooling off period of
+Daily Price Limits   15 minutes, the daily price limit will be relaxed up to 9%.
+
+                     In case price movement in international markets is more than the
+                     maximum daily price limit (currently 9%), the same may be further
+                     relaxed in steps of 3%.
+
+                     Minimum 10% or based on SPAN whichever is higher
+Initial Margin*
+Extreme Loss
+                     Minimum 1%
+Margin
+                     In case of additional volatility, an additional margin (on both buy & sell
+                     side) and/ or special margin (on either buy or sell side) at such
+Additional and/ or
+                     percentage, as deemed fit, will be imposed in respect of all outstanding
+Special Margin
+                     positions.
+
+                     For individual client: 60,00,000 mmBtu Or 5% of the market wide open
+                     position, whichever is higher, ‘for all Natural Gas contracts combined
+Maximum              together’.
+Allowable Open       For a member collectively for all clients: 6,00,00,000 mmBtu or 20% of
+Position             the market wide open position, whichever is higher, ‘for all Natural Gas
+                     contracts combined together’.
+
+                     Natural Gas meeting the specifications set forth in the FERC approved
+Quality
+                     tariff of Sabine Pipeline Company.
+Specifications
+                     Due date rate shall be the settlement price, in Indian rupees, of the New
+                     York Mercantile Exchange’s (NYMEX)# Natural Gas (NG) front month
+                     contract on the last trading day of the MCX Natural Gas contract. The
+                     last available RBI USDINR reference rate will be used for the conversion.
+                     The price so arrived will be rounded off to the nearest tick.
+Due Date Rate
+(Final Settlement    For example, on the day of expiry, if NYMEX Natural Gas (NG) front
+Price)               month contract settlement price is $2.260 per mmBtu and the last
+                     available RBI USDINR reference rate is 66.1105, then DDR for MCX
+                     Natural Gas contract would be Rs. 149.40 per mmBtu (i.e. $2.260 *
+                     66.1105 and rounded off to the nearest tick.)
+
+                     #A market division of Chicago Mercantile Exchange Inc. (“CME Group”)
+Settlement
+                     The contract would be settled in cash
+Mechanism
+
+* A) The Margin Period of Risk (MPOR) shall be in accordance with SEBI Circular no.
+SEBI/HO/CDMRD/DRMP/CIR/P/2020/15 dated January 27, 2020. For applicable minimum
+MPOR, refer latest circulars issued by MCXCCL from time to time.
+
+ B) For all the applicable margins, refer the latest circulars issued by Multi Commodity
+Exchange Clearing Corporation Limited (MCXCCL) from time to time.
+                 MCX Natural Gas Futures (1,250 MMBtu)
+Contract Launch Calendar for Contracts Expiring During the Calendar Year 2025
+
+     Contract Month     Contract Launch Date       Contract Expiry Date
+         Jan-25               29-Jul-24                  28-Jan-25
+         Feb-25              28-Aug-24                  25-Feb-25
+         Mar-25               26-Sep-24                 26-Mar-25
+         Apr-25               29-Oct-24                 25-Apr-25
+        May-25               26-Nov-24                  27-May-25
+         Jun-25               27-Dec-24                 25-Jun-25
+         Jul-25               29-Jan-25                  28-Jul-25
+        Aug-25                26-Feb-25                 26-Aug-25
+         Sep-25              27-Mar-25                  25-Sep-25
+         Oct-25               28-Apr-25                 28-Oct-25
+        Nov-25               28-May-25                  24-Nov-25
+         Dec-25               26-Jun-25                 26-Dec-25
+
+
+       (Reference Circular No. MCX/TRD/497/2024 dated July 26, 2024)
+

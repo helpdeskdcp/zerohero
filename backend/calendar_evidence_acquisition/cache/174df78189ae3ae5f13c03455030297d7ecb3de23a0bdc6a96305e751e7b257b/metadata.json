@@ -1,0 +1,19 @@
+{
+  "source_url": "https://html.duckduckgo.com/html/?q=site%3Ansearchives.nseindia.com+expiry+Tuesday+2025+circular",
+  "source_class": "SECONDARY_DATASET",
+  "exchange": "NSE",
+  "dataset": "PRIOR_FAILED_SOURCE",
+  "cache_key": "174df78189ae3ae5f13c03455030297d7ecb3de23a0bdc6a96305e751e7b257b",
+  "acquired_at": "2026-10-02T13:56:18.327248+00:00",
+  "http_status": 202,
+  "sha256": "9dddb48a0fb32e11a977e8aa4507dad389309ac19081eedaee865528e54ece06",
+  "bytes": 14284,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

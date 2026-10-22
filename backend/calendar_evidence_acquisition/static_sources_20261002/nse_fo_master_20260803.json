@@ -1,0 +1,15 @@
+{
+  "source_id": "nse_fo_master_20260803",
+  "url": "https://archives.nseindia.com/content/fo/NSE_FO_contract_03082026.csv.gz",
+  "retrieved_at": "2026-10-02T14:40:08.848221+00:00",
+  "curl_exit": 92,
+  "http_status": "000",
+  "effective_url": "https://archives.nseindia.com/content/fo/NSE_FO_contract_03082026.csv.gz",
+  "content_type": "",
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "path": null,
+  "sha256": null,
+  "bytes": 0,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

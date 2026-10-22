@@ -1,0 +1,15 @@
+{
+  "source_id": "nifty_options_dataset_bundle",
+  "url": "https://codeload.github.com/thyAnupam/Nifty-Options-Dataset/tar.gz/refs/heads/main",
+  "retrieved_at": "2026-10-02T14:41:33.984136+00:00",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://codeload.github.com/thyAnupam/Nifty-Options-Dataset/tar.gz/refs/heads/main",
+  "content_type": "application/x-gzip",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/static_sources_20261002/nifty_options_dataset_bundle.body",
+  "sha256": "0699c3b07cc19e10016cd9b7cee8d9c4aa9f428efa83f7adea787ae62db3f1b8",
+  "bytes": 7993,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

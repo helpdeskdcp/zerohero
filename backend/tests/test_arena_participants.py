@@ -68,3 +68,25 @@ def test_risk_module_profile_may_leave_stop_and_targets_blank_others_may_not(cli
     names = [x["participant"] for x in client.get("/api/arena/public/leaderboard?scope=all", headers={"X-Arena-Token": T1}).json()["rows"]]; assert "TEST_PROFILE" not in names           # hidden test profile
     pv = client.get("/api/arena/public/risk-preview?underlying=NIFTY&option_type=CE&strike=23000&entry=160&expiry=27OCT2026", headers=H2).json()
     assert pv["sl"] == 126.1 and pv["targets"] == [193.9, 227.8, 261.7] and len(SU.load()) == 2                                                                                  # preview records nothing
+
+
+def test_live_endpoint_waiting_active_closed_and_the_open_pnl(client, monkeypatch):
+    import time as _t
+    from app.arena import contracts as CT, run as RR
+    now = _t.time()
+    mk = lambda i, mode, entry, t=now - 60, **k: {"id": i, "participant": "INSTITUTION_TRADER", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": mode, "entry": entry, "entry_hi": entry,
+                                                     "sl": entry - 20, "targets": [entry + 20, entry + 40], "t": t, "events": [], **k}
+    sigs = [mk("W", "LIMIT", 100.0), mk("A", "NEAR", 100.0), mk("C", "NEAR", 100.0), mk("E", "LIMIT", 100.0, valid_sec=30)]
+    res = {"W": {"id": "W", "status": "NOT_TRIGGERED", "valid_until": None}, "A": {"id": "A", "status": "NO_DATA:no_exit_snapshot", "fill": 100.0, "lot": 65, "sl_now": 80.0, "targets_now": [120.0, 140.0], "last": {}},
+           "C": {"id": "C", "status": "SETTLED", "fill": 100.0, "exit": 120.0, "exit_reason": "TARGET", "net_rs": 1200.0}, "E": {"id": "E", "status": "NOT_TRIGGERED", "valid_until": now - 30}}
+    monkeypatch.setattr(RR, "human_signals", lambda *a, **k: sigs); monkeypatch.setattr(A.R, "human_signals", lambda *a, **k: sigs)
+    monkeypatch.setattr(A.R, "run", lambda s, **k: {"INSTITUTION_TRADER": {"results": [res[x["id"]] for x in s], "summary": {}}})
+    monkeypatch.setattr(CT, "latest_quote", lambda *a, **k: {"ltp": 110.0, "bid": 109.5, "ask": 110.5, "t": _t.time() - 2})
+    monkeypatch.setattr("app.market_calendar.is_trading", lambda *a, **k: True)
+    A._cache.update(by={}, lb={}, live={})
+    j = client.get("/api/arena/public/live", headers={"X-Arena-Token": T1}).json(); by = {r["id"]: r for r in j["rows"]}
+    assert [r["id"] for r in j["rows"]][:2] == ["A", "W"] and by["A"]["state"] == "ACTIVE" and by["W"]["state"] == "WAITING" and by["C"]["state"] == "CLOSED" and by["E"]["state"] == "EXPIRED"
+    assert "ask to come down to 100" in by["W"]["waiting_note"] and by["A"]["ltp"] == 110.0 and 0 <= by["A"]["quote_age_s"] < 5
+    gross = (109.5 - 100.0) * 65; assert by["A"]["pnl_rs"] < gross and by["A"]["pnl_rs"] > gross - 200 and by["A"]["to_sl"] == 29.5 and by["A"]["to_t1"] == 10.5           # open P&L = mark-to-bid minus estimated costs
+    assert j["total_open_pnl_rs"] == by["A"]["pnl_rs"] and j["realised_today_rs"] == 1200.0 and by["C"]["ltp"] is None
+    assert client.get("/api/arena/public/live").status_code == 401

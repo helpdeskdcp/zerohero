@@ -1,0 +1,341 @@
+{
+  "source_page_url": "https://www.nseindia.com/all-reports-derivatives#cr_deriv_equity_archives",
+  "classification": "HISTORICAL_CONTRACT_DATA",
+  "sources": [
+    {
+      "source_url": "https://www.nseindia.com/all-reports-derivatives",
+      "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-reports-page-a9c593cb5abc.html",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-reports-page-a9c593cb5abc.html.json",
+      "observed_at": "2026-10-03T03:03:13.168107+00:00",
+      "http_status": 200,
+      "discovery_sources": []
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/daily-reports?key=FO",
+      "sha256": "f9c303b83e5a2f51afc6e52eaecde3d39386889f64887b2d715da09babd34be2",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-fo-daily-report-listing-f9c303b83e5a.json",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-fo-daily-report-listing-f9c303b83e5a.json.json",
+      "observed_at": "2026-10-03T03:04:43.623968+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        },
+        {
+          "source_url": "https://www.nseindia.com/dist/js/sections/all-reports.js?v=01102026",
+          "sha256": "81665684b6b316446a3da384091c89a0decc2373e1e4e149ed3dde672d7fddb2"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/sections/all-reports.js?v=01102026",
+      "sha256": "81665684b6b316446a3da384091c89a0decc2373e1e4e149ed3dde672d7fddb2",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-all-reports-81665684b6b3.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-all-reports-81665684b6b3.js.json",
+      "observed_at": "2026-10-03T03:03:28.356094+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/assets/js/nse-min.js?v=01102026",
+      "sha256": "f551c3e5b36c7db5a61b2aad182b3ade450a9d6c059ec4621b6995dc15341d51",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-nse-min-f551c3e5b36c.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-nse-min-f551c3e5b36c.js.json",
+      "observed_at": "2026-10-03T03:05:07.416950+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/robots.txt",
+      "sha256": "318df6884989e0386b3cfa7bd4f227fb8879892bb6be0272d6621c1909445d6a",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-robots-policy-318df6884989.txt",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-robots-policy-318df6884989.txt.json",
+      "observed_at": "2026-10-03T03:03:13.067925+00:00",
+      "http_status": 200,
+      "discovery_sources": []
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/static/public/assets/js/common.js?v=01102026",
+      "sha256": "705afc1e96aa531edfa3f0e994d37496ab6d620fcacc7f645657b03cb6c0147f",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-common-705afc1e96aa.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-common-705afc1e96aa.js.json",
+      "observed_at": "2026-10-03T03:04:50.431772+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+      "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-page-d48d508b3300.html",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-page-d48d508b3300.html.json",
+      "observed_at": "2026-10-03T03:14:13.169621+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=NIFTY&year=2026&expiryDate=06-OCT-2026&optionType=CE",
+      "sha256": "95b34980827dc7d509580156c80ec58dce61dc879cc466581046b2c27da62add",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-ce-history-20261001-exp20261006-95b34980827d.json",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-ce-history-20261001-exp20261006-95b34980827d.json.json",
+      "observed_at": "2026-10-03T03:26:50.504311+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+          "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23"
+        },
+        {
+          "source_url": "https://www.nseindia.com/dist/js/sections/reports/contract-wise-pricevolume-fo.js?v=01102026",
+          "sha256": "f0e7e835c74a8046b892c2cf061be72c536aa4537600f7319bdd59d90269f4f9"
+        },
+        {
+          "source_url": "https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol=NIFTY&year=2026",
+          "sha256": "5cc7614b67693ba3e6ee7a326da7d1e037008aa824eaa8d1d838abdd55810d06"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol=NIFTY&year=2026",
+      "sha256": "5cc7614b67693ba3e6ee7a326da7d1e037008aa824eaa8d1d838abdd55810d06",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-expiry-selector-2026-5cc7614b6769.json",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-expiry-selector-2026-5cc7614b6769.json.json",
+      "observed_at": "2026-10-03T03:19:18.819789+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+          "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23"
+        },
+        {
+          "source_url": "https://www.nseindia.com/dist/js/sections/reports/contract-wise-pricevolume-fo.js?v=01102026",
+          "sha256": "f0e7e835c74a8046b892c2cf061be72c536aa4537600f7319bdd59d90269f4f9"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/sections/reports/contract-wise-pricevolume-fo.js?v=01102026",
+      "sha256": "f0e7e835c74a8046b892c2cf061be72c536aa4537600f7319bdd59d90269f4f9",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-script-f0e7e835c74a.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-script-f0e7e835c74a.js.json",
+      "observed_at": "2026-10-03T03:14:28.117573+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+          "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23"
+        }
+      ]
+    }
+  ],
+  "html_report_label": "F&O - UDiFF Common Bhavcopy Final (zip)",
+  "html_download_control": {
+    "id": "ard-udiffcb",
+    "href": "#"
+  },
+  "udiff_records": [
+    {
+      "group": "CurrentDay",
+      "observed_record": {
+        "fileHashKey": "FO-UDIFF-BHAVCOPY-CSV-2",
+        "fileKey": "FO-UDIFF-BHAVCOPY-CSV",
+        "fileSegment": "FO",
+        "displayName": "F&O-UDiFF Common Bhavcopy Final (zip)",
+        "fileActlName": "BhavCopy_NSE_FO_0_0_0_20261001_F_0000.csv.zip",
+        "filePath": "https://nsearchives.nseindia.com//content/fo/",
+        "tradingDate": "01-Oct-2026",
+        "filePosition": 28,
+        "fileSize": "1.00 MB"
+      }
+    },
+    {
+      "group": "PreviousDay",
+      "observed_record": {
+        "fileHashKey": "FO-UDIFF-BHAVCOPY-CSV-3",
+        "fileKey": "FO-UDIFF-BHAVCOPY-CSV",
+        "fileSegment": "FO",
+        "displayName": "F&O-UDiFF Common Bhavcopy Final (zip)",
+        "fileActlName": "BhavCopy_NSE_FO_0_0_0_20260930_F_0000.csv.zip",
+        "filePath": "https://nsearchives.nseindia.com//content/fo/",
+        "tradingDate": "30-Sep-2026",
+        "filePosition": 28,
+        "fileSize": "1.02 MB"
+      }
+    }
+  ],
+  "download_mechanism_observed": "NSE ReportCard sets downloadLink = item.filePath + item.fileActlName and opens it on click; no complete URL was captured as a link/request.",
+  "archive_download_attempted": false,
+  "browser_used": false,
+  "ingested": false,
+  "discontinuation_notice": {
+    "text": "Discontinued w.e.f July 08,2024. Refer NSE Circular No. 62424 dated June 12, 2024. Switch to F&O-UDiFF Common Bhavcopy Final(zip)",
+    "scope": "PAGE_NOTICE_ONLY_CIRCULAR_NOT_ACQUIRED"
+  },
+  "lifecycle": {
+    "label": "Contract Expiry Details (Life Cycle)",
+    "href": "#",
+    "section_id": "h_report_deriv_commodity7",
+    "classification": "SOURCE_METADATA_REQUIRED",
+    "expiry_evidence": false
+  },
+  "historical_contract": {
+    "section_id": "h_report_deriv_equity1",
+    "label": "Historical Contract-wise Price Volume Archives",
+    "fields": [
+      "Symbol",
+      "Date",
+      "Expiry",
+      "Open",
+      "High",
+      "Low",
+      "Close",
+      "LTP",
+      "Settle Price",
+      "No. of contracts",
+      "Turnover * in Lakhs",
+      "Open Int",
+      "Change in OI",
+      "Underlying Value"
+    ],
+    "limitations": [
+      "One trading date, one expiry and CE only; not complete historical coverage",
+      "Does not establish provider listings, publication history, cutoff or a complete calendar",
+      "Original FH_TIMESTAMP_ORDER is retained; not treated as a quote observation time"
+    ],
+    "classification": "HISTORICAL_CONTRACT_DATA",
+    "source_page_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+    "data_source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=NIFTY&year=2026&expiryDate=06-OCT-2026&optionType=CE",
+    "data_sha256": "95b34980827dc7d509580156c80ec58dce61dc879cc466581046b2c27da62add",
+    "report_date": "2026-10-01",
+    "expiry": "2026-10-06",
+    "row_count": 70,
+    "observed_fields": [
+      "CALCULATED_PREMIUM_VAL",
+      "FH_CHANGE_IN_OI",
+      "FH_CLOSING_PRICE",
+      "FH_EXPIRY_DT",
+      "FH_INSTRUMENT",
+      "FH_LAST_TRADED_PRICE",
+      "FH_MARKET_LOT",
+      "FH_MARKET_TYPE",
+      "FH_OPENING_PRICE",
+      "FH_OPEN_INT",
+      "FH_OPTION_TYPE",
+      "FH_PREV_CLS",
+      "FH_SETTLE_PRICE",
+      "FH_STRIKE_PRICE",
+      "FH_SYMBOL",
+      "FH_TIMESTAMP",
+      "FH_TIMESTAMP_ORDER",
+      "FH_TOT_TRADED_QTY",
+      "FH_TOT_TRADED_VAL",
+      "FH_TRADE_HIGH_PRICE",
+      "FH_TRADE_LOW_PRICE",
+      "FH_UNDERLYING_VALUE"
+    ],
+    "expiry_field_available": true,
+    "scope": "ONE_DAY_ONE_EXPIRY_NIFTY_OPTIDX_CE_ONLY"
+  },
+  "operator_archive": {
+    "path": "artifacts/staging/BhavCopy_NSE_FO_20261001.csv.zip",
+    "classification": "OPERATOR_PROVIDED_ARTIFACT",
+    "status": "UNVERIFIED",
+    "independently_observed": false
+  },
+  "production_calendar": "NOT INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "expiry_selector": {
+    "source_url": "https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol=NIFTY&year=2026",
+    "sha256": "5cc7614b67693ba3e6ee7a326da7d1e037008aa824eaa8d1d838abdd55810d06",
+    "literal_dates": [
+      "06-JAN-2026",
+      "13-JAN-2026",
+      "20-JAN-2026",
+      "27-JAN-2026",
+      "03-FEB-2026",
+      "10-FEB-2026",
+      "17-FEB-2026",
+      "24-FEB-2026",
+      "02-MAR-2026",
+      "10-MAR-2026",
+      "17-MAR-2026",
+      "24-MAR-2026",
+      "26-MAR-2026",
+      "30-MAR-2026",
+      "31-MAR-2026",
+      "07-APR-2026",
+      "13-APR-2026",
+      "21-APR-2026",
+      "28-APR-2026",
+      "05-MAY-2026",
+      "12-MAY-2026",
+      "19-MAY-2026",
+      "26-MAY-2026",
+      "02-JUN-2026",
+      "09-JUN-2026",
+      "16-JUN-2026",
+      "23-JUN-2026",
+      "25-JUN-2026",
+      "30-JUN-2026",
+      "07-JUL-2026",
+      "14-JUL-2026",
+      "21-JUL-2026",
+      "28-JUL-2026",
+      "04-AUG-2026",
+      "11-AUG-2026",
+      "18-AUG-2026",
+      "25-AUG-2026",
+      "01-SEP-2026",
+      "08-SEP-2026",
+      "15-SEP-2026",
+      "22-SEP-2026",
+      "29-SEP-2026",
+      "06-OCT-2026",
+      "13-OCT-2026",
+      "19-OCT-2026",
+      "27-OCT-2026",
+      "03-NOV-2026",
+      "23-NOV-2026",
+      "29-DEC-2026",
+      "31-DEC-2026"
+    ],
+    "classification": "INDEPENDENT_REVIEW_REQUIRED",
+    "scope": "CURRENT_OFFICIAL_SELECTOR_OBSERVATIONS_NOT_COMPLETE_HISTORICAL_CALENDAR"
+  },
+  "bhavcopy_complete_download_url_observed": false,
+  "reproduction_contract": {
+    "method": "GET",
+    "http_protocol": "HTTP/1.1",
+    "tls_certificate_verification": true,
+    "user_agent": "ZeroHero-public-evidence/1",
+    "cookies_imported": false,
+    "redirects_followed": false,
+    "browser_used": false,
+    "retries": 0,
+    "per_request_timeout_seconds": 15,
+    "maximum_response_bytes": 8000000,
+    "expiry_parameter_source": "https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol=NIFTY&year=2026",
+    "scope": "Published page mechanisms only; recheck robots and access before any future acquisition"
+  }
+}

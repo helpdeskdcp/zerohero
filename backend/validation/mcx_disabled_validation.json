@@ -1,0 +1,722 @@
+{
+  "relevant_tests": {
+    "tests": 1211,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "passed": 1211,
+  "new_disabled_scope_cases": 46,
+  "phase2_diagnostics_included": 4,
+  "warnings": 0,
+  "warnings_as_errors": true,
+  "mypy": {
+    "status": "PASS",
+    "files_checked": 11
+  },
+  "syntax": "PASS",
+  "git_diff_check": "PASS",
+  "junit_path": "/tmp/mcx-disabled-relevant-20261005/result.xml",
+  "junit_sha256": "0c873ae618ad1db3a2f6c97043d6b70a15f369ff43a1d229067d03144b573034",
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-product-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-specifications-20261004/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-direct-20261004/SHA256SUMS",
+      "passed": 23
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/validation/MCX_LOCAL_SPECIFICATION_SHA256SUMS",
+      "passed": 16
+    },
+    {
+      "manifest": "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "backend/validation/MCX_SPECIFICATION_SHA256SUMS",
+      "passed": 3
+    },
+    {
+      "manifest": "backend/validation/NSE_COMPLETION_SHA256SUMS",
+      "passed": 19
+    },
+    {
+      "manifest": "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+      "passed": 7
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_DIRECT_SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_FALLBACK_SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/SHA256SUMS",
+      "passed": 7
+    }
+  ],
+  "readback": {
+    "MCX": {
+      "PRODUCTION": "NOT_ENABLED",
+      "AUTO/NEXT": "DISABLED",
+      "LIVE_ORDERS": "DISABLED",
+      "eligible_for_review": false,
+      "missing_gates": [],
+      "pending_requirements": [],
+      "gate_required": false,
+      "scope": "OUT_OF_SCOPE",
+      "status": "DISABLED",
+      "reason": "CALENDAR_EXCHANGE_DISABLED",
+      "calendar_installed": false
+    },
+    "coverage_counts": {
+      "VERIFIED": 0,
+      "PARTIALLY_VERIFIED": 0,
+      "UNVERIFIED": 12,
+      "CONFLICTING": 0,
+      "NOT_APPLICABLE": 0,
+      "DISABLED": 16
+    },
+    "MCX_coverage_rows": [
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "NATURALGAS",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "NATURALGAS",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "NATGASMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "NATGASMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "CRUDEOIL",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "CRUDEOIL",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "CRUDEOILMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "CRUDEOILMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "GOLD",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "GOLD",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "GOLDMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "GOLDMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "SILVER",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "SILVER",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "DHAN",
+        "exchange": "MCX",
+        "instrument": "SILVERMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      },
+      {
+        "provider": "ANGELONE",
+        "exchange": "MCX",
+        "instrument": "SILVERMINI",
+        "status": "DISABLED",
+        "scope": "OUT_OF_SCOPE",
+        "production": "NOT_ENABLED",
+        "auto_next": "DISABLED",
+        "pending_requirements": [],
+        "blockers": [],
+        "required_range": null,
+        "candidate_expiry_dates": [],
+        "official_observed_expiry_dates": [],
+        "qualifying_source_count": 0,
+        "missing_required_date_ranges": [],
+        "evidence_disposition": "HISTORICAL_RETAINED_ONLY"
+      }
+    ],
+    "resolution": {
+      "NATURALGAS": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "NATGASMINI": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "CRUDEOIL": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "CRUDEOILM": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "GOLD": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "GOLDMINI": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "SILVER": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      },
+      "SILVERMINI": {
+        "AUTO": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        },
+        "NEXT": {
+          "status": "DATA_UNAVAILABLE",
+          "reason": "CALENDAR_EXCHANGE_DISABLED",
+          "expiry": null,
+          "scope": "OUT_OF_SCOPE",
+          "scope_status": "DISABLED",
+          "production": "NOT_ENABLED",
+          "production_calendar": "NOT_INSTALLED",
+          "auto_next": "DISABLED",
+          "pending_requirements": [],
+          "classification": "HISTORICAL_RETAINED_ONLY",
+          "provenance": {},
+          "preview_only": true
+        }
+      }
+    },
+    "NSE_gate": {
+      "PRODUCTION": "BLOCKED",
+      "AUTO/NEXT": "FAIL-CLOSED",
+      "LIVE_ORDERS": "DISABLED",
+      "eligible_for_review": false,
+      "missing_gates": [
+        "full_suite",
+        "contract_master",
+        "expiry_calendar",
+        "historical_ingestion",
+        "live_freshness",
+        "provenance",
+        "duplicates",
+        "discrepancy"
+      ],
+      "reason": "MANUAL_ACTIVATION_NOT_AUTHORIZED",
+      "calendar_installed": false
+    },
+    "BSE_gate": {
+      "PRODUCTION": "BLOCKED",
+      "AUTO/NEXT": "FAIL-CLOSED",
+      "LIVE_ORDERS": "DISABLED",
+      "eligible_for_review": false,
+      "missing_gates": [
+        "full_suite",
+        "contract_master",
+        "expiry_calendar",
+        "historical_ingestion",
+        "live_freshness",
+        "provenance",
+        "duplicates",
+        "discrepancy"
+      ],
+      "reason": "MANUAL_ACTIVATION_NOT_AUTHORIZED",
+      "calendar_installed": false
+    }
+  },
+  "changed_files": [
+    "backend/app/hist_options/calendar_scope.py",
+    "backend/app/hist_options/provider_calendar.py",
+    "backend/app/hist_options/expiry.py",
+    "backend/app/nse_official/calendar.py",
+    "backend/app/nse_official/own_exchange.py",
+    "backend/app/nse_official/controls.py",
+    "backend/calendar_evidence_acquisition/evidence_engine.py",
+    "backend/calendar_evidence_acquisition/static_archives.py",
+    "backend/calendar_evidence_acquisition/official_eod.py",
+    "backend/calendar_evidence_acquisition/staging_status.py",
+    "backend/calendar_evidence_acquisition/production_scope.json",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_scope_before_disable_20261005.json",
+    "backend/tests/test_mcx_disabled_scope.py",
+    "backend/tests/test_provider_calendar.py",
+    "backend/tests/test_official_expiry_calendar.py",
+    "backend/tests/test_own_exchange_calendar.py",
+    "backend/tests/test_hist_expiry.py",
+    "backend/tests/test_evidence_engine.py",
+    "backend/tests/test_evidence_staging.py",
+    "backend/tests/test_official_eod_evidence.py",
+    "backend/tests/test_static_calendar_archives.py",
+    "backend/tests/test_mcx_naturalgas_production_scope.py",
+    "backend/tests/test_historical_read_contract.py",
+    "backend/tests/test_histcap.py",
+    "backend/calendar_evidence_acquisition/SHA256SUMS",
+    "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS",
+    "backend/validation/NSE_COMPLETION_SHA256SUMS",
+    "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+    "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+    "backend/validation/mcx_disabled_checksum_changes.json",
+    "backend/MCX_DISABLED_REPORT.md",
+    "backend/validation/mcx_disabled_validation.json",
+    "backend/validation/MCX_DISABLED_SHA256SUMS"
+  ],
+  "production_installation": false,
+  "raw_evidence_modified": false,
+  "october_archives_modified": false,
+  "network_requests": 0,
+  "broker_calls": 0,
+  "orders": 0,
+  "migrations": 0,
+  "service_restarts": 0,
+  "final_state": "MCX DISABLED \u2014 OUT_OF_SCOPE \u2014 NOT PART OF PRODUCTION CALENDAR"
+}

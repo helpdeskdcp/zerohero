@@ -1,0 +1,19 @@
+{
+  "source_url": "https://www.google.com/search?q=site%3Ansearchives.nseindia.com%2Fcontent%2Fcirculars%2F+expiry+Tuesday+2025",
+  "source_class": "SECONDARY_DATASET",
+  "exchange": "NSE",
+  "dataset": "PRIOR_FAILED_SOURCE",
+  "cache_key": "58f23b7cbaf90a9d6ca142d83e36004045663c6bddbf277006dc6f820f520b33",
+  "acquired_at": "2026-10-02T13:53:52.856709+00:00",
+  "http_status": 429,
+  "sha256": "67f838d99689b3367af23bc5f3605ddf1f2cbb225b4d952e47fdbd0d2b58fddc",
+  "bytes": 3405,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": false,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

@@ -1,0 +1,2908 @@
+{
+  "package_schema": "validation-failure-classification/v1",
+  "prepared_on": "2026-10-02",
+  "classification_rule": "Exactly one primary A-H class per saved incident; choose the concrete C-G cause over the broad B label. Pre-existing is separately recorded as replay evidence, not a second class. D records attempted/dependent access, not successful production contamination.",
+  "legend": {
+    "A": "Regression caused by Phase 3",
+    "B": "Pre-existing repository failure (functional; no more specific C-G cause)",
+    "C": "Test isolation violation",
+    "D": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+    "E": "Environment-dependent failure",
+    "F": "Timeout/resource issue",
+    "G": "Date/time-dependent fixture",
+    "H": "Other, with evidence"
+  },
+  "summary": {
+    "A": 0,
+    "B": 0,
+    "C": 1,
+    "D": 28,
+    "E": 8,
+    "F": 4,
+    "G": 2,
+    "H": 0
+  },
+  "original_failure_count": 36,
+  "original_timeout_file_count": 7,
+  "pre_phase3_snapshot": {
+    "path": "/tmp/phase3_before.json",
+    "sha256": "d186eb4946a7e3eecda75e890802e4858b0da068d2e803525437eaf5698078be"
+  },
+  "environment_probe": {
+    "probe": "asyncio.to_thread without app imports or audit hooks",
+    "limit_seconds": 3,
+    "exit": "TIMEOUT",
+    "stdout": "No-app/no-guard asyncio debug probe\n",
+    "stderr": "DEBUG:asyncio:Using selector: EpollSelector\nDEBUG:asyncio:Fail to write a null byte into the self-pipe socket\nTraceback (most recent call last):\n  File \"/usr/lib/python3.11/asyncio/selector_events.py\", line 139, in _write_to_self\n    csock.send(b'\\0')\nPermissionError: [Errno 1] Operation not permitted\nDEBUG:asyncio:Fail to write a null byte into the self-pipe socket\nTraceback (most recent call last):\n  File \"/usr/lib/python3.11/asyncio/selector_events.py\", line 139, in _write_to_self\n    csock.send(b'\\0')\nPermissionError: [Errno 1] Operation not permitted\n"
+  },
+  "source_controls_not_committed_to_tests": true,
+  "incidents": [
+    {
+      "id": "F01",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_ai_shadow.py",
+      "test_name": "test_ai_called_and_persisted_when_required_and_configured",
+      "exact_original_failure": "IndexError: list index out of range",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.55,
+        "log": {
+          "path": "/tmp/validation-investigation/F01-current/run.log",
+          "sha256": "a835e892200c9c8ee1afd4592dc7f171558d8b82db5fe5d892ea2d69d12b356e"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F01-current/result.xml",
+          "sha256": "372cf5cefe4544f6519331c0a26d1ec0f90c1e2da992ab412173c918e2dcfb32"
+        },
+        "cases": [
+          {
+            "name": "test_ai_called_and_persisted_when_required_and_configured",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.85,
+        "log": {
+          "path": "/tmp/validation-investigation/F01-baseline/run.log",
+          "sha256": "13b9052f85703c8f40a754e867c1526410eb99c97b3704fc750c221b5268af3e"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F01-baseline/result.xml",
+          "sha256": "15596dffa54a99b1a2bfb1de3e923e337a77c2904c752d2c6acb686f4e89bdf1"
+        },
+        "cases": [
+          {
+            "name": "test_ai_called_and_persisted_when_required_and_configured",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F01",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F01-control/run.log",
+          "sha256": "271e673dafc49d58dd8cc057b3c73869f6a08dac635fba8173269f7a3b981495"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F01-control/result.xml",
+          "sha256": "eed6718b16cb428f44d98c045d9d8ad94e59f802cb08ff0cd083c2f7461fcdf1"
+        }
+      }
+    },
+    {
+      "id": "F02",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_disarmed_scan_evaluates_no_new_entries",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.54,
+        "log": {
+          "path": "/tmp/validation-investigation/F02-current/run.log",
+          "sha256": "7925e107af85067147bf066e73c06df2595a3ddd701a924f9b0c723cef195edb"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F02-current/result.xml",
+          "sha256": "f09cff553fd63507482cfbc969612d77e34778eb1d74095ba1b911d78607f528"
+        },
+        "cases": [
+          {
+            "name": "test_disarmed_scan_evaluates_no_new_entries",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.48,
+        "log": {
+          "path": "/tmp/validation-investigation/F02-baseline/run.log",
+          "sha256": "1b7c867e95e630baeb81ff6255b10bb5d3398178801b5f348aac0a0549874b6a"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F02-baseline/result.xml",
+          "sha256": "d57134b70b31ac9c8cd426d91b588595f485061a90929471ba2b340a855753d3"
+        },
+        "cases": [
+          {
+            "name": "test_disarmed_scan_evaluates_no_new_entries",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F02",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F02-control/run.log",
+          "sha256": "0dff5a7b4f7b627aa5d5ba9609862b0c83a9c34efeac8569b0ff66edb0c0e2d9"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F02-control/result.xml",
+          "sha256": "596d6e51d753302ba8185a70f88f31feb8a361f6f1a1730e81532050fa103cc8"
+        }
+      }
+    },
+    {
+      "id": "F03",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_armed_scan_opens_a_position_and_notifies",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.55,
+        "log": {
+          "path": "/tmp/validation-investigation/F03-current/run.log",
+          "sha256": "72dd5a9809f0039125f5be949376237ec3227dc02c214a2c45d4767d32df6418"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F03-current/result.xml",
+          "sha256": "ba8012c5781f06025974136b735628ad68d4d83180c0673cbd77ccfed1fdef05"
+        },
+        "cases": [
+          {
+            "name": "test_armed_scan_opens_a_position_and_notifies",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.64,
+        "log": {
+          "path": "/tmp/validation-investigation/F03-baseline/run.log",
+          "sha256": "3980446a53e954e4bdf1424a01f2bd3e375e47f6ad5ba0ad9245af0955584a6a"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F03-baseline/result.xml",
+          "sha256": "849014b7570ba7ea56cacd41c2f24f4fda6099fba563065bb94d313476b44e8b"
+        },
+        "cases": [
+          {
+            "name": "test_armed_scan_opens_a_position_and_notifies",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F03",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F03-control/run.log",
+          "sha256": "d1fbddf0ade714ed8e49058e2238859f1158e63a9a94ecad8ebf449efc6a77c7"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F03-control/result.xml",
+          "sha256": "57aa3ffe54b0397cf041a9125c87a5023ba9881dc6c909ec1f7fd7fd8243d32c"
+        }
+      }
+    },
+    {
+      "id": "F04",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_portfolio_margin_ceiling_blocks_new_entry",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.34,
+        "log": {
+          "path": "/tmp/validation-investigation/F04-current/run.log",
+          "sha256": "54cf0b2afd117e1cdbcd70aad9c6f76dca373cba85e189906ac84e8ab2e22438"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F04-current/result.xml",
+          "sha256": "4ae49a20f027b4e3a5b4ac608347cb627cbc0dce0de86a05b51210dda2cceda7"
+        },
+        "cases": [
+          {
+            "name": "test_portfolio_margin_ceiling_blocks_new_entry",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.79,
+        "log": {
+          "path": "/tmp/validation-investigation/F04-baseline/run.log",
+          "sha256": "be2e1f7fb8a3031182534033322233c78844c5bb0282f9d569c253706821b3ce"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F04-baseline/result.xml",
+          "sha256": "4bcc978927d9a599f5b74f552873c44b71e3efc3036d34716493e8b99628d8b7"
+        },
+        "cases": [
+          {
+            "name": "test_portfolio_margin_ceiling_blocks_new_entry",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F04",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F04-control/run.log",
+          "sha256": "791acbb2840ecff621592488f8e65512e312896e3865560d4000495c22ef5d13"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F04-control/result.xml",
+          "sha256": "f9050c699c82505b6b707b75ec62505777c27e1beca0d4d18093bbeb31ee4da5"
+        }
+      }
+    },
+    {
+      "id": "F05",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_armed_scan_respects_max_positions_per_symbol",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.08,
+        "log": {
+          "path": "/tmp/validation-investigation/F05-current/run.log",
+          "sha256": "a4c32099f216a2d7c7d4f1f636524c35287cdc7869496294a44fede2f04e7936"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F05-current/result.xml",
+          "sha256": "5deecb9cdb0dd702fe01cfb9a5eb57a71330ab98ff6e5cd9f6a1871dfaf64a32"
+        },
+        "cases": [
+          {
+            "name": "test_armed_scan_respects_max_positions_per_symbol",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.08,
+        "log": {
+          "path": "/tmp/validation-investigation/F05-baseline/run.log",
+          "sha256": "f96199c1835c504a2e6189f18586ae73644925529f9c559d84b60c26e31bf7cd"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F05-baseline/result.xml",
+          "sha256": "ecd2066215c743bf4112a9b76c524cee4a3fccddd7fa708529b936c62468bb93"
+        },
+        "cases": [
+          {
+            "name": "test_armed_scan_respects_max_positions_per_symbol",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F05",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F05-control/run.log",
+          "sha256": "f832f1e1e84adbb268c3e95231944d298493e7c3ef9d4f47544b6103699e803c"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F05-control/result.xml",
+          "sha256": "1f3b32faf33c0366113a466896111312bec9a0c0556cd63c85c3a4ea5f6ec62f"
+        }
+      }
+    },
+    {
+      "id": "F06",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_no_verified_lot_size_is_no_trade_not_fabricated",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.9,
+        "log": {
+          "path": "/tmp/validation-investigation/F06-current/run.log",
+          "sha256": "7321c71d67fa46f851eb36b10da7fa1a0203dad078cac46305b93e33340611b0"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F06-current/result.xml",
+          "sha256": "fb317dc78495bcf76b4a90df221586fbe9c27faf56ef25881acfc97cdbeb3705"
+        },
+        "cases": [
+          {
+            "name": "test_no_verified_lot_size_is_no_trade_not_fabricated",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.04,
+        "log": {
+          "path": "/tmp/validation-investigation/F06-baseline/run.log",
+          "sha256": "adfadcbdccbf79048a23446656b542ed632bc399aa108695f7ba7d10e1b549c8"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F06-baseline/result.xml",
+          "sha256": "4716aa30ecbd58711da5bef26e2304cf677bf29bc789e3a4f0bb4dce398a3c45"
+        },
+        "cases": [
+          {
+            "name": "test_no_verified_lot_size_is_no_trade_not_fabricated",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F06",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F06-control/run.log",
+          "sha256": "acb50bc88917f57929611d63c707e0ccd387dae970fefba6e9100a81f12eba7b"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F06-control/result.xml",
+          "sha256": "03ff883459e67ba8070665e6a97129895c964741c630df2f61a0cfec57bf765d"
+        }
+      }
+    },
+    {
+      "id": "F07",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_bad_symbol_evaluation_is_error_not_crash",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.89,
+        "log": {
+          "path": "/tmp/validation-investigation/F07-current/run.log",
+          "sha256": "b2980cb7c6993466bc0868365accda390bbfd0935873922aa2d437a8d1a34a87"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F07-current/result.xml",
+          "sha256": "c6899612978bfd8eeb4ff65f69be0be6b61793914788a4d15af13ba05275c6b0"
+        },
+        "cases": [
+          {
+            "name": "test_bad_symbol_evaluation_is_error_not_crash",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.31,
+        "log": {
+          "path": "/tmp/validation-investigation/F07-baseline/run.log",
+          "sha256": "7504bd77f3acbe1dc8f1779e5bcaf896a99a59181cda86f833402277d700eddd"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F07-baseline/result.xml",
+          "sha256": "795c908507b66d4ab477e0ef1ed13c4e0a92351bac4925fac5a9b8fef5ca23ab"
+        },
+        "cases": [
+          {
+            "name": "test_bad_symbol_evaluation_is_error_not_crash",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F07",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F07-control/run.log",
+          "sha256": "8a5d3f8c1b452931de963c4bdff9775f7404361fdf3f79b4d740fb5a4f7e6e92"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F07-control/result.xml",
+          "sha256": "404ff4c628c07a6b0b44bffb8a2781f147ff5952f6f4417e2280c98f22ff41f4"
+        }
+      }
+    },
+    {
+      "id": "F08",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_scan_and_record_persists_result_for_polling",
+      "exact_original_failure": "KeyError: 'armed'",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. scan_and_record stores its error result, so the assertion cannot find armed.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.97,
+        "log": {
+          "path": "/tmp/validation-investigation/F08-current/run.log",
+          "sha256": "c0aeab0d914f51b4fe9af1574b3b1312765bfb152277466797212d16dc2a5c83"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F08-current/result.xml",
+          "sha256": "77668225ea177da13f36d8587eebf93023cc2c4c33fc2b001ef54851a1d15c38"
+        },
+        "cases": [
+          {
+            "name": "test_scan_and_record_persists_result_for_polling",
+            "outcome": "failure",
+            "messages": [
+              "KeyError: 'armed'"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.77,
+        "log": {
+          "path": "/tmp/validation-investigation/F08-baseline/run.log",
+          "sha256": "1dad588a78a0a5a8bb8983f9f3bf1cfef5ea39206bbd4b8176142984b05e4b7f"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F08-baseline/result.xml",
+          "sha256": "7b79d484758a11ef363327a4807da9aafce1d56cadd61e74f06a8bf943ddff54"
+        },
+        "cases": [
+          {
+            "name": "test_scan_and_record_persists_result_for_polling",
+            "outcome": "failure",
+            "messages": [
+              "KeyError: 'armed'"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F08",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F08-control/run.log",
+          "sha256": "8afe2471606046b386cbefd7224d475f9d94ddb804d914ca3a5b3472c14d8f5c"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F08-control/result.xml",
+          "sha256": "ce287a09bbf4f52bd641e128b869f182ee4b22c645f5a9992eeeaf9d8821072d"
+        }
+      }
+    },
+    {
+      "id": "F09",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_entry_gate_blocks_new_positions_outside_session",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.28,
+        "log": {
+          "path": "/tmp/validation-investigation/F09-current/run.log",
+          "sha256": "0cbf7a6dba6a90613a79e93a7d2d87e23aa671045b1b3c4747f4df949665f7c6"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F09-current/result.xml",
+          "sha256": "83aee8af6eae0fb7c7f4a6377910e5badd80f73fd612c962e905b4dd209557e3"
+        },
+        "cases": [
+          {
+            "name": "test_entry_gate_blocks_new_positions_outside_session",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.84,
+        "log": {
+          "path": "/tmp/validation-investigation/F09-baseline/run.log",
+          "sha256": "f6ec9bec2ecd57d02525704410ec9e2f597eaae39a42bfb7d04a4b227576c1b1"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F09-baseline/result.xml",
+          "sha256": "d19bbc93d3c4d82674363032ae1e484c70097872adc7cb35216c4b3d3984779b"
+        },
+        "cases": [
+          {
+            "name": "test_entry_gate_blocks_new_positions_outside_session",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F09",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F09-control/run.log",
+          "sha256": "0cddb2f9522c5fc98e9503738cea759bed811b3ad3b391083a46a5d5f403e174"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F09-control/result.xml",
+          "sha256": "090f0a6c2b9e4aebc5000d1c9288b9b69562636856d148427db5d5d201cb1810"
+        }
+      }
+    },
+    {
+      "id": "F10",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_kill_switch_daily_loss_limit_disarms_and_notifies",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.39,
+        "log": {
+          "path": "/tmp/validation-investigation/F10-current/run.log",
+          "sha256": "c3b1057f5af657925abc9a2247ec8b9137525ede0110668f16a1e0e42b9cc867"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F10-current/result.xml",
+          "sha256": "9802ffefdeeb0ddac02b0787f50733440f60667549507beae6ea147674de936e"
+        },
+        "cases": [
+          {
+            "name": "test_kill_switch_daily_loss_limit_disarms_and_notifies",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.06,
+        "log": {
+          "path": "/tmp/validation-investigation/F10-baseline/run.log",
+          "sha256": "33ac7d30a78c2c9595b496f6517578adc29c30740eb9f6df83d3e1485f68dbf6"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F10-baseline/result.xml",
+          "sha256": "559f2b89ae19b211b2fd4d081e728870a5a232ce591707491e4aa5850383fd62"
+        },
+        "cases": [
+          {
+            "name": "test_kill_switch_daily_loss_limit_disarms_and_notifies",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F10",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F10-control/run.log",
+          "sha256": "82c201bb904df7561785e93b567cf9f67336470fb20ba42c9846547bf1029aea"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F10-control/result.xml",
+          "sha256": "e694f350e57e35c1f11d93011b32a5b2cd3f901c455cd534b9f8ca2709377414"
+        }
+      }
+    },
+    {
+      "id": "F11",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_hedging_runner.py",
+      "test_name": "test_kill_switch_consecutive_losses_disarms",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit writes outside temporary storage",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "hedging.runner._LOCK_PATH targets backend/data/.hedging_runner_scan.lock; open(..., w) is blocked. The test fails before its mocked scan can execute.",
+      "source_references": [
+        "app/hedging/runner.py:51,529,530,543"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.48,
+        "log": {
+          "path": "/tmp/validation-investigation/F11-current/run.log",
+          "sha256": "b1efcb2f73a2471ef542cf895419dba8ba276ce68481425cea554f2e2db29682"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F11-current/result.xml",
+          "sha256": "b94071d470f0c660d473984dc09ee545cf21899daaef48c8a34ae44e28e8ad14"
+        },
+        "cases": [
+          {
+            "name": "test_kill_switch_consecutive_losses_disarms",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.78,
+        "log": {
+          "path": "/tmp/validation-investigation/F11-baseline/run.log",
+          "sha256": "0454eb94752265df54b22143fa1ae832a48784361a01be8de8f2b9db819d8f3a"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F11-baseline/result.xml",
+          "sha256": "10467259e32f23fefa9d87476c64e6a495202f105c3b181d81acf3e87da4642a"
+        },
+        "cases": [
+          {
+            "name": "test_kill_switch_consecutive_losses_disarms",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit writes outside temporary storage"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch _LOCK_PATH to tmp_path in the runner test fixture. Keep the real file-lock behavior and existing scan assertions; never disable the production lock.",
+      "diagnostic_control": {
+        "id": "F11",
+        "control": "lock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F11-control/run.log",
+          "sha256": "acb50bc88917f57929611d63c707e0ccd387dae970fefba6e9100a81f12eba7b"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F11-control/result.xml",
+          "sha256": "94fbf5ee63ad9306a3124d52ad8258463ea2296bf6f5439bf0763e5da6ebe944"
+        }
+      }
+    },
+    {
+      "id": "F12",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_order_pressure.py",
+      "test_name": "test_models_are_deterministic",
+      "exact_original_failure": "TimeoutError: Phase 3 isolated test exceeded 10 seconds",
+      "classification": "F",
+      "classification_label": "Timeout/resource issue",
+      "cause": "Training two deterministic instances of each research model exceeds the 10-second diagnostic deadline; trace is in GBStumps/MLP fitting, not provider calendars.",
+      "source_references": [
+        "tests/test_order_pressure.py:115",
+        "app/research_engines/order_pressure/models.py:fit"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 11.33,
+        "log": {
+          "path": "/tmp/validation-investigation/F12-current/run.log",
+          "sha256": "b54f0e12a5ba603dd1c16cd56f38cd054e87982610bacd70edc3b4a176278d97"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F12-current/result.xml",
+          "sha256": "296b98301bfca76e4bf1ca341bb0a796f8d64756413bc5e930666c8cea6ed05d"
+        },
+        "cases": [
+          {
+            "name": "test_models_are_deterministic",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 11.78,
+        "log": {
+          "path": "/tmp/validation-investigation/F12-baseline/run.log",
+          "sha256": "e54780ac84c12f7fc0f1b62fc159779bb68db22eb2a03c891f672201b05eb9f9"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F12-baseline/result.xml",
+          "sha256": "b8d3c97ebad987ff0626451081c704f32dcbdbc0bc24ebc0f8f1b3b08ce41fa0"
+        },
+        "cases": [
+          {
+            "name": "test_models_are_deterministic",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Keep determinism assertions; use a measured slow-test budget or deterministic, smaller unit workload plus a separate full training integration case. No arbitrary deadline as proof of model failure.",
+      "diagnostic_control": {
+        "id": "F12",
+        "control": "budget",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F12-control/run.log",
+          "sha256": "a6ead4b98d7762d2755c69a391b990f21b07b9c4e68f5d148f4c7046960a9dd9"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F12-control/result.xml",
+          "sha256": "1ebbb887dfdaf2a3a4730dddb3714603b08cc316ec8f4cfc1a5e28511ace5acc"
+        }
+      }
+    },
+    {
+      "id": "F13",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_order_pressure.py",
+      "test_name": "test_coverage_report_is_honest",
+      "exact_original_failure": "TimeoutError: Phase 3 isolated test exceeded 10 seconds",
+      "classification": "F",
+      "classification_label": "Timeout/resource issue",
+      "cause": "coverage_report loads/sorts the large on-disk research CSV universe and exceeds 10 seconds. With a 45-second budget it progresses to a second blocker: unmocked backend/data/market_history.db, which the guard rejects.",
+      "source_references": [
+        "tests/test_order_pressure.py:137",
+        "app/research_engines/order_pressure/data.py:239,312"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 11.24,
+        "log": {
+          "path": "/tmp/validation-investigation/F13-current/run.log",
+          "sha256": "e7ed7787f94b83518184b8346317c348d63655189e54cb991dcf5e7f297e6dd7"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F13-current/result.xml",
+          "sha256": "118e76bf661d47525f31d52e1d24271fbf9dd7a7faa33413978164fcd1e28ee6"
+        },
+        "cases": [
+          {
+            "name": "test_coverage_report_is_honest",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 14.0,
+        "log": {
+          "path": "/tmp/validation-investigation/F13-baseline/run.log",
+          "sha256": "caff8147180f33e74883eac4b93b5a41ee8803238fc03d72c15f1f33110fdd34"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F13-baseline/result.xml",
+          "sha256": "9e32d0193a6d1f6eeec3f44219f8ff1e416c851419918586ff9ad50f58cd85ce"
+        },
+        "cases": [
+          {
+            "name": "test_coverage_report_is_honest",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Use temporary deterministic CSVs and a temporary option DB in the coverage unit test, preserving missing-data assertions; separate the full-dataset integration benchmark. Keep the secondary DB guard.",
+      "diagnostic_control": {
+        "id": "F13",
+        "control": "budget",
+        "exit": 1,
+        "log": {
+          "path": "/tmp/validation-investigation/F13-control/run.log",
+          "sha256": "13ea7f734a2d34f1760b055e3db37139dc725d364cf802371555ed5419a0e825"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F13-control/result.xml",
+          "sha256": "d2752131a0c3406a3c38a634a91840e45fab7920a78c652ccd4e913c13d10272"
+        }
+      }
+    },
+    {
+      "id": "F14",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_orderflow_v1.py",
+      "test_name": "test_entry_ready_geometry_and_r_consistency_on_real_data",
+      "exact_original_failure": "TimeoutError: Phase 3 isolated test exceeded 10 seconds",
+      "classification": "F",
+      "classification_label": "Timeout/resource issue",
+      "cause": "The large real-data order-flow pipeline exceeds a 10-second budget intermittently; baseline trace is in rolling history sorting. Current isolated replay passes, confirming budget/resource sensitivity.",
+      "source_references": [
+        "tests/test_orderflow_v1.py:118",
+        "app/research_engines/orderflow/orderflow.py:178"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 0,
+        "seconds": 10.25,
+        "log": {
+          "path": "/tmp/validation-investigation/F14-current/run.log",
+          "sha256": "e54f7ad9def8f7dec6c98a5834031133071a2ca19e5154865bafed33a36c468d"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F14-current/result.xml",
+          "sha256": "1bd6fb87382e789c151a27d84158e4d3972a32222e685745140a32adea55b857"
+        },
+        "cases": [
+          {
+            "name": "test_entry_ready_geometry_and_r_consistency_on_real_data",
+            "outcome": "passed",
+            "messages": []
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 12.15,
+        "log": {
+          "path": "/tmp/validation-investigation/F14-baseline/run.log",
+          "sha256": "748d6759c91d0fe605ec4f7de8704a8a23d74e97a475b83572c6a53396fefbd1"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F14-baseline/result.xml",
+          "sha256": "fd94856e70f0c9b30a42ccab6e4165e69e71489c74ee2d19a3d73c6742a81cea"
+        },
+        "cases": [
+          {
+            "name": "test_entry_ready_geometry_and_r_consistency_on_real_data",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Keep the geometry/R assertions; split deterministic unit coverage from a pinned research-data integration workload and give the latter a measured budget.",
+      "diagnostic_control": {
+        "id": "F14",
+        "control": "budget",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F14-control/run.log",
+          "sha256": "7aa509c49b8c83b978a7f324319491e6673c3f885c609be1ae50de61eaf7724c"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F14-control/result.xml",
+          "sha256": "52e8dedfc656e231747eff564de5438dc3a791176d7b073e194c92ab48995f5a"
+        }
+      }
+    },
+    {
+      "id": "F15",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "test_name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[NIFTY]",
+      "exact_original_failure": "IndexError: list index out of range",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.23,
+        "log": {
+          "path": "/tmp/validation-investigation/F15-current/run.log",
+          "sha256": "fb97c0eccee54ef5e2d40d00065f261cc50aebc1dad1d3e76e998541c366bc74"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F15-current/result.xml",
+          "sha256": "95e07f10adf74e0a4d5c898087252d9da51d0af7164fdd36b8fd961e0a0ad17d"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[NIFTY]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 3.19,
+        "log": {
+          "path": "/tmp/validation-investigation/F15-baseline/run.log",
+          "sha256": "8f3964531ea0d514882b80ca70006f5d626ab35a4bdcad62521bf13703ca50b3"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F15-baseline/result.xml",
+          "sha256": "295fba2c17bd6a263a2826d6da3a108e261c085a05dc56cfc2b23814bd3c934e"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[NIFTY]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F15",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F15-control/run.log",
+          "sha256": "6262a8e2e6f2ad2d2de112173e9d549955762f82a7ab80d9fb2f247e0426b472"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F15-control/result.xml",
+          "sha256": "bc9df05f410895613b3f8ec38549a8221d25093def4e1aac1570c53759885d53"
+        }
+      }
+    },
+    {
+      "id": "F16",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "test_name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[BANKNIFTY]",
+      "exact_original_failure": "IndexError: list index out of range",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.14,
+        "log": {
+          "path": "/tmp/validation-investigation/F16-current/run.log",
+          "sha256": "87415dca5ff90513e1342f746f119d1615a66841be532fceba5ffb3ef4088233"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F16-current/result.xml",
+          "sha256": "96ffdaae09bd0cf4b2ceec3ed29745f24fbcda9081052785e25de14263c9d68d"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[BANKNIFTY]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 3.77,
+        "log": {
+          "path": "/tmp/validation-investigation/F16-baseline/run.log",
+          "sha256": "0b70d1dc3234fd2194dc2364b971b9a6ca3ee84e61e7efaafa3b80b7ff6c7def"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F16-baseline/result.xml",
+          "sha256": "0fc616d753ad58259ee9867468a291db07a1aaf5842002d413a6403584ec520e"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[BANKNIFTY]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F16",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F16-control/run.log",
+          "sha256": "1d432f0ab1e03f8143b074509933536c2ceffa55ea32e9eab145f65283204f96"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F16-control/result.xml",
+          "sha256": "3526f9745d884ea625f809685124f69b0abaebf255162bbb70a27e4c035b7eaf"
+        }
+      }
+    },
+    {
+      "id": "F17",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "test_name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[SENSEX]",
+      "exact_original_failure": "IndexError: list index out of range",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.5,
+        "log": {
+          "path": "/tmp/validation-investigation/F17-current/run.log",
+          "sha256": "98320203408db2651d69b5ea99a75e8f172a321fe3a723d86a7888966606ddd7"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F17-current/result.xml",
+          "sha256": "f3f474632b7b3d2321ee3c62fa576c4c4b89fcde720cc71911253c5f86409966"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[SENSEX]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 3.54,
+        "log": {
+          "path": "/tmp/validation-investigation/F17-baseline/run.log",
+          "sha256": "c44f0d6133c29dc30808df7aee2173e856e61bb69c3a969a916cecc6b2f848dc"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F17-baseline/result.xml",
+          "sha256": "dacef6eae313bba1b84609390724a24ecd33789a57076872045897229fb4b4c7"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[SENSEX]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F17",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F17-control/run.log",
+          "sha256": "ebe7616af2106c5a70f8921beb67cd42a995ff8b95248ec550c72100dbbc6554"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F17-control/result.xml",
+          "sha256": "a61a58cbbb7443c41e48d621b74260ffa2735592a9c613dcf05bd4e523c7bf2a"
+        }
+      }
+    },
+    {
+      "id": "F18",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "test_name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[NATURALGAS]",
+      "exact_original_failure": "IndexError: list index out of range",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 3.38,
+        "log": {
+          "path": "/tmp/validation-investigation/F18-current/run.log",
+          "sha256": "3b889fb9b0fc986593da58bac4cf1d57149213f6d9934b4f33d03e22230ba94f"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F18-current/result.xml",
+          "sha256": "4e2d7b9a1f03cbf7e96c45410920c9e7af9a6a2445b97519bc08822981059d42"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[NATURALGAS]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 7.26,
+        "log": {
+          "path": "/tmp/validation-investigation/F18-baseline/run.log",
+          "sha256": "db3b5b09ef3814ed5e79b43862e374ed8cbf27df107dd8e673111911c28c472b"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F18-baseline/result.xml",
+          "sha256": "14fc88e598fb480f65ecb0e5f5bbcb7d6b9a3ffb0b071c6586dec4fdfac1375a"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[NATURALGAS]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F18",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F18-control/run.log",
+          "sha256": "98b819a06bf72c79f1f58a43184d01ee6f551479b497bed319d89ef7b168a98c"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F18-control/result.xml",
+          "sha256": "6d3feb5b6710d712633cdd8948620d1cb0bcf0ec823d91119d62b483c8552ea5"
+        }
+      }
+    },
+    {
+      "id": "F19",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "test_name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[CRUDEOIL]",
+      "exact_original_failure": "IndexError: list index out of range",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 3.54,
+        "log": {
+          "path": "/tmp/validation-investigation/F19-current/run.log",
+          "sha256": "cbe560ebde620d01384796cef9d6ea37c87cfde5d9066db155a6a30150b42330"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F19-current/result.xml",
+          "sha256": "a7b2c6d2a4024fad4ab202e547b6d081b06e20dd1b2734c6a54cd7f4a9e1e7fe"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[CRUDEOIL]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 6.62,
+        "log": {
+          "path": "/tmp/validation-investigation/F19-baseline/run.log",
+          "sha256": "6e93bd34adfc7a22c7b14f02f1d0c9cf974101b266199e6820883d51a0419219"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F19-baseline/result.xml",
+          "sha256": "5e3e24b7e117d89a627c0ff9b0af9d0903626fc26cb5e75093da6cb3ad616437"
+        },
+        "cases": [
+          {
+            "name": "test_full_pipeline_with_mocked_ai_success_for_every_symbol[CRUDEOIL]",
+            "outcome": "failure",
+            "messages": [
+              "IndexError: list index out of range"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F19",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F19-control/run.log",
+          "sha256": "2b38bea586f6566a5ace012e1477ba7dd3e599443b5ab807077223fc7fd49484"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F19-control/result.xml",
+          "sha256": "ecd381b1d426ceb9814e0c2064c01a0cee0e031f4f12f9e024b5bef098689fb9"
+        }
+      }
+    },
+    {
+      "id": "F20",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_phase_h_five_symbol_pipeline.py",
+      "test_name": "test_ai_failure_never_blocks_the_deterministic_pipeline",
+      "exact_original_failure": "assert None is not None",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.46,
+        "log": {
+          "path": "/tmp/validation-investigation/F20-current/run.log",
+          "sha256": "8bcf7d831fd6c32fc1c13294c663f761554c467cf32cc650a2bbed874fe55ae3"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F20-current/result.xml",
+          "sha256": "a291dc6cbe2a5f108517a22c3c61c9b752b995406334f4498b2e945f2eb4a8ab"
+        },
+        "cases": [
+          {
+            "name": "test_ai_failure_never_blocks_the_deterministic_pipeline",
+            "outcome": "failure",
+            "messages": [
+              "assert None is not None"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 5.46,
+        "log": {
+          "path": "/tmp/validation-investigation/F20-baseline/run.log",
+          "sha256": "b9c3ca85c5264783a70279403452052bab6329d0adc3f4522af4ad0f7682d0bc"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F20-baseline/result.xml",
+          "sha256": "408066f095f8556dcf325d822da3d29da95240fc3dcf13540760137dd4f14f41"
+        },
+        "cases": [
+          {
+            "name": "test_ai_failure_never_blocks_the_deterministic_pipeline",
+            "outcome": "failure",
+            "messages": [
+              "assert None is not None"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F20",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F20-control/run.log",
+          "sha256": "4bd73b366564b44348c8f29719bb50c6e999cfba188512750ab212bbe3ad35e9"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F20-control/result.xml",
+          "sha256": "6f698c357f25efbc5e343cc30338ab784b617dd7b81bb3a67e60cfca747edf05"
+        }
+      }
+    },
+    {
+      "id": "F21",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_reverse_engineering_status_report.py",
+      "test_name": "test_status_report_missing_market_db_does_not_raise",
+      "exact_original_failure": "RuntimeError: Phase 1 tests require temporary databases",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access.",
+      "source_references": [
+        "app/reverse_engineering/status_report.py:95",
+        "app/orderflow/depth.py:30,55"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.67,
+        "log": {
+          "path": "/tmp/validation-investigation/F21-current/run.log",
+          "sha256": "8302098c385c48a66734ebe4cd5ec287d1047c97668eedc7debcc86b91fd6189"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F21-current/result.xml",
+          "sha256": "13014577f75fead62039f5f8be5bdaf89375d9e93c7917c2aee37fe7c6bb5507"
+        },
+        "cases": [
+          {
+            "name": "test_status_report_missing_market_db_does_not_raise",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 1 tests require temporary databases"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 3.69,
+        "log": {
+          "path": "/tmp/validation-investigation/F21-baseline/run.log",
+          "sha256": "a7686fba1204ecc0dfad90bb6e6b45c29f8b3dac4261bbbe5bde17ba5b5d8454"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F21-baseline/result.xml",
+          "sha256": "3ea83638892f304fa43d45ca67f2ee4cc339c5a685a99c0fdbae8e7a54f1b7cc"
+        },
+        "cases": [
+          {
+            "name": "test_status_report_missing_market_db_does_not_raise",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 1 tests require temporary databases"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F21",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F21-control/run.log",
+          "sha256": "49f3e29a212c09e239d566d800ad1a453c57eadb7df75ad1ac7db810d0140caa"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F21-control/result.xml",
+          "sha256": "34fcb24d7f909f0d546db6c08cc44d0256b435c5b8fbc0001790ce5b63bece76"
+        }
+      }
+    },
+    {
+      "id": "F22",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_sdk_candle_metadata.py",
+      "test_name": "test_api_run_offloads_pipeline_off_the_event_loop",
+      "exact_original_failure": "TimeoutError: Phase 3 isolated test exceeded 10 seconds",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "asyncio thread-offload/Runner cleanup stalls in the event loop. A no-app/no-audit-hook probe reports EPERM in selector_events._write_to_self: the environment blocks the self-pipe socket send.",
+      "source_references": [
+        "tests/test_sdk_candle_metadata.py:166,187",
+        "app/api/engines_routes.py:api_run_pipeline",
+        "/tmp/validation-investigation/environment_probe.json"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 11.11,
+        "log": {
+          "path": "/tmp/validation-investigation/F22-current/run.log",
+          "sha256": "5b99b93cf2a8e1005ff497abbf4607d33ddbf1ab533f8335e9646fda7bdbdae7"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F22-current/result.xml",
+          "sha256": "503b01c257a535aa933b71fce4a853f73f1b6a9ccd9bec82cca2ca9415901ab2"
+        },
+        "cases": [
+          {
+            "name": "test_api_run_offloads_pipeline_off_the_event_loop",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 12.59,
+        "log": {
+          "path": "/tmp/validation-investigation/F22-baseline/run.log",
+          "sha256": "9b84443edf9324ae24784f0f6006f9df103b043c0bbe427b9a67e27c95dc7b4b"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F22-baseline/result.xml",
+          "sha256": "93e3087d248d5ad6a63ddc334403868894c877fa94177802dd3ba1c926b36885"
+        },
+        "cases": [
+          {
+            "name": "test_api_run_offloads_pipeline_off_the_event_loop",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Repair the test environment to permit local event-loop/socketpair IPC while retaining outbound-network blocking, then rerun unchanged. Do not inline to_thread in the offload test, which explicitly asserts a different thread.",
+      "diagnostic_control": null
+    },
+    {
+      "id": "F23",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_sdk_candle_metadata.py",
+      "test_name": "test_api_run_unexpected_exception_is_logged_and_sanitised",
+      "exact_original_failure": "TimeoutError: Phase 3 isolated test exceeded 10 seconds",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "asyncio thread-offload/Runner cleanup stalls in the event loop. A no-app/no-audit-hook probe reports EPERM in selector_events._write_to_self: the environment blocks the self-pipe socket send.",
+      "source_references": [
+        "tests/test_sdk_candle_metadata.py:166,187",
+        "app/api/engines_routes.py:api_run_pipeline",
+        "/tmp/validation-investigation/environment_probe.json"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 11.72,
+        "log": {
+          "path": "/tmp/validation-investigation/F23-current/run.log",
+          "sha256": "badc87d4a55f31ec9c4125f207bdd123ddfe9bbf29389a4087b70e2dce7832d4"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F23-current/result.xml",
+          "sha256": "575431c72abef5797e0c0d2819793e0b63f345abc39f1e9e0634797d1cc62624"
+        },
+        "cases": [
+          {
+            "name": "test_api_run_unexpected_exception_is_logged_and_sanitised",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 13.14,
+        "log": {
+          "path": "/tmp/validation-investigation/F23-baseline/run.log",
+          "sha256": "eb790e02e95267615bf61158e61ac7f8590f4934b15cf624417d6d9c66279e48"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F23-baseline/result.xml",
+          "sha256": "85fd84469af2a47415166ac6800dc517987f92c58f06997b35e5ca6b78bf9093"
+        },
+        "cases": [
+          {
+            "name": "test_api_run_unexpected_exception_is_logged_and_sanitised",
+            "outcome": "failure",
+            "messages": [
+              "TimeoutError: Phase 3 isolated test exceeded 10 seconds"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Repair the test environment to permit local event-loop/socketpair IPC while retaining outbound-network blocking, then rerun unchanged. Do not inline to_thread in the offload test, which explicitly asserts a different thread.",
+      "diagnostic_control": null
+    },
+    {
+      "id": "F24",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_pass_sends_telegram_for_both_sides[BUY_CE-CE-expected_states0]",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.23,
+        "log": {
+          "path": "/tmp/validation-investigation/F24-current/run.log",
+          "sha256": "e44bcdcf348f6120e81b607d3f4916a808f52c946390394d9b7c5efc0277d1bc"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F24-current/result.xml",
+          "sha256": "edae4a3e04f0549d2db3ce4e1cd12c17c6a4823977f5ea31efe609cebb7d809d"
+        },
+        "cases": [
+          {
+            "name": "test_pass_sends_telegram_for_both_sides[BUY_CE-CE-expected_states0]",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.34,
+        "log": {
+          "path": "/tmp/validation-investigation/F24-baseline/run.log",
+          "sha256": "90a9d71893f7b3851b60531bcdc082b63df69e12aa15ce9a8256f6712ce4922f"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F24-baseline/result.xml",
+          "sha256": "923dff8d5ecd9e202935dd3078b8d6ceeed7330e935c17e9280ecb0515f2849c"
+        },
+        "cases": [
+          {
+            "name": "test_pass_sends_telegram_for_both_sides[BUY_CE-CE-expected_states0]",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F24",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F24-control/run.log",
+          "sha256": "e14a6292fe4346dd292bd6fdc0609de743f05184b6b9322a46f58b2459874476"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F24-control/result.xml",
+          "sha256": "78bc2d90b0ab661dcbf73137caded722402e08f5b35380a9084c18608a0860f4"
+        }
+      }
+    },
+    {
+      "id": "F25",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_pass_sends_telegram_for_both_sides[BUY_PE-PE-expected_states1]",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.27,
+        "log": {
+          "path": "/tmp/validation-investigation/F25-current/run.log",
+          "sha256": "6d4486d7d1828037cbd0788276fa5785c7e30d939c0e0b87e0b27ad5de120b05"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F25-current/result.xml",
+          "sha256": "f19a92e0bee5e6e1bc78aa8654264090e9a35b5bed13aabe2d4df86cf10a93c7"
+        },
+        "cases": [
+          {
+            "name": "test_pass_sends_telegram_for_both_sides[BUY_PE-PE-expected_states1]",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.75,
+        "log": {
+          "path": "/tmp/validation-investigation/F25-baseline/run.log",
+          "sha256": "042049caba9800b4d36a4d49644bdd23bd4f9f31815b4042f708b2544f88f657"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F25-baseline/result.xml",
+          "sha256": "7d51d31218aac662d82f2067f5a259d71fc15f24d2db86e4518806c443eda2be"
+        },
+        "cases": [
+          {
+            "name": "test_pass_sends_telegram_for_both_sides[BUY_PE-PE-expected_states1]",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F25",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F25-control/run.log",
+          "sha256": "f196cc597f3e1d85ee991e7e5f8c42a2f052d2b1ce51ef6b00df094244614266"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F25-control/result.xml",
+          "sha256": "26847b6fb779ff9653167474eac3b03a0753df9c9adaff834d718ff4f42df0cb"
+        }
+      }
+    },
+    {
+      "id": "F26",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_fail_suppresses_to_no_trade_and_does_not_send",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.98,
+        "log": {
+          "path": "/tmp/validation-investigation/F26-current/run.log",
+          "sha256": "fc40fc6e60ed9da7fa903df2eea69582d01ee80b790b02f0e165f538f99e4f54"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F26-current/result.xml",
+          "sha256": "e16ce0b6d8abadc4b8d0e2697b02f903c2a56073f1620f048cf8b473b8e6f263"
+        },
+        "cases": [
+          {
+            "name": "test_fail_suppresses_to_no_trade_and_does_not_send",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.1,
+        "log": {
+          "path": "/tmp/validation-investigation/F26-baseline/run.log",
+          "sha256": "fc40fc6e60ed9da7fa903df2eea69582d01ee80b790b02f0e165f538f99e4f54"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F26-baseline/result.xml",
+          "sha256": "9a686bd42ac0b1f7f8e9d512684cbed34de3c327b4763ac5ebbca5f573e5fb37"
+        },
+        "cases": [
+          {
+            "name": "test_fail_suppresses_to_no_trade_and_does_not_send",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F26",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F26-control/run.log",
+          "sha256": "857a632ad7644efb522ebe1d6dc1267bbe84c1a8fb83bf0009f26893477a8547"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F26-control/result.xml",
+          "sha256": "d4055cb75eeb50a0cbf2904a6b8f90d9b440398e9c927e205ce6ec6534bf602b"
+        }
+      }
+    },
+    {
+      "id": "F27",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_uncertain_does_not_send_when_it_stays_weak",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.47,
+        "log": {
+          "path": "/tmp/validation-investigation/F27-current/run.log",
+          "sha256": "7e26123ced54532f13fc9c5e58f84a282be71358369505d77bc9980971f7cb6c"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F27-current/result.xml",
+          "sha256": "4f07f5afc77ea55d32a76c287b94adbb656eb582eaf8ada9e5a1b934aab0fc6d"
+        },
+        "cases": [
+          {
+            "name": "test_uncertain_does_not_send_when_it_stays_weak",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 4.33,
+        "log": {
+          "path": "/tmp/validation-investigation/F27-baseline/run.log",
+          "sha256": "018698bb45e5a240a8fc8e712514edada3e669b5ee7d035c939004795c60d568"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F27-baseline/result.xml",
+          "sha256": "4792119cc5940d52839491ae95712c2bc8d0c2a2f45a00fa0b37bfeffff37a36"
+        },
+        "cases": [
+          {
+            "name": "test_uncertain_does_not_send_when_it_stays_weak",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F27",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F27-control/run.log",
+          "sha256": "bb33dffc7f90fa16dec2c04086faaaa37e7df0e6208cdd382848b30ddc128470"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F27-control/result.xml",
+          "sha256": "14b1a6e818916a11fa76e07e8bc70f198fc78265cb89f62d97a79f525271438d"
+        }
+      }
+    },
+    {
+      "id": "F28",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_high_risk_weakens_and_only_sends_if_still_strong",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.38,
+        "log": {
+          "path": "/tmp/validation-investigation/F28-current/run.log",
+          "sha256": "32b15e3c29571e4e5be6c9d14d1d53443b9ad06fcfc0d427a5d371511f6d3103"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F28-current/result.xml",
+          "sha256": "b2af8dfb1c8245e266cb36c379908a205b777ad669889ce0ea7ca543ff497485"
+        },
+        "cases": [
+          {
+            "name": "test_high_risk_weakens_and_only_sends_if_still_strong",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 5.16,
+        "log": {
+          "path": "/tmp/validation-investigation/F28-baseline/run.log",
+          "sha256": "3fa5801cd76dbf56429ab9a2a296933883913181e3f013ff288ed35214f5b9d2"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F28-baseline/result.xml",
+          "sha256": "7939c1a2a70445256072584faf50ebbb3ee2f02a920f058e6a6618bf5b729d07"
+        },
+        "cases": [
+          {
+            "name": "test_high_risk_weakens_and_only_sends_if_still_strong",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F28",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F28-control/run.log",
+          "sha256": "bdc4a033a16622e249556c78c42b2f18fdbdb2bfa4c14d4977c44133effefef7"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F28-control/result.xml",
+          "sha256": "39ed78198b820f163aa1b77167978b9f22d29a409e7449767eca9ae53a0459ed"
+        }
+      }
+    },
+    {
+      "id": "F29",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_high_risk_weak_state_sent_when_include_weak_enabled",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 3.02,
+        "log": {
+          "path": "/tmp/validation-investigation/F29-current/run.log",
+          "sha256": "b10cb2dc675c19fc7db4cd2aa1a1d65be37a34c011d49b2de6c87679f8d716d7"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F29-current/result.xml",
+          "sha256": "05210f8742aa792745ead53e213bd40fa146a685297ed6985a1534464230bf6a"
+        },
+        "cases": [
+          {
+            "name": "test_high_risk_weak_state_sent_when_include_weak_enabled",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 4.95,
+        "log": {
+          "path": "/tmp/validation-investigation/F29-baseline/run.log",
+          "sha256": "04d0072da5c04ccc646f98e4cbcf723fe92464bacbfb975e6c62c2827d92d3e6"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F29-baseline/result.xml",
+          "sha256": "be7517d167359f615652fbba7eb201cbba76532c1fe335e19d686b8a65e7b22f"
+        },
+        "cases": [
+          {
+            "name": "test_high_risk_weak_state_sent_when_include_weak_enabled",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F29",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F29-control/run.log",
+          "sha256": "653a4be89e5143db9f8d3b1731f1e0a5ac9eaa419f7ef21c42f76641e5de69ea"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F29-control/result.xml",
+          "sha256": "5037f3c24edb168114640a8d037df39e8d7bf7581d5a2737897ce75703cf5272"
+        }
+      }
+    },
+    {
+      "id": "F30",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_duplicate_signal_sent_only_once",
+      "exact_original_failure": "TypeError: 'NoneType' object is not subscriptable",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 3.48,
+        "log": {
+          "path": "/tmp/validation-investigation/F30-current/run.log",
+          "sha256": "4c8a263c5136478c979ed71f3743c0112f07d2330efb3385eb0f8fb84e18c4b0"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F30-current/result.xml",
+          "sha256": "6e90e263ed5d6a61df731f3d5e217a4716cac0c961f31eab4c91afc6d5c91dc7"
+        },
+        "cases": [
+          {
+            "name": "test_duplicate_signal_sent_only_once",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 6.41,
+        "log": {
+          "path": "/tmp/validation-investigation/F30-baseline/run.log",
+          "sha256": "e1a5127ee13948de66967a0c56ff96fa0fff532615afb033143f9fcb1b64a029"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F30-baseline/result.xml",
+          "sha256": "ebd3d65223a72819818ed89450050e28a105e6a847430b4bf2f371d18fd7d44a"
+        },
+        "cases": [
+          {
+            "name": "test_duplicate_signal_sent_only_once",
+            "outcome": "failure",
+            "messages": [
+              "TypeError: 'NoneType' object is not subscriptable"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F30",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F30-control/run.log",
+          "sha256": "231fdf298bc7d8f35b5ffa69ba088244072c3c9dbb95fdec3e2376bc693723df"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F30-control/result.xml",
+          "sha256": "f0d56e5ec13aa98e45b336eb5605c6d5ffbf67f9398b1041ccd4ea18ee49301d"
+        }
+      }
+    },
+    {
+      "id": "F31",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_telegram_failure_does_not_block_shadow_decision",
+      "exact_original_failure": "assert None is not None",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.53,
+        "log": {
+          "path": "/tmp/validation-investigation/F31-current/run.log",
+          "sha256": "1dba8e56dbba2e759e96f74565e28c243c370087bce322c7b0a03d54231e14b3"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F31-current/result.xml",
+          "sha256": "52e2488c1a1e807327f158879a9abd8653c40a422d5f14d0d657df21d07e1917"
+        },
+        "cases": [
+          {
+            "name": "test_telegram_failure_does_not_block_shadow_decision",
+            "outcome": "failure",
+            "messages": [
+              "assert None is not None"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 3.94,
+        "log": {
+          "path": "/tmp/validation-investigation/F31-baseline/run.log",
+          "sha256": "a7ee2fdca35ea07a9a1c05707e837da13b9fc61fdf20ec3e4187f82a1db91362"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F31-baseline/result.xml",
+          "sha256": "66f1e43f9242f0d9ed9820edf4e36657fd5b0f3efff9d3273f708e2f9d3cf9c0"
+        },
+        "cases": [
+          {
+            "name": "test_telegram_failure_does_not_block_shadow_decision",
+            "outcome": "failure",
+            "messages": [
+              "assert None is not None"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F31",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F31-control/run.log",
+          "sha256": "b40307e8f303809355413848a6a81c33b612281ff8e50f28e7426da7a0593d34"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F31-control/result.xml",
+          "sha256": "45887f0f9d62c3fd78e9fe34c4823d82b6d9a79ffd5008546c2c110578c31dac"
+        }
+      }
+    },
+    {
+      "id": "F32",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_telegram_send_fn_raising_never_propagates",
+      "exact_original_failure": "assert None is not None",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.05,
+        "log": {
+          "path": "/tmp/validation-investigation/F32-current/run.log",
+          "sha256": "ae1a5452a47db136d25bd0b40b37a4207521adda9a0b4dca1eb0635dfc0800b3"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F32-current/result.xml",
+          "sha256": "422f3b6ebcaafc050e8dd0e3db04d052c6147b3ead64846a74d088c127643691"
+        },
+        "cases": [
+          {
+            "name": "test_telegram_send_fn_raising_never_propagates",
+            "outcome": "failure",
+            "messages": [
+              "assert None is not None"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 3.99,
+        "log": {
+          "path": "/tmp/validation-investigation/F32-baseline/run.log",
+          "sha256": "eb00e857fc7169bdbccae56fbaf5434c05e8dc29d2e5f9bc35e44f85885e1f90"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F32-baseline/result.xml",
+          "sha256": "4db46d675b6831e0a5953fe20a96e82aa56d44b75c6b6499de649e4b1f618495"
+        },
+        "cases": [
+          {
+            "name": "test_telegram_send_fn_raising_never_propagates",
+            "outcome": "failure",
+            "messages": [
+              "assert None is not None"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F32",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F32-control/run.log",
+          "sha256": "6adb81285ad83cda4860e53fd7a29d459160a711fe0e4b04323f735de187fab8"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F32-control/result.xml",
+          "sha256": "e8c357351101572e710285c2ea8d2cfc1a30f37999dad2b7ab4ae6971d955709"
+        }
+      }
+    },
+    {
+      "id": "F33",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_shadow_notify.py",
+      "test_name": "test_no_duplicate_across_a_simulated_restart",
+      "exact_original_failure": "assert 0 == 1\n +  where 0 = len([])",
+      "classification": "D",
+      "classification_label": "Filesystem/database contamination dependency or attempted access; blocked before contamination",
+      "cause": "Unmocked orderflow.depth.L2_DB_PATH imports l2capture.store._DEFAULT_PATH, targeting backend/data/l2_capture.db. The guard blocks even read-only production DB access. ai.shadow catches the guard exception and returns None before persisting; later assertions see None or empty rows.",
+      "source_references": [
+        "app/orderflow/depth.py:30,55,86",
+        "app/l2capture/store.py:24",
+        "app/ai/shadow.py:53,112"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 2.33,
+        "log": {
+          "path": "/tmp/validation-investigation/F33-current/run.log",
+          "sha256": "0996d310e4280444255fca452f06b4fa3a45e781ec883d7485576395fd4c4419"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F33-current/result.xml",
+          "sha256": "78cad904f6e4d13d22e4aedc04e075a1a605071def5798e768410e3df79327d5"
+        },
+        "cases": [
+          {
+            "name": "test_no_duplicate_across_a_simulated_restart",
+            "outcome": "failure",
+            "messages": [
+              "assert 0 == 1\n +  where 0 = len([])"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 4.11,
+        "log": {
+          "path": "/tmp/validation-investigation/F33-baseline/run.log",
+          "sha256": "dd00aa6f7c439677964efc38891751a11e6105587574b7477686cdfac4158b33"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F33-baseline/result.xml",
+          "sha256": "2b2788adaf40342f142fdff96d3f0da34fde370516d63465cce1745ced51b331"
+        },
+        "cases": [
+          {
+            "name": "test_no_duplicate_across_a_simulated_restart",
+            "outcome": "failure",
+            "messages": [
+              "assert 0 == 1\n +  where 0 = len([])"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Patch depth.L2_DB_PATH to a temporary absent/seeded SQLite fixture or mock snapshot_for_symbol at the unit boundary; isolate the secondary DB as well as fresh_db. Keep unavailable semantics and existing assertions.",
+      "diagnostic_control": {
+        "id": "F33",
+        "control": "l2",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F33-control/run.log",
+          "sha256": "cea56812b2feed537d72f533dcd9bbebe462ea81cec364b5fd190dfe7346f2cf"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F33-control/result.xml",
+          "sha256": "4ae76589903f4f686eeade36b10545c834816bc0d77138bcf91dbe9e7fee52bd"
+        }
+      }
+    },
+    {
+      "id": "F34",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_stale_feed_watchdog.py",
+      "test_name": "test_selftest_entrypoint_passes",
+      "exact_original_failure": "RuntimeError: Phase 3 tests prohibit subprocesses",
+      "classification": "C",
+      "classification_label": "Test isolation violation",
+      "cause": "The test spawns scripts/stale_feed_watchdog.py --self-test. The child would not inherit Python audit hooks, and its DB subtest can inspect the real history path. Subprocess execution is deliberately blocked.",
+      "source_references": [
+        "tests/test_stale_feed_watchdog.py:129",
+        "scripts/stale_feed_watchdog.py:main"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.17,
+        "log": {
+          "path": "/tmp/validation-investigation/F34-current/run.log",
+          "sha256": "17792723ea1f759f548709f30fc8f9ab077294abc645fc2f3e046b021fa913b8"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F34-current/result.xml",
+          "sha256": "4f08ff6a4eaae01c4d8c9ec3ca10e6a46525923df7c6dbb2263b0e56bab274a4"
+        },
+        "cases": [
+          {
+            "name": "test_selftest_entrypoint_passes",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit subprocesses"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 2.18,
+        "log": {
+          "path": "/tmp/validation-investigation/F34-baseline/run.log",
+          "sha256": "e74cdf56116cad47bf89273fb73999b3c3ba50fbd7ddc41c69b8c45dae51cf01"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F34-baseline/result.xml",
+          "sha256": "d5ca86e37751b6ceec652aa35a98f9ac3a0d3a8cba345b1839e0179810598e4d"
+        },
+        "cases": [
+          {
+            "name": "test_selftest_entrypoint_passes",
+            "outcome": "failure",
+            "messages": [
+              "RuntimeError: Phase 3 tests prohibit subprocesses"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Separate the pure self-test from the CLI smoke test; supply a seeded temporary DB and an inherited isolated runner to the child. Do not globally permit unguarded subprocesses or silently skip the DB assertion.",
+      "diagnostic_control": null
+    },
+    {
+      "id": "F35",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_standalone_angelone.py",
+      "test_name": "test_resolver_handles_mcx_options_on_futures",
+      "exact_original_failure": "AssertionError: assert ('CONTRACT_INVALID' == 'OK'\n  \n  - OK\n  + CONTRACT_INVALID)",
+      "classification": "G",
+      "classification_label": "Date/time-dependent fixture",
+      "cause": "Fixed 23SEP2026 MCX fixture is compared with the real current date (2026-10-02). The resolver correctly filters it as expired; AUTO cannot satisfy the old assertion.",
+      "source_references": [
+        "tests/test_standalone_angelone.py:25,43",
+        "broker/angelone/client.py:137,181"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 0.82,
+        "log": {
+          "path": "/tmp/validation-investigation/F35-current/run.log",
+          "sha256": "0e0634e686893d5102a3f2f3602e8e4669726fe92b231f036c5f3f54234b801f"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F35-current/result.xml",
+          "sha256": "358998be05b109bfced84adb408a3bda5a88340a2ff599421430f0576789da95"
+        },
+        "cases": [
+          {
+            "name": "test_resolver_handles_mcx_options_on_futures",
+            "outcome": "failure",
+            "messages": [
+              "AssertionError: assert ('CONTRACT_INVALID' == 'OK'\n  \n  - OK\n  + CONTRACT_INVALID)"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.68,
+        "log": {
+          "path": "/tmp/validation-investigation/F35-baseline/run.log",
+          "sha256": "ad220a49104d633c33cf12ec9d109417207754899af24c350ebaf429eea60772"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F35-baseline/result.xml",
+          "sha256": "3774e4d97b048fb6f5409758b906814a5b55a751b6fb28de273992865246ddd4"
+        },
+        "cases": [
+          {
+            "name": "test_resolver_handles_mcx_options_on_futures",
+            "outcome": "failure",
+            "messages": [
+              "AssertionError: assert ('CONTRACT_INVALID' == 'OK'\n  \n  - OK\n  + CONTRACT_INVALID)"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Freeze the test clock at an explicit synthetic pre-expiry instant and retain all date-order/contract assertions; test post-expiry behavior separately. Do not change production expiry filtering.",
+      "diagnostic_control": {
+        "id": "F35",
+        "control": "clock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F35-control/run.log",
+          "sha256": "3be6ffcaecf85b5bd3eef3693ab214b0e7c9eb4e36d117fcf1825652de5eb298"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F35-control/result.xml",
+          "sha256": "11b392bf471496e95e89a6697c4ad44db7d68937f94c6b00d699350ec7c74f7b"
+        }
+      }
+    },
+    {
+      "id": "F36",
+      "kind": "saved_test_failure",
+      "test_file": "tests/test_standalone_angelone.py",
+      "test_name": "test_auto_expiry_is_chronological_not_lexical",
+      "exact_original_failure": "AssertionError: assert ('23OCT2026' == '23SEP2026'\n  \n  - 23SEP2026\n  + 23OCT2026)",
+      "classification": "G",
+      "classification_label": "Date/time-dependent fixture",
+      "cause": "Fixed 23SEP2026 MCX fixture is compared with the real current date (2026-10-02). The resolver correctly filters it as expired; AUTO cannot satisfy the old assertion.",
+      "source_references": [
+        "tests/test_standalone_angelone.py:25,43",
+        "broker/angelone/client.py:137,181"
+      ],
+      "phase3_code_involved": "Not causal in the failing path; same saved case fails with pre-Phase-3 app source. Some tests import app.main transitively, which is not evidence of calendar execution.",
+      "pre_phase3_failure_reproduced": true,
+      "reproduction_current": {
+        "exit": 1,
+        "seconds": 1.32,
+        "log": {
+          "path": "/tmp/validation-investigation/F36-current/run.log",
+          "sha256": "9f5854cc67fd71c2fb9dd7d6b4e8cabfa26b04f40d3dda158a582447a9b04f57"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F36-current/result.xml",
+          "sha256": "5520fac7ecfb6b0ded40dec243c82094062be2f5b75c97a82a65ecee8b605c56"
+        },
+        "cases": [
+          {
+            "name": "test_auto_expiry_is_chronological_not_lexical",
+            "outcome": "failure",
+            "messages": [
+              "AssertionError: assert ('23OCT2026' == '23SEP2026'\n  \n  - 23SEP2026\n  + 23OCT2026)"
+            ]
+          }
+        ]
+      },
+      "reproduction_pre_phase3": {
+        "exit": 1,
+        "seconds": 1.53,
+        "log": {
+          "path": "/tmp/validation-investigation/F36-baseline/run.log",
+          "sha256": "a7a7a549f1124040ef31a2d0266ad1e4932a8d9f1af7c71c01d35739eb85abbc"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F36-baseline/result.xml",
+          "sha256": "bd34324ecac826c56b2710bd4ba4779255ea65df137e64425307cc36a6f83e99"
+        },
+        "cases": [
+          {
+            "name": "test_auto_expiry_is_chronological_not_lexical",
+            "outcome": "failure",
+            "messages": [
+              "AssertionError: assert ('23OCT2026' == '23SEP2026'\n  \n  - 23SEP2026\n  + 23OCT2026)"
+            ]
+          }
+        ]
+      },
+      "recommended_fix": "Freeze the test clock at an explicit synthetic pre-expiry instant and retain all date-order/contract assertions; test post-expiry behavior separately. Do not change production expiry filtering.",
+      "diagnostic_control": {
+        "id": "F36",
+        "control": "clock",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/F36-control/run.log",
+          "sha256": "4e8b6c5a89da44bf05d17100903172be04033067c113a6831bdfafbd42b7da52"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/F36-control/result.xml",
+          "sha256": "c986a1c6ce4830b62c9bb312221369d56e264d2f19ed2360a4ea3153b83aa4f0"
+        }
+      }
+    },
+    {
+      "id": "T01",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_autoscalp.py",
+      "test_name": "test_runner_seeds_index_agg_from_broker_on_start",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "Event-loop/thread or AnyIO blocking-portal wait. Targeted trace plus independent no-app EPERM self-pipe probe establish an environment-level IPC blocker, also present with pre-Phase-3 source.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.03,
+        "log": {
+          "path": "/tmp/validation-investigation/T01-current/run.log",
+          "sha256": "dfa3476846ce31adf8b1496b34595fb3f5ca2adf22b6df8ca2264c718b985cd9"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.04,
+        "log": {
+          "path": "/tmp/validation-investigation/T01-baseline/run.log",
+          "sha256": "dfa3476846ce31adf8b1496b34595fb3f5ca2adf22b6df8ca2264c718b985cd9"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T01",
+        "node": "tests/test_autoscalp.py::test_runner_seeds_index_agg_from_broker_on_start",
+        "exit": "PROCESS_TIMEOUT",
+        "log": {
+          "path": "/tmp/validation-investigation/T01-trace/run.log",
+          "sha256": "54c8d050e0dba9325031327a39b62b3821f38a6602d01fb12b19e44c6052f81b"
+        },
+        "xml": null
+      },
+      "recommended_fix": "Restore local thread/event-loop IPC in the test environment while retaining broker-network guards. Rerun the entire file unchanged, including downstream cases; do not replace thread offload with synchronous execution just for green tests."
+    },
+    {
+      "id": "T02",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_autoscalp_final_signal_gate.py",
+      "test_name": "test_gate_disabled_sends_telegram_as_before",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "Event-loop/thread or AnyIO blocking-portal wait. Targeted trace plus independent no-app EPERM self-pipe probe establish an environment-level IPC blocker, also present with pre-Phase-3 source.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.02,
+        "log": {
+          "path": "/tmp/validation-investigation/T02-current/run.log",
+          "sha256": "f67ab10ad4e4c53121b6a5fe4da9c10ddee905b978d3788d2723d7bfacbe28a9"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.06,
+        "log": {
+          "path": "/tmp/validation-investigation/T02-baseline/run.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T02",
+        "node": "tests/test_autoscalp_final_signal_gate.py::test_gate_disabled_sends_telegram_as_before",
+        "exit": "PROCESS_TIMEOUT",
+        "log": {
+          "path": "/tmp/validation-investigation/T02-trace/run.log",
+          "sha256": "f56c7a069e31ed411886f1dd381f366d5160c7a0c0e9877a725b728834778f31"
+        },
+        "xml": null
+      },
+      "recommended_fix": "Restore local thread/event-loop IPC in the test environment while retaining broker-network guards. Rerun the entire file unchanged, including downstream cases; do not replace thread offload with synchronous execution just for green tests."
+    },
+    {
+      "id": "T03",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_dhan_connector.py",
+      "test_name": "test_worker_refresh_instruments_merges_auto_and_static",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "Event-loop/thread or AnyIO blocking-portal wait. Targeted trace plus independent no-app EPERM self-pipe probe establish an environment-level IPC blocker, also present with pre-Phase-3 source.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.01,
+        "log": {
+          "path": "/tmp/validation-investigation/T03-current/run.log",
+          "sha256": "7768805861bd8c008bb8ac5ad6dec40b2a6161128fedd5bc4d7c9b0b3479398b"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.03,
+        "log": {
+          "path": "/tmp/validation-investigation/T03-baseline/run.log",
+          "sha256": "7768805861bd8c008bb8ac5ad6dec40b2a6161128fedd5bc4d7c9b0b3479398b"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T03",
+        "node": "tests/test_dhan_connector.py::test_worker_refresh_instruments_merges_auto_and_static",
+        "exit": "PROCESS_TIMEOUT",
+        "log": {
+          "path": "/tmp/validation-investigation/T03-trace/run.log",
+          "sha256": "8df5744dcb53f602ff0a25f51ba7acdf1f5d79e9c045821f0fd69f62595f0ba3"
+        },
+        "xml": null
+      },
+      "recommended_fix": "Restore local thread/event-loop IPC in the test environment while retaining broker-network guards. Rerun the entire file unchanged, including downstream cases; do not replace thread offload with synchronous execution just for green tests."
+    },
+    {
+      "id": "T04",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_dhan_postback.py",
+      "test_name": "test_correct_secret_is_logged_and_needs_no_basic_auth",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "Event-loop/thread or AnyIO blocking-portal wait. Targeted trace plus independent no-app EPERM self-pipe probe establish an environment-level IPC blocker, also present with pre-Phase-3 source.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.01,
+        "log": {
+          "path": "/tmp/validation-investigation/T04-current/run.log",
+          "sha256": "cdb4ee2aea69cc6a83331bbe96dc2caa9a299d21329efb0336fc02a82e1839a8"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.04,
+        "log": {
+          "path": "/tmp/validation-investigation/T04-baseline/run.log",
+          "sha256": "cdb4ee2aea69cc6a83331bbe96dc2caa9a299d21329efb0336fc02a82e1839a8"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T04",
+        "node": "tests/test_dhan_postback.py::test_correct_secret_is_logged_and_needs_no_basic_auth",
+        "exit": "PROCESS_TIMEOUT",
+        "log": {
+          "path": "/tmp/validation-investigation/T04-trace/run.log",
+          "sha256": "ad2ffc08f828e3002f2435e175a1a70888da3d0d1699b1336759da113b2093bf"
+        },
+        "xml": null
+      },
+      "recommended_fix": "Restore local thread/event-loop IPC in the test environment while retaining broker-network guards. Rerun the entire file unchanged, including downstream cases; do not replace thread offload with synchronous execution just for green tests."
+    },
+    {
+      "id": "T05",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_main_auth.py",
+      "test_name": "test_health_is_open_without_any_credential",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "Event-loop/thread or AnyIO blocking-portal wait. Targeted trace plus independent no-app EPERM self-pipe probe establish an environment-level IPC blocker, also present with pre-Phase-3 source.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.01,
+        "log": {
+          "path": "/tmp/validation-investigation/T05-current/run.log",
+          "sha256": "895361ffbf88d5a8c40d47f8dd3d03df2042ca9360d08738bcbb4faa39495404"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.05,
+        "log": {
+          "path": "/tmp/validation-investigation/T05-baseline/run.log",
+          "sha256": "895361ffbf88d5a8c40d47f8dd3d03df2042ca9360d08738bcbb4faa39495404"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T05",
+        "node": "tests/test_main_auth.py::test_health_is_open_without_any_credential",
+        "exit": "PROCESS_TIMEOUT",
+        "log": {
+          "path": "/tmp/validation-investigation/T05-trace/run.log",
+          "sha256": "485dbbd8e373d66a447033ef7abc67ddf2dcb6a41a9036f9787f5b38e9c4c058"
+        },
+        "xml": null
+      },
+      "recommended_fix": "Restore local thread/event-loop IPC in the test environment while retaining broker-network guards. Rerun the entire file unchanged, including downstream cases; do not replace thread offload with synchronous execution just for green tests."
+    },
+    {
+      "id": "T06",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_p61_filters_ablation.py",
+      "test_name": "test_ablation_deterministic",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "F",
+      "classification_label": "Timeout/resource issue",
+      "cause": "Repeated deterministic ablation replays are CPU-heavy: trace is in backtest/replay.candles and runner._train_samples. The selected long test passes in 42.31 seconds with a 50-second case budget.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.01,
+        "log": {
+          "path": "/tmp/validation-investigation/T06-current/run.log",
+          "sha256": "dfa3476846ce31adf8b1496b34595fb3f5ca2adf22b6df8ca2264c718b985cd9"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.03,
+        "log": {
+          "path": "/tmp/validation-investigation/T06-baseline/run.log",
+          "sha256": "dfa3476846ce31adf8b1496b34595fb3f5ca2adf22b6df8ca2264c718b985cd9"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T06",
+        "node": "tests/test_p61_filters_ablation.py::test_ablation_deterministic",
+        "exit": 0,
+        "log": {
+          "path": "/tmp/validation-investigation/T06-trace/run.log",
+          "sha256": "1a3d7394ee38c29d80c0abc79257614858a5943d50984fa8005ba12fe7f42182"
+        },
+        "xml": {
+          "path": "/tmp/validation-investigation/T06-trace/result.xml",
+          "sha256": "87f8b5ea43d686054f7af4a9552d86f3197c03d2d57d7f88f5f71b4232938245"
+        }
+      },
+      "recommended_fix": "Retain the deterministic equality and bucket assertions; profile/reuse immutable replay preparation where safe, distinguish unit and integration workloads, and set measured budgets."
+    },
+    {
+      "id": "T07",
+      "kind": "saved_file_timeout",
+      "test_file": "tests/test_smart_scalper_scheduler.py",
+      "test_name": "test_evaluate_called_with_dry_run_false_when_armed",
+      "name_scope": "Named test is the targeted reproduced blocker; the original 90-second file log did not retain individual node attribution. Not a claim that this is the only blocked test in the file.",
+      "exact_original_failure": "PROCESS_TIMEOUT at 90-second per-file deadline; no complete JUnit report",
+      "classification": "E",
+      "classification_label": "Environment-dependent failure",
+      "cause": "Event-loop/thread or AnyIO blocking-portal wait. Targeted trace plus independent no-app EPERM self-pipe probe establish an environment-level IPC blocker, also present with pre-Phase-3 source.",
+      "phase3_code_involved": "No demonstrated causal involvement; timeout family reproduced with saved pre-Phase-3 app source; traces are in existing replay/async/test infrastructure.",
+      "pre_phase3_timeout_family_reproduced": true,
+      "reproducibility_limit": "Current and pre-Phase-3 file replays used a 35-second cap, not another 90-second run; original threshold reproducibility is not asserted.",
+      "reproduction_current": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.02,
+        "log": {
+          "path": "/tmp/validation-investigation/T07-current/run.log",
+          "sha256": "4c923d9349910091f7c23458b6043abff3042d936f288777b57788258feb6a28"
+        },
+        "xml": null
+      },
+      "reproduction_pre_phase3": {
+        "exit": "PROCESS_TIMEOUT",
+        "seconds": 35.01,
+        "log": {
+          "path": "/tmp/validation-investigation/T07-baseline/run.log",
+          "sha256": "4c923d9349910091f7c23458b6043abff3042d936f288777b57788258feb6a28"
+        },
+        "xml": null
+      },
+      "targeted_trace": {
+        "id": "T07",
+        "node": "tests/test_smart_scalper_scheduler.py::test_evaluate_called_with_dry_run_false_when_armed",
+        "exit": "PROCESS_TIMEOUT",
+        "log": {
+          "path": "/tmp/validation-investigation/T07-trace/run.log",
+          "sha256": "a3f25bbde6372693cc626d2d8be3cc02ac1e1f59cea5faf3683eb47540bfcada"
+        },
+        "xml": null
+      },
+      "recommended_fix": "Restore local thread/event-loop IPC in the test environment while retaining broker-network guards. Rerun the entire file unchanged, including downstream cases; do not replace thread offload with synchronous execution just for green tests."
+    }
+  ]
+}

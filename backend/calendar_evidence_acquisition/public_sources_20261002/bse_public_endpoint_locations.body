@@ -1,0 +1,3 @@
+window.__env = window.__env || {};
+window.__env.SERVER_IP = ['85', ''];
+window.__env.IS_INTERNATIONAL = true;

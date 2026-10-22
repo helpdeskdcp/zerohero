@@ -1,0 +1,13 @@
+{
+  "url": "https://www.bing.com/search?q=site%3Ansearchives.nseindia.com%2Fcontent%2Fcirculars%2F+expiry+Tuesday+2025",
+  "retrieved_at": "2026-10-02T13:55:36.673886+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://www.bing.com/search?q=site%3Ansearchives.nseindia.com%2Fcontent%2Fcirculars%2F+expiry+Tuesday+2025",
+  "content_type": "text/html; charset=utf-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/nse_archive_search.body",
+  "sha256": "31d1f1cf5a7d00cd4ac6b477b622e2c561f994e10dc1db4f6747dfe7728d3aa9",
+  "bytes": 122922
+}

@@ -1,0 +1,2832 @@
+{
+  "evidence_type": "CURRENT_PROVIDER_MASTER_OBSERVATION",
+  "exchange": [
+    "NSE",
+    "BSE",
+    "MCX"
+  ],
+  "excluded_other_exchange_groups": [
+    {
+      "exchange": "NSE",
+      "instrument": "OPTFUT",
+      "row_count": 822,
+      "underlying": "CRUDEOIL"
+    },
+    {
+      "exchange": "NSE",
+      "instrument": "OPTFUT",
+      "row_count": 7556,
+      "underlying": "GOLD"
+    },
+    {
+      "exchange": "NSE",
+      "instrument": "OPTFUT",
+      "row_count": 306,
+      "underlying": "GOLDM"
+    },
+    {
+      "exchange": "NSE",
+      "instrument": "OPTFUT",
+      "row_count": 240,
+      "underlying": "NATURALGAS"
+    },
+    {
+      "exchange": "NSE",
+      "instrument": "OPTFUT",
+      "row_count": 10608,
+      "underlying": "SILVERM"
+    }
+  ],
+  "grouping_fields": [
+    "EXCH_ID",
+    "SEGMENT",
+    "UNDERLYING_SYMBOL",
+    "INSTRUMENT",
+    "SM_EXPIRY_DATE",
+    "EXPIRY_FLAG",
+    "OPTION_TYPE"
+  ],
+  "groups": [
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-26",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 187
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 187
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-26",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 180
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-26",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 180
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 156
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "BANKEX",
+      "row_count": 156
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-08",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 199
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-08",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 199
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-15",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 195
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-15",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 195
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-22",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 187
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-22",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 187
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 212
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 212
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-05",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 171
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-05",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 171
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-12",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 161
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-12",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 161
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-19",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 141
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-19",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 141
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 195
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 195
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 173
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 173
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "Q",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "Q",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-06-24",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-06-24",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "Q",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-09-30",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 13
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "Q",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-09-30",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 13
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-12-30",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-12-30",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-06-29",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-06-29",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-12-28",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-12-28",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-06-28",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-06-28",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-12-27",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-12-27",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-06-27",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-06-27",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-12-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-12-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2031-06-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "BSE",
+      "EXPIRY_FLAG": "H",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2031-06-26",
+      "UNDERLYING_SYMBOL": "SENSEX",
+      "row_count": 18
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-19",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-19",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-18",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-19",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-19",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-19",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-21",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-09-20",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-12-17",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2028-03-20",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-15",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 207
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-15",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 207
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-17",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-17",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-16",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 158
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-16",
+      "UNDERLYING_SYMBOL": "CRUDEOIL",
+      "row_count": 158
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-19",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-19",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-18",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-19",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-19",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-19",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-21",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-09-20",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-12-17",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2028-03-20",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-15",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 207
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-15",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 207
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-17",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-17",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-16",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 158
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-16",
+      "UNDERLYING_SYMBOL": "CRUDEOILM",
+      "row_count": 158
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-05",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-04",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-05",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-05",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-04",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-08-05",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-30",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-30",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-27",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-27",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 186
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-31",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 186
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-29",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 186
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-29",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 186
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-26",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 182
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-26",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 182
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-29",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 182
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-29",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 182
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-30",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 157
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-30",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 157
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-28",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 157
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-28",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 157
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-30",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 136
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-30",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 136
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-29",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 136
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-29",
+      "UNDERLYING_SYMBOL": "GOLD",
+      "row_count": 136
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-05",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-05",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-04",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-05",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-05",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-05",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 134
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-29",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 134
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-27",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 115
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-27",
+      "UNDERLYING_SYMBOL": "GOLDM",
+      "row_count": 115
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-24",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-28",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-25",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-23",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-23",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 89
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-23",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 89
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-20",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 88
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-20",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 88
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-23",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 84
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-23",
+      "UNDERLYING_SYMBOL": "NATGASMINI",
+      "row_count": 84
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-24",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-28",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-25",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-23",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-23",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 90
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-23",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 90
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-20",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 88
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-20",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 88
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-23",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 84
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-23",
+      "UNDERLYING_SYMBOL": "NATURALGAS",
+      "row_count": 84
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-04",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-05",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-05",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-05",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-09-03",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-28",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-28",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-25",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-25",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-26",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-26",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 185
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-28",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-28",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-26",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 123
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-26",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 123
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-28",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 123
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-28",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 123
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-08-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-08-27",
+      "UNDERLYING_SYMBOL": "SILVER",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-30",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-26",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-30",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-30",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTCOM",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-08-31",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 176
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-28",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2026-12-28",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-25",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-01-25",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-19",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-02-19",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 181
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 162
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-03-25",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 162
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-23",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 162
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-04-23",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 162
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-26",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 119
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-05-26",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 119
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-23",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 119
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-06-23",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 119
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-27",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-07-27",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-08-24",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "MCX",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTFUT",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "M",
+      "SM_EXPIRY_DATE": "2027-08-24",
+      "UNDERLYING_SYMBOL": "SILVERM",
+      "row_count": 98
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 370
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 370
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 368
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 368
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 338
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 338
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-03-30",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 34
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-03-30",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 34
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-06-29",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 34
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-06-29",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 34
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-09-28",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 31
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-09-28",
+      "UNDERLYING_SYMBOL": "BANKNIFTY",
+      "row_count": 31
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 246
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 246
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 153
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 153
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 134
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "FINNIFTY",
+      "row_count": 134
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 287
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 287
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 285
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 285
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 233
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "MIDCPNIFTY",
+      "row_count": 233
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "FUTIDX",
+      "OPTION_TYPE": "XX",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 1
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-06",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 244
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-06",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 244
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-13",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 236
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-13",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 236
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-19",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 232
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-19",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 232
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 258
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-10-27",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 258
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-03",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 232
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "W",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-03",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 232
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 250
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-11-23",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 250
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 246
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2026-12-29",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 248
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-03-30",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-03-30",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-06-29",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 33
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-06-29",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 33
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-09-28",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 30
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-09-28",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 30
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-12-28",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 34
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2027-12-28",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 39
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-06-27",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-06-27",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 33
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-12-26",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 33
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2028-12-26",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 37
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-06-26",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-06-26",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 33
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-12-24",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2029-12-24",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 35
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-06-25",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-06-25",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-12-31",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2030-12-31",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "CE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2031-06-24",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    },
+    {
+      "EXCH_ID": "NSE",
+      "EXPIRY_FLAG": "M",
+      "INSTRUMENT": "OPTIDX",
+      "OPTION_TYPE": "PE",
+      "SEGMENT": "D",
+      "SM_EXPIRY_DATE": "2031-06-24",
+      "UNDERLYING_SYMBOL": "NIFTY",
+      "row_count": 32
+    }
+  ],
+  "headers": [
+    "EXCH_ID",
+    "SEGMENT",
+    "SECURITY_ID",
+    "ISIN",
+    "INSTRUMENT",
+    "UNDERLYING_SECURITY_ID",
+    "UNDERLYING_SYMBOL",
+    "SYMBOL_NAME",
+    "DISPLAY_NAME",
+    "INSTRUMENT_TYPE",
+    "SERIES",
+    "LOT_SIZE",
+    "SM_EXPIRY_DATE",
+    "STRIKE_PRICE",
+    "OPTION_TYPE",
+    "TICK_SIZE",
+    "EXPIRY_FLAG",
+    "BRACKET_FLAG",
+    "COVER_FLAG",
+    "ASM_GSM_FLAG",
+    "ASM_GSM_CATEGORY",
+    "BUY_SELL_INDICATOR",
+    "BUY_CO_MIN_MARGIN_PER",
+    "BUY_CO_SL_RANGE_MAX_PERC",
+    "BUY_CO_SL_RANGE_MIN_PERC",
+    "BUY_BO_MIN_MARGIN_PER",
+    "BUY_BO_PROFIT_RANGE_MAX_PERC",
+    "BUY_BO_PROFIT_RANGE_MIN_PERC",
+    "MTF_LEVERAGE",
+    "SM_UPPER_LIMIT",
+    "SM_LOWER_LIMIT",
+    "SM_FREEZE_QTY",
+    ""
+  ],
+  "historical_coverage_end": null,
+  "historical_coverage_start": null,
+  "independent_review": null,
+  "instrument_symbols_as_stored": {
+    "BSE": [
+      "SENSEX",
+      "BANKEX"
+    ],
+    "MCX": [
+      "NATURALGAS",
+      "NATGASMINI",
+      "CRUDEOIL",
+      "CRUDEOILM",
+      "GOLD",
+      "GOLDM",
+      "SILVER",
+      "SILVERM"
+    ],
+    "NSE": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY"
+    ]
+  },
+  "last_trading_time_present": false,
+  "limitations": [
+    "Retrieval proves bytes observed now, not historical listing/publication, completeness or trading-data availability.",
+    "SM_EXPIRY_DATE is a date, not an independently verified cutoff. EXPIRY_FLAG preserved verbatim, never filled from weekday patterns.",
+    "Symbols are provider spellings. CRUDEOILM/GOLDM/SILVERM are candidate mini mappings; dated lifecycle mapping still requires review.",
+    "All selected expiry dates follow retrieval date; no expired historical contracts found in selected scope.",
+    "No current master row authorizes a historical AUTO/NEXT request."
+  ],
+  "listing_times_present": false,
+  "observed_expiry_max": "2031-06-26",
+  "observed_expiry_min": "2026-10-05",
+  "provider": "DHAN",
+  "publication_date": null,
+  "retrieved_at": "2026-10-02T14:26:41.765418+00:00",
+  "selected_rows": 27738,
+  "source": {
+    "path": "backend/calendar_evidence_acquisition/alternative_sources_20261002/dhan_detailed_master.body",
+    "sha256": "e639b46af3ccd6d525180fd669b50c62f2be66c21111a3181fe3afe6a83d8300"
+  },
+  "source_family": "DHAN",
+  "total_master_rows": 202243
+}

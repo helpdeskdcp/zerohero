@@ -1,0 +1,13 @@
+{
+  "url": "https://api.bseindia.com/BseIndiaAPI/api/getDataAdvance/w?strTxtNoticeNo=&strTxtDate=2025-01-01&strTxtTodate=2026-10-02&strScripcode=&strDep=&strSegment=&subject=expiry&category=&containgtext=",
+  "retrieved_at": "2026-10-02T13:57:54.182695+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "403",
+  "effective_url": "https://api.bseindia.com/BseIndiaAPI/api/getDataAdvance/w?strTxtNoticeNo=&strTxtDate=2025-01-01&strTxtTodate=2026-10-02&strScripcode=&strDep=&strSegment=&subject=expiry&category=&containgtext=",
+  "content_type": "text/html",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_expiry_notice_archive.body",
+  "sha256": "bcfbe6b69930df0c78462f421746366c01f0baa494aefd04db98ab5659f2b85c",
+  "bytes": 419
+}

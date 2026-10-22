@@ -1,0 +1,112 @@
+{
+  "production": true,
+  "environment": "prod",
+  "BSE_Domain": "https://api.bseindia.com",
+  "BSE_Domain_APIUrl": "https://api.bseindia.com/BseIndiaAPI/api",
+  "BSE_Domain_RealtimeUrl": "https://api.bseindia.com/RealTimeBseIndiaAPI/api",
+  "BSE_SocketURL": "https://bnotification.bseindia.com",
+  "BSE_India": "https://www.bseindia.com",
+  "BSE_Data": "https://www.bseindia.com/BSEDATA",
+  "BSE_Orgin": "https://beta.bseindia.com",
+  "languages": [
+    {
+      "langLabel": "English",
+      "selectedLang": "",
+      "selectedLangExt": "",
+      "langcode": "en"
+    },
+    {
+      "langLabel": "हिन्दी (Hindi)",
+      "selectedLang": "hindiin",
+      "selectedLangExt": "hindi",
+      "langcode": "hi"
+    },
+    {
+      "langLabel": "मराठी (Marathi)",
+      "selectedLang": "marathiin",
+      "selectedLangExt": "marathi",
+      "langcode": "mr"
+    },
+    {
+      "langLabel": "ગુજરાતી (Gujarati)",
+      "selectedLang": "gujaratiin",
+      "selectedLangExt": "gujarati",
+      "langcode": "gu"
+    },
+    {
+      "langLabel": "অসমীয়া (Assamese)",
+      "selectedLang": "assamesein",
+      "selectedLangExt": "assamese",
+      "langcode": "as"
+    },
+    {
+      "langLabel": "বাংলা (Bengali)",
+      "selectedLang": "bengaliin",
+      "selectedLangExt": "bengali",
+      "langcode": "bn"
+    },
+    {
+      "langLabel": "ಕನ್ನಡ (Kannada)",
+      "selectedLang": "kannadain",
+      "selectedLangExt": "kannada",
+      "langcode": "kn"
+    },
+    {
+      "langLabel": "മലയാളം (Malayalam)",
+      "selectedLang": "malayalamin",
+      "selectedLangExt": "malayalam",
+      "langcode": "ml"
+    },
+    {
+      "langLabel": "ଓଡ଼ିଆ (Oriya)",
+      "selectedLang": "oriyain",
+      "selectedLangExt": "oriya",
+      "langcode": "or"
+    },
+    {
+      "langLabel": "ਪੰਜਾਬੀ (Punjabi)",
+      "selectedLang": "punjabiin",
+      "selectedLangExt": "punjabi",
+      "langcode": "pa"
+    },
+    {
+      "langLabel": "தமிழ் (Tamil)",
+      "selectedLang": "tamilin",
+      "selectedLangExt": "tamil",
+      "langcode": "ta"
+    },
+    {
+      "langLabel": "తెలుగు (Telugu)",
+      "selectedLang": "teluguin",
+      "selectedLangExt": "telugu",
+      "langcode": "te"
+    },
+    {
+      "langLabel": "اردو (Urdu)",
+      "selectedLang": "urduin",
+      "selectedLangExt": "urdu",
+      "langcode": "ur"
+    }
+  ],
+ "streamingTime": {
+    "start": {
+      "hour": 9,
+      "minutes": 0
+    },
+    "end": {
+      "hour": 15,
+      "minutes": 30
+    }
+  },
+  "realtimeSensexChannels": ["AllIndiceWise", "SensexIndicativePrice"],
+  "maintainanceRoutes": [],
+  "maintainanceComponents": [],
+  "featureFlags": {
+    "chatbot": false,
+    "homeRedesign": false,
+    "newGraphs": false,
+    "enableMoxvedaSites": false,
+    "marketTurnoverDerivativeTimeShow": false,
+    "saperateMarketTurnover": false
+  }
+}

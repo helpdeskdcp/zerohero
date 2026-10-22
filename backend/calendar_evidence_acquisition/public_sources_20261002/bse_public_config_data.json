@@ -1,0 +1,13 @@
+{
+  "url": "https://www.bseindia.com/assets/data/appConfig.json",
+  "retrieved_at": "2026-10-02T13:57:43.059370+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://www.bseindia.com/assets/data/appConfig.json",
+  "content_type": "application/json",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_public_config_data.body",
+  "sha256": "2ca488b5c4c16426c796d266188c6994e7c2830a61b47c49cae123e2969ff334",
+  "bytes": 3034
+}

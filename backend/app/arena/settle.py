@@ -126,7 +126,9 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         else:                                                    # NEAR / MARKET: first snapshot only
             if p > sig.get("entry_hi", sig["entry"]) * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}
             fill, real_fill, j = p, real, i; break
-    if fill is None: return {**base, "status": "NOT_TRIGGERED", "events_applied": applied}
+    if fill is None:
+        vu = (sig["t"] + sig["valid_sec"]) if sig.get("valid_sec") else None                                  # a limit / above entry may still be waiting until this instant (None = until the session end)
+        return {**base, "status": "NOT_TRIGGERED", "events_applied": applied, "valid_until": vu}
     hwm = sell_px(live[j], half_spread)[0]; px = why = None; k_exit = j; real_exit = False
     _from = sl_at_fill_from()
     if _from is not None and sig["t"] >= _from and st["sl"] is not None:                    # SL-at-fill rule: a stop already at/above the market at the moment of the fill is hit immediately
@@ -143,7 +145,8 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         if eff_sl is not None and sp <= eff_sl: px, real_exit, why = sp, real, ("TRAIL" if (trail is not None and trail >= (st["sl"] or -1e18)) else "SL"); break
         tg = (st["targets"][0] if policy == "T1" else st["targets"][-1]) if st["targets"] else None
         if tg is not None and sp >= tg: px, real_exit, why = sp, real, "TARGET"; break
-    if px is None: return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill}
+    if px is None:                                                                                      # still open: what a live screen needs (fill, lot, the stop / targets in force, the last quote)
+        ls = live[-1]; return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill, "fill_t": live[j]["t"], "lot": lot, "sl_now": st["sl"], "targets_now": list(st["targets"]), "last": {"t": ls["t"], "bid": ls.get("bid"), "ask": ls.get("ask"), "ltp": ls.get("ltp")}}
     c = cost_points(und, fill, px, lot)
     if c is None: return {**base, "status": "NO_DATA:no_cost_model"}
     gross = (px - fill) * lot; cost = c * lot

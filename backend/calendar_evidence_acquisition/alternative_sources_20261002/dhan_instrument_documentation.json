@@ -1,0 +1,16 @@
+{
+  "source_id": "dhan_instrument_documentation",
+  "url": "https://dhanhq.co/docs/v2/instruments/",
+  "retrieved_at": "2026-10-02T14:26:41.763088+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://dhanhq.co/docs/v2/instruments/",
+  "content_type": "text/html; charset=utf-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/alternative_sources_20261002/dhan_instrument_documentation.body",
+  "sha256": "36a9b707a9570e2868a2177488d35fc596536ef162c8d651cfd47d8fe1684d8f",
+  "bytes": 32799,
+  "retry_attempted": false,
+  "environment": "public document retrieval; curl configuration disabled; no broker API/authentication"
+}

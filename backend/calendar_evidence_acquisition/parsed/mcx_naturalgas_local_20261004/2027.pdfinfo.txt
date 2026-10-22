@@ -1,0 +1,19 @@
+Author:          MCX
+Creator:         Microsoft® Word for Microsoft 365
+Producer:        Microsoft® Word for Microsoft 365
+CreationDate:    Thu Jul  2 11:09:16 2026 IST
+ModDate:         Thu Jul  2 11:09:16 2026 IST
+Custom Metadata: no
+Metadata Stream: yes
+Tagged:          yes
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           2
+Encrypted:       no
+Page size:       595.44 x 841.68 pts (A4)
+Page rot:        0
+File size:       155329 bytes
+Optimized:       no
+PDF version:     1.7

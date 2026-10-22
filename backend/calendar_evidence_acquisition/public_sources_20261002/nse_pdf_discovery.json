@@ -1,0 +1,13 @@
+{
+  "url": "https://html.duckduckgo.com/html/?q=site%3Ansearchives.nseindia.com+expiry+Tuesday+2025+circular",
+  "retrieved_at": "2026-10-02T13:56:18.327248+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "202",
+  "effective_url": "https://html.duckduckgo.com/html/?q=site%3Ansearchives.nseindia.com+expiry+Tuesday+2025+circular",
+  "content_type": "text/html; charset=UTF-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/nse_pdf_discovery.body",
+  "sha256": "9dddb48a0fb32e11a977e8aa4507dad389309ac19081eedaee865528e54ece06",
+  "bytes": 14284
+}

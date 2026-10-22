@@ -1,0 +1,215 @@
+{
+  "schema": "mcx-specification-acquisition-review/v1",
+  "sources": [
+    {
+      "source_url": "https://www.mcxindia.com/docs/default-source/products/contract-specification/natural-gas/natural-gas-january-2026-contract-onwards2ff2141b-f6e4-4b6a-9f0e-59f260cecf9b.pdf",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "scope_status": "OPERATOR_ASSERTED_PENDING_DOCUMENT_INSPECTION",
+      "discovery_method": "EXACT_OPERATOR_PROVIDED_OFFICIAL_PDF_URL",
+      "retrieved_at": "2026-10-04T08:56:43.479540+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "automatic_retries": 0,
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "587"
+      },
+      "sha256": "1b9ecee9dca6700d40acad6302aa4832405c7304c18b6589f7084e9727115034",
+      "bytes": 587,
+      "raw_path": "artifacts/staging/mcx-naturalgas-specifications-20261004/2d950268ecf3fda267bc.body",
+      "pdf_signature": false,
+      "evidence_classification": "UNVERIFIED",
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "production_calendar": "NOT_INSTALLED",
+      "auto_next": "FAIL-CLOSED",
+      "document_title": null,
+      "page_number": null,
+      "reference_circular": null,
+      "contract_month": null,
+      "launch_date": null,
+      "expiry_date": null,
+      "reason": "HTTP_403_HTML_NOT_PDF",
+      "independently_observed_document": false
+    },
+    {
+      "source_url": "https://www.mcxindia.com/docs/default-source/about-us/natural-gas-january-2027-contract-onwards.pdf",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "scope_status": "OPERATOR_ASSERTED_PENDING_DOCUMENT_INSPECTION",
+      "discovery_method": "EXACT_OPERATOR_PROVIDED_OFFICIAL_PDF_URL",
+      "retrieved_at": "2026-10-04T08:56:43.421563+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "automatic_retries": 0,
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "488"
+      },
+      "sha256": "d3c13d00570ba1579b612708a2433868d7965e02db50140a21d67118b094914d",
+      "bytes": 488,
+      "raw_path": "artifacts/staging/mcx-naturalgas-specifications-20261004/5bc1a2b2c0b1105039f5.body",
+      "pdf_signature": false,
+      "evidence_classification": "UNVERIFIED",
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "production_calendar": "NOT_INSTALLED",
+      "auto_next": "FAIL-CLOSED",
+      "document_title": null,
+      "page_number": null,
+      "reference_circular": null,
+      "contract_month": null,
+      "launch_date": null,
+      "expiry_date": null,
+      "reason": "HTTP_403_HTML_NOT_PDF",
+      "independently_observed_document": false
+    },
+    {
+      "source_url": "https://www.mcxindia.com/docs/default-source/products/contract-specification/natural-gas/natural-gas-january-2025-contract-onwardse3c71b50-1e45-4513-ac73-76cf7a894681.pdf",
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "contract_type": "FUTURE",
+      "scope_status": "OPERATOR_ASSERTED_PENDING_DOCUMENT_INSPECTION",
+      "discovery_method": "EXACT_OPERATOR_PROVIDED_OFFICIAL_PDF_URL",
+      "retrieved_at": "2026-10-04T08:56:43.501183+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "automatic_retries": 0,
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "587"
+      },
+      "sha256": "90806cd928f2ea99379cc6b5b8233abfb9120cf8e139c0736264d17fe05b420d",
+      "bytes": 587,
+      "raw_path": "artifacts/staging/mcx-naturalgas-specifications-20261004/7512762cb90ca5fe8b98.body",
+      "pdf_signature": false,
+      "evidence_classification": "UNVERIFIED",
+      "observed_expiries": [],
+      "validated_production_expiries": [],
+      "production_calendar": "NOT_INSTALLED",
+      "auto_next": "FAIL-CLOSED",
+      "document_title": null,
+      "page_number": null,
+      "reference_circular": null,
+      "contract_month": null,
+      "launch_date": null,
+      "expiry_date": null,
+      "reason": "HTTP_403_HTML_NOT_PDF",
+      "independently_observed_document": false
+    }
+  ],
+  "network": {
+    "unique_requests": 3,
+    "successful_pdf_acquisitions": 0,
+    "http_403": 3,
+    "retries": 0,
+    "redirects_followed": 0
+  },
+  "instruments": [
+    {
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "evidence_classification": "OFFICIAL_PUBLISHED_CONTRACT_SCHEDULE",
+      "verification_status": "UNVERIFIED",
+      "production_ready": false,
+      "candidate_source_urls": [
+        "https://www.mcxindia.com/docs/default-source/products/contract-specification/natural-gas/natural-gas-january-2026-contract-onwards2ff2141b-f6e4-4b6a-9f0e-59f260cecf9b.pdf",
+        "https://www.mcxindia.com/docs/default-source/about-us/natural-gas-january-2027-contract-onwards.pdf",
+        "https://www.mcxindia.com/docs/default-source/products/contract-specification/natural-gas/natural-gas-january-2025-contract-onwardse3c71b50-1e45-4513-ac73-76cf7a894681.pdf"
+      ],
+      "missing_evidence": [
+        "Independent operator-artifact provenance/source review",
+        "Applicable later amendments and effective scope",
+        "Dated cutoff/DST and holiday evidence required by production gate",
+        "Reviewed complete contract mapping/coverage"
+      ],
+      "blocker": "Local PDFs establish 36 literal published futures schedule entries. Independent provenance/amendment review, applicable dated cutoff and holiday evidence remain incomplete; no trading observations or production eligibility claimed.",
+      "published_schedule_count": 36,
+      "schedule_evidence_path": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/evidence.json"
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "evidence_classification": "MISSING_EVIDENCE",
+      "verification_status": "UNVERIFIED",
+      "production_ready": false,
+      "candidate_source_urls": [],
+      "missing_evidence": [
+        "Accessible instrument-specific official raw document/contract records",
+        "Explicit contract identity, launch and expiry dates",
+        "Applicable lifecycle/cutoff and amendments",
+        "Required coverage and independent production review"
+      ],
+      "blocker": "No instrument-specific PDF link found in retained official MCX material; previous official discovery routes return HTTP 403. NATURALGAS sources cannot establish this instrument."
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "evidence_classification": "MISSING_EVIDENCE",
+      "verification_status": "UNVERIFIED",
+      "production_ready": false,
+      "candidate_source_urls": [],
+      "missing_evidence": [
+        "Accessible instrument-specific official raw document/contract records",
+        "Explicit contract identity, launch and expiry dates",
+        "Applicable lifecycle/cutoff and amendments",
+        "Required coverage and independent production review"
+      ],
+      "blocker": "No instrument-specific PDF link found in retained official MCX material; previous official discovery routes return HTTP 403. NATURALGAS sources cannot establish this instrument."
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOILM",
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "evidence_classification": "MISSING_EVIDENCE",
+      "verification_status": "UNVERIFIED",
+      "production_ready": false,
+      "candidate_source_urls": [],
+      "missing_evidence": [
+        "Accessible instrument-specific official raw document/contract records",
+        "Explicit contract identity, launch and expiry dates",
+        "Applicable lifecycle/cutoff and amendments",
+        "Required coverage and independent production review"
+      ],
+      "blocker": "No instrument-specific PDF link found in retained official MCX material; previous official discovery routes return HTTP 403. NATURALGAS sources cannot establish this instrument."
+    }
+  ],
+  "discovery_review": {
+    "method": "Local retained official source/document-link search",
+    "scope": [
+      "backend/calendar_evidence_acquisition",
+      "backend/OWN_EXCHANGE*",
+      "artifacts/staging"
+    ],
+    "additional_official_mcx_specification_links_found": 0,
+    "limitation": "No accessible official MCX page payload or public web search tool was available to discover additional published links. Previously denied routes were not retried."
+  },
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "broker_calls": 0,
+  "orders": 0,
+  "local_pdf_followup": {
+    "evidence_path": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/evidence.json",
+    "sha256": "1a639808671238836e5bdeae4688ac6a1a10ccf7c122b7efd1ad1ad02b386dfd",
+    "acquisition_method": "OPERATOR_PROVIDED_ARTIFACT",
+    "published_schedule_count": 36,
+    "historical_trading_observation_count": 0,
+    "validated_production_expiry_count": 0,
+    "production_calendar": "NOT_INSTALLED",
+    "auto_next": "FAIL-CLOSED",
+    "note": "Earlier HTTP-denial sources are unchanged and are not PDF evidence."
+  }
+}

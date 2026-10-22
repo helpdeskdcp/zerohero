@@ -1,0 +1,309 @@
+{
+  "schema_version": "own-exchange-evidence-review/v1",
+  "reviewed_at": "2026-10-03T17:30:26.386871+00:00",
+  "sources": [
+    {
+      "source_url": "https://www.bseindia.com/robots.txt",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-03T17:27:14.351656+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "http_status": null,
+      "error": "URLError: <urlopen error [Errno -3] Temporary failure in name resolution>",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "raw_path": "artifacts/staging/own-exchange-review-20261003/df63a7008aeaf3b65029.body",
+      "metadata_path": "artifacts/staging/own-exchange-review-20261003/df63a7008aeaf3b65029.json",
+      "source_family": "BSE_OFFICIAL",
+      "evidence_classification": "MISSING_EVIDENCE",
+      "expiry_observations": [],
+      "limitations": [
+        "SANDBOX_DNS_FAILURE; not evidence of exchange DNS failure"
+      ]
+    },
+    {
+      "source_url": "https://www.mcxindia.com/robots.txt",
+      "exchange": "MCX",
+      "retrieved_at": "2026-10-03T17:27:14.355829+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "http_status": null,
+      "error": "URLError: <urlopen error [Errno -3] Temporary failure in name resolution>",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "raw_path": "artifacts/staging/own-exchange-review-20261003/ec205b89e51a94492097.body",
+      "metadata_path": "artifacts/staging/own-exchange-review-20261003/ec205b89e51a94492097.json",
+      "source_family": "MCX_OFFICIAL",
+      "evidence_classification": "MISSING_EVIDENCE",
+      "expiry_observations": [],
+      "limitations": [
+        "SANDBOX_DNS_FAILURE; not evidence of exchange DNS failure"
+      ]
+    },
+    {
+      "source_url": "https://www.bseindia.com/static/markets/Derivatives/DeriReports/contractindex",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-03T17:28:04.021333+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Last-Modified": "Wed, 30 Sep 2026 14:37:52 GMT",
+        "Content-Length": "14287"
+      },
+      "sha256": "0fc66f1aa723c230a6859655af7567dd5bb341643af893d753f86ffc0d6f39e6",
+      "bytes": 14287,
+      "raw_path": "artifacts/staging/own-exchange-review-20261003-network/b68a165840eba08ce332.body",
+      "metadata_path": "artifacts/staging/own-exchange-review-20261003-network/b68a165840eba08ce332.json",
+      "source_family": "BSE_OFFICIAL",
+      "evidence_classification": "MISSING_EVIDENCE",
+      "expiry_observations": [],
+      "limitations": [
+        "HTTP_200_APPLICATION_SHELL",
+        "No contract, expiry, specification or holiday evidence",
+        "robots.txt HTML cannot authorize acquisition; contract page was requested before this defect was fixed"
+      ]
+    },
+    {
+      "source_url": "https://www.bseindia.com/robots.txt",
+      "exchange": "BSE",
+      "retrieved_at": "2026-10-03T17:28:03.891553+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "http_status": 200,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Last-Modified": "Wed, 30 Sep 2026 14:37:06 GMT",
+        "Content-Length": "14287"
+      },
+      "sha256": "0fc66f1aa723c230a6859655af7567dd5bb341643af893d753f86ffc0d6f39e6",
+      "bytes": 14287,
+      "raw_path": "artifacts/staging/own-exchange-review-20261003-network/df63a7008aeaf3b65029.body",
+      "metadata_path": "artifacts/staging/own-exchange-review-20261003-network/df63a7008aeaf3b65029.json",
+      "source_family": "BSE_OFFICIAL",
+      "evidence_classification": "MISSING_EVIDENCE",
+      "expiry_observations": [],
+      "limitations": [
+        "HTTP_200_APPLICATION_SHELL",
+        "No contract, expiry, specification or holiday evidence",
+        "robots.txt HTML cannot authorize acquisition; contract page was requested before this defect was fixed"
+      ]
+    },
+    {
+      "source_url": "https://www.mcxindia.com/robots.txt",
+      "exchange": "MCX",
+      "retrieved_at": "2026-10-03T17:28:04.175399+00:00",
+      "method": "GET",
+      "redirects_followed": false,
+      "http_status": 403,
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Content-Length": "384"
+      },
+      "sha256": "85e3ff559d08bf5fe1b17095df17589d8f47c94245481f4037e74ca3815c8d67",
+      "bytes": 384,
+      "raw_path": "artifacts/staging/own-exchange-review-20261003-network/ec205b89e51a94492097.body",
+      "metadata_path": "artifacts/staging/own-exchange-review-20261003-network/ec205b89e51a94492097.json",
+      "source_family": "MCX_OFFICIAL",
+      "evidence_classification": "MISSING_EVIDENCE",
+      "expiry_observations": [],
+      "limitations": [
+        "ROBOTS_HTTP_403; no subsequent MCX request authorized or attempted"
+      ]
+    }
+  ],
+  "discovery": {
+    "raw_path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_app_index.body",
+    "sha256": "4f343512fd2bd532acb28143a64b0149a0ba6f7009eb970bc117a3abc5155692",
+    "source_url": "https://www.bseindia.com/assets/includenew/js/main-FB3J6BO4.js",
+    "exact_observed_route": "/static/markets/Derivatives/DeriReports/contractindex"
+  },
+  "instruments": [
+    {
+      "exchange": "BSE",
+      "instrument": "SENSEX",
+      "canonical_underlying": "SENSEX",
+      "alias_scope": "Repository identity alias only; official contract spelling must be retained",
+      "contract_types": [
+        "OPTION",
+        "FUTURE"
+      ],
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "inferred_derived_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "required_coverage": {
+        "start": "2026-09-03",
+        "end_inclusive": "2026-10-02",
+        "timezone": "Asia/Kolkata",
+        "state": "PROPOSED_FROM_OBSERVED_CONSUMER_CONTEXT"
+      },
+      "proven_coverage": null,
+      "complete_contract_master": false,
+      "lifecycle_cutoff_evidence": false,
+      "holiday_adjustment_evidence": false,
+      "production_ready": false,
+      "missing_evidence": [
+        "Own-exchange complete dated contract master with explicit expiries and identifiers",
+        "Official listing/launch and last-trading timestamps with timezone and effective version",
+        "Current and historical specification/cycle rules and amendments",
+        "Own-exchange holiday calendar and documented adjustment rule; literal adjusted contract dates",
+        "Independent semantic review binding completeness and claims to source hashes"
+      ],
+      "blocker": "BSE robots returns application shell; discovery page is also shell"
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "canonical_underlying": "NATURALGAS",
+      "alias_scope": "Repository identity alias only; official contract spelling must be retained",
+      "contract_types": [
+        "OPTION",
+        "FUTURE"
+      ],
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "inferred_derived_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "required_coverage": {
+        "start": "2026-07-13",
+        "end_inclusive": "2026-10-02",
+        "timezone": "Asia/Kolkata",
+        "state": "PROPOSED_FROM_OBSERVED_CONSUMER_CONTEXT"
+      },
+      "proven_coverage": null,
+      "complete_contract_master": false,
+      "lifecycle_cutoff_evidence": false,
+      "holiday_adjustment_evidence": false,
+      "production_ready": false,
+      "missing_evidence": [
+        "Own-exchange complete dated contract master with explicit expiries and identifiers",
+        "Official listing/launch and last-trading timestamps with timezone and effective version",
+        "Current and historical specification/cycle rules and amendments",
+        "Own-exchange holiday calendar and documented adjustment rule; literal adjusted contract dates",
+        "Independent semantic review binding completeness and claims to source hashes"
+      ],
+      "blocker": "MCX robots HTTP 403; earlier history and bhavcopy HTTP 403 remain unresolved"
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "canonical_underlying": "NATGASMINI",
+      "alias_scope": "Repository identity alias only; official contract spelling must be retained",
+      "contract_types": [
+        "OPTION",
+        "FUTURE"
+      ],
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "inferred_derived_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "required_coverage": {
+        "start": null,
+        "end_inclusive": null,
+        "timezone": "Asia/Kolkata",
+        "state": "NOT_ESTABLISHED"
+      },
+      "proven_coverage": null,
+      "complete_contract_master": false,
+      "lifecycle_cutoff_evidence": false,
+      "holiday_adjustment_evidence": false,
+      "production_ready": false,
+      "missing_evidence": [
+        "Own-exchange complete dated contract master with explicit expiries and identifiers",
+        "Official listing/launch and last-trading timestamps with timezone and effective version",
+        "Current and historical specification/cycle rules and amendments",
+        "Own-exchange holiday calendar and documented adjustment rule; literal adjusted contract dates",
+        "Independent semantic review binding completeness and claims to source hashes"
+      ],
+      "blocker": "MCX robots HTTP 403; earlier history and bhavcopy HTTP 403 remain unresolved"
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "canonical_underlying": "CRUDEOIL",
+      "alias_scope": "Repository identity alias only; official contract spelling must be retained",
+      "contract_types": [
+        "OPTION",
+        "FUTURE"
+      ],
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "inferred_derived_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "required_coverage": {
+        "start": "2026-07-13",
+        "end_inclusive": "2026-10-01",
+        "timezone": "Asia/Kolkata",
+        "state": "PROPOSED_FROM_OBSERVED_CONSUMER_CONTEXT"
+      },
+      "proven_coverage": null,
+      "complete_contract_master": false,
+      "lifecycle_cutoff_evidence": false,
+      "holiday_adjustment_evidence": false,
+      "production_ready": false,
+      "missing_evidence": [
+        "Own-exchange complete dated contract master with explicit expiries and identifiers",
+        "Official listing/launch and last-trading timestamps with timezone and effective version",
+        "Current and historical specification/cycle rules and amendments",
+        "Own-exchange holiday calendar and documented adjustment rule; literal adjusted contract dates",
+        "Independent semantic review binding completeness and claims to source hashes"
+      ],
+      "blocker": "MCX robots HTTP 403; earlier history and bhavcopy HTTP 403 remain unresolved"
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOILM",
+      "canonical_underlying": "CRUDEOILMINI",
+      "alias_scope": "Repository identity alias only; official contract spelling must be retained",
+      "contract_types": [
+        "OPTION",
+        "FUTURE"
+      ],
+      "observed_official_expiries": [],
+      "validated_production_expiries": [],
+      "inferred_derived_expiries": [],
+      "classification": "MISSING_EVIDENCE",
+      "required_coverage": {
+        "start": null,
+        "end_inclusive": null,
+        "timezone": "Asia/Kolkata",
+        "state": "NOT_ESTABLISHED"
+      },
+      "proven_coverage": null,
+      "complete_contract_master": false,
+      "lifecycle_cutoff_evidence": false,
+      "holiday_adjustment_evidence": false,
+      "production_ready": false,
+      "missing_evidence": [
+        "Own-exchange complete dated contract master with explicit expiries and identifiers",
+        "Official listing/launch and last-trading timestamps with timezone and effective version",
+        "Current and historical specification/cycle rules and amendments",
+        "Own-exchange holiday calendar and documented adjustment rule; literal adjusted contract dates",
+        "Independent semantic review binding completeness and claims to source hashes"
+      ],
+      "blocker": "MCX robots HTTP 403; earlier history and bhavcopy HTTP 403 remain unresolved"
+    }
+  ],
+  "counts": {
+    "observed_official_expiries": 0,
+    "validated_production_expiries": 0,
+    "inferred_derived_expiries": 0,
+    "instruments_missing_evidence": 5
+  },
+  "network": {
+    "sandbox_dns_failures": 2,
+    "external_get_requests": 3,
+    "http_200_application_shells": 2,
+    "http_403": 1,
+    "retries_of_denied_endpoints": 0
+  },
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "broker_calls": 0,
+  "orders": 0,
+  "migrations": 0,
+  "restarts": 0,
+  "scheduler_changes": 0
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "path": "backend/calendar_evidence_acquisition/bse_master.py",
+    "previous_sha256": "1f45ee354efed2378488e7488bfb02a7e180f0be04f03ae5192980f8353f1998",
+    "current_sha256": "55f9855955bce0c8d16e7c072bf4f56a95bb456784266ea897bf29cf1a2f3e7d",
+    "reason": "Add exact BANKEX filtering; default SENSEX semantics and source validation preserved."
+  }
+]

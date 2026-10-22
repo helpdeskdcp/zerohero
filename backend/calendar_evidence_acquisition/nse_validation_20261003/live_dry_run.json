@@ -1,0 +1,18 @@
+{
+  "result": {
+    "calendar_status": "UNVERIFIED",
+    "detail": "NSE_CONNECTION_FAILED",
+    "production_calendar": "NOT INSTALLED",
+    "reason": "SOURCE_METADATA_REQUIRED",
+    "status": "UNVERIFIED"
+  },
+  "report_page": "https://www.nseindia.com/all-reports-derivatives",
+  "requested_date": "2026-10-01",
+  "mode": "LIVE_PLAYWRIGHT_DISCOVERY_DRY_RUN",
+  "browser_installed": true,
+  "archive_downloaded": false,
+  "sidecar_created": false,
+  "evidence_ingested": false,
+  "production_calendar_activated": false,
+  "notes": "Bounded discovery attempt; no authoritative download URL or report response acquired. No WAF bypass."
+}

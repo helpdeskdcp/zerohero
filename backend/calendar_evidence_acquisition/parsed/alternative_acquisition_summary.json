@@ -1,0 +1,41 @@
+{
+  "acquired_at": "2026-10-02T14:28:19.691714+00:00",
+  "historical_calendar_status_counts": {
+    "CONFLICTING": 0,
+    "NOT_APPLICABLE": 0,
+    "PARTIALLY_VERIFIED": 0,
+    "UNVERIFIED": 28,
+    "VERIFIED": 0
+  },
+  "network": {
+    "avoided_sources": [
+      "cached Dhan expired-option docs",
+      "cached Dhan expiry-list docs",
+      "cached Dhan current F&O calendar",
+      "retained AngelOne master"
+    ],
+    "duplicate_requests_avoided": 4,
+    "duplicate_requests_sent": 0,
+    "failed_acquisitions": 1,
+    "known_blocked_urls_not_retried": [
+      "https://api.bseindia.com/BseIndiaAPI/api/getDataAdvance/w?strTxtNoticeNo=&strTxtDate=2025-01-01&strTxtTodate=2026-10-02&strScripcode=&strDep=&strSegment=&subject=expiry&category=&containgtext=",
+      "https://www.mcxindia.com/market-data/contract-available-for-trading",
+      "https://www.google.com/search?q=site%3Ansearchives.nseindia.com%2Fcontent%2Fcirculars%2F+expiry+Tuesday+2025",
+      "https://nsearchives.nseindia.com/content/fo/NSE_FO_contract_01072026.csv.gz",
+      "https://html.duckduckgo.com/html/?q=site%3Ansearchives.nseindia.com+expiry+Tuesday+2025+circular",
+      "https://www.nseindia.com/products-services/equity-derivatives-contract-specifications"
+    ],
+    "redundant_compact_dhan_master_omitted": true,
+    "retry_count": 0,
+    "successful_acquisitions": 2,
+    "unique_sources_attempted": 3
+  },
+  "new_source_ids": [
+    "dhan_instrument_documentation",
+    "dhan_detailed_master",
+    "nse_historical_contract_report"
+  ],
+  "production_behavior_changed": false,
+  "production_calendar_installed": false,
+  "version": "2026-10-02.4"
+}

@@ -1,0 +1,15 @@
+{
+  "source_id": "jugaad_data_archive_index",
+  "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/HEAD?recursive=1",
+  "retrieved_at": "2026-10-02T14:40:08.855747+00:00",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/HEAD?recursive=1",
+  "content_type": "application/json; charset=utf-8",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/static_sources_20261002/jugaad_data_archive_index.body",
+  "sha256": "f9aa3a15b43c6663053de0982861fa6f0fc07567cc5971404cb1395f075484dc",
+  "bytes": 18252,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

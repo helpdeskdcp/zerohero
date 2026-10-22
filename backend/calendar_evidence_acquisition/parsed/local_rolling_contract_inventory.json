@@ -1,0 +1,116 @@
+{
+  "acquired_at": "2026-10-02T14:28:19.691714+00:00",
+  "audit_rows": 22,
+  "audit_rule_evidence": [
+    "BROKER_METADATA_PATTERN"
+  ],
+  "audit_source_references": [
+    "Upstox /v2/expired-instruments/expiries (expiry_metadata_upstox.json)"
+  ],
+  "distinct_expiry_labels": [
+    "2026-08-04",
+    "2026-08-11",
+    "2026-08-18"
+  ],
+  "evidence_type": "LOCAL_DERIVED_EXPIRY_LABELS_NOT_PROVIDER_EXPIRY_RESPONSE",
+  "groups": [
+    {
+      "distinct_strikes": 6,
+      "exchange_as_stored": "NFO",
+      "expiry_label_as_stored": "2026-08-04",
+      "market_timestamp_max": "2026-08-04T10:09:00+00:00",
+      "market_timestamp_min": "2026-08-03T03:45:00+00:00",
+      "option_type": "CE",
+      "rows": 770,
+      "source_as_stored": "DHAN_ROLLING",
+      "timeframe": "1m",
+      "underlying": "NIFTY"
+    },
+    {
+      "distinct_strikes": 6,
+      "exchange_as_stored": "NFO",
+      "expiry_label_as_stored": "2026-08-04",
+      "market_timestamp_max": "2026-08-04T10:09:00+00:00",
+      "market_timestamp_min": "2026-08-03T03:45:00+00:00",
+      "option_type": "PE",
+      "rows": 770,
+      "source_as_stored": "DHAN_ROLLING",
+      "timeframe": "1m",
+      "underlying": "NIFTY"
+    },
+    {
+      "distinct_strikes": 5,
+      "exchange_as_stored": "NFO",
+      "expiry_label_as_stored": "2026-08-11",
+      "market_timestamp_max": "2026-08-11T10:09:00+00:00",
+      "market_timestamp_min": "2026-08-05T03:45:00+00:00",
+      "option_type": "CE",
+      "rows": 1925,
+      "source_as_stored": "DHAN_ROLLING",
+      "timeframe": "1m",
+      "underlying": "NIFTY"
+    },
+    {
+      "distinct_strikes": 5,
+      "exchange_as_stored": "NFO",
+      "expiry_label_as_stored": "2026-08-11",
+      "market_timestamp_max": "2026-08-11T10:09:00+00:00",
+      "market_timestamp_min": "2026-08-05T03:45:00+00:00",
+      "option_type": "PE",
+      "rows": 1925,
+      "source_as_stored": "DHAN_ROLLING",
+      "timeframe": "1m",
+      "underlying": "NIFTY"
+    },
+    {
+      "distinct_strikes": 5,
+      "exchange_as_stored": "NFO",
+      "expiry_label_as_stored": "2026-08-18",
+      "market_timestamp_max": "2026-08-17T10:09:00+00:00",
+      "market_timestamp_min": "2026-08-12T03:45:00+00:00",
+      "option_type": "CE",
+      "rows": 1540,
+      "source_as_stored": "DHAN_ROLLING",
+      "timeframe": "1m",
+      "underlying": "NIFTY"
+    },
+    {
+      "distinct_strikes": 5,
+      "exchange_as_stored": "NFO",
+      "expiry_label_as_stored": "2026-08-18",
+      "market_timestamp_max": "2026-08-17T10:09:00+00:00",
+      "market_timestamp_min": "2026-08-12T03:45:00+00:00",
+      "option_type": "PE",
+      "rows": 1540,
+      "source_as_stored": "DHAN_ROLLING",
+      "timeframe": "1m",
+      "underlying": "NIFTY"
+    }
+  ],
+  "historical_calendar_coverage_end": null,
+  "historical_calendar_coverage_start": null,
+  "independent_review": null,
+  "limitations": [
+    "Projection retains stored identity and provenance, not a newly authenticated Dhan response.",
+    "Expiry audit attributes dates to Upstox metadata and BROKER_METADATA_PATTERN; legacy VERIFIED is not Phase 3 verification.",
+    "Three observed Tuesday labels seven days apart are not independent proof of a weekly rule or complete calendar; no missing dates filled.",
+    "No Dhan security_id, historical publication/listing times or provider-complete universe established.",
+    "August market timestamp range proves local stored data presence only; not independent contract or calendar coverage.",
+    "Legacy snapshots and raw database left untouched."
+  ],
+  "observation_end": "2026-08-17T10:09:00+00:00",
+  "observation_start": "2026-08-03T03:45:00+00:00",
+  "provider_label": "DHAN_ROLLING",
+  "retained_projection": {
+    "path": "backend/calendar_evidence_acquisition/raw/local_rolling_contract_projection.json.gz",
+    "sha256": "8f06684167373190d6203139756ed864ac0149fbb2825779128e763d3b88d527"
+  },
+  "row_count": 8470,
+  "source_database": {
+    "copy_hash_matched_before_and_after": true,
+    "path": "backend/data/hist_options.db",
+    "sha256_at_copy": "f602678c010e21642df988704266d11c4de804007ea31364b55bbd278aea5729",
+    "wal_present": false
+  },
+  "source_family": "LOCAL_RESEARCH_DERIVED_FROM_DHAN_AND_UPSTOX"
+}

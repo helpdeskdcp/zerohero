@@ -1,0 +1,13 @@
+{
+  "url": "https://www.nseindia.com/products-services/equity-derivatives-contract-specifications",
+  "retrieved_at": "2026-10-02T13:53:14.158883+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 92,
+  "http_status": "000",
+  "effective_url": "https://www.nseindia.com/products-services/equity-derivatives-contract-specifications",
+  "content_type": "",
+  "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+  "path": null,
+  "sha256": null,
+  "bytes": 0
+}

@@ -1,0 +1,499 @@
+{
+  "sha": "9cf00145a05a7c5fd80fc8ef77755118ac84156c",
+  "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/9cf00145a05a7c5fd80fc8ef77755118ac84156c",
+  "tree": [
+    {
+      "path": ".devcontainer",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9668cd8a3c4811393913be90a0120e23154c44e9",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/9668cd8a3c4811393913be90a0120e23154c44e9"
+    },
+    {
+      "path": ".devcontainer/Dockerfile",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a2841f4b5a9da88101e271714b6358fa59f9c6d5",
+      "size": 1352,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/a2841f4b5a9da88101e271714b6358fa59f9c6d5"
+    },
+    {
+      "path": ".devcontainer/devcontainer.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60912eb7bd34fa50d8fe6f4debba60c3c83003ea",
+      "size": 1927,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/60912eb7bd34fa50d8fe6f4debba60c3c83003ea"
+    },
+    {
+      "path": ".githooks",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "72c102e14c9609fb093370d68399c9ed39dcf5fb",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/72c102e14c9609fb093370d68399c9ed39dcf5fb"
+    },
+    {
+      "path": ".githooks/pre-push",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "4e43373ae730e43d4b9d7485180048526fbc35ff",
+      "size": 1008,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/4e43373ae730e43d4b9d7485180048526fbc35ff"
+    },
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "12a2c9fc78aeef874b472c0df56af02f93e808e2",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/12a2c9fc78aeef874b472c0df56af02f93e808e2"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "47180e5497af7ff4a1f4cec116b4cc2f37dbbfa8",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/47180e5497af7ff4a1f4cec116b4cc2f37dbbfa8"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1796a0ab7f97bf4e5b9c6f64a33da9373c3644ca",
+      "size": 94,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/1796a0ab7f97bf4e5b9c6f64a33da9373c3644ca"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/enhancements.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1f9a2ac44f147c8186a2c4cfcb496d2ff8dafbd3",
+      "size": 1154,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/1f9a2ac44f147c8186a2c4cfcb496d2ff8dafbd3"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/issue.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0bcca068db75ae74121ea6950d3173f02d894bbf",
+      "size": 1210,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/0bcca068db75ae74121ea6950d3173f02d894bbf"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "afddc82bd6ebb1e7345468cfdb75c677f84fdb5b",
+      "size": 7317,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/afddc82bd6ebb1e7345468cfdb75c677f84fdb5b"
+    },
+    {
+      "path": ".github/workflows",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "cf9d3b8e7f6491bd076c507fd7f8c78ff53a6a7a",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/cf9d3b8e7f6491bd076c507fd7f8c78ff53a6a7a"
+    },
+    {
+      "path": ".github/workflows/publish.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2847754301bedd2aade325d4bc74b1d671088758",
+      "size": 1557,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/2847754301bedd2aade325d4bc74b1d671088758"
+    },
+    {
+      "path": ".github/workflows/run-tests.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0e0981cb57b8be82e06995013b251017f4da8c2b",
+      "size": 1504,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/0e0981cb57b8be82e06995013b251017f4da8c2b"
+    },
+    {
+      "path": ".github/workflows/version-check.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c65421ce644f1c5a2dcb4663e27e9c63fb4050a3",
+      "size": 1214,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/c65421ce644f1c5a2dcb4663e27e9c63fb4050a3"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d3385bb63001bd4a971a531818c5f1200815ebb",
+      "size": 2127,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/5d3385bb63001bd4a971a531818c5f1200815ebb"
+    },
+    {
+      "path": ".travis.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ef13ae13c3e889af258fddb9300d7d28dafda6e",
+      "size": 251,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/6ef13ae13c3e889af258fddb9300d7d28dafda6e"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e5d9f72a4cb0291c3013a726cfb4ee7b97a6f693",
+      "size": 6136,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/e5d9f72a4cb0291c3013a726cfb4ee7b97a6f693"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b0d0f477689b24cc98dfa9051e8774aaec1a6bd1",
+      "size": 7121,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/b0d0f477689b24cc98dfa9051e8774aaec1a6bd1"
+    },
+    {
+      "path": "LICENSE.YOLO.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d8690a3871198fb4664dd9df00b85a76131376e",
+      "size": 487,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/3d8690a3871198fb4664dd9df00b85a76131376e"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cdd25e2f8e4639e5d13d8ec0ed4e1686db5762ff",
+      "size": 5329,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/cdd25e2f8e4639e5d13d8ec0ed4e1686db5762ff"
+    },
+    {
+      "path": "blog_run_test.sh",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c913d42e6f84d15e3500b2be61d0805a2c0388f6",
+      "size": 157,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/c913d42e6f84d15e3500b2be61d0805a2c0388f6"
+    },
+    {
+      "path": "check-version.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a240d4b0245fdde8023337e383c6b4beb80d585b",
+      "size": 1409,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/a240d4b0245fdde8023337e383c6b4beb80d585b"
+    },
+    {
+      "path": "docs",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "11579f14f19ebc2cd482c8985f5d88cb6ee2251d",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/11579f14f19ebc2cd482c8985f5d88cb6ee2251d"
+    },
+    {
+      "path": "docs/API_REFERENCE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6740d53a2a432bf36604431842fc90acebb67296",
+      "size": 15655,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/6740d53a2a432bf36604431842fc90acebb67296"
+    },
+    {
+      "path": "docs/HISTORICAL_DATA_GUIDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "35495e14af42a080242271291f9ac417707d9e65",
+      "size": 20408,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/35495e14af42a080242271291f9ac417707d9e65"
+    },
+    {
+      "path": "docs/LIVE_DATA_GUIDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ab92d179b5e3606544f3c852c1cf5c17a54dfcb",
+      "size": 18700,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/4ab92d179b5e3606544f3c852c1cf5c17a54dfcb"
+    },
+    {
+      "path": "docs/QUICKSTART.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bb14a0691034173dd36b6ec680eb19971320d200",
+      "size": 7359,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/bb14a0691034173dd36b6ec680eb19971320d200"
+    },
+    {
+      "path": "docs/RBI_GUIDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8fd7dcf52fda8d5029f833c414a5dd87e60f569f",
+      "size": 10822,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/8fd7dcf52fda8d5029f833c414a5dd87e60f569f"
+    },
+    {
+      "path": "docs/index.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d179f75661d25e0c6dbf712278793782329d3852",
+      "size": 8236,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/d179f75661d25e0c6dbf712278793782329d3852"
+    },
+    {
+      "path": "jugaad_data",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "5bfdd7890cc9f91a3fde1bc11adee213c011b806",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/5bfdd7890cc9f91a3fde1bc11adee213c011b806"
+    },
+    {
+      "path": "jugaad_data/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d6cb6730644ea7fde30832c3d0546cf903b09af3",
+      "size": 22,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/d6cb6730644ea7fde30832c3d0546cf903b09af3"
+    },
+    {
+      "path": "jugaad_data/bse",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "5c8640798d4074dcf8494d75631d8828867cf72b",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/5c8640798d4074dcf8494d75631d8828867cf72b"
+    },
+    {
+      "path": "jugaad_data/bse/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f22bdfcbdaebfb3653207b256cf922c33e275666",
+      "size": 48,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/f22bdfcbdaebfb3653207b256cf922c33e275666"
+    },
+    {
+      "path": "jugaad_data/bse/live.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "397672a39d5d76e9ecd7a7de1d9ca9b2fa5dc531",
+      "size": 15579,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/397672a39d5d76e9ecd7a7de1d9ca9b2fa5dc531"
+    },
+    {
+      "path": "jugaad_data/cli.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6016e1e03060fdf234d2b9b08f81adc12d7acec",
+      "size": 7626,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/b6016e1e03060fdf234d2b9b08f81adc12d7acec"
+    },
+    {
+      "path": "jugaad_data/holidays.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ea2b52831b4da1fe6b5057435a274b86057d60e",
+      "size": 7940,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/6ea2b52831b4da1fe6b5057435a274b86057d60e"
+    },
+    {
+      "path": "jugaad_data/nse",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f4d7b834a62d045757226c17ad32b5c7d38affc8",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/f4d7b834a62d045757226c17ad32b5c7d38affc8"
+    },
+    {
+      "path": "jugaad_data/nse/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "476fccc8038592126233069034e5793ae830d79c",
+      "size": 67,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/476fccc8038592126233069034e5793ae830d79c"
+    },
+    {
+      "path": "jugaad_data/nse/archives.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da922fbcbf2badb1070f31f2ee6125a3bb82bdfd",
+      "size": 26826,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/da922fbcbf2badb1070f31f2ee6125a3bb82bdfd"
+    },
+    {
+      "path": "jugaad_data/nse/history.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "613cca9ee01e42a6f3f05fc8e88cf2b8b28b4f71",
+      "size": 19959,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/613cca9ee01e42a6f3f05fc8e88cf2b8b28b4f71"
+    },
+    {
+      "path": "jugaad_data/nse/live.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "df3aaa0e7769850e159bb064c0de997b8cfb6af8",
+      "size": 15150,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/df3aaa0e7769850e159bb064c0de997b8cfb6af8"
+    },
+    {
+      "path": "jugaad_data/rbi",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "21edfa97778ef311a3ca0cf9db17ed55e3ad22c7",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/21edfa97778ef311a3ca0cf9db17ed55e3ad22c7"
+    },
+    {
+      "path": "jugaad_data/rbi/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7fd80a5172adc40a340dfa81c384375c9aa98840",
+      "size": 2957,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/7fd80a5172adc40a340dfa81c384375c9aa98840"
+    },
+    {
+      "path": "jugaad_data/util.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ac05a36fc6046e5474508fd070532f95b8f9106",
+      "size": 6186,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/7ac05a36fc6046e5474508fd070532f95b8f9106"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "54f91f86108e581041627e09b3c33f69cbcb9db0",
+      "size": 817,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/54f91f86108e581041627e09b3c33f69cbcb9db0"
+    },
+    {
+      "path": "pytest.ini",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1f27fa98a3530fd833c7188e481b07f202f8f56e",
+      "size": 192,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/1f27fa98a3530fd833c7188e481b07f202f8f56e"
+    },
+    {
+      "path": "requirements.dev.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bc46a4e80ed50c72b8b3e3a2db2854043a500980",
+      "size": 84,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/bc46a4e80ed50c72b8b3e3a2db2854043a500980"
+    },
+    {
+      "path": "requirements.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "41433069c3d616dbe9f3526f64edab30317138cc",
+      "size": 93,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/41433069c3d616dbe9f3526f64edab30317138cc"
+    },
+    {
+      "path": "run_tests.sh",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "c95dbb1dfbccc3013dd257b1da0fca554cd63b9b",
+      "size": 362,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/c95dbb1dfbccc3013dd257b1da0fca554cd63b9b"
+    },
+    {
+      "path": "scripts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6309a594d0291353acd9d33fddd6c1b4918726f3",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/6309a594d0291353acd9d33fddd6c1b4918726f3"
+    },
+    {
+      "path": "scripts/check_version.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7c5042c4127b6f43f175810dfc7cdd2198e8390f",
+      "size": 2067,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/7c5042c4127b6f43f175810dfc7cdd2198e8390f"
+    },
+    {
+      "path": "tests",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1527b5e1347fc6ffc412ffd6cf4432c0162a95e9",
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/trees/1527b5e1347fc6ffc412ffd6cf4432c0162a95e9"
+    },
+    {
+      "path": "tests/__init__.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "tests/test_bhav.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1333bd8e7c2e278c6417a09011e711c2132c16c3",
+      "size": 14316,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/1333bd8e7c2e278c6417a09011e711c2132c16c3"
+    },
+    {
+      "path": "tests/test_bse_live.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "85f307842342a2617b026f1060b247b05b5e526b",
+      "size": 5834,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/85f307842342a2617b026f1060b247b05b5e526b"
+    },
+    {
+      "path": "tests/test_cache_concurrency.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa9c0a33ac00b2444a62ec610ab06023c6125dbf",
+      "size": 2043,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/fa9c0a33ac00b2444a62ec610ab06023c6125dbf"
+    },
+    {
+      "path": "tests/test_cli.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f19b9936da97e426ed5e7f29f9419f94c6f60cf8",
+      "size": 3635,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/f19b9936da97e426ed5e7f29f9419f94c6f60cf8"
+    },
+    {
+      "path": "tests/test_holidays.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9dfc1711d6ecabcd619c60c53cd3a3b247e405c1",
+      "size": 1007,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/9dfc1711d6ecabcd619c60c53cd3a3b247e405c1"
+    },
+    {
+      "path": "tests/test_nse.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e5c815514b58abaa0f3450595649b080a019a145",
+      "size": 12108,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/e5c815514b58abaa0f3450595649b080a019a145"
+    },
+    {
+      "path": "tests/test_nse_live.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2aa39dba4a9fb20ee4c130e0565c45658685b539",
+      "size": 4906,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/2aa39dba4a9fb20ee4c130e0565c45658685b539"
+    },
+    {
+      "path": "tests/test_rbi.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f26a1b464d515f79696737753bb60dc84391234",
+      "size": 332,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/8f26a1b464d515f79696737753bb60dc84391234"
+    },
+    {
+      "path": "tests/test_util.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "62e4c287f94f8c7a3b2aa8e14fc0f5bb8350828f",
+      "size": 5185,
+      "url": "https://api.github.com/repos/jugaad-py/jugaad-data/git/blobs/62e4c287f94f8c7a3b2aa8e14fc0f5bb8350828f"
+    }
+  ],
+  "truncated": false
+}

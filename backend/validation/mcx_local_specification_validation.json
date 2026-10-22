@@ -1,0 +1,114 @@
+{
+  "relevant_tests": {
+    "tests": 1145,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "passed": 1145,
+  "new_regression_cases": 41,
+  "targeted_tests_passed": 41,
+  "phase2_diagnostics_included": 4,
+  "warnings": 0,
+  "warnings_as_errors": true,
+  "junit_path": "/tmp/mcx-local-specifications-relevant/result.xml",
+  "junit_sha256": "47c5a8a7dc088b7d0b70ae5395e3778d43a42635e934ac1c24ffba8908b22438",
+  "mypy": {
+    "status": "PASS",
+    "files_checked": 5
+  },
+  "syntax": "PASS",
+  "git_diff_check": "PASS",
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-product-20261004/SHA256SUMS",
+      "passed": 2,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-specifications-20261004/SHA256SUMS",
+      "passed": 6,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-direct-20261004/SHA256SUMS",
+      "passed": 23,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4,
+      "returncode": 0
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6,
+      "returncode": 0
+    },
+    {
+      "manifest": "backend/validation/MCX_SPECIFICATION_SHA256SUMS",
+      "passed": 3,
+      "returncode": 0
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/SHA256SUMS",
+      "passed": 7,
+      "returncode": 0
+    }
+  ],
+  "changed_files": [
+    "backend/MCX_SPECIFICATION_ACQUISITION_REPORT.md",
+    "backend/calendar_evidence_acquisition/parsed/mcx_specification_candidates_20261004.json",
+    "backend/validation/MCX_SPECIFICATION_SHA256SUMS",
+    "backend/tests/test_mcx_local_specification_evidence.py",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/2025.pdfinfo.txt",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/2025.txt",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/2026.pdfinfo.txt",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/2026.txt",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/2027.pdfinfo.txt",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/2027.txt",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/SHA256SUMS",
+    "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/evidence.json",
+    "backend/validation/mcx_local_specification_validation.json",
+    "backend/validation/MCX_LOCAL_SPECIFICATION_SHA256SUMS"
+  ],
+  "network_requests": 0,
+  "application_code_changed": false,
+  "pdfs_modified": false,
+  "october_archives": "UNCHANGED",
+  "published_schedule_entries": 36,
+  "historical_trading_observations": 0,
+  "validated_production_expiries": 0,
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED"
+}

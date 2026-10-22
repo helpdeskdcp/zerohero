@@ -1,0 +1,160 @@
+{
+  "status": "INSTALLATION_BLOCKED",
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "mcx": "DISABLED / OUT_OF_SCOPE",
+  "tests": {
+    "passed": 1221,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "warnings": 0
+  },
+  "mypy": {
+    "status": "PASS",
+    "files": 6
+  },
+  "syntax": {
+    "status": "PASS",
+    "files": 6
+  },
+  "checksums": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": 192
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-product-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/mcx-naturalgas-specifications-20261004/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": 20
+    },
+    {
+      "manifest": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": 22
+    },
+    {
+      "manifest": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": 21
+    },
+    {
+      "manifest": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": 11
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-direct-20261004/SHA256SUMS",
+      "passed": 23
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-fallback-20261004/SHA256SUMS",
+      "passed": 2
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003/SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "artifacts/staging/own-exchange-review-20261003-network/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/validation/MCX_LOCAL_SPECIFICATION_SHA256SUMS",
+      "passed": 16
+    },
+    {
+      "manifest": "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "backend/validation/MCX_SPECIFICATION_SHA256SUMS",
+      "passed": 3
+    },
+    {
+      "manifest": "backend/validation/NSE_COMPLETION_SHA256SUMS",
+      "passed": 19
+    },
+    {
+      "manifest": "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+      "passed": 7
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_DIRECT_SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_FALLBACK_SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/SHA256SUMS",
+      "passed": 7
+    },
+    {
+      "manifest": "backend/validation/MCX_DISABLED_SHA256SUMS",
+      "passed": 32
+    },
+    {
+      "manifest": "artifacts/staging/nse-bse-requirements-20261005/SHA256SUMS",
+      "passed": 11
+    },
+    {
+      "manifest": "backend/validation/NSE_BSE_REMAINING_SHA256SUMS",
+      "passed": 21
+    },
+    {
+      "manifest": "artifacts/staging/nse-bse-cutoff-followup-20261005/SHA256SUMS",
+      "passed": 4
+    },
+    {
+      "manifest": "artifacts/staging/nse-bse-cutoff-followup-network-20261005/SHA256SUMS",
+      "passed": 6
+    },
+    {
+      "manifest": "artifacts/staging/nse-bse-cutoff-circulars-20261005/SHA256SUMS",
+      "passed": 2
+    }
+  ],
+  "checksum_entries": 457,
+  "git_diff_check": "PASS",
+  "runtime_code_changes": false,
+  "files_added": [
+    "artifacts/staging/nse-bse-cutoff-followup-20261005/6ac4208907eefb83fd0c.body",
+    "artifacts/staging/nse-bse-cutoff-followup-20261005/6ac4208907eefb83fd0c.json",
+    "artifacts/staging/nse-bse-cutoff-followup-20261005/793f2e08395936e6ebfc.body",
+    "artifacts/staging/nse-bse-cutoff-followup-20261005/793f2e08395936e6ebfc.json",
+    "artifacts/staging/nse-bse-cutoff-followup-20261005/SHA256SUMS",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/3c5442298f6a5de10d6d.body",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/3c5442298f6a5de10d6d.json",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/6ac4208907eefb83fd0c.body",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/6ac4208907eefb83fd0c.json",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/793f2e08395936e6ebfc.body",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/793f2e08395936e6ebfc.json",
+    "artifacts/staging/nse-bse-cutoff-followup-network-20261005/SHA256SUMS",
+    "artifacts/staging/nse-bse-cutoff-circulars-20261005/6c9b4af0b83af0fbc1ea.body",
+    "artifacts/staging/nse-bse-cutoff-circulars-20261005/6c9b4af0b83af0fbc1ea.json",
+    "artifacts/staging/nse-bse-cutoff-circulars-20261005/SHA256SUMS",
+    "backend/NSE_BSE_CUTOFF_FOLLOWUP.md",
+    "backend/calendar_evidence_acquisition/parsed/nse_bse_cutoff_followup_20261005.json",
+    "backend/validation/nse_bse_cutoff_followup_validation.json"
+  ],
+  "network": {
+    "official_nse_https_gets": 4,
+    "sandbox_dns_failures": 2,
+    "bse_requests": 0,
+    "mcx_requests": 0,
+    "broker_requests": 0
+  },
+  "orders": 0,
+  "migrations": 0,
+  "restarts": 0
+}

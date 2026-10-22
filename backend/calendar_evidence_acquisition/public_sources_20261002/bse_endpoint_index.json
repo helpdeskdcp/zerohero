@@ -1,0 +1,13 @@
+{
+  "url": "https://www.bseindia.com/assets/includenew/js/chunk-SCEKLEXO.js",
+  "retrieved_at": "2026-10-02T13:56:18.254160+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://www.bseindia.com/assets/includenew/js/chunk-SCEKLEXO.js",
+  "content_type": "application/javascript",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_endpoint_index.body",
+  "sha256": "7637f2f2f5e903d5bd9813c74f43864ba7387bfa866854f088c12776b96453fe",
+  "bytes": 72119
+}

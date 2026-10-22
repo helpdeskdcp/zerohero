@@ -1,0 +1,1024 @@
+{
+  "version": "nse-official-calendar-evidence/20261003.1",
+  "calendar_schema": "official-exchange-calendar/v1",
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "sources": [
+    {
+      "source_url": "https://www.nseindia.com/static/market-data/market-timings",
+      "sha256": "022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "observed_at": "2026-10-03T16:48:23.447152+00:00",
+      "response_headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Date": "Sat, 03 Oct 2026 16:48:23 GMT"
+      },
+      "discovery_method": "EXPLICIT_REVIEW_OF_OFFICIAL_SAME_HOST_301_LOCATION",
+      "discovery_parent": {
+        "url": "https://www.nseindia.com/market-data/market-timings",
+        "method": "HEAD",
+        "http_status": 301,
+        "location": "/static/market-data/market-timings",
+        "content_type": "text/plain; charset=utf-8",
+        "observed_at": "2026-10-03T16:27:09.032211+00:00",
+        "redirect_followed": false
+      },
+      "redirects_followed": false,
+      "robots_result": "ALLOWED",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/275093afd4c9ee0154ceb8b0c20b96b85d777b28c632f616a2beea8d7a27b561.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227.raw",
+      "evidence_use": "OFFICIAL_RULE_CONTEXT_NOT_COMPLETE_CALENDAR"
+    },
+    {
+      "source_url": "https://www.nseindia.com/market-data/securities-information-contracts-available-for-trading",
+      "sha256": "e1fc823f631d747e9f9d53b6cd449969dd7ce03874ee54667c6be25c5d89b6c3",
+      "http_status": 301,
+      "content_type": "text/plain; charset=utf-8",
+      "location": "/static/market-data/securities-information-contracts-available-for-trading",
+      "observed_at": "2026-10-03T16:49:24.711900+00:00",
+      "parent_sha256": "022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227",
+      "discovery_method": "OFFICIAL_HTML_HREF",
+      "redirects_followed": false,
+      "robots_result": "ALLOWED",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/703c538ce184d1b0343aff40f95c15ba0cd9edccde5df2e830c66e113da7aa27.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/e1fc823f631d747e9f9d53b6cd449969dd7ce03874ee54667c6be25c5d89b6c3.raw",
+      "evidence_use": "SOURCE_DISCOVERY_ONLY"
+    },
+    {
+      "source_url": "https://www.nseindia.com/robots.txt",
+      "sha256": "318df6884989e0386b3cfa7bd4f227fb8879892bb6be0272d6621c1909445d6a",
+      "observed_at": "2026-10-03T16:22:33.588022+00:00",
+      "http_status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "response_headers": {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Length": "96",
+        "Date": "Sat, 03 Oct 2026 16:22:33 GMT"
+      },
+      "parent_sha256": null,
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/9402c64d404525236f8de1499054e80b1954cce54d151c66fd7286646488a05b.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/318df6884989e0386b3cfa7bd4f227fb8879892bb6be0272d6621c1909445d6a.raw",
+      "evidence_use": "POLICY"
+    },
+    {
+      "source_url": "https://www.nseindia.com/static/market-data/securities-information-contracts-available-for-trading",
+      "sha256": "548bdc3344aabe97e44cd7737f5fb46fc6cd7e462a0aeac0faa208328e8b145a",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "observed_at": "2026-10-03T16:49:36.620016+00:00",
+      "response_headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Date": "Sat, 03 Oct 2026 16:49:36 GMT"
+      },
+      "discovery_method": "EXPLICIT_REVIEW_OF_OFFICIAL_SAME_HOST_301_LOCATION",
+      "discovery_parent": {
+        "source_url": "https://www.nseindia.com/market-data/securities-information-contracts-available-for-trading",
+        "sha256": "e1fc823f631d747e9f9d53b6cd449969dd7ce03874ee54667c6be25c5d89b6c3",
+        "http_status": 301,
+        "content_type": "text/plain; charset=utf-8",
+        "location": "/static/market-data/securities-information-contracts-available-for-trading",
+        "observed_at": "2026-10-03T16:49:24.711900+00:00",
+        "parent_sha256": "022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227",
+        "discovery_method": "OFFICIAL_HTML_HREF",
+        "redirects_followed": false,
+        "robots_result": "ALLOWED",
+        "url": "https://www.nseindia.com/market-data/securities-information-contracts-available-for-trading",
+        "redirect_followed": false
+      },
+      "redirects_followed": false,
+      "robots_result": "ALLOWED",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/a32acb87d1e66f1e9f426185cb8829c62eaf77229ddb820a19d6c68bce47ccfb.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/548bdc3344aabe97e44cd7737f5fb46fc6cd7e462a0aeac0faa208328e8b145a.raw",
+      "evidence_use": "OFFICIAL_RULE_CONTEXT_NOT_COMPLETE_CALENDAR"
+    },
+    {
+      "source_url": "https://www.nseindia.com/static/products-services/equity-derivatives-contract-specifications",
+      "sha256": "9e91df5dcaafc532985e648eb36d7c1ca2156801f0d546268d78d7d064e07ea8",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "observed_at": "2026-10-03T16:54:43.686111+00:00",
+      "response_headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Date": "Sat, 03 Oct 2026 16:54:43 GMT"
+      },
+      "discovery_method": "EXPLICIT_REVIEW_OF_OFFICIAL_SAME_HOST_301_LOCATION",
+      "discovery_parent": {
+        "source_url": "https://www.nseindia.com/products-services/equity-derivatives-contract-specifications",
+        "sha256": "decbbaa14f767b339e0ff1bed89a977403b2b8fc2597165c105d782015127b78",
+        "http_status": 301,
+        "content_type": "text/plain; charset=utf-8",
+        "location": "/static/products-services/equity-derivatives-contract-specifications",
+        "observed_at": "2026-10-03T16:54:37.651464+00:00",
+        "parent_sha256": "548bdc3344aabe97e44cd7737f5fb46fc6cd7e462a0aeac0faa208328e8b145a",
+        "discovery_method": "OFFICIAL_HTML_HREF",
+        "redirects_followed": false,
+        "robots_result": "ALLOWED",
+        "url": "https://www.nseindia.com/products-services/equity-derivatives-contract-specifications",
+        "redirect_followed": false
+      },
+      "redirects_followed": false,
+      "robots_result": "ALLOWED",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/adfb96061f611280ba0ea18438adbd440cdba548ebdd565bf1194cb7cd1e1e3e.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/9e91df5dcaafc532985e648eb36d7c1ca2156801f0d546268d78d7d064e07ea8.raw",
+      "evidence_use": "OFFICIAL_RULE_CONTEXT_NOT_COMPLETE_CALENDAR"
+    },
+    {
+      "source_url": "https://nsearchives.nseindia.com/robots.txt",
+      "http_status": 404,
+      "content_type": "text/html;charset=UTF-8",
+      "sha256": "41fd81290608a684e8c2e9912890d5e77734a2f4f631ab9e4298274e485fa4e1",
+      "observed_at": "2026-10-03T16:55:14.392356+00:00",
+      "redirects_followed": false,
+      "location": null,
+      "discovery_method": "ROBOTS_POLICY",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/d967bf4322e7a80c765673c9cecefc8c082209282d687500306185f7625c56e2.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/41fd81290608a684e8c2e9912890d5e77734a2f4f631ab9e4298274e485fa4e1.raw",
+      "evidence_use": "POLICY"
+    },
+    {
+      "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+      "http_status": 200,
+      "content_type": "application/pdf",
+      "sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+      "observed_at": "2026-10-03T16:55:14.930104+00:00",
+      "redirects_followed": false,
+      "location": null,
+      "discovery_method": "OFFICIAL_SPECIFICATION_LINK",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/eb7bf8471e9a1ffca008f4a74e98cd0be0d130da1396d214e729bb57451c2821.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762.raw",
+      "evidence_use": "OFFICIAL_RULE_CONTEXT_NOT_COMPLETE_CALENDAR"
+    },
+    {
+      "source_url": "https://www.nseindia.com/products-services/equity-derivatives-contract-specifications",
+      "sha256": "decbbaa14f767b339e0ff1bed89a977403b2b8fc2597165c105d782015127b78",
+      "http_status": 301,
+      "content_type": "text/plain; charset=utf-8",
+      "location": "/static/products-services/equity-derivatives-contract-specifications",
+      "observed_at": "2026-10-03T16:54:37.651464+00:00",
+      "parent_sha256": "548bdc3344aabe97e44cd7737f5fb46fc6cd7e462a0aeac0faa208328e8b145a",
+      "discovery_method": "OFFICIAL_HTML_HREF",
+      "redirects_followed": false,
+      "robots_result": "ALLOWED",
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/f48cfc291d335d23b8edec816d7ee76b69889bd03dad972dc0306dcf2f174038.json",
+      "raw_path": "artifacts/staging/nse-calendar-review-20261003/decbbaa14f767b339e0ff1bed89a977403b2b8fc2597165c105d782015127b78.raw",
+      "evidence_use": "SOURCE_DISCOVERY_ONLY"
+    },
+    {
+      "url": "https://www.nseindia.com/market-data/market-timings",
+      "method": "HEAD",
+      "http_status": 301,
+      "location": "/static/market-data/market-timings",
+      "content_type": "text/plain; charset=utf-8",
+      "observed_at": "2026-10-03T16:27:09.032211+00:00",
+      "redirect_followed": false,
+      "metadata_path": "artifacts/staging/nse-calendar-review-20261003/redirect_diagnostic.json",
+      "evidence_use": "SOURCE_DISCOVERY_ONLY"
+    }
+  ],
+  "circular": {
+    "document_id": "NSE/FAOP/68747",
+    "circular_reference": "111/2025",
+    "publication_date": "2025-06-25",
+    "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+    "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+    "text_path": "artifacts/staging/nse-calendar-review-20261003/FAOP68747.txt",
+    "text_sha256": "9890cfdc7d93f0144e5cd3deca9793809ecdbc634d9279034e69b89096a96ca6",
+    "extraction": "pdftotext -layout",
+    "transitions": [
+      {
+        "scope": "New contracts with expiry on/after 2025-09-01",
+        "effective_display": "June 26, 2025 EOD onwards",
+        "old_rule": "Thursday",
+        "new_rule": "Tuesday",
+        "cutoff_time": null
+      },
+      {
+        "scope": "Existing NIFTY/BANKNIFTY long-dated options September 2025 onwards",
+        "effective_display": "July 31, 2025 EOD",
+        "action": "Realign with revised Tuesday expiry",
+        "cutoff_time": null
+      }
+    ],
+    "qualification": "Annexure dates may change on account of any holiday declared; no missing date was generated"
+  },
+  "current_specification": {
+    "source_url": "https://www.nseindia.com/static/products-services/equity-derivatives-contract-specifications",
+    "source_sha256": "9e91df5dcaafc532985e648eb36d7c1ca2156801f0d546268d78d7d064e07ea8",
+    "updated_display": "11/08/2026",
+    "nifty_cycles": "4 weekly excluding monthly; 3 monthly; quarterly and half-yearly contracts as described",
+    "other_nse_index_cycles": "3 monthly; BANKNIFTY also quarterly",
+    "holiday_rule": "Previous trading day when the Tuesday expiry is a trading holiday",
+    "historical_backfill_authorized": false
+  },
+  "normal_session_context": {
+    "source_url": "https://www.nseindia.com/static/market-data/market-timings",
+    "source_sha256": "022cacc11dec6fd6a39e44569ffdfa78d1349d1990cd6fa0b67ade7408c41227",
+    "equity_derivatives_open_display": "09:15 hrs.",
+    "equity_derivatives_close_display": "15:40 hrs.",
+    "contract_expiry_cutoff_established": false,
+    "effective_period_established": false
+  },
+  "observations": [
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-06",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-13",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-19",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-27",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-11-03",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-11-23",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-12-29",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-03-30",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-06-29",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-09-28",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-12-28",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2028-06-27",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2028-12-26",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2029-06-26",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2029-12-24",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2030-06-25",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": [
+        "HALF_YEARLY"
+      ],
+      "cycle_evidence": {
+        "source_url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAOP68747.pdf",
+        "source_sha256": "e1b56024a511135ffd5c6c3c097881dd0ac2c37b15b5f61e94fe84e51cf66762",
+        "scope": "Annexure illustration corroborated by current selector; holiday-change qualification retained"
+      },
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2030-12-31",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2031-06-24",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "source_sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "retrieved_at": "2026-10-03T04:06:30.676936+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-27",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "source_sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "retrieved_at": "2026-10-03T14:54:44.795264+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-11-23",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "source_sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "retrieved_at": "2026-10-03T14:54:44.795264+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-12-29",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "source_sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "retrieved_at": "2026-10-03T14:54:44.795264+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-03-30",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "source_sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "retrieved_at": "2026-10-03T14:54:44.795264+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-06-29",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "source_sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "retrieved_at": "2026-10-03T14:54:44.795264+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2027-09-28",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "source_sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "retrieved_at": "2026-10-03T14:54:44.795264+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "FINNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-27",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=FINNIFTY",
+      "source_sha256": "7686e5b20fa21e2048784471f76cb52312a80f099fbe61923e657bc9f0421308",
+      "retrieved_at": "2026-10-03T14:54:45.998122+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "FINNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-11-23",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=FINNIFTY",
+      "source_sha256": "7686e5b20fa21e2048784471f76cb52312a80f099fbe61923e657bc9f0421308",
+      "retrieved_at": "2026-10-03T14:54:45.998122+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "FINNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-12-29",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=FINNIFTY",
+      "source_sha256": "7686e5b20fa21e2048784471f76cb52312a80f099fbe61923e657bc9f0421308",
+      "retrieved_at": "2026-10-03T14:54:45.998122+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "MIDCPNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-10-27",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=MIDCPNIFTY",
+      "source_sha256": "4167308be6075b845985b7a75adbd93006110e27317911982740989baa0987f9",
+      "retrieved_at": "2026-10-03T14:54:47.249099+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "MIDCPNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-11-23",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=MIDCPNIFTY",
+      "source_sha256": "4167308be6075b845985b7a75adbd93006110e27317911982740989baa0987f9",
+      "retrieved_at": "2026-10-03T14:54:47.249099+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "MIDCPNIFTY",
+      "instrument": "OPTIDX",
+      "contract_type": "OPTION",
+      "expiry": "2026-12-29",
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=MIDCPNIFTY",
+      "source_sha256": "4167308be6075b845985b7a75adbd93006110e27317911982740989baa0987f9",
+      "retrieved_at": "2026-10-03T14:54:47.249099+00:00",
+      "source_timestamp": null,
+      "published_at": null,
+      "listed_at": null,
+      "last_trading_at": null,
+      "cycles": null,
+      "cycle_evidence": null,
+      "status": "UNVERIFIED",
+      "validated_expiry_observation": true,
+      "missing": [
+        "COMPLETE_LIFECYCLE_INTERVAL",
+        "PUBLICATION_LISTING_TIMESTAMPS",
+        "CONTRACT_CUTOFF_EVIDENCE",
+        "INDEPENDENT_CALENDAR_REVIEW"
+      ]
+    }
+  ],
+  "counts": {
+    "validated_expiry_observations": 30,
+    "corroborated_annexure_cycle_entries": 8,
+    "fully_verified_resolvable_entries": 0
+  },
+  "missing_exchange_evidence": {
+    "BSE": [
+      "SENSEX",
+      "BANKEX"
+    ],
+    "MCX": [
+      "NATURALGAS",
+      "NATGASMINI",
+      "CRUDEOIL",
+      "CRUDEOILMINI",
+      "GOLD",
+      "GOLDMINI",
+      "SILVER",
+      "SILVERMINI"
+    ]
+  },
+  "master_candidate": "backend/calendar_evidence_acquisition/parsed/nse_calendar_acquisition_20261003.json",
+  "missing_master_evidence": [
+    "Independent exact master download provenance",
+    "Official numeric date epoch/timezone/units layout"
+  ],
+  "limitations": [
+    "Official current rules must not be back-applied to uncovered history",
+    "General session closing time does not establish each contract final-trading cutoff",
+    "No current selector publication timestamp was invented",
+    "No exchange evidence establishes historical DHAN or ANGELONE listing coverage"
+  ]
+}

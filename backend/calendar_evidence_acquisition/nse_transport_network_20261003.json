@@ -1,0 +1,72 @@
+[
+  {
+    "host": "www.nseindia.com",
+    "family": "IPv4",
+    "recorded_at": "2026-10-03T02:46:39.588317+00:00",
+    "method": "HEAD",
+    "path": "/robots.txt",
+    "dns_addresses": [
+      "2.22.251.22",
+      "2.22.251.29",
+      "2.22.251.31",
+      "2.22.251.44",
+      "2.22.251.52",
+      "2.22.251.56",
+      "2.22.251.67",
+      "2.22.251.8"
+    ],
+    "tls_protocol": "TLSv1.3",
+    "certificate_verified": true,
+    "alpn": "http/1.1",
+    "peer": "2.22.251.52",
+    "stage": "HTTP",
+    "http_protocol": "HTTP/1.1",
+    "http_status": 200
+  },
+  {
+    "host": "www.nseindia.com",
+    "family": "IPv6",
+    "recorded_at": "2026-10-03T02:46:39.658876+00:00",
+    "method": "HEAD",
+    "path": "/robots.txt",
+    "stage": "DNS",
+    "error_type": "gaierror",
+    "errno": -5
+  },
+  {
+    "host": "nsearchives.nseindia.com",
+    "family": "IPv4",
+    "recorded_at": "2026-10-03T02:46:39.659735+00:00",
+    "method": "HEAD",
+    "path": "/robots.txt",
+    "dns_addresses": [
+      "2.22.251.29",
+      "2.22.251.46"
+    ],
+    "tls_protocol": "TLSv1.3",
+    "certificate_verified": true,
+    "alpn": "http/1.1",
+    "peer": "2.22.251.46",
+    "stage": "HTTP",
+    "http_protocol": "HTTP/1.1",
+    "http_status": 200
+  },
+  {
+    "host": "nsearchives.nseindia.com",
+    "family": "IPv6",
+    "recorded_at": "2026-10-03T02:46:39.870557+00:00",
+    "method": "HEAD",
+    "path": "/robots.txt",
+    "dns_addresses": [
+      "2a02:26f0:82::17c8:5612",
+      "2a02:26f0:82::17c8:5730"
+    ],
+    "tls_protocol": "TLSv1.3",
+    "certificate_verified": true,
+    "alpn": "http/1.1",
+    "peer": "2a02:26f0:82::17c8:5612",
+    "stage": "HTTP",
+    "http_protocol": "HTTP/1.1",
+    "http_status": 200
+  }
+]

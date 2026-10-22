@@ -1,0 +1,19 @@
+{
+  "source_url": "https://api.bseindia.com/BseIndiaAPI/api/getDataAdvance/w?strTxtNoticeNo=&strTxtDate=2025-01-01&strTxtTodate=2026-10-02&strScripcode=&strDep=&strSegment=&subject=expiry&category=&containgtext=",
+  "source_class": "SECONDARY_DATASET",
+  "exchange": "BSE",
+  "dataset": "PRIOR_FAILED_SOURCE",
+  "cache_key": "9c5d06d467cdfc948e01fa93dbb71423a0377014369c813327ca5d8f02b548d7",
+  "acquired_at": "2026-10-02T13:57:54.182695+00:00",
+  "http_status": 403,
+  "sha256": "bcfbe6b69930df0c78462f421746366c01f0baa494aefd04db98ab5659f2b85c",
+  "bytes": 419,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": true,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

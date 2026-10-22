@@ -1,0 +1,19 @@
+{
+  "source_url": "https://dhan.co/expiry-calendar/",
+  "source_class": "SECONDARY_DATASET",
+  "exchange": "NSE",
+  "dataset": "PRIOR_FAILED_SOURCE",
+  "cache_key": "45605becef437c374323a69f00c99010ba9683a5f0c14b48324ba375bed1671e",
+  "acquired_at": "2026-10-02T13:53:52.923714+00:00",
+  "http_status": 404,
+  "sha256": "35dd365e7c3031c711914e7e03a3c2061e2efd20f215391c9031d0555dfb31ee",
+  "bytes": 77901,
+  "error": "",
+  "acquisition_status": "FAILED",
+  "permanent_failure": true,
+  "retry_attempted": false,
+  "verification_status": "UNVERIFIED",
+  "coverage_start": null,
+  "coverage_end": null,
+  "parser_status": "NOT_ATTEMPTED_DOWNLOAD_FAILED"
+}

@@ -1,0 +1,135 @@
+{
+  "version": "official-eod-discovery/v1",
+  "attempts": [
+    {
+      "source_id": "nse_derivative_reports_landing",
+      "url": "https://www.nseindia.com/all-reports-derivatives",
+      "retrieved_at": "2026-10-02T15:04:22.235239+00:00",
+      "curl_exit": 92,
+      "http_status": "000",
+      "effective_url": "https://www.nseindia.com/all-reports-derivatives",
+      "content_type": "",
+      "error": "curl: (92) HTTP/2 stream 1 was not closed cleanly: INTERNAL_ERROR (err 2)",
+      "path": null,
+      "sha256": null,
+      "bytes": 0,
+      "retry_attempted": false,
+      "method": "unauthenticated public static GET",
+      "source_family": "NSE",
+      "source_class": "OFFICIAL_ARCHIVE",
+      "source_type": "OFFICIAL_REPORT_DISCOVERY_NOT_EOD_DATA",
+      "exchange": [
+        "NSE"
+      ],
+      "provider": null,
+      "classification": "ACCESS_BLOCKED",
+      "historical_calendar_usable": false,
+      "independently_verified": false,
+      "what_it_proves": "Retained discovery attempt and failure only; no report/data file validated.",
+      "what_it_does_not_prove": "No historical expiry observation, trading-day completeness, current downloadable endpoint or provider listing is established.",
+      "publication_date": null,
+      "coverage_start": null,
+      "coverage_end": null,
+      "cache_key": "0139f67266bddad1d0bf5ca686225c909b02a9c659d2972a53be45b5021d5026",
+      "request_metadata_path": "backend/calendar_evidence_acquisition/static_sources_20261002/nse_derivative_reports_landing.json"
+    },
+    {
+      "source_id": "bse_derivative_report_listing_20260903",
+      "url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+      "retrieved_at": "2026-10-02T15:04:22.241754+00:00",
+      "curl_exit": 0,
+      "http_status": "403",
+      "effective_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+      "content_type": "text/html",
+      "error": "",
+      "path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.body",
+      "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+      "bytes": 416,
+      "retry_attempted": false,
+      "method": "unauthenticated public static GET",
+      "source_family": "BSE",
+      "source_class": "OFFICIAL_ARCHIVE",
+      "source_type": "OFFICIAL_REPORT_DISCOVERY_NOT_EOD_DATA",
+      "exchange": [
+        "BSE"
+      ],
+      "provider": null,
+      "classification": "ACCESS_BLOCKED",
+      "historical_calendar_usable": false,
+      "independently_verified": false,
+      "what_it_proves": "Retained discovery attempt and failure only; no report/data file validated.",
+      "what_it_does_not_prove": "No historical expiry observation, trading-day completeness, current downloadable endpoint or provider listing is established.",
+      "publication_date": null,
+      "coverage_start": null,
+      "coverage_end": null,
+      "cache_key": "ea269277c177816de177cb318c0a107c26eae65b7b6a553bd7c651872dedf50c",
+      "request_metadata_path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.json"
+    },
+    {
+      "source_id": "mcx_bhavcopy_landing",
+      "url": "https://www.mcxindia.com/market-data/bhavcopy",
+      "retrieved_at": "2026-10-02T15:04:22.236757+00:00",
+      "curl_exit": 0,
+      "http_status": "403",
+      "effective_url": "https://www.mcxindia.com/market-data/bhavcopy",
+      "content_type": "text/html",
+      "error": "",
+      "path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.body",
+      "sha256": "f4b17f60b6449767a21b8a2cc8ea9c74de19faf1eadaab69a32e306fdd39e190",
+      "bytes": 396,
+      "retry_attempted": false,
+      "method": "unauthenticated public static GET",
+      "source_family": "MCX",
+      "source_class": "OFFICIAL_ARCHIVE",
+      "source_type": "OFFICIAL_REPORT_DISCOVERY_NOT_EOD_DATA",
+      "exchange": [
+        "MCX"
+      ],
+      "provider": null,
+      "classification": "ACCESS_BLOCKED",
+      "historical_calendar_usable": false,
+      "independently_verified": false,
+      "what_it_proves": "Retained discovery attempt and failure only; no report/data file validated.",
+      "what_it_does_not_prove": "No historical expiry observation, trading-day completeness, current downloadable endpoint or provider listing is established.",
+      "publication_date": null,
+      "coverage_start": null,
+      "coverage_end": null,
+      "cache_key": "2b737387bb32d49ba5fb377879ef05cc5ef81fc89ccd6ec15a0faa0a4db635f9",
+      "request_metadata_path": "backend/calendar_evidence_acquisition/static_sources_20261002/mcx_bhavcopy_landing.json"
+    }
+  ],
+  "bse_cached_discovery_proofs": [
+    {
+      "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_markets_routes.body",
+      "sha256": "943501d5c346726ed6de5eedddc32cefab237dbeb88d063db04eff948d22d5c4",
+      "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-XNUURNBE.js",
+      "excerpt": "getBhavcopydata with flag=1, segment=deri, date=YYYYMMDD; /download/BhavCopy/Derivative/ plus returned filename"
+    },
+    {
+      "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_endpoint_index.body",
+      "sha256": "7637f2f2f5e903d5bd9813c74f43864ba7387bfa866854f088c12776b96453fe",
+      "source_url": "https://www.bseindia.com/assets/includenew/js/chunk-SCEKLEXO.js",
+      "excerpt": "getBhavcopydata:\"/GetBhavcopydata/w\""
+    },
+    {
+      "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_public_config_data.body",
+      "sha256": "2ca488b5c4c16426c796d266188c6994e7c2830a61b47c49cae123e2969ff334",
+      "source_url": "https://www.bseindia.com/assets/data/appConfig.json",
+      "excerpt": "BSE_Domain_APIUrl=https://api.bseindia.com/BseIndiaAPI/api"
+    }
+  ],
+  "validated_download_endpoints": [],
+  "bse_status": "ENDPOINT_IDENTIFIED_FROM_OFFICIAL_SITE_CODE; LISTING_ACCESS_BLOCKED; NO_VALIDATED_FILE_LINK",
+  "nse_status": "REPORT_LANDING_TRANSPORT_FAILURE; NO_VALIDATED_FILE_LINK",
+  "mcx_status": "REPORT_LANDING_HTTP_403; NO_VALIDATED_FILE_LINK",
+  "downloads_enabled": false,
+  "network_requests": 3,
+  "duplicate_requests": 0,
+  "date_range_fanout_requests": 0,
+  "no_old_url_patterns_used": true,
+  "limitations": [
+    "NSE and MCX landing URLs were discovery candidates, not proof of an active report endpoint.",
+    "BSE API route is traceable to cached official code/config; current listing response denied access.",
+    "Do not generate filename/date URLs or enable a backfill without actual successful official listing/download evidence."
+  ]
+}

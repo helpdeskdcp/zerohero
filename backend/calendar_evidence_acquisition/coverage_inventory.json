@@ -1,0 +1,4833 @@
+{
+  "purpose": "Repository demand inventory only; does not verify any calendar or raw-data validity",
+  "inspected_at": "2026-10-02T10:32:36.309205+00:00",
+  "database_ranges": [
+    {
+      "path": "backend/data/hist_options.db",
+      "table": "hist_option_bars",
+      "query": "SELECT underlying,exchange,source,timeframe,COUNT(*) AS rows,MIN(timestamp) AS earliest,MAX(timestamp) AS latest,MIN(expiry) AS expiry_min,MAX(expiry) AS expiry_max FROM hist_option_bars GROUP BY underlying,exchange,source,timeframe",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 0,
+      "ranges": [
+        {
+          "underlying": "NIFTY",
+          "exchange": "NFO",
+          "source": "DHAN_ROLLING",
+          "timeframe": "1m",
+          "rows": 8470,
+          "earliest": "2026-08-03T03:45:00+00:00",
+          "latest": "2026-08-17T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-08-04",
+          "sql_lexical_expiry_max": "2026-08-18"
+        }
+      ],
+      "main_file_stat_stable": true
+    },
+    {
+      "path": "backend/data/market_history.db",
+      "table": "market_candles",
+      "query": "SELECT symbol,kind,exchange,source,tf,COUNT(*) AS rows,MIN(bar_start) AS earliest,MAX(bar_start) AS latest,MIN(expiry) AS expiry_min,MAX(expiry) AS expiry_max FROM market_candles GROUP BY symbol,kind,exchange,source,tf",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 4280712,
+      "ranges": [
+        {
+          "symbol": "BANKEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 483,
+          "earliest": "2026-09-04T04:15:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 145,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 6550,
+          "earliest": "2026-09-04T08:57:00Z",
+          "latest": "2026-10-01T09:58:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 256,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2260,
+          "earliest": "2026-09-04T08:15:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1389,
+          "earliest": "2026-09-04T07:45:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 521,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T10:00:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 150,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 6834,
+          "earliest": "2026-09-04T06:42:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 270,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2396,
+          "earliest": "2026-09-04T06:00:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1450,
+          "earliest": "2026-09-04T05:20:00Z",
+          "latest": "2026-10-01T10:05:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1208,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 24019,
+          "earliest": "2026-07-01T03:48:00+00:00",
+          "latest": "2026-09-28T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 483,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 139,
+          "earliest": "2026-09-03T09:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 6588,
+          "earliest": "2026-09-04T06:42:00Z",
+          "latest": "2026-10-01T09:59:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 253,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2271,
+          "earliest": "2026-09-04T05:57:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1375,
+          "earliest": "2026-09-04T05:15:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1239,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 518500,
+          "earliest": "2021-09-29T00:28:00+00:00",
+          "latest": "2026-09-28T15:39:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "OPTION",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 68,
+          "earliest": "2026-07-23T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "OPTION",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 19055,
+          "earliest": "2026-07-24T08:10:00+00:00",
+          "latest": "2026-09-28T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 1273,
+          "earliest": "2026-09-01T04:45:00Z",
+          "latest": "2026-10-01T17:30:00Z",
+          "sql_lexical_expiry_min": "19OCT2026",
+          "sql_lexical_expiry_max": "21SEP2026"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 322,
+          "earliest": "2026-09-02T13:30:00Z",
+          "latest": "2026-10-01T17:30:00Z",
+          "sql_lexical_expiry_min": "19OCT2026",
+          "sql_lexical_expiry_max": "21SEP2026"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 18404,
+          "earliest": "2026-09-01T09:25:00Z",
+          "latest": "2026-10-01T17:55:00Z",
+          "sql_lexical_expiry_min": "19OCT2026",
+          "sql_lexical_expiry_max": "21SEP2026"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 594,
+          "earliest": "2026-09-03T03:30:00Z",
+          "latest": "2026-10-01T17:00:00Z",
+          "sql_lexical_expiry_min": "19OCT2026",
+          "sql_lexical_expiry_max": "21SEP2026"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 5793,
+          "earliest": "2026-09-03T08:09:00Z",
+          "latest": "2026-10-01T17:51:00Z",
+          "sql_lexical_expiry_min": "19OCT2026",
+          "sql_lexical_expiry_max": "21SEP2026"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 3746,
+          "earliest": "2026-09-01T08:05:00Z",
+          "latest": "2026-10-01T17:50:00Z",
+          "sql_lexical_expiry_min": "19OCT2026",
+          "sql_lexical_expiry_max": "21SEP2026"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1215,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-19",
+          "sql_lexical_expiry_max": "2026-10-19"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 50019,
+          "earliest": "2026-07-02T08:28:00+00:00",
+          "latest": "2026-09-28T17:11:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-19",
+          "sql_lexical_expiry_max": "2026-10-19"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 392,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T10:00:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 138,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 1063,
+          "earliest": "2026-09-04T07:13:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 242,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 806,
+          "earliest": "2026-09-04T06:33:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 661,
+          "earliest": "2026-09-04T05:50:00Z",
+          "latest": "2026-10-01T10:05:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 485,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 141,
+          "earliest": "2026-09-03T09:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 6574,
+          "earliest": "2026-09-04T07:06:00Z",
+          "latest": "2026-10-01T09:59:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 249,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2275,
+          "earliest": "2026-09-04T06:27:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "FINNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1368,
+          "earliest": "2026-09-04T05:50:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "INDIAVIX",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 71,
+          "earliest": "2026-09-29T04:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "INDIAVIX",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 21,
+          "earliest": "2026-09-29T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "INDIAVIX",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 760,
+          "earliest": "2026-09-29T09:25:00Z",
+          "latest": "2026-10-01T09:59:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "INDIAVIX",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 39,
+          "earliest": "2026-09-29T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "INDIAVIX",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 275,
+          "earliest": "2026-09-29T08:45:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "INDIAVIX",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 173,
+          "earliest": "2026-09-29T08:05:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 522,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T10:00:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 146,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 5533,
+          "earliest": "2026-09-04T07:05:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 266,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2308,
+          "earliest": "2026-09-04T06:24:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1448,
+          "earliest": "2026-09-04T05:45:00Z",
+          "latest": "2026-10-01T10:05:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 480,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 139,
+          "earliest": "2026-09-03T09:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 6554,
+          "earliest": "2026-09-04T07:04:00Z",
+          "latest": "2026-10-01T09:59:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 255,
+          "earliest": "2026-09-04T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2272,
+          "earliest": "2026-09-04T06:33:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1355,
+          "earliest": "2026-09-04T05:50:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 1271,
+          "earliest": "2026-09-01T04:45:00Z",
+          "latest": "2026-10-01T17:30:00Z",
+          "sql_lexical_expiry_min": "25SEP2026",
+          "sql_lexical_expiry_max": "27OCT2026"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 319,
+          "earliest": "2026-09-02T13:30:00Z",
+          "latest": "2026-10-01T17:30:00Z",
+          "sql_lexical_expiry_min": "25SEP2026",
+          "sql_lexical_expiry_max": "27OCT2026"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 18123,
+          "earliest": "2026-09-01T09:25:00Z",
+          "latest": "2026-10-01T17:54:00Z",
+          "sql_lexical_expiry_min": "25SEP2026",
+          "sql_lexical_expiry_max": "27OCT2026"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 596,
+          "earliest": "2026-09-03T03:30:00Z",
+          "latest": "2026-10-01T17:00:00Z",
+          "sql_lexical_expiry_min": "25SEP2026",
+          "sql_lexical_expiry_max": "27OCT2026"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 5791,
+          "earliest": "2026-09-03T08:03:00Z",
+          "latest": "2026-10-01T17:51:00Z",
+          "sql_lexical_expiry_min": "25SEP2026",
+          "sql_lexical_expiry_max": "27OCT2026"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 3737,
+          "earliest": "2026-09-01T08:05:00Z",
+          "latest": "2026-10-01T17:50:00Z",
+          "sql_lexical_expiry_min": "25SEP2026",
+          "sql_lexical_expiry_max": "27OCT2026"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1215,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-27",
+          "sql_lexical_expiry_max": "2026-10-27"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "exchange": "MCX",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 55260,
+          "earliest": "2026-06-30T03:41:00+00:00",
+          "latest": "2026-09-28T17:10:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-27",
+          "sql_lexical_expiry_max": "2026-10-27"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 599,
+          "earliest": "2026-09-01T04:45:00Z",
+          "latest": "2026-10-01T10:00:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 155,
+          "earliest": "2026-09-03T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 7888,
+          "earliest": "2026-09-01T09:25:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 284,
+          "earliest": "2026-09-03T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2498,
+          "earliest": "2026-09-03T08:00:00Z",
+          "latest": "2026-10-01T10:09:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NFO",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1659,
+          "earliest": "2026-09-01T08:05:00Z",
+          "latest": "2026-10-01T10:05:00Z",
+          "sql_lexical_expiry_min": "27OCT2026",
+          "sql_lexical_expiry_max": "29SEP2026"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1209,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 24025,
+          "earliest": "2026-07-01T03:45:00+00:00",
+          "latest": "2026-09-28T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 556,
+          "earliest": "2026-09-01T04:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 148,
+          "earliest": "2026-09-02T09:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 7535,
+          "earliest": "2026-09-01T09:25:00Z",
+          "latest": "2026-10-01T09:59:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 269,
+          "earliest": "2026-09-03T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2361,
+          "earliest": "2026-09-03T08:00:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1569,
+          "earliest": "2026-09-01T08:05:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 5140,
+          "earliest": "2006-01-01T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "INDEX",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 928805,
+          "earliest": "2017-06-01T03:45:00+00:00",
+          "latest": "2026-09-28T15:40:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "OPTION",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 119,
+          "earliest": "2026-06-30T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "OPTION",
+          "exchange": "NSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 33084,
+          "earliest": "2026-07-01T03:51:00+00:00",
+          "latest": "2026-09-28T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-09-29",
+          "sql_lexical_expiry_max": "2026-09-29"
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "FUTURE",
+          "exchange": "BSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1169,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-29",
+          "sql_lexical_expiry_max": "2026-10-29"
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "FUTURE",
+          "exchange": "BSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 15155,
+          "earliest": "2026-07-31T03:59:00+00:00",
+          "latest": "2026-09-28T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-29",
+          "sql_lexical_expiry_max": "2026-10-29"
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "15m",
+          "rows": 506,
+          "earliest": "2026-09-03T04:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1h",
+          "rows": 151,
+          "earliest": "2026-09-03T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "1m",
+          "rows": 6842,
+          "earliest": "2026-09-03T09:25:00Z",
+          "latest": "2026-10-01T09:58:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "30m",
+          "rows": 270,
+          "earliest": "2026-09-03T03:45:00Z",
+          "latest": "2026-10-01T09:45:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "3m",
+          "rows": 2373,
+          "earliest": "2026-09-03T08:45:00Z",
+          "latest": "2026-10-01T09:57:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "ANGELONE_CANDLES",
+          "tf": "5m",
+          "rows": 1448,
+          "earliest": "2026-09-03T08:05:00Z",
+          "latest": "2026-10-01T09:55:00Z",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 1239,
+          "earliest": "2021-09-28T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "INDEX",
+          "exchange": "BSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 498815,
+          "earliest": "2021-09-29T02:42:00+00:00",
+          "latest": "2026-09-28T11:30:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "OPTION",
+          "exchange": "BSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1d",
+          "rows": 12,
+          "earliest": "2026-09-17T18:30:00+00:00",
+          "latest": "2026-09-24T18:30:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-01",
+          "sql_lexical_expiry_max": "2026-10-01"
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "OPTION",
+          "exchange": "BSE",
+          "source": "DHAN_HISTORICAL",
+          "tf": "1m",
+          "rows": 4296,
+          "earliest": "2026-09-18T04:06:00+00:00",
+          "latest": "2026-09-28T10:09:00+00:00",
+          "sql_lexical_expiry_min": "2026-10-01",
+          "sql_lexical_expiry_max": "2026-10-01"
+        }
+      ],
+      "main_file_stat_stable": true
+    },
+    {
+      "path": "backend/data/market_history.db",
+      "table": "quote_snapshots",
+      "query": "SELECT symbol,kind,exchange,source,COUNT(*) AS rows,MIN(received_ts) AS earliest,MAX(received_ts) AS latest,MIN(expiry) AS expiry_min,MAX(expiry) AS expiry_max FROM quote_snapshots GROUP BY symbol,kind,exchange,source",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 4280712,
+      "error": "interrupted",
+      "main_file_stat_stable": false
+    },
+    {
+      "path": "backend/data/market_history.db",
+      "table": "option_greeks",
+      "query": "SELECT underlying,source,COUNT(*) AS rows,MIN(received_ts) AS earliest,MAX(received_ts) AS latest,MIN(expiry) AS expiry_min,MAX(expiry) AS expiry_max FROM option_greeks GROUP BY underlying,source",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 4494952,
+      "error": "interrupted",
+      "main_file_stat_stable": false
+    },
+    {
+      "path": "backend/data/chanakya.db",
+      "table": "live_market_snapshots",
+      "query": "SELECT symbol,source,COUNT(*) AS rows,MIN(ts) AS earliest,MAX(ts) AS latest FROM live_market_snapshots GROUP BY symbol,source",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 0,
+      "error": "database disk image is malformed",
+      "main_file_stat_stable": false
+    },
+    {
+      "path": "backend/data/historical/kaggle/research_historical.db",
+      "table": "normalized_bars",
+      "query": "SELECT symbol,instrument_type,exchange,source,timeframe,COUNT(*) AS rows,MIN(timestamp) AS earliest,MAX(timestamp) AS latest,MIN(expiry) AS expiry_min,MAX(expiry) AS expiry_max FROM normalized_bars GROUP BY symbol,instrument_type,exchange,source,timeframe",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 0,
+      "ranges": [
+        {
+          "symbol": "BANKNIFTY",
+          "instrument_type": "INDEX",
+          "exchange": "NSE",
+          "source": "kaggle",
+          "timeframe": "5m",
+          "rows": 380898,
+          "earliest": "2015-01-09T03:45:00+00:00",
+          "latest": "2026-05-18T12:05:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "GOLD",
+          "instrument_type": "INDEX",
+          "exchange": "MCX",
+          "source": "kaggle",
+          "timeframe": "1d",
+          "rows": 2760,
+          "earliest": "2014-01-01",
+          "latest": "2024-08-30",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "NIFTY",
+          "instrument_type": "FUTURE",
+          "exchange": "NSE",
+          "source": "kaggle",
+          "timeframe": "1d",
+          "rows": 1299,
+          "earliest": "2021-01-01",
+          "latest": "2026-03-30",
+          "sql_lexical_expiry_min": "2021-01-28",
+          "sql_lexical_expiry_max": "2026-05-26"
+        },
+        {
+          "symbol": "NIFTY",
+          "instrument_type": "INDEX",
+          "exchange": "NSE",
+          "source": "kaggle",
+          "timeframe": "5m",
+          "rows": 209888,
+          "earliest": "2015-01-09T03:45:00+00:00",
+          "latest": "2026-05-18T12:05:00+00:00",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SENSEX",
+          "instrument_type": "INDEX",
+          "exchange": "BSE",
+          "source": "kaggle",
+          "timeframe": "1d",
+          "rows": 672,
+          "earliest": "2021-04-01",
+          "latest": "2023-12-15",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        },
+        {
+          "symbol": "SILVER",
+          "instrument_type": "INDEX",
+          "exchange": "MCX",
+          "source": "kaggle",
+          "timeframe": "1d",
+          "rows": 2759,
+          "earliest": "2014-01-01",
+          "latest": "2024-08-30",
+          "sql_lexical_expiry_min": null,
+          "sql_lexical_expiry_max": null
+        }
+      ],
+      "main_file_stat_stable": true
+    },
+    {
+      "path": "backend/data/dhan_orderflow_ticks.db",
+      "table": "classified_ticks",
+      "query": "SELECT symbol,kind,COUNT(*) AS rows,MIN(received_ts) AS earliest,MAX(received_ts) AS latest FROM classified_ticks GROUP BY symbol,kind",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 0,
+      "ranges": [
+        {
+          "symbol": null,
+          "kind": null,
+          "rows": 312082,
+          "earliest": "2026-09-29T01:55:49.337559+00:00",
+          "latest": "2026-10-01T17:59:59.779562+00:00"
+        }
+      ],
+      "main_file_stat_stable": true
+    },
+    {
+      "path": "backend/data/l2_capture.db",
+      "table": "snapquote_ticks",
+      "query": "SELECT symbol,kind,COUNT(*) AS rows,MIN(received_ts) AS earliest,MAX(received_ts) AS latest FROM snapquote_ticks GROUP BY symbol,kind",
+      "read_mode": "mode=ro&immutable=1 (WAL excluded)",
+      "wal_bytes": 4185952,
+      "ranges": [
+        {
+          "symbol": "BANKNIFTY",
+          "kind": "FUTURE",
+          "rows": 393093,
+          "earliest": "2026-09-22T03:30:27.510960+00:00",
+          "latest": "2026-10-01T10:10:02.444339+00:00"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "kind": "FUTURE",
+          "rows": 770279,
+          "earliest": "2026-09-09T07:45:24.304503+00:00",
+          "latest": "2026-10-01T18:00:01.739959+00:00"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "kind": "FUTURE",
+          "rows": 674827,
+          "earliest": "2026-09-09T07:45:24.304906+00:00",
+          "latest": "2026-10-01T18:00:01.744852+00:00"
+        },
+        {
+          "symbol": "NIFTY",
+          "kind": "FUTURE",
+          "rows": 745196,
+          "earliest": "2026-09-09T07:45:02.623473+00:00",
+          "latest": "2026-10-01T10:10:02.506995+00:00"
+        },
+        {
+          "symbol": "SENSEX",
+          "kind": "FUTURE",
+          "rows": 313529,
+          "earliest": "2026-09-22T03:30:27.523675+00:00",
+          "latest": "2026-10-01T10:23:09.486952+00:00"
+        }
+      ],
+      "main_file_stat_stable": true
+    }
+  ],
+  "quote_exchange_time_edges": [
+    {
+      "symbol": "NIFTY",
+      "edges": [
+        {
+          "symbol": "NIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "expiry": "08SEP2026",
+          "exch_ts": "2026-09-01T04:20:46Z",
+          "received_ts": "2026-09-02T03:30:08.778286Z",
+          "session_date_ist": "2026-09-01"
+        },
+        {
+          "symbol": "NIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "expiry": "06OCT2026",
+          "exch_ts": "2026-10-01T10:55:32.396574+00:00",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "BANKNIFTY",
+      "edges": [
+        {
+          "symbol": "BANKNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "expiry": "29SEP2026",
+          "exch_ts": "2026-08-24T07:02:41Z",
+          "received_ts": "2026-09-25T03:30:10.292118Z",
+          "session_date_ist": "2026-08-24"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "expiry": "27OCT2026",
+          "exch_ts": "2026-10-01T10:55:32.757909+00:00",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "FINNIFTY",
+      "edges": [
+        {
+          "symbol": "FINNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "expiry": "29SEP2026",
+          "exch_ts": "2023-02-23T09:08:42Z",
+          "received_ts": "2026-09-07T04:30:35.182634Z",
+          "session_date_ist": "2023-02-23"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "expiry": "27OCT2026",
+          "exch_ts": "2026-10-01T10:55:33.188217+00:00",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "MIDCPNIFTY",
+      "edges": [
+        {
+          "symbol": "MIDCPNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "expiry": "29SEP2026",
+          "exch_ts": "2026-08-25T05:27:09Z",
+          "received_ts": "2026-09-15T10:34:37.852307Z",
+          "session_date_ist": "2026-08-25"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "expiry": "27OCT2026",
+          "exch_ts": "2026-10-01T10:55:33.575408+00:00",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "SENSEX",
+      "edges": [
+        {
+          "symbol": "SENSEX",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "BFO",
+          "expiry": "10SEP2026",
+          "exch_ts": "2026-09-03T05:02:34Z",
+          "received_ts": "2026-09-04T03:30:12.596729Z",
+          "session_date_ist": "2026-09-03"
+        },
+        {
+          "symbol": "SENSEX",
+          "source": "DHAN_CHAIN",
+          "exchange": "BFO",
+          "expiry": "01OCT2026",
+          "exch_ts": "2026-10-01T10:55:34.882496+00:00",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "BANKEX",
+      "edges": [
+        {
+          "symbol": "BANKEX",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "BFO",
+          "expiry": "29OCT2026",
+          "exch_ts": "2024-06-26T18:30:00Z",
+          "received_ts": "2026-09-29T04:31:32.809280Z",
+          "session_date_ist": "2024-06-27"
+        },
+        {
+          "symbol": "BANKEX",
+          "source": "DHAN_CHAIN",
+          "exchange": "BFO",
+          "expiry": "29OCT2026",
+          "exch_ts": "2026-10-01T10:55:33.962050+00:00",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "NATURALGAS",
+      "edges": [
+        {
+          "symbol": "NATURALGAS",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "expiry": "23SEP2026",
+          "exch_ts": "2026-08-28T04:03:31Z",
+          "received_ts": "2026-09-02T03:30:08.778286Z",
+          "session_date_ist": "2026-08-28"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "expiry": "23OCT2026",
+          "exch_ts": "2026-10-01T18:00:00Z",
+          "received_ts": "2026-10-02T03:30:14.966029Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "NATGASMINI",
+      "edges": [
+        null,
+        null
+      ]
+    },
+    {
+      "symbol": "CRUDEOIL",
+      "edges": [
+        {
+          "symbol": "CRUDEOIL",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "expiry": "17SEP2026",
+          "exch_ts": "2026-08-19T17:40:24Z",
+          "received_ts": "2026-09-08T05:47:52.361696Z",
+          "session_date_ist": "2026-08-19"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "expiry": "15OCT2026",
+          "exch_ts": "2026-10-01T18:00:00Z",
+          "received_ts": "2026-10-01T17:58:41.069611Z",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "CRUDEOILM",
+      "edges": [
+        null,
+        null
+      ]
+    },
+    {
+      "symbol": "CRUDEOILMINI",
+      "edges": [
+        null,
+        null
+      ]
+    },
+    {
+      "symbol": "GOLD",
+      "edges": [
+        null,
+        null
+      ]
+    },
+    {
+      "symbol": "GOLDMINI",
+      "edges": [
+        null,
+        null
+      ]
+    },
+    {
+      "symbol": "SILVER",
+      "edges": [
+        null,
+        null
+      ]
+    },
+    {
+      "symbol": "SILVERMINI",
+      "edges": [
+        null,
+        null
+      ]
+    }
+  ],
+  "quote_capture_edges": [
+    {
+      "symbol": "NIFTY",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "error": "interrupted"
+        },
+        {
+          "error": "interrupted"
+        }
+      ]
+    },
+    {
+      "symbol": "NIFTY",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "NIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-09-02T03:30:08.778286Z",
+          "exch_ts": null,
+          "expiry": "08SEP2026",
+          "session_date_ist": "2026-09-02"
+        },
+        {
+          "symbol": "NIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-10-01T10:45:16.419382Z",
+          "exch_ts": "2026-10-01T10:07:38Z",
+          "expiry": "06OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "BANKNIFTY",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "BANKNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "received_ts": "2026-09-30T11:14:24.172091Z",
+          "exch_ts": "2026-09-30T11:15:14.279846+00:00",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:32.757909+00:00",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "BANKNIFTY",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "BANKNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-09-04T07:10:26.599036Z",
+          "exch_ts": "2026-09-04T07:07:10Z",
+          "expiry": "29SEP2026",
+          "session_date_ist": "2026-09-04"
+        },
+        {
+          "symbol": "BANKNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-10-01T10:09:48.341471Z",
+          "exch_ts": "2026-10-01T10:09:30Z",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "FINNIFTY",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "FINNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "received_ts": "2026-09-30T11:14:24.172091Z",
+          "exch_ts": "2026-09-30T11:15:51.161964+00:00",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:33.188217+00:00",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "FINNIFTY",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "FINNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-09-04T07:38:37.871640Z",
+          "exch_ts": null,
+          "expiry": "29SEP2026",
+          "session_date_ist": "2026-09-04"
+        },
+        {
+          "symbol": "FINNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-10-02T10:27:41.170635Z",
+          "exch_ts": null,
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "symbol": "MIDCPNIFTY",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "MIDCPNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "received_ts": "2026-09-30T11:14:24.172091Z",
+          "exch_ts": "2026-09-30T11:16:24.423365+00:00",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "source": "DHAN_CHAIN",
+          "exchange": "NFO",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:33.575408+00:00",
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "MIDCPNIFTY",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "MIDCPNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-09-04T07:38:37.871640Z",
+          "exch_ts": "2026-09-04T07:31:17Z",
+          "expiry": "29SEP2026",
+          "session_date_ist": "2026-09-04"
+        },
+        {
+          "symbol": "MIDCPNIFTY",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "NFO",
+          "received_ts": "2026-10-02T10:27:41.170635Z",
+          "exch_ts": null,
+          "expiry": "27OCT2026",
+          "session_date_ist": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "symbol": "SENSEX",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "SENSEX",
+          "source": "DHAN_CHAIN",
+          "exchange": "BFO",
+          "received_ts": "2026-09-30T11:17:22.169047Z",
+          "exch_ts": "2026-09-30T11:21:51.310282+00:00",
+          "expiry": "01OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "SENSEX",
+          "source": "DHAN_CHAIN",
+          "exchange": "BFO",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:34.882496+00:00",
+          "expiry": "01OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "SENSEX",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "SENSEX",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "BFO",
+          "received_ts": "2026-09-03T14:16:58.014523Z",
+          "exch_ts": "2026-09-03T10:08:55Z",
+          "expiry": "03SEP2026",
+          "session_date_ist": "2026-09-03"
+        },
+        {
+          "symbol": "SENSEX",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "BFO",
+          "received_ts": "2026-10-02T10:26:31.270189Z",
+          "exch_ts": null,
+          "expiry": "08OCT2026",
+          "session_date_ist": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "symbol": "BANKEX",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "BANKEX",
+          "source": "DHAN_CHAIN",
+          "exchange": "BFO",
+          "received_ts": "2026-09-30T11:14:24.172091Z",
+          "exch_ts": "2026-09-30T11:16:50.681293+00:00",
+          "expiry": "29OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "BANKEX",
+          "source": "DHAN_CHAIN",
+          "exchange": "BFO",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:33.962050+00:00",
+          "expiry": "29OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "BANKEX",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "BANKEX",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "BFO",
+          "received_ts": "2026-09-04T09:29:19.543271Z",
+          "exch_ts": null,
+          "expiry": "24SEP2026",
+          "session_date_ist": "2026-09-04"
+        },
+        {
+          "symbol": "BANKEX",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "BFO",
+          "received_ts": "2026-10-02T10:27:41.170635Z",
+          "exch_ts": null,
+          "expiry": "29OCT2026",
+          "session_date_ist": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "symbol": "NATURALGAS",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "NATURALGAS",
+          "source": "DHAN_CHAIN",
+          "exchange": "MCX",
+          "received_ts": "2026-09-30T14:47:48.213107Z",
+          "exch_ts": "2026-09-30T14:47:55.349167+00:00",
+          "expiry": "23OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "source": "DHAN_CHAIN",
+          "exchange": "MCX",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:34.293792+00:00",
+          "expiry": "23OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "NATURALGAS",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "NATURALGAS",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "received_ts": "2026-09-02T03:30:08.778286Z",
+          "exch_ts": null,
+          "expiry": "23SEP2026",
+          "session_date_ist": "2026-09-02"
+        },
+        {
+          "symbol": "NATURALGAS",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "received_ts": "2026-10-02T10:26:31.270189Z",
+          "exch_ts": null,
+          "expiry": "23OCT2026",
+          "session_date_ist": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "symbol": "CRUDEOIL",
+      "source": "DHAN_CHAIN",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "CRUDEOIL",
+          "source": "DHAN_CHAIN",
+          "exchange": "MCX",
+          "received_ts": "2026-09-30T14:47:48.213107Z",
+          "exch_ts": "2026-09-30T14:47:55.813868+00:00",
+          "expiry": "15OCT2026",
+          "session_date_ist": "2026-09-30"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "source": "DHAN_CHAIN",
+          "exchange": "MCX",
+          "received_ts": "2026-10-01T10:55:32.197317Z",
+          "exch_ts": "2026-10-01T10:55:34.576115+00:00",
+          "expiry": "15OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "symbol": "CRUDEOIL",
+      "source": "ANGELONE_QUOTE_FULL",
+      "scan_interval": [
+        "2026-09-01",
+        "2026-10-02"
+      ],
+      "qualification": "Option row, positive LTP, capture IST date equals session; contract listing/cutoff not verified",
+      "edges": [
+        {
+          "symbol": "CRUDEOIL",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "received_ts": "2026-09-02T03:30:08.778286Z",
+          "exch_ts": "2026-09-02T03:30:16Z",
+          "expiry": "17SEP2026",
+          "session_date_ist": "2026-09-02"
+        },
+        {
+          "symbol": "CRUDEOIL",
+          "source": "ANGELONE_QUOTE_FULL",
+          "exchange": "MCX",
+          "received_ts": "2026-10-01T17:58:41.069611Z",
+          "exch_ts": "2026-10-01T17:59:42Z",
+          "expiry": "15OCT2026",
+          "session_date_ist": "2026-10-01"
+        }
+      ]
+    }
+  ],
+  "legacy_external_database": {
+    "path": "/root/oi_dashboard/oi_history.db",
+    "read_mode": "mode=ro&immutable=1",
+    "wal_bytes": 0,
+    "ranges": [
+      {
+        "table": "cycles",
+        "rows": [
+          {
+            "symbol": "BANKNIFTY",
+            "earliest": "2026-07-13T09:18:07.687465",
+            "latest": "2026-08-28T15:39:46.355074",
+            "rows": 17224
+          },
+          {
+            "symbol": "CRUDEOIL",
+            "earliest": "2026-07-13T09:10:25.644991",
+            "latest": "2026-08-28T23:54:31.841785",
+            "rows": 40638
+          },
+          {
+            "symbol": "CRUDEOILM",
+            "earliest": "2026-07-13T09:10:26.345560",
+            "latest": "2026-08-28T23:54:32.004769",
+            "rows": 40424
+          },
+          {
+            "symbol": "FINNIFTY",
+            "earliest": "2026-07-13T09:18:09.050676",
+            "latest": "2026-08-28T15:39:54.254132",
+            "rows": 17230
+          },
+          {
+            "symbol": "GOLD",
+            "earliest": "2026-07-13T09:10:28.772735",
+            "latest": "2026-08-28T23:54:39.760319",
+            "rows": 38140
+          },
+          {
+            "symbol": "GOLDM",
+            "earliest": "2026-07-13T09:10:29.472239",
+            "latest": "2026-08-28T23:54:36.967822",
+            "rows": 37958
+          },
+          {
+            "symbol": "MIDCPNIFTY",
+            "earliest": "2026-07-13T09:18:09.489950",
+            "latest": "2026-08-28T15:40:02.526342",
+            "rows": 17235
+          },
+          {
+            "symbol": "NATGASMINI",
+            "earliest": "2026-07-13T09:10:27.718338",
+            "latest": "2026-08-26T23:54:18.525000",
+            "rows": 39137
+          },
+          {
+            "symbol": "NATURALGAS",
+            "earliest": "2026-07-13T09:10:27.060315",
+            "latest": "2026-08-26T23:54:50.829071",
+            "rows": 70107
+          },
+          {
+            "symbol": "NIFTY",
+            "earliest": "2026-07-13T09:18:07.127557",
+            "latest": "2026-08-28T15:39:43.957002",
+            "rows": 46363
+          },
+          {
+            "symbol": "SENSEX",
+            "earliest": "2026-07-13T09:18:10.705442",
+            "latest": "2026-08-28T15:39:52.717133",
+            "rows": 21397
+          },
+          {
+            "symbol": "SILVER",
+            "earliest": "2026-07-13T09:10:30.148071",
+            "latest": "2026-08-28T23:54:35.963455",
+            "rows": 40255
+          },
+          {
+            "symbol": "SILVERM",
+            "earliest": "2026-07-13T09:10:30.822713",
+            "latest": "2026-08-28T23:54:42.307429",
+            "rows": 40232
+          }
+        ]
+      },
+      {
+        "table": "live_candles",
+        "rows": [
+          {
+            "symbol": "BANKNIFTY",
+            "earliest": "2026-08-10T09:15:00",
+            "latest": "2026-08-28T15:38:00",
+            "rows": 10439
+          },
+          {
+            "symbol": "CRUDEOIL",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-28T23:53:00",
+            "rows": 19902
+          },
+          {
+            "symbol": "CRUDEOILM",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-28T23:53:00",
+            "rows": 19899
+          },
+          {
+            "symbol": "FINNIFTY",
+            "earliest": "2026-08-10T09:15:00",
+            "latest": "2026-08-28T15:38:00",
+            "rows": 10443
+          },
+          {
+            "symbol": "GOLD",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-28T23:53:00",
+            "rows": 19863
+          },
+          {
+            "symbol": "GOLDM",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-28T23:53:00",
+            "rows": 19860
+          },
+          {
+            "symbol": "INDIA VIX",
+            "earliest": "2026-08-10T09:15:00",
+            "latest": "2026-08-28T15:28:00",
+            "rows": 10303
+          },
+          {
+            "symbol": "MIDCPNIFTY",
+            "earliest": "2026-08-10T09:15:00",
+            "latest": "2026-08-28T15:39:00",
+            "rows": 10443
+          },
+          {
+            "symbol": "NATGASMINI",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-26T23:53:00",
+            "rows": 17154
+          },
+          {
+            "symbol": "NATURALGAS",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-26T23:53:00",
+            "rows": 17144
+          },
+          {
+            "symbol": "NIFTY",
+            "earliest": "2026-08-10T09:15:00",
+            "latest": "2026-08-28T15:38:00",
+            "rows": 10439
+          },
+          {
+            "symbol": "SENSEX",
+            "earliest": "2026-08-10T09:15:00",
+            "latest": "2026-08-28T15:38:00",
+            "rows": 10433
+          },
+          {
+            "symbol": "SILVER",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-28T23:53:00",
+            "rows": 19853
+          },
+          {
+            "symbol": "SILVERM",
+            "earliest": "2026-08-10T09:00:00",
+            "latest": "2026-08-28T23:53:00",
+            "rows": 19850
+          }
+        ]
+      }
+    ]
+  },
+  "research_369_csv_ranges": [
+    {
+      "path": "research_369/output/369_v4_events.csv",
+      "column": "timestamp",
+      "rows": 4235,
+      "earliest": "2026-08-03 03:45:00+00:00",
+      "latest": "2026-08-17 10:09:00+00:00"
+    },
+    {
+      "path": "research_369/output/369_v5_events.csv",
+      "column": "timestamp",
+      "rows": 4235,
+      "earliest": "2026-08-03 03:45:00+00:00",
+      "latest": "2026-08-17 10:09:00+00:00"
+    },
+    {
+      "path": "research_369/output/369_v3_events.csv",
+      "column": "timestamp",
+      "rows": 4235,
+      "earliest": "2026-08-03 03:45:00+00:00",
+      "latest": "2026-08-17 10:09:00+00:00"
+    },
+    {
+      "path": "research_369/output/369_v7_daily_stability.csv",
+      "column": "date",
+      "rows": 22,
+      "earliest": "2026-08-03",
+      "latest": "2026-08-17"
+    },
+    {
+      "path": "research_369/output/369_v7_events.csv",
+      "column": "timestamp",
+      "rows": 4235,
+      "earliest": "2026-08-03 03:45:00+00:00",
+      "latest": "2026-08-17 10:09:00+00:00"
+    },
+    {
+      "path": "research_369/output/v8/v8_daily_stability.csv",
+      "column": "date",
+      "rows": 19,
+      "earliest": "2026-08-03",
+      "latest": "2026-08-17"
+    }
+  ],
+  "date_literal_inventory": [
+    {
+      "path": "backend/tests/test_cross_broker.py",
+      "earliest_literal": "2020-01-01",
+      "earliest_line": 44,
+      "latest_literal": "2026-09-30",
+      "latest_line": 130,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_dhan_historical.py",
+      "earliest_literal": "2026-01-01",
+      "earliest_line": 32,
+      "latest_literal": "2026-09-29",
+      "latest_line": 186,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_structural_break_evaluator.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 29,
+      "latest_literal": "2026-09-01",
+      "latest_line": 29,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_scalp_strategy_chain_gate.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 90,
+      "latest_literal": "2026-09-30",
+      "latest_line": 105,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_expiry_z2h_oi.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 60,
+      "latest_literal": "2026-09-03",
+      "latest_line": 60,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_liquidity_sweep_structure.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 78,
+      "latest_literal": "2026-09-03",
+      "latest_line": 69,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_db_update_allowlist.py",
+      "earliest_literal": "2026-09-19",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-19",
+      "latest_line": 56,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_replay_harness.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 26,
+      "latest_literal": "2026-09-21",
+      "latest_line": 118,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_institutional_edge_api.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 33,
+      "latest_literal": "2026-09-01",
+      "latest_line": 33,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_dhan_connector.py",
+      "earliest_literal": "2020-01-01",
+      "earliest_line": 206,
+      "latest_literal": "2026-09-28",
+      "latest_line": 78,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_analytics_extra.py",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 26,
+      "latest_literal": "2026-09-09",
+      "latest_line": 26,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_reverse_engineering_capture.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 25,
+      "latest_literal": "2026-09-03",
+      "latest_line": 90,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_microstructure_api.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 23,
+      "latest_literal": "2026-09-01",
+      "latest_line": 41,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_hcs_engine.py",
+      "earliest_literal": "2026-09-07",
+      "earliest_line": 24,
+      "latest_literal": "2026-09-07",
+      "latest_line": 24,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_qualify.py",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 20,
+      "latest_literal": "2026-09-09",
+      "latest_line": 224,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_sl_hit_analysis.py",
+      "earliest_literal": "2026-09-20",
+      "earliest_line": 11,
+      "latest_literal": "2026-09-20",
+      "latest_line": 53,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_pipeline_core_symboltoken.py",
+      "earliest_literal": "2026-09-24",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-24",
+      "latest_line": 1,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_market_snapshot_routes.py",
+      "earliest_literal": "2026-09-30",
+      "earliest_line": 47,
+      "latest_literal": "2026-09-30",
+      "latest_line": 49,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_liquidity_sweep_indicators.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 15,
+      "latest_literal": "2026-09-02",
+      "latest_line": 16,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_turning_point.py",
+      "earliest_literal": "2026-01-01",
+      "earliest_line": 133,
+      "latest_literal": "2026-01-01",
+      "latest_line": 133,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_market_data_selection.py",
+      "earliest_literal": "2026-08-29",
+      "earliest_line": 25,
+      "latest_literal": "2026-08-29",
+      "latest_line": 122,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_p61_filters_ablation.py",
+      "earliest_literal": "2026-07-06",
+      "earliest_line": 113,
+      "latest_literal": "2026-09-29",
+      "latest_line": 54,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_h1h7_state.py",
+      "earliest_literal": "2026-09-04",
+      "earliest_line": 34,
+      "latest_literal": "2026-09-04",
+      "latest_line": 264,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_paper_trading_ev_and_costs.py",
+      "earliest_literal": "2026-09-19",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-19",
+      "latest_line": 2,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_structure.py",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 26,
+      "latest_literal": "2026-09-09",
+      "latest_line": 155,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_oi_history_adapter.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 45,
+      "latest_literal": "2026-09-03",
+      "latest_line": 69,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_structural_break_api.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 36,
+      "latest_literal": "2026-09-01",
+      "latest_line": 36,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_premium_walk.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 27,
+      "latest_literal": "2026-09-04",
+      "latest_line": 245,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_history_analytics.py",
+      "earliest_literal": "2026-09-08",
+      "earliest_line": 188,
+      "latest_literal": "2026-09-16",
+      "latest_line": 306,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_hist_expiry.py",
+      "earliest_literal": "2023-06-07",
+      "earliest_line": 185,
+      "latest_literal": "2027-01-01",
+      "latest_line": 120,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_historical_quality_contract.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 9,
+      "latest_literal": "2026-09-15",
+      "latest_line": 13,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_microstructure_evaluator.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 26,
+      "latest_literal": "2026-09-01",
+      "latest_line": 71,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_sr_engine.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 15,
+      "latest_literal": "2026-09-01",
+      "latest_line": 248,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_institutional_edge_evaluator.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 26,
+      "latest_literal": "2026-09-01",
+      "latest_line": 26,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_liquidity_sweep_resample.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 23,
+      "latest_literal": "2026-01-06",
+      "latest_line": 70,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_smart_money.py",
+      "earliest_literal": "2026-09-05",
+      "earliest_line": 4,
+      "latest_literal": "2026-09-09",
+      "latest_line": 448,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_autoscalp_optionchain_wiring_audit.py",
+      "earliest_literal": "2026-09-10",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-10",
+      "latest_line": 3,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_angelone_greeks_adapter.py",
+      "earliest_literal": "2024-01-24",
+      "earliest_line": 257,
+      "latest_literal": "2024-01-24",
+      "latest_line": 257,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_hedging_selector.py",
+      "earliest_literal": "2026-09-22",
+      "earliest_line": 18,
+      "latest_literal": "2026-09-22",
+      "latest_line": 18,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_trend_swing.py",
+      "earliest_literal": "2012-01-01",
+      "earliest_line": 53,
+      "latest_literal": "2022-12-31",
+      "latest_line": 65,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_institutional_edge_costs.py",
+      "earliest_literal": "2026-04-01",
+      "earliest_line": 121,
+      "latest_literal": "2026-04-01",
+      "latest_line": 121,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_autoscalp.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 21,
+      "latest_literal": "2026-09-21",
+      "latest_line": 360,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_hist_options.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 98,
+      "latest_literal": "2026-09-15",
+      "latest_line": 157,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_store.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 8,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_option_engine.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 19,
+      "latest_literal": "2026-09-01",
+      "latest_line": 30,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_shadow_outcome.py",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 31,
+      "latest_literal": "2026-09-21",
+      "latest_line": 242,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_nse_mcx_pipeline_audit.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 77,
+      "latest_literal": "2026-09-19",
+      "latest_line": 98,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_datalayer.py",
+      "earliest_literal": "2026-09-08",
+      "earliest_line": 131,
+      "latest_literal": "2026-09-30",
+      "latest_line": 241,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_instruments_registry.py",
+      "earliest_literal": "2026-09-30",
+      "earliest_line": 35,
+      "latest_literal": "2026-09-30",
+      "latest_line": 35,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/calendar_fixtures.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 15,
+      "latest_literal": "2026-10-01",
+      "latest_line": 16,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_historical_read_contract.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-15",
+      "latest_line": 308,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_epm_surface.py",
+      "earliest_literal": "2026-09-08",
+      "earliest_line": 96,
+      "latest_literal": "2026-09-30",
+      "latest_line": 37,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_backtest.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 92,
+      "latest_literal": "2026-09-04",
+      "latest_line": 212,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_provider_calendar.py",
+      "earliest_literal": "2026-08-31",
+      "earliest_line": 67,
+      "latest_literal": "2026-10-08",
+      "latest_line": 174,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_market_regime.py",
+      "earliest_literal": "2026-08-15",
+      "earliest_line": 55,
+      "latest_literal": "2026-09-30",
+      "latest_line": 42,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_fsg_shadow_log_db.py",
+      "earliest_literal": "2026-09-17",
+      "earliest_line": 8,
+      "latest_literal": "2026-09-17",
+      "latest_line": 18,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_market_calendar.py",
+      "earliest_literal": "2026-08-31",
+      "earliest_line": 14,
+      "latest_literal": "2026-08-31",
+      "latest_line": 14,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_calibration_backtest.py",
+      "earliest_literal": "2026-07-06",
+      "earliest_line": 178,
+      "latest_literal": "2026-09-21",
+      "latest_line": 61,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_profile_routes.py",
+      "earliest_literal": "2026-09-17",
+      "earliest_line": 74,
+      "latest_literal": "2026-09-17",
+      "latest_line": 75,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_structural_break_regime_profiles.py",
+      "earliest_literal": "2026-09-12",
+      "earliest_line": 59,
+      "latest_literal": "2026-09-12",
+      "latest_line": 59,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_api.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 85,
+      "latest_literal": "2031-02-17",
+      "latest_line": 109,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_smart_scalper_replay.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 47,
+      "latest_literal": "2026-09-03",
+      "latest_line": 128,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_profile.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 201,
+      "latest_literal": "2026-09-21",
+      "latest_line": 172,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_premium_decoupling.py",
+      "earliest_literal": "2026-01-01",
+      "earliest_line": 68,
+      "latest_literal": "2026-09-24",
+      "latest_line": 77,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_histcap.py",
+      "earliest_literal": "2000-01-01",
+      "earliest_line": 152,
+      "latest_literal": "2026-09-30",
+      "latest_line": 522,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_index_signal_research_hypotheses.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 69,
+      "latest_literal": "2026-01-05",
+      "latest_line": 100,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_market_hub_chain_unification.py",
+      "earliest_literal": "2026-09-05",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-18",
+      "latest_line": 160,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_depth.py",
+      "earliest_literal": "2026-01-01",
+      "earliest_line": 22,
+      "latest_literal": "2026-01-01",
+      "latest_line": 26,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_dhan_instruments.py",
+      "earliest_literal": "2026-09-28",
+      "earliest_line": 61,
+      "latest_literal": "2026-09-28",
+      "latest_line": 61,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_fetch_candles_retry.py",
+      "earliest_literal": "2026-09-22",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-22",
+      "latest_line": 85,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_dhan_chain.py",
+      "earliest_literal": "2026-09-30",
+      "earliest_line": 3,
+      "latest_literal": "2026-11-24",
+      "latest_line": 202,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_stale_feed_watchdog.py",
+      "earliest_literal": "2026-06-01",
+      "earliest_line": 60,
+      "latest_literal": "2026-06-01",
+      "latest_line": 126,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_hedging_position.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 87,
+      "latest_literal": "2026-09-30",
+      "latest_line": 86,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_mathematical_confluence.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 115,
+      "latest_literal": "2026-09-03",
+      "latest_line": 137,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_instrument_profiles.py",
+      "earliest_literal": "2026-09-04",
+      "earliest_line": 31,
+      "latest_literal": "2026-09-19",
+      "latest_line": 194,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_research.py",
+      "earliest_literal": "2026-08-31",
+      "earliest_line": 13,
+      "latest_literal": "2026-08-31",
+      "latest_line": 13,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_upstox_adapter.py",
+      "earliest_literal": "2024-01-01",
+      "earliest_line": 170,
+      "latest_literal": "2026-09-30",
+      "latest_line": 190,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_phase8_9_trade_features.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 98,
+      "latest_literal": "2026-09-03",
+      "latest_line": 98,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_smart_scalper_paper.py",
+      "earliest_literal": "2026-09-04",
+      "earliest_line": 93,
+      "latest_literal": "2026-09-04",
+      "latest_line": 93,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_index_signal_research_features.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 22,
+      "latest_literal": "2026-01-05",
+      "latest_line": 22,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_dhan_client.py",
+      "earliest_literal": "2026-10-01",
+      "earliest_line": 69,
+      "latest_literal": "2026-10-01",
+      "latest_line": 69,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_ann.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 113,
+      "latest_literal": "2026-09-10",
+      "latest_line": 168,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_shared_research_harness.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 30,
+      "latest_literal": "2026-01-06",
+      "latest_line": 91,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_regime_mtf.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 15,
+      "latest_literal": "2026-08-27",
+      "latest_line": 15,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_reverse_engineering_status_report.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 17,
+      "latest_literal": "2026-09-03",
+      "latest_line": 21,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_reverse_engineering_schema.py",
+      "earliest_literal": "2026-01-01",
+      "earliest_line": 32,
+      "latest_literal": "2026-09-21",
+      "latest_line": 8,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_dhan_postback.py",
+      "earliest_literal": "2026-10-01",
+      "earliest_line": 104,
+      "latest_literal": "2026-10-01",
+      "latest_line": 152,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_optionchain_qualified_watch.py",
+      "earliest_literal": "2026-09-24",
+      "earliest_line": 36,
+      "latest_literal": "2026-09-24",
+      "latest_line": 88,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_main_auth.py",
+      "earliest_literal": "2026-09-19",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-28",
+      "latest_line": 87,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_greeks_engine.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 139,
+      "latest_literal": "2026-09-02",
+      "latest_line": 363,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_orderflow_v1.py",
+      "earliest_literal": "2015-01-01",
+      "earliest_line": 49,
+      "latest_literal": "2020-06-30",
+      "latest_line": 123,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_structural_break_performance_monitor.py",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 27,
+      "latest_literal": "2026-09-01",
+      "latest_line": 27,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_state_classifier.py",
+      "earliest_literal": "2026-08-27",
+      "earliest_line": 20,
+      "latest_literal": "2026-08-27",
+      "latest_line": 54,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_tri_compare.py",
+      "earliest_literal": "2018-01-01",
+      "earliest_line": 112,
+      "latest_literal": "2022-06-30",
+      "latest_line": 112,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_scalp_strategy_sr_gate.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 34,
+      "latest_literal": "2026-09-30",
+      "latest_line": 49,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_autoscalp_final_signal_gate.py",
+      "earliest_literal": "2026-09-03",
+      "earliest_line": 23,
+      "latest_literal": "2026-09-03",
+      "latest_line": 23,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_l2capture_health.py",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 60,
+      "latest_literal": "2026-09-09",
+      "latest_line": 105,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/test_core.py",
+      "earliest_literal": "2026-08-31",
+      "earliest_line": 136,
+      "latest_literal": "2026-08-31",
+      "latest_line": 136,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy_mtf/test_fvg_candle.py",
+      "earliest_literal": "2026-08-04",
+      "earliest_line": 13,
+      "latest_literal": "2026-08-04",
+      "latest_line": 13,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy_mtf/test_target_stop.py",
+      "earliest_literal": "2026-08-04",
+      "earliest_line": 18,
+      "latest_literal": "2026-08-04",
+      "latest_line": 18,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy_mtf/test_htf_resample_no_lookahead.py",
+      "earliest_literal": "2026-06-01",
+      "earliest_line": 110,
+      "latest_literal": "2026-09-11",
+      "latest_line": 140,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy_mtf/test_mtf_verifier.py",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 27,
+      "latest_literal": "2026-08-04",
+      "latest_line": 77,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy_mtf/test_prev_day_levels.py",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 31,
+      "latest_literal": "2026-08-04",
+      "latest_line": 88,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy_mtf/test_zth_sideways_gate.py",
+      "earliest_literal": "2026-08-04",
+      "earliest_line": 20,
+      "latest_literal": "2026-08-04",
+      "latest_line": 20,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/strategy/test_verifier.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 34,
+      "latest_literal": "2026-01-05",
+      "latest_line": 34,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "backend/tests/signal_gate/test_final_signal_gate.py",
+      "earliest_literal": "2026-09-30",
+      "earliest_line": 18,
+      "latest_literal": "2026-09-30",
+      "latest_line": 18,
+      "classification": "test_or_fixture_only"
+    },
+    {
+      "path": "research_369/output/369_research_v3_report.txt",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 10,
+      "latest_literal": "2026-08-17",
+      "latest_line": 11,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "research_369/output/369_research_v6_report.txt",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 9,
+      "latest_literal": "2026-08-17",
+      "latest_line": 10,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "research_369/output/369_research_v7_report.txt",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 9,
+      "latest_literal": "2026-08-17",
+      "latest_line": 10,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "research_369/output/369_research_v4_report.txt",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 10,
+      "latest_literal": "2026-08-17",
+      "latest_line": 11,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "research_369/output/369_data_validation.txt",
+      "earliest_literal": "2026-08-03",
+      "earliest_line": 16,
+      "latest_literal": "2026-08-18",
+      "latest_line": 84,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/ssl_hybrid_pro/SSL_HYBRID_PRO_FINAL_VERDICT.md",
+      "earliest_literal": "2026-04-01",
+      "earliest_line": 66,
+      "latest_literal": "2026-09-11",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/ORDERFLOW_V1_RESULT.md",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/orderflow_v1_backtest_20260909T035232Z.md",
+      "earliest_literal": "2016-01-01",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/orderflow_v1_backtest_20260909T035241Z.md",
+      "earliest_literal": "2016-01-01",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/orderflow_v1_backtest_20260909T035241Z.json",
+      "earliest_literal": "2016-01-01",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/M0_CAPTURE_STATUS.md",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-09",
+      "latest_line": 66,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/orderflow_v1_backtest_20260909T035232Z.json",
+      "earliest_literal": "2016-01-01",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-17.json",
+      "earliest_literal": "2026-09-17",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-17",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-11.json",
+      "earliest_literal": "2026-09-11",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-11",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-22.md",
+      "earliest_literal": "2026-09-22",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-22",
+      "latest_line": 47,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-24.md",
+      "earliest_literal": "2026-09-24",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-24",
+      "latest_line": 45,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-09.json",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-09",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-18.json",
+      "earliest_literal": "2026-09-18",
+      "earliest_line": 4,
+      "latest_literal": "2026-09-20",
+      "latest_line": 2,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-11.md",
+      "earliest_literal": "2026-09-11",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-11",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-14.json",
+      "earliest_literal": "2026-09-14",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-14",
+      "latest_line": 65,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-25.json",
+      "earliest_literal": "2026-09-25",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-25",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-29.md",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-29",
+      "latest_line": 47,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-18.md",
+      "earliest_literal": "2026-09-18",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-20",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-16.json",
+      "earliest_literal": "2026-09-16",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-16",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-23.md",
+      "earliest_literal": "2026-09-23",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-23",
+      "latest_line": 47,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-23.json",
+      "earliest_literal": "2026-09-23",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-23",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-20.md",
+      "earliest_literal": "2026-09-20",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-20",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-25.md",
+      "earliest_literal": "2026-09-25",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-25",
+      "latest_line": 45,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-19.json",
+      "earliest_literal": "2026-09-19",
+      "earliest_line": 4,
+      "latest_literal": "2026-09-20",
+      "latest_line": 2,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-10-01.md",
+      "earliest_literal": "2026-10-01",
+      "earliest_line": 1,
+      "latest_literal": "2026-10-01",
+      "latest_line": 47,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-15.md",
+      "earliest_literal": "2026-09-15",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-15",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-09.md",
+      "earliest_literal": "2026-09-09",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-09",
+      "latest_line": 29,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-10.json",
+      "earliest_literal": "2026-09-10",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-10",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-28.json",
+      "earliest_literal": "2026-09-28",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-28",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-20.json",
+      "earliest_literal": "2026-09-20",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-20",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-21.md",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-21",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-19.md",
+      "earliest_literal": "2026-09-19",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-20",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-28.md",
+      "earliest_literal": "2026-09-28",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-28",
+      "latest_line": 47,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-30.md",
+      "earliest_literal": "2026-09-30",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-30",
+      "latest_line": 47,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-16.md",
+      "earliest_literal": "2026-09-16",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-16",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-10-01.json",
+      "earliest_literal": "2026-10-01",
+      "earliest_line": 2,
+      "latest_literal": "2026-10-01",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-24.json",
+      "earliest_literal": "2026-09-24",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-24",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-30.json",
+      "earliest_literal": "2026-09-30",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-30",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-10.md",
+      "earliest_literal": "2026-09-10",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-10",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-15.json",
+      "earliest_literal": "2026-09-15",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-15",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-29.json",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-29",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-22.json",
+      "earliest_literal": "2026-09-22",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-22",
+      "latest_line": 230,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-17.md",
+      "earliest_literal": "2026-09-17",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-17",
+      "latest_line": 29,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-14.md",
+      "earliest_literal": "2026-09-14",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-14",
+      "latest_line": 23,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow/health/l2_health_2026-09-21.json",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 2,
+      "latest_literal": "2026-09-21",
+      "latest_line": 120,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/signal_engine_merge_audit_2026-09/AUDIT.md",
+      "earliest_literal": "2026-09-22",
+      "earliest_line": 8,
+      "latest_literal": "2026-09-23",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/trading_logic_forensic_audit_2026-09/DEEP_DIVE.md",
+      "earliest_literal": "2026-07-14",
+      "earliest_line": 107,
+      "latest_literal": "2026-08-11",
+      "latest_line": 107,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/trading_logic_forensic_audit_2026-09/AUDIT.md",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-21",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reversal_sweep_2026-09/backtest.py",
+      "earliest_literal": "2015-01-01",
+      "earliest_line": 13,
+      "latest_literal": "2026-09-15",
+      "latest_line": 169,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reversal_sweep_2026-09/VERDICT.md",
+      "earliest_literal": "2015-01-01",
+      "earliest_line": 36,
+      "latest_literal": "2026-09-28",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reversal_sweep_2026-09/option_premium_test.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 7,
+      "latest_literal": "2026-09-25",
+      "latest_line": 7,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/CHANGELOG.md",
+      "earliest_literal": "2017-06-08",
+      "earliest_line": 117,
+      "latest_literal": "2026-09-29",
+      "latest_line": 427,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/README.md",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 16,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/metrics/run_funnel_diagnostic.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-29",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/strategy/_reversal.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 40,
+      "latest_literal": "2026-09-29",
+      "latest_line": 115,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/strategy/_breakout.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 48,
+      "latest_literal": "2026-09-29",
+      "latest_line": 76,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/engine/costs.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 48,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/v5.yaml",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-29",
+      "latest_line": 6,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/v2.yaml",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-29",
+      "latest_line": 6,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/v8.yaml",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-29",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/v6.yaml",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-29",
+      "latest_line": 6,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/base.yaml",
+      "earliest_literal": "2017-06-01",
+      "earliest_line": 19,
+      "latest_literal": "2026-09-29",
+      "latest_line": 76,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/v3.yaml",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-29",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/config/v7.yaml",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 10,
+      "latest_literal": "2026-09-29",
+      "latest_line": 10,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/data/source_ohlcv_proxy.py",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 85,
+      "latest_literal": "2026-09-29",
+      "latest_line": 89,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/data/source_base.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 73,
+      "latest_literal": "2026-09-29",
+      "latest_line": 73,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/data/source_tick.py",
+      "earliest_literal": "2026-09-29",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-29",
+      "latest_line": 66,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/tests/test_signals.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 27,
+      "latest_literal": "2026-01-05",
+      "latest_line": 27,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/tests/test_smartmoney.py",
+      "earliest_literal": "2026-01-05",
+      "earliest_line": 24,
+      "latest_literal": "2026-01-05",
+      "latest_line": 24,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/tests/test_no_lookahead.py",
+      "earliest_literal": "2024-01-01",
+      "earliest_line": 31,
+      "latest_literal": "2024-06-30",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v7_nifty_5m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v7_nifty_5m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v1_nifty_5m/report.md",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v1_nifty_5m/report.json",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v4_nifty_5m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v4_nifty_5m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v2_nifty_5m/report.md",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v2_nifty_5m/report.json",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v6_nifty_5m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v6_nifty_5m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v8_nifty_15m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v8_nifty_15m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v3_nifty_5m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v3_nifty_5m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v5_nifty_5m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v5_nifty_5m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v8_nifty_5m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v8_nifty_5m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v1_nifty_15m/report.md",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v1_nifty_15m/report.json",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v5_nifty_15m/report.md",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 16,
+      "latest_literal": "2026-09-29",
+      "latest_line": 8,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/orderflow_system/reports/run_v5_nifty_15m/report.json",
+      "earliest_literal": "2022-04-09",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-29",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/order_pressure/order_pressure_backtest_NIFTY_20260908T043157Z.json",
+      "earliest_literal": "2015-01-01",
+      "earliest_line": 112,
+      "latest_literal": "2026-09-08",
+      "latest_line": 233,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/order_pressure/order_pressure_backtest_NIFTY_20260908T043157Z.md",
+      "earliest_literal": "2022-01-01",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-08",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/architecture_audit_2026-09/BASELINE_REPORT.md",
+      "earliest_literal": "2026-09-11",
+      "earliest_line": 49,
+      "latest_literal": "2026-09-21",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/architecture_audit_2026-09/SYSTEM_INVENTORY.md",
+      "earliest_literal": "2026-09-11",
+      "earliest_line": 143,
+      "latest_literal": "2026-09-21",
+      "latest_line": 114,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/strategy_verification/backtest_rows.json",
+      "earliest_literal": "2026-07-13",
+      "earliest_line": 3,
+      "latest_literal": "2026-08-28",
+      "latest_line": 25075,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/naturalgas_dedup_audit_2026-09/VERDICT.md",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-21",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/mtf_cascade/mtf_backtest_rows.json",
+      "earliest_literal": "2025-07-24",
+      "earliest_line": 3,
+      "latest_literal": "2026-05-18",
+      "latest_line": 1848,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/mtf_cascade/rr_sl_comparison_rows.json",
+      "earliest_literal": "2025-09-17",
+      "earliest_line": 3,
+      "latest_literal": "2026-05-12",
+      "latest_line": 211,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/nifty_orderflow_cvd_2026-09/NIFTY_ORDERFLOW_CVD_VERDICT.md",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 11,
+      "latest_literal": "2026-09-28",
+      "latest_line": 22,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/nifty_orderflow_cvd_2026-09/run.py",
+      "earliest_literal": "2021-09-29",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-28",
+      "latest_line": 131,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/hedging_engine_2026-09/PHASE1_2A_VALIDATION.md",
+      "earliest_literal": "2026-09-23",
+      "earliest_line": 14,
+      "latest_literal": "2026-09-23",
+      "latest_line": 14,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/tri_compare/TRI_COMPARE_RESULT.md",
+      "earliest_literal": "2010-01-04",
+      "earliest_line": 131,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/tri_compare/tri_compare_20260909T092040Z.md",
+      "earliest_literal": "2010-01-01",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/tri_compare/tri_compare_20260909T092040Z.json",
+      "earliest_literal": "2010-01-01",
+      "earliest_line": 7,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/ta_options_pdf_upgrade/backtest_candidates.py",
+      "earliest_literal": "2026-07-13",
+      "earliest_line": 218,
+      "latest_literal": "2026-08-28",
+      "latest_line": 219,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/ta_options_pdf_upgrade/raw_results.json",
+      "earliest_literal": "2026-07-13",
+      "earliest_line": 6,
+      "latest_literal": "2026-08-28",
+      "latest_line": 48,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/ta_options_pdf_upgrade/VERDICT.md",
+      "earliest_literal": "2026-07-13",
+      "earliest_line": 18,
+      "latest_literal": "2026-08-28",
+      "latest_line": 18,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/calibrated_rerun_2026-09/run.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 15,
+      "latest_literal": "2026-09-02",
+      "latest_line": 179,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/calibration_fix_2026-09/VERDICT.md",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-21",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/natgas_futures_backtest/natgas_futures_5m_bars.json",
+      "earliest_literal": "2026-05-20",
+      "earliest_line": 1,
+      "latest_literal": "2026-09-10",
+      "latest_line": 1,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/trend_swing/trend_swing_20260909T093218Z.json",
+      "earliest_literal": "2010-01-01",
+      "earliest_line": 6,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/trend_swing/trend_swing_20260909T093218Z.md",
+      "earliest_literal": "2010-01-01",
+      "earliest_line": 3,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/trend_swing/TREND_SWING_RESULT.md",
+      "earliest_literal": "2010-01-01",
+      "earliest_line": 129,
+      "latest_literal": "2026-09-09",
+      "latest_line": 3,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/vwap_ema_scalp_2026-09/backtest.py",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 31,
+      "latest_literal": "2026-09-02",
+      "latest_line": 31,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/price_action_engine_spec_2026-09/GAP_ANALYSIS.md",
+      "earliest_literal": "2026-09-14",
+      "earliest_line": 12,
+      "latest_literal": "2026-09-14",
+      "latest_line": 12,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/price_action_engine_spec_2026-09/COMPONENT_BACKTESTS.md",
+      "earliest_literal": "2026-09-02",
+      "earliest_line": 47,
+      "latest_literal": "2026-09-21",
+      "latest_line": 48,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reverse_engineering/DATA_COLLECTION_STATUS.json",
+      "earliest_literal": "2023-02-23",
+      "earliest_line": 402,
+      "latest_literal": "2026-09-18",
+      "latest_line": 913,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reverse_engineering/ENGINE_CHANGE_LOG.md",
+      "earliest_literal": "2026-09-21",
+      "earliest_line": 29,
+      "latest_literal": "2026-09-21",
+      "latest_line": 29,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reverse_engineering/PHASE0_PHASE1_REPORT.md",
+      "earliest_literal": "2026-08-31",
+      "earliest_line": 20,
+      "latest_literal": "2026-09-03",
+      "latest_line": 23,
+      "classification": "literal_lead_not_asof_requirement"
+    },
+    {
+      "path": "backend/data/research/reverse_engineering/DATA_COLLECTION_STATUS.md",
+      "earliest_literal": "2026-09-01",
+      "earliest_line": 19,
+      "latest_literal": "2026-09-21",
+      "latest_line": 4,
+      "classification": "literal_lead_not_asof_requirement"
+    }
+  ],
+  "limitations": [
+    "Immutable SQLite reads ignored WAL files; not a transactionally consistent live snapshot. Main-file stat stability is recorded where checked, not a guarantee of snapshot consistency.",
+    "quote_snapshots/option_greeks full aggregate queries exceeded 30-second read budgets. Bounded indexed edge queries supplement them, with their own 3-second query failures retained.",
+    "chanakya.db immutable read returned database disk image is malformed while its main file changed; this does not establish persistent corruption. Obtain a consistent authorized snapshot before concluding.",
+    "Date literals are discovery leads, not required historical observations. Scan restricted to .py/.md/.txt/.yaml/.json files <=2MB in research_369, backend/tests and backend/data/research.",
+    "No auth/order/credential tables read. Market data ranges only. No write/migration/checkpoint/repair executed.",
+    "Legacy external cycles have neither provider nor expiry columns; GOLDM/SILVERM aliases/type mapping remain unproved.",
+    "Expiry extrema from SQL are lexical strings, not chronological ranges. Do not use them for resolution."
+  ],
+  "kaggle_inventory_rows": [
+    {
+      "dataset": "debashis74017/nifty-50-minute-data",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "0",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "7",
+      "null_oi": "209888",
+      "null_volume": "209888",
+      "ohlc_bad": "0",
+      "rows_loaded": "209888",
+      "rows_raw": "209888",
+      "status": "OK",
+      "symbol": "NIFTY",
+      "tf": "5m",
+      "ts_max": "2026-05-18T12:05:00+00:00",
+      "ts_min": "2015-01-09T03:45:00+00:00",
+      "weekend_rows": "463"
+    },
+    {
+      "dataset": "debashis74017/nifty-50-minute-data",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "10693",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "7129",
+      "null_oi": "1048738",
+      "null_volume": "1048738",
+      "ohlc_bad": "0",
+      "rows_loaded": "1048738",
+      "rows_raw": "1048738",
+      "status": "OK",
+      "symbol": "NIFTY",
+      "tf": "1m",
+      "ts_max": "2026-05-15T07:50:00+00:00",
+      "ts_min": "2015-01-09T03:45:00+00:00",
+      "weekend_rows": "2311"
+    },
+    {
+      "dataset": "debashis74017/nifty-50-minute-data",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "0",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "8",
+      "null_oi": "209879",
+      "null_volume": "209879",
+      "ohlc_bad": "0",
+      "rows_loaded": "209879",
+      "rows_raw": "209879",
+      "status": "OK",
+      "symbol": "BANKNIFTY",
+      "tf": "5m",
+      "ts_max": "2026-05-18T12:05:00+00:00",
+      "ts_min": "2015-01-09T03:45:00+00:00",
+      "weekend_rows": "463"
+    },
+    {
+      "dataset": "mavrick136/10-years-of-nifty-50-1-minute-data-20152025",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "0",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "0",
+      "null_oi": "1077240",
+      "null_volume": "1077240",
+      "ohlc_bad": "0",
+      "rows_loaded": "1077240",
+      "rows_raw": "1077240",
+      "status": "OK",
+      "symbol": "NIFTY",
+      "tf": "1m",
+      "ts_max": "2025-12-24T10:00:00+00:00",
+      "ts_min": "2015-01-01T03:45:00+00:00",
+      "weekend_rows": "0"
+    },
+    {
+      "dataset": "nishanthsalian/indian-stock-index-1minute-data-2008-2020",
+      "dup_sym_ts": "7125",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "0",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "2078",
+      "null_oi": "1171766",
+      "null_volume": "1171766",
+      "ohlc_bad": "0",
+      "rows_loaded": "1171766",
+      "rows_raw": "1178891",
+      "status": "DUP_WARN",
+      "symbol": "NIFTY",
+      "tf": "1m",
+      "ts_max": "2020-11-27T10:02:00+00:00",
+      "ts_min": "2008-01-01T04:25:00+00:00",
+      "weekend_rows": "1590"
+    },
+    {
+      "dataset": "sandeepkapri/banknifty-data-upto-2024",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "0",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "8",
+      "null_oi": "171019",
+      "null_volume": "171019",
+      "ohlc_bad": "0",
+      "rows_loaded": "171019",
+      "rows_raw": "171019",
+      "status": "OK",
+      "symbol": "BANKNIFTY",
+      "tf": "5m",
+      "ts_max": "2024-04-09T07:05:00+00:00",
+      "ts_min": "2015-01-09T03:45:00+00:00",
+      "weekend_rows": "294"
+    },
+    {
+      "dataset": "sandeepkapri/banknifty-data-upto-2024",
+      "dup_sym_ts": "3690",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "10695",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "7134",
+      "null_oi": "1042909",
+      "null_volume": "1042909",
+      "ohlc_bad": "0",
+      "rows_loaded": "1042909",
+      "rows_raw": "1046599",
+      "status": "DUP_WARN",
+      "symbol": "BANKNIFTY",
+      "tf": "1m",
+      "ts_max": "2026-04-22T09:59:00+00:00",
+      "ts_min": "2015-01-09T03:45:00+00:00",
+      "weekend_rows": "2325"
+    },
+    {
+      "dataset": "rbtj1729/nifty-futures-data-jan-2021-march-2026",
+      "dup_sym_ts": "2629",
+      "dup_ts": "0",
+      "exchange": "NSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "",
+      "has_real_oi": "True",
+      "instrument_type": "FUTURE",
+      "intrasession_gaps": "",
+      "null_oi": "11",
+      "null_volume": "11",
+      "ohlc_bad": "0",
+      "rows_loaded": "1299",
+      "rows_raw": "3928",
+      "status": "DUP_WARN",
+      "symbol": "NIFTY",
+      "tf": "1d",
+      "ts_max": "2026-03-30T00:00:00+05:30",
+      "ts_min": "2021-01-01T00:00:00+05:30",
+      "weekend_rows": "6"
+    },
+    {
+      "dataset": "naveennas/metals-price-historical-data-mcx-data-7-metals",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "MCX",
+      "future_ts": "0",
+      "grid_off_5m_1m": "",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "",
+      "null_oi": "2760",
+      "null_volume": "22",
+      "ohlc_bad": "2",
+      "rows_loaded": "2760",
+      "rows_raw": "2760",
+      "status": "OK",
+      "symbol": "GOLD",
+      "tf": "1d",
+      "ts_max": "2024-08-30T00:00:00+05:30",
+      "ts_min": "2014-01-01T00:00:00+05:30",
+      "weekend_rows": "24"
+    },
+    {
+      "dataset": "naveennas/metals-price-historical-data-mcx-data-7-metals",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "MCX",
+      "future_ts": "0",
+      "grid_off_5m_1m": "",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "",
+      "null_oi": "2759",
+      "null_volume": "18",
+      "ohlc_bad": "2",
+      "rows_loaded": "2759",
+      "rows_raw": "2759",
+      "status": "OK",
+      "symbol": "SILVER",
+      "tf": "1d",
+      "ts_max": "2024-08-30T00:00:00+05:30",
+      "ts_min": "2014-01-01T00:00:00+05:30",
+      "weekend_rows": "23"
+    },
+    {
+      "dataset": "prathamsatani/s-and-p-bse-sensex-01-apr-23-to-15-dec-23",
+      "dup_sym_ts": "0",
+      "dup_ts": "0",
+      "exchange": "BSE",
+      "future_ts": "0",
+      "grid_off_5m_1m": "",
+      "has_real_oi": "False",
+      "instrument_type": "INDEX",
+      "intrasession_gaps": "",
+      "null_oi": "672",
+      "null_volume": "672",
+      "ohlc_bad": "0",
+      "rows_loaded": "672",
+      "rows_raw": "672",
+      "status": "OK",
+      "symbol": "SENSEX",
+      "tf": "1d",
+      "ts_max": "2023-12-15T00:00:00+05:30",
+      "ts_min": "2021-04-01T00:00:00+05:30",
+      "weekend_rows": "1"
+    }
+  ],
+  "other_database_schema_inventory": [
+    {
+      "path": "backend/data/expiry_z2h.db",
+      "market_or_observation_schema": {
+        "expiry_z2h_windows": [
+          "id",
+          "captured_ts",
+          "index_name",
+          "expiry",
+          "session_date",
+          "window_start",
+          "window_end",
+          "atm",
+          "step",
+          "ref_spot",
+          "n_strikes",
+          "index_bars",
+          "option_bars",
+          "data_notes_json",
+          "payload_json"
+        ],
+        "sqlite_sequence": [
+          "name",
+          "seq"
+        ],
+        "expiry_z2h_analysis": [
+          "id",
+          "ran_ts",
+          "index_name",
+          "expiry",
+          "session_date",
+          "kind",
+          "result_json"
+        ]
+      },
+      "excluded_tables": "Order/trade/position/auth/account tables not inspected"
+    },
+    {
+      "path": "backend/data/premium_decoupling.db",
+      "market_or_observation_schema": {
+        "decoupling_log": [
+          "id",
+          "underlying",
+          "window_sec",
+          "window_start_ts",
+          "window_end_ts",
+          "spot_open",
+          "spot_close",
+          "spot_delta",
+          "spot_delta_pct",
+          "expiry",
+          "ce_strike",
+          "ce_open",
+          "ce_close",
+          "ce_delta",
+          "ce_delta_pct",
+          "pe_strike",
+          "pe_open",
+          "pe_close",
+          "pe_delta",
+          "pe_delta_pct",
+          "classification",
+          "explanation",
+          "logged_ts"
+        ],
+        "sqlite_sequence": [
+          "name",
+          "seq"
+        ]
+      },
+      "excluded_tables": "Order/trade/position/auth/account tables not inspected"
+    },
+    {
+      "path": "backend/data/structural_break.db",
+      "market_or_observation_schema": {
+        "structural_break_events": [
+          "id",
+          "logged_ts",
+          "symbol",
+          "timeframe",
+          "old_model_id",
+          "current_regime",
+          "state_from",
+          "state_to",
+          "total_score",
+          "max_possible_score",
+          "category_scores_json",
+          "reason_codes_json",
+          "performance_metrics_json",
+          "drift_metrics_json",
+          "adaptation_observations",
+          "candidate_model_id",
+          "validation_result_json",
+          "notes"
+        ],
+        "sqlite_sequence": [
+          "name",
+          "seq"
+        ]
+      },
+      "excluded_tables": "Order/trade/position/auth/account tables not inspected"
+    },
+    {
+      "path": "backend/data/monitor.db",
+      "market_or_observation_schema": {
+        "ai_signals_log": [
+          "id",
+          "signal_id",
+          "created_ts",
+          "market",
+          "symbol",
+          "instrument",
+          "underlying",
+          "expiry",
+          "strike",
+          "option_type",
+          "direction",
+          "timeframe",
+          "entry_ref",
+          "target_1",
+          "target_2",
+          "stop_loss",
+          "trailing_stop",
+          "probability",
+          "confidence",
+          "risk_reward",
+          "market_regime",
+          "decision",
+          "data_status",
+          "risk_status",
+          "reason",
+          "model_version",
+          "live_trading"
+        ],
+        "sqlite_sequence": [
+          "name",
+          "seq"
+        ],
+        "app_settings": [
+          "key",
+          "value"
+        ]
+      },
+      "excluded_tables": "Order/trade/position/auth/account tables not inspected"
+    },
+    {
+      "path": "backend/data/institutional_edge.db",
+      "market_or_observation_schema": {
+        "edge_evaluations": [
+          "id",
+          "logged_ts",
+          "instrument",
+          "condition_label",
+          "regime",
+          "n_condition",
+          "n_baseline",
+          "p_condition",
+          "p_baseline",
+          "conditional_edge",
+          "edge_ci95_low",
+          "edge_ci95_high",
+          "mean_return",
+          "median_return",
+          "variance_return",
+          "win_rate",
+          "avg_win_points",
+          "avg_loss_points",
+          "gross_ev_points",
+          "cost_points",
+          "net_ev_points",
+          "risk_adjusted_ev",
+          "edge_score",
+          "edge_score_max",
+          "reason_codes_json",
+          "state",
+          "oos_result_json"
+        ],
+        "sqlite_sequence": [
+          "name",
+          "seq"
+        ]
+      },
+      "excluded_tables": "Order/trade/position/auth/account tables not inspected"
+    },
+    {
+      "path": "backend/data/research_events.db",
+      "market_or_observation_schema": {
+        "research_events": [
+          "id",
+          "source",
+          "capture_timestamp",
+          "timestamp",
+          "underlying",
+          "spot_price",
+          "option_symbol",
+          "expiry",
+          "strike",
+          "ce_pe",
+          "option_ltp",
+          "bid",
+          "ask",
+          "spread",
+          "volume",
+          "oi",
+          "oi_change",
+          "iv",
+          "delta",
+          "gamma",
+          "theta",
+          "vega",
+          "underlying_ohlc",
+          "option_ohlc",
+          "vwap",
+          "ema",
+          "sma",
+          "atr",
+          "rsi",
+          "adx",
+          "support",
+          "resistance",
+          "candle_structure",
+          "volume_delta",
+          "bid_volume",
+          "ask_volume",
+          "orderflow_imbalance",
+          "depth_imbalance",
+          "absorption",
+          "sweep_aggression",
+          "regime",
+          "signal_state",
+          "public_signal_state",
+          "entry",
+          "target",
+          "stop_invalidation",
+          "mae",
+          "mfe",
+          "exit",
+          "outcome",
+          "data_quality",
+          "schema_version"
+        ],
+        "sqlite_sequence": [
+          "name",
+          "seq"
+        ]
+      },
+      "excluded_tables": "Order/trade/position/auth/account tables not inspected"
+    }
+  ],
+  "derived_data_ranges": [
+    {
+      "path": "backend/data/expiry_z2h.db",
+      "table": "expiry_z2h_windows",
+      "read_mode": "mode=ro&immutable=1",
+      "query": "SELECT index_name AS underlying,MIN(session_date) earliest,MAX(session_date) latest,MIN(captured_ts) first_capture,MAX(captured_ts) last_capture,COUNT(*) rows FROM expiry_z2h_windows GROUP BY index_name",
+      "ranges": [
+        {
+          "underlying": "SENSEX",
+          "earliest": "2026-09-03",
+          "latest": "2026-10-02",
+          "first_capture": "2026-09-03T13:25:01.300034Z",
+          "last_capture": "2026-10-02T10:15:16.998573Z",
+          "rows": 23
+        }
+      ],
+      "timestamp_note": "window_start/end store time of day only; use session_date for historical scope"
+    },
+    {
+      "path": "backend/data/premium_decoupling.db",
+      "table": "decoupling_log",
+      "read_mode": "mode=ro&immutable=1",
+      "query": "SELECT underlying AS underlying,MIN(window_start_ts) earliest,MAX(window_end_ts) latest,COUNT(*) rows FROM decoupling_log GROUP BY underlying",
+      "ranges": [
+        {
+          "underlying": "BANKEX",
+          "earliest": "2026-09-24T04:37:21.325178Z",
+          "latest": "2026-10-02T10:25:16.278950Z",
+          "rows": 410
+        },
+        {
+          "underlying": "BANKNIFTY",
+          "earliest": "2026-09-24T04:36:59.832882Z",
+          "latest": "2026-10-01T10:25:09.855117Z",
+          "rows": 356
+        },
+        {
+          "underlying": "FINNIFTY",
+          "earliest": "2026-09-24T04:37:02.964457Z",
+          "latest": "2026-10-02T10:25:09.575116Z",
+          "rows": 443
+        },
+        {
+          "underlying": "MIDCPNIFTY",
+          "earliest": "2026-09-24T04:37:14.846243Z",
+          "latest": "2026-10-01T10:25:23.928623Z",
+          "rows": 338
+        },
+        {
+          "underlying": "NIFTY",
+          "earliest": "2026-09-24T04:36:34.923081Z",
+          "latest": "2026-10-01T10:20:02.758095Z",
+          "rows": 371
+        },
+        {
+          "underlying": "SENSEX",
+          "earliest": "2026-09-24T04:37:19.656893Z",
+          "latest": "2026-10-01T10:20:42.131021Z",
+          "rows": 303
+        }
+      ]
+    },
+    {
+      "path": "backend/data/research_events.db",
+      "table": "research_events",
+      "read_mode": "mode=ro&immutable=1",
+      "query": "SELECT underlying AS underlying,MIN(timestamp) earliest,MAX(timestamp) latest,COUNT(*) rows FROM research_events GROUP BY underlying",
+      "ranges": []
+    }
+  ],
+  "current_source_pass": {
+    "per_consumer_ranges_rechecked": [
+      "research_369 reads stored August 2026 NIFTY option expiries; v8 consumes v7 events",
+      "optionchain API as_of remains caller-controlled, no universal finite window",
+      "orderflow-system configured 2022-04-09..2026-09-28 is NIFTY INDEX history, not option calendar scope"
+    ],
+    "coverage_changed": false,
+    "documentation_example_dates_are_not_consumers": true,
+    "current_master_inventory": "backend/calendar_evidence_acquisition/angelone_local_master_inventory.json",
+    "current_master_does_not_establish_historical_minis_or_metals_scope": true,
+    "new_network_documents_do_not_establish_any_historical_coverage": true
+  },
+  "alternative_source_pass": {
+    "package_version": "2026-10-02.4",
+    "dhan_current_master_inventory": "backend/calendar_evidence_acquisition/parsed/dhan_master_contract_inventory.json",
+    "local_rolling_provenance_inventory": "backend/calendar_evidence_acquisition/parsed/local_rolling_contract_inventory.json",
+    "consumer_requirements_changed": false,
+    "historical_calendar_coverage_extended": false,
+    "local_labels_independently_verify_dhan_expiry": false,
+    "reason": "22 local expiry audit rows explicitly cite Upstox metadata; stored DHAN_ROLLING price-source label is not expiry provenance."
+  },
+  "static_archive_pass": {
+    "path": "backend/calendar_evidence_acquisition/parsed/static_archive_observations.json",
+    "sha256": "da53eccda5dd17cf635962eb4df5256505a54537db7d7b7242cb482334b711ce",
+    "consumer_requirements_changed": false,
+    "additional_secondary_dates_are_not_new_consumer_requirements": true,
+    "historical_verified_coverage": []
+  },
+  "official_exchange_eod_pass": {
+    "required_windows": {
+      "NIFTY": [
+        "NSE",
+        "2026-07-01",
+        "2026-10-01"
+      ],
+      "BANKNIFTY": [
+        "NSE",
+        "2026-07-24",
+        "2026-10-01"
+      ],
+      "FINNIFTY": [
+        "NSE",
+        "2026-09-04",
+        "2026-10-02"
+      ],
+      "MIDCPNIFTY": [
+        "NSE",
+        "2026-09-04",
+        "2026-10-02"
+      ],
+      "BANKEX": [
+        "BSE",
+        "2026-09-04",
+        "2026-10-02"
+      ],
+      "SENSEX": [
+        "BSE",
+        "2026-09-03",
+        "2026-10-02"
+      ],
+      "NATURALGAS": [
+        "MCX",
+        "2026-07-13",
+        "2026-10-02"
+      ],
+      "CRUDEOIL": [
+        "MCX",
+        "2026-07-13",
+        "2026-10-01"
+      ]
+    },
+    "official_observations": 0,
+    "missing_trading_dates": "UNDETERMINED_WITHOUT_OFFICIAL_SESSION_CALENDAR",
+    "secondary_datasets_excluded_from_verified_coverage": true
+  }
+}

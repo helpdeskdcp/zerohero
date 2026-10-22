@@ -1,0 +1,13 @@
+{
+  "url": "https://www.google.com/search?q=site%3Ansearchives.nseindia.com%2Fcontent%2Fcirculars%2F+expiry+Tuesday+2025",
+  "retrieved_at": "2026-10-02T13:53:52.856709+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "429",
+  "effective_url": "https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dsite%253Ansearchives.nseindia.com%252Fcontent%252Fcirculars%252F%2Bexpiry%2BTuesday%2B2025&q=EhAqAkeAACjx6AAAAAAAAAABGPDu_tUGIjBx60vP-CQPhqGZgdIvYv-uruigdPcxygiAhabsMn1hVP6DrFxiSQprXZIKOsKAPUYyAnJSShlTT1JSWV9BQlVTSVZFX05FVF9NRVNTQUdFWgFD",
+  "content_type": "text/html",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/nse_archive_discovery.body",
+  "sha256": "67f838d99689b3367af23bc5f3605ddf1f2cbb225b4d952e47fdbd0d2b58fddc",
+  "bytes": 3405
+}

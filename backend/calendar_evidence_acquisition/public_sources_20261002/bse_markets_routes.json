@@ -1,0 +1,13 @@
+{
+  "url": "https://www.bseindia.com/assets/includenew/js/chunk-XNUURNBE.js",
+  "retrieved_at": "2026-10-02T13:55:36.672571+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://www.bseindia.com/assets/includenew/js/chunk-XNUURNBE.js",
+  "content_type": "application/javascript",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_markets_routes.body",
+  "sha256": "943501d5c346726ed6de5eedddc32cefab237dbeb88d063db04eff948d22d5c4",
+  "bytes": 213750
+}

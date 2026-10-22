@@ -1,0 +1,117 @@
+{
+  "schema": "own-exchange-production-scope/v1",
+  "decision_date": "2026-10-05",
+  "purpose": "All MCX calendar operations disabled by owner; retained evidence is historical only.",
+  "required_calendars": [],
+  "excluded_instruments": [
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOIL",
+      "canonical_instrument": "CRUDEOIL",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOILM",
+      "canonical_instrument": "CRUDEOILMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "CRUDEOILMINI",
+      "canonical_instrument": "CRUDEOILMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "GOLD",
+      "canonical_instrument": "GOLD",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "GOLDMINI",
+      "canonical_instrument": "GOLDMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATGASMINI",
+      "canonical_instrument": "NATGASMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "NATURALGAS",
+      "canonical_instrument": "NATURALGAS",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "SILVER",
+      "canonical_instrument": "SILVER",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    },
+    {
+      "exchange": "MCX",
+      "instrument": "SILVERMINI",
+      "canonical_instrument": "SILVERMINI",
+      "status": "DISABLED",
+      "scope": "OUT_OF_SCOPE",
+      "acquisition_required": false,
+      "pending_requirements": [],
+      "blocks_installation": false
+    }
+  ],
+  "other_instruments_policy": "NSE/BSE_UNCHANGED_OWN_EVIDENCE_GATES",
+  "active_calendars": [],
+  "auto_next_enabled_calendars": [],
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "DISABLED",
+  "installation_path": null,
+  "normalized_schedule_evidence": {
+    "path": "backend/calendar_evidence_acquisition/parsed/mcx_naturalgas_local_20261004/evidence.json",
+    "sha256": "1a639808671238836e5bdeae4688ac6a1a10ccf7c122b7efd1ad1ad02b386dfd"
+  },
+  "production_requirement_failures": [],
+  "note": "Prior MCX evidence is retained, not validated or installed. NSE/BSE requirements remain unchanged.",
+  "status": "DISABLED",
+  "scope": "OUT_OF_SCOPE",
+  "production": "NOT_ENABLED",
+  "pending_requirements": [],
+  "policy_module": "backend/app/hist_options/calendar_scope.py",
+  "evidence_disposition": "HISTORICAL_RETAINED_ONLY",
+  "exchange": "MCX"
+}

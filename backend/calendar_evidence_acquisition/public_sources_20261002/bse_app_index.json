@@ -1,0 +1,13 @@
+{
+  "url": "https://www.bseindia.com/assets/includenew/js/main-FB3J6BO4.js",
+  "retrieved_at": "2026-10-02T13:53:52.839071+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://www.bseindia.com/assets/includenew/js/main-FB3J6BO4.js",
+  "content_type": "application/javascript",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/public_sources_20261002/bse_app_index.body",
+  "sha256": "4f343512fd2bd532acb28143a64b0149a0ba6f7009eb970bc117a3abc5155692",
+  "bytes": 869112
+}

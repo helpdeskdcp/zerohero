@@ -1,0 +1,15 @@
+{
+  "source_id": "bse_derivative_report_listing_20260903",
+  "url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+  "retrieved_at": "2026-10-02T15:04:22.241754+00:00",
+  "curl_exit": 0,
+  "http_status": "403",
+  "effective_url": "https://api.bseindia.com/BseIndiaAPI/api/GetBhavcopydata/w?flag=1&segment=deri&date=20260903",
+  "content_type": "text/html",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/static_sources_20261002/bse_derivative_report_listing_20260903.body",
+  "sha256": "39fbb1278a498c3444d282d4671a193d1ff60a0e5f93a6b17eff455ab126183c",
+  "bytes": 416,
+  "retry_attempted": false,
+  "method": "unauthenticated public static GET"
+}

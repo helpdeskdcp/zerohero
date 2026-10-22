@@ -1,0 +1,242 @@
+{
+  "sources": [
+    {
+      "source_url": "https://www.nseindia.com/all-reports-derivatives",
+      "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-reports-page-a9c593cb5abc.html",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-reports-page-a9c593cb5abc.html.json",
+      "observed_at": "2026-10-03T03:03:13.168107+00:00",
+      "http_status": 200,
+      "discovery_sources": []
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/daily-reports?key=FO",
+      "sha256": "f9c303b83e5a2f51afc6e52eaecde3d39386889f64887b2d715da09babd34be2",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-fo-daily-report-listing-f9c303b83e5a.json",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-fo-daily-report-listing-f9c303b83e5a.json.json",
+      "observed_at": "2026-10-03T03:04:43.623968+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        },
+        {
+          "source_url": "https://www.nseindia.com/dist/js/sections/all-reports.js?v=01102026",
+          "sha256": "81665684b6b316446a3da384091c89a0decc2373e1e4e149ed3dde672d7fddb2"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/sections/all-reports.js?v=01102026",
+      "sha256": "81665684b6b316446a3da384091c89a0decc2373e1e4e149ed3dde672d7fddb2",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-all-reports-81665684b6b3.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-all-reports-81665684b6b3.js.json",
+      "observed_at": "2026-10-03T03:03:28.356094+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/assets/js/nse-min.js?v=01102026",
+      "sha256": "f551c3e5b36c7db5a61b2aad182b3ade450a9d6c059ec4621b6995dc15341d51",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-nse-min-f551c3e5b36c.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-nse-min-f551c3e5b36c.js.json",
+      "observed_at": "2026-10-03T03:05:07.416950+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/robots.txt",
+      "sha256": "318df6884989e0386b3cfa7bd4f227fb8879892bb6be0272d6621c1909445d6a",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-robots-policy-318df6884989.txt",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-robots-policy-318df6884989.txt.json",
+      "observed_at": "2026-10-03T03:03:13.067925+00:00",
+      "http_status": 200,
+      "discovery_sources": []
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/static/public/assets/js/common.js?v=01102026",
+      "sha256": "705afc1e96aa531edfa3f0e994d37496ab6d620fcacc7f645657b03cb6c0147f",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-common-705afc1e96aa.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-common-705afc1e96aa.js.json",
+      "observed_at": "2026-10-03T03:04:50.431772+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+      "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-page-d48d508b3300.html",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-page-d48d508b3300.html.json",
+      "observed_at": "2026-10-03T03:14:13.169621+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/all-reports-derivatives",
+          "sha256": "a9c593cb5abc23db5128e4e5584d61e52bc2f8862de8c63a5eb107bea5f6bbc7"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=NIFTY&year=2026&expiryDate=06-OCT-2026&optionType=CE",
+      "sha256": "95b34980827dc7d509580156c80ec58dce61dc879cc466581046b2c27da62add",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-ce-history-20261001-exp20261006-95b34980827d.json",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-ce-history-20261001-exp20261006-95b34980827d.json.json",
+      "observed_at": "2026-10-03T03:26:50.504311+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+          "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23"
+        },
+        {
+          "source_url": "https://www.nseindia.com/dist/js/sections/reports/contract-wise-pricevolume-fo.js?v=01102026",
+          "sha256": "f0e7e835c74a8046b892c2cf061be72c536aa4537600f7319bdd59d90269f4f9"
+        },
+        {
+          "source_url": "https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol=NIFTY&year=2026",
+          "sha256": "5cc7614b67693ba3e6ee7a326da7d1e037008aa824eaa8d1d838abdd55810d06"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol=NIFTY&year=2026",
+      "sha256": "5cc7614b67693ba3e6ee7a326da7d1e037008aa824eaa8d1d838abdd55810d06",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-expiry-selector-2026-5cc7614b6769.json",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-nifty-optidx-expiry-selector-2026-5cc7614b6769.json.json",
+      "observed_at": "2026-10-03T03:19:18.819789+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+          "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23"
+        },
+        {
+          "source_url": "https://www.nseindia.com/dist/js/sections/reports/contract-wise-pricevolume-fo.js?v=01102026",
+          "sha256": "f0e7e835c74a8046b892c2cf061be72c536aa4537600f7319bdd59d90269f4f9"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/sections/reports/contract-wise-pricevolume-fo.js?v=01102026",
+      "sha256": "f0e7e835c74a8046b892c2cf061be72c536aa4537600f7319bdd59d90269f4f9",
+      "staging_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-script-f0e7e835c74a.js",
+      "sidecar_path": "artifacts/staging/nse-discovery-20261003/nse-historical-contract-script-f0e7e835c74a.js.json",
+      "observed_at": "2026-10-03T03:14:28.117573+00:00",
+      "http_status": 200,
+      "discovery_sources": [
+        {
+          "source_url": "https://www.nseindia.com/report-detail/fo_eq_security",
+          "sha256": "d48d508b3300c130dc2d122cac8be28eb06bc075754309ad652ad46660487e23"
+        }
+      ]
+    },
+    {
+      "source_url": "https://www.nseindia.com/option-chain",
+      "sha256": "865ac732a01bb1e14431f047b179673f89ec0e8512f8337ecdb5b79f4c8f1592",
+      "staging_path": "artifacts/staging/nse-market-data-20261003/nse-official-865ac732a01b.html",
+      "sidecar_path": "artifacts/staging/nse-market-data-20261003/nse-official-865ac732a01b.html.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/dist/js/sections/option-chain-v3.js?v=01102026",
+      "sha256": "f301bd0d87d740c97a66eee159fff6eee96d21da2de1f94a9f53bd116b6686d7",
+      "staging_path": "artifacts/staging/nse-market-data-20261003/nse-official-f301bd0d87d7.js",
+      "sidecar_path": "artifacts/staging/nse-market-data-20261003/nse-official-f301bd0d87d7.js.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=NIFTY",
+      "sha256": "1229bb445d1fee03acaf80c6c6e6fd564b525841cbeb1aa8ea4bb3b7094b5b6b",
+      "staging_path": "artifacts/staging/nse-market-data-20261003/nse-official-1229bb445d1f.json",
+      "sidecar_path": "artifacts/staging/nse-market-data-20261003/nse-official-1229bb445d1f.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry=06-Oct-2026",
+      "sha256": "b7296785773fcd0c253e2bf7207ac26ac84b1ccd44cddc57f96ce8e0f67013e2",
+      "staging_path": "artifacts/staging/nse-market-data-20261003/nse-official-b7296785773f.json",
+      "sidecar_path": "artifacts/staging/nse-market-data-20261003/nse-official-b7296785773f.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=NIFTY&year=2026&expiryDate=06-OCT-2026&optionType=PE",
+      "sha256": "3ce74bf8546ae0c64c38ede68170f19da48f0333396e571e030edebe6e1f273b",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-3ce74bf8546ae0c6.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-3ce74bf8546ae0c6.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=BANKNIFTY",
+      "sha256": "c13e7ce8dff87c05145a6f599cd75c9e0e6b1c32b2b269d9b49772aef0f3f194",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-c13e7ce8dff87c05.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-c13e7ce8dff87c05.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=BANKNIFTY&year=2026&expiryDate=27-OCT-2026&optionType=CE",
+      "sha256": "8d90efffc2ca71d1b6e74e6efa16ce27b77e48bffa3323d48268242fa025e78d",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-8d90efffc2ca71d1.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-8d90efffc2ca71d1.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=BANKNIFTY&year=2026&expiryDate=27-OCT-2026&optionType=PE",
+      "sha256": "40806ba22e0b0d35e4c43f53336a1b0f6eade4e734d4794b20f527f90f105e05",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-40806ba22e0b0d35.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-40806ba22e0b0d35.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=FINNIFTY",
+      "sha256": "7686e5b20fa21e2048784471f76cb52312a80f099fbe61923e657bc9f0421308",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-7686e5b20fa21e20.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-7686e5b20fa21e20.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=FINNIFTY&year=2026&expiryDate=27-OCT-2026&optionType=CE",
+      "sha256": "481f526f6ce2852ed25208464773aaf8eab5c0bbb238470e89e69cf5c342095b",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-481f526f6ce2852e.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-481f526f6ce2852e.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=FINNIFTY&year=2026&expiryDate=27-OCT-2026&optionType=PE",
+      "sha256": "859a66724a34a5cb0834c4d5e6963cf360ccaaa6afac207d10fe2152b5d5fdac",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-859a66724a34a5cb.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-859a66724a34a5cb.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/option-chain-contract-info?symbol=MIDCPNIFTY",
+      "sha256": "4167308be6075b845985b7a75adbd93006110e27317911982740989baa0987f9",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-4167308be6075b84.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-4167308be6075b84.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=MIDCPNIFTY&year=2026&expiryDate=27-OCT-2026&optionType=CE",
+      "sha256": "19a5b4a7abccd296cb84c0bc5d546e390dd4f90e266a9884f3ae6f84faf6bc13",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-19a5b4a7abccd296.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-19a5b4a7abccd296.json.json"
+    },
+    {
+      "source_url": "https://www.nseindia.com/api/historicalOR/foCPV?from=01-10-2026&to=01-10-2026&instrumentType=OPTIDX&symbol=MIDCPNIFTY&year=2026&expiryDate=27-OCT-2026&optionType=PE",
+      "sha256": "301e4f8ee8d5790aaab770532d643bcd3349a128154a703f454cbf8d063fa0d5",
+      "staging_path": "artifacts/staging/nse-completion-20261003/nse-301e4f8ee8d5790a.json",
+      "sidecar_path": "artifacts/staging/nse-completion-20261003/nse-301e4f8ee8d5790a.json.json"
+    }
+  ],
+  "scope": "EXACT_OBSERVATIONS_ONLY",
+  "production_calendar": "NOT_INSTALLED",
+  "auto_next": "FAIL-CLOSED",
+  "limitations": [
+    "Response subsets do not prove full contract universe",
+    "Current selectors do not prove historical listing/calendar coverage",
+    "BSE and MCX sources must be acquired independently"
+  ]
+}

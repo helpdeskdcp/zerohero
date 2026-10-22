@@ -1,0 +1,107 @@
+{
+  "reason": "Owner disables all MCX calendars; refresh only changed code/tests and current scope hashes. All source artifact hashes unchanged.",
+  "updates": [
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/../tests/test_evidence_engine.py",
+      "old_sha256": "5368a41eae8cd86c54d61b1bccea84788044fbdff7ae2e5188f7bfea8383b1bc",
+      "new_sha256": "482f6a51fe045f7d8b118507dc607ef443cdfa59de8954f66e98e62e2abbe1d5"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/../tests/test_evidence_staging.py",
+      "old_sha256": "0db7753219e04d9940cb1520fb7f07838d334370b79b86a9faf8bfb3bb528419",
+      "new_sha256": "3487d2b012a0d1872fb7a8c39b129628dfef08afe70dd250db2f4c5a4445582a"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/../tests/test_official_eod_evidence.py",
+      "old_sha256": "5a22253e7fb5dc863cf6335616556e30e800106677df549c0b8b74deb4da5c45",
+      "new_sha256": "24f26f80cd85c18421cdc87835cdd77161ec2ff8773fa602e5b41d0c44efe397"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/../tests/test_static_calendar_archives.py",
+      "old_sha256": "c975cdab99157d2486fa37f78ddea5b80c20cecc87eae9cce3a704ce24f8eaf9",
+      "new_sha256": "d87f63e62ed7f89ca4d8cade9c951b1f475c826f2377337253414580da106884"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/evidence_engine.py",
+      "old_sha256": "5c2fdf79b8fe005b31617bfe8912c765877e7a1c06e01c2302d074b4ab55c789",
+      "new_sha256": "a7e976f87f40c93b314aae70d24578de9191d96aa4754b7fd779712d5d671d4c"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/official_eod.py",
+      "old_sha256": "3c411552920009aa92c7f29957a5eb7f7ae3f54d59b08c60542b47e3e781f752",
+      "new_sha256": "f1f3c9d5b9b249e330774897a934546533feb9b61b8ab323f6136a10e61998ff"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/staging_status.py",
+      "old_sha256": "e245d53857664c8f80bf55ebd506b3236819b2f66a8fdae8897b0079a702c964",
+      "new_sha256": "33f081a26f5d2de92e60cbb8c5ced50d8f4c2f4efb3c45a509f430f0a7e9013a"
+    },
+    {
+      "manifest": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/static_archives.py",
+      "old_sha256": "5e7e5b04f31faa4ddd4587ee1718f16618a517a7771613f28148539d2458dbe3",
+      "new_sha256": "2f6d79c3c34c967fa82e04acaac4e63d2d09d4dd4a7fde218f124c091ccd1496"
+    },
+    {
+      "manifest": "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/production_scope.json",
+      "old_sha256": "77c1439730d0d5df87cbfce7ad64d5c2c2759b61726853cdbf194adda772ea25",
+      "new_sha256": "b9cf9d18447bd4b40fa72b3215647552d8bac68353ce598005399957ae3b7d8a"
+    },
+    {
+      "manifest": "backend/validation/MCX_NATURALGAS_SCOPE_SHA256SUMS",
+      "file": "backend/tests/test_mcx_naturalgas_production_scope.py",
+      "old_sha256": "a0c39e556cac1851779b690952bc384e14298c7f8bfcffb63c9762dcfc887c58",
+      "new_sha256": "606d62e4e1e3d421eeb84b35bce77dc8bf14e7111588329a515689fe875bee28"
+    },
+    {
+      "manifest": "backend/validation/NSE_COMPLETION_SHA256SUMS",
+      "file": "backend/app/nse_official/controls.py",
+      "old_sha256": "7bc488a82733875e4e9a291d5a9f76a2c3231b10f7883b96ec5744ac4c5d785d",
+      "new_sha256": "75d5a0d81e97f194f990fb9f5e69f0efa99297ff97d55359792dc7cea349ee59"
+    },
+    {
+      "manifest": "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+      "file": "backend/app/nse_official/calendar.py",
+      "old_sha256": "e98ef3c88e4050734bc85e2a31ecadea6dc650aedad3dfb38e53e8b9f4950f3e",
+      "new_sha256": "984686919e057803eb058c5cf775b6da0ccd4b33d3eceede71e5fc3230c6a1d1"
+    },
+    {
+      "manifest": "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+      "file": "backend/app/hist_options/provider_calendar.py",
+      "old_sha256": "56de9690f5b54ad6e602b3ad8ecd675f02caca854b91918682412e9625d8cff5",
+      "new_sha256": "2a8e14fb34c8950830618135fbbb08a911a4f0a937fb9bd3f5b04cdf2a911a0d"
+    },
+    {
+      "manifest": "backend/validation/OFFICIAL_CALENDAR_SHA256SUMS",
+      "file": "backend/tests/test_official_expiry_calendar.py",
+      "old_sha256": "de6d8f45a51e2d8ed429e0b0cc383ded46ab59d28e68f977c3c3587f971b863f",
+      "new_sha256": "cc118df2af7b73e0b287afb4902974684f82de99ce2aea85441966f473b2aee6"
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+      "file": "backend/app/nse_official/own_exchange.py",
+      "old_sha256": "28f742615751843c4f525419e8410e23cd7c5ef67309204c6beb94db00692e25",
+      "new_sha256": "6a9eda5742b3e1da8ae1992c58b41c696a637a6a0447a49bd4a23b643a6cd9f9"
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+      "file": "backend/calendar_evidence_acquisition/evidence_engine.py",
+      "old_sha256": "5c2fdf79b8fe005b31617bfe8912c765877e7a1c06e01c2302d074b4ab55c789",
+      "new_sha256": "a7e976f87f40c93b314aae70d24578de9191d96aa4754b7fd779712d5d671d4c"
+    },
+    {
+      "manifest": "backend/validation/OWN_EXCHANGE_CALENDAR_SHA256SUMS",
+      "file": "backend/tests/test_own_exchange_calendar.py",
+      "old_sha256": "fafcb996556dea620009ef509bca71fe5c92a967be408c27fc098dd92987b806",
+      "new_sha256": "fbbc287ac73c4ba2edf0acda21fc99ffe91ac57e51455f3ac7edbc47a70ca930"
+    }
+  ]
+}

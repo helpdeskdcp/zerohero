@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "relevant_tests": 1018,
+  "passed": 1018,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "warnings": 0,
+  "new_regression_cases": 57,
+  "phase2_diagnostics_included": 4,
+  "xml_sha256": "c66db49cf0cf3adfdb53847d5ec1e7efb42cdefb3682e9d1e23557c7aa6ce53f",
+  "xml_path": "/tmp/official-calendar-relevant/result.xml",
+  "source_checksums": [
+    {
+      "path": "backend/calendar_evidence_acquisition/SHA256SUMS",
+      "passed": true,
+      "entries": 192
+    },
+    {
+      "path": "artifacts/staging/nse-market-data-20261003/SHA256SUMS",
+      "passed": true,
+      "entries": 11
+    },
+    {
+      "path": "artifacts/staging/nse-completion-20261003/SHA256SUMS",
+      "passed": true,
+      "entries": 22
+    },
+    {
+      "path": "artifacts/staging/nse-calendar-review-20261003/SHA256SUMS",
+      "passed": true,
+      "entries": 20
+    },
+    {
+      "path": "artifacts/staging/nse-discovery-20261003/SHA256SUMS",
+      "passed": true,
+      "entries": 21
+    }
+  ],
+  "syntax": "PASS",
+  "mypy": "PASS: 13 modules with follow-imports=skip, ignore-missing-imports, check-untyped-defs",
+  "git_diff_check": "PASS",
+  "production_calendar": "NOT_INSTALLED",
+  "ready": false,
+  "auto_next": "FAIL-CLOSED",
+  "orders": 0,
+  "broker_calls": 0,
+  "migrations": 0,
+  "restarts": 0,
+  "validated_expiry_observations": 30,
+  "fully_verified_resolvable_expiry_entries": 0
+}

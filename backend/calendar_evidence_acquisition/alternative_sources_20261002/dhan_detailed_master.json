@@ -1,0 +1,16 @@
+{
+  "source_id": "dhan_detailed_master",
+  "url": "https://images.dhan.co/api-data/api-scrip-master-detailed.csv",
+  "retrieved_at": "2026-10-02T14:26:41.765418+00:00",
+  "method": "unauthenticated public GET",
+  "curl_exit": 0,
+  "http_status": "200",
+  "effective_url": "https://images.dhan.co/api-data/api-scrip-master-detailed.csv",
+  "content_type": "application/octet-stream",
+  "error": "",
+  "path": "backend/calendar_evidence_acquisition/alternative_sources_20261002/dhan_detailed_master.body",
+  "sha256": "e639b46af3ccd6d525180fd669b50c62f2be66c21111a3181fe3afe6a83d8300",
+  "bytes": 34396652,
+  "retry_attempted": false,
+  "environment": "public document retrieval; curl configuration disabled; no broker API/authentication"
+}
