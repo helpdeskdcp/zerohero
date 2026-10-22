@@ -276,7 +276,7 @@ def standings(request: Request):
                         active = {"summary": {}, "groups": {}, "trades_per_day": 0.0, "verdict": "UNAVAILABLE", "results": [], "error": f"{type(e).__name__}"}
                     _cache["by"][c["name"]] = (time.time(), {"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
                                                     "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
-                                                    "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
+                                                    "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Contracts with a signal are captured every few seconds, all others every 1-3 minutes; a missing bid/ask uses a modelled spread.",
                                                                 "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
             finally:
                 lk.release()
