@@ -3,6 +3,7 @@ the arena rules (entry as signalled, SL, T1) - NOT their own simulated exits - s
 from __future__ import annotations
 
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 
 from . import settle as S, spread_model as SM, submit as SU
@@ -60,8 +61,15 @@ def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", c
         key = (_json.dumps(s, sort_keys=True, default=str), policy) if cache is not None else None
         if key is not None and key in cache:
             r = cache[key]; spread_cache.setdefault(s["underlying"], {"half_spread": None, "source": r.get("spread_source")}); by_part.setdefault(s["participant"], []).append(r); continue
-        hs = spread_cache.get(s["underlying"]) or spread_cache.setdefault(s["underlying"], SM.half_spread(s["underlying"], [day], market_db))
-        snaps = S.load_snaps(s["underlying"], s["expiry"], s["strike"], s["option_type"], day, market_db)
+        hs = spread_cache.get(s["underlying"])
+        if hs is None:                                                                                      # the measured half-spread of an underlying/day barely moves: reused for 10 minutes across refreshes
+            hk = ("hs", s["underlying"], day, market_db); hit = cache.get(hk) if cache is not None else None
+            if hit and time.time() - hit[0] < 600: hs = hit[1]
+            else:
+                hs = SM.half_spread(s["underlying"], [day], market_db)
+                if cache is not None: cache[hk] = (time.time(), hs)
+            spread_cache[s["underlying"]] = hs
+        snaps = S.load_snaps(s["underlying"], s["expiry"], s["strike"], s["option_type"], day, market_db, since=s["t"] - 60)
         r = S.settle(s, snaps, half_spread=hs["half_spread"], policy=policy); r["spread_source"] = hs["source"]
         if key is not None and _is_final(r, day): cache[key] = r
         by_part.setdefault(s["participant"], []).append(r)

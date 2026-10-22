@@ -34,11 +34,14 @@ def snap_expiry(iso: str) -> str:
 def _ep(ts: str) -> float: return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
 
 
-def load_snaps(underlying: str, expiry_iso: str, strike: float, ot: str, day: str, path: str | None = None) -> list[dict]:
+def load_snaps(underlying: str, expiry_iso: str, strike: float, ot: str, day: str, path: str | None = None, since: float | None = None) -> list[dict]:
+    """Captured quotes of one contract for one session day. `since` (epoch) keeps only rows received at/after that instant: a settlement never needs the rows before its signal."""
     c = sqlite3.connect(f"file:{os.path.abspath(path or DB)}?mode=ro", uri=True, timeout=30)
     try:
-        rows = c.execute("SELECT received_ts,ltp,bid,ask FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND session_date_ist=? AND ltp IS NOT NULL ORDER BY received_ts",
-                         (underlying, snap_expiry(expiry_iso), strike, ot, day)).fetchall()
+        q = "SELECT received_ts,ltp,bid,ask FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND session_date_ist=? AND ltp IS NOT NULL"
+        a = [underlying, snap_expiry(expiry_iso), strike, ot, day]
+        if since is not None: q += " AND received_ts>=?"; a.append(datetime.fromtimestamp(since, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"))
+        rows = c.execute(q + " ORDER BY received_ts", a).fetchall()
     finally:
         c.close()
     return [{"t": _ep(r[0]), "ltp": r[1], "bid": r[2], "ask": r[3]} for r in rows]
