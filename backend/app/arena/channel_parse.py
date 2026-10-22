@@ -18,6 +18,9 @@ NUM = r"(\d+(?:\.\d+)?)"
 CLAIM_POST = re.compile(r"\b(RESULTS?|ACHIEVED|REACHED|REPORT|SL\s*HIT|STOP.?LOSS\s*HIT|TARGETS?\s*HIT|BOOKED|POINTS?\s*MOVE|AFTER\s*CONFIRMATION)\b")
 
 
+CLAIM_POST2 = re.compile(r"PROFIT\s*DONE|\bCALL\s*NO\s*\d+|HIGH\s*-+\s*\d")
+
+
 def underlying_of(text: str) -> str | None:
     t = text.upper()
     for k, v in ALIASES:
@@ -28,7 +31,7 @@ def underlying_of(text: str) -> str | None:
 def parse_signal(text: str) -> dict:
     """-> {"ok": True, "signal": {...}} or {"ok": False, "reason": ...}"""
     s = norm(text)
-    if CLAIM_POST.search(s): return {"ok": False, "reason": "result / claim post (report, achieved, stop-loss hit ...), not an entry signal"}
+    if CLAIM_POST.search(s) or CLAIM_POST2.search(s): return {"ok": False, "reason": "result / claim post (report, achieved, stop-loss hit ...), not an entry signal"}
     m = re.search(r"#\s*([A-Z0-9_ ]*?)\s*_\s*(\d{3,6})\s*(CE|PE)\b", s) or re.search(r"#\s*([A-Z0-9_]+)\s+(\d{3,6})\s*(CE|PE)\b", s)
     if not m:
         r = parse_expiry_header(s)

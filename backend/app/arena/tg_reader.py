@@ -37,6 +37,17 @@ def participant_for(chat_id, default: str) -> str:
     return m.get(str(chat_id), default)
 
 
+def anon_only_chats() -> set[str]:
+    return {x.strip() for x in (os.environ.get("TG_ANON_ONLY_CHATS") or "").split(",") if x.strip()}
+
+
+def sender_allowed(chat_id, sender_id) -> bool:
+    """A GROUP whose posts come from an anonymous admin / the group itself (no user sender) may be listed in TG_ANON_ONLY_CHATS: only such messages count; a message from an ordinary member (a real user id) is ignored.
+    Channels (broadcast) need no such check."""
+    if str(chat_id) not in anon_only_chats(): return True
+    return sender_id is None or str(sender_id) == str(chat_id)
+
+
 def submit_enabled() -> bool:
     return (os.environ.get("TG_INGEST_SUBMIT") or "").strip().lower() in ("1", "true", "on", "yes")
 
@@ -97,7 +108,8 @@ async def run() -> None:                                                       #
     def handle(ev, edited):
         try:
             post = to_post(ev.chat_id, ev.message)
-            if str(post["chat"]["id"]) not in ids: return                        # belt and braces: never touch a non-listed chat
+            if str(post["chat"]["id"]) not in ids: return
+            if not sender_allowed(post["chat"]["id"], getattr(ev.message, "sender_id", None)): _bump("member_message_ignored"); return          # group member, not the anonymous admin                        # belt and braces: never touch a non-listed chat
             r = process(post, state, edited=edited, participant=participant_for(post["chat"]["id"], c["name"]), mode_fn=lambda: api.mode(api.cfg()))
             json.dump(state, open(CI.STATE, "w")); write_status(connected=True, last_event=time.time())
             log.info("channel=%s msg=%s outcome=%s", post["chat"]["id"], post["message_id"], r["outcome"])

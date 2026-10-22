@@ -108,3 +108,12 @@ def test_signal_edge_real_posts_call_put_shortened_range_numbered_targets_and_re
     for claim in ("\\U0001f4ca TODAY\\u2019S COMBINED TRADE REPORT\\n1. SENSEX 73400 PUT\\nEntry: 500 \\u2192 High: 528\\nResult: Stop-Loss Hit at 470",
                   "\\U0001f4ca SENSEX 74500 PUT (22 OCT Expiry)\\n\\u27a1 Entry: Above 500 (After Confirmation)\\nT1: 530 \\u2014 Achieved\\nT2: 550 \\u2014 Achieved"):
         r = CP.parse_signal(claim); assert r["ok"] is False and "claim" in r["reason"]                                    # results are claims, never entries
+
+
+def test_finobulls_group_posts_entry_with_paid_stop_and_targets_and_the_profit_done_posts_are_claims():
+    a = CP.parse_signal("SENSEX 73600 CE \\nBUY ABOVE 06\\nTGT paid \\nSL paid")["signal"]
+    assert (a["underlying"], a["strike"], a["option_type"], a["entry_mode"], a["entry"], a["sl"], a["targets"], a["sl_published"], a["targets_published"]) == ("SENSEX", 73600.0, "CE", "ABOVE", 6.0, None, [], False, False)
+    b = CP.parse_signal("CRUDEOIL 10400 CE\\nBUY ABOVE 250\\nTGT paid\\nSL paid")["signal"]; assert (b["underlying"], b["entry"]) == ("CRUDEOIL", 250.0)
+    c = CP.parse_signal("SENSEX 22 OCT  73500  CE \\nBuy above 19\\nTARGET:paid\\nSL: paid")["signal"]; assert (c["strike"], c["entry"], c["expiry_hint"]) == (73500.0, 19.0, {"day": 22, "month": 10})
+    for claim in ("Call no 07\\n\\U0001f4a5 SENSEX---- 73600 CE\\n\\U0001f449BUY --- 06\\n\\U0001f449HIGH -- 12++\\n\\U0001f449 Money double", "Call no 02\\n\\U0001f4a5 Nifty ---- 22650 CE\\n\\U0001f449BUY --- 173\\n\\U0001f449HIGH -- 190++\\n\\U0001f449 17++ points profit done"):
+        assert CP.parse_signal(claim)["ok"] is False

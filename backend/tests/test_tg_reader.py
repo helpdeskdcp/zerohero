@@ -64,3 +64,10 @@ def test_timestamp_correction_is_earlier_only_and_channel_only(env, monkeypatch)
     assert AR.human_signals(led, include_practice=True)[0]["t"] == rec["server_ts"] - 600
     SU.submit({"participant": "INSTITUTION_TRADER", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 22400, "option_type": "CE", "entry_mode": "LIMIT", "entry": 80, "sl": 50, "targets": [100]}, path=led)
     with pytest.raises(SU.SubmissionError): SU.submit_ts_correction("H00002", rec["server_ts"] - 900, "x", path=led)                    # manual submissions cannot be moved
+
+
+def test_anonymous_admin_groups_ignore_ordinary_members(monkeypatch):
+    monkeypatch.setenv("TG_ANON_ONLY_CHATS", "-1001383836599")
+    assert TR.sender_allowed(-1001383836599, None) and TR.sender_allowed(-1001383836599, -1001383836599)               # anonymous admin / the group itself
+    assert not TR.sender_allowed(-1001383836599, 123456789)                                                           # an ordinary member
+    assert TR.sender_allowed(-1002288564423, 123456789)                                                               # channels are not restricted
