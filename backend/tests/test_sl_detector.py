@@ -32,3 +32,9 @@ def test_no_trading_module_imports_the_estimator():
         for f in fs:
             if f.endswith(".py") and "sl_detector" in open(os.path.join(dp, f), encoding="utf-8").read(): bad.append(os.path.relpath(os.path.join(dp, f), root))
     assert bad == [], f"only the contest ingest may reference the estimator: {bad}"
+
+
+def test_plan_for_builds_the_1r_2r_3r_ladder_from_the_estimated_stop():
+    pl = D.plan_for("NIFTY", "2026-10-27", 25350.0, "PE", 160.0, 1_760_000_000.0, ltps=[150.0, 140.0, 130.0])
+    assert pl["sl"] == 126.1 and pl["targets"] == [193.9, 227.8, 261.7] and pl["risk_per_unit"] == 33.9 and pl["last_price"] == 130.0 and pl["n_quotes_60min"] == 3
+    assert D.plan_for("NIFTY", "2026-10-27", 25350.0, "PE", 160.0, 1_760_000_000.0, ltps=[])["method"] == "FALLBACK_70PCT"

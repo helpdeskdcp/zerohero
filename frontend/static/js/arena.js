@@ -6,6 +6,7 @@ const rs = (x, d = 0) => (x === null || x === undefined || Number.isNaN(x) ? "�
 const pct = (x, d = 1) => (x === null || x === undefined ? "—" : (x * 100).toFixed(d) + "%");
 
 /* form -> {ok, errors[], payload, preview}; mirrors the server rules so mistakes are caught before the (irreversible) submit */
+let RISK_MODULE = false;                                                         // set from /state: entry-only profile, ZeroHero's risk module may set stop and targets
 function validateForm(v) {
   const err = [], num = (k) => (v[k] === "" || v[k] === undefined ? NaN : Number(v[k]));
   if (!ALLOWED.includes(String(v.underlying || "").toUpperCase())) err.push("Underlying must be one of " + ALLOWED.join(", "));
@@ -13,9 +14,11 @@ function validateForm(v) {
   const strike = num("strike"), entry = num("entry"), sl = num("sl");
   if (!(strike > 0)) err.push("Strike must be a positive number");
   if (!(entry > 0)) err.push("Entry premium must be > 0");
-  if (!(sl > 0 && sl < entry)) err.push("Stop-loss must be above 0 and below entry (long options only)");
+  const slBlank = RISK_MODULE && String(v.sl || "").trim() === "";
+  if (!slBlank && !(sl > 0 && sl < entry)) err.push("Stop-loss must be above 0 and below entry (long options only)");
   const targets = String(v.targets || "").split(",").map((x) => x.trim()).filter(Boolean).map(Number);
-  if (!targets.length || targets.some((t) => !(t > entry))) err.push("Give at least one target, every target above entry");
+  const tgBlank = RISK_MODULE && targets.length === 0;
+  if (!tgBlank && (!targets.length || targets.some((t) => !(t > entry)))) err.push("Give at least one target, every target above entry");
   if (!["CE", "PE"].includes(String(v.option_type || "").toUpperCase())) err.push("Choose CE or PE");
   if (!v.confirmNotEntered) err.push("Tick: I have not entered this trade yet");
   const risk = entry - sl, rr = targets.length && risk > 0 ? (Math.min(...targets) - entry) / risk : null;
@@ -92,6 +95,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   const show = (tab) => { document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== tab)); document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); if (tab === "mine") loadMine(); if (tab === "standings") loadStandings(); };
   async function loadState() {
     try { const s = await api("/state"); $("mode").textContent = s.mode === "PRACTICE" ? `PRACTICE until ${s.start} — entries are stored but NOT scored` : s.mode === "ARENA_LIVE" ? (s.phase === "REHEARSAL" ? `REHEARSAL until ${s.official_start} — official contest starts ${s.official_start} (ends ${s.end})` : `OFFICIAL CONTEST (${s.start} → ${s.end})`) : "ARENA ENDED";
+      RISK_MODULE = !!s.risk_module; { const n = document.getElementById("riskNote"); if (n) n.hidden = !RISK_MODULE; }
       $("mode").className = "banner " + (s.mode === "ARENA_LIVE" ? "live" : "prac"); $("who").textContent = s.participant + " · " + s.now_ist.replace("T", " ") + " IST"; $("conn").hidden = true; $("app").hidden = false; return s; }
     catch (e) { $("app").hidden = true; $("conn").hidden = false; msg("connmsg", e.message, true); return null; }
   }
@@ -143,6 +147,8 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   form.option_type.addEventListener("change", () => { autoEntry = true; form.entry.value = ""; loadChain(true); });
   form.expiry.addEventListener("change", () => { autoEntry = true; form.entry.value = ""; loadChain(true); });
   $("refreshChain").onclick = () => { autoEntry = true; loadChain(true); };
+  const pv = $("previewRisk"); if (pv) pv.onclick = async () => { const v = readForm(); const q = new URLSearchParams({ underlying: String(v.underlying || "").toUpperCase(), option_type: String(v.option_type || "").toUpperCase(), strike: v.strike, entry: v.entry, expiry: String(v.expiry || "") });
+    try { const j = await api("/risk-preview?" + q.toString()); msg("submsg", `ZeroHero risk module: stop ${j.sl} · targets ${j.targets.join(" / ")} (1:1 / 1:2 / 1:3) · risk ${j.risk_per_unit} per unit` + (j.last_price ? ` · last price ${j.last_price}` : "") + (j.contract_captured ? "" : " · contract not captured: stop uses the no-quote rule") + " — nothing is recorded", false); } catch (e) { msg("submsg", String(e.message || e), true); } };
   const refreshContracts = () => loadChain(false);
   form.onsubmit = async (ev) => { ev.preventDefault(); const r = validateForm(readForm()); if (!r.ok) return msg("submsg", r.errors.join(" · "), true);
     $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.` + ((j.warnings || []).length ? "  ⚠ " + j.warnings.join(" · ") : ""), !!((j.warnings || []).length)); form.reset(); preview(); }

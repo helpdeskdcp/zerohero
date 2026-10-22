@@ -82,3 +82,10 @@ def report(pred_path: str = PRED, truth_path: str = TRUTH) -> dict:
     if n:
         out.update(median_abs_error_pts=ae[n // 2] if n % 2 else (ae[n // 2 - 1] + ae[n // 2]) / 2, within_5_pts=[w5, n, [round(x, 3) for x in wilson(w5, n)]], within_10_pts=[w10, n, [round(x, 3) for x in wilson(w10, n)]])
     return out
+
+
+def plan_for(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float, t_post: float, *, ltps: list[float] | None = None, db: str | None = None) -> dict:
+    """The risk module for an entry-only signal: stop from the estimator rule, targets at 1R / 2R / 3R of that risk (the 1:1, 1:2, 1:3 ladder), rounded to 0.05. Read-only."""
+    p = ltps if ltps is not None else prior_ltps(underlying, expiry_iso, strike, ot, t_post, db)
+    e = estimate(entry, p); r = float(entry) - e["sl"]
+    return {"sl": e["sl"], "targets": [round(round((float(entry) + k * r) / 0.05) * 0.05, 2) for k in (1, 2, 3)], "risk_per_unit": round(r, 2), "method": e["method"], "swing_low": e["low"], "n_quotes_60min": len(p), "last_price": (p[-1] if p else None)}

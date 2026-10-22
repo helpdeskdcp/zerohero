@@ -56,6 +56,8 @@ Each institution-side participant has **their own access token and their own pro
 
 **Fill window and proof.** A signal read from a Telegram channel is a *range / limit / above* entry that stays valid for **15 minutes** after the post: if the ask is not at or inside your range within that time, the signal expires unfilled (it is never filled hours later). Forms you submit yourself stay valid until the session end unless you set a validity. Every day an **evidence pack** is written for every signal (your row, the source post and its Telegram time, the captured bid/ask around the trade, the settlement, the rules and the code version) with a sha256 manifest, so any number on the leaderboard can be re-checked.
 
+**Entry-only profile and preview.** A profile can be set up as *entry-only*: you give the contract and the entry, and ZeroHero's rule-based risk module sets the stop-loss and the targets (1:1 / 1:2 / 1:3). On that profile you may leave both fields blank in the form; whatever you do fill in is kept. Press **Preview stop & targets** to see what the module would set before you submit (nothing is recorded by the preview). Entries of such a profile are valid for 15 minutes, like channel entries.
+
 ## 5. How every signal is settled (same for you and the AI)
 1. Execution starts **20 seconds after** your submission time (first recorded quote after that).
 2. **SL-at-fill rule (from 2026-10-20, not retroactive):** if your stop-loss is at or above the sell price at the moment you are filled (for example a limit buy fills far below your limit and the stop sits above the fill), the trade is stopped at once at that bid. This mirrors a real stop order placed above the market. H00002 (settled before the rule) keeps its result.

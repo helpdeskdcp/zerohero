@@ -61,7 +61,8 @@ def cfg() -> dict:
         if x and x != name: parts[x] = (os.environ.get("ARENA_TOKEN_" + x) or "").strip()
     pf = _participants_file(); hashes = {k.upper(): v["token_sha256"] for k, v in pf.items() if isinstance(v, dict) and v.get("token_sha256") and k.upper() not in parts}
     display = {k.upper(): (v.get("display") or k) for k, v in pf.items() if isinstance(v, dict)}
-    return {"participants": parts, "hashes": hashes, "display": display, "token": tok, "name": name,
+    flags = {k.upper(): {"risk_module": bool(v.get("risk_module")), "hidden": bool(v.get("hidden"))} for k, v in pf.items() if isinstance(v, dict)}
+    return {"participants": parts, "hashes": hashes, "display": display, "flags": flags, "token": tok, "name": name,
             "start": _contest_file().get("start") or os.environ.get("ARENA_START", "2026-10-26"), "end": _contest_file().get("end") or os.environ.get("ARENA_END", "2026-11-25"),
             "official_start": _contest_file().get("official_start"),
             "exclude": {x.strip() for x in (os.environ.get("ARENA_EXCLUDE_IDS") or "").split(",") if x.strip()}}
@@ -101,7 +102,7 @@ def state(request: Request):
     c = _auth(request)
     if time.time() - _warm["t"] > 120:                                                  # keep the quote pages hot so contract/strike pickers answer instantly
         _warm["t"] = time.time(); threading.Thread(target=CT.warm, daemon=True).start()
-    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
+    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "risk_module": c["flags"].get(c["name"], {}).get("risk_module", False), "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
             "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
 
 
@@ -133,6 +134,24 @@ def chain(request: Request, underlying: str, option_type: str = "CE", expiry: st
     return out
 
 
+@router.get("/risk-preview")
+def risk_preview(request: Request, underlying: str, option_type: str, strike: float, entry: float, expiry: str | None = None):
+    """What ZeroHero's rule-based risk module would set for an entry-only signal: stop from the contract's own recent swing low, targets at 1R / 2R / 3R. Read-only; nothing is recorded."""
+    _auth(request); u = underlying.upper(); ot = option_type.upper()
+    if u not in SU.ALLOWED or ot not in ("CE", "PE") or not (entry > 0 and strike > 0): raise HTTPException(422, "bad underlying / option_type / strike / entry")
+    try: cap = CT.captured(u)["expiries"]
+    except Exception: cap = {}                                                                 # quote store unavailable: still answer for an explicit expiry (stop falls back to the no-quote rule)
+    exps = list(cap)
+    try: e = SU.norm_expiry(expiry) if expiry else (exps[0] if exps else None)
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    if e is None: raise HTTPException(404, "no captured expiry for this underlying")
+    from .. import sl_detector
+    out = sl_detector.plan_for(u, e, strike, ot, entry, time.time())
+    out.update(underlying=u, expiry=e, strike=strike, option_type=ot, entry=entry, contract_captured=bool(strike in (cap.get(e, {}).get("strikes") or [])),
+               rule="stop = clip(0.97 x lowest price of this contract in the last 60 min, 55%..85% of entry); targets = entry + 1R, 2R, 3R; no quote -> stop 70% of entry")
+    return out
+
+
 @router.get("/quote")
 def quote(request: Request, underlying: str, expiry: str, strike: float, option_type: str):
     _auth(request); u = underlying.upper()
@@ -151,6 +170,16 @@ async def submit(request: Request):
     if not isinstance(body, dict): raise HTTPException(400, "object expected")
     m = mode(c)
     if m == "ENDED": raise HTTPException(409, "arena has ended")
+    if c["flags"].get(c["name"], {}).get("risk_module") and (not body.get("sl") or not body.get("targets")):          # entry-only profile: ZeroHero's rule-based risk module sets what is missing
+        try:
+            from .. import sl_detector
+            e_iso = SU.norm_expiry(str(body.get("expiry", ""))); entry = float(body.get("entry"))
+            pl = sl_detector.plan_for(str(body.get("underlying", "")).upper(), e_iso, float(body.get("strike")), str(body.get("option_type", "")).upper(), entry, time.time())
+            if not body.get("sl"): body["sl"] = pl["sl"]
+            if not body.get("targets"): body["targets"] = [round(round((entry + k * (entry - float(body["sl"]))) / 0.05) * 0.05, 2) for k in (1, 2, 3)]
+            body["note"] = (str(body.get("note", "")) + " | stop/targets set by the ZeroHero risk module (1R/2R/3R)").strip(" |")[:300]; body.setdefault("valid_sec", 900)
+        except Exception as ex:
+            raise HTTPException(422, f"risk module could not set the stop/targets: {ex}")
     u = str(body.get("underlying", "")).upper()
     if m == "ARENA_LIVE":
         try:
@@ -275,7 +304,7 @@ def leaderboard(request: Request, scope: str = "today"):
                         pass
                     out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
                     today = datetime.now(IST).strftime("%Y-%m-%d")
-                    names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
+                    names = [n for n in dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]) if not c["flags"].get(n, {}).get("hidden")]       # hidden = test profiles
                     v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)
                     v.update(mode=mode(c), generated_at=datetime.now(IST).isoformat(timespec="seconds"), you=None)
                     _cache["lb"][scope] = (time.time(), v)
