@@ -2,8 +2,10 @@
 become unscorable (wrong expiry, uncaptured strike, premium wildly off the market). READ-ONLY, cached 120 s, indexed queries only (session_date_ist, symbol)."""
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
+import threading
 import time
 
 from .submit import norm_expiry
@@ -25,10 +27,9 @@ def latest_day(path: str | None = None) -> str | None:
     return r[0] if r else None
 
 
-def captured(underlying: str, day: str | None = None, path: str | None = None) -> dict:
+def _compute_captured(underlying: str, day: str | None = None, path: str | None = None) -> dict:
     """{"day":..., "expiries": {iso: {"strikes": [...], "raw": 'DDMONYYYY'}}}"""
-    key = (underlying, day, path); hit = _cache.get(key)
-    if hit and time.time() - hit[0] < 120: return hit[1]
+    key = (underlying, day, path)
     c = _ro(path)
     try:
         if day:
@@ -48,6 +49,59 @@ def captured(underlying: str, day: str | None = None, path: str | None = None) -
         e = ex.setdefault(iso, {"strikes": set(), "raw": raw}); e["strikes"].add(float(k))
     out = {"day": d, "expiries": {i: {"strikes": sorted(v["strikes"]), "raw": v["raw"]} for i, v in sorted(ex.items())}}
     _cache[key] = (time.time(), out); return out
+
+
+
+
+_CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "captured_cache.json")
+_refreshing: set = set(); _rlock = threading.Lock(); _file_loaded = [False]
+
+
+def _load_file() -> None:
+    """Cold start: the previous answer (a few minutes old at worst) is served at once while a fresh one is computed in the background."""
+    if _file_loaded[0]: return
+    _file_loaded[0] = True
+    try:
+        d = json.load(open(_CACHE_FILE))
+        for u, v in d.items(): _cache.setdefault((u, None, None), (0.0, v))
+    except Exception:
+        pass
+
+
+def _persist() -> None:
+    try:
+        d = {k[0]: v[1] for k, v in _cache.items() if k[1] is None and k[2] is None}
+        tmp = _CACHE_FILE + ".tmp"; os.makedirs(os.path.dirname(_CACHE_FILE), exist_ok=True); json.dump(d, open(tmp, "w")); os.replace(tmp, _CACHE_FILE)
+    except Exception:
+        pass
+
+
+def _refresh(key) -> None:
+    try:
+        _compute_captured(*key)
+        if key[1] is None and key[2] is None: _persist()
+    except Exception:
+        pass
+    finally:
+        with _rlock: _refreshing.discard(key)
+
+
+def captured(underlying: str, day: str | None = None, path: str | None = None) -> dict:
+    """{"day":..., "expiries": {iso: {"strikes": [...], "raw": 'DDMONYYYY'}}}. Stale-while-revalidate: an answer older than 120 s is returned immediately and refreshed in the background (one refresher per key),
+    so no request ever waits for the scan of the big quote table, except the very first one ever."""
+    key = (underlying, day, path)
+    if path is None: _load_file()
+    hit = _cache.get(key)
+    if hit:
+        if time.time() - hit[0] >= 120:
+            with _rlock:
+                start = key not in _refreshing
+                if start: _refreshing.add(key)
+            if start: threading.Thread(target=_refresh, args=(key,), daemon=True).start()
+        return hit[1]
+    out = _compute_captured(underlying, day, path)
+    if path is None and day is None: _persist()
+    return out
 
 
 def last_quote(underlying: str, expiry_iso: str, strike: float, ot: str, day: str | None = None, path: str | None = None) -> dict | None:

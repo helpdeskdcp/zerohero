@@ -22,8 +22,14 @@ EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX"
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY, RATE_PER_MIN = 4096, 300                                   # per IP; many participants may share one office address
+_sf: dict = defaultdict(threading.Lock)                                  # single-flight: only ONE request recomputes a stale entry, the others get the previous value (or wait if there is none)
 RESULT_CACHE: dict = {}                                                  # final settlement results, reused across refreshes (see run.run)
 TTL_SEC = 20                                                             # standings / leaderboard are recomputed at most every 20 s (only OPEN signals are re-settled)
+
+
+def _stale_all() -> None:
+    for k in ("by", "lb"):
+        _cache[k] = {n: (0.0, v[1]) for n, v in _cache.get(k, {}).items()}
 
 
 def enabled() -> bool: return os.environ.get("ARENA_PUBLIC", "1").strip().lower() not in ("0", "false", "off", "no")
@@ -154,7 +160,7 @@ async def submit(request: Request):
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))
     try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
-    _cache["by"] = {}; _cache["lb"] = {}
+    _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
     try:
         from ..histcap import priority
         priority.request_watch(rec["underlying"], rec["expiry"], rec["strike"], rec["option_type"])         # dense quotes for this contract until the exchange closes
@@ -184,7 +190,7 @@ async def amend(request: Request):
         except Exception: pass
     try: rec = SU.submit_event(body, c["name"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
-    _cache["by"] = {}; _cache["lb"] = {}
+    _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
     return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "server_iso", "practice", "hash")}
 
 
@@ -219,20 +225,27 @@ def standings(request: Request):
     c = _auth(request)
     ent = _cache.setdefault("by", {}).get(c["name"])
     if ent is None or time.time() - ent[0] > TTL_SEC:
-        sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
-        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
-        ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
-        try:
-            from ..active_arm import run as _arm
-            lo = datetime.fromisoformat(c["start"] + "T00:00:00+05:30").timestamp(); hi = datetime.fromisoformat(c["end"] + "T23:59:59+05:30").timestamp()
-            a = _arm.run(market_db=os.path.join(BASE, "data", "market_history.db"), since_ts=lo, until_ts=hi)
-            active = {"summary": a["summary"]["all"], "groups": a["summary"]["groups"], "trades_per_day": a["summary"]["trades_per_day"], "verdict": a["summary"]["verdict"], "results": a["results"][-200:]}
-        except Exception as e:
-            active = {"summary": {}, "groups": {}, "trades_per_day": 0.0, "verdict": "UNAVAILABLE", "results": [], "error": f"{type(e).__name__}"}
-        _cache["by"][c["name"]] = (time.time(), {"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
-                                        "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
-                                        "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
-                                                    "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
+        lk = _sf[("by", c["name"])]
+        if lk.acquire(blocking=False):
+            try:
+                    sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+                    out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
+                    ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
+                    try:
+                        from ..active_arm import run as _arm
+                        lo = datetime.fromisoformat(c["start"] + "T00:00:00+05:30").timestamp(); hi = datetime.fromisoformat(c["end"] + "T23:59:59+05:30").timestamp()
+                        a = _arm.run(market_db=os.path.join(BASE, "data", "market_history.db"), since_ts=lo, until_ts=hi)
+                        active = {"summary": a["summary"]["all"], "groups": a["summary"]["groups"], "trades_per_day": a["summary"]["trades_per_day"], "verdict": a["summary"]["verdict"], "results": a["results"][-200:]}
+                    except Exception as e:
+                        active = {"summary": {}, "groups": {}, "trades_per_day": 0.0, "verdict": "UNAVAILABLE", "results": [], "error": f"{type(e).__name__}"}
+                    _cache["by"][c["name"]] = (time.time(), {"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
+                                                    "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
+                                                    "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Snapshots are ~1-3 min apart; SENSEX/MCX may use a modelled spread.",
+                                                                "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
+            finally:
+                lk.release()
+        elif ent is None:
+            with lk: pass                                                                       # first request ever: wait for the in-flight computation
     return _cache["by"][c["name"]][1]
 
 
@@ -243,19 +256,26 @@ def leaderboard(request: Request, scope: str = "today"):
     if scope not in ("today", "all"): raise HTTPException(422, "scope must be today or all")
     ent = _cache.setdefault("lb", {}).get(scope)
     if ent is None or time.time() - ent[0] > TTL_SEC:
-        from . import leaderboard as LB
-        sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
-        try:
-            from ..energy_event import shadow as _ev
-            sigs += _ev.scoring_signals(c["start"], c["end"])                                       # the NG event rule: a separate, disclosed AI line
-        except Exception:
-            pass
-        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
-        today = datetime.now(IST).strftime("%Y-%m-%d")
-        names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
-        v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)
-        v.update(mode=mode(c), generated_at=datetime.now(IST).isoformat(timespec="seconds"), you=None)
-        _cache["lb"][scope] = (time.time(), v)
+        lk = _sf[("lb", scope)]
+        if lk.acquire(blocking=False):
+            try:
+                    from . import leaderboard as LB
+                    sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+                    try:
+                        from ..energy_event import shadow as _ev
+                        sigs += _ev.scoring_signals(c["start"], c["end"])                                       # the NG event rule: a separate, disclosed AI line
+                    except Exception:
+                        pass
+                    out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
+                    today = datetime.now(IST).strftime("%Y-%m-%d")
+                    names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
+                    v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)
+                    v.update(mode=mode(c), generated_at=datetime.now(IST).isoformat(timespec="seconds"), you=None)
+                    _cache["lb"][scope] = (time.time(), v)
+            finally:
+                lk.release()
+        elif ent is None:
+            with lk: pass                                                                       # first request ever: wait for the in-flight computation
     return {**_cache["lb"][scope][1], "you": c["name"]}
 
 

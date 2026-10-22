@@ -60,3 +60,18 @@ def test_run_cache_reuses_final_results_and_resettles_open_ones(monkeypatch):
     R.run([sg("A"), sg("OPEN")], cache=cache); assert calls == ["A", "OPEN", "OPEN"]                                     # the settled one came from the cache, the open one was settled again
     R.run([{**sg("A"), "sl": 1.0}], cache=cache); assert calls[-1] == "A"                                                  # any change to the signal's content invalidates its entry
     R.run([sg("A")]); assert calls.count("A") == 3                                                                          # no cache argument: old behaviour
+
+
+def test_captured_is_stale_while_revalidate(monkeypatch, tmp_path):
+    from app.arena import contracts as CT
+    import threading
+    monkeypatch.setattr(CT, "_CACHE_FILE", str(tmp_path / "c.json")); monkeypatch.setattr(CT, "_file_loaded", [True]); CT._cache.clear(); CT._refreshing.clear()
+    n = []; gate = threading.Event()
+    def comp(u, day=None, path=None):
+        n.append(1); gate.wait(2); out = {"day": "d", "expiries": {"2026-10-27": {"strikes": [float(len(n))], "raw": "27OCT2026"}}}; CT._cache[(u, day, path)] = (time.time(), out); return out
+    monkeypatch.setattr(CT, "_compute_captured", comp)
+    gate.set(); first = CT.captured("NIFTY"); assert first["expiries"]["2026-10-27"]["strikes"] == [1.0]                                     # very first call computes inline
+    CT._cache[("NIFTY", None, None)] = (time.time() - 500, first); gate.clear(); t = time.time()
+    stale = CT.captured("NIFTY"); assert stale is first and time.time() - t < 0.5                                                          # stale answer returned at once
+    stale2 = CT.captured("NIFTY"); assert stale2 is first and len(n) == 2                                                                  # one background refresher only
+    gate.set(); time.sleep(0.3); assert CT.captured("NIFTY")["expiries"]["2026-10-27"]["strikes"] == [2.0]                                  # refreshed value arrives

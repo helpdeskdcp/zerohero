@@ -61,3 +61,19 @@ def test_daily_report_script_tolerates_log_rows_without_a_telegram_date():
     import os
     src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "arena_daily_report.py")).read()
     assert 'r.get("tg_date") and' in src                      # regression: edit-ignored rows have no tg_date and crashed the 23:40 report
+
+
+def test_standings_and_leaderboard_are_single_flight_under_a_stampede(client, monkeypatch):
+    import threading
+    calls = []
+
+    def slow_run(sigs, **kw):
+        calls.append(1); time.sleep(0.3); return {}
+    monkeypatch.setattr(A.R, "run", slow_run); monkeypatch.setattr(A.R, "ai_signals", lambda *a, **k: []); monkeypatch.setattr(A.R, "human_signals", lambda *a, **k: [])
+    A._cache.update(by={}, lb={}); H = {"X-Arena-Token": client.tok}; codes = []
+
+    def hit(path): codes.append(client.get(path, headers=H).status_code)
+    th = [threading.Thread(target=hit, args=("/api/arena/public/standings",)) for _ in range(12)] + [threading.Thread(target=hit, args=("/api/arena/public/leaderboard?scope=today",)) for _ in range(12)]
+    [t.start() for t in th]; [t.join() for t in th]
+    assert codes.count(200) == 24 and len(calls) == 2                                           # 24 simultaneous requests, one recompute per endpoint
+    A._stale_all(); r = client.get("/api/arena/public/leaderboard?scope=today", headers=H); assert r.status_code == 200 and len(calls) == 3     # a new signal makes it stale: one refresh, previous value kept meanwhile
