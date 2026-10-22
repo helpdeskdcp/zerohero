@@ -1,0 +1,350 @@
+{
+ "NIFTY": {
+  "P1": {
+   "events": 249205,
+   "none_share": 0.058,
+   "cells": {
+    "PLAIN/UP/BEYOND": {
+     "n": 51622,
+     "cont_share": 0.6775
+    },
+    "PLAIN/UP/REJECTED": {
+     "n": 40960,
+     "cont_share": 0.3734
+    },
+    "PLAIN/DOWN/BEYOND": {
+     "n": 54191,
+     "cont_share": 0.6863
+    },
+    "PLAIN/DOWN/REJECTED": {
+     "n": 40925,
+     "cont_share": 0.3674
+    },
+    "PLAIN/BOTH/BEYOND": {
+     "n": 105813,
+     "cont_share": 0.682
+    },
+    "PLAIN/BOTH/REJECTED": {
+     "n": 81885,
+     "cont_share": 0.3704
+    },
+    "STRUCT/UP/BEYOND": {
+     "n": 17518,
+     "cont_share": 0.6918
+    },
+    "STRUCT/UP/REJECTED": {
+     "n": 12783,
+     "cont_share": 0.3481
+    },
+    "STRUCT/DOWN/BEYOND": {
+     "n": 18701,
+     "cont_share": 0.6924
+    },
+    "STRUCT/DOWN/REJECTED": {
+     "n": 12505,
+     "cont_share": 0.3515
+    },
+    "STRUCT/BOTH/BEYOND": {
+     "n": 36219,
+     "cont_share": 0.6921
+    },
+    "STRUCT/BOTH/REJECTED": {
+     "n": 25288,
+     "cont_share": 0.3498
+    }
+   },
+   "class_effect": {
+    "PLAIN": [
+     0.3116,
+     [
+      0.3053,
+      0.3173
+     ]
+    ],
+    "STRUCT": [
+     0.3423,
+     [
+      0.3322,
+      0.3527
+     ]
+    ]
+   },
+   "level_effect": {
+    "BEYOND": [
+     0.0101,
+     [
+      0.0046,
+      0.0153
+     ]
+    ],
+    "REJECTED": [
+     -0.0207,
+     [
+      -0.0301,
+      -0.0124
+     ]
+    ]
+   }
+  },
+  "P2": {
+   "events": 302798,
+   "none_share": 0.057,
+   "cells": {
+    "PLAIN/UP/BEYOND": {
+     "n": 60615,
+     "cont_share": 0.6688
+    },
+    "PLAIN/UP/REJECTED": {
+     "n": 51872,
+     "cont_share": 0.3416
+    },
+    "PLAIN/DOWN/BEYOND": {
+     "n": 61884,
+     "cont_share": 0.6782
+    },
+    "PLAIN/DOWN/REJECTED": {
+     "n": 54571,
+     "cont_share": 0.3422
+    },
+    "PLAIN/BOTH/BEYOND": {
+     "n": 122499,
+     "cont_share": 0.6736
+    },
+    "PLAIN/BOTH/REJECTED": {
+     "n": 106443,
+     "cont_share": 0.3419
+    },
+    "STRUCT/UP/BEYOND": {
+     "n": 20427,
+     "cont_share": 0.6843
+    },
+    "STRUCT/UP/REJECTED": {
+     "n": 15949,
+     "cont_share": 0.326
+    },
+    "STRUCT/DOWN/BEYOND": {
+     "n": 21062,
+     "cont_share": 0.6958
+    },
+    "STRUCT/DOWN/REJECTED": {
+     "n": 16418,
+     "cont_share": 0.3155
+    },
+    "STRUCT/BOTH/BEYOND": {
+     "n": 41489,
+     "cont_share": 0.6901
+    },
+    "STRUCT/BOTH/REJECTED": {
+     "n": 32367,
+     "cont_share": 0.3207
+    }
+   },
+   "class_effect": {
+    "PLAIN": [
+     0.3317,
+     [
+      0.3266,
+      0.3368
+     ]
+    ],
+    "STRUCT": [
+     0.3695,
+     [
+      0.3609,
+      0.379
+     ]
+    ]
+   },
+   "level_effect": {
+    "BEYOND": [
+     0.0166,
+     [
+      0.0114,
+      0.0221
+     ]
+    ],
+    "REJECTED": [
+     -0.0213,
+     [
+      -0.0282,
+      -0.0142
+     ]
+    ]
+   }
+  }
+ },
+ "BANKNIFTY": {
+  "P1": {
+   "events": 237610,
+   "none_share": 0.008,
+   "cells": {
+    "PLAIN/UP/BEYOND": {
+     "n": 47035,
+     "cont_share": 0.6604
+    },
+    "PLAIN/UP/REJECTED": {
+     "n": 38210,
+     "cont_share": 0.3335
+    },
+    "PLAIN/DOWN/BEYOND": {
+     "n": 47436,
+     "cont_share": 0.661
+    },
+    "PLAIN/DOWN/REJECTED": {
+     "n": 38228,
+     "cont_share": 0.33
+    },
+    "PLAIN/BOTH/BEYOND": {
+     "n": 94471,
+     "cont_share": 0.6607
+    },
+    "PLAIN/BOTH/REJECTED": {
+     "n": 76438,
+     "cont_share": 0.3318
+    },
+    "STRUCT/UP/BEYOND": {
+     "n": 18080,
+     "cont_share": 0.665
+    },
+    "STRUCT/UP/REJECTED": {
+     "n": 15126,
+     "cont_share": 0.3182
+    },
+    "STRUCT/DOWN/BEYOND": {
+     "n": 18661,
+     "cont_share": 0.6682
+    },
+    "STRUCT/DOWN/REJECTED": {
+     "n": 14834,
+     "cont_share": 0.3168
+    },
+    "STRUCT/BOTH/BEYOND": {
+     "n": 36741,
+     "cont_share": 0.6666
+    },
+    "STRUCT/BOTH/REJECTED": {
+     "n": 29960,
+     "cont_share": 0.3175
+    }
+   },
+   "class_effect": {
+    "PLAIN": [
+     0.3289,
+     [
+      0.3243,
+      0.3339
+     ]
+    ],
+    "STRUCT": [
+     0.3491,
+     [
+      0.3409,
+      0.3575
+     ]
+    ]
+   },
+   "level_effect": {
+    "BEYOND": [
+     0.0059,
+     [
+      0.0004,
+      0.0113
+     ]
+    ],
+    "REJECTED": [
+     -0.0143,
+     [
+      -0.0203,
+      -0.0077
+     ]
+    ]
+   }
+  },
+  "P2": {
+   "events": 303997,
+   "none_share": 0.007,
+   "cells": {
+    "PLAIN/UP/BEYOND": {
+     "n": 60702,
+     "cont_share": 0.6609
+    },
+    "PLAIN/UP/REJECTED": {
+     "n": 48790,
+     "cont_share": 0.3229
+    },
+    "PLAIN/DOWN/BEYOND": {
+     "n": 60063,
+     "cont_share": 0.6687
+    },
+    "PLAIN/DOWN/REJECTED": {
+     "n": 51898,
+     "cont_share": 0.3265
+    },
+    "PLAIN/BOTH/BEYOND": {
+     "n": 120765,
+     "cont_share": 0.6648
+    },
+    "PLAIN/BOTH/REJECTED": {
+     "n": 100688,
+     "cont_share": 0.3248
+    },
+    "STRUCT/UP/BEYOND": {
+     "n": 22274,
+     "cont_share": 0.6706
+    },
+    "STRUCT/UP/REJECTED": {
+     "n": 18195,
+     "cont_share": 0.3212
+    },
+    "STRUCT/DOWN/BEYOND": {
+     "n": 22459,
+     "cont_share": 0.6764
+    },
+    "STRUCT/DOWN/REJECTED": {
+     "n": 19616,
+     "cont_share": 0.3146
+    },
+    "STRUCT/BOTH/BEYOND": {
+     "n": 44733,
+     "cont_share": 0.6735
+    },
+    "STRUCT/BOTH/REJECTED": {
+     "n": 37811,
+     "cont_share": 0.3178
+    }
+   },
+   "class_effect": {
+    "PLAIN": [
+     0.34,
+     [
+      0.3362,
+      0.3438
+     ]
+    ],
+    "STRUCT": [
+     0.3557,
+     [
+      0.3481,
+      0.3638
+     ]
+    ]
+   },
+   "level_effect": {
+    "BEYOND": [
+     0.0087,
+     [
+      0.0036,
+      0.0139
+     ]
+    ],
+    "REJECTED": [
+     -0.007,
+     [
+      -0.0129,
+      -0.0016
+     ]
+    ]
+   }
+  }
+ }
+}
