@@ -38,3 +38,16 @@ test("management event form mirrors server rules", () => {
     assert.equal(A.validateEvent({ ...base, ...bad }).ok, false, JSON.stringify(bad));
   }
 });
+
+test("every time on the page is India Standard Time (UTC+5:30), never UTC", () => {
+  assert.equal(A.fmtIsoIST("2026-10-22T04:15:00+00:00", false), "2026-10-22 09:45");               // Mohit's example: 04:15 UTC is 09:45 IST
+  assert.equal(A.fmtIsoIST("2026-10-21T03:48:42Z", true), "2026-10-21 09:18:42");                  // H00003's Telegram post time
+  assert.equal(A.fmtIST(Date.UTC(2026, 9, 21, 18, 30), false), "2026-10-22 00:00");                // rolls over midnight IST
+});
+test("entry-only profile: stop and targets may be blank, everyone else still needs them", () => {
+  const blank = { ...ok, sl: "", targets: "" };
+  assert.equal(A.validateForm(blank).ok, false); A.setRiskModule(true);
+  assert.equal(A.validateForm(blank).ok, true);
+  assert.equal(A.validateForm({ ...ok, sl: "120" }).ok, false, "a stop that is given must still be below the entry");
+  A.setRiskModule(false); assert.equal(A.validateForm(blank).ok, false);
+});

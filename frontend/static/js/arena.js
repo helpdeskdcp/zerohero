@@ -6,6 +6,8 @@ const rs = (x, d = 0) => (x === null || x === undefined || Number.isNaN(x) ? "�
 const pct = (x, d = 1) => (x === null || x === undefined ? "—" : (x * 100).toFixed(d) + "%");
 
 /* form -> {ok, errors[], payload, preview}; mirrors the server rules so mistakes are caught before the (irreversible) submit */
+/* every time shown on this page is INDIA STANDARD TIME (IST, UTC+5:30): the server sends epoch / UTC ISO values, converted here */
+const IST_MS = 19800000, fmtIST = (ms, secs) => new Date(ms + IST_MS).toISOString().slice(0, secs ? 19 : 16).replace("T", " "), fmtIsoIST = (iso, secs) => fmtIST(Date.parse(iso), secs);
 let RISK_MODULE = false;                                                         // set from /state: entry-only profile, ZeroHero's risk module may set stop and targets
 function validateForm(v) {
   const err = [], num = (k) => (v[k] === "" || v[k] === undefined ? NaN : Number(v[k]));
@@ -80,7 +82,7 @@ function validateEvent(v) {
   return { ok: err.length === 0, errors: err, payload };
 }
 
-if (typeof module !== "undefined") module.exports = { validateForm, validateEvent, renderMarkdown, sideCard, verdictText, rs, pct, esc, ALLOWED };
+if (typeof module !== "undefined") module.exports = { validateForm, validateEvent, renderMarkdown, sideCard, verdictText, rs, pct, esc, ALLOWED, fmtIST, fmtIsoIST, setRiskModule: (b) => { RISK_MODULE = !!b; } };
 
 if (typeof window !== "undefined" && typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id);
@@ -104,12 +106,12 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     const tb = $("mine"); tb.replaceChildren();
     try { const j = await api("/signals"); if (!j.signals.length) { tb.insertRow().insertCell().textContent = "nothing submitted yet"; return; }
       const sel = $("mgSignal"); sel.replaceChildren(...j.signals.slice().reverse().map((r) => { const o = document.createElement("option"); o.value = r.id; o.textContent = `${r.id} · ${r.underlying} ${r.strike}${r.option_type} ${r.entry_mode} ${r.entry}`; return o; }));
-      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, r.server_iso.replace("T", " ").slice(0, 19), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "),
+      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, fmtIsoIST(r.server_iso, true), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "),
         (r.events || []).map((e) => e.action + (e.sl ? " " + e.sl : "") + (e.targets ? " " + e.targets.join("/") : "") + (e.trail_points ? " " + e.trail_points + "pt" : "") + (e.trail_pct ? " " + e.trail_pct + "%" : "")).join(" → ") || "—", r.hash.slice(0, 10)].forEach((v) => (tr.insertCell().textContent = v)); } }
     catch (e) { tb.insertRow().insertCell().textContent = e.message; }
   }
   function resultsTable(el, rows) {
-    el.replaceChildren(); for (const r of rows.slice(-60).reverse()) { const tr = el.insertRow(); [new Date((r.t || 0) * 1000).toISOString().slice(0, 16).replace("T", " "), `${r.underlying} ${r.strike}${r.type}`, r.status, r.fill ? r.fill.toFixed(2) : "—", r.exit ? r.exit.toFixed(2) : "—", r.exit_reason || "—", r.net_rs !== undefined ? rs(r.net_rs) : "—"].forEach((v) => (tr.insertCell().textContent = v)); }
+    el.replaceChildren(); for (const r of rows.slice(-60).reverse()) { const tr = el.insertRow(); [fmtIST((r.t || 0) * 1000), `${r.underlying} ${r.strike}${r.type}`, r.status, r.fill ? r.fill.toFixed(2) : "—", r.exit ? r.exit.toFixed(2) : "—", r.exit_reason || "—", r.net_rs !== undefined ? rs(r.net_rs) : "—"].forEach((v) => (tr.insertCell().textContent = v)); }
   }
   async function loadStandings() {
     try { const s = await api("/standings"); const put = (id, c) => { const e = $(id); e.replaceChildren(); const h = document.createElement("h3"); h.textContent = c.label; e.append(h); for (const l of c.lines) { const d = document.createElement("div"); d.textContent = l; e.append(d); } };
@@ -151,13 +153,13 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     try { const j = await api("/risk-preview?" + q.toString()); msg("submsg", `ZeroHero risk module: stop ${j.sl} · targets ${j.targets.join(" / ")} (1:1 / 1:2 / 1:3) · risk ${j.risk_per_unit} per unit` + (j.last_price ? ` · last price ${j.last_price}` : "") + (j.contract_captured ? "" : " · contract not captured: stop uses the no-quote rule") + " — nothing is recorded", false); } catch (e) { msg("submsg", String(e.message || e), true); } };
   const refreshContracts = () => loadChain(false);
   form.onsubmit = async (ev) => { ev.preventDefault(); const r = validateForm(readForm()); if (!r.ok) return msg("submsg", r.errors.join(" · "), true);
-    $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.` + ((j.warnings || []).length ? "  ⚠ " + j.warnings.join(" · ") : ""), !!((j.warnings || []).length)); form.reset(); preview(); }
+    $("go").disabled = true; try { const j = await api("/submit", { method: "POST", body: JSON.stringify(r.payload) }); msg("submsg", `Submitted ${j.id} at ${fmtIsoIST(j.server_iso, true)} IST${j.practice ? " (PRACTICE: not scored)" : ""} · hash ${j.hash.slice(0, 12)}… — it cannot be edited.` + ((j.warnings || []).length ? "  ⚠ " + j.warnings.join(" · ") : ""), !!((j.warnings || []).length)); form.reset(); preview(); }
     catch (e) { msg("submsg", e.message, true); } finally { $("go").disabled = false; } };
   const mg = $("mg"); const showMg = () => { const a = mg.action.value; mg.querySelectorAll("[data-for]").forEach((d) => (d.hidden = !d.dataset.for.split(" ").includes(a))); };
   mg.oninput = showMg; showMg();
   mg.onsubmit = async (ev) => { ev.preventDefault(); const v = { signal_id: mg.signal_id.value, action: mg.action.value, sl: mg.sl.value, targets: mg.targets.value, trail_points: mg.trail_points.value, trail_pct: mg.trail_pct.value, confirm: mg.confirm.checked };
     const r = validateEvent(v); if (!r.ok) return msg("mgmsg", r.errors.join(" · "), true); $("mgGo").disabled = true;
-    try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${j.server_iso.replace("T", " ").slice(0, 19)} UTC${j.practice ? " (PRACTICE)" : ""} — takes effect ~20 s later, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
+    try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${fmtIsoIST(j.server_iso, true)} IST${j.practice ? " (PRACTICE)" : ""} — takes effect ~20 s later, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
     catch (e) { msg("mgmsg", e.message, true); } finally { $("mgGo").disabled = false; } };
   $("tokenIn").value = token; if (token) loadState().then((s) => { if (s) { loadGuide(); show("guide"); refreshContracts(); } });
 })();
