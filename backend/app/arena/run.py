@@ -40,10 +40,10 @@ def human_signals(path: str | None = None, start: str | None = None, end: str | 
     vcorr = {r["signal_id"]: r["valid_sec"] for r in allrecs if r.get("type") == "HUMAN_VALIDITY_CORRECTION"}        # fill window applied to channel signals ingested before it existed
     corr = {r["signal_id"]: r["effective_ts"] for r in allrecs if r.get("type") == "HUMAN_TS_CORRECTION"}         # earlier-only latency corrections for channel-ingested signals
     for r in allrecs:
-        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct") if k in r} | {"t": r["server_ts"]})
+        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct", "lots") if k in r} | {"t": r["server_ts"]})
     rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or (start is not None or end is not None) or not r.get("practice")) and r["id"] not in (exclude_ids or set()) and (not start or day(r) >= start) and (not end or day(r) <= end)]
     return [{"id": r["id"], "participant": pmap.get(r["id"], r["participant"]), "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
-             "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], []), **({"valid_sec": r.get("valid_sec") or vcorr[r["id"]]} if (r.get("valid_sec") or r["id"] in vcorr) else {})} for r in rows]
+             "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], []), **({"valid_sec": r.get("valid_sec") or vcorr[r["id"]]} if (r.get("valid_sec") or r["id"] in vcorr) else {}), "lots": int(r.get("lots") or 1)} for r in rows]
 
 
 def _is_final(r: dict, day: str) -> bool:

@@ -61,7 +61,7 @@ def cfg() -> dict:
         if x and x != name: parts[x] = (os.environ.get("ARENA_TOKEN_" + x) or "").strip()
     pf = _participants_file(); hashes = {k.upper(): v["token_sha256"] for k, v in pf.items() if isinstance(v, dict) and v.get("token_sha256") and k.upper() not in parts}
     display = {k.upper(): (v.get("display") or k) for k, v in pf.items() if isinstance(v, dict)}
-    flags = {k.upper(): {"risk_module": bool(v.get("risk_module")), "hidden": bool(v.get("hidden"))} for k, v in pf.items() if isinstance(v, dict)}
+    flags = {k.upper(): {"risk_module": bool(v.get("risk_module")), "hidden": bool(v.get("hidden")), "default_lots": (int(v.get("default_lots", 1)) if 1 <= int(v.get("default_lots", 1)) <= SU.MAX_LOTS else 1)} for k, v in pf.items() if isinstance(v, dict)}
     return {"participants": parts, "hashes": hashes, "display": display, "flags": flags, "token": tok, "name": name,
             "start": _contest_file().get("start") or os.environ.get("ARENA_START", "2026-10-26"), "end": _contest_file().get("end") or os.environ.get("ARENA_END", "2026-11-25"),
             "official_start": _contest_file().get("official_start"),
@@ -102,7 +102,7 @@ def state(request: Request):
     c = _auth(request)
     if time.time() - _warm["t"] > 120:                                                  # keep the quote pages hot so contract/strike pickers answer instantly
         _warm["t"] = time.time(); threading.Thread(target=CT.warm, daemon=True).start()
-    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "risk_module": c["flags"].get(c["name"], {}).get("risk_module", False), "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
+    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "risk_module": c["flags"].get(c["name"], {}).get("risk_module", False), "default_lots": c["flags"].get(c["name"], {}).get("default_lots", 1), "max_lots": SU.MAX_LOTS, "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
             "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
 
 
@@ -180,6 +180,7 @@ async def submit(request: Request):
             body["note"] = (str(body.get("note", "")) + " | stop/targets set by the ZeroHero risk module (1R/2R/3R)").strip(" |")[:300]; body.setdefault("valid_sec", 900)
         except Exception as ex:
             raise HTTPException(422, f"risk module could not set the stop/targets: {ex}")
+    if body.get("lots") in (None, ""): body["lots"] = c["flags"].get(c["name"], {}).get("default_lots", 1)             # the profile's default quantity (1 lot unless the profile says otherwise)
     u = str(body.get("underlying", "")).upper()
     if m == "ARENA_LIVE":
         try:
@@ -202,7 +203,7 @@ async def submit(request: Request):
         priority.request_watch(rec["underlying"], rec["expiry"], rec["strike"], rec["option_type"])         # dense quotes for this contract until the exchange closes
     except Exception:
         pass
-    out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "hash")}
+    out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "lots", "hash")}
     if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]; out["available_expiries"] = chk["available_expiries"]
     return out
 
@@ -224,10 +225,16 @@ async def amend(request: Request):
             if sig and sig["underlying"] in EXCH and not mc.is_trading(EXCH[sig["underlying"]]): raise HTTPException(409, f"{EXCH[sig['underlying']]} is not open")
         except HTTPException: raise
         except Exception: pass
+    if str(body.get("action", "")).upper() == "AMEND_LOTS":                                                # the quantity can change only while the trade is NOT active
+        sid = str(body.get("signal_id", ""))
+        sg = [x for x in R.human_signals(include_practice=True) if x["id"] == sid and x["participant"] == c["name"]]
+        if sg:
+            rr = R.run(sg, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE).get(c["name"], {"results": []})["results"]
+            if rr and (rr[0].get("fill") is not None or rr[0].get("status") in ("SETTLED", "CANCELLED")): raise HTTPException(409, "the trade is already active (or closed): the quantity cannot be changed any more")
     try: rec = SU.submit_event(body, c["name"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
-    return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "server_iso", "practice", "hash")}
+    return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "lots", "server_iso", "practice", "hash")}
 
 
 @router.get("/ingest/status")
@@ -250,8 +257,8 @@ def signals(request: Request):
     recs = SU.load(); evs: dict[str, list] = {}; pm = SU.participant_map(recs)
     day = lambda r: datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
     for r in recs:
-        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r.get(k) for k in ("id", "server_iso", "action", "sl", "targets", "trail_points", "trail_pct", "hash")})
-    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "note", "hash")}, "events": evs.get(r["id"], []),
+        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r.get(k) for k in ("id", "server_iso", "action", "sl", "targets", "trail_points", "trail_pct", "lots", "hash")})
+    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "lots", "note", "hash")}, "events": evs.get(r["id"], []),
                          "scored": c["start"] <= day(r) <= c["end"] and r["id"] not in c["exclude"], "excluded": r["id"] in c["exclude"]}
                         for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and pm.get(r["id"]) == c["name"]]}
 
@@ -314,14 +321,14 @@ def live(request: Request):
     for s, r in base:
         q = CT.latest_quote(s["underlying"], s["expiry"], s["strike"], s["option_type"]) if s.get("expiry") else None
         st = str(r.get("status", "")); label = f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})"
-        row = {"id": s["id"], "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
+        row = {"id": s["id"], "lots": r.get("lots") or s.get("lots") or 1, "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
                "quote_age_s": (round(min(now - q["t"], chk) if chk is not None else now - q["t"], 1) if q else None), "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
         elif st == "CANCELLED": row.update(state="CANCELLED")
         elif st.startswith("NO_DATA:no_exit_snapshot"):
             lot = r.get("lot") or 1; bid = (q or {}).get("bid") or (r.get("last") or {}).get("bid"); fill = r["fill"]
-            pnl = None if not bid else round((bid - fill) * lot - _S.cost_points(s["underlying"], fill, bid, lot) * lot, 1)
+            lots = r.get("lots") or s.get("lots") or 1; pnl = None if not bid else round((bid - fill) * lot * lots - (_S.cost_total_rs(s["underlying"], fill, bid, lot, lots) or 0), 1)
             row.update(state="ACTIVE", fill=fill, sl=r.get("sl_now", s["sl"]), targets=r.get("targets_now", s["targets"]), pnl_rs=pnl, pnl_pct=(round(100 * (bid - fill) / fill, 2) if bid else None), lot=lot,
                        to_sl=(round(bid - r.get("sl_now", s["sl"]), 2) if (bid and r.get("sl_now", s["sl"]) is not None) else None), to_t1=(round((r.get("targets_now") or s["targets"])[0] - bid, 2) if (bid and (r.get("targets_now") or s["targets"])) else None), pnl_note="open P&L = (bid - fill) x lot - estimated costs; the final result follows the contest rules at exit")
         elif st == "NOT_TRIGGERED":

@@ -79,3 +79,11 @@ def test_entry_only_post_gets_estimator_stop_and_1r_2r_3r_ladder(env, monkeypatc
     rec = SU.load(env["kw"]["ledger"])[-1]; assert rec["sl"] == 140.0 and rec["targets"] == [180.0, 200.0, 220.0] and len(calls) == 1
     r = CI.handle_post(post(33, "NIFTY 27 OCT 25350 PE\nABOVE :- 160\nTARGET :- 200/250\nSL :- 140"), env["st"], **env["kw"])                  # fully published: untouched
     rec = SU.load(env["kw"]["ledger"])[-1]; assert rec["sl"] == 140.0 and rec["targets"] == [200.0, 250.0] and "risk module" not in rec["note"]
+
+
+def test_channel_signals_carry_the_profile_default_quantity(env, monkeypatch, tmp_path):
+    import json
+    from app.arena import api as A
+    (tmp_path / "pf.json").write_text(json.dumps({"INSTITUTION_TRADER": {"default_lots": 2}})); monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(tmp_path / "pf.json"))
+    assert CI.handle_post(post(41, HERO), env["st"], **env["kw"])["outcome"] == "SUBMITTED" and SU.load(env["kw"]["ledger"])[-1]["lots"] == 2                       # Mohit's profile: 2 lots
+    kw = {**env["kw"], "participant": "SOMEONE_ELSE"}; assert CI.handle_post(post(42, HERO), env["st"], **kw)["outcome"] == "SUBMITTED" and SU.load(env["kw"]["ledger"])[-1]["lots"] == 1   # everybody else: 1 lot

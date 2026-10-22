@@ -74,6 +74,21 @@ def cost_points(und: str, entry: float, exit_: float, lot: int) -> float | None:
     return estimate_index_option_cost(entry, max(exit_, 0.05), lot, lots=1, slippage_points=0.0)["total_cost_points"]
 
 
+def cost_total_rs(und: str, entry: float, exit_: float, unit: int, lots: int = 1) -> float | None:
+    """Round-trip cost in RUPEES for `lots` lots (one buy order, one sell order: the flat brokerage is paid once, every other charge scales with the quantity)."""
+    lots = max(1, int(lots or 1))
+    if und == "GOLDM":
+        buy, sell = entry * unit * lots, max(exit_, 0.05) * unit * lots
+        brokerage = 2 * 20.0; exch = (buy + sell) * 0.000418; regfee = (buy + sell) * 0.000001; ctt = sell * 0.0005; stamp = buy * 0.00003; gst = 0.18 * (brokerage + exch + regfee)
+        return brokerage + exch + regfee + ctt + stamp + gst
+    if und in MCX:
+        from ..institutional_edge.costs import KNOWN_COST_PROFILES
+        pr = KNOWN_COST_PROFILES.get(("MCX", MCX[und]))
+        if pr is None: return None
+        return pr.brokerage + (pr.round_trip_total - pr.brokerage) * lots
+    return estimate_index_option_cost(entry, max(exit_, 0.05), unit, lots=lots, slippage_points=0.0)["total_cost"]
+
+
 RULES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "rule_effective.json")
 
 
@@ -91,6 +106,8 @@ def _apply(ev: dict, st: dict) -> None:
     if a == "AMEND_SL": st["sl"] = float(ev["sl"])
     elif a == "AMEND_TARGETS": st["targets"] = sorted({float(x) for x in ev["targets"]})
     elif a == "TRAIL_SL": st["trail_points"] = ev.get("trail_points"); st["trail_pct"] = ev.get("trail_pct")
+    elif a == "AMEND_LOTS":
+        if not st.get("filled"): st["lots"] = max(1, int(ev["lots"]))                                              # once the trade is active the quantity is frozen: the event is ignored
     elif a == "CANCEL" or a == "EXIT_NOW": st[a] = True
 
 
@@ -107,7 +124,7 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     live = [s for s in snaps if s["t"] >= t0]
     if not live: return {**base, "status": "NO_DATA:no_snapshot_after_signal"}
     evs = sorted(({**e, "t_eff": e["t"] + latency} for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
-    st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None}
+    st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None, "lots": max(1, int(sig.get("lots") or 1)), "filled": False}
     applied = 0
 
     def drain(upto: float):
@@ -129,6 +146,7 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         else:                                                    # NEAR / MARKET: first snapshot only
             if p > sig.get("entry_hi", sig["entry"]) * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}
             fill, real_fill, j = p, real, i; break
+    if fill is not None: st["filled"] = True                                                              # from here the quantity cannot change
     if fill is None:
         vu = (sig["t"] + sig["valid_sec"]) if sig.get("valid_sec") else None                                  # a limit / above entry may still be waiting until this instant (None = until the session end)
         return {**base, "status": "NOT_TRIGGERED", "events_applied": applied, "valid_until": vu}
@@ -149,11 +167,13 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         tg = (st["targets"][0] if policy == "T1" else st["targets"][-1]) if st["targets"] else None
         if tg is not None and sp >= tg: px, real_exit, why = sp, real, "TARGET"; break
     if px is None:                                                                                      # still open: what a live screen needs (fill, lot, the stop / targets in force, the last quote)
-        ls = live[-1]; return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill, "fill_t": live[j]["t"], "lot": lot, "sl_now": st["sl"], "targets_now": list(st["targets"]), "last": {"t": ls["t"], "bid": ls.get("bid"), "ask": ls.get("ask"), "ltp": ls.get("ltp")}}
+        ls = live[-1]; return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill, "fill_t": live[j]["t"], "lot": lot, "lots": st["lots"], "sl_now": st["sl"], "targets_now": list(st["targets"]), "last": {"t": ls["t"], "bid": ls.get("bid"), "ask": ls.get("ask"), "ltp": ls.get("ltp")}}
     c = cost_points(und, fill, px, lot)
     if c is None: return {**base, "status": "NO_DATA:no_cost_model"}
-    gross = (px - fill) * lot; cost = c * lot
-    return {**base, "status": "SETTLED", "fill": fill, "exit": px, "exit_reason": why, "fill_real_quote": real_fill, "exit_real_quote": real_exit, "lot": lot, "gross_rs": gross, "cost_rs": cost,
+    lots = st["lots"]; ct1 = cost_total_rs(und, fill, px, lot, 1); ctn = cost_total_rs(und, fill, px, lot, lots)
+    if ct1 is None or ctn is None: return {**base, "status": "NO_DATA:no_cost_model", "fill": fill}
+    gross = (px - fill) * lot * lots; cost = ctn; gross1 = (px - fill) * lot; cost1 = ct1
+    return {**base, "status": "SETTLED", "fill": fill, "exit": px, "exit_reason": why, "fill_real_quote": real_fill, "exit_real_quote": real_exit, "lot": lot, "lots": lots, "gross_rs": gross, "cost_rs": cost, "net_rs_1lot": gross1 - cost1,
             "net_rs": gross - cost, "hold_sec": live[k_exit]["t"] - live[j]["t"], "fill_t": live[j]["t"], "events_applied": applied, **({"cost_note": PROVISIONAL_COSTS[und]} if und in PROVISIONAL_COSTS else {})}
 
 
@@ -164,7 +184,7 @@ def summarize(results: list[dict], capital: float = 50000.0) -> dict:
     if not ok: return out
     net = [r["net_rs"] for r in ok]; w = [x for x in net if x > 0]; l = [-x for x in net if x <= 0]; eq = peak = dd = 0.0
     for x in sorted(ok, key=lambda r: r["fill_t"]): eq += x["net_rs"]; peak = max(peak, eq); dd = max(dd, peak - eq)
-    out.update(net_rs=sum(net), return_pct=sum(net) / capital * 100.0, win_rate=len(w) / len(ok), gross_rs=sum(r["gross_rs"] for r in ok), cost_rs=sum(r["cost_rs"] for r in ok),
+    out.update(net_rs=sum(net), net_rs_1lot=sum(r.get("net_rs_1lot", r["net_rs"]) for r in ok), lots_traded=sum(r.get("lots", 1) for r in ok), return_pct=sum(net) / capital * 100.0, win_rate=len(w) / len(ok), gross_rs=sum(r["gross_rs"] for r in ok), cost_rs=sum(r["cost_rs"] for r in ok),
                profit_factor=(sum(w) / sum(l)) if l and sum(l) > 0 else None, max_drawdown_rs=dd, max_drawdown_pct=dd / capital * 100.0, avg_net_rs=sum(net) / len(ok),
                real_quote_fill_share=sum(1 for r in ok if r["fill_real_quote"] and r["exit_real_quote"]) / len(ok))
     return out

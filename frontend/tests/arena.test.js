@@ -77,3 +77,12 @@ test("targets are optional; any target that is given must be above the entry", (
   assert.equal(A.validateForm({ ...ok, targets: "90" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "", targets: "" }).ok, true);
   assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H8", label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, targets: [], to_sl: null, to_t1: null, pnl_rs: 0, posted_ist: "1" }] }).includes("no target"));
 });
+
+test("quantity (lots): optional whole number 1..max; the change-quantity event needs one", () => {
+  assert.equal(A.validateForm({ ...ok, lots: "" }).ok, true); assert.equal(A.validateForm({ ...ok, lots: "2" }).payload.lots, 2);
+  for (const bad of ["0", "11", "1.5", "abc", "-1"]) assert.equal(A.validateForm({ ...ok, lots: bad }).ok, false, bad);
+  const base = { signal_id: "H1", confirm: true };
+  assert.equal(A.validateEvent({ ...base, action: "AMEND_LOTS", lots: "3" }).payload.lots, 3);
+  for (const bad of ["", "0", "11", "2.5"]) assert.equal(A.validateEvent({ ...base, action: "AMEND_LOTS", lots: bad }).ok, false, bad);
+  assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H7", lots: 2, label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, targets: [], pnl_rs: 0, posted_ist: "1" }] }).includes("2 lots"));
+});

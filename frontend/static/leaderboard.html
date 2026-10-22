@@ -16,7 +16,7 @@ tr.me td{background:rgba(245,197,66,.10)}.pos{color:var(--ok)}.neg{color:var(--b
 </style></head><body><div class="wrap">
 <h1>🏆 Arena leaderboard</h1><a href="/static/arena.html" style="color:var(--mut);font-size:13px">← back to the arena</a><div class="sub" id="sub">Ranked by net profit after costs (same settlement rules for everyone). Paper trading.</div>
 <div class="bar"><button id="t" class="on">Today</button><button id="a">Overall</button><input id="tok" type="password" placeholder="your access token" size="28"><button id="go">Show</button></div>
-<div id="err"></div><table><thead><tr><th>#</th><th>Participant</th><th>Net ₹</th><th>Return</th><th>Trades</th><th>Win</th></tr></thead><tbody id="rows"></tbody></table>
+<div id="err"></div><table><thead><tr><th>#</th><th>Participant</th><th>Net ₹ per lot (rank)</th><th>Net ₹ (their lots)</th><th>Trades</th><th>Win</th></tr></thead><tbody id="rows"></tbody></table>
 <div class="note" id="note"></div></div>
 <script>
 let scope="today";const $=id=>document.getElementById(id);
@@ -29,8 +29,8 @@ async function load(){
     if(!r.ok){$("err").textContent=r.status==401?"Wrong token.":"Error "+r.status;return}
     const d=await r.json();const medal=["🥇","🥈","🥉"];
     $("sub").textContent=(scope=="today"?"Today ("+d.day+")":"Whole contest window")+" · updated "+d.generated_at.slice(11,19)+" IST · "+d.n_participants+" participants";
-    $("rows").innerHTML=d.rows.map(x=>{const me=x.participant==d.you?' class="me"':"";const c=x.net_rs==null?"mut":x.net_rs>=0?"pos":"neg";
-      return `<tr${me}><td class="rank">${x.rank?(medal[x.rank-1]||x.rank):"–"}</td><td>${x.display}${me?" (you)":""}</td><td class="${c}">${fmt(x.net_rs)}</td><td class="${c}">${x.return_pct==null?"–":x.return_pct+"%"}</td><td>${x.settled?x.settled:'<span class="mut">no settled trades</span>'}${x.not_filled?` <span class="mut">(+${x.not_filled} not filled)</span>`:""}</td><td>${x.win_rate==null?"–":Math.round(x.win_rate*100)+"%"}</td></tr>`}).join("");
+    $("rows").innerHTML=d.rows.map(x=>{const me=x.participant==d.you?' class="me"':"";const c=x.net_per_lot==null?"mut":x.net_per_lot>=0?"pos":"neg";
+      return `<tr${me}><td class="rank">${x.rank?(medal[x.rank-1]||x.rank):"–"}</td><td>${x.display}${me?" (you)":""}</td><td class="${c}">${fmt(x.net_per_lot)}</td><td class="${c} mut">${fmt(x.net_rs)}${x.lots_traded&&x.settled?` <span class="mut">(${x.lots_traded} lot${x.lots_traded>1?"s":""})</span>`:""}</td><td>${x.settled?x.settled:'<span class="mut">no settled trades</span>'}${x.not_filled?` <span class="mut">(+${x.not_filled} not filled)</span>`:""}</td><td>${x.win_rate==null?"–":Math.round(x.win_rate*100)+"%"}</td></tr>`}).join("");
     $("note").textContent=d.note}catch(e){$("err").textContent="Could not load."}}
 $("go").onclick=load;$("t").onclick=()=>{scope="today";$("t").className="on";$("a").className="";load()};$("a").onclick=()=>{scope="all";$("a").className="on";$("t").className="";load()};
 setInterval(()=>{if($("tok").value.trim())load()},60000);if($("tok").value.trim())load();

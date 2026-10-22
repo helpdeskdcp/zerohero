@@ -16,10 +16,10 @@ out = R.run(sigs, market_db=os.path.join(HERE, "data", "market_history.db")); re
 names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
 t = LB.build(res, names, c["display"], scope="today", today=day, capital=R.CAPITAL); a = LB.build(res, names, c["display"], scope="all", today=day, capital=R.CAPITAL)
 f = lambda x: datetime.fromtimestamp(x, IST).strftime("%H:%M:%S") if x else "-"
-lines = [f"# Arena daily report {day}", "", "Paper trading, identical settlement for everyone (ask in / bid out, 20 s delay, SL / first target, costs). Small samples prove nothing.", ""]
+lines = [f"# Arena daily report {day}", "", "Paper trading, identical settlement for everyone (ask in / bid out, 20 s delay, SL / first target, costs). Ranked by net per lot (1-lot equivalent): the quantity a participant chooses does not decide the rank. Small samples prove nothing.", ""]
 for title, d in (("Today", t), ("Overall", a)):
-    lines += [f"## Leaderboard: {title}", "", "| # | Participant | Net Rs | Settled | Not filled | Win |", "|---|---|---|---|---|---|"]
-    lines += [f"| {r['rank'] or '-'} | {r['display']} | {r['net_rs'] if r['net_rs'] is not None else '-'} | {r['settled']} | {r['not_filled']} | {r['win_rate'] if r['win_rate'] is not None else '-'} |" for r in d["rows"]] + [""]
+    lines += [f"## Leaderboard: {title}", "", "| # | Participant | Net Rs per lot (rank) | Net Rs (their lots) | Settled | Not filled | Win |", "|---|---|---|---|---|---|---|"]
+    lines += [f"| {r['rank'] or '-'} | {r['display']} | {r['net_per_lot'] if r['net_per_lot'] is not None else '-'} | {r['net_rs'] if r['net_rs'] is not None else '-'} | {r['settled']} | {r['not_filled']} | {r['win_rate'] if r['win_rate'] is not None else '-'} |" for r in d["rows"]] + [""]
 lines += [f"## Signals of {day} and their settlement", ""]
 n = 0
 for p, rs in sorted(res.items()):

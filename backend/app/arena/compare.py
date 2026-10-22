@@ -9,7 +9,7 @@ def daily_net(results: list[dict]) -> dict[str, float]:
     d: dict[str, float] = {}
     for r in results:
         if r.get("status") != "SETTLED": continue
-        k = datetime.fromtimestamp(r["fill_t"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d"); d[k] = d.get(k, 0.0) + r["net_rs"]
+        k = datetime.fromtimestamp(r["fill_t"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d"); d[k] = d.get(k, 0.0) + r.get("net_rs_1lot", r["net_rs"])
     return d
 
 

@@ -15,7 +15,7 @@ Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised
 - Signals agreed by the parties as tests are **excluded** from scoring and listed in `ARENA_RULE_CHANGES.md` (currently H00001 and H00007).
 
 ## 3. What you may trade
-- BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL, GOLDM** (MCX gold mini), nearest expiry. Long only (no selling/writing). **One lot per signal.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.
+- BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL, GOLDM** (MCX gold mini), nearest expiry. Long only (no selling/writing). **Quantity is in lots (default 1; your profile may have another default, shown on the form), 1 to 10.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.
 - Scored signals can be submitted only while that exchange is trading.
 
 ## 4. How to submit a signal — BEFORE you take the trade
@@ -61,6 +61,8 @@ Each institution-side participant has **their own access token and their own pro
 **Gold (GOLDM).** MCX gold-mini options are in the contest (traded 09:00-23:30, scored like the other MCX contracts, session-end exit 23:15). Strikes and premiums are in rupees per 10 g; one lot is 100 g, so **one rupee of premium is worth Rs 10 per lot**. The current monthly expiry (for example 29 Oct 2026) is the one quotes are captured for. **The gold cost model is PROVISIONAL**: it uses the public charge schedule (brokerage, CTT, exchange, GST, stamp) and has not yet been validated against a real contract note, so every gold result carries that label. A real contract note for a gold option trade will let us validate it.
 
 **The stop-loss and the targets are optional.** You may submit a signal with no stop-loss (and/or no targets) and add one after the trade is on ("Change stop-loss" in *My signals*), or never. Without a stop and without a target the trade ends only at an "exit now" you send or at the session end; with only a target it ends at that target, an "exit now" or the session end. Targets can be added later too ("Change targets") (23:15 MCX, 15:15 NSE/BSE); a stop you add later works only from the moment it takes effect (same 20-second delay as every change, never retroactive). Risk is yours: a trade without a stop can lose the whole premium, and that result counts exactly as it falls. The settlement rules are the same for everybody.
+
+**Quantity (lots).** Every signal has a quantity in whole lots (1 to 10). The default is 1 lot unless your profile has another default (Mohit Agrawal's profile: 2 lots, also for the signals read from his channels). You can change the quantity of a signal **only while its trade is not active yet** (use *Change quantity* in *My signals*; it takes effect after the usual 20-second delay); **once the trade is active (filled) the quantity cannot change any more**. P&L is shown in rupees for your lots, brokerage is paid once per order pair and the other charges scale with the quantity. **The ranking and the comparison with the AI use the net result PER LOT (as if every participant had traded 1 lot)**, so a bigger quantity never decides who is ahead; the leaderboard shows both the per-lot figure (the rank) and the rupees for the lots traded.
 
 ## 5. How every signal is settled (same for you and the AI)
 1. Execution starts **20 seconds after** your submission time (first recorded quote after that).

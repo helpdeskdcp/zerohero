@@ -100,3 +100,24 @@ def test_normal_profile_may_submit_without_a_stop_loss_but_not_with_a_wrong_one(
     sid = j["id"]; ev = client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "AMEND_SL", "sl": 140}, headers={"X-Arena-Token": T1}); assert ev.status_code == 200      # added later, from then on
     assert client.post("/api/arena/public/submit", json={**body, "sl": 170}, headers={"X-Arena-Token": T1}).status_code == 422                                                       # a given stop must be below the entry
     assert client.get("/api/arena/public/live", headers={"X-Arena-Token": T1}).status_code == 200                                                                                    # the live screen copes with a signal that has no stop
+
+
+def test_default_lots_per_profile_and_the_quantity_freeze_after_the_trade_is_active(client, monkeypatch, tmp_path):
+    import hashlib, json
+    from app.arena import run as RR
+    tok = "mohit2-" + "m" * 20
+    (tmp_path / "pf.json").write_text(json.dumps({"BIG_PROFILE": {"display": "Big", "token_sha256": hashlib.sha256(tok.encode()).hexdigest(), "default_lots": 2}}))
+    monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(tmp_path / "pf.json")); A._cache.update(by={}, lb={}, live={}); H2 = {"X-Arena-Token": tok}
+    st = client.get("/api/arena/public/state", headers=H2).json(); assert st["default_lots"] == 2 and st["max_lots"] == 10
+    assert client.get("/api/arena/public/state", headers={"X-Arena-Token": T1}).json()["default_lots"] == 1
+    body = {"underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "ABOVE", "entry": 160}
+    assert client.post("/api/arena/public/submit", json=body, headers=H2).json()["lots"] == 2                                          # the profile default
+    assert client.post("/api/arena/public/submit", json={**body, "lots": 5}, headers=H2).json()["lots"] == 5                          # chosen at submit
+    assert client.post("/api/arena/public/submit", json=body, headers={"X-Arena-Token": T1}).json()["lots"] == 1                      # everybody else: 1 lot
+    assert client.post("/api/arena/public/submit", json={**body, "lots": 11}, headers=H2).status_code == 422
+    sid = SU.load()[-1]["id"]
+    monkeypatch.setattr(A.R, "run", lambda s, **k: {"BIG_PROFILE": {"results": [{"id": sid, "status": "NOT_TRIGGERED"}], "summary": {}}})
+    sid2 = [r["id"] for r in SU.load() if r.get("participant") == "BIG_PROFILE"][0]
+    ok = client.post("/api/arena/public/amend", json={"signal_id": sid2, "action": "AMEND_LOTS", "lots": 3}, headers=H2); assert ok.status_code == 200 and ok.json()["lots"] == 3        # not active yet: allowed
+    monkeypatch.setattr(A.R, "run", lambda s, **k: {"BIG_PROFILE": {"results": [{"id": sid2, "status": "NO_DATA:no_exit_snapshot", "fill": 160.0}], "summary": {}}})
+    assert client.post("/api/arena/public/amend", json={"signal_id": sid2, "action": "AMEND_LOTS", "lots": 4}, headers=H2).status_code == 409                                              # active: no change

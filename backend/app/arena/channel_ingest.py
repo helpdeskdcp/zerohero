@@ -39,6 +39,14 @@ def pick_expiry(underlying: str, today_iso: str, path: str | None = None) -> str
     return ex[0] if ex else None
 
 
+def _default_lots(participant: str) -> int:
+    try:
+        from . import api
+        return int(api.cfg()["flags"].get(str(participant).upper(), {}).get("default_lots", 1))
+    except Exception:
+        return 1
+
+
 def _market_open(und: str) -> bool:
     try:
         from .. import market_calendar as mc
@@ -111,7 +119,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     if dry_run: return {"outcome": "WOULD_SUBMIT", "parsed": s, "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
     try:
         rec = SU.submit({"participant": participant, "underlying": und, "expiry": exp, "strike": s["strike"], "option_type": s["option_type"], "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"],
-                         "targets": s["targets"], "valid_sec": FILL_WINDOW_SEC, "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
+                         "targets": s["targets"], "valid_sec": FILL_WINDOW_SEC, "lots": _default_lots(participant), "note": f"via channel post {base['message_id']} ({s.get('horizon') or 'n/a'}; range {s['entry_range'][0]:g}-{s['entry_range'][1]:g}; expiry assumed = nearest captured{'; stop/targets set by the ZeroHero risk module (1R/2R/3R)' if risk_module else ''})"},
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]

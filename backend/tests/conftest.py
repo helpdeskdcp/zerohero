@@ -236,3 +236,13 @@ def _isolated_captured_cache(tmp_path, monkeypatch):
         monkeypatch.setattr(contracts, "_CACHE_FILE", str(tmp_path / "captured_cache_test.json")); monkeypatch.setattr(contracts, "_file_loaded", [True])
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _isolated_participants_file(tmp_path, monkeypatch):
+    """Tests must not read the production participants file (tokens' hashes, default lots); a test that needs one sets its own."""
+    try:
+        from app.arena import api
+        monkeypatch.setattr(api, "PARTICIPANTS_FILE", str(tmp_path / "no_participants_default.json"))
+    except Exception:
+        pass

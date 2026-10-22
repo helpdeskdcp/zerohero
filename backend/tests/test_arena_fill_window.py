@@ -119,3 +119,26 @@ def test_targets_are_optional_a_no_target_no_stop_trade_runs_to_the_session_end(
     r = S.settle(sig, [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 120, "ltp": 300, "bid": 299, "ask": 301}], half_spread=0.0); assert r["status"].startswith("NO_DATA")        # never exits by itself, however far it runs
     r = S.settle({**sig, "events": [{"t": t0 + 100, "action": "EXIT_NOW"}]}, [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 200, "ltp": 300, "bid": 299, "ask": 301}], half_spread=0.0)
     assert r["status"] == "SETTLED" and r["exit_reason"] == "EMERGENCY" and r["exit"] == 299.0                                  # a manual exit-now closes it
+
+
+def test_lots_scale_the_rupees_not_the_per_lot_figure_and_flat_brokerage_is_paid_once():
+    t0 = 1_760_000_000.0; sg = lambda **k: {"id": "L", "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": "NEAR", "entry": 100.0, "entry_hi": 100.0, "sl": None, "targets": [120.0], "t": t0, "events": [], **k}
+    sn = [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 200, "ltp": 121, "bid": 120.5, "ask": 121.5}]
+    r1 = S.settle(sg(), sn, half_spread=0.0); r2 = S.settle(sg(lots=2), sn, half_spread=0.0)
+    assert r1["lots"] == 1 and r2["lots"] == 2 and r2["gross_rs"] == pytest.approx(2 * r1["gross_rs"]) and r2["cost_rs"] < 2 * r1["cost_rs"]                    # brokerage is flat per order, not per lot
+    assert r2["net_rs_1lot"] == pytest.approx(r1["net_rs"]) and r2["net_rs"] > 2 * r1["net_rs"]                                                                   # the per-lot figure is the same whatever the quantity
+    sm = S.summarize([r2]); assert sm["net_rs"] == pytest.approx(r2["net_rs"]) and sm["net_rs_1lot"] == pytest.approx(r1["net_rs"]) and sm["lots_traded"] == 2
+
+
+def test_quantity_can_change_only_before_the_trade_is_active():
+    t0 = 1_760_000_000.0
+    sig = {"id": "Q", "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": "LIMIT", "entry": 100.0, "entry_hi": 100.0, "sl": None, "targets": [130.0], "t": t0, "lots": 2,
+           "events": [{"t": t0 + 40, "action": "AMEND_LOTS", "lots": 4}, {"t": t0 + 400, "action": "AMEND_LOTS", "lots": 1}]}
+    sn = [{"t": t0 + 30, "ltp": 110, "bid": 109, "ask": 110}, {"t": t0 + 100, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 500, "ltp": 131, "bid": 130.5, "ask": 131.5}]
+    r = S.settle(sig, sn, half_spread=0.0)
+    assert r["status"] == "SETTLED" and r["lots"] == 4                                              # changed while waiting (effective 20 s after t0+40); the change sent after the fill is ignored
+    assert S.settle({**sig, "events": []}, sn, half_spread=0.0)["lots"] == 2
+    for bad in (0, 11, 1.5): 
+        with pytest.raises(SU.SubmissionError): SU.validate({"participant": "P", "underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "NEAR", "entry": 100, "lots": bad})
+    with pytest.raises(SU.SubmissionError): SU.validate_event({"signal_id": "X", "action": "AMEND_LOTS", "lots": 0})
+    assert SU.validate_event({"signal_id": "X", "action": "AMEND_LOTS", "lots": 3})["lots"] == 3

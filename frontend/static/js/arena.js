@@ -21,7 +21,7 @@ function liveRows(d) {
     if (r.state === "WAITING") nums.push(`<span>${esc(r.entry_mode)} <b>${f(r.entry)}</b></span>`, (r.sl == null ? `<span class="mut">no stop-loss</span>` : `<span>SL <b>${f(r.sl)}</b></span>`), ((r.targets || []).length ? `<span>T1 <b>${f((r.targets || [])[0])}</b></span>` : `<span class="mut">no target</span>`), r.valid_until_ist ? `<span>valid till <b>${esc(r.valid_until_ist)}</b></span>` : "");
     if (r.state === "CLOSED") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, `<span>exit <b>${f(r.exit)}</b> (${esc(r.why)})</span>`);
     const note = r.waiting_note ? `<div class="nums mut">${esc(r.waiting_note)}</div>` : r.why && r.state !== "CLOSED" ? `<div class="nums mut">${esc(r.why)}</div>` : "";
-    o += `<div class="row"><span class="chip ${esc(r.state)}">${esc(r.state)}</span><div><b>${esc(r.label)}</b> <span class="mut">${esc(r.id)} · posted ${esc(r.posted_ist)}</span>${stale ? ' <span class="pnlneg">price not refreshed for ' + Math.round(age) + ' s</span>' : age != null && live ? ' <span class="mut">· checked ' + Math.round(age) + ' s ago</span>' : ""}</div>${big}<div class="nums">${nums.join("")}</div>${note}</div>`;
+    o += `<div class="row"><span class="chip ${esc(r.state)}">${esc(r.state)}</span><div><b>${esc(r.label)}</b> <span class="mut">${esc(r.id)} · ${r.lots || 1} lot${(r.lots || 1) > 1 ? "s" : ""} · posted ${esc(r.posted_ist)}</span>${stale ? ' <span class="pnlneg">price not refreshed for ' + Math.round(age) + ' s</span>' : age != null && live ? ' <span class="mut">· checked ' + Math.round(age) + ' s ago</span>' : ""}</div>${big}<div class="nums">${nums.join("")}</div>${note}</div>`;
   }
   return o + '<div class="mut" style="font-size:11px;margin-top:4px">Open P&amp;L = (bid − fill) × lot − estimated costs. The final result is booked by the contest rules at the exit. Prices are the latest captured quotes (a few seconds old).</div>';
 }
@@ -31,7 +31,7 @@ const pct = (x, d = 1) => (x === null || x === undefined ? "—" : (x * 100).toF
 /* form -> {ok, errors[], payload, preview}; mirrors the server rules so mistakes are caught before the (irreversible) submit */
 /* every time shown on this page is INDIA STANDARD TIME (IST, UTC+5:30): the server sends epoch / UTC ISO values, converted here */
 const IST_MS = 19800000, fmtIST = (ms, secs) => new Date(ms + IST_MS).toISOString().slice(0, secs ? 19 : 16).replace("T", " "), fmtIsoIST = (iso, secs) => fmtIST(Date.parse(iso), secs);
-let RISK_MODULE = false;                                                         // set from /state: entry-only profile, ZeroHero's risk module may set stop and targets
+let RISK_MODULE = false, MAX_LOTS = 10;                                                         // set from /state: entry-only profile, ZeroHero's risk module may set stop and targets
 function validateForm(v) {
   const err = [], num = (k) => (v[k] === "" || v[k] === undefined ? NaN : Number(v[k]));
   if (!ALLOWED.includes(String(v.underlying || "").toUpperCase())) err.push("Underlying must be one of " + ALLOWED.join(", "));
@@ -44,9 +44,11 @@ function validateForm(v) {
   const targets = String(v.targets || "").split(",").map((x) => x.trim()).filter(Boolean).map(Number);
   if (targets.some((t) => !(t > entry))) err.push("Targets are optional; if you give any, every target must be above entry");
   if (!["CE", "PE"].includes(String(v.option_type || "").toUpperCase())) err.push("Choose CE or PE");
+  const lotsRaw = String(v.lots === undefined || v.lots === null ? "" : v.lots).trim(), lots = lotsRaw === "" ? null : Number(lotsRaw);
+  if (lots !== null && !(Number.isInteger(lots) && lots >= 1 && lots <= (typeof MAX_LOTS === "number" ? MAX_LOTS : 10))) err.push("Quantity must be a whole number of lots, 1 to " + (typeof MAX_LOTS === "number" ? MAX_LOTS : 10));
   if (!v.confirmNotEntered) err.push("Tick: I have not entered this trade yet");
   const risk = entry - sl, rr = targets.length && risk > 0 ? (Math.min(...targets) - entry) / risk : null;
-  const payload = { underlying: String(v.underlying || "").toUpperCase(), expiry: String(v.expiry || "").trim(), strike, option_type: String(v.option_type || "").toUpperCase(), entry_mode: String(v.entry_mode || "NEAR").toUpperCase(), entry, sl, targets: [...new Set(targets)].sort((a, b) => a - b), note: String(v.note || "").slice(0, 300) };
+  const payload = { lots: lots === null ? undefined : lots, underlying: String(v.underlying || "").toUpperCase(), expiry: String(v.expiry || "").trim(), strike, option_type: String(v.option_type || "").toUpperCase(), entry_mode: String(v.entry_mode || "NEAR").toUpperCase(), entry, sl, targets: [...new Set(targets)].sort((a, b) => a - b), note: String(v.note || "").slice(0, 300) };
   return { ok: err.length === 0, errors: err, payload, preview: { risk_per_unit: risk > 0 ? risk : null, rr_to_t1: rr } };
 }
 
@@ -90,9 +92,10 @@ function verdictText(c, humanName) {
 function validateEvent(v) {
   const err = [], a = String(v.action || "").toUpperCase(), n = (k) => (v[k] === "" || v[k] === undefined ? NaN : Number(v[k]));
   if (!v.signal_id) err.push("Choose a signal");
-  if (!["AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL"].includes(a)) err.push("Choose an action");
+  if (!["AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL", "AMEND_LOTS"].includes(a)) err.push("Choose an action");
   const payload = { signal_id: v.signal_id, action: a };
   if (a === "AMEND_SL") { if (!(n("sl") > 0)) err.push("New stop-loss must be > 0"); else payload.sl = n("sl"); }
+  if (a === "AMEND_LOTS") { const q = Number(v.lots); if (!(Number.isInteger(q) && q >= 1 && q <= MAX_LOTS)) err.push("Quantity must be a whole number of lots, 1 to " + MAX_LOTS); else payload.lots = q; }
   if (a === "AMEND_TARGETS") { const t = String(v.targets || "").split(",").map((x) => x.trim()).filter(Boolean).map(Number); if (!t.length || t.some((x) => !(x > 0))) err.push("Give one or more targets (> 0)"); else payload.targets = [...new Set(t)].sort((x, y) => x - y); }
   if (a === "TRAIL_SL") {
     const pts = n("trail_points"), pct = n("trail_pct");
@@ -127,7 +130,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   const show = (tab) => { document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== tab)); document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); if (tab === "mine") loadMine(); if (tab === "standings") loadStandings(); if (tab === "mine" || tab === "standings") startLive(); else stopLive(); };
   async function loadState() {
     try { const s = await api("/state"); $("mode").textContent = s.mode === "PRACTICE" ? `PRACTICE until ${s.start} — entries are stored but NOT scored` : s.mode === "ARENA_LIVE" ? (s.phase === "REHEARSAL" ? `REHEARSAL — official contest starts ${s.official_start} (ends ${s.end})` : `OFFICIAL CONTEST (${s.start} → ${s.end})`) : "ARENA ENDED";
-      RISK_MODULE = !!s.risk_module; { const n = document.getElementById("riskNote"); if (n) n.hidden = !RISK_MODULE; }
+      RISK_MODULE = !!s.risk_module; MAX_LOTS = s.max_lots || 10; { const d = document.getElementById("lotsDefault"), m = document.getElementById("lotsMax"); if (d) d.textContent = s.default_lots || 1; if (m) m.textContent = MAX_LOTS; const f = document.querySelector("form[name=submitForm], #sf"); const li = document.querySelector("input[name=lots]"); if (li) { li.defaultValue = String(s.default_lots || 1); if (!li.dataset.touched) li.value = s.default_lots || 1; } } { const n = document.getElementById("riskNote"); if (n) n.hidden = !RISK_MODULE; }
       $("mode").className = "banner " + (s.mode === "ARENA_LIVE" ? "live" : "prac"); $("who").textContent = s.participant + " · " + s.now_ist.replace("T", " ") + " IST"; $("conn").hidden = true; $("app").hidden = false; return s; }
     catch (e) { $("app").hidden = true; $("conn").hidden = false; msg("connmsg", e.message, true); return null; }
   }
@@ -136,7 +139,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     const tb = $("mine"); tb.replaceChildren();
     try { const j = await api("/signals"); if (!j.signals.length) { tb.insertRow().insertCell().textContent = "nothing submitted yet"; return; }
       const sel = $("mgSignal"); sel.replaceChildren(...j.signals.slice().reverse().map((r) => { const o = document.createElement("option"); o.value = r.id; o.textContent = `${r.id} · ${r.underlying} ${r.strike}${r.option_type} ${r.entry_mode} ${r.entry}`; return o; }));
-      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, fmtIsoIST(r.server_iso, true), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, (r.sl === null || r.sl === undefined ? "no stop" : r.sl), (r.targets || []).join(", "),
+      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, fmtIsoIST(r.server_iso, true), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, (r.lots || 1), (r.sl === null || r.sl === undefined ? "no stop" : r.sl), (r.targets || []).join(", "),
         (r.events || []).map((e) => e.action + (e.sl ? " " + e.sl : "") + (e.targets ? " " + e.targets.join("/") : "") + (e.trail_points ? " " + e.trail_points + "pt" : "") + (e.trail_pct ? " " + e.trail_pct + "%" : "")).join(" → ") || "—", r.hash.slice(0, 10)].forEach((v) => (tr.insertCell().textContent = v)); } }
     catch (e) { tb.insertRow().insertCell().textContent = e.message; }
   }
@@ -187,7 +190,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     catch (e) { msg("submsg", e.message, true); } finally { $("go").disabled = false; } };
   const mg = $("mg"); const showMg = () => { const a = mg.action.value; mg.querySelectorAll("[data-for]").forEach((d) => (d.hidden = !d.dataset.for.split(" ").includes(a))); };
   mg.oninput = showMg; showMg();
-  mg.onsubmit = async (ev) => { ev.preventDefault(); const v = { signal_id: mg.signal_id.value, action: mg.action.value, sl: mg.sl.value, targets: mg.targets.value, trail_points: mg.trail_points.value, trail_pct: mg.trail_pct.value, confirm: mg.confirm.checked };
+  mg.onsubmit = async (ev) => { ev.preventDefault(); const v = { signal_id: mg.signal_id.value, action: mg.action.value, sl: mg.sl.value, lots: mg.lots.value, targets: mg.targets.value, trail_points: mg.trail_points.value, trail_pct: mg.trail_pct.value, confirm: mg.confirm.checked };
     const r = validateEvent(v); if (!r.ok) return msg("mgmsg", r.errors.join(" · "), true); $("mgGo").disabled = true;
     try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${fmtIsoIST(j.server_iso, true)} IST${j.practice ? " (PRACTICE)" : ""} — takes effect ~20 s later, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
     catch (e) { msg("mgmsg", e.message, true); } finally { $("mgGo").disabled = false; } };

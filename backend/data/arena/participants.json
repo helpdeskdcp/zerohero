@@ -1,6 +1,7 @@
 {
  "INSTITUTION_TRADER": {
-  "display": "Mohit Agrawal"
+  "display": "Mohit Agrawal",
+  "default_lots": 2
  },
  "NEERAJ_JOSHI": {
   "display": "Neeraj Joshi (entry) + ZeroHero stop/targets"

@@ -77,3 +77,10 @@ def test_standings_and_leaderboard_are_single_flight_under_a_stampede(client, mo
     [t.start() for t in th]; [t.join() for t in th]
     assert codes.count(200) == 24 and len(calls) == 2                                           # 24 simultaneous requests, one recompute per endpoint
     A._stale_all(); r = client.get("/api/arena/public/leaderboard?scope=today", headers=H); assert r.status_code == 200 and len(calls) == 3     # a new signal makes it stale: one refresh, previous value kept meanwhile
+
+
+def test_ranking_uses_the_per_lot_net_so_a_bigger_quantity_cannot_win_by_size():
+    r = lambda net, lots: {"t": T(10, 0), "status": "SETTLED", "net_rs": net * lots, "net_rs_1lot": net, "lots": lots, "gross_rs": net * lots + 10, "cost_rs": 10, "fill_t": T(10, 1), "fill_real_quote": True, "exit_real_quote": True}
+    d = LB.build({"BIG": [r(1000, 2)], "SMALL": [r(1500, 1)]}, ["BIG", "SMALL"], {}, scope="today", today=TODAY)
+    assert [x["participant"] for x in d["rows"]] == ["SMALL", "BIG"]                                  # 1500 per lot beats 1000 per lot even though BIG's actual rupees are 2000 vs 1500
+    big = d["rows"][1]; assert big["net_rs"] == 2000 and big["net_per_lot"] == 1000 and big["lots_traded"] == 2

@@ -11,7 +11,8 @@ from ..forward_test import ledger as L
 
 ALLOWED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM")
 MODES = ("ABOVE", "NEAR", "MARKET", "LIMIT")
-ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL")
+ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL", "AMEND_LOTS")
+MAX_LOTS = 10
 MAX_EVENTS_PER_SIGNAL = 20
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "human_signals.jsonl")
 
@@ -40,6 +41,10 @@ def validate(d: dict) -> dict:
     need(str(d.get("participant", "")).strip(), "participant required")
     out = {"participant": str(d["participant"]).strip(), "underlying": u, "expiry": norm_expiry(str(d["expiry"])), "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "sl": sl,
            "targets": tg, "note": str(d.get("note", ""))[:300]}
+    if d.get("lots") is not None:
+        try: lots = int(d["lots"])
+        except (TypeError, ValueError): lots = 0
+        need(1 <= lots <= MAX_LOTS and lots == float(d["lots"]), f"quantity must be a whole number of lots, 1 to {MAX_LOTS}"); out["lots"] = lots
     if d.get("valid_sec") is not None:
         vs = int(d["valid_sec"]); need(60 <= vs <= 28800, "valid_sec between 60 and 28800"); out["valid_sec"] = vs
     return out
@@ -64,6 +69,10 @@ def validate_event(d: dict) -> dict:
     a = str(d.get("action", "")).upper(); need(a in ACTIONS, f"action must be one of {ACTIONS}")
     out = {"signal_id": str(d.get("signal_id", "")).strip(), "action": a}; need(out["signal_id"], "signal_id required")
     if a == "AMEND_SL": sl = float(d.get("sl") or 0); need(sl > 0, "sl > 0"); out["sl"] = sl
+    elif a == "AMEND_LOTS":
+        try: lots = int(d.get("lots"))
+        except (TypeError, ValueError): lots = 0
+        need(1 <= lots <= MAX_LOTS and lots == float(d["lots"]), f"quantity must be a whole number of lots, 1 to {MAX_LOTS}"); out["lots"] = lots
     elif a == "AMEND_TARGETS":
         tg = sorted({float(x) for x in (d.get("targets") or [])}); need(tg and all(x > 0 for x in tg), "targets: at least one value > 0"); out["targets"] = tg
     elif a == "TRAIL_SL":
@@ -127,3 +136,12 @@ def submit_validity_correction(signal_id: str, valid_sec: int, reason: str, path
     if not (60 <= int(valid_sec) <= 28800): raise SubmissionError("valid_sec between 60 and 28800")
     n = sum(1 for r in recs if r.get("type") == "HUMAN_VALIDITY_CORRECTION")
     return L.append(p, {"type": "HUMAN_VALIDITY_CORRECTION", "id": f"V{n + 1:05d}", "signal_id": signal_id, "valid_sec": int(valid_sec), "reason": reason[:300], "server_ts": time.time()})
+
+
+def default_lots(participant: str, participants_file: str | None = None) -> int:
+    """Default quantity (lots) of a profile: `default_lots` in data/arena/participants.json, else 1."""
+    import json as _j
+    f = participants_file or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "participants.json")
+    try: n = int((_j.load(open(f, encoding="utf-8")).get(str(participant).upper(), {}) or {}).get("default_lots", 1))
+    except Exception: n = 1
+    return n if 1 <= n <= MAX_LOTS else 1
