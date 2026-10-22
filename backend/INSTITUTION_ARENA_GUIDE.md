@@ -11,7 +11,7 @@ Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised
 
 ## 2. Dates
 - **Rehearsal: 22 Oct to 1 Nov 2026** (the arena has been running since 20 Oct). Signals in this period are scored on the leaderboard for practice, so everyone can test the system; they are **not part of the official result**.
-- **Official contest: from Monday 2 Nov 2026** (1 Nov is a Sunday) to the end date shown on the page. Only signals from the official start count. At the cut-over the rehearsal standings are saved (`REHEARSAL_FINAL.md`) and the scoreboard starts again from zero.
+- **Official contest: from Monday 2 Nov 2026** (1 Nov is a Sunday) to **Thursday 3 Dec 2026** (about 22 trading days, holidays excluded). Only signals from the official start count. At the cut-over the rehearsal standings are saved (`REHEARSAL_FINAL.md`) and the scoreboard starts again from zero.
 - Signals agreed by the parties as tests are **excluded** from scoring and listed in `ARENA_RULE_CHANGES.md` (currently H00001 and H00007).
 
 ## 3. What you may trade
