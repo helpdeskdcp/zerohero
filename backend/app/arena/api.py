@@ -386,3 +386,19 @@ def guide(request: Request):
     _auth(request)
     p = os.path.join(BASE, "INSTITUTION_ARENA_GUIDE.md")
     return {"markdown": open(p, encoding="utf-8").read() if os.path.exists(p) else "guide missing"}
+
+
+def prewarm(delay: float = 15.0) -> None:
+    """After a restart: settle every signal once in the background so the first participant request finds the final results, the measured spreads and the quote pages already warm."""
+    time.sleep(delay)
+    try:
+        c = cfg(); sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
+        try:
+            from ..energy_event import shadow as _ev
+            sigs += _ev.scoring_signals(c["start"], c["end"])
+        except Exception:
+            pass
+        R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
+        for u in SU.ALLOWED: CT.captured(u)
+    except Exception:
+        pass
