@@ -47,3 +47,15 @@ def test_step_writes_dense_rows_in_one_batched_request_and_skips_expired(tmp_pat
 def test_unresolvable_contract_is_skipped_not_fatal(tmp_path):
     w = str(tmp_path / "w.json"); json.dump([{"symbol": "SENSEX", "expiry": "22OCT2026", "strike": 1.0, "option_type": "PE", "until": time.time() + 99}], open(w, "w"))
     st, sdk = FakeStore(), FakeSdk(); assert P.PriorityCapture(store=st, sdk_provider=lambda: sdk, meta_fn=lambda e: None, path=w).step() == 0 and sdk.calls == []
+
+
+def test_view_watches_expire_signals_do_not_and_signals_are_fetched_first(tmp_path):
+    w = str(tmp_path / "w.json"); t = time.mktime(time.strptime("2026-10-22 11:00", "%Y-%m-%d %H:%M"))
+    v = P.request_watch("NIFTY", "2026-10-27", 23000, "CE", now=t, path=w, ttl_sec=300); assert v["kind"] == "view" and v["until"] == t + 300
+    again = P.request_watch("NIFTY", "2026-10-27", 23000, "CE", now=t + 10, path=w, ttl_sec=300); assert len(json.load(open(w))) == 1 and again["until"] == t + 300       # covered: no rewrite
+    P.request_watch("NIFTY", "2026-10-27", 23000, "CE", now=t + 200, path=w, ttl_sec=300); assert json.load(open(w))[0]["until"] == t + 500                           # a later view extends it
+    s = P.request_watch("NIFTY", "2026-10-27", 23000, "CE", now=t + 210, path=w); assert s["kind"] == "signal" and s["until"] > t + 3600                                  # a signal upgrades it to 'until close'
+    P.request_watch("NIFTY", "2026-10-27", 23000, "CE", now=t + 220, path=w, ttl_sec=60); assert json.load(open(w))[0]["kind"] == "signal"                           # a view never shortens a signal
+    P.request_watch("NIFTY", "2026-10-27", 23050, "CE", now=t + 230, path=w, ttl_sec=300)
+    items = [e for e in json.load(open(w))]; items.sort(key=lambda e: (e.get("kind") != "signal", -e.get("added", 0))); assert [e["strike"] for e in items] == [23000.0, 23050.0]
+    assert [e for e in json.load(open(w)) if e["until"] > t + 4000 and e["kind"] == "view"] == []                                                                    # views are short-lived

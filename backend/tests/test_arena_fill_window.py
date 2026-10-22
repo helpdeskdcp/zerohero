@@ -47,3 +47,16 @@ def test_validity_correction_only_for_channel_signals_and_is_applied(tmp_path):
         with pytest.raises(SU.SubmissionError): SU.submit_validity_correction(bad, 900, "x", path=led)
     got = {s["id"]: s.get("valid_sec") for s in R.human_signals(led, include_practice=True)}
     assert got == {ch["id"]: 900, manual["id"]: None, win["id"]: 600}
+
+
+def test_run_cache_reuses_final_results_and_resettles_open_ones(monkeypatch):
+    calls = []
+    def fake_settle(sig, snaps, *, half_spread, policy="T1", latency=20):
+        calls.append(sig["id"]); done = sig["id"] != "OPEN"
+        return {"id": sig["id"], "participant": sig["participant"], "status": "SETTLED" if done else "NO_DATA:no_exit_snapshot", "t": sig["t"], **({"net_rs": 1.0, "gross_rs": 2.0, "cost_rs": 1.0, "fill_t": sig["t"], "fill_real_quote": True, "exit_real_quote": True} if done else {})}
+    monkeypatch.setattr(R.S, "settle", fake_settle); monkeypatch.setattr(R.S, "load_snaps", lambda *a, **k: []); monkeypatch.setattr(R.SM, "half_spread", lambda *a, **k: {"half_spread": 0.0, "source": "TEST"})
+    sg = lambda i: {"id": i, "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 1.0, "option_type": "CE", "t": 1_760_000_000.0}
+    cache = {}; R.run([sg("A"), sg("OPEN")], cache=cache); assert calls == ["A", "OPEN"]
+    R.run([sg("A"), sg("OPEN")], cache=cache); assert calls == ["A", "OPEN", "OPEN"]                                     # the settled one came from the cache, the open one was settled again
+    R.run([{**sg("A"), "sl": 1.0}], cache=cache); assert calls[-1] == "A"                                                  # any change to the signal's content invalidates its entry
+    R.run([sg("A")]); assert calls.count("A") == 3                                                                          # no cache argument: old behaviour

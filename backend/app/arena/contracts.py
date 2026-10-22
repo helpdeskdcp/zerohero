@@ -36,7 +36,7 @@ def captured(underlying: str, day: str | None = None, path: str | None = None) -
             rows = c.execute("SELECT expiry, strike FROM quote_snapshots WHERE session_date_ist=? AND symbol=? AND kind='OPTION' AND expiry IS NOT NULL GROUP BY expiry, strike", (d, underlying)).fetchall()
         else:                                                    # latest polls only: a PRIMARY KEY range scan (the last ~30k rows span several full-chain cycles), not a scan of the 12 GB table
             mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
-            rows = c.execute("SELECT expiry, strike FROM quote_snapshots WHERE id>? AND symbol=? AND kind='OPTION' AND expiry IS NOT NULL GROUP BY expiry, strike", (mx - 30000, underlying)).fetchall()
+            rows = c.execute("SELECT expiry, strike FROM quote_snapshots WHERE id>? AND symbol=? AND kind='OPTION' AND expiry IS NOT NULL GROUP BY expiry, strike", (mx - 60000, underlying)).fetchall()
             d = c.execute("SELECT session_date_ist FROM quote_snapshots WHERE id=?", (mx,)).fetchone()
             d = d[0] if d else None
     finally:
@@ -89,9 +89,9 @@ def spot_for(underlying: str, option_expiry_iso: str | None = None, path: str | 
     c = _ro(path)
     try:
         mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
-        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL ORDER BY id DESC LIMIT 1", (mx - 30000, underlying)).fetchone()
+        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL ORDER BY id DESC LIMIT 1", (mx - 60000, underlying)).fetchone()
         if r: return float(r[0]), f"INDEX @ {r[1]}"
-        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL ORDER BY id DESC", (mx - 30000, underlying)).fetchall()
+        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL ORDER BY id DESC", (mx - 60000, underlying)).fetchall()
     finally:
         c.close()
     best: dict = {}
@@ -144,7 +144,7 @@ def _chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path:
         mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
         qs: dict = {}
         for k, ltp, bid, ask, ts in c.execute("SELECT strike, ltp, bid, ask, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='OPTION' AND expiry=? AND option_type=? AND strike BETWEEN ? AND ? AND ltp IS NOT NULL ORDER BY id DESC",
-                                              (mx - 30000, underlying, snap_expiry(expiry_iso), option_type, win[0], win[-1])):
+                                              (mx - 60000, underlying, snap_expiry(expiry_iso), option_type, win[0], win[-1])):
             qs.setdefault(float(k), {"ltp": ltp, "bid": bid, "ask": ask, "ts": ts})
     finally:
         c.close()

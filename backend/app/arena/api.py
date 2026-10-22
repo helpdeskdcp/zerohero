@@ -21,7 +21,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX"}
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
-MAX_BODY, RATE_PER_MIN = 4096, 60
+MAX_BODY, RATE_PER_MIN = 4096, 300                                   # per IP; many participants may share one office address
+RESULT_CACHE: dict = {}                                                  # final settlement results, reused across refreshes (see run.run)
+TTL_SEC = 20                                                             # standings / leaderboard are recomputed at most every 20 s (only OPEN signals are re-settled)
 
 
 def enabled() -> bool: return os.environ.get("ARENA_PUBLIC", "1").strip().lower() not in ("0", "false", "off", "no")
@@ -108,6 +110,12 @@ def chain(request: Request, underlying: str, option_type: str = "CE", expiry: st
     try: e = SU.norm_expiry(expiry) if expiry else exps[0]
     except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
     out = CT.chain(u, e, ot, max(1, min(int(n), 15)))
+    try:                                                                                          # someone is looking at this ladder: keep the near-the-money prices ~3-8 s fresh while it is on screen (5 min after the last view)
+        from ..histcap import priority
+        near = sorted(out.get("rows") or [], key=lambda r: abs((r.get("strike") or 0) - (out.get("atm") or 0)))[:7]
+        for r in near: priority.request_watch(u, e, r["strike"], ot, ttl_sec=300)
+    except Exception:
+        pass
     out["expiries"] = [{"expiry": x, "raw": cap["expiries"][x]["raw"], "role": ("current" if i == 0 else "next" if i == 1 else f"+{i}")} for i, x in enumerate(exps)]
     return out
 
@@ -210,9 +218,9 @@ def signals(request: Request):
 def standings(request: Request):
     c = _auth(request)
     ent = _cache.setdefault("by", {}).get(c["name"])
-    if ent is None or time.time() - ent[0] > 120:
+    if ent is None or time.time() - ent[0] > TTL_SEC:
         sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
-        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
+        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
         ai, hu = out.get("ZEROHERO_AI", {"results": [], "summary": {}}), out.get(c["name"], {"results": [], "summary": {}})
         try:
             from ..active_arm import run as _arm
@@ -234,7 +242,7 @@ def leaderboard(request: Request, scope: str = "today"):
     c = _auth(request)
     if scope not in ("today", "all"): raise HTTPException(422, "scope must be today or all")
     ent = _cache.setdefault("lb", {}).get(scope)
-    if ent is None or time.time() - ent[0] > 90:
+    if ent is None or time.time() - ent[0] > TTL_SEC:
         from . import leaderboard as LB
         sigs = R.ai_signals(os.path.join(BASE, "data", "chanakya.db"), c["start"], c["end"]) + R.human_signals(start=c["start"], end=c["end"], exclude_ids=c["exclude"])
         try:
@@ -242,7 +250,7 @@ def leaderboard(request: Request, scope: str = "today"):
             sigs += _ev.scoring_signals(c["start"], c["end"])                                       # the NG event rule: a separate, disclosed AI line
         except Exception:
             pass
-        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"))
+        out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
         today = datetime.now(IST).strftime("%Y-%m-%d")
         names = list(dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]))
         v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)

@@ -18,7 +18,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 MCX_SYMS = {"NATURALGAS", "CRUDEOIL", "CRUDEOILM", "NATGASMINI", "GOLDM", "GOLD", "SILVER", "SILVERM", "COPPER", "ZINC"}
 CLOSE = {"NSE": (15, 35), "MCX": (23, 35)}
-MAX_TOKENS = 40
+MAX_TOKENS = 50                                  # one batched broker request carries up to 50 tokens
 _lock = threading.Lock()
 
 
@@ -31,16 +31,21 @@ def _load(path: str | None = None) -> list[dict]:
     except Exception: return []
 
 
-def request_watch(symbol: str, expiry_iso: str, strike: float, option_type: str, *, now: float | None = None, path: str | None = None) -> dict:
-    """Register a contract; it stays on the list until its exchange closes today. Idempotent. Never raises into the caller's flow if the file cannot be written (returns the entry anyway)."""
+def request_watch(symbol: str, expiry_iso: str, strike: float, option_type: str, *, now: float | None = None, path: str | None = None, ttl_sec: float | None = None) -> dict:
+    """Register a contract. Without ttl_sec (a signal's contract) it stays until its exchange closes today; with ttl_sec (a screen that is showing the contract) only that long, refreshed whenever it is viewed again.
+    Idempotent; an existing longer registration is never shortened. Never raises into the caller's flow if the file cannot be written (returns the entry anyway)."""
     path = path or WATCH; t = now or time.time(); d = date.fromisoformat(expiry_iso); raw = f"{d.day:02d}{MON[d.month - 1]}{d.year}"
     h, m = CLOSE["MCX" if symbol.upper() in MCX_SYMS else "NSE"]; day = datetime.fromtimestamp(t, tz=IST)
-    until = datetime(day.year, day.month, day.day, h, m, tzinfo=IST).timestamp()
-    e = {"symbol": symbol.upper(), "expiry": raw, "strike": float(strike), "option_type": option_type.upper(), "until": until, "added": t}
+    close = datetime(day.year, day.month, day.day, h, m, tzinfo=IST).timestamp()
+    until = close if ttl_sec is None else min(close, t + float(ttl_sec))
+    e = {"symbol": symbol.upper(), "expiry": raw, "strike": float(strike), "option_type": option_type.upper(), "until": until, "added": t, "kind": "signal" if ttl_sec is None else "view"}
+    key = lambda x: (x["symbol"], x["expiry"], x["strike"], x["option_type"])
     try:
         with _lock:
-            items = [x for x in _load(path) if x.get("until", 0) > t and not (x["symbol"], x["expiry"], x["strike"], x["option_type"]) == (e["symbol"], e["expiry"], e["strike"], e["option_type"])]
-            items.append(e); os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path + ".tmp"; json.dump(items, open(tmp, "w")); os.replace(tmp, path)
+            items = [x for x in _load(path) if x.get("until", 0) > t]; old = next((x for x in items if key(x) == key(e)), None)
+            if old is not None and old["until"] >= until - 30 and (old.get("kind") == "signal" or e["kind"] == "view"): return old        # already covered: no file write (many viewers, one entry)
+            if old is not None: e["until"] = max(until, old["until"]); e["kind"] = "signal" if "signal" in (old.get("kind"), e["kind"]) else "view"
+            items = [x for x in items if key(x) != key(e)] + [e]; os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path + ".tmp"; json.dump(items, open(tmp, "w")); os.replace(tmp, path)
     except Exception:
         pass
     return e
@@ -79,6 +84,7 @@ class PriorityCapture:
     def step(self, now: float | None = None) -> int:
         t = now or time.time(); active = [e for e in _load(self.path) if e.get("until", 0) > t]
         if not active: self.last_note = "idle: empty watch list"; return 0
+        active.sort(key=lambda e: (e.get("kind") != "signal", -e.get("added", 0)))                        # signal contracts first, then the most recently viewed
         metas = [m for m in (self._meta(e) for e in active[:MAX_TOKENS]) if m]
         if not metas: self.last_note = "no watched contract resolvable from the captured chain yet"; return 0
         sdk = self._sdk()

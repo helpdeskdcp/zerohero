@@ -45,12 +45,24 @@ def human_signals(path: str | None = None, start: str | None = None, end: str | 
              "entry": r["entry"], "entry_hi": r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], []), **({"valid_sec": r.get("valid_sec") or vcorr[r["id"]]} if (r.get("valid_sec") or r["id"] in vcorr) else {})} for r in rows]
 
 
-def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", capital: float = CAPITAL) -> dict:
+def _is_final(r: dict, day: str) -> bool:
+    """A result that can no longer change: settled / cancelled, or never filled on a day that has ended."""
+    st = r.get("status", "")
+    return st in ("SETTLED", "CANCELLED") or (st == "NOT_TRIGGERED" and day < datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d"))
+
+
+def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", capital: float = CAPITAL, cache: dict | None = None) -> dict:
+    """cache (optional, in-memory, owned by the caller): final results are stored under the signal's full content + policy and reused, so a refresh only re-settles OPEN signals (speed with many participants)."""
     by_part: dict[str, list] = {}; spread_cache: dict[str, dict] = {}
+    import json as _json
     for s in sigs:
         day = datetime.fromtimestamp(s["t"] + S.IST_SEC, tz=timezone.utc).strftime("%Y-%m-%d")
+        key = (_json.dumps(s, sort_keys=True, default=str), policy) if cache is not None else None
+        if key is not None and key in cache:
+            r = cache[key]; spread_cache.setdefault(s["underlying"], {"half_spread": None, "source": r.get("spread_source")}); by_part.setdefault(s["participant"], []).append(r); continue
         hs = spread_cache.get(s["underlying"]) or spread_cache.setdefault(s["underlying"], SM.half_spread(s["underlying"], [day], market_db))
         snaps = S.load_snaps(s["underlying"], s["expiry"], s["strike"], s["option_type"], day, market_db)
         r = S.settle(s, snaps, half_spread=hs["half_spread"], policy=policy); r["spread_source"] = hs["source"]
+        if key is not None and _is_final(r, day): cache[key] = r
         by_part.setdefault(s["participant"], []).append(r)
     return {p: {"summary": S.summarize(rs, capital), "results": rs} for p, rs in by_part.items()} | {"_spread_models": spread_cache}
