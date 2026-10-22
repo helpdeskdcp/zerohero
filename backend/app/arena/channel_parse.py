@@ -28,7 +28,11 @@ def parse_signal(text: str) -> dict:
     m = re.search(r"#\s*([A-Z0-9_ ]*?)\s*_\s*(\d{3,6})\s*(CE|PE)\b", s) or re.search(r"#\s*([A-Z0-9_]+)\s+(\d{3,6})\s*(CE|PE)\b", s)
     if not m:
         r = parse_expiry_header(s)
-        return r if r is not None else parse_mcx(s)
+        if r is not None: return r
+        r = parse_mcx(s)
+        if r["ok"]: return r
+        r2 = parse_loose(s)                                                                  # entry-only / own-stop styles (Neeraj Joshi's channel)
+        return r2 if r2 is not None else r
     tag, strike, ot = m.group(1), float(m.group(2)), m.group(3)
     und = underlying_of(tag)
     if und is None: return {"ok": False, "reason": f"unknown underlying in tag {tag!r}"}
@@ -79,6 +83,32 @@ def parse_expiry_header(s: str) -> dict | None:
     targets = [t for t in targets if t > entry]
     return {"ok": True, "signal": {"underlying": und, "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "entry_range": [lo, hi], "sl": sl, "targets": targets, "horizon": None, "sl_published": sl_published, "targets_published": bool(targets),
                                   "expiry_hint": {"day": day, "month": mon}, "tag": und, "supported": und in ALLOWED}}
+
+
+def parse_loose(s: str) -> dict | None:
+    """Header without '#' and without an expiry date, e.g. `BUY NIFTY 24150 PE`, `SENSEX 74600 CE`, `SENSEX 77600 PE`. The expiry is the current captured one (or the month in an `EXPIRY - OCT` line).
+    Entry needs an explicit keyword (ABOVE | BUY RANGE | BUY | NEAR | ENTRY | CMP); stop and targets are optional: `SL - TGT OWN`, `STOPLOSS :- VIP` or no line at all mean "not published" (the
+    risk module sets them); `TG - 280 300 320` / `TARGET : 330/350/400` are read when present. Anything inconsistent is refused, never guessed."""
+    m = re.search(r"\b(?:BUY\s+)?(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|BANKEX|SENSEX|NATURALGAS|NATURAL\s*GAS|CRUDEOILM|CRUDEOIL|CRUDE\s*OIL|GOLDM)\s+(\d{3,6})\s*(CE|PE)\b", s)
+    if not m: return None
+    und = underlying_of(m.group(1)); strike, ot = float(m.group(2)), m.group(3)
+    if und is None: return {"ok": False, "reason": f"unknown underlying in {m.group(1)!r}"}
+    rest = s[m.end():]
+    em = re.search(rf"(ABOVE|BUY\s*RANGE|BUY|NEAR|ENTRY|CMP)\s*(?:LEVEL|PRICE|AT|ON)?\s*[:\-=]*\s*{NUM}(?:\s*(?:-|TO|/)\s*{NUM})?", rest)
+    if not em: return {"ok": False, "reason": "no explicit entry keyword (ABOVE|BUY RANGE|NEAR|ENTRY)"}
+    lo = float(em.group(2)); hi = float(em.group(3)) if em.group(3) else lo
+    if hi < lo: lo, hi = hi, lo
+    kw = re.sub(r"\s+", " ", em.group(1)); mode, entry = ("ABOVE", lo) if kw == "ABOVE" else (("NEAR", lo) if kw in ("NEAR", "CMP") else ("LIMIT", hi))
+    tm = re.search(r"(?:TARGETS?|TGT|TG|TP)\b\s*[:\-=]*\s*((?:\d+(?:\.\d+)?\s*[/,&\-]?\s*)+)", rest)
+    targets = sorted({float(x) for x in re.findall(r"\d+(?:\.\d+)?", tm.group(1))}) if tm else []
+    if tm and targets and not [t for t in targets if t > entry]: return {"ok": False, "reason": "no target above the entry"}
+    targets = [t for t in targets if t > entry]
+    sm = re.search(rf"(?:STOP\s*LOSS|STOPLOSS|\bSL\b)\s*[:\-=]*\s*{NUM}", rest)
+    sl = float(sm.group(1)) if sm else None                                                  # "SL - TGT OWN", "VIP", "PREMIUM", no line: not published
+    if sl is not None and not (0 < sl < entry): return {"ok": False, "reason": f"inconsistent: stop-loss {sl:g} must be below the entry {entry:g}"}
+    xm = re.search(r"EXPIRY\s*[:\-=]*\s*([A-Z]{3,9})", rest); hint = {"month": MONTHS[xm.group(1)[:3]]} if xm and xm.group(1)[:3] in MONTHS else None
+    return {"ok": True, "signal": {"underlying": und, "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "entry_range": [lo, hi], "sl": sl, "targets": targets, "horizon": None, "sl_published": sl is not None,
+                                  "targets_published": bool(targets), **({"expiry_hint": hint} if hint else {}), "tag": und, "supported": und in ALLOWED}}
 
 
 def parse_mcx(s: str) -> dict:

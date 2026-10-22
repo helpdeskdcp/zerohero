@@ -85,3 +85,16 @@ def test_neeraj_format_colon_dash_and_unpublished_vip_stoploss():
 def test_goldm_is_supported_and_month_only_expiry_becomes_a_hint():
     r = CP.parse_signal("POSITIONAL GOLDM 146000 PE\n\nNEAR LEVEL  2450\n\nTARGET -3050/3650/4250\n\nSTOPLOSS - 1950\n\nEXPIRY - OCT")["signal"]
     assert (r["underlying"], r["strike"], r["entry_mode"], r["entry"], r["sl"], r["targets"], r["supported"], r["expiry_hint"]) == ("GOLDM", 146000.0, "NEAR", 2450.0, 1950.0, [3050.0, 3650.0, 4250.0], True, {"month": 10})
+
+
+def test_neeraj_active_channel_formats_real_posts():
+    # the three layouts found in the live channel "Neeraj Joshi" (history of 2026-04-30 .. 2026-10-21)
+    a = CP.parse_signal("BUY NIFTY 24150 PE\n\nABOVE  \u20b9190\nSL - TGT OWN \u2705")["signal"]                                  # entry only, stop and targets are the trader's own
+    assert (a["underlying"], a["strike"], a["option_type"], a["entry_mode"], a["entry"], a["sl"], a["targets"], a["sl_published"], a["targets_published"]) == ("NIFTY", 24150.0, "PE", "ABOVE", 190.0, None, [], False, False)
+    b = CP.parse_signal("SENSEX 74600 CE\n\nAbove - 250\n\nTG - 280 300 320 350\n\nSL - 180\n\nWait for level")["signal"]
+    assert (b["underlying"], b["strike"], b["entry_mode"], b["entry"], b["sl"], b["targets"], b["sl_published"]) == ("SENSEX", 74600.0, "ABOVE", 250.0, 180.0, [280.0, 300.0, 320.0, 350.0], True)
+    c = CP.parse_signal("\U0001f538 SENSEX  77600 PE\n\U0001f4ca Buy Range :306\n\U0001f3af Target : 330/350/400\n\u26d4\ufe0fStoploss : 150\n\u2014\u2014\u2014\n\U0001f4e2 For Research Services, Stock Market Risks")["signal"]
+    assert (c["entry_mode"], c["entry"], c["sl"], c["targets"]) == ("LIMIT", 306.0, 150.0, [330.0, 350.0, 400.0])
+    assert CP.parse_signal("BUY NIFTY 24150 PE\nsome words but no entry keyword")["ok"] is False
+    assert CP.parse_signal("BUY NIFTY 24150 PE\nABOVE 190\nSL - 200")["ok"] is False                                                        # a published stop above the entry is refused
+    assert CP.parse_signal("Good morning doston")["ok"] is False
