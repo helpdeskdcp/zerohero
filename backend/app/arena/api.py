@@ -323,7 +323,7 @@ def live(request: Request):
             lot = r.get("lot") or 1; bid = (q or {}).get("bid") or (r.get("last") or {}).get("bid"); fill = r["fill"]
             pnl = None if not bid else round((bid - fill) * lot - _S.cost_points(s["underlying"], fill, bid, lot) * lot, 1)
             row.update(state="ACTIVE", fill=fill, sl=r.get("sl_now", s["sl"]), targets=r.get("targets_now", s["targets"]), pnl_rs=pnl, pnl_pct=(round(100 * (bid - fill) / fill, 2) if bid else None), lot=lot,
-                       to_sl=(round(bid - r.get("sl_now", s["sl"]), 2) if bid else None), to_t1=(round((r.get("targets_now") or s["targets"])[0] - bid, 2) if bid else None), pnl_note="open P&L = (bid - fill) x lot - estimated costs; the final result follows the contest rules at exit")
+                       to_sl=(round(bid - r.get("sl_now", s["sl"]), 2) if (bid and r.get("sl_now", s["sl"]) is not None) else None), to_t1=(round((r.get("targets_now") or s["targets"])[0] - bid, 2) if bid else None), pnl_note="open P&L = (bid - fill) x lot - estimated costs; the final result follows the contest rules at exit")
         elif st == "NOT_TRIGGERED":
             vu = r.get("valid_until"); still = (now < vu) if vu else True
             try:

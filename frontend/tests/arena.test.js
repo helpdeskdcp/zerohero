@@ -65,3 +65,9 @@ test("live watch rows: WAITING stays amber with the reason, ACTIVE shows ltp and
   const d3 = { ...d, rows: [{ ...d.rows[0], ltp: 561 }] }; assert.ok(A.liveRows(d3).includes("tickdn"), "a down-tick flashes");
   assert.ok(!A.liveRows({ ...d, rows: [{ id: "<b>", label: "<script>x</script>", state: "CLOSED", pnl_rs: 5, fill: 1, exit: 2, why: "TARGET", posted_ist: "1" }] }).includes("<script>"), "labels are escaped");
 });
+
+test("stop-loss is optional for everyone; a stop that is given must still be below the entry", () => {
+  const none = { ...ok, sl: "" }; assert.equal(A.validateForm(none).ok, true); assert.ok(Number.isNaN(A.validateForm(none).payload.sl) || A.validateForm(none).payload.sl === null || A.validateForm(none).payload.sl === undefined);
+  assert.equal(A.validateForm({ ...ok, sl: "120" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "0" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "85" }).ok, true);
+  assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H9", label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, to_sl: null, targets: [6], to_t1: 1, pnl_rs: 0, posted_ist: "1" }] }).includes("no stop-loss set"));
+});

@@ -35,7 +35,7 @@ def validate(d: dict) -> dict:
     mode = str(d.get("entry_mode", "NEAR")).upper(); need(mode in MODES, f"entry_mode {MODES}")
     num = lambda k: float(d[k]) if d.get(k) is not None else None
     strike, entry, sl = num("strike"), num("entry"), num("sl")
-    need(strike and strike > 0, "strike > 0"); need(entry and entry > 0, "entry > 0"); need(sl is not None and 0 < sl < entry, "0 < sl < entry (long options only)")
+    need(strike and strike > 0, "strike > 0"); need(entry and entry > 0, "entry > 0"); need(sl is None or 0 < sl < entry, "stop-loss is optional; if given it must be below the entry (long options only)")
     tg = sorted({float(x) for x in (d.get("targets") or [])}); need(tg and all(x > entry for x in tg), "at least one target, all above entry")
     need(str(d.get("participant", "")).strip(), "participant required")
     out = {"participant": str(d["participant"]).strip(), "underlying": u, "expiry": norm_expiry(str(d["expiry"])), "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "sl": sl,

@@ -17,8 +17,8 @@ function liveRows(d) {
     const big = r.state === "ACTIVE" ? `<div class="big ${cls(r.pnl_rs)}">${pn(r.pnl_rs)}</div>` : r.state === "CLOSED" ? `<div class="big ${cls(r.pnl_rs)}">${pn(r.pnl_rs)}</div>` : '<div class="big mut">–</div>';
     const nums = [];
     if (live) nums.push(`<span class="${dir}">LTP <b>${f(r.ltp)}</b></span>`, `<span>bid <b>${f(r.bid)}</b> / ask <b>${f(r.ask)}</b></span>`);
-    if (r.state === "ACTIVE") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, `<span>SL <b>${f(r.sl)}</b> (${f(r.to_sl)} away)</span>`, `<span>T1 <b>${f((r.targets || [])[0])}</b> (${f(r.to_t1)} away)</span>`, `<span>${r.pnl_pct == null ? "" : (r.pnl_pct > 0 ? "+" : "") + r.pnl_pct + "%"}</span>`);
-    if (r.state === "WAITING") nums.push(`<span>${esc(r.entry_mode)} <b>${f(r.entry)}</b></span>`, `<span>SL <b>${f(r.sl)}</b></span>`, `<span>T1 <b>${f((r.targets || [])[0])}</b></span>`, r.valid_until_ist ? `<span>valid till <b>${esc(r.valid_until_ist)}</b></span>` : "");
+    if (r.state === "ACTIVE") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, (r.sl == null ? `<span class="mut">no stop-loss set</span>` : `<span>SL <b>${f(r.sl)}</b> (${f(r.to_sl)} away)</span>`), `<span>T1 <b>${f((r.targets || [])[0])}</b> (${f(r.to_t1)} away)</span>`, `<span>${r.pnl_pct == null ? "" : (r.pnl_pct > 0 ? "+" : "") + r.pnl_pct + "%"}</span>`);
+    if (r.state === "WAITING") nums.push(`<span>${esc(r.entry_mode)} <b>${f(r.entry)}</b></span>`, (r.sl == null ? `<span class="mut">no stop-loss</span>` : `<span>SL <b>${f(r.sl)}</b></span>`), `<span>T1 <b>${f((r.targets || [])[0])}</b></span>`, r.valid_until_ist ? `<span>valid till <b>${esc(r.valid_until_ist)}</b></span>` : "");
     if (r.state === "CLOSED") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, `<span>exit <b>${f(r.exit)}</b> (${esc(r.why)})</span>`);
     const note = r.waiting_note ? `<div class="nums mut">${esc(r.waiting_note)}</div>` : r.why && r.state !== "CLOSED" ? `<div class="nums mut">${esc(r.why)}</div>` : "";
     o += `<div class="row"><span class="chip ${esc(r.state)}">${esc(r.state)}</span><div><b>${esc(r.label)}</b> <span class="mut">${esc(r.id)} · posted ${esc(r.posted_ist)}</span>${stale ? ' <span class="pnlneg">price not refreshed for ' + Math.round(age) + ' s</span>' : age != null && live ? ' <span class="mut">· checked ' + Math.round(age) + ' s ago</span>' : ""}</div>${big}<div class="nums">${nums.join("")}</div>${note}</div>`;
@@ -39,8 +39,8 @@ function validateForm(v) {
   const strike = num("strike"), entry = num("entry"), sl = num("sl");
   if (!(strike > 0)) err.push("Strike must be a positive number");
   if (!(entry > 0)) err.push("Entry premium must be > 0");
-  const slBlank = RISK_MODULE && String(v.sl || "").trim() === "";
-  if (!slBlank && !(sl > 0 && sl < entry)) err.push("Stop-loss must be above 0 and below entry (long options only)");
+  const slBlank = String(v.sl === undefined || v.sl === null ? "" : v.sl).trim() === "";                          // the stop-loss is OPTIONAL: blank = no stop (add one later with "Change stop-loss", or never)
+  if (!slBlank && !(sl > 0 && sl < entry)) err.push("Stop-loss, if you give one, must be above 0 and below entry (long options only)");
   const targets = String(v.targets || "").split(",").map((x) => x.trim()).filter(Boolean).map(Number);
   const tgBlank = RISK_MODULE && targets.length === 0;
   if (!tgBlank && (!targets.length || targets.some((t) => !(t > entry)))) err.push("Give at least one target, every target above entry");
@@ -137,7 +137,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     const tb = $("mine"); tb.replaceChildren();
     try { const j = await api("/signals"); if (!j.signals.length) { tb.insertRow().insertCell().textContent = "nothing submitted yet"; return; }
       const sel = $("mgSignal"); sel.replaceChildren(...j.signals.slice().reverse().map((r) => { const o = document.createElement("option"); o.value = r.id; o.textContent = `${r.id} · ${r.underlying} ${r.strike}${r.option_type} ${r.entry_mode} ${r.entry}`; return o; }));
-      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, fmtIsoIST(r.server_iso, true), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, r.sl, (r.targets || []).join(", "),
+      for (const r of j.signals.slice().reverse()) { const tr = tb.insertRow(); [r.id, fmtIsoIST(r.server_iso, true), r.excluded ? "EXCLUDED (agreed test)" : (r.scored ? "SCORED" : "PRACTICE"), `${r.underlying} ${r.strike} ${r.option_type} ${r.expiry}`, r.entry_mode, r.entry, (r.sl === null || r.sl === undefined ? "no stop" : r.sl), (r.targets || []).join(", "),
         (r.events || []).map((e) => e.action + (e.sl ? " " + e.sl : "") + (e.targets ? " " + e.targets.join("/") : "") + (e.trail_points ? " " + e.trail_points + "pt" : "") + (e.trail_pct ? " " + e.trail_pct + "%" : "")).join(" → ") || "—", r.hash.slice(0, 10)].forEach((v) => (tr.insertCell().textContent = v)); } }
     catch (e) { tb.insertRow().insertCell().textContent = e.message; }
   }

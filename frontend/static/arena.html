@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <div><label>CE / PE</label><select name="option_type"><option>CE</option><option>PE</option></select></div>
 <div><label>Entry mode <span class="mut">(LIMIT = buy when price comes down to your entry; ABOVE = buy when it trades up to it)</span></label><select name="entry_mode"><option>LIMIT</option><option>ABOVE</option><option>NEAR</option><option>MARKET</option></select></div>
 <div><label>Entry (option premium)</label><input name="entry" inputmode="decimal"></div>
-<div><label>Stop-loss (premium)</label><input name="sl" inputmode="decimal"></div>
+<div><label>Stop-loss (premium) <span class="mut">· optional, leave blank for none; you can add one later</span></label><input name="sl" inputmode="decimal" placeholder="optional"></div>
 <div><label>Targets (premium, comma separated)</label><input name="targets" placeholder="120, 140"></div></div>
 <label>Note (optional)</label><textarea name="note" rows="2" maxlength="300"></textarea>
 <label style="color:var(--tx)"><input type="checkbox" name="confirmNotEntered" style="width:auto"> I have <b>not</b> entered this trade yet</label>

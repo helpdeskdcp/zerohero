@@ -96,3 +96,16 @@ def test_goldm_settles_with_the_per_10g_multiplier_and_provisional_costs():
     sn = [{"t": t0 + 30, "ltp": 2450, "bid": 2440, "ask": 2450}, {"t": t0 + 300, "ltp": 3060, "bid": 3060, "ask": 3070}]
     r = S.settle(sig, sn, half_spread=0.0)
     assert r["status"] == "SETTLED" and r["lot"] == 10 and abs(r["gross_rs"] - (3060 - 2450) * 10) < 1e-6 and "PROVISIONAL" in r["cost_note"]
+
+
+def test_stop_loss_is_optional_and_a_trade_without_one_runs_to_its_target_or_the_session_end():
+    base = {"participant": "P", "underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "NEAR", "entry": 100, "targets": [130]}
+    assert SU.validate(base)["sl"] is None and SU.validate({**base, "sl": 80})["sl"] == 80.0
+    for bad in (0, 100, 120):
+        with pytest.raises(SU.SubmissionError): SU.validate({**base, "sl": bad})                                              # a stop that is given must still be below the entry
+    t0 = 1_760_000_000.0; sig = {"id": "N", "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": "NEAR", "entry": 100.0, "entry_hi": 100.0, "sl": None, "targets": [130.0], "t": t0, "events": []}
+    fall = [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 120, "ltp": 40, "bid": 39, "ask": 41}, {"t": t0 + 240, "ltp": 125, "bid": 124, "ask": 126}, {"t": t0 + 300, "ltp": 131, "bid": 130.5, "ask": 131.5}]
+    r = S.settle(sig, fall, half_spread=0.0); assert r["status"] == "SETTLED" and r["exit_reason"] == "TARGET" and r["exit"] == 130.5                           # the dip to 39 did not stop it out: there is no stop
+    held = S.settle(sig, fall[:2], half_spread=0.0); assert held["status"].startswith("NO_DATA")                                                                  # still open, no stop triggered
+    late = S.settle({**sig, "events": [{"t": t0 + 150, "action": "AMEND_SL", "sl": 50.0}]}, fall, half_spread=0.0)                                                # a stop added later works from then on, never retroactively
+    assert late["exit_reason"] == "TARGET"                                                                                                                       # price was above 50 after the amendment
