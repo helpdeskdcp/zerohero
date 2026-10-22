@@ -90,3 +90,12 @@ def test_live_endpoint_waiting_active_closed_and_the_open_pnl(client, monkeypatc
     gross = (109.5 - 100.0) * 65; assert by["A"]["pnl_rs"] < gross and by["A"]["pnl_rs"] > gross - 200 and by["A"]["to_sl"] == 29.5 and by["A"]["to_t1"] == 10.5           # open P&L = mark-to-bid minus estimated costs
     assert j["total_open_pnl_rs"] == by["A"]["pnl_rs"] and j["realised_today_rs"] == 1200.0 and by["C"]["ltp"] is None
     assert client.get("/api/arena/public/live").status_code == 401
+
+
+def test_normal_profile_may_submit_without_a_stop_loss_but_not_with_a_wrong_one(client):
+    body = {"underlying": "NIFTY", "expiry": "27OCT2026", "strike": 23000, "option_type": "CE", "entry_mode": "ABOVE", "entry": 160, "targets": [200]}
+    r = client.post("/api/arena/public/submit", json=body, headers={"X-Arena-Token": T1}); assert r.status_code == 200, r.text
+    j = r.json(); assert j["sl"] is None and j["targets"] == [200.0] and SU.load()[-1]["sl"] is None
+    sid = j["id"]; ev = client.post("/api/arena/public/amend", json={"signal_id": sid, "action": "AMEND_SL", "sl": 140}, headers={"X-Arena-Token": T1}); assert ev.status_code == 200      # added later, from then on
+    assert client.post("/api/arena/public/submit", json={**body, "sl": 170}, headers={"X-Arena-Token": T1}).status_code == 422                                                       # a given stop must be below the entry
+    assert client.get("/api/arena/public/live", headers={"X-Arena-Token": T1}).status_code == 200                                                                                    # the live screen copes with a signal that has no stop
