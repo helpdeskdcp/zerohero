@@ -1,0 +1,12 @@
+# Nirnay 1 vs Nirnay 2 — comparison spec, pre-registered 2026-10-23
+The owner asked for two separate Pine scripts to run side by side and see which is more profitable: NIRNAY 1 = trend-day (breakout) mode with relaxed risk settings; NIRNAY 2 = a new VOLUME-BREAKOUT signal. Both rules are fixed here before any replay and are not tuned afterwards.
+## Variants (identical risk plumbing: entry = signal close, thirds 1R/2R/3R, stop first, flat 15:15, window 09:25-15:00, cooldown 5, stop = 8-bar swing +/- 0.2 ATR with min 0.5 ATR, skip if the stop is wider than 10 ATR, max 6 signals/day, stop signalling after 4 losing trades, cost 2 points per round trip)
+- NIRNAY 1: BREAKOUT signal as already specified (ADX >= 25, DI side, EMA21 vs EMA50, close beyond EMA21, new 20-bar high/low, close vs open, RSI >= 55 / <= 45), HTF ignored.
+- NIRNAY 2: VOLUME BREAKOUT: in the last 7 candles (current + last closed + 5 before) at least one candle has volume >= 2.0 x the 20-bar average volume, AND the current bar closes beyond the highest high (lowest low) of the previous 20 bars, close > open (< open), close beyond EMA21 and EMA21 vs EMA50 agreeing with the side. HTF, ADX and RSI are NOT required.
+- Reference rows: the shipped PULLBACK signal and BREAKOUT with the old 2.5 ATR stop cap and loss cap 2.
+## Data
+(a) NIFTY futures 1-minute with real volume: Dhan (to 2026-09-28) + Angel One (Sep 29 .. Oct 23) in market_history.db, front contract per day (the one with the most volume that day), about 100 sessions of ONE regime (Jul-Oct 2026): this is the only test of the volume rule and can be at best INSUFFICIENT/indicative. Charts 1m (the owner's chart) and 5m.
+(b) NIFTY index 1-minute 2015-2025 (Kaggle) for NIRNAY 1 only (no volume exists there): 5m/15m, P1 2015-19, P2 2020-25.
+## Verdict (decided now)
+A variant is EDGE only if on every chart/period cell tested n >= 30 and the 95% bootstrap interval (2000 resamples, seed 7) of NET mean R per trade has a lower bound above 0; with the ~100-session futures sample a pass would still only mean "worth a forward paper test". The comparison table (net R per trade, trades per day, total net R) is descriptive; the winner is the variant with the higher net R in more cells, stated with its interval, not a claim of profitability.
+Not testable: options premium, MCX (too few sessions of futures with volume). Futures roll gaps at the day boundary are left as they are.
