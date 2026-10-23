@@ -38,6 +38,13 @@ flatHM      = input.int(1515, "Flatten virtual trades at (HHMM, exchange time)",
 maxPerDay   = input.int(4, "Max signals per day", minval=1, group=gE)
 maxLossDay  = input.int(2, "Stop signalling for the day after N losing trades", minval=1, group=gE)
 
+string gM = "02b Entry mode (trend-day mode is OPTIONAL and tested-negative: no validated edge)"
+entryMode = input.string("Pullback only", "Entry mode", options=["Pullback only", "Trend-day only", "Both"], group=gM, tooltip="Trend-day = strong local trend breakout (ADX, DI, new N-bar high/low, RSI), ignores the lagging HTF filter. Tested on 11 years of NIFTY 5m/15m: no validated edge. Prefer 5m or 15m charts.")
+boLen     = input.int(20, "Trend-day: breakout lookback (bars)", minval=5, group=gM)
+boAdx     = input.float(25.0, "Trend-day: minimum ADX", minval=10.0, group=gM)
+boRsiL    = input.int(55, "Trend-day long: RSI at least", minval=1, maxval=99, group=gM)
+boRsiS    = input.int(45, "Trend-day short: RSI at most", minval=1, maxval=99, group=gM)
+
 string gR = "03 Risk and targets"
 atrLen     = input.int(14, "ATR length", minval=2, group=gR)
 swingLen   = input.int(8, "Swing lookback for the stop (bars)", minval=2, group=gR)
@@ -68,6 +75,8 @@ swLow     = ta.lowest(low, swingLen)
 swHigh    = ta.highest(high, swingLen)
 pullLow   = ta.lowest(low, pullBars)
 pullHigh  = ta.highest(high, pullBars)
+hhPrev    = ta.highest(high[1], boLen)
+llPrev    = ta.lowest(low[1], boLen)
 retVar    = ta.ema(math.pow(math.log(close / nz(close[1], close)), 2), 87)   // EWMA of squared 1-bar log returns (half-life about 30 bars)
 
 // ------------------------------------------------------------------------------------ 03 HIGHER-TIMEFRAME TREND
@@ -126,8 +135,14 @@ buyCd  = na(lastBuyBar) or bar_index - lastBuyBar > cooldown
 sellCd = na(lastSellBar) or bar_index - lastSellBar > cooldown
 canTrade = barstate.isconfirmed and inSess and volOK and not na(atr) and sigToday < maxPerDay and lossToday < maxLossDay and tDir == 0
 
-longSetup  = canTrade and htfScore >= minHtf and localUp and touchedUp and trigLong and buyCd
-shortSetup = canTrade and htfScore <= -minHtf and localDn and touchedDn and trigShort and sellCd
+usePb = entryMode != "Trend-day only"
+useBo = entryMode != "Pullback only"
+pullLong  = htfScore >= minHtf and localUp and touchedUp and trigLong
+pullShort = htfScore <= -minHtf and localDn and touchedDn and trigShort
+boLong  = adx >= boAdx and diPlus > diMinus and localUp and close > em and high > hhPrev and close > open and rv >= boRsiL
+boShort = adx >= boAdx and diMinus > diPlus and localDn and close < em and low < llPrev and close < open and rv <= boRsiS
+longSetup  = canTrade and buyCd and ((usePb and pullLong) or (useBo and boLong))
+shortSetup = canTrade and sellCd and ((usePb and pullShort) or (useBo and boShort))
 buySignal  = longSetup and not wideL
 sellSignal = shortSetup and not wideS
 skipWide   = (longSetup and wideL) or (shortSetup and wideS)
