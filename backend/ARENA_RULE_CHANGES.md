@@ -45,3 +45,8 @@
 
 ## 2026-10-23 01:25 IST — Per-lot ranking accepted by Mohit Agrawal (verbal, relayed by the owner)
 - The owner reports that Mohit accepted the per-lot ranking (rank by net per lot, default 1 lot, Mohit 2 lots, change only before the trade is active) and said the arena is good. No rule changed. Not a written confirmation: ask for a message/screenshot if a record is wanted before 2026-11-02.
+
+## 2026-10-23 11:05 IST — Defect fix: first channel post after an expiry roll was dropped (NO_CAPTURED_EXPIRY)
+- Found on 2026-10-23: Mohit posted SENSEX 73600 PE at 09:17:15 and NIFTY 22850 PE at 09:18:37; only NIFTY reached the ledger. The SENSEX post was logged NO_CAPTURED_EXPIRY because contracts.captured() is stale-while-revalidate and handed out yesterday's expiry list (22 Oct only) although the 29 Oct chain had been captured since 09:07:36 IST.
+- Fix (no scoring rule changed): channel ingest now reads contracts.captured_fresh() (cached answer used only if under 30 s old, else recomputed synchronously). tests/test_channel_ingest.py covers it. Reader restarted.
+- The dropped SENSEX post is NOT in the ledger. Whether to add it afterwards is an owner decision (it would be stamped with its original Telegram time and settled mechanically; the channel later claimed all targets hit, so late insertion must be disclosed). Nothing was inserted.

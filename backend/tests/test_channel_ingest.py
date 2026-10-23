@@ -87,3 +87,30 @@ def test_channel_signals_carry_the_profile_default_quantity(env, monkeypatch, tm
     (tmp_path / "pf.json").write_text(json.dumps({"INSTITUTION_TRADER": {"default_lots": 2}})); monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(tmp_path / "pf.json"))
     assert CI.handle_post(post(41, HERO), env["st"], **env["kw"])["outcome"] == "SUBMITTED" and SU.load(env["kw"]["ledger"])[-1]["lots"] == 2                       # Mohit's profile: 2 lots
     kw = {**env["kw"], "participant": "SOMEONE_ELSE"}; assert CI.handle_post(post(42, HERO), env["st"], **kw)["outcome"] == "SUBMITTED" and SU.load(env["kw"]["ledger"])[-1]["lots"] == 1   # everybody else: 1 lot
+
+
+def test_captured_fresh_bypasses_a_stale_cache_after_an_expiry_roll(monkeypatch):
+    """2026-10-23: the first Mohit post after the SENSEX expiry roll read yesterday's cached expiry list and was dropped as NO_CAPTURED_EXPIRY."""
+    import time
+    from app.arena import contracts as CT_
+    stale = {"day": "2026-10-22", "expiries": {"2026-10-22": {"strikes": [73600.0], "raw": "22OCT2026"}}}
+    new = {"day": "2026-10-23", "expiries": {"2026-10-29": {"strikes": [73600.0], "raw": "29OCT2026"}}}
+    key = ("ZZTEST", None, "/nonexistent-test-path"); calls = []
+
+    def fake_compute(u, d=None, p=None):
+        calls.append(1); CT_._cache[key] = (time.time(), new); return new
+    monkeypatch.setattr(CT_, "_compute_captured", fake_compute); monkeypatch.setattr(CT_, "_persist", lambda: None); monkeypatch.setattr(CT_, "_refreshing", set())
+    try:
+        CT_._cache[key] = (time.time() - 3600, stale)
+        assert CT_.captured("ZZTEST", None, "/nonexistent-test-path") == stale              # stale-while-revalidate returns the old list at once
+        CT_._cache[key] = (time.time() - 3600, stale); calls.clear()
+        assert CT_._real_captured_fresh("ZZTEST", None, "/nonexistent-test-path") == new and calls == [1]       # the fresh variant recomputes synchronously
+        assert CT_._real_captured_fresh("ZZTEST", None, "/nonexistent-test-path") == new and calls == [1]       # ...and a young answer is reused, not recomputed
+    finally:
+        CT_._cache.pop(key, None)
+
+
+def test_pick_expiry_and_hint_use_the_fresh_list(monkeypatch):
+    seen = []
+    monkeypatch.setattr(CI.CT, "captured_fresh", lambda u, d=None, p=None, max_age=30.0: seen.append(u) or {"expiries": {"2026-10-22": {}, "2026-10-29": {}}})
+    assert CI.pick_expiry("SENSEX", "2026-10-23") == "2026-10-29" and seen == ["SENSEX"]

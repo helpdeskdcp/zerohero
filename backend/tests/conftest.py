@@ -246,3 +246,11 @@ def _isolated_participants_file(tmp_path, monkeypatch):
         monkeypatch.setattr(api, "PARTICIPANTS_FILE", str(tmp_path / "no_participants_default.json"))
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _captured_fresh_follows_captured(monkeypatch):
+    """Tests stub CT.captured; the fresh variant used by channel ingest must follow the stub instead of scanning the real quote table."""
+    from app.arena import contracts as _CT
+    if not hasattr(_CT, "_real_captured_fresh"): _CT._real_captured_fresh = _CT.captured_fresh        # kept so one test can exercise the real function
+    monkeypatch.setattr(_CT, "captured_fresh", lambda u, d=None, p=None, max_age=30.0: _CT.captured(u, d, p))

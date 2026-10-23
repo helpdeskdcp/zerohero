@@ -104,6 +104,18 @@ def captured(underlying: str, day: str | None = None, path: str | None = None) -
     return out
 
 
+def captured_fresh(underlying: str, day: str | None = None, path: str | None = None, max_age: float = 30.0) -> dict:
+    """For decisions that cannot tolerate a stale answer (a channel post that creates a scored trade): the cached answer is used only if younger than `max_age` seconds, otherwise it is recomputed
+    SYNCHRONOUSLY. captured() may hand out a day-old list right after an expiry roll (the first post after the roll lost a real SENSEX signal on 2026-10-23 that way)."""
+    key = (underlying, day, path)
+    if path is None: _load_file()
+    hit = _cache.get(key)
+    if hit and time.time() - hit[0] < max_age: return hit[1]
+    out = _compute_captured(underlying, day, path)
+    if path is None and day is None: _persist()
+    return out
+
+
 def last_quote(underlying: str, expiry_iso: str, strike: float, ot: str, day: str | None = None, path: str | None = None) -> dict | None:
     from .settle import snap_expiry
     c = _ro(path)

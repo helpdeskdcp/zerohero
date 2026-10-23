@@ -35,7 +35,7 @@ def _log(rec: dict, log: str):
 
 
 def pick_expiry(underlying: str, today_iso: str, path: str | None = None) -> str | None:
-    ex = sorted(e for e in CT.captured(underlying, None, path)["expiries"] if e >= today_iso)
+    ex = sorted(e for e in CT.captured_fresh(underlying, None, path)["expiries"] if e >= today_iso)
     return ex[0] if ex else None
 
 
@@ -100,7 +100,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
     today = datetime.fromtimestamp(t, tz=IST).date().isoformat()
     hint = s.get("expiry_hint")
     if hint:                                                                                  # the post names day + month: use ONLY a captured expiry with exactly that day and month on/after the post date
-        cands = [e for e in sorted(CT.captured(und, None, db_path)["expiries"]) if e >= today and int(e[5:7]) == hint["month"] and (hint.get("day") is None or int(e[8:10]) == hint["day"])]       # month-only posts ("EXPIRY - OCT"): the captured expiry of that month
+        cands = [e for e in sorted(CT.captured_fresh(und, None, db_path)["expiries"]) if e >= today and int(e[5:7]) == hint["month"] and (hint.get("day") is None or int(e[8:10]) == hint["day"])]       # month-only posts ("EXPIRY - OCT"): the captured expiry of that month
         exp = cands[0] if cands else None
         if not exp: return {"outcome": "NO_CAPTURED_EXPIRY_FOR_POST", "underlying": und, "hint": hint}
     else:
