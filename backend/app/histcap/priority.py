@@ -119,11 +119,16 @@ class PriorityCapture:
         self.written += n; self.cycles += 1; self.last_cycle = t; self.last_note = f"ok: {n} row(s) from {len(metas)} contract(s)"; return n
 
     def run_forever(self) -> None:                                                              # pragma: no cover (thread)
+        last_log = 0.0
         while True:
             try:
-                self.step(); self.last_error = None; time.sleep(self.interval)
+                t0 = time.time(); self.step(); dt = time.time() - t0
+                if dt > 10 and t0 - last_log > 60: print(f"[priority-capture] slow step {dt:.1f}s ({self.last_note})", flush=True); last_log = t0           # a step is normally well under a second: anything slow is visible in the journal
+                self.last_error = None; time.sleep(self.interval)
             except Exception as e:
-                self.last_error = f"{type(e).__name__}: {str(e)[:120]}"; time.sleep(max(self.interval * 5, 15))      # back off on any broker error (rate limit etc.)
+                self.last_error = f"{type(e).__name__}: {str(e)[:120]}"
+                if time.time() - last_log > 60: print(f"[priority-capture] error {self.last_error}", flush=True); last_log = time.time()
+                time.sleep(max(self.interval * 5, 15))      # back off on any broker error (rate limit etc.)
 
     def status(self) -> dict:
         return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_cycle_age_s": (round(time.time() - self.last_cycle, 1) if self.last_cycle else None), "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval}

@@ -650,3 +650,24 @@ def test_capture_candles_delay_is_configurable_via_env(store, monkeypatch):
     w.run_once("POLL_ONCE", do_candles=True)
     # candle_delay_sec=0 must not call time.sleep at all (not even sleep(0))
     assert sleeps == []
+
+
+def test_capture_never_holds_the_store_lock_across_a_broker_call(store, monkeypatch):
+    """2026-10-23: the capture held the store's process-wide lock for the whole symbol cycle (minutes of greeks/candle broker calls), which starved the 3-second priority
+    capture of live arena trades (193 s stale prices). Every broker call must now run with the lock free, so another writer can get in."""
+    seen = []
+
+    class _Probe(_FakeSDK):
+        def get_quotes_batch(self, by_ex, mode="FULL"):
+            seen.append(("quotes", store._lock.locked())); return super().get_quotes_batch(by_ex, mode)
+
+        def get_option_greeks(self, *a, **k):
+            seen.append(("greeks", store._lock.locked())); return super().get_option_greeks(*a, **k)
+
+        def get_candles(self, *a, **k):
+            seen.append(("candles", store._lock.locked())); return super().get_candles(*a, **k)
+    w = _worker(store, monkeypatch, _Probe()); w.cfg["tfs"] = ["1m", "5m"]; w.cfg["candle_delay_sec"] = 0.0
+    monkeypatch.setattr(WK.time, "sleep", lambda s: seen.append(("sleep", store._lock.locked())))
+    w.run_once("POLL_ONCE", do_candles=True)
+    assert {k for k, _ in seen} >= {"quotes", "candles"} and all(locked is False for _, locked in seen)
+    assert store.summary()["quotes"] > 0                                   # rows were still written (short transactions)

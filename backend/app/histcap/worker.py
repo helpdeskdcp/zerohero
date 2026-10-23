@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import traceback
+from contextlib import nullcontext
 from datetime import timedelta, timezone
 from pathlib import Path
 
@@ -264,11 +265,13 @@ class CaptureWorker:
                         errors.append({"symbol": sym, "stage": "resolve", "status": "NO_REFS"})
                         continue
                     n_instr += len(refs["tokens_meta"])
-                    with self.store.transaction() as conn:
-                        self._capture_quotes(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
-                        self._capture_greeks(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
-                        if do_candles:
-                            self._capture_candles(conn, sdk, sym, refs, recv, rid, counts, integ, errors)
+                    # NO transaction around the whole symbol: each phase fetches from the broker FIRST (no DB lock held)
+                    # and writes in its own short transaction, so the shared store lock is never held across a broker call
+                    # (it used to be held for minutes and starved the 3-second priority capture of live trades).
+                    self._capture_quotes(None, sdk, sym, refs, recv, rid, counts, integ, errors)
+                    self._capture_greeks(None, sdk, sym, refs, recv, rid, counts, integ, errors)
+                    if do_candles:
+                        self._capture_candles(None, sdk, sym, refs, recv, rid, counts, integ, errors)
                 except Exception as e:
                     errors.append({"symbol": sym, "stage": "cycle", "status": type(e).__name__,
                                    "message": str(e)[:200]})
@@ -390,6 +393,10 @@ class CaptureWorker:
         self._oi_base_cache[sym] = (time.time() + 1800, out)
         return out
 
+    def _wtxn(self, conn):
+        """A write transaction: reuse `conn` if the caller already holds one, else open a SHORT one (rows only; never across a broker call)."""
+        return nullcontext(conn) if conn is not None else self.store.transaction()
+
     # ---------------------------------------------------------------- captures
     def _capture_quotes(self, conn, sdk, sym, refs, recv, rid, counts, integ, errors):
         by_ex: dict[str, list] = {}
@@ -401,40 +408,41 @@ class CaptureWorker:
             errors.append({"symbol": sym, "stage": "quotes", "status": type(e).__name__, "message": str(e)[:160]})
             return
 
-        raw_id = self.store.put_raw(conn, endpoint="market/v1/quote",
-                                    request={"exchangeTokens": {k: v for k, v in by_ex.items()}, "mode": "FULL"},
-                                    http_status=None, status="OK" if quotes else "DATA_UNAVAILABLE",
-                                    payload=quotes, server_ts=None, run_id=rid)
-        counts["raw"] += 1
-        spot_ltp = None
-        sm = refs.get("spot_meta")
-        if sm:
-            sq = quotes.get(sm["token"]) or {}
-            spot_ltp = N._f(sq.get("ltp") or sq.get("lastTradedPrice"))
+        with self._wtxn(conn) as c:
+            raw_id = self.store.put_raw(c, endpoint="market/v1/quote",
+                                        request={"exchangeTokens": {k: v for k, v in by_ex.items()}, "mode": "FULL"},
+                                        http_status=None, status="OK" if quotes else "DATA_UNAVAILABLE",
+                                        payload=quotes, server_ts=None, run_id=rid)
+            counts["raw"] += 1
+            spot_ltp = None
+            sm = refs.get("spot_meta")
+            if sm:
+                sq = quotes.get(sm["token"]) or {}
+                spot_ltp = N._f(sq.get("ltp") or sq.get("lastTradedPrice"))
 
-        rows = []
-        for m in refs["tokens_meta"]:
-            q = quotes.get(m["token"])
-            if not isinstance(q, dict):
-                q = {"status": "DATA_UNAVAILABLE"}
-            nq = N.norm_quote(q, m, recv, spot_ltp=spot_ltp)
-            nq["raw_id"] = raw_id
-            rows.append(nq)
+            rows = []
+            for m in refs["tokens_meta"]:
+                q = quotes.get(m["token"])
+                if not isinstance(q, dict):
+                    q = {"status": "DATA_UNAVAILABLE"}
+                nq = N.norm_quote(q, m, recv, spot_ltp=spot_ltp)
+                nq["raw_id"] = raw_id
+                rows.append(nq)
 
-        # materialise change-in-OI (broker sends none): current_oi - prev-session
-        # close OI per contract. Tagged doi_derived; never overwrites a real value.
-        base = self._oi_baseline_for(conn, sym)
-        if base:
-            for nq in rows:
-                oi = nq.get("oi")
-                if (nq.get("kind") in ("OPTION", "FUTURE") and nq.get("oi_change") is None
-                        and isinstance(oi, (int, float)) and oi > 0):
-                    b = base.get((nq.get("expiry") or "", nq.get("strike"), nq.get("option_type")))
-                    if b is not None:
-                        nq["oi_change"] = round(oi - b, 0)
-                        nq["oi_change_src"] = "derived"
+            # materialise change-in-OI (broker sends none): current_oi - prev-session
+            # close OI per contract. Tagged doi_derived; never overwrites a real value.
+            base = self._oi_baseline_for(c, sym)
+            if base:
+                for nq in rows:
+                    oi = nq.get("oi")
+                    if (nq.get("kind") in ("OPTION", "FUTURE") and nq.get("oi_change") is None
+                            and isinstance(oi, (int, float)) and oi > 0):
+                        b = base.get((nq.get("expiry") or "", nq.get("strike"), nq.get("option_type")))
+                        if b is not None:
+                            nq["oi_change"] = round(oi - b, 0)
+                            nq["oi_change_src"] = "derived"
 
-        counts["quotes"] += self.store.write_quotes(conn, rows, rid, integ)
+            counts["quotes"] += self.store.write_quotes(c, rows, rid, integ)
 
     def _capture_greeks(self, conn, sdk, sym, refs, recv, rid, counts, integ, errors):
         expiry = refs.get("opt_expiry")
@@ -452,20 +460,21 @@ class CaptureWorker:
         if g.get("cache") == "CAPABILITY" or g.get("capability") == "UNAVAILABLE":
             counts["greeks_unavailable"] = counts.get("greeks_unavailable", 0) + 1
             return
-        raw_id = self.store.put_raw(conn, endpoint="marketData/v1/optionGreek",
-                                    request={"name": sym.upper(), "expirydate": expiry},
-                                    http_status=g.get("http_status"), status=g.get("status"),
-                                    payload=g, server_ts=g.get("fetched_at"), run_id=rid)
-        counts["raw"] += 1
-        if g.get("status") != "OK":
-            errors.append({"symbol": sym, "stage": "greeks", "status": g.get("status"),
-                           "message": g.get("errorcode") or g.get("message")})
-            return
-        rows = N.norm_greeks(g.get("rows") or [], sym, expiry, "OK", recv,
-                             server_ts=g.get("fetched_at"))
-        for r in rows:
-            r["raw_id"] = raw_id
-        counts["greeks"] += self.store.write_greeks(conn, rows, rid, integ)
+        with self._wtxn(conn) as c:
+            raw_id = self.store.put_raw(c, endpoint="marketData/v1/optionGreek",
+                                        request={"name": sym.upper(), "expirydate": expiry},
+                                        http_status=g.get("http_status"), status=g.get("status"),
+                                        payload=g, server_ts=g.get("fetched_at"), run_id=rid)
+            counts["raw"] += 1
+            if g.get("status") != "OK":
+                errors.append({"symbol": sym, "stage": "greeks", "status": g.get("status"),
+                               "message": g.get("errorcode") or g.get("message")})
+                return
+            rows = N.norm_greeks(g.get("rows") or [], sym, expiry, "OK", recv,
+                                 server_ts=g.get("fetched_at"))
+            for r in rows:
+                r["raw_id"] = raw_id
+            counts["greeks"] += self.store.write_greeks(c, rows, rid, integ)
 
     def _capture_candles(self, conn, sdk, sym, refs, recv, rid, counts, integ, errors):
         metas = [m for m in (refs.get("spot_meta"), refs.get("fut_meta")) if m]
@@ -495,18 +504,19 @@ class CaptureWorker:
                     errors.append({"symbol": sym, "stage": f"candles:{tf}", "status": type(e).__name__,
                                    "message": str(e)[:140]})
                     continue
-                raw_id = self.store.put_raw(conn, endpoint="historical/v1/getCandleData",
-                                            request={"exchange": m["exchange"], "symboltoken": m["token"],
-                                                     "interval": _INTERVAL[tf], "fromdate": frm, "todate": to},
-                                            http_status=None, status=d.get("status"),
-                                            payload=d, server_ts=None, run_id=rid)
-                counts["raw"] += 1
-                if d.get("status") != "OK":
-                    continue
-                rows = N.norm_candles(d.get("candles") or [], m, tf, recv)
-                for r in rows:
-                    r["raw_id"] = raw_id
-                counts["candles"] += self.store.write_candles(conn, rows, rid, integ)
+                with self._wtxn(conn) as c:
+                    raw_id = self.store.put_raw(c, endpoint="historical/v1/getCandleData",
+                                                request={"exchange": m["exchange"], "symboltoken": m["token"],
+                                                         "interval": _INTERVAL[tf], "fromdate": frm, "todate": to},
+                                                http_status=None, status=d.get("status"),
+                                                payload=d, server_ts=None, run_id=rid)
+                    counts["raw"] += 1
+                    if d.get("status") != "OK":
+                        continue
+                    rows = N.norm_candles(d.get("candles") or [], m, tf, recv)
+                    for r in rows:
+                        r["raw_id"] = raw_id
+                    counts["candles"] += self.store.write_candles(c, rows, rid, integ)
 
     def _dhan_nearest_expiry(self, sym: str) -> str | None:
         """Dhan's own nearest live expiry (dhan_chain.expiry_list), fully
