@@ -61,3 +61,8 @@ Follow-up to the 2026-10-23 SENSEX incident:
 3. contracts.check() looks again with a fresh list before it calls a contract unscorable (manual submissions and channel posts), so a stale cache can no longer produce a false 'not captured'.
 4. Daily report: new section 'Signal-like posts that did NOT reach the ledger' (dropped / retried / unparsed counts) and a DROPPED line in the Telegram summary.
 5. scripts/arena_ingest_watchdog.py (cron every 5 min, 08-23 Mon-Fri): private alert when the reader is down/stale and once when it is back.
+
+## 2026-10-23 17:58 IST — Infrastructure fix: live-trade price capture no longer stalls (no scoring rule changed)
+- Symptom (2026-10-23 evening): an active NaturalGas trade's price stopped refreshing for minutes. Cause: the normal chain capture held the store's shared python lock across minutes of broker calls and a heavy OI-baseline query, and the 3-second priority capture waited behind it.
+- Fixes: the normal capture writes in short transactions only (broker calls outside the lock); the OI baseline query runs on a private read connection before the write; the priority capture writes through its own connection (no shared lock); store lock holds over 5 s and priority-capture slow steps are logged; a watchdog (cron every 2 min) alerts the owner's private chat when a watched live contract has no stored quote for 90 s.
+- Verified live afterwards: 68 priority batches in 5 minutes, median gap 4.3 s, max 7 s. Trades settled while the stall lasted were settled on the quotes that existed (captured fills/exits can be minutes late for that window); no row was edited.

@@ -671,3 +671,15 @@ def test_capture_never_holds_the_store_lock_across_a_broker_call(store, monkeypa
     w.run_once("POLL_ONCE", do_candles=True)
     assert {k for k, _ in seen} >= {"quotes", "candles"} and all(locked is False for _, locked in seen)
     assert store.summary()["quotes"] > 0                                   # rows were still written (short transactions)
+
+
+def test_independent_transaction_writes_while_the_shared_store_lock_is_held(store):
+    """The priority capture must be able to write while the normal capture holds the store's python lock."""
+    store._lock.acquire()
+    try:
+        with store.independent_transaction() as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS _t(x)"); conn.execute("INSERT INTO _t VALUES (1)")
+        with store.independent_transaction() as conn:
+            assert conn.execute("SELECT COUNT(*) FROM _t").fetchone()[0] == 1
+    finally:
+        store._lock.release()

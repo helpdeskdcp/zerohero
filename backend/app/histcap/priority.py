@@ -98,7 +98,7 @@ class PriorityCapture:
             if not ok: self.last_note = "broker session not authenticated"; return 0
         by_ex: dict[str, list] = {}
         for m in metas: by_ex.setdefault(m["exchange"], []).append(m["token"])
-        quotes = sdk.get_quotes_batch(by_ex, mode="FULL"); recv = N.now_utc_iso(); rows = []
+        t_f0 = time.time(); quotes = sdk.get_quotes_batch(by_ex, mode="FULL"); t_fetch = time.time() - t_f0; recv = N.now_utc_iso(); rows = []
         for m in metas:
             q = quotes.get(m["token"]) if isinstance(quotes, dict) else None
             if not isinstance(q, dict): continue
@@ -115,7 +115,10 @@ class PriorityCapture:
         if not rows: self.last_note = f"{len(metas)} contract(s) polled, no new quote to store"; self.last_cycle = t; return 0
         st = self._store(); day = datetime.now(IST).strftime("%Y-%m-%d")
         if self._run_id is None or self._run_day != day: self._run_id = st.start_run("PRIORITY_WATCH", {}, True); self._run_day = day
-        with st.transaction() as conn: n = st.write_quotes(conn, rows, self._run_id, {"issues": [], "rejected": [], "flagged": 0})
+        t_w0 = time.time()
+        with getattr(st, "independent_transaction", st.transaction)() as conn:                          # private connection, not the normal capture's shared lock
+            n = st.write_quotes(conn, rows, self._run_id, {"issues": [], "rejected": [], "flagged": 0})
+        self.last_timing = {"fetch_s": round(t_fetch, 2), "write_s": round(time.time() - t_w0, 2)}
         self.written += n; self.cycles += 1; self.last_cycle = t; self.last_note = f"ok: {n} row(s) from {len(metas)} contract(s)"; return n
 
     def run_forever(self) -> None:                                                              # pragma: no cover (thread)
@@ -123,12 +126,12 @@ class PriorityCapture:
         while True:
             try:
                 t0 = time.time(); self.step(); dt = time.time() - t0
-                if dt > 10 and t0 - last_log > 60: print(f"[priority-capture] slow step {dt:.1f}s ({self.last_note})", flush=True); last_log = t0           # a step is normally well under a second: anything slow is visible in the journal
+                if dt > 10 and t0 - last_log > 60: print(f"[priority-capture] slow step {dt:.1f}s ({self.last_note}; {getattr(self, 'last_timing', None)})", flush=True); last_log = t0           # a step is normally well under a second: anything slow is visible in the journal
                 self.last_error = None; time.sleep(self.interval)
             except Exception as e:
                 self.last_error = f"{type(e).__name__}: {str(e)[:120]}"
                 if time.time() - last_log > 60: print(f"[priority-capture] error {self.last_error}", flush=True); last_log = time.time()
-                time.sleep(max(self.interval * 5, 15))      # back off on any broker error (rate limit etc.)
+                time.sleep(1.0 if "locked" in str(e).lower() else max(self.interval * 5, 15))      # a busy database is retried at once; any broker error (rate limit etc.) backs off
 
     def status(self) -> dict:
         return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_cycle_age_s": (round(time.time() - self.last_cycle, 1) if self.last_cycle else None), "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval}

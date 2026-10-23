@@ -8,9 +8,12 @@ so a backtest never sees a bar before the exchange published it.
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
 import gzip
 import hashlib
 import json
+import time
+import traceback
 import os
 import sqlite3
 import threading
@@ -150,6 +153,24 @@ class HistStore:
     def transaction(self):
         return _Txn(self)
 
+    @contextmanager
+    def independent_transaction(self):
+        """A SHORT write transaction on a private connection that does not take the store's shared python lock (held by the normal capture); SQLite's own writer lock plus the
+        15 s busy timeout are enough for a few-row insert. Used by the 3-second priority capture so a live trade's price is never queued behind the long capture cycle."""
+        conn = self._conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            yield conn
+            conn.commit()
+        except BaseException:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
+        finally:
+            conn.close()
+
     # -------------------------------------------------- raw archive retention
     def rotate_raw_responses(self, *, days_to_keep: int = 14) -> int:
         """Deletes raw_responses rows older than `days_to_keep` -- the
@@ -285,11 +306,15 @@ class _Txn:
 
     def __enter__(self):
         self.store._lock.acquire()
+        self._t0 = time.time(); self._who = [f"{f.name}:{f.lineno}" for f in traceback.extract_stack(limit=4)[:-1]][-2:]
         self.conn = self.store._conn()
         self.conn.execute("BEGIN")
         return self.conn
 
     def __exit__(self, exc_type, exc, tb):
+        held = time.time() - getattr(self, "_t0", time.time())
+        if held > 5:                                                    # a write transaction should take milliseconds: anything long starves the priority capture, so it is named in the journal
+            print(f"[histcap] store lock held {held:.1f}s by {self._who}", flush=True)
         try:
             if exc_type is None:
                 self.conn.commit()

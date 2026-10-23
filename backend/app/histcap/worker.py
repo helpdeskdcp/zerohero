@@ -370,6 +370,9 @@ class CaptureWorker:
         if hit and time.time() < hit[0]:
             return hit[1]
         out: dict = {}
+        own = conn is None
+        if own:                                     # a private READ connection: this aggregation scans every earlier session and can take minutes, so it must never run inside the shared write lock
+            conn = self.store._conn()
         try:
             today = conn.execute(
                 "SELECT MAX(session_date_ist) FROM quote_snapshots "
@@ -390,6 +393,9 @@ class CaptureWorker:
                     out[(r[0] or "", r[1], r[2])] = r[3]
         except Exception:
             out = {}
+        finally:
+            if own:
+                conn.close()
         self._oi_base_cache[sym] = (time.time() + 1800, out)
         return out
 
@@ -408,6 +414,7 @@ class CaptureWorker:
             errors.append({"symbol": sym, "stage": "quotes", "status": type(e).__name__, "message": str(e)[:160]})
             return
 
+        base = self._oi_baseline_for(None, sym)          # heavy query: OUTSIDE the write lock (cached ~30 min)
         with self._wtxn(conn) as c:
             raw_id = self.store.put_raw(c, endpoint="market/v1/quote",
                                         request={"exchangeTokens": {k: v for k, v in by_ex.items()}, "mode": "FULL"},
@@ -431,7 +438,6 @@ class CaptureWorker:
 
             # materialise change-in-OI (broker sends none): current_oi - prev-session
             # close OI per contract. Tagged doi_derived; never overwrites a real value.
-            base = self._oi_baseline_for(c, sym)
             if base:
                 for nq in rows:
                     oi = nq.get("oi")

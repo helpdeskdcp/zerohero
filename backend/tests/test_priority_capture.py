@@ -70,3 +70,9 @@ def test_unchanged_quote_is_stored_as_a_light_heartbeat_every_15_s_only(tmp_path
     assert cap.step(now + 16) == 1                                         # 15 s passed: a heartbeat row says "the quote is still standing"
     hb = st.rows[-1][1]; assert hb["snap_key"].startswith("HB|") and hb["depth_json"] is None and hb["bid"] == 99.5
     assert cap.status()["last_cycle_age_s"] is not None
+
+
+def test_watchdog_flags_contracts_without_a_recent_quote():
+    import importlib.util, os
+    sp = importlib.util.spec_from_file_location("pw", os.path.join(os.path.dirname(__file__), "..", "scripts", "priority_capture_watchdog.py")); pw = importlib.util.module_from_spec(sp); sp.loader.exec_module(pw)
+    assert pw.stale_contracts({"a": 5.0, "b": 200.0, "c": None, "d": 90.0}) == ["b", "c"] and pw.stale_contracts({}) == []
