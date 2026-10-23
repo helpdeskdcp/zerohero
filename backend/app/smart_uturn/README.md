@@ -25,7 +25,7 @@ Chart timeframes supported by the Pine mapping: 1, 3, 5, 15, 30, 45, 60, 120, 24
 | s03 `request.security(tf, f()[1], lookahead_on)` | `strategy.mtf_values` | value of the previous COMPLETED HTF bar; truncation-invariance test proves no look-ahead |
 | s04 votes, `mtfDirection`, `evA/B/C` | `strategy.run` | |
 | s06 strict trend, independent cooldowns, blocked warnings | `strategy.gate_signals` | `lastBuyBar/lastSellBar` move only on emitted signals |
-| s07 entry/stop/T1-T3/support/resistance | `strategy.run` (levels) | `entry := close`; swing low/high include the current bar; `minDist = max(atr*0.5, 2*mintick)` |
+| s07 entry/stop/T1-T3/support/resistance | `strategy.run` (levels) | `entry := close`; `minDist = max(atr*0.5, 2*mintick)`. `ta.lowest/highest(.., swingLen)` sit inside the signal `if`, so Pine evaluates them over the last swingLen SIGNAL bars, not candles: default `swing_window="PINE_CONDITIONAL"` reproduces TradingView, `"BARS"` is the intent |
 | s08 breakout/retest | `strategy.run` | uses the levels frozen at the last signal |
 | s09 pivots, `valuewhen` hunts | `indicators.pivot_*`, `valuewhen_recent` | pivot reported only `swing` bars after the peak |
 | s10 dashboard, s11 alerts | `strategy.dashboard`, signal columns (`buy_signal`, `blocked_buy`, `bull_breakout`...) | data only |
@@ -41,7 +41,7 @@ Signal known at its bar close -> fill at the NEXT bar's open; stops fill at the 
 | item | status |
 |---|---|
 | Unit/integration/anti-look-ahead tests (synthetic) | PASS: 47/47 (`tests/test_smart_uturn.py`) |
-| TradingView signal parity | **BLOCKED**: no TradingView export/reference available. Not verified. To verify: export the indicator's BUY/SELL times from TradingView for a 1-minute file you also give here, then compare with `signals.csv` |
+| TradingView signal parity | **PARTIAL** (2026-10-23, screenshots + complete Upstox 1m data): dashboard states, SL-hunt pivots and 5 of 9 SELL labels match exactly; TradingView shows 4 extra SELL labels the port does not (unresolved). See `data/research/smart_uturn/FINDINGS_PARITY_2026-10-23.md` |
 | Pivot tie rule, `ta.lowest` early-bar behaviour | NOT VERIFIED against TradingView (documented in `indicators.py`) |
 | Historical replay | see `data/research/smart_uturn/` (spec first, results after) |
 | Provider adapters (Dhan/Angel One/Upstox) | interface + CSV adapter + fallback/backoff only; broker SDKs are NOT called from this package |

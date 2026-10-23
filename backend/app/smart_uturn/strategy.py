@@ -96,13 +96,18 @@ def run(chart: pd.DataFrame, chart_tf: str, htf_bars: dict[str, pd.DataFrame], p
     turn = comp["turn"]
     buy, sell, blocked_buy, blocked_sell = gate_signals(turn, mtf_dir, p)
     active_dir = np.zeros(n, int); entry = np.full(n, np.nan); stop = entry.copy(); risk = entry.copy(); t1 = entry.copy(); t2 = entry.copy(); t3 = entry.copy(); sup = entry.copy(); res = entry.copy()
+    call_l: list = []; call_h: list = []
     cur = dict(d=0, e=np.nan, s=np.nan, r=np.nan, a=np.nan, b=np.nan, c=np.nan, sup=np.nan, res=np.nan); new_levels = np.zeros(n, bool)
     for i in range(n):
         if (buy[i] or sell[i]) and not np.isnan(atr[i]):
-            d = 1 if buy[i] else -1; e = c[i]; sl_, sh_ = swing_low[i], swing_high[i]
+            d = 1 if buy[i] else -1; e = c[i]
+            if p.swing_window == "BARS": sl_, sh_ = swing_low[i], swing_high[i]
+            else:                                                       # Pine: ta.lowest/highest sit INSIDE this `if`, so their window is the last swingLen EXECUTIONS (signal bars), not the last swingLen candles
+                call_l.append(l[i]); call_h.append(h[i])
+                sl_ = min(call_l[-p.swing_len:]) if len(call_l) >= p.swing_len else np.nan; sh_ = max(call_h[-p.swing_len:]) if len(call_h) >= p.swing_len else np.nan
             min_dist = max(atr[i] * p.min_risk_atr, p.mintick * 2)
             raw = (sl_ - atr[i] * p.sl_buffer) if d == 1 else (sh_ + atr[i] * p.sl_buffer)
-            st = min(raw, e - min_dist) if d == 1 else max(raw, e + min_dist); rk = abs(e - st)
+            st = np.nan if np.isnan(raw) else (min(raw, e - min_dist) if d == 1 else max(raw, e + min_dist)); rk = abs(e - st)         # Pine math.min/max with na -> na (only before swingLen signals exist)
             cur = dict(d=d, e=e, s=st, r=rk, a=e + d * rk * p.rr1, b=e + d * rk * p.rr2, c=e + d * rk * p.rr3, sup=sl_, res=sh_); new_levels[i] = True
         active_dir[i] = cur["d"]; entry[i] = cur["e"]; stop[i] = cur["s"]; risk[i] = cur["r"]; t1[i], t2[i], t3[i] = cur["a"], cur["b"], cur["c"]; sup[i] = cur["sup"]; res[i] = cur["res"]
     # section 08 structure (support/resistance are the levels frozen at the last signal)

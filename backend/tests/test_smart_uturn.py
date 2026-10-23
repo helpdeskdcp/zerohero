@@ -223,8 +223,8 @@ def test_no_lookahead_truncating_future_data_changes_no_earlier_signal(chart_tf)
     assert sf.buy_signal.sum() + sf.sell_signal.sum() > 0                                       # the comparison is not vacuous
 
 
-def test_levels_follow_pine_formula():
-    d, _ = Q.validate_one_minute(synth_minutes(5, seed=5, vol=3.0)); sp = SignalParams(); chart, sig = cli.build_signals(d, "5", sp, R.NSE)
+def test_levels_follow_pine_formula_with_the_bar_window():
+    d, _ = Q.validate_one_minute(synth_minutes(5, seed=5, vol=3.0)); sp = SignalParams(swing_window="BARS"); chart, sig = cli.build_signals(d, "5", sp, R.NSE)
     new = sig[sig.new_levels]; assert len(new) > 0
     for t, r in new.iloc[:30].iterrows():
         i = chart.index.get_loc(t); lo = chart.low.iloc[max(0, i - 7):i + 1].min(); hi = chart.high.iloc[max(0, i - 7):i + 1].max(); md = max(r.atr * sp.min_risk_atr, sp.mintick * 2)
@@ -421,3 +421,21 @@ def test_option_replay_uses_next_expiry_on_expiry_day_and_blocks_overlap():
     r = OR.replay_options(ix, chart, sig, _Store(opens, expiries=("2026-03-02", "2026-03-10")), SignalParams())
     assert r["trades"].iloc[0].option.startswith("2026-03-10") and list(r["rejections"].reason) == ["position_open"]
     none = OR.replay_options(ix, chart, sig, _Store(opens, expiries=("2026-03-02",)), SignalParams()); assert list(none["rejections"].reason)[0] == "no_later_expiry_in_data"
+
+
+def test_pine_conditional_window_levels_use_the_last_n_signal_executions_not_the_last_n_bars(monkeypatch):
+    """Pine: ta.lowest/highest(.., swingLen) sit inside `if (buySignal or sellSignal)`, so they only run on signal bars: the window is the last swingLen EXECUTIONS. Verified against TradingView's own
+    dashboard on 2026-10-23 (resistance = highest high of the last 8 signal bars; stop = that + 0.2*ATR). SYNTHETIC check of the mechanism."""
+    d, _ = Q.validate_one_minute(synth_minutes(3, seed=9, vol=3.0)); store = R.CandleStore(d, R.NSE); chart = store.get("5"); n = len(chart)
+    fire = list(range(40, n - 1, 9))[:12]; turn = np.zeros(n, int); mtf = np.zeros(n, int); sell = np.zeros(n, bool); sell[fire] = True
+    monkeypatch.setattr(st, "gate_signals", lambda t, m, p: (np.zeros(n, bool), sell.copy(), np.zeros(n, bool), np.zeros(n, bool)))
+    sp = SignalParams(); sig = st.run(chart, "5", {t: store.get(t) for t in ("15", "30", "45")}, sp)
+    hi, lo = chart.high.to_numpy(), chart.low.to_numpy(); lv = sig[sig.new_levels]
+    assert len(lv) == len(fire)
+    for k, i in enumerate(fire):
+        if k < 7: assert np.isnan(lv.iloc[k].resistance) and np.isnan(lv.iloc[k].stop)                       # fewer than swingLen executions: na, as in Pine
+        else:
+            w = fire[k - 7:k + 1]; assert lv.iloc[k].resistance == pytest.approx(hi[w].max()) and lv.iloc[k].support == pytest.approx(lo[w].min())
+            raw = hi[w].max() + sp.sl_buffer * lv.iloc[k].atr; e = chart.close.iloc[i]; assert lv.iloc[k].stop == pytest.approx(max(raw, e + max(lv.iloc[k].atr * sp.min_risk_atr, sp.mintick * 2)))
+    bars = st.run(chart, "5", {t: store.get(t) for t in ("15", "30", "45")}, SignalParams(swing_window="BARS"))
+    assert not np.allclose(bars[bars.new_levels].resistance.to_numpy()[7:], lv.resistance.to_numpy()[7:])     # the two readings really differ

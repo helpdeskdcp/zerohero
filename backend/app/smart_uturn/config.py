@@ -38,12 +38,14 @@ class SignalParams:
     rr1: float = 1.0
     rr2: float = 2.0
     rr3: float = 3.0
+    swing_window: str = "PINE_CONDITIONAL"   # how the level block's ta.highest/lowest(.., swingLen) is read: PINE_CONDITIONAL = over the last swingLen EXECUTIONS of the `if (buySignal or sellSignal)` block (what TradingView actually shows, see strategy.py) | BARS = the last swingLen candles (the evident intent)
     mintick: float = 0.05            # syminfo.mintick of the instrument (NIFTY index 0.05); set per instrument
 
     def validate(self) -> "SignalParams":
         if self.fast_len < 2 or self.slow_len < 3 or self.rsi_len < 2 or self.swing_len < 3 or self.volume_len < 2 or self.atr_len < 2: raise ConfigError("length below Pine minval")
         if not 2 <= self.min_score <= 5: raise ConfigError("min_score must be 2..5")
         if not 1 <= self.min_trend_votes <= 3: raise ConfigError("min_trend_votes must be 1..3")
+        if self.swing_window not in ("PINE_CONDITIONAL", "BARS"): raise ConfigError("swing_window")
         if self.cooldown_bars < 0 or self.wick_ratio < 0.5 or self.sl_buffer < 0 or self.min_risk_atr < 0.1 or self.mintick <= 0: raise ConfigError("invalid risk/threshold parameter")
         if self.rr1 < 0.5 or self.rr2 < 1.0 or self.rr3 < 1.5: raise ConfigError("target R below Pine minval")
         return self
