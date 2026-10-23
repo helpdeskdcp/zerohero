@@ -1,0 +1,237 @@
+{
+ "label": "upstox_nifty",
+ "index_rows": 31875,
+ "expiries_in_data": 17,
+ "5": {
+  "PRIMARY_s1.5": {
+   "signals": 261,
+   "trades": 124,
+   "rejected": 137,
+   "rejection_reasons": {
+    "position_open": 97,
+    "contract_not_in_data": 30,
+    "no_later_expiry_in_data": 9,
+    "no_next_bar_in_session": 1
+   },
+   "config": {
+    "slippage_pct": 1.5,
+    "brokerage_per_order": 20.0,
+    "sell_charges_pct": 0.15,
+    "lot_size": 65,
+    "max_strike_dist": 75.0,
+    "quote_tolerance_min": 5,
+    "exit_model": "THIRDS"
+   },
+   "net_rs_total": -44316.97467583326,
+   "gross_rs_total": -36277.09583333326,
+   "mean_net_rs": -357.3949570631715,
+   "mean_net_rs_ci95": [
+    -630.8251480714458,
+    -50.350577997143894
+   ],
+   "win_rate": 0.3387096774193548,
+   "profit_factor": 0.5640101956105957,
+   "max_drawdown_rs": 47072.895333541586,
+   "mean_net_pct_of_premium": -3.688718420698159,
+   "avg_entry_premium": 125.2518185483871,
+   "avg_hold_min": 116.08870967741936,
+   "long_calls": 54,
+   "short_puts": 70,
+   "net_rs_calls": -20265.8192227083,
+   "net_rs_puts": -24051.15545312496,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "s0.5": {
+   "signals": 261,
+   "trades": 124,
+   "rejected": 137,
+   "rejection_reasons": {
+    "position_open": 97,
+    "contract_not_in_data": 30,
+    "no_later_expiry_in_data": 9,
+    "no_next_bar_in_session": 1
+   },
+   "config": {
+    "slippage_pct": 0.5,
+    "brokerage_per_order": 20.0,
+    "sell_charges_pct": 0.15,
+    "lot_size": 65,
+    "max_strike_dist": 75.0,
+    "quote_tolerance_min": 5,
+    "exit_model": "THIRDS"
+   },
+   "net_rs_total": -24504.954114166572,
+   "gross_rs_total": -16450.25416666657,
+   "mean_net_rs": -197.6205976948917,
+   "mean_net_rs_ci95": [
+    -473.39420032014374,
+    113.23951429498551
+   ],
+   "win_rate": 0.3709677419354839,
+   "profit_factor": 0.7256217687115557,
+   "max_drawdown_rs": 32429.361746458282,
+   "mean_net_pct_of_premium": -1.7356788329357724,
+   "avg_entry_premium": 124.01781048387096,
+   "avg_hold_min": 116.08870967741936,
+   "long_calls": 54,
+   "short_puts": 70,
+   "net_rs_calls": -11496.11687979163,
+   "net_rs_puts": -13008.837234374943,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "s3.0": {
+   "signals": 261,
+   "trades": 124,
+   "rejected": 137,
+   "rejection_reasons": {
+    "position_open": 97,
+    "contract_not_in_data": 30,
+    "no_later_expiry_in_data": 9,
+    "no_next_bar_in_session": 1
+   },
+   "config": {
+    "slippage_pct": 3.0,
+    "brokerage_per_order": 20.0,
+    "sell_charges_pct": 0.15,
+    "lot_size": 65,
+    "max_strike_dist": 75.0,
+    "quote_tolerance_min": 5,
+    "exit_model": "THIRDS"
+   },
+   "net_rs_total": -74035.00551833339,
+   "gross_rs_total": -66017.35833333341,
+   "mean_net_rs": -597.0564961155918,
+   "mean_net_rs_ci95": [
+    -868.8641313906255,
+    -291.29872049017246
+   ],
+   "win_rate": 0.28225806451612906,
+   "profit_factor": 0.3904148758562393,
+   "max_drawdown_rs": 76179.11012541677,
+   "mean_net_pct_of_premium": -6.547171992107685,
+   "avg_entry_premium": 127.10283064516129,
+   "avg_hold_min": 116.08870967741936,
+   "long_calls": 54,
+   "short_puts": 70,
+   "net_rs_calls": -33420.37273708337,
+   "net_rs_puts": -40614.63278125004,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  }
+ },
+ "15": {
+  "PRIMARY_s1.5": {
+   "signals": 87,
+   "trades": 54,
+   "rejected": 33,
+   "rejection_reasons": {
+    "position_open": 16,
+    "contract_not_in_data": 12,
+    "no_later_expiry_in_data": 4,
+    "no_next_bar_in_session": 1
+   },
+   "config": {
+    "slippage_pct": 1.5,
+    "brokerage_per_order": 20.0,
+    "sell_charges_pct": 0.15,
+    "lot_size": 65,
+    "max_strike_dist": 75.0,
+    "quote_tolerance_min": 5,
+    "exit_model": "THIRDS"
+   },
+   "net_rs_total": -2541.3574527083083,
+   "gross_rs_total": 760.8629166666976,
+   "mean_net_rs": -47.062175050153854,
+   "mean_net_rs_ci95": [
+    -739.0925578612071,
+    853.8791062299383
+   ],
+   "win_rate": 0.4074074074074074,
+   "profit_factor": 0.9546240721200364,
+   "max_drawdown_rs": 35886.70915999998,
+   "mean_net_pct_of_premium": -0.38591526968507883,
+   "avg_entry_premium": 121.7624074074074,
+   "avg_hold_min": 206.11111111111111,
+   "long_calls": 24,
+   "short_puts": 30,
+   "net_rs_calls": -15417.72403374999,
+   "net_rs_puts": 12876.366581041682,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "s0.5": {
+   "signals": 87,
+   "trades": 54,
+   "rejected": 33,
+   "rejection_reasons": {
+    "position_open": 16,
+    "contract_not_in_data": 12,
+    "no_later_expiry_in_data": 4,
+    "no_next_bar_in_session": 1
+   },
+   "config": {
+    "slippage_pct": 0.5,
+    "brokerage_per_order": 20.0,
+    "sell_charges_pct": 0.15,
+    "lot_size": 65,
+    "max_strike_dist": 75.0,
+    "quote_tolerance_min": 5,
+    "exit_model": "THIRDS"
+   },
+   "net_rs_total": 6009.491710208369,
+   "gross_rs_total": 9318.232083333374,
+   "mean_net_rs": 111.28688352237721,
+   "mean_net_rs_ci95": [
+    -589.1125603414345,
+    1025.3981245479365
+   ],
+   "win_rate": 0.4444444444444444,
+   "profit_factor": 1.1164132551097377,
+   "max_drawdown_rs": 30329.87371999998,
+   "mean_net_pct_of_premium": 1.6335701290322444,
+   "avg_entry_premium": 120.56277777777777,
+   "avg_hold_min": 206.11111111111111,
+   "long_calls": 24,
+   "short_puts": 30,
+   "net_rs_calls": -11469.406511249988,
+   "net_rs_puts": 17478.898221458356,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "s3.0": {
+   "signals": 87,
+   "trades": 54,
+   "rejected": 33,
+   "rejection_reasons": {
+    "position_open": 16,
+    "contract_not_in_data": 12,
+    "no_later_expiry_in_data": 4,
+    "no_next_bar_in_session": 1
+   },
+   "config": {
+    "slippage_pct": 3.0,
+    "brokerage_per_order": 20.0,
+    "sell_charges_pct": 0.15,
+    "lot_size": 65,
+    "max_strike_dist": 75.0,
+    "quote_tolerance_min": 5,
+    "exit_model": "THIRDS"
+   },
+   "net_rs_total": -15367.63119708336,
+   "gross_rs_total": -12075.190833333356,
+   "mean_net_rs": -284.5857629089511,
+   "mean_net_rs_ci95": [
+    -967.5616749477242,
+    602.0601191699445
+   ],
+   "win_rate": 0.3888888888888889,
+   "profit_factor": 0.7560987047495659,
+   "max_drawdown_rs": 44221.96232000003,
+   "mean_net_pct_of_premium": -3.3416184139242806,
+   "avg_entry_premium": 123.56185185185184,
+   "avg_hold_min": 206.11111111111111,
+   "long_calls": 24,
+   "short_puts": 30,
+   "net_rs_calls": -21340.200317500014,
+   "net_rs_puts": 5972.569120416655,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  }
+ }
+}

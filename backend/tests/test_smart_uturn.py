@@ -351,3 +351,73 @@ def test_cli_validate_resample_signals_backtest_on_synthetic_csv(tmp_path):
     assert cli.main(["backtest", "--input", str(csv), "--out", out, "--chart-tf", "5"]) == 0
     meta = json.load(open(tmp_path / "out" / "run_metadata.json")); assert meta["engine"].startswith("smart_u_turn_py") and (tmp_path / "out" / "report.md").exists()
     assert (tmp_path / "out" / "trades.csv").exists() and (tmp_path / "out" / "feature_availability.json").exists()
+
+
+# ---------------------------------------------------------------- option replay (SYNTHETIC store)
+from app.smart_uturn import option_replay as OR
+
+
+class _Store(OR.OptionStore):
+    def __init__(self, opens, strikes=(24000.0,), expiries=("2026-03-03", "2026-03-10"), closes=None):
+        self.opens, self.k, self.e, self.closes = opens, list(strikes), list(expiries), closes or {}
+
+    def expiries(self): return self.e
+    def strikes(self, expiry, opt): return self.k
+
+    def bars(self, expiry, strike, opt, day):
+        rows = [(pd.Timestamp(f"{day} {m}", tz=IST), o, o, o, self.closes.get(m, o), 100) for m, o in self.opens.items()]
+        return pd.DataFrame(rows, columns=["t", "open", "high", "low", "close", "volume"]).set_index("t")
+
+
+def _opt_world(hits, opt_open_extra=None):
+    """index 1m 09:15..09:44 flat at 24000 except the given (minute -> (high, low)); option opens 100 flat except overrides."""
+    mins = pd.date_range("2026-03-02 09:15", periods=30, freq="min", tz=IST)
+    ix = pd.DataFrame({"open": 24000.0, "high": 24000.0, "low": 24000.0, "close": 24000.0}, index=mins)
+    for m, (hi, lo) in hits.items():
+        ix.loc[pd.Timestamp(f"2026-03-02 {m}", tz=IST), ["high", "low"]] = [hi, lo]
+    chart_idx = pd.date_range("2026-03-02 09:15", periods=6, freq="5min", tz=IST)
+    chart = pd.DataFrame({"close": 24000.0, "close_time": chart_idx + pd.Timedelta(minutes=5)}, index=chart_idx)
+    sig = pd.DataFrame({"buy_signal": False, "sell_signal": False, "new_levels": False, "stop": np.nan, "t1": np.nan, "t2": np.nan, "t3": np.nan}, index=chart_idx)
+    opens = {m.strftime("%H:%M"): 100.0 for m in mins}; opens.update(opt_open_extra or {})
+    return ix, chart, sig, opens
+
+
+def _signal(sig, k, d=1, stop=23990.0):
+    t = sig.index[k]; sig.loc[t, ["buy_signal" if d == 1 else "sell_signal", "new_levels"]] = True
+    sig.loc[t, ["stop", "t1", "t2", "t3"]] = [stop, 24000 + d * 10, 24000 + d * 20, 24000 + d * 30]
+
+
+def test_option_replay_thirds_prices_and_costs_are_exact():
+    ix, chart, sig, opens = _opt_world({"09:23": (24011, 24000), "09:27": (24021, 24000), "09:31": (24031, 24000)}, {"09:24": 110.0, "09:28": 120.0, "09:32": 130.0})
+    _signal(sig, 0); r = OR.replay_options(ix, chart, sig, _Store(opens), SignalParams()); t = r["trades"].iloc[0]; s = 0.015
+    assert t.option == "2026-03-03 24000 CE" and t.dte == 1 and t.entry_px == pytest.approx(100 * (1 + s))
+    px = [110 * (1 - s), 120 * (1 - s), 130 * (1 - s)]; gross = sum((p - 100 * (1 + s)) / 3 for p in px) * 65
+    assert t.gross_rs == pytest.approx(gross) and t.net_rs == pytest.approx(gross - 20 * 4 - 0.0015 * (sum(px) / 3) * 65)
+
+
+def test_option_replay_stop_first_on_collision_and_one_minute_latency():
+    ix, chart, sig, opens = _opt_world({"09:23": (24012, 23985)}, {"09:24": 80.0, "09:23": 140.0})      # same minute touches stop AND T1; option 09:23 open would be flattering (140)
+    _signal(sig, 0); t = OR.replay_options(ix, chart, sig, _Store(opens), SignalParams())["trades"].iloc[0]
+    assert t.last_reason == "STOP" and t.legs.startswith("STOP@" + f"{80 * 0.985:.2f}") and "T1" not in t.legs       # exit uses the NEXT minute's open (09:24), never the trigger minute's
+
+
+def test_option_replay_put_for_sell_and_session_end_exit():
+    ix, chart, sig, opens = _opt_world({}); _signal(sig, 0, d=-1, stop=24010.0)
+    st = _Store(opens, closes={"09:44": 90.0}); t = OR.replay_options(ix, chart, sig, st, SignalParams())["trades"].iloc[0]
+    assert t.option.endswith("PE") and t.dir == "SHORT" and t.last_reason == "SESSION_END" and t.legs == f"SESSION_END@{90 * 0.985:.2f}x1.00"
+
+
+def test_option_replay_rejections_are_counted_never_substituted():
+    ix, chart, sig, opens = _opt_world({}); _signal(sig, 0)
+    far = OR.replay_options(ix, chart, sig, _Store(opens, strikes=(24500.0,)), SignalParams()); assert far["trades"].empty and list(far["rejections"].reason) == ["contract_not_in_data"]
+    gap_opens = {k: v for k, v in opens.items() if k < "09:15" or k > "09:40"}                           # no option bars in the entry window
+    nq = OR.replay_options(ix, chart, sig, _Store(gap_opens), SignalParams()); assert list(nq["rejections"].reason) == ["no_option_quote"]
+    ix2 = ix.copy(); ix2.iloc[5, ix2.columns.get_loc("open")] = 23980.0                                   # index opens through the stop at the entry minute (09:20)
+    assert list(OR.replay_options(ix2, chart, sig, _Store(opens), SignalParams())["rejections"].reason) == ["entry_gap_through_stop"]
+
+
+def test_option_replay_uses_next_expiry_on_expiry_day_and_blocks_overlap():
+    ix, chart, sig, opens = _opt_world({}); _signal(sig, 0); _signal(sig, 1)
+    r = OR.replay_options(ix, chart, sig, _Store(opens, expiries=("2026-03-02", "2026-03-10")), SignalParams())
+    assert r["trades"].iloc[0].option.startswith("2026-03-10") and list(r["rejections"].reason) == ["position_open"]
+    none = OR.replay_options(ix, chart, sig, _Store(opens, expiries=("2026-03-02",)), SignalParams()); assert list(none["rejections"].reason)[0] == "no_later_expiry_in_data"

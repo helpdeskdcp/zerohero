@@ -1,0 +1,279 @@
+{
+ "label": "upstox_nifty",
+ "period": "ALL",
+ "quality": {
+  "rows_in": 31875,
+  "out_of_order_rows": 0,
+  "duplicate_timestamps_dropped": 0,
+  "rows_with_missing_ohlc_dropped": 0,
+  "non_positive_price_dropped": 0,
+  "inconsistent_ohlc_dropped": 0,
+  "outside_session_rows": 0,
+  "sessions": 85,
+  "sessions_complete": 85,
+  "missing_minutes_total": 0,
+  "volume_zero_share": 1.0,
+  "volume_missing_share": 0.0,
+  "rows_out": 31875,
+  "first": "2026-06-22 09:15:00+05:30",
+  "last": "2026-10-22 15:29:00+05:30",
+  "timestamp_semantics": "candle OPEN time (Asia/Kolkata)",
+  "fills": "none: missing minutes are left missing"
+ },
+ "5": {
+  "PRIMARY": {
+   "signals": 261,
+   "trades": 147,
+   "rejected": 114,
+   "net_points": 171.90619223108553,
+   "gross_points": 465.9061922310855,
+   "win_rate": 0.42857142857142855,
+   "profit_factor": 1.0597663037110556,
+   "expectancy_points": 1.1694298791230309,
+   "expectancy_R": -0.036712034454875246,
+   "expectancy_R_ci95": [
+    -0.2078624843803901,
+    0.14105683473093733
+   ],
+   "max_drawdown_pct": 22.35006886110861,
+   "max_consecutive_losses": 6,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "cost0": {
+   "signals": 261,
+   "trades": 147,
+   "rejected": 114,
+   "net_points": 465.9061922310855,
+   "gross_points": 465.9061922310855,
+   "win_rate": 0.42857142857142855,
+   "profit_factor": 1.1720286227477248,
+   "expectancy_points": 3.169429879123031,
+   "expectancy_R": 0.03672937324303896,
+   "expectancy_R_ci95": [
+    -0.1338101116938193,
+    0.21458058770501345
+   ],
+   "max_drawdown_pct": 15.200068861108612,
+   "max_consecutive_losses": 6,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "cost4": {
+   "signals": 261,
+   "trades": 147,
+   "rejected": 114,
+   "net_points": -122.09380776891449,
+   "gross_points": 465.9061922310855,
+   "win_rate": 0.4217687074829932,
+   "profit_factor": 0.9599194998216196,
+   "expectancy_points": -0.8305701208769694,
+   "expectancy_R": -0.11015344215278947,
+   "expectancy_R_ci95": [
+    -0.2795673453250675,
+    0.06938762353260151
+   ],
+   "max_drawdown_pct": 29.50006886110861,
+   "max_consecutive_losses": 6,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "SIGNAL_CLOSE(optimistic)": {
+   "signals": 261,
+   "trades": 148,
+   "rejected": 113,
+   "net_points": 137.80620973474532,
+   "gross_points": 433.8062097347453,
+   "win_rate": 0.4189189189189189,
+   "profit_factor": 1.0475068563196839,
+   "expectancy_points": 0.9311230387482792,
+   "expectancy_R": -0.046647546070779894,
+   "expectancy_R_ci95": [
+    -0.21930163556089152,
+    0.1326711567580931
+   ],
+   "max_drawdown_pct": 23.920707579840776,
+   "max_consecutive_losses": 6,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "exit_T1": {
+   "signals": 261,
+   "trades": 173,
+   "rejected": 88,
+   "net_points": -148.27428965292347,
+   "gross_points": 197.72571034707653,
+   "win_rate": 0.47398843930635837,
+   "profit_factor": 0.9540895894826895,
+   "expectancy_points": -0.8570768188030259,
+   "expectancy_R": -0.12007003293269,
+   "expectancy_R_ci95": [
+    -0.26135268154615054,
+    0.017560989092991912
+   ],
+   "max_drawdown_pct": 29.034398379629188,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "exit_T2": {
+   "signals": 261,
+   "trades": 158,
+   "rejected": 103,
+   "net_points": 52.61854931999187,
+   "gross_points": 368.61854931999187,
+   "win_rate": 0.3987341772151899,
+   "profit_factor": 1.0158576101239196,
+   "expectancy_points": 0.3330287931645055,
+   "expectancy_R": -0.030928450031155724,
+   "expectancy_R_ci95": [
+    -0.21768229753909188,
+    0.17185546385128034
+   ],
+   "max_drawdown_pct": 23.634921897208855,
+   "max_consecutive_losses": 6,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "exit_T3": {
+   "signals": 261,
+   "trades": 147,
+   "rejected": 114,
+   "net_points": 253.78315065705465,
+   "gross_points": 547.7831506570546,
+   "win_rate": 0.36054421768707484,
+   "profit_factor": 1.0784541612134386,
+   "expectancy_points": 1.7264159908643173,
+   "expectancy_R": -0.027964308915438364,
+   "expectancy_R_ci95": [
+    -0.2546469555844621,
+    0.19990062333859515
+   ],
+   "max_drawdown_pct": 28.47871026438519,
+   "max_consecutive_losses": 6,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  }
+ },
+ "15": {
+  "PRIMARY": {
+   "signals": 88,
+   "trades": 66,
+   "rejected": 22,
+   "net_points": 273.87258986173515,
+   "gross_points": 405.87258986173515,
+   "win_rate": 0.4696969696969697,
+   "profit_factor": 1.1400809436739416,
+   "expectancy_points": 4.149584694874775,
+   "expectancy_R": -0.047469757135088275,
+   "expectancy_R_ci95": [
+    -0.25143551537418296,
+    0.16807999144293953
+   ],
+   "max_drawdown_pct": 10.072988815357105,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "cost0": {
+   "signals": 88,
+   "trades": 66,
+   "rejected": 22,
+   "net_points": 405.87258986173515,
+   "gross_points": 405.87258986173515,
+   "win_rate": 0.4696969696969697,
+   "profit_factor": 1.2153053270742005,
+   "expectancy_points": 6.149584694874775,
+   "expectancy_R": -0.012105225491734031,
+   "expectancy_R_ci95": [
+    -0.21550859723993532,
+    0.2044295687839997
+   ],
+   "max_drawdown_pct": 8.61679170194501,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "cost4": {
+   "signals": 88,
+   "trades": 66,
+   "rejected": 22,
+   "net_points": 141.87258986173515,
+   "gross_points": 405.87258986173515,
+   "win_rate": 0.45454545454545453,
+   "profit_factor": 1.0700293308880608,
+   "expectancy_points": 2.149584694874775,
+   "expectancy_R": -0.0828342887784426,
+   "expectancy_R_ci95": [
+    -0.2881207698374799,
+    0.13440592089574407
+   ],
+   "max_drawdown_pct": 11.634988815357106,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "SIGNAL_CLOSE(optimistic)": {
+   "signals": 88,
+   "trades": 67,
+   "rejected": 21,
+   "net_points": 57.27258986172569,
+   "gross_points": 191.27258986172575,
+   "win_rate": 0.4626865671641791,
+   "profit_factor": 1.0265285682812477,
+   "expectancy_points": 0.8548147740556074,
+   "expectancy_R": -0.1433365656583357,
+   "expectancy_R_ci95": [
+    -0.42066514760880663,
+    0.11790464160337263
+   ],
+   "max_drawdown_pct": 16.516248815357162,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "exit_T1": {
+   "signals": 88,
+   "trades": 70,
+   "rejected": 18,
+   "net_points": 142.18831781896733,
+   "gross_points": 282.18831781896733,
+   "win_rate": 0.4857142857142857,
+   "profit_factor": 1.067350679054148,
+   "expectancy_points": 2.031261683128105,
+   "expectancy_R": -0.06741732570514256,
+   "expectancy_R_ci95": [
+    -0.2527873809808843,
+    0.11577325522741709
+   ],
+   "max_drawdown_pct": 11.312891998851846,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "exit_T2": {
+   "signals": 88,
+   "trades": 67,
+   "rejected": 21,
+   "net_points": 375.3346859226185,
+   "gross_points": 509.3346859226185,
+   "win_rate": 0.44776119402985076,
+   "profit_factor": 1.1834812596133872,
+   "expectancy_points": 5.602010237651022,
+   "expectancy_R": -0.01600604624799224,
+   "expectancy_R_ci95": [
+    -0.250396883426912,
+    0.22707995464973854
+   ],
+   "max_drawdown_pct": 10.700888730587273,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  },
+  "exit_T3": {
+   "signals": 88,
+   "trades": 66,
+   "rejected": 22,
+   "net_points": 166.6447658436191,
+   "gross_points": 298.6447658436191,
+   "win_rate": 0.42424242424242425,
+   "profit_factor": 1.0796235575049256,
+   "expectancy_points": 2.5249206946002896,
+   "expectancy_R": -0.07968408192542108,
+   "expectancy_R_ci95": [
+    -0.3128191848104598,
+    0.18349248808753238
+   ],
+   "max_drawdown_pct": 10.398538299914613,
+   "max_consecutive_losses": 5,
+   "verdict": "n>=30: read the interval, not the point estimate"
+  }
+ }
+}
