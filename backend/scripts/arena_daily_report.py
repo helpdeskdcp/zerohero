@@ -47,6 +47,16 @@ day_log = [r for r in log if r.get("tg_date") and datetime.fromisoformat(r["tg_d
 cnt = {}
 for r in day_log: cnt[r["outcome"]] = cnt.get(r["outcome"], 0) + 1
 lines += ["", "## Channel reader", "", f"- posts read: {len(day_log)}; by outcome: {cnt or 'none'}", "- claims ('target hit', 'gaining') are recorded, never scored.", ""]
+from app.arena import channel_ingest as _CI
+dropped = [r for r in day_log if r["outcome"] in _CI.DROPPED]; retried = [r for r in day_log if r.get("after_retries") or r.get("retry_scheduled")]
+qpath = os.path.join(HERE, "data", "arena", "channel_quarantine.jsonl"); qn = 0
+if os.path.exists(qpath):
+    for x in open(qpath):
+        try: q = json.loads(x)
+        except Exception: continue
+        if q.get("tg_date") and datetime.fromisoformat(q["tg_date"]).astimezone(IST).strftime("%Y-%m-%d") == day and "did not parse" in q.get("why", ""): qn += 1
+lines += ["## Signal-like posts that did NOT reach the ledger", "", f"- dropped (never submitted): {len(dropped)}" + ("" if not dropped else " -> " + "; ".join(f"{r['outcome']} msg {r['message_id']}: {r['text'][:60]!r}" for r in dropped)),
+          f"- delayed by missing contract data (retried): {len(retried)}; signal-like but unparsed (quarantine): {qn}", "- every one of these is also sent to the owner's private chat the moment it happens.", ""]
 ai_n = sum(1 for r in res.get("ZEROHERO_AI", []) if LB._day(r) == day)
 lines += ["## AI side", "", f"- ZEROHERO_AI signals today: {ai_n} (frozen AUTOSCALP engine; no signal = its filters/EV gate did not allow one).", ""]
 d = os.path.join(HERE, "data", "arena", "daily"); os.makedirs(d, exist_ok=True); path = os.path.join(d, f"REPORT_{day}.md"); open(path, "w").write("\n".join(lines))
@@ -54,5 +64,5 @@ print("\n".join(lines))
 if "--send" in sys.argv:
     from app.connectors import telegram
     top = [f"{r['rank']}. {r['display']}: Rs {r['net_rs']}" for r in t["rows"] if r["rank"]] or ["no settled trades today"]
-    msg = f"Arena report {day}\n" + "\n".join(top) + f"\nsignals today: {n}, channel posts: {len(day_log)}, AI signals: {ai_n}\nFull: data/arena/daily/REPORT_{day}.md\n(paper trading, small sample)"
+    msg = f"Arena report {day}\n" + "\n".join(top) + f"\nsignals today: {n}, channel posts: {len(day_log)}, AI signals: {ai_n}\nDROPPED signal-like posts: {len(dropped)} (unparsed {qn})\nFull: data/arena/daily/REPORT_{day}.md\n(paper trading, small sample)"
     print("telegram ok:", telegram._send(msg, os.environ.get("TELEGRAM_CHAT_ID")).get("ok"))

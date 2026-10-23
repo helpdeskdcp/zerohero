@@ -55,10 +55,17 @@ def _market_open(und: str) -> bool:
         return False
 
 
-def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None, dry_run: bool = False, use_post_time: bool = False) -> dict:
+RETRYABLE = {"NO_CAPTURED_EXPIRY", "NO_CAPTURED_EXPIRY_FOR_POST", "UNSCORABLE_NOT_SUBMITTED"}          # data not there YET (capture lag, expiry roll): retried until the post is STALE_SEC old
+DROPPED = RETRYABLE | {"STALE_NOT_SUBMITTED", "REJECTED"}                                                    # a signal-like post that never reached the ledger: always alerted + listed in the daily report
+
+
+def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None, dry_run: bool = False,
+                use_post_time: bool = False, retry: bool = False, alert=None) -> dict:
     """One channel_post -> outcome dict (also appended to the log). Mutates `state['seen']`.
     use_post_time: the ledger stamp is Telegram's own time of the post (the instant the signal became public), never later than receipt, so a late reader cannot penalise the poster;
-    a post read more than STALE_SEC after it was posted is logged and NOT submitted."""
+    a post read more than STALE_SEC after it was posted is logged and NOT submitted.
+    A RETRYABLE outcome (the contract data is not captured yet) is not final: the post waits in state['pending'] and is retried (retry=True) until it is STALE_SEC old; only the first attempt and the
+    final outcome are logged. `alert(text)` is called when a signal-like post ends up dropped, and once when a retried post is finally submitted."""
     chat = str(post["chat"]["id"]); mid = post.get("message_id"); key = f"{chat}:{mid}"
     t_recv = now or time.time(); text = post.get("text") or post.get("caption") or ""
     t = min(float(post["date"]), t_recv) if (use_post_time and post.get("date")) else t_recv
@@ -66,9 +73,22 @@ def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: s
     base = {"key": key, "chat_id": chat, "message_id": mid, "tg_date": datetime.fromtimestamp(post.get("date", t), tz=timezone.utc).isoformat(), "received_iso": datetime.fromtimestamp(t_recv, tz=timezone.utc).isoformat(),
             "latency_sec": round(t_recv - t, 1), "text": text[:1500]}
     if key in state["seen"]: return {"outcome": "DUPLICATE", **base}
-    out = _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run, stale)
+    pend = state.setdefault("pending", {}); out = _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, dry_run, stale)
+    if out["outcome"] in RETRYABLE and use_post_time and not dry_run and not stale:
+        first = key not in pend; rec = pend.setdefault(key, {"post": post, "participant": participant, "tries": 0, "first_outcome": out["outcome"]}); rec["tries"] += 1; rec["last_outcome"] = out["outcome"]
+        if first: _log({**base, **out, "retry_scheduled": True}, log)
+        return {**base, **out, "retry_scheduled": True}
+    was_pending = pend.pop(key, None)
     state["seen"][key] = out.get("signal_id") or out["outcome"]
-    _log({**base, **out}, log)
+    _log({**base, **out, **({"after_retries": was_pending["tries"]} if was_pending else {})}, log)
+    if alert and not dry_run:
+        try:
+            if out["outcome"] in DROPPED:
+                alert(f"DROPPED channel post ({out['outcome']}): {text[:200]!r}\n{out.get('reason') or out.get('hint') or out.get('problems') or ''}\nchat {chat} msg {mid}. It is NOT in the ledger.")
+            elif was_pending and out["outcome"] == "SUBMITTED":
+                alert(f"Recovered: channel post {chat}:{mid} was submitted after {was_pending['tries']} retries ({was_pending['first_outcome']}); stamped at its Telegram post time.")
+        except Exception:
+            pass
     return {**base, **out}
 
 

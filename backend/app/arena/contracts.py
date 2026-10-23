@@ -130,7 +130,10 @@ def last_quote(underlying: str, expiry_iso: str, strike: float, ot: str, day: st
 
 def check(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float, mode: str, *, sl: float | None = None, day: str | None = None, path: str | None = None) -> dict:
     """-> {"found": bool, "problems": [..], "warnings": [..], "available_expiries": [...], "strike_range": [lo, hi], "last": {...}|None}. `problems` make a scored submission unscorable."""
-    cap = captured(underlying, day, path); ex = cap["expiries"]; out = {"found": False, "problems": [], "warnings": [], "available_expiries": list(ex), "strike_range": None, "last": None, "day": cap["day"]}
+    cap = captured(underlying, day, path); ex = cap["expiries"]
+    if expiry_iso not in ex or float(strike) not in ex[expiry_iso]["strikes"]:        # a stale cached list must never be the reason a real contract is called unscorable: look again, fresh
+        cap = captured_fresh(underlying, day, path); ex = cap["expiries"]
+    out = {"found": False, "problems": [], "warnings": [], "available_expiries": list(ex), "strike_range": None, "last": None, "day": cap["day"]}
     if expiry_iso not in ex:
         out["problems"].append(f"no quotes are captured for {underlying} expiry {expiry_iso}; captured expiries: {', '.join(ex) or 'none'}")
         return out

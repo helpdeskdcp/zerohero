@@ -22,6 +22,7 @@ QUARANTINE = os.path.join(CI.DIR, "channel_quarantine.jsonl")
 LAST_IDS = os.path.join(DIR, "last_ids.json")
 POLL_SEC = 15
 LOOKS_LIKE_SIGNAL = re.compile(r"\b(CE|PE|TARGET|STOP\s*LOSS|STOPLOSS|BUY\s*(RANGE|ABOVE)|NEAR\s*LEVEL)\b", re.I)
+CLAIM_LIKE = re.compile(r"\b(GAINING|PROFIT|TARGET\s*HIT|ALL\s*TARGET|FULL\s*HIT|ACHIEVED|BOOKED|RESULT)\b", re.I)          # result/claim chatter is not a missed signal: no alert
 _counts: dict = {}
 
 
@@ -78,15 +79,34 @@ def to_post(chat_id, message) -> dict:
     return p
 
 
-def process(post: dict, state: dict, *, edited: bool = False, participant: str, mode_fn, now: float | None = None, **kw) -> dict:
+def process(post: dict, state: dict, *, edited: bool = False, participant: str, mode_fn, now: float | None = None, alert=None, **kw) -> dict:
     """Pure-ish core (testable without Telegram). Returns the outcome dict."""
     text = post.get("text") or ""
     if edited:
         rec = {"outcome": "EDIT_IGNORED", "chat_id": str(post["chat"]["id"]), "message_id": post.get("message_id"), "text": text[:1500]}
         CI._log(rec, kw.get("log", CI.LOG)); _quarantine({**rec, "why": "edited post, never re-submitted"}); _bump("edit_ignored"); return rec
-    out = CI.handle_post(post, state, participant=participant, mode_fn=mode_fn, now=now, dry_run=not submit_enabled(), use_post_time=True, **kw)
+    out = CI.handle_post(post, state, participant=participant, mode_fn=mode_fn, now=now, dry_run=not submit_enabled(), use_post_time=True, alert=alert if alert is not None else send_alert, **kw)
     _bump(out["outcome"].lower())
-    if out["outcome"] == "IGNORED_NOT_A_SIGNAL" and LOOKS_LIKE_SIGNAL.search(text): _quarantine({**out, "why": "looks like a signal but did not parse"}); _bump("quarantined")
+    if out["outcome"] == "IGNORED_NOT_A_SIGNAL" and LOOKS_LIKE_SIGNAL.search(text):
+        _quarantine({**out, "why": "looks like a signal but did not parse"}); _bump("quarantined")
+        if submit_enabled() and not CLAIM_LIKE.search(text): send_alert(f"signal-like post NOT parsed (chat {post['chat']['id']} msg {post.get('message_id')}): {text[:200]!r}")
+    return out
+
+
+def send_alert(text: str) -> None:
+    """Private message to the owner's Telegram chat (never a public channel). Failure to alert must never break ingestion."""
+    try:
+        from ..connectors import telegram
+        telegram._send("Arena ingest: " + text, os.environ.get("TELEGRAM_CHAT_ID"))
+    except Exception:
+        log.warning("alert could not be sent")
+
+
+def retry_pending(state: dict, *, mode_fn, default_participant: str, now: float | None = None, **kw) -> list:
+    """Re-run posts whose contract data was not captured yet. Each is stamped at its Telegram post time when it finally goes through; at STALE_SEC it ends as STALE_NOT_SUBMITTED (alerted)."""
+    out = []
+    for key, v in list(state.get("pending", {}).items()):
+        out.append(process(v["post"], state, participant=v.get("participant") or default_participant, mode_fn=mode_fn, now=now, retry=True, **kw))
     return out
 
 
@@ -133,6 +153,8 @@ async def run() -> None:                                                       #
                     new = await client.get_messages(cid, limit=20, min_id=last[k])
                     for m in sorted(new, key=lambda x: x.id):
                         handle_msg(cid, m); last[k] = max(last[k], m.id); json.dump(last, open(LAST_IDS, "w"))
+                if state.get("pending"):
+                    retry_pending(state, mode_fn=lambda: api.mode(api.cfg()), default_participant=c["name"]); json.dump(state, open(CI.STATE, "w"))
                 write_status(connected=True, last_poll=time.time())
             except FloodWaitError as e:
                 _bump("flood_wait"); await asyncio.sleep(min(int(e.seconds) + 5, 3600))

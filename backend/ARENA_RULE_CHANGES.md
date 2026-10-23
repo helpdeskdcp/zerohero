@@ -53,3 +53,11 @@
 
 ## 2026-10-23 11:27 IST — Late insertion of the dropped SENSEX post (owner-approved, disclosed)
 - Mohit's 2026-10-23 09:17:15 IST post (SENSEX 73600 PE, Buy Range 470-490, T 620/700/850, SL 350; Telegram message 72202) was inserted as H00052 after the defect fix (17463f7). Server time of the row = the real insertion time; HUMAN_TS_CORRECTION C00005 sets the effective time to the Telegram post time (the existing earlier-only mechanism for channel signals). Parsing, expiry (2026-10-29), mode (LIMIT 490) and settlement are the normal automatic ones; nothing was chosen by hand. The channel later claimed all targets hit; settlement ignores that and uses captured quotes only.
+
+## 2026-10-23 11:31 IST — Safeguards against silently dropped channel signals (no scoring rule changed)
+Follow-up to the 2026-10-23 SENSEX incident:
+1. Retry: a post whose contract data is not captured yet (NO_CAPTURED_EXPIRY, NO_CAPTURED_EXPIRY_FOR_POST, UNSCORABLE_NOT_SUBMITTED) is retried every 15 s until it is 30 min old, then stamped at its Telegram post time when it goes through (the existing stale limit is unchanged). Only the first attempt and the final outcome are logged.
+2. Alerts to the owner's PRIVATE Telegram chat: a signal-like post that ends dropped (STALE/REJECTED/no contract after 30 min), a signal-like post the parser could not read (result chatter excluded), and one line when a retried post is finally submitted.
+3. contracts.check() looks again with a fresh list before it calls a contract unscorable (manual submissions and channel posts), so a stale cache can no longer produce a false 'not captured'.
+4. Daily report: new section 'Signal-like posts that did NOT reach the ledger' (dropped / retried / unparsed counts) and a DROPPED line in the Telegram summary.
+5. scripts/arena_ingest_watchdog.py (cron every 5 min, 08-23 Mon-Fri): private alert when the reader is down/stale and once when it is back.
