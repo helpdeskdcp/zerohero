@@ -41,6 +41,11 @@ class TPParams:
     bo_adx: float = 25.0
     bo_rsi_long: float = 55.0
     bo_rsi_short: float = 45.0
+    entry_style: str = "ORIGINAL"      # ORIGINAL (signal close) | HUNT (arm, sweep of the stop level, reclaim)
+    arm_bars: int = 40
+    reclaim_bars: int = 5
+    hunt_stop: str = "SWEEP"           # SWEEP (sweep extreme +/- ATR buffer) | FRAC (entry -/+ risk_frac x signal risk)
+    risk_frac: float = 0.25
 
 
 def dmi(h, l, c, n: int = 14):
@@ -83,11 +88,12 @@ def run(chart: pd.DataFrame, htf_a: pd.DataFrame, htf_b: pd.DataFrame, p: TPPara
         wide_l = (c - stop_l) > atr * p.max_risk_atr; wide_s = (stop_s - c) > atr * p.max_risk_atr
     in_sess = (hm >= p.sess_start_hm) & (hm < p.sess_end_hm); flat_now = hm >= p.flat_hm
     sig_today = loss_today = 0; last_buy = last_sell = None; t_dir = 0; third = 1.0 / 3.0; out = []
+    hunt = p.entry_style == "HUNT"; arm_dir = 0; arm_sl = arm_ref = arm_r = np.nan; arm_bar = -1; sweep_bar = -1; sweep_ext = np.nan
     tr = dict(entry=0.0, stop=0.0, risk=0.0, t=(0.0, 0.0, 0.0), bar=0, h=[False, False, False], realized=0.0, remaining=0.0, time=None, end="")
     for i in range(n):
         new_day = i == 0 or day[i] != day[i - 1]
         if new_day: sig_today = loss_today = 0
-        can = in_sess[i] and vol_ok[i] and not np.isnan(atr[i]) and sig_today < p.max_per_day and loss_today < p.max_loss_day and t_dir == 0
+        can = in_sess[i] and vol_ok[i] and not np.isnan(atr[i]) and sig_today < p.max_per_day and loss_today < p.max_loss_day and t_dir == 0 and arm_dir == 0
         buy_cd = last_buy is None or i - last_buy > p.cooldown; sell_cd = last_sell is None or i - last_sell > p.cooldown
         pb_long = score[i] >= p.min_htf and local_up[i] and touched_up[i] and trig_long[i]; pb_short = score[i] <= -p.min_htf and local_dn[i] and touched_dn[i] and trig_short[i]
         use_pb, use_bo = p.mode in ("PULLBACK", "BOTH"), p.mode in ("BREAKOUT", "BOTH")
@@ -110,12 +116,39 @@ def run(chart: pd.DataFrame, htf_a: pd.DataFrame, htf_b: pd.DataFrame, p: TPPara
                 if tr["realized"] < 0: loss_today += 1
                 out.append({"time": tr["time"], "dir": d, "entry": tr["entry"], "risk": tr["risk"], "gross_R": tr["realized"], "h1": tr["h"][0], "h2": tr["h"][1], "h3": tr["h"][2], "end": ended or tr["end"]})
                 t_dir = 0
+        open_dir = 0; open_stop = np.nan
+        if hunt and arm_dir != 0 and i > arm_bar:
+            d = arm_dir; sweep_now = (l[i] < arm_sl) if d == 1 else (h[i] > arm_sl); away = (h[i] >= arm_ref + arm_r) if d == 1 else (l[i] <= arm_ref - arm_r)
+            if sweep_bar < 0:
+                if sweep_now:
+                    sweep_bar = i; sweep_ext = l[i] if d == 1 else h[i]
+                elif away or i - arm_bar > p.arm_bars:
+                    arm_dir = 0
+            else:
+                sweep_ext = min(sweep_ext, l[i]) if d == 1 else max(sweep_ext, h[i])
+                back = (c[i] > arm_sl) if d == 1 else (c[i] < arm_sl)
+                if back:
+                    trend_now = local_up[i] if d == 1 else local_dn[i]
+                    if trend_now and in_sess[i] and vol_ok[i] and sig_today < p.max_per_day and loss_today < p.max_loss_day:
+                        e_p = c[i]
+                        raw = (sweep_ext - atr[i] * p.sl_buffer if d == 1 else sweep_ext + atr[i] * p.sl_buffer) if p.hunt_stop == "SWEEP" else (e_p - p.risk_frac * arm_r if d == 1 else e_p + p.risk_frac * arm_r)
+                        st_h = min(raw, e_p - min_dist[i]) if d == 1 else max(raw, e_p + min_dist[i])
+                        if abs(e_p - st_h) <= atr[i] * p.max_risk_atr: open_dir = d; open_stop = st_h
+                    arm_dir = 0
+                elif i - sweep_bar >= p.reclaim_bars:
+                    arm_dir = 0
         if buy or sell:
-            d = 1 if buy else -1; st = stop_l[i] if d == 1 else stop_s[i]; risk = abs(c[i] - st)
-            t_dir = d; tr = dict(entry=c[i], stop=st, risk=risk, t=tuple(c[i] + d * risk * rr for rr in (p.rr1, p.rr2, p.rr3)), bar=i, h=[False, False, False], realized=0.0, remaining=1.0, time=chart.index[i], end="OPEN")
-            sig_today += 1
+            d = 1 if buy else -1
             if buy: last_buy = i
             else: last_sell = i
+            if hunt:
+                arm_dir = d; arm_sl = stop_l[i] if d == 1 else stop_s[i]; arm_ref = c[i]; arm_r = abs(c[i] - arm_sl); arm_bar = i; sweep_bar = -1; sweep_ext = np.nan
+            else:
+                open_dir = d; open_stop = stop_l[i] if d == 1 else stop_s[i]
+        if open_dir != 0:
+            d = open_dir; st = open_stop; risk = abs(c[i] - st)
+            t_dir = d; tr = dict(entry=c[i], stop=st, risk=risk, t=tuple(c[i] + d * risk * rr for rr in (p.rr1, p.rr2, p.rr3)), bar=i, h=[False, False, False], realized=0.0, remaining=1.0, time=chart.index[i], end="OPEN")
+            sig_today += 1
     if include_open and t_dir != 0:
         mark = tr['realized'] + tr['remaining'] * (t_dir * (c[-1] - tr['entry']) / tr['risk'])
         out.append({'time': tr['time'], 'dir': t_dir, 'entry': tr['entry'], 'risk': tr['risk'], 'gross_R': mark, 'h1': tr['h'][0], 'h2': tr['h'][1], 'h3': tr['h'][2], 'end': 'OPEN'})
