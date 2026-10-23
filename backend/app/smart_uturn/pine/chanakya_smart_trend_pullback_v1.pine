@@ -338,7 +338,7 @@ if barstate.islast and showDash
     bool active = tDir != 0
     string sigTxt = active ? (tDir == 1 ? "BUY ACTIVE" : "SELL ACTIVE") : "WAIT"
     color sigCol = active ? (tDir == 1 ? cUp : cDn) : cNeu
-    string bias = htfScore >= minHtf and localUp ? "BUY BIAS" : htfScore <= -minHtf and localDn ? "SELL BIAS" : "NO TRADE (mixed)"
+    string bias = htfScore >= minHtf and localUp ? "BUY BIAS" : htfScore <= -minHtf and localDn ? "SELL BIAS" : htfScore <= -minHtf and localUp ? "WAIT: HTF down, local up (no counter-trend)" : htfScore >= minHtf and localDn ? "WAIT: HTF up, local down (no counter-trend)" : "WAIT: HTF mixed"
     color biasCol = htfScore >= minHtf and localUp ? cUp : htfScore <= -minHtf and localDn ? cDn : cNeu
     string status = lastEnd == "OPEN" ? "OPEN  " + f_r(realized + remaining * (tDir * (close - nz(tEntry, close)) / nz(tRisk, 1.0))) + "R" : lastEnd == "-" ? "no trade yet" : lastEnd + "  " + f_r(nz(lastR, 0.0)) + "R"
     string touchNote = timeframe.period == "1" ? "touch chance next 10 bars" : "touch chance (1m-calibrated, rough here)"
@@ -359,13 +359,13 @@ if barstate.islast and showDash
     table.cell(dash, 0, 6, "Entry (signal close)", bgcolor=cNeu, text_color=color.white, text_size=ts)
     table.cell(dash, 1, 6, f_px(tEntry), bgcolor=color.blue, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 7, "Stop | risk", bgcolor=cNeu, text_color=color.white, text_size=ts)
-    table.cell(dash, 1, 7, f_px(tStop) + " | " + f_px(tRisk) + " (" + str.tostring(nz(tRisk, 0.0) / atr, "#.0") + " ATR)  " + f_pct(tStop), bgcolor=cDn, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 7, f_px(tStop) + " | " + f_px(tRisk) + " (" + str.tostring(nz(tRisk, 0.0) / atr, "#.0") + " ATR)" + (active ? "  touch " + f_pct(tStop) : ""), bgcolor=cDn, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 8, "T1 (" + str.tostring(rr1, "#.#") + "R)", bgcolor=cNeu, text_color=color.white, text_size=ts)
-    table.cell(dash, 1, 8, f_px(tT1) + "  " + f_pct(tT1) + (h1 ? "  HIT" : ""), bgcolor=cUp, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 8, f_px(tT1) + (h1 ? "  HIT" : (active ? "  " + f_pct(tT1) : "")), bgcolor=cUp, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 9, "T2 (" + str.tostring(rr2, "#.#") + "R)", bgcolor=cNeu, text_color=color.white, text_size=ts)
-    table.cell(dash, 1, 9, f_px(tT2) + "  " + f_pct(tT2) + (h2 ? "  HIT" : ""), bgcolor=cUp, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 9, f_px(tT2) + (h2 ? "  HIT" : (active ? "  " + f_pct(tT2) : "")), bgcolor=cUp, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 10, "T3 (" + str.tostring(rr3, "#.#") + "R)", bgcolor=cNeu, text_color=color.white, text_size=ts)
-    table.cell(dash, 1, 10, f_px(tT3) + "  " + f_pct(tT3) + (h3 ? "  HIT" : ""), bgcolor=cUp, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 10, f_px(tT3) + (h3 ? "  HIT" : (active ? "  " + f_pct(tT3) : "")), bgcolor=cUp, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 11, "Trade status", bgcolor=cNeu, text_color=color.white, text_size=ts)
     table.cell(dash, 1, 11, status, bgcolor=active ? sigCol : cInfo, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 12, "Today", bgcolor=cNeu, text_color=color.white, text_size=ts)
