@@ -1,0 +1,106 @@
+{
+ "NIFTYFUT NIFTY|1|PULLBACK (shipped)": {
+  "trades": 163,
+  "per_day": 2.2,
+  "win": 0.319,
+  "gross_R": -0.087,
+  "net_R": -0.215,
+  "net_ci95": [
+   -0.399,
+   -0.024
+  ],
+  "total_net_R": -35.0,
+  "avg_risk_pts": 19.3
+ },
+ "NIFTYFUT NIFTY|1|BREAKOUT old caps": {
+  "trades": 102,
+  "per_day": 1.73,
+  "win": 0.343,
+  "gross_R": -0.043,
+  "net_R": -0.14,
+  "net_ci95": [
+   -0.367,
+   0.098
+  ],
+  "total_net_R": -14.3,
+  "avg_risk_pts": 23.3
+ },
+ "NIFTYFUT NIFTY|1|NIRNAY1 trend-day": {
+  "trades": 177,
+  "per_day": 2.27,
+  "win": 0.424,
+  "gross_R": 0.097,
+  "net_R": 0.03,
+  "net_ci95": [
+   -0.138,
+   0.207
+  ],
+  "total_net_R": 5.4,
+  "avg_risk_pts": 39.7
+ },
+ "NIFTYFUT NIFTY|1|NIRNAY2 volume-breakout": {
+  "trades": 206,
+  "per_day": 2.61,
+  "win": 0.393,
+  "gross_R": 0.019,
+  "net_R": -0.05,
+  "net_ci95": [
+   -0.214,
+   0.114
+  ],
+  "total_net_R": -10.3,
+  "avg_risk_pts": 36.8
+ },
+ "NIFTYFUT NIFTY|5|PULLBACK (shipped)": {
+  "trades": 109,
+  "per_day": 1.45,
+  "win": 0.339,
+  "gross_R": -0.113,
+  "net_R": -0.18,
+  "net_ci95": [
+   -0.375,
+   0.037
+  ],
+  "total_net_R": -19.6,
+  "avg_risk_pts": 37.7
+ },
+ "NIFTYFUT NIFTY|5|BREAKOUT old caps": {
+  "trades": 50,
+  "per_day": 1.09,
+  "win": 0.5,
+  "gross_R": 0.071,
+  "net_R": 0.017,
+  "net_ci95": [
+   -0.239,
+   0.283
+  ],
+  "total_net_R": 0.9,
+  "avg_risk_pts": 41.0
+ },
+ "NIFTYFUT NIFTY|5|NIRNAY1 trend-day": {
+  "trades": 76,
+  "per_day": 1.12,
+  "win": 0.526,
+  "gross_R": -0.017,
+  "net_R": -0.046,
+  "net_ci95": [
+   -0.215,
+   0.13
+  ],
+  "total_net_R": -3.5,
+  "avg_risk_pts": 107.6
+ },
+ "NIFTYFUT NIFTY|5|NIRNAY2 volume-breakout": {
+  "trades": 84,
+  "per_day": 1.15,
+  "win": 0.536,
+  "gross_R": 0.048,
+  "net_R": 0.018,
+  "net_ci95": [
+   -0.156,
+   0.199
+  ],
+  "total_net_R": 1.5,
+  "avg_risk_pts": 103.9
+ }
+}

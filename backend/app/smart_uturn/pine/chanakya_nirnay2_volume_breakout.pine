@@ -1,0 +1,506 @@
+//@version=6
+indicator("Chanakya Volume Breakout (Nirnay 2)", shorttitle="VolBO", overlay=true, max_labels_count=300, max_lines_count=60)
+
+// =====================================================================================================
+// VARIANT: Chanakya Volume Breakout (Nirnay 2). Defaults differ from the base script (entry mode, signal-close entry, stop cap 10 ATR, max 6 signals/day, stop after 4 losing trades).
+// WHAT IT DOES
+//   ENTRY STYLE (new): the setup below only ARMS a signal and fixes the stop level. The ENTRY happens when price
+//   runs beyond that stop level (a stop hunt) WITHOUT a volume spike (>= 2x average in the last 7 candles) and then closes
+//   back inside: SELL after a sweep above the SL level, BUY after a sweep below it. 'Signal close (original)' keeps the old entry.
+//   Trades WITH the higher-timeframe trend: waits for a pullback to the EMA21 inside that trend and
+//   signals when price resumes (bar closes back above/below EMA21, breaks the previous bar's high/low,
+//   RSI turning the right way). Entry = close of the signal bar. Stop = swing extreme + ATR buffer.
+//   T1/T2/T3 = 1R / 2R / 3R. Signals are confirmed-bar only (no repaint), HTF values use the previous
+//   COMPLETED HTF bar.
+//   Honest scoreboard: every signal is followed as a virtual trade (1/3 off at each target, rest stops
+//   at the original stop, stop-first when a candle touches both, flat at the flatten time) and the
+//   dashboard shows the REAL hit rates and average R of the signals on YOUR chart. If those numbers are
+//   not good on your instrument, do not trade it, whatever the arrows look like.
+//   Research / visual tool. Not financial advice. No edge is claimed.
+// =====================================================================================================
+
+// ------------------------------------------------------------------------------------ 01 INPUTS
+string gT = "01 Trend (higher timeframes)"
+tfA     = input.timeframe("15", "HTF A (must be above the chart timeframe)", group=gT)
+tfB     = input.timeframe("60", "HTF B (must be above the chart timeframe)", group=gT)
+minHtf  = input.int(1, "Min HTF trend score (1 = one agrees and none opposes, 2 = both agree)", minval=1, maxval=2, group=gT)
+midLen  = input.int(21, "EMA mid (pullback line)", minval=3, group=gT)
+slowLen = input.int(50, "EMA slow (trend line)", minval=5, group=gT)
+fastLen = input.int(9, "EMA fast (display only)", minval=2, group=gT)
+rsiLen  = input.int(14, "RSI length", minval=2, group=gT)
+
+string gE = "02 Entry filters"
+pullBars    = input.int(6, "Pullback lookback (bars): price must have touched EMA mid within this", minval=2, maxval=30, group=gE)
+touchAtr    = input.float(0.15, "EMA touch tolerance (x ATR)", minval=0.0, step=0.05, group=gE)
+rsiLongMin  = input.int(45, "Long: RSI must be above", minval=1, maxval=99, group=gE)
+rsiShortMax = input.int(55, "Short: RSI must be below", minval=1, maxval=99, group=gE)
+minAtrBps   = input.float(2.0, "Minimum volatility: ATR in bps of price", minval=0.0, step=0.5, group=gE)
+cooldown    = input.int(5, "Bars between same-direction signals", minval=0, group=gE)
+useSession  = input.bool(true, "Only signal inside the trading window", group=gE)
+sessMode    = input.string("Auto (MCX vs others)", "Session preset", options=["Auto (MCX vs others)", "Manual"], group=gE, tooltip="Auto: MCX symbols use the MCX window below, everything else (NSE/BSE) uses the window below it. Manual: always use the NSE/BSE window.")
+sessionIn   = input.session("0925-1500", "Trading window: NSE/BSE (exchange time)", group=gE)
+flatHM      = input.int(1515, "Flatten virtual trades at (HHMM): NSE/BSE", minval=0, maxval=2359, group=gE)
+mcxWindow   = input.session("0900-2325", "Trading window: MCX", group=gE)
+mcxFlat     = input.int(2325, "Flatten virtual trades at (HHMM): MCX", minval=0, maxval=2359, group=gE)
+maxPerDay   = input.int(6, "Max signals per day", minval=1, group=gE)
+maxLossDay  = input.int(4, "Stop signalling for the day after N losing trades", minval=1, group=gE)
+
+string gM = "02b Entry mode (trend-day mode is OPTIONAL and tested-negative: no validated edge)"
+entryMode = input.string("Volume breakout only", "Entry mode", options=["Pullback only", "Trend-day only", "Both", "Volume breakout only"], group=gM, tooltip="Trend-day = strong local trend breakout (ADX, DI, new N-bar high/low, RSI), ignores the lagging HTF filter. Tested on 11 years of NIFTY 5m/15m: no validated edge. Prefer 5m or 15m charts.")
+boLen     = input.int(20, "Trend-day: breakout lookback (bars)", minval=5, group=gM)
+boAdx     = input.float(25.0, "Trend-day: minimum ADX", minval=10.0, group=gM)
+boRsiL    = input.int(55, "Trend-day long: RSI at least", minval=1, maxval=99, group=gM)
+boRsiS    = input.int(45, "Trend-day short: RSI at most", minval=1, maxval=99, group=gM)
+
+string gH = "02c Entry style (stop-hunt reclaim)"
+entryStyle   = input.string("Signal close (original)", "Entry style", options=["Stop-hunt reclaim", "Signal close (original)"], group=gH, tooltip="Stop-hunt reclaim: the signal arms a setup and fixes the SL level. Entry only after price sweeps beyond that SL level on NO volume spike and closes back inside it. Signal close: enter at the signal bar close (old behaviour).")
+huntStopMode = input.string("Sweep extreme + ATR buffer", "Stop for the hunt entry", options=["Sweep extreme + ATR buffer", "Fraction of signal risk"], group=gH)
+riskFrac     = input.float(0.25, "Fraction of the signal risk (only if 'Fraction of signal risk')", minval=0.05, maxval=1.0, step=0.05, group=gH)
+armBars      = input.int(40, "Cancel the setup if there is no sweep within (bars)", minval=3, group=gH)
+reclaimBars  = input.int(5, "Max bars price may stay beyond the SL level (longer = real breakout, cancel)", minval=1, group=gH)
+useVolCheck  = input.bool(true, "Require NO volume spike before and during the sweep", group=gH)
+volLen       = input.int(20, "Volume average length", minval=2, group=gH)
+volMult      = input.float(2.0, "Volume spike = at least this many times the average", minval=1.0, step=0.5, group=gH)
+volLook      = input.int(7, "Volume check window (candles: current + last closed + 5 before)", minval=1, maxval=30, group=gH)
+
+string gR = "03 Risk and targets"
+atrLen     = input.int(14, "ATR length", minval=2, group=gR)
+swingLen   = input.int(8, "Swing lookback for the stop (bars)", minval=2, group=gR)
+slBuffer   = input.float(0.2, "Stop ATR buffer", minval=0.0, step=0.05, group=gR)
+minRiskAtr = input.float(0.5, "Minimum stop distance (x ATR)", minval=0.1, step=0.1, group=gR)
+maxRiskAtr = input.float(10.0, "Skip the signal if the stop is wider than (x ATR)", minval=0.5, step=0.1, group=gR)
+rr1        = input.float(1.0, "Target 1 (R)", minval=0.5, group=gR)
+rr2        = input.float(2.0, "Target 2 (R)", minval=1.0, group=gR)
+rr3        = input.float(3.0, "Target 3 (R)", minval=1.5, group=gR)
+
+string gD = "04 Display"
+showDash   = input.bool(true, "Show dashboard", group=gD)
+dashPos    = input.string("Top Right", "Dashboard position", options=["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Right", "Bottom Left", "Bottom Center", "Bottom Right"], group=gD)
+dashSize   = input.string("Small", "Dashboard text size", options=["Tiny", "Small", "Normal"], group=gD)
+showLines  = input.bool(true, "Draw entry / stop / targets", group=gD)
+showEMAs   = input.bool(true, "Plot EMAs", group=gD)
+showMarks  = input.bool(true, "Mark target and stop hits", group=gD)
+
+// ------------------------------------------------------------------------------------ 02 CORE SERIES
+// Every ta.* call is made on every bar (never inside an if), so the history is consistent.
+ef  = ta.ema(close, fastLen)
+em  = ta.ema(close, midLen)
+es  = ta.ema(close, slowLen)
+rv  = ta.rsi(close, rsiLen)
+atr = ta.atr(atrLen)
+[diPlus, diMinus, adx] = ta.dmi(14, 14)
+swLow     = ta.lowest(low, swingLen)
+swHigh    = ta.highest(high, swingLen)
+pullLow   = ta.lowest(low, pullBars)
+pullHigh  = ta.highest(high, pullBars)
+volAvg    = ta.sma(nz(volume), volLen)
+haveVol   = not na(volAvg) and volAvg > 0
+volRatio  = haveVol ? nz(volume) / volAvg : 0.0
+volPeak   = ta.highest(volRatio, volLook)
+volCalm   = not useVolCheck or not haveVol or volPeak < volMult
+hhPrev    = ta.highest(high[1], boLen)
+llPrev    = ta.lowest(low[1], boLen)
+retVar    = ta.ema(math.pow(math.log(close / nz(close[1], close)), 2), 87)   // EWMA of squared 1-bar log returns (half-life about 30 bars)
+
+// ------------------------------------------------------------------------------------ 03 HIGHER-TIMEFRAME TREND
+f_trend() =>
+    float a = ta.ema(close, midLen)
+    float b = ta.ema(close, slowLen)
+    float r = ta.rsi(close, rsiLen)
+    a > b and r > 50 ? 1 : a < b and r < 50 ? -1 : 0
+
+// previous COMPLETED HTF bar only: [1] together with lookahead_on is the non-repainting pattern
+trA = request.security(syminfo.tickerid, tfA, f_trend()[1], barmerge.gaps_off, barmerge.lookahead_on)
+trB = request.security(syminfo.tickerid, tfB, f_trend()[1], barmerge.gaps_off, barmerge.lookahead_on)
+chartSec = timeframe.in_seconds(timeframe.period)
+okA = timeframe.in_seconds(tfA) > chartSec
+okB = timeframe.in_seconds(tfB) > chartSec
+trAe = okA ? trA : 0
+trBe = okB ? trB : 0
+htfScore = trAe + trBe
+
+// ------------------------------------------------------------------------------------ 04 SESSION, VOLATILITY, DAY COUNTERS
+useMcx  = sessMode == "Auto (MCX vs others)" and syminfo.prefix == "MCX"
+inSessA = not na(time(timeframe.period, sessionIn, syminfo.timezone))
+inSessB = not na(time(timeframe.period, mcxWindow, syminfo.timezone))
+inSess  = not useSession or (useMcx ? inSessB : inSessA)
+curHM   = hour(time, syminfo.timezone) * 100 + minute(time, syminfo.timezone)
+flatEff = useMcx ? mcxFlat : flatHM
+flatNow = curHM >= flatEff
+newDay  = timeframe.change("1D")
+atrBps  = close > 0 ? atr / close * 10000.0 : na
+volOK   = not na(atrBps) and atrBps >= minAtrBps
+
+var int sigToday  = 0
+var int lossToday = 0
+var float rToday  = 0.0
+if newDay
+    sigToday := 0
+    lossToday := 0
+    rToday := 0.0
+
+// ------------------------------------------------------------------------------------ 05 SIGNAL LOGIC
+localUp = em > es
+localDn = em < es
+touchedUp = pullLow <= em + touchAtr * atr
+touchedDn = pullHigh >= em - touchAtr * atr
+trigLong  = close > em and close > open and close > high[1] and rv > rsiLongMin and rv > rv[1]
+trigShort = close < em and close < open and close < low[1] and rv < rsiShortMax and rv < rv[1]
+
+minDist = math.max(atr * minRiskAtr, syminfo.mintick * 2)
+stopL   = math.min(swLow - atr * slBuffer, close - minDist)
+stopS   = math.max(swHigh + atr * slBuffer, close + minDist)
+riskL   = close - stopL
+riskS   = stopS - close
+wideL   = riskL > atr * maxRiskAtr
+wideS   = riskS > atr * maxRiskAtr
+
+var int lastBuyBar  = na
+var int lastSellBar = na
+var int tDir = 0          // virtual trade direction: 1 long, -1 short, 0 none
+var int   armDir  = 0     // armed setup waiting for the stop hunt: 1 buy, -1 sell, 0 none
+var float armSL   = na    // the signal's stop level = the level price must sweep
+var float armRef  = na
+var float armR    = na
+var int   armBar  = na
+var int   sweepBar = na
+var float sweepExt = na
+var bool  sweepVolOk = true
+var line  lnArm = na
+buyCd  = na(lastBuyBar) or bar_index - lastBuyBar > cooldown
+sellCd = na(lastSellBar) or bar_index - lastSellBar > cooldown
+canTrade = barstate.isconfirmed and inSess and volOK and not na(atr) and sigToday < maxPerDay and lossToday < maxLossDay and tDir == 0 and armDir == 0
+
+usePb = entryMode == "Pullback only" or entryMode == "Both"
+useBo = entryMode == "Trend-day only" or entryMode == "Both"
+useVb = entryMode == "Volume breakout only"
+pullLong  = htfScore >= minHtf and localUp and touchedUp and trigLong
+pullShort = htfScore <= -minHtf and localDn and touchedDn and trigShort
+boLong  = adx >= boAdx and diPlus > diMinus and localUp and close > em and high > hhPrev and close > open and rv >= boRsiL
+boShort = adx >= boAdx and diMinus > diPlus and localDn and close < em and low < llPrev and close < open and rv <= boRsiS
+volBoLong  = haveVol and volPeak >= volMult and high > hhPrev and close > em and close > open and localUp
+volBoShort = haveVol and volPeak >= volMult and low < llPrev and close < em and close < open and localDn
+longSetup  = canTrade and buyCd and ((usePb and pullLong) or (useBo and boLong) or (useVb and volBoLong))
+shortSetup = canTrade and sellCd and ((usePb and pullShort) or (useBo and boShort) or (useVb and volBoShort))
+buySignal  = longSetup and not wideL
+sellSignal = shortSetup and not wideS
+skipWide   = (longSetup and wideL) or (shortSetup and wideS)
+
+// ------------------------------------------------------------------------------------ 06 VIRTUAL TRADE TRACKER (the honest scoreboard)
+var float tEntry = na
+var float tStop  = na
+var float tRisk  = na
+var float tT1    = na
+var float tT2    = na
+var float tT3    = na
+var int   tBar   = na
+var bool  h1 = false
+var bool  h2 = false
+var bool  h3 = false
+var float realized  = 0.0
+var float remaining = 0.0
+var int   nTr = 0
+var int   nWin = 0
+var int   nT1 = 0
+var int   nT2 = 0
+var int   nT3 = 0
+var int   nSL = 0
+var float sumR = 0.0
+var float lastR = na
+var string lastEnd = "-"
+var line lnEntry = na
+var line lnStop  = na
+var line lnT1    = na
+var line lnT2    = na
+var line lnT3    = na
+
+third = 1.0 / 3.0
+int   evDir = tDir
+bool  evT1 = false
+bool  evT2 = false
+bool  evT3 = false
+bool  evSL = false
+bool  evEnd = false
+
+if barstate.isconfirmed and tDir != 0 and bar_index > tBar
+    bool stopHit = tDir == 1 ? low <= tStop : high >= tStop
+    if stopHit                                   // stop first, also when the same candle touched a target
+        realized := realized - remaining
+        remaining := 0.0
+        evSL := true
+        lastEnd := "STOP"
+    else
+        if not h1 and (tDir == 1 ? high >= tT1 : low <= tT1)
+            h1 := true
+            evT1 := true
+            realized := realized + rr1 * third
+            remaining := remaining - third
+        if h1 and not h2 and (tDir == 1 ? high >= tT2 : low <= tT2)
+            h2 := true
+            evT2 := true
+            realized := realized + rr2 * third
+            remaining := remaining - third
+        if h2 and not h3 and (tDir == 1 ? high >= tT3 : low <= tT3)
+            h3 := true
+            evT3 := true
+            realized := realized + rr3 * third
+            remaining := remaining - third
+            lastEnd := "T3"
+    if remaining > 0.0001 and (flatNow or newDay)   // flat: exit what is left at the close (previous close if a new day started)
+        float px = newDay ? nz(close[1], close) : close
+        realized := realized + remaining * (tDir * (px - tEntry) / tRisk)
+        remaining := 0.0
+        evEnd := true
+        lastEnd := "FLAT"
+    if remaining <= 0.0001
+        nTr += 1
+        sumR += realized
+        rToday += realized
+        lastR := realized
+        if realized > 0
+            nWin += 1
+        if realized < 0
+            lossToday += 1
+        if h1
+            nT1 += 1
+        if h2
+            nT2 += 1
+        if h3
+            nT3 += 1
+        if evSL
+            nSL += 1
+        if not na(lnEntry)
+            line.set_extend(lnEntry, extend.none)
+            line.set_x2(lnEntry, bar_index)
+            line.set_extend(lnStop, extend.none)
+            line.set_x2(lnStop, bar_index)
+            line.set_extend(lnT1, extend.none)
+            line.set_x2(lnT1, bar_index)
+            line.set_extend(lnT2, extend.none)
+            line.set_x2(lnT2, bar_index)
+            line.set_extend(lnT3, extend.none)
+            line.set_x2(lnT3, bar_index)
+        tDir := 0
+
+// ------------------------------------------------------------------------------------ 06b ENTRY: STOP-HUNT RECLAIM (only the entry changes; the signal logic above is untouched)
+huntOn = entryStyle == "Stop-hunt reclaim"
+int   openDir  = 0
+float openStop = na
+bool  evArm = false
+bool  evCancel = false
+bool  armedBefore = armDir != 0
+
+if huntOn and barstate.isconfirmed and armDir != 0 and bar_index > armBar
+    bool sweepNow = armDir == 1 ? low < armSL : high > armSL
+    bool awayFirst = armDir == 1 ? high >= armRef + armR : low <= armRef - armR
+    if na(sweepBar)
+        if sweepNow
+            sweepBar := bar_index
+            sweepExt := armDir == 1 ? low : high
+            sweepVolOk := volCalm
+        else
+            if awayFirst or bar_index - armBar > armBars
+                armDir := 0
+                evCancel := true
+    else
+        sweepExt := armDir == 1 ? math.min(sweepExt, low) : math.max(sweepExt, high)
+        sweepVolOk := sweepVolOk and volCalm
+        bool backIn = armDir == 1 ? close > armSL : close < armSL
+        if backIn
+            bool trendNow = armDir == 1 ? localUp : localDn          // the trend must still agree when price comes back inside
+            if sweepVolOk and trendNow and inSess and volOK and sigToday < maxPerDay and lossToday < maxLossDay
+                float eP = close
+                float stopRaw = huntStopMode == "Sweep extreme + ATR buffer" ? (armDir == 1 ? sweepExt - atr * slBuffer : sweepExt + atr * slBuffer) : (armDir == 1 ? eP - riskFrac * armR : eP + riskFrac * armR)
+                float stopH = armDir == 1 ? math.min(stopRaw, eP - minDist) : math.max(stopRaw, eP + minDist)
+                if math.abs(eP - stopH) <= atr * maxRiskAtr
+                    openDir := armDir
+                    openStop := stopH
+            armDir := 0
+            if openDir == 0
+                evCancel := true
+        else
+            if bar_index - sweepBar >= reclaimBars
+                armDir := 0
+                evCancel := true
+
+if buySignal or sellSignal
+    lastBuyBar := buySignal ? bar_index : lastBuyBar
+    lastSellBar := sellSignal ? bar_index : lastSellBar
+    if huntOn
+        armDir := buySignal ? 1 : -1
+        armSL := buySignal ? stopL : stopS
+        armRef := close
+        armR := math.abs(close - armSL)
+        armBar := bar_index
+        sweepBar := na
+        sweepExt := na
+        sweepVolOk := true
+        evArm := true
+        if not na(lnArm)
+            line.delete(lnArm)
+        lnArm := line.new(bar_index, armSL, bar_index + 1, armSL, extend=extend.right, color=color.new(color.orange, 0), style=line.style_dotted, width=1)
+    else
+        openDir := buySignal ? 1 : -1
+        openStop := buySignal ? stopL : stopS
+
+if armedBefore and armDir == 0 and not na(lnArm)
+    line.set_extend(lnArm, extend.none)
+    line.set_x2(lnArm, bar_index)
+
+// open a new virtual trade at the entry (one trade at a time)
+if openDir != 0
+    int d = openDir
+    tDir := d
+    tEntry := close
+    tStop := openStop
+    tRisk := math.abs(close - tStop)
+    tT1 := close + d * tRisk * rr1
+    tT2 := close + d * tRisk * rr2
+    tT3 := close + d * tRisk * rr3
+    tBar := bar_index
+    h1 := false
+    h2 := false
+    h3 := false
+    realized := 0.0
+    remaining := 1.0
+    sigToday += 1
+    lastEnd := "OPEN"
+    if showLines
+        if not na(lnEntry)
+            line.delete(lnEntry)
+            line.delete(lnStop)
+            line.delete(lnT1)
+            line.delete(lnT2)
+            line.delete(lnT3)
+        lnEntry := line.new(bar_index, tEntry, bar_index + 1, tEntry, extend=extend.right, color=color.new(color.blue, 0), width=2)
+        lnStop  := line.new(bar_index, tStop, bar_index + 1, tStop, extend=extend.right, color=color.new(color.red, 0), width=2)
+        lnT1    := line.new(bar_index, tT1, bar_index + 1, tT1, extend=extend.right, color=color.new(color.lime, 20), style=line.style_dashed)
+        lnT2    := line.new(bar_index, tT2, bar_index + 1, tT2, extend=extend.right, color=color.new(color.lime, 20), style=line.style_dashed)
+        lnT3    := line.new(bar_index, tT3, bar_index + 1, tT3, extend=extend.right, color=color.new(color.green, 0), width=2)
+
+if showMarks
+    if evT1
+        label.new(bar_index, evDir == 1 ? high : low, "T1", style=evDir == 1 ? label.style_label_down : label.style_label_up, color=color.new(color.green, 20), textcolor=color.white, size=size.tiny)
+    if evT2
+        label.new(bar_index, evDir == 1 ? high : low, "T2", style=evDir == 1 ? label.style_label_down : label.style_label_up, color=color.new(color.green, 0), textcolor=color.white, size=size.tiny)
+    if evT3
+        label.new(bar_index, evDir == 1 ? high : low, "T3", style=evDir == 1 ? label.style_label_down : label.style_label_up, color=color.new(color.teal, 0), textcolor=color.white, size=size.tiny)
+    if evSL
+        label.new(bar_index, evDir == 1 ? low : high, "SL", style=evDir == 1 ? label.style_label_up : label.style_label_down, color=color.new(color.maroon, 0), textcolor=color.white, size=size.tiny)
+
+// ------------------------------------------------------------------------------------ 07 PLOTS
+plot(showEMAs ? em : na, "EMA mid", color=color.new(color.orange, 20), linewidth=1)
+plot(showEMAs ? es : na, "EMA slow", color=color.new(color.purple, 20), linewidth=1)
+plot(showEMAs ? ef : na, "EMA fast", color=color.new(color.gray, 60), linewidth=1)
+plotshape(openDir == 1, "BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), text="BUY", textcolor=color.white, size=size.small)
+plotshape(openDir == -1, "SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="SELL", textcolor=color.white, size=size.small)
+plotshape(evArm and armDir == 1, "Armed BUY", style=shape.circle, location=location.belowbar, color=color.new(color.orange, 0), size=size.tiny)
+plotshape(evArm and armDir == -1, "Armed SELL", style=shape.circle, location=location.abovebar, color=color.new(color.orange, 0), size=size.tiny)
+plotshape(skipWide and barstate.isconfirmed, "Skipped: stop too wide", style=shape.xcross, location=location.abovebar, color=color.new(color.gray, 20), size=size.tiny)
+bgcolor(htfScore >= minHtf ? color.new(color.green, 94) : htfScore <= -minHtf ? color.new(color.red, 94) : na)
+
+// ------------------------------------------------------------------------------------ 08 TOUCH PROBABILITY (calibrated on NIFTY/BANKNIFTY 1-minute data)
+// Chance that price touches a level at distance d (in sigma10 units) within the next 10 bars. Fitted map from
+// 11 years of NIFTY + BANKNIFTY 1-minute bars (2015-2026): d=0.25 -> 74%, 0.5 -> 55%, 0.75 -> 40%, 1.0 -> 28%, 1.5 -> 13%, 2.0 -> 6.5%.
+// Calibrated for the 1-minute chart only; on other timeframes it is a rough guide.
+f_lerp(float x, float x0, float x1, float y0, float y1) =>
+    y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+
+f_touchP(float d) =>
+    na(d) ? na : d <= 0.25 ? f_lerp(d, 0.0, 0.25, 1.0, 0.74) : d <= 0.5 ? f_lerp(d, 0.25, 0.5, 0.74, 0.55) : d <= 0.75 ? f_lerp(d, 0.5, 0.75, 0.55, 0.396) : d <= 1.0 ? f_lerp(d, 0.75, 1.0, 0.396, 0.276) : d <= 1.5 ? f_lerp(d, 1.0, 1.5, 0.276, 0.131) : d <= 2.0 ? f_lerp(d, 1.5, 2.0, 0.131, 0.065) : 0.065 * math.exp(-1.1 * (d - 2.0))
+
+sig10 = math.sqrt(10.0 * nz(retVar))
+f_pct(float lvl) =>
+    float dd = (sig10 > 0 and not na(lvl)) ? math.abs(lvl - close) / (close * sig10) : na
+    float p = f_touchP(dd)
+    na(p) ? "-" : str.tostring(p * 100, "#") + "%"
+
+// ------------------------------------------------------------------------------------ 09 DASHBOARD
+f_pos(string p) =>
+    switch p
+        "Top Left" => position.top_left
+        "Top Center" => position.top_center
+        "Middle Left" => position.middle_left
+        "Middle Right" => position.middle_right
+        "Bottom Left" => position.bottom_left
+        "Bottom Center" => position.bottom_center
+        "Bottom Right" => position.bottom_right
+        => position.top_right
+
+f_size(string s) =>
+    switch s
+        "Tiny" => size.tiny
+        "Normal" => size.normal
+        => size.small
+
+f_arrow(int v) =>
+    v == 1 ? "UP" : v == -1 ? "DOWN" : "FLAT"
+
+f_px(float p) =>
+    na(p) ? "-" : str.tostring(p, format.mintick)
+
+f_r(float x) =>
+    na(x) ? "-" : (x >= 0 ? "+" : "") + str.tostring(math.round(x * 100) / 100, "#.##")
+
+var table dash = table.new(position.top_right, 2, 17, border_width=1, frame_width=1)
+
+if barstate.islast and showDash
+    color cHead = color.rgb(30, 41, 90)
+    color cNeu  = color.rgb(45, 48, 58)
+    color cUp   = color.rgb(18, 125, 70)
+    color cDn   = color.rgb(170, 40, 50)
+    color cInfo = color.rgb(60, 62, 72)
+    ts = f_size(dashSize)
+    table.set_position(dash, f_pos(dashPos))
+    bool active = tDir != 0
+    string sigTxt = active ? (tDir == 1 ? "BUY ACTIVE" : "SELL ACTIVE") : armDir != 0 ? "ARMED " + (armDir == 1 ? "BUY" : "SELL") + ": wait sweep of " + f_px(armSL) + (na(sweepBar) ? "" : " (swept)") : "WAIT"
+    color sigCol = active ? (tDir == 1 ? cUp : cDn) : armDir != 0 ? color.rgb(190, 110, 20) : cNeu
+    string bias = htfScore >= minHtf and localUp ? "BUY BIAS" : htfScore <= -minHtf and localDn ? "SELL BIAS" : htfScore <= -minHtf and localUp ? "WAIT: HTF down, local up (no counter-trend)" : htfScore >= minHtf and localDn ? "WAIT: HTF up, local down (no counter-trend)" : "WAIT: HTF mixed"
+    color biasCol = htfScore >= minHtf and localUp ? cUp : htfScore <= -minHtf and localDn ? cDn : cNeu
+    string status = lastEnd == "OPEN" ? "OPEN  " + f_r(realized + remaining * (tDir * (close - nz(tEntry, close)) / nz(tRisk, 1.0))) + "R" : lastEnd == "-" ? "no trade yet" : lastEnd + "  " + f_r(nz(lastR, 0.0)) + "R"
+    string touchNote = timeframe.period == "1" ? "touch chance next 10 bars" : "touch chance (1m-calibrated, rough here)"
+    float winPct = nTr > 0 ? 100.0 * nWin / nTr : na
+    float avgR = nTr > 0 ? sumR / nTr : na
+    table.cell(dash, 0, 0, "SMART TREND-PULLBACK", bgcolor=cHead, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 0, timeframe.period, bgcolor=cHead, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 1, "Signal", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 1, sigTxt, bgcolor=sigCol, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 2, "HTF A " + tfA, bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 2, okA ? f_arrow(trA) : "not above chart", bgcolor=okA ? (trA == 1 ? cUp : trA == -1 ? cDn : cNeu) : cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 3, "HTF B " + tfB, bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 3, okB ? f_arrow(trB) : "not above chart", bgcolor=okB ? (trB == 1 ? cUp : trB == -1 ? cDn : cNeu) : cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 4, "Local EMA21/50 + ADX", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 4, (localUp ? "UP" : "DOWN") + " | ADX " + str.tostring(adx, "#") + (adx >= 20 ? " trend" : " range"), bgcolor=localUp ? cUp : cDn, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 5, "Decision", bgcolor=biasCol, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 5, bias, bgcolor=biasCol, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 6, "Entry", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 6, f_px(tEntry), bgcolor=color.blue, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 7, "Stop | risk", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 7, f_px(tStop) + " | " + f_px(tRisk) + " (" + str.tostring(nz(tRisk, 0.0) / atr, "#.0") + " ATR)" + (active ? "  touch " + f_pct(tStop) : ""), bgcolor=cDn, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 8, "T1 (" + str.tostring(rr1, "#.#") + "R)", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 8, f_px(tT1) + (h1 ? "  HIT" : (active ? "  " + f_pct(tT1) : "")), bgcolor=cUp, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 9, "T2 (" + str.tostring(rr2, "#.#") + "R)", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 9, f_px(tT2) + (h2 ? "  HIT" : (active ? "  " + f_pct(tT2) : "")), bgcolor=cUp, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 10, "T3 (" + str.tostring(rr3, "#.#") + "R)", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 10, f_px(tT3) + (h3 ? "  HIT" : (active ? "  " + f_pct(tT3) : "")), bgcolor=cUp, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 11, "Trade status", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 11, status, bgcolor=active ? sigCol : cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 12, "Today", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 12, "signals " + str.tostring(sigToday) + "/" + str.tostring(maxPerDay) + " | losses " + str.tostring(lossToday) + "/" + str.tostring(maxLossDay) + " | " + f_r(rToday) + "R", bgcolor=cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 13, "Chart history (virtual)", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 13, "n=" + str.tostring(nTr) + " | win " + (na(winPct) ? "-" : str.tostring(winPct, "#") + "%") + " | avg " + (na(avgR) ? "-" : f_r(avgR) + "R") + " | sum " + f_r(sumR) + "R", bgcolor=(nTr > 0 and sumR > 0) ? cUp : (nTr > 0 ? cDn : cInfo), text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 14, "Targets reached", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 14, nTr > 0 ? "T1 " + str.tostring(100.0 * nT1 / nTr, "#") + "% | T2 " + str.tostring(100.0 * nT2 / nTr, "#") + "% | T3 " + str.tostring(100.0 * nT3 / nTr, "#") + "% | SL " + str.tostring(100.0 * nSL / nTr, "#") + "%" : "-", bgcolor=cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 15, "Volatility | window", bgcolor=cNeu, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 15, "ATR " + str.tostring(atrBps, "#.0") + " bps " + (volOK ? "ok" : "LOW") + " | " + (useMcx ? "MCX " : "NSE/BSE ") + (inSess ? "in window" : "OUTSIDE window"), bgcolor=volOK and inSess ? cInfo : cDn, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 16, (useVb and not haveVol) ? "NO VOLUME DATA: volume mode cannot signal" : touchNote, bgcolor=cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 16, "Research tool. No validated edge. Paper first.", bgcolor=cInfo, text_color=color.white, text_size=ts)
+
+// ------------------------------------------------------------------------------------ 10 ALERTS
+alertcondition(openDir == 1, "BUY entry", "Smart Trend-Pullback: BUY entry.")
+alertcondition(openDir == -1, "SELL entry", "Smart Trend-Pullback: SELL entry.")
+alertcondition(evArm, "Setup armed", "Smart Trend-Pullback: setup armed, waiting for the stop hunt.")
+alertcondition(evT1, "Target 1 hit", "Smart Trend-Pullback: target 1 reached.")
+alertcondition(evT2, "Target 2 hit", "Smart Trend-Pullback: target 2 reached.")
+alertcondition(evT3, "Target 3 hit", "Smart Trend-Pullback: target 3 reached.")
+alertcondition(evSL, "Stop hit", "Smart Trend-Pullback: stop-loss hit.")

@@ -1,0 +1,158 @@
+{
+ "INDEX P1|5|PULLBACK (shipped)": {
+  "trades": 1601,
+  "per_day": 1.44,
+  "win": 0.406,
+  "gross_R": 0.093,
+  "net_R": -0.05,
+  "net_ci95": [
+   -0.111,
+   0.008
+  ],
+  "total_net_R": -79.8,
+  "avg_risk_pts": 16.9
+ },
+ "INDEX P1|5|BREAKOUT old caps": {
+  "trades": 545,
+  "per_day": 1.06,
+  "win": 0.409,
+  "gross_R": 0.095,
+  "net_R": -0.02,
+  "net_ci95": [
+   -0.121,
+   0.082
+  ],
+  "total_net_R": -11.1,
+  "avg_risk_pts": 20.2
+ },
+ "INDEX P1|5|NIRNAY1 trend-day": {
+  "trades": 1130,
+  "per_day": 1.16,
+  "win": 0.481,
+  "gross_R": 0.049,
+  "net_R": -0.013,
+  "net_ci95": [
+   -0.069,
+   0.041
+  ],
+  "total_net_R": -14.3,
+  "avg_risk_pts": 45.6
+ },
+ "INDEX P1|15|PULLBACK (shipped)": {
+  "trades": 700,
+  "per_day": 1.07,
+  "win": 0.476,
+  "gross_R": 0.035,
+  "net_R": -0.043,
+  "net_ci95": [
+   -0.113,
+   0.029
+  ],
+  "total_net_R": -30.4,
+  "avg_risk_pts": 30.6
+ },
+ "INDEX P1|15|BREAKOUT old caps": {
+  "trades": 329,
+  "per_day": 1.0,
+  "win": 0.538,
+  "gross_R": 0.089,
+  "net_R": 0.02,
+  "net_ci95": [
+   -0.079,
+   0.122
+  ],
+  "total_net_R": 6.7,
+  "avg_risk_pts": 33.3
+ },
+ "INDEX P1|15|NIRNAY1 trend-day": {
+  "trades": 661,
+  "per_day": 1.02,
+  "win": 0.543,
+  "gross_R": 0.045,
+  "net_R": 0.007,
+  "net_ci95": [
+   -0.042,
+   0.061
+  ],
+  "total_net_R": 5.0,
+  "avg_risk_pts": 73.5
+ },
+ "INDEX P2|5|PULLBACK (shipped)": {
+  "trades": 1907,
+  "per_day": 1.42,
+  "win": 0.414,
+  "gross_R": 0.046,
+  "net_R": -0.024,
+  "net_ci95": [
+   -0.077,
+   0.027
+  ],
+  "total_net_R": -44.9,
+  "avg_risk_pts": 36.4
+ },
+ "INDEX P2|5|BREAKOUT old caps": {
+  "trades": 662,
+  "per_day": 1.06,
+  "win": 0.462,
+  "gross_R": 0.149,
+  "net_R": 0.092,
+  "net_ci95": [
+   0.005,
+   0.177
+  ],
+  "total_net_R": 60.7,
+  "avg_risk_pts": 41.6
+ },
+ "INDEX P2|5|NIRNAY1 trend-day": {
+  "trades": 1355,
+  "per_day": 1.17,
+  "win": 0.508,
+  "gross_R": 0.073,
+  "net_R": 0.043,
+  "net_ci95": [
+   -0.005,
+   0.092
+  ],
+  "total_net_R": 58.3,
+  "avg_risk_pts": 98.9
+ },
+ "INDEX P2|15|PULLBACK (shipped)": {
+  "trades": 844,
+  "per_day": 1.07,
+  "win": 0.449,
+  "gross_R": -0.008,
+  "net_R": -0.046,
+  "net_ci95": [
+   -0.108,
+   0.015
+  ],
+  "total_net_R": -38.4,
+  "avg_risk_pts": 63.9
+ },
+ "INDEX P2|15|BREAKOUT old caps": {
+  "trades": 345,
+  "per_day": 1.01,
+  "win": 0.548,
+  "gross_R": 0.076,
+  "net_R": 0.04,
+  "net_ci95": [
+   -0.047,
+   0.132
+  ],
+  "total_net_R": 14.0,
+  "avg_risk_pts": 65.9
+ },
+ "INDEX P2|15|NIRNAY1 trend-day": {
+  "trades": 758,
+  "per_day": 1.01,
+  "win": 0.549,
+  "gross_R": 0.031,
+  "net_R": 0.013,
+  "net_ci95": [
+   -0.032,
+   0.059
+  ],
+  "total_net_R": 9.9,
+  "avg_risk_pts": 152.6
+ }
+}

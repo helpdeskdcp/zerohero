@@ -46,6 +46,9 @@ class TPParams:
     reclaim_bars: int = 5
     hunt_stop: str = "SWEEP"           # SWEEP (sweep extreme +/- ATR buffer) | FRAC (entry -/+ risk_frac x signal risk)
     risk_frac: float = 0.25
+    vol_mult: float = 2.0
+    vol_len: int = 20
+    vol_look: int = 7
 
 
 def dmi(h, l, c, n: int = 14):
@@ -72,6 +75,8 @@ def run(chart: pd.DataFrame, htf_a: pd.DataFrame, htf_b: pd.DataFrame, p: TPPara
     em, es, rv = ind.ema(c, p.mid_len), ind.ema(c, p.slow_len), ind.rsi(c, p.rsi_len); atr = ind.atr(h, l, c, p.atr_len)
     sw_lo, sw_hi = ind.lowest(l, p.swing_len), ind.highest(h, p.swing_len); pull_lo, pull_hi = ind.lowest(l, p.pull_bars), ind.highest(h, p.pull_bars)
     rv1, h1, l1 = ind.shift(rv), ind.shift(h), ind.shift(l)
+    vol = chart["volume"].to_numpy(float) if "volume" in chart.columns else np.full(n, np.nan)
+    vavg = ind.sma(np.nan_to_num(vol), p.vol_len); vratio = np.where(vavg > 0, np.nan_to_num(vol) / np.where(vavg > 0, vavg, 1.0), 0.0); vpeak = pd.Series(vratio).rolling(p.vol_look).max().to_numpy()
     dip, dim, adx = dmi(h, l, c, 14); hh = ind.highest_prev(h, p.bo_len); ll = ind.lowest_prev(l, p.bo_len)
     score = mtf_values(chart.index, htf_a, htf_trend(htf_a, p)) + mtf_values(chart.index, htf_b, htf_trend(htf_b, p))
     loc = chart.index.tz_convert("Asia/Kolkata"); hm = np.asarray(loc.hour * 100 + loc.minute); day = np.asarray(loc.date)
@@ -82,6 +87,8 @@ def run(chart: pd.DataFrame, htf_a: pd.DataFrame, htf_b: pd.DataFrame, p: TPPara
         trig_short = (c < em) & (c < o) & (c < l1) & (rv < p.rsi_short_max) & (rv < rv1)
         bo_long = (adx >= p.bo_adx) & (dip > dim) & (em > es) & (c > em) & (h > hh) & (c > o) & (rv >= p.bo_rsi_long)
         bo_short = (adx >= p.bo_adx) & (dim > dip) & (em < es) & (c < em) & (l < ll) & (c < o) & (rv <= p.bo_rsi_short)
+        vb_long = (vpeak >= p.vol_mult) & (h > hh) & (c > em) & (c > o) & (em > es)
+        vb_short = (vpeak >= p.vol_mult) & (l < ll) & (c < em) & (c < o) & (em < es)
         atr_bps = np.where(c > 0, atr / c * 1e4, np.nan); vol_ok = ~np.isnan(atr_bps) & (atr_bps >= p.min_atr_bps)
         min_dist = np.maximum(atr * p.min_risk_atr, p.mintick * 2)
         stop_l = np.minimum(sw_lo - atr * p.sl_buffer, c - min_dist); stop_s = np.maximum(sw_hi + atr * p.sl_buffer, c + min_dist)
@@ -96,9 +103,9 @@ def run(chart: pd.DataFrame, htf_a: pd.DataFrame, htf_b: pd.DataFrame, p: TPPara
         can = in_sess[i] and vol_ok[i] and not np.isnan(atr[i]) and sig_today < p.max_per_day and loss_today < p.max_loss_day and t_dir == 0 and arm_dir == 0
         buy_cd = last_buy is None or i - last_buy > p.cooldown; sell_cd = last_sell is None or i - last_sell > p.cooldown
         pb_long = score[i] >= p.min_htf and local_up[i] and touched_up[i] and trig_long[i]; pb_short = score[i] <= -p.min_htf and local_dn[i] and touched_dn[i] and trig_short[i]
-        use_pb, use_bo = p.mode in ("PULLBACK", "BOTH"), p.mode in ("BREAKOUT", "BOTH")
-        long_setup = can and ((use_pb and pb_long) or (use_bo and bo_long[i])) and buy_cd
-        short_setup = can and ((use_pb and pb_short) or (use_bo and bo_short[i])) and sell_cd
+        use_pb, use_bo, use_vb = p.mode in ("PULLBACK", "BOTH"), p.mode in ("BREAKOUT", "BOTH"), p.mode == "VOLBO"
+        long_setup = can and ((use_pb and pb_long) or (use_bo and bo_long[i]) or (use_vb and vb_long[i])) and buy_cd
+        short_setup = can and ((use_pb and pb_short) or (use_bo and bo_short[i]) or (use_vb and vb_short[i])) and sell_cd
         buy = long_setup and not wide_l[i]; sell = short_setup and not wide_s[i]
         if t_dir != 0 and i > tr["bar"]:
             d = t_dir; stop_hit = (l[i] <= tr["stop"]) if d == 1 else (h[i] >= tr["stop"]); ended = None

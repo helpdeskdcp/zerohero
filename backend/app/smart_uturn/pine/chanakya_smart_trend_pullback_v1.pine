@@ -45,7 +45,7 @@ maxPerDay   = input.int(4, "Max signals per day", minval=1, group=gE)
 maxLossDay  = input.int(2, "Stop signalling for the day after N losing trades", minval=1, group=gE)
 
 string gM = "02b Entry mode (trend-day mode is OPTIONAL and tested-negative: no validated edge)"
-entryMode = input.string("Pullback only", "Entry mode", options=["Pullback only", "Trend-day only", "Both"], group=gM, tooltip="Trend-day = strong local trend breakout (ADX, DI, new N-bar high/low, RSI), ignores the lagging HTF filter. Tested on 11 years of NIFTY 5m/15m: no validated edge. Prefer 5m or 15m charts.")
+entryMode = input.string("Pullback only", "Entry mode", options=["Pullback only", "Trend-day only", "Both", "Volume breakout only"], group=gM, tooltip="Trend-day = strong local trend breakout (ADX, DI, new N-bar high/low, RSI), ignores the lagging HTF filter. Tested on 11 years of NIFTY 5m/15m: no validated edge. Prefer 5m or 15m charts.")
 boLen     = input.int(20, "Trend-day: breakout lookback (bars)", minval=5, group=gM)
 boAdx     = input.float(25.0, "Trend-day: minimum ADX", minval=10.0, group=gM)
 boRsiL    = input.int(55, "Trend-day long: RSI at least", minval=1, maxval=99, group=gM)
@@ -170,14 +170,17 @@ buyCd  = na(lastBuyBar) or bar_index - lastBuyBar > cooldown
 sellCd = na(lastSellBar) or bar_index - lastSellBar > cooldown
 canTrade = barstate.isconfirmed and inSess and volOK and not na(atr) and sigToday < maxPerDay and lossToday < maxLossDay and tDir == 0 and armDir == 0
 
-usePb = entryMode != "Trend-day only"
-useBo = entryMode != "Pullback only"
+usePb = entryMode == "Pullback only" or entryMode == "Both"
+useBo = entryMode == "Trend-day only" or entryMode == "Both"
+useVb = entryMode == "Volume breakout only"
 pullLong  = htfScore >= minHtf and localUp and touchedUp and trigLong
 pullShort = htfScore <= -minHtf and localDn and touchedDn and trigShort
 boLong  = adx >= boAdx and diPlus > diMinus and localUp and close > em and high > hhPrev and close > open and rv >= boRsiL
 boShort = adx >= boAdx and diMinus > diPlus and localDn and close < em and low < llPrev and close < open and rv <= boRsiS
-longSetup  = canTrade and buyCd and ((usePb and pullLong) or (useBo and boLong))
-shortSetup = canTrade and sellCd and ((usePb and pullShort) or (useBo and boShort))
+volBoLong  = haveVol and volPeak >= volMult and high > hhPrev and close > em and close > open and localUp
+volBoShort = haveVol and volPeak >= volMult and low < llPrev and close < em and close < open and localDn
+longSetup  = canTrade and buyCd and ((usePb and pullLong) or (useBo and boLong) or (useVb and volBoLong))
+shortSetup = canTrade and sellCd and ((usePb and pullShort) or (useBo and boShort) or (useVb and volBoShort))
 buySignal  = longSetup and not wideL
 sellSignal = shortSetup and not wideS
 skipWide   = (longSetup and wideL) or (shortSetup and wideS)
@@ -489,7 +492,7 @@ if barstate.islast and showDash
     table.cell(dash, 1, 14, nTr > 0 ? "T1 " + str.tostring(100.0 * nT1 / nTr, "#") + "% | T2 " + str.tostring(100.0 * nT2 / nTr, "#") + "% | T3 " + str.tostring(100.0 * nT3 / nTr, "#") + "% | SL " + str.tostring(100.0 * nSL / nTr, "#") + "%" : "-", bgcolor=cInfo, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 15, "Volatility | window", bgcolor=cNeu, text_color=color.white, text_size=ts)
     table.cell(dash, 1, 15, "ATR " + str.tostring(atrBps, "#.0") + " bps " + (volOK ? "ok" : "LOW") + " | " + (useMcx ? "MCX " : "NSE/BSE ") + (inSess ? "in window" : "OUTSIDE window"), bgcolor=volOK and inSess ? cInfo : cDn, text_color=color.white, text_size=ts)
-    table.cell(dash, 0, 16, touchNote, bgcolor=cInfo, text_color=color.white, text_size=ts)
+    table.cell(dash, 0, 16, (useVb and not haveVol) ? "NO VOLUME DATA: volume mode cannot signal" : touchNote, bgcolor=cInfo, text_color=color.white, text_size=ts)
     table.cell(dash, 1, 16, "Research tool. No validated edge. Paper first.", bgcolor=cInfo, text_color=color.white, text_size=ts)
 
 // ------------------------------------------------------------------------------------ 10 ALERTS
