@@ -1,0 +1,186 @@
+// REFERENCE COPY of the user's original script, exactly as pasted into the chat on 2026-10-23 (chat transcript dropped the indentation in most places, so this copy is NOT compilable as is).
+// It is kept only to document what the Python port (app/smart_uturn) implements. The authoritative original lives in the owner's TradingView account. Never edit this file to change strategy rules.
+//@version=6
+indicator("Smart U-Turn Decision Engine v2.1 | Calibrated", overlay=true, max_labels_count=100, max_lines_count=20)
+
+//====================================================
+// 01 SETTINGS
+//====================================================
+string g1 = "01 - MTF Radar"
+showA = input.bool(true, "Show TF-A", group=g1)
+showB = input.bool(true, "Show TF-B", group=g1)
+showC = input.bool(true, "Show TF-C", group=g1)
+showMTFLabels = input.bool(true, "Show MTF Turn Labels", group=g1)
+
+string g2 = "02 - Signal Calibration"
+fastLen = input.int(9, "Fast EMA", minval=2, group=g2)
+slowLen = input.int(21, "Slow EMA", minval=3, group=g2)
+rsiLen = input.int(14, "RSI Length", minval=2, group=g2)
+swingLen = input.int(8, "Swing Lookback", minval=3, group=g2)
+minScore = input.int(3, "Minimum Signal Score", minval=2, maxval=5, group=g2)
+wickRatio = input.float(1.3, "Wick / Body Ratio", minval=0.5, step=0.1, group=g2)
+strictTrend = input.bool(true, "Filter Against MTF Trend", group=g2)
+minTrendVotes = input.int(1, "Minimum Trend Votes", minval=1, maxval=3, group=g2)
+useVolume = input.bool(false, "Require Volume Confirmation", group=g2)
+volumeLen = input.int(20, "Volume Average Length", minval=2, group=g2)
+cooldownBars = input.int(3, "Bars Between Same-Direction Signals", minval=0, group=g2)
+showEarly = input.bool(true, "Show Early Warning (not entry)", group=g2)
+
+string g3 = "03 - Risk & Targets"
+atrLen = input.int(14, "ATR Length", minval=2, group=g3)
+slBuffer = input.float(0.20, "SL ATR Buffer", minval=0, step=0.05, group=g3)
+minRiskATR = input.float(0.5, "Minimum SL Distance (ATR)", minval=0.1, step=0.1, group=g3)
+rr1 = input.float(1.0, "Target 1 (R)", minval=0.5, group=g3)
+rr2 = input.float(2.0, "Target 2 (R)", minval=1.0, group=g3)
+rr3 = input.float(3.0, "Target 3 (R)", minval=1.5, group=g3)
+
+// ... 04 Dashboard inputs (position/size/show flags, maxLabels) omitted here: display only ...
+
+//====================================================
+// 02 TIMEFRAME MAPPING  (chart tf -> tfA / tfB / tfC)
+//====================================================
+// "1"=>"3"/"5"/"15"  "3"=>"5"/"30"/"45"  "5"=>"15"/"30"/"45"  "15"=>"30"/"60"/"120"  "30"=>"45"/"60"/"120"  "45"=>"60"/"120"/"240"
+// "60"=>"120"/"240"/"D"  "120"=>"240"/"D"/"W"  "240"=>"D"/"W"/"M"  "D"=>"W"/"M"/"3M"  "W"=>"M"/"3M"/"6M"   (anything else => "")
+
+//====================================================
+// 03 REVERSAL SCORING ENGINE
+//====================================================
+f_turn() =>
+    float ef = ta.ema(close, fastLen)
+    float es = ta.ema(close, slowLen)
+    float rv = ta.rsi(close, rsiLen)
+    float bd = math.max(math.abs(close - open), syminfo.mintick)
+    float rg = math.max(high - low, syminfo.mintick)
+    float lw = math.min(open, close) - low
+    float uw = high - math.max(open, close)
+
+    float priorLow = ta.lowest(low[1], swingLen)
+    float priorHigh = ta.highest(high[1], swingLen)
+    float volAvg = ta.sma(volume, volumeLen)
+
+    bool bullWick = lw / bd >= wickRatio and close > low + rg * 0.55
+    bool bearWick = uw / bd >= wickRatio and close < high - rg * 0.55
+
+    bool bullSweep = low < priorLow and close > priorLow
+    bool bearSweep = high > priorHigh and close < priorHigh
+
+    bool bullMomentum = rv > rv[1] and rv[1] < 50
+    bool bearMomentum = rv < rv[1] and rv[1] > 50
+
+    bool bullBreak = close > high[1] and close > open
+    bool bearBreak = close < low[1] and close < open
+
+    bool bullTrend = ef > es and ef > ef[1]
+    bool bearTrend = ef < es and ef < ef[1]
+
+    int bs = (bullWick ? 1 : 0) + (bullSweep ? 1 : 0) +
+         (bullMomentum ? 1 : 0) + (bullBreak ? 1 : 0) +
+         (bullTrend ? 1 : 0)
+
+    int ss = (bearWick ? 1 : 0) + (bearSweep ? 1 : 0) +
+         (bearMomentum ? 1 : 0) + (bearBreak ? 1 : 0) +
+         (bearTrend ? 1 : 0)
+
+    bool volumeOK = not useVolume or na(volAvg) or volume > volAvg
+
+    bool bullSetup = bs >= minScore and
+         (bullWick or bullSweep or bullBreak) and volumeOK
+    bool bearSetup = ss >= minScore and
+         (bearWick or bearSweep or bearBreak) and volumeOK
+
+    bool bullPulse = bullSetup and not bullSetup[1]
+    bool bearPulse = bearSetup and not bearSetup[1]
+
+    bullPulse ? 1 : bearPulse ? -1 : 0
+
+f_trend() =>
+    float ef = ta.ema(close, fastLen)
+    float es = ta.ema(close, slowLen)
+    float rv = ta.rsi(close, rsiLen)
+    ef > es and ef > ef[1] and rv > 50 ? 1 :
+    ef < es and ef < ef[1] and rv < 50 ? -1 : 0
+
+// Confirmed HTF data only: prior HTF bar + lookahead_on.
+f_mtfTurn(string tf) =>
+    request.security(syminfo.tickerid, tf, f_turn()[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+
+f_mtfTrend(string tf) =>
+    request.security(syminfo.tickerid, tf, f_trend()[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+
+//====================================================
+// 04 MTF RADAR
+//====================================================
+int sigA = tfA == "" ? 0 : f_mtfTurn(tfA)     // (same for B, C)
+int trA = tfA == "" ? 0 : f_mtfTrend(tfA)     // (same for B, C)
+
+bool evA = showA and sigA != 0 and sigA != nz(sigA[1])     // (same for B, C)
+
+int upVotes = (trA == 1 ? 1 : 0) + (trB == 1 ? 1 : 0) + (trC == 1 ? 1 : 0)
+int dnVotes = (trA == -1 ? 1 : 0) + (trB == -1 ? 1 : 0) + (trC == -1 ? 1 : 0)
+
+int mtfDirection = upVotes >= minTrendVotes and upVotes > dnVotes ? 1 :
+    dnVotes >= minTrendVotes and dnVotes > upVotes ? -1 : 0
+
+// ... 05 MTF labels: drawing only ...
+
+//====================================================
+// 06 CALIBRATED LOCAL BUY / SELL SIGNALS
+//====================================================
+int localTurn = f_turn()
+bool buyCandidate = localTurn == 1
+bool sellCandidate = localTurn == -1
+bool buyAllowed = not strictTrend or mtfDirection != -1
+bool sellAllowed = not strictTrend or mtfDirection != 1
+
+var int lastBuyBar = na
+var int lastSellBar = na
+bool buyCooldownOK = na(lastBuyBar) or bar_index - lastBuyBar > cooldownBars
+bool sellCooldownOK = na(lastSellBar) or bar_index - lastSellBar > cooldownBars
+
+bool buySignal = barstate.isconfirmed and buyCandidate and buyAllowed and buyCooldownOK
+bool sellSignal = barstate.isconfirmed and sellCandidate and sellAllowed and sellCooldownOK
+if buySignal
+    lastBuyBar := bar_index
+if sellSignal
+    lastSellBar := bar_index
+
+bool blockedBuy = barstate.isconfirmed and buyCandidate and strictTrend and mtfDirection == -1
+bool blockedSell = barstate.isconfirmed and sellCandidate and strictTrend and mtfDirection == 1
+
+//====================================================
+// 07 ENTRY / STOP / TARGETS / DYNAMIC LEVELS   (new signal replaces the previous active set)
+//====================================================
+if (buySignal or sellSignal) and not na(atr)
+    activeDir := buySignal ? 1 : -1
+    activeBar := bar_index
+    entry := close
+    float swingLow = ta.lowest(low, swingLen)
+    float swingHigh = ta.highest(high, swingLen)
+    support := swingLow
+    resistance := swingHigh
+    float minDist = math.max(atr * minRiskATR, syminfo.mintick * 2)
+    float rawStop = activeDir == 1 ? swingLow - atr * slBuffer : swingHigh + atr * slBuffer
+    stop := activeDir == 1 ? math.min(rawStop, entry - minDist) : math.max(rawStop, entry + minDist)
+    risk := math.abs(entry - stop)
+    t1 := entry + activeDir * risk * rr1
+    t2 := entry + activeDir * risk * rr2
+    t3 := entry + activeDir * risk * rr3
+    // ... line drawing omitted ...
+
+//====================================================
+// 08 BREAKOUT / RETEST
+//====================================================
+bool bullBreak = not na(resistance) and ta.crossover(close, resistance)
+bool bearBreak = not na(support) and ta.crossunder(close, support)
+bool bullRetest = not na(resistance) and low <= resistance and close > resistance
+bool bearRetest = not na(support) and high >= support and close < support
+
+//====================================================
+// 09 POTENTIAL LIQUIDITY / STOP-HUNT LEVELS (confirmed swing points)
+//====================================================
+float pivotHigh = ta.pivothigh(high, swingLen, swingLen)
+float pivotLow = ta.pivotlow(low, swingLen, swingLen)
+float ph0 = ta.valuewhen(not na(pivotHigh), pivotHigh, 0)   // ph1 (1), ph2 (2); pl0..pl2 likewise
+float hunt1 = activeDir == 1 ? pl0 : ph0                     // hunt2 -> pl1/ph1, hunt3 -> pl2/ph2
+
+// ... 10 dashboard (table), 11 alertconditions (buySignal, sellSignal, blockedBuy, blockedSell, bullBreak, bearBreak, bullRetest, bearRetest): display/alerts only ...
