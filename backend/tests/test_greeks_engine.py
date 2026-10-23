@@ -361,3 +361,12 @@ def test_greek_capture_cutoff_understands_timezone_offsets(hist_db):
     eng = GreeksEngine(hist_db)
     # 09:59 IST is BEFORE the 04:30 UTC capture, despite sorting after it as text.
     assert eng.run_once("NIFTY", as_of="2026-09-02T09:59:00+05:30")["snapshots_written"] == 0
+
+
+def test_run_once_does_not_keep_a_write_transaction_open_between_expiries(tmp_path, monkeypatch):
+    """A write transaction left open while the next expiry's heavy reads run blocks every other writer on the shared database (live-trade price capture stalled for minutes)."""
+    import inspect
+    from app.greeks_engine import engine as E
+    src = inspect.getsource(E.GreeksEngine.run_once) if hasattr(E, "GreeksEngine") else inspect.getsource(E)
+    i = src.index("written += self._write(conn, snap)")
+    assert "conn.commit()" in src[i:i + 400]

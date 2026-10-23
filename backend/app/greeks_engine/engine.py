@@ -169,6 +169,7 @@ class GreeksEngine:
                         stale_sec_threshold=STALE_SEC)
                     snap["run_id"] = rid
                     written += self._write(conn, snap)
+                    conn.commit()                       # release SQLite's single writer lock BEFORE the next expiry's heavy reads (an open write transaction here starved the 3-second priority capture of live trades for minutes)
                     quality[exp] = snap["quality"]
                 except Exception as e:
                     errors.append({"expiry": exp, "error": f"{type(e).__name__}: {e}"})
