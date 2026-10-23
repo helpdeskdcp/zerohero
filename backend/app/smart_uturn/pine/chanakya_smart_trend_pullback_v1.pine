@@ -33,8 +33,11 @@ rsiShortMax = input.int(55, "Short: RSI must be below", minval=1, maxval=99, gro
 minAtrBps   = input.float(2.0, "Minimum volatility: ATR in bps of price", minval=0.0, step=0.5, group=gE)
 cooldown    = input.int(5, "Bars between same-direction signals", minval=0, group=gE)
 useSession  = input.bool(true, "Only signal inside the trading window", group=gE)
-sessionIn   = input.session("0925-1500", "Trading window (exchange time)", group=gE)
-flatHM      = input.int(1515, "Flatten virtual trades at (HHMM, exchange time)", minval=0, maxval=2359, group=gE)
+sessMode    = input.string("Auto (MCX vs others)", "Session preset", options=["Auto (MCX vs others)", "Manual"], group=gE, tooltip="Auto: MCX symbols use the MCX window below, everything else (NSE/BSE) uses the window below it. Manual: always use the NSE/BSE window.")
+sessionIn   = input.session("0925-1500", "Trading window: NSE/BSE (exchange time)", group=gE)
+flatHM      = input.int(1515, "Flatten virtual trades at (HHMM): NSE/BSE", minval=0, maxval=2359, group=gE)
+mcxWindow   = input.session("0900-2325", "Trading window: MCX", group=gE)
+mcxFlat     = input.int(2325, "Flatten virtual trades at (HHMM): MCX", minval=0, maxval=2359, group=gE)
 maxPerDay   = input.int(4, "Max signals per day", minval=1, group=gE)
 maxLossDay  = input.int(2, "Stop signalling for the day after N losing trades", minval=1, group=gE)
 
@@ -97,9 +100,13 @@ trBe = okB ? trB : 0
 htfScore = trAe + trBe
 
 // ------------------------------------------------------------------------------------ 04 SESSION, VOLATILITY, DAY COUNTERS
-inSess  = not useSession or not na(time(timeframe.period, sessionIn, syminfo.timezone))
+useMcx  = sessMode == "Auto (MCX vs others)" and syminfo.prefix == "MCX"
+inSessA = not na(time(timeframe.period, sessionIn, syminfo.timezone))
+inSessB = not na(time(timeframe.period, mcxWindow, syminfo.timezone))
+inSess  = not useSession or (useMcx ? inSessB : inSessA)
 curHM   = hour(time, syminfo.timezone) * 100 + minute(time, syminfo.timezone)
-flatNow = curHM >= flatHM
+flatEff = useMcx ? mcxFlat : flatHM
+flatNow = curHM >= flatEff
 newDay  = timeframe.change("1D")
 atrBps  = close > 0 ? atr / close * 10000.0 : na
 volOK   = not na(atrBps) and atrBps >= minAtrBps
@@ -390,7 +397,7 @@ if barstate.islast and showDash
     table.cell(dash, 0, 14, "Targets reached", bgcolor=cNeu, text_color=color.white, text_size=ts)
     table.cell(dash, 1, 14, nTr > 0 ? "T1 " + str.tostring(100.0 * nT1 / nTr, "#") + "% | T2 " + str.tostring(100.0 * nT2 / nTr, "#") + "% | T3 " + str.tostring(100.0 * nT3 / nTr, "#") + "% | SL " + str.tostring(100.0 * nSL / nTr, "#") + "%" : "-", bgcolor=cInfo, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 15, "Volatility | window", bgcolor=cNeu, text_color=color.white, text_size=ts)
-    table.cell(dash, 1, 15, "ATR " + str.tostring(atrBps, "#.0") + " bps " + (volOK ? "ok" : "LOW") + " | " + (inSess ? "in window" : "outside"), bgcolor=volOK and inSess ? cInfo : cDn, text_color=color.white, text_size=ts)
+    table.cell(dash, 1, 15, "ATR " + str.tostring(atrBps, "#.0") + " bps " + (volOK ? "ok" : "LOW") + " | " + (useMcx ? "MCX " : "NSE/BSE ") + (inSess ? "in window" : "OUTSIDE window"), bgcolor=volOK and inSess ? cInfo : cDn, text_color=color.white, text_size=ts)
     table.cell(dash, 0, 16, touchNote, bgcolor=cInfo, text_color=color.white, text_size=ts)
     table.cell(dash, 1, 16, "Research tool. No validated edge. Paper first.", bgcolor=cInfo, text_color=color.white, text_size=ts)
 
