@@ -1,0 +1,58 @@
+{
+ "_note": "Pine defaults (SignalParams) + replay assumptions (BacktestParams). CLI flags map to the backtest fields; SignalParams are the Pine inputs and are intentionally not CLI-tunable.",
+ "signal_params": {
+  "show_a": true,
+  "show_b": true,
+  "show_c": true,
+  "fast_len": 9,
+  "slow_len": 21,
+  "rsi_len": 14,
+  "swing_len": 8,
+  "min_score": 3,
+  "wick_ratio": 1.3,
+  "strict_trend": true,
+  "min_trend_votes": 1,
+  "use_volume": false,
+  "volume_len": 20,
+  "cooldown_bars": 3,
+  "atr_len": 14,
+  "sl_buffer": 0.2,
+  "min_risk_atr": 0.5,
+  "rr1": 1.0,
+  "rr2": 2.0,
+  "rr3": 3.0,
+  "mintick": 0.05
+ },
+ "backtest_params": {
+  "entry_mode": "NEXT_OPEN",
+  "exit_model": "THIRDS",
+  "position_policy": "IGNORE_WHILE_OPEN",
+  "same_bar_rule": "STOP_FIRST",
+  "session_exit": true,
+  "cost_points_roundtrip": 2.0,
+  "capital": 500000.0,
+  "risk_pct": 1.0
+ },
+ "input_schema": {
+  "required": [
+   "datetime (tz-aware or Asia/Kolkata local; candle OPEN time unless --ts-is close)",
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "optional_source_fields": [
+   "volume",
+   "oi",
+   "iv",
+   "bid",
+   "ask",
+   "bid_qty",
+   "ask_qty",
+   "ltp",
+   "ltq",
+   "source_ts"
+  ],
+  "rules": "missing != zero; unavailable fields stay empty; never filled"
+ }
+}
