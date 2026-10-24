@@ -362,6 +362,13 @@ try:
 except Exception as _e:
     print(f"[chartink] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- In-house daily scanner (read-only views; observation only, no order path) ----
+try:
+    from .scanner import api as _scanner_api
+    app.include_router(_scanner_api.router)
+except Exception as _e:
+    print(f"[scanner] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:
