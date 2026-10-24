@@ -71,3 +71,15 @@ def test_library_size_and_calendar_names():
     assert len(SCANS) == 36 and {v[0] for v in SCANS.values()} == {"LONG", "SHORT"}
     df = _daily(60); ns = dsl.namespace(df); assert int(ns["dow"].max()) <= 4 and int(ns["dom"].max()) <= 31
     assert dsl.run_expr("(dom >= 28) | (dom <= 3)", df, ns).sum() > 5
+
+
+def test_chart_payload_daily_and_5m_markers_and_validation():
+    from app.scanner import api as SA, intraday as I
+    df = _daily(300); out = SA.chart_payload("NIFTY", "1d", "BRK20_UP", 120, daily_df=df)
+    assert out["bars"] == 120 and out["side"] == "LONG" and out["candles"][0]["time"] < out["candles"][-1]["time"] and all(m["time"] in {c["time"] for c in out["candles"]} for m in out["markers"])
+    hand = engine.evaluate(df, {"BRK20_UP": SCANS["BRK20_UP"]})["BRK20_UP"].tail(120); assert len(out["markers"]) == int(hand.sum())
+    assert SA.chart_payload("XYZ", "1d", "BRK20_UP")["error"].startswith("unknown") and "error" in SA.chart_payload("NIFTY", "1h", "x")
+    n = 140; idx = np.arange(n); c = 100 + 0.1 * idx; o = c - 0.12
+    f5 = pd.DataFrame({"t": pd.date_range("2026-10-22 03:45", periods=n, freq="5min", tz="UTC"), "o": o, "h": c + 0.05, "l": o - 0.05, "c": c, "v": 1000.0}); f5.loc[n - 1, ["c", "h", "v"]] = [c[-1] + 1.0, c[-1] + 1.0, 8000.0]
+    p5 = SA.chart_payload("NIFTY", "5m", "FULL_BULL", 100, fut5_df=f5)
+    assert p5["side"] == "LONG" and isinstance(p5["candles"][0]["time"], int) and p5["candles"][-1]["time"] - p5["candles"][-2]["time"] == 300 and len(p5["markers"]) >= 1 and p5["markers"][-1]["time"] == p5["candles"][-1]["time"]

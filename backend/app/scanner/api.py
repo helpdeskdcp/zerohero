@@ -8,7 +8,7 @@ import time
 import pandas as pd
 from fastapi import APIRouter
 
-from . import backtest as BT, data as D, store
+from . import backtest as BT, data as D, engine, intraday as I, store
 from .library import SCANS
 
 router = APIRouter(prefix="/api/scanner", tags=["scanner"])
@@ -58,3 +58,81 @@ def backtest():
 def forward():
     if _cache.get("t", 0) > time.time() - 600: return _cache["v"]
     v = forward_report(); _cache.update(t=time.time(), v=v); return v
+
+
+# ---------------------------------------------------------------- chart-scan page (frontend/static/chartscan.html)
+RESULTS_5M = os.path.join(D.ROOT, "data", "research", "scanner", "results_5m.json")
+_ccache: dict = {}
+IST_SHIFT = 19800
+
+
+def _cached(key, ttl, fn):
+    hit = _ccache.get(key)
+    if hit and time.time() - hit[0] < ttl: return hit[1]
+    v = fn(); _ccache[key] = (time.time(), v); return v
+
+
+def _daily_df(inst: str): return _cached(("d", inst), 600, lambda: D.load_daily(inst))
+
+
+def _fut5_df(inst: str): return _cached(("5", inst), 90, lambda: I.futures_5m(inst, since_epoch=time.time() - 12 * 86400, until_epoch=time.time()))
+
+
+def _bt_summary(tf: str, scan: str) -> dict | None:
+    try:
+        r = json.load(open(RESULTS if tf == "1d" else RESULTS_5M)); x = (r["scans"] if tf == "1d" else r["variants"]).get(scan)
+        if not x: return None
+        hs = {str(h): {"n": v.get("n"), "mean_net_bps": v.get("mean_net_bps", v.get("mean_net")), "hit": v.get("hit")} for h, v in x["horizons"].items()}
+        return {"verdict": x.get("verdict"), "horizons": hs}
+    except Exception:
+        return None
+
+
+def chart_payload(inst: str, tf: str, scan: str, bars: int = 250, daily_df=None, fut5_df=None) -> dict:
+    inst = inst.upper(); bars = max(20, min(int(bars), 1500))
+    if inst not in D.INSTRUMENTS: return {"error": f"unknown instrument {inst}"}
+    if tf == "1d":
+        df = daily_df if daily_df is not None else _daily_df(inst)
+        if df is None or df.empty: return {"error": "no data"}
+        side = SCANS[scan][0] if scan in SCANS else None; sig = engine.evaluate(df, {scan: SCANS[scan]}).get(scan) if scan in SCANS else None
+        t = df.tail(bars).reset_index(drop=True); off = len(df) - len(t)
+        candles = [{"time": str(pd.Timestamp(r.date).date()), "open": float(r.o), "high": float(r.h), "low": float(r.l), "close": float(r.c), "volume": float(r.v or 0)} for r in t.itertuples()]
+        marks = [{"time": candles[i]["time"], "side": side, "scan": scan} for i in range(len(t)) if sig is not None and bool(sig.iloc[off + i])]
+        return {"inst": inst, "tf": tf, "scan": scan, "side": side, "expr": SCANS[scan][1] if scan in SCANS else None, "candles": candles, "markers": marks, "backtest": _bt_summary(tf, scan), "last_bar": candles[-1]["time"], "bars": len(candles)}
+    if tf == "5m":
+        df = fut5_df if fut5_df is not None else _fut5_df(inst)
+        if df is None or len(df) < 40: return {"error": "not enough 5-minute data"}
+        f = I.scan_flags(df); side = ("LONG" if "BULL" in scan else "SHORT") if scan in I.VARIANTS else None
+        t = df.tail(bars).reset_index(drop=True); off = len(df) - len(t); ep = [int(pd.Timestamp(x).timestamp()) + IST_SHIFT for x in t["t"]]
+        candles = [{"time": ep[i], "open": float(t.o[i]), "high": float(t.h[i]), "low": float(t.l[i]), "close": float(t.c[i]), "volume": float(t.v[i] or 0)} for i in range(len(t))]
+        marks = [{"time": ep[i], "side": side, "scan": scan, "rsi": round(float(f["rsi"].iloc[off + i]), 1) if f["rsi"].notna().iloc[off + i] else None} for i in range(len(t)) if side and bool(f[scan].iloc[off + i])]
+        return {"inst": inst, "tf": tf, "scan": scan, "side": side, "candles": candles, "markers": marks, "backtest": _bt_summary(tf, scan), "last_bar": ep[-1], "bars": len(candles), "tz_note": "times shifted to IST for display"}
+    return {"error": "tf must be 1d or 5m"}
+
+
+@router.get("/chart")
+def chart(inst: str = "NIFTY", tf: str = "1d", scan: str = "BRK20_UP", bars: int = 250): return chart_payload(inst, tf, scan, bars)
+
+
+@router.get("/results")
+def results(tf: str = "1d"):
+    """Latest-bar hits across the six instruments (Chartink-style result table); each row opens in the chart."""
+    def build():
+        rows = []
+        for inst in D.INSTRUMENTS:
+            try:
+                if tf == "1d":
+                    df = _daily_df(inst)
+                    if df is None or len(df) < 30: continue
+                    for name, sig in engine.evaluate(df).items():
+                        if bool(sig.iloc[-1]): rows.append({"inst": inst, "scan": name, "side": SCANS[name][0], "bar": str(pd.Timestamp(df["date"].iloc[-1]).date()), "close": float(df["c"].iloc[-1])})
+                else:
+                    df = _fut5_df(inst)
+                    if df is None or len(df) < 60: continue
+                    f = I.scan_flags(df)
+                    for v in I.VARIANTS:
+                        if bool(f[v].iloc[-1]): rows.append({"inst": inst, "scan": v, "side": "LONG" if "BULL" in v else "SHORT", "bar": str(df["t"].iloc[-1]), "close": float(df["c"].iloc[-1])})
+            except Exception as e:
+                rows.append({"inst": inst, "error": repr(e)[:120]})
+        return rows
+    return {"tf": tf, "results": _cached(("r", tf), 120, build), "scans": ([{"name": k, "side": v[0]} for k, v in SCANS.items()] if tf == "1d" else [{"name": v, "side": "LONG" if "BULL" in v else "SHORT"} for v in I.VARIANTS])}
