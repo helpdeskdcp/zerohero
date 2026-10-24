@@ -1,0 +1,15 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chartink alerts</title>
+<style>:root{--bg:#0b1220;--fg:#e5e7eb;--mut:#94a3b8;--line:#1f2937;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 6px}.mut{color:var(--mut)}table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+.chip{padding:1px 7px;border-radius:9px;border:1px solid var(--line);font-size:12px}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.wrap{overflow-x:auto}</style></head><body>
+<h1>Chartink scanner alerts</h1><div class="mut" id="st">loading…</div>
+<p class="mut">Observation only. Every alert is tracked forward (+5/15/30/60 min, EOD) and judged by the pre-registered rules in data/research/chartink/SPEC_2026-10-24.md. Nothing here places an order.</p>
+<h2>Scan validation</h2><div class="wrap"><table id="val"></table></div><h2>Latest alerts</h2><div class="wrap"><table id="al"></table></div>
+<script>
+const j=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.json());const f=(x,d=1)=>x==null?'–':(+x).toFixed(d);
+(async()=>{const s=await j('/api/chartink/status');document.getElementById('st').textContent=(s.configured?'webhook configured':'webhook NOT configured')+' · alerts '+s.alerts+' · last '+(s.last_alert||'–')+' · marks '+JSON.stringify(s.marks);
+const v=(await j('/api/chartink/validation')).scans;let h='<tr><th>Scan</th><th>Side</th><th>Days</th><th>Pairs</th><th>Verdict</th><th>30m net excess</th><th>60m</th><th>EOD</th></tr>';
+for(const [k,x] of Object.entries(v)){const c=z=>{const r=x.horizons[z];return r?f(r.net_excess['8'])+' bp (n '+r.n+')'+(r.pass?' ✓':''):'–'};h+=`<tr><td>${k}</td><td>${x.side}</td><td>${x.need.alert_days}</td><td>${x.need.pairs}</td><td><span class="chip ${x.verdict=='GO-SHADOW'?'ok':x.verdict=='NO-GO'?'bad':'warn'}">${x.verdict}</span></td><td>${c('30')}</td><td>${c('60')}</td><td>${c('EOD')}</td></tr>`}
+document.getElementById('val').innerHTML=h;
+const a=(await j('/api/chartink/alerts?limit=30')).alerts;let t='<tr><th>Time</th><th>Scan</th><th>#</th><th>Symbols</th></tr>';for(const r of a)t+=`<tr><td>${r.received_iso.replace('T',' ').slice(0,19)}</td><td>${r.scan_name}</td><td>${r.n_symbols}</td><td>${r.symbols.map(y=>y.symbol).join(', ')}</td></tr>`;document.getElementById('al').innerHTML=t})();
+</script></body></html>

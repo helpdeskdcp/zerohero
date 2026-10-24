@@ -47,6 +47,11 @@ def is_auth_exempt_path(path: str) -> bool:
     alone -- kept here, next to the routes they protect, not duplicated in
     main.py."""
     if path.startswith("/api/dhan/postback/") or path == "/api/dhan/redirect": return True
+    try:                                                   # Chartink alert webhook: secret in the path, checked in the route (fail-closed) (app/chartink/api.py)
+        from ..chartink.api import is_public_path as _ck_public
+        if _ck_public(path): return True
+    except Exception:
+        pass
     try:                                                   # Institution-side arena: its own token-protected public API + its two static files (app/arena/api.py)
         from ..arena.api import is_public_path
         return is_public_path(path)

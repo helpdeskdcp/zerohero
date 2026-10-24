@@ -355,6 +355,13 @@ try:
 except Exception as _e:
     print(f"[arena] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Chartink scanner alerts: webhook receiver + forward validation (observation only, no order path) ----
+try:
+    from .chartink import api as _chartink_api
+    app.include_router(_chartink_api.router)
+except Exception as _e:
+    print(f"[chartink] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:
@@ -497,6 +504,12 @@ async def _lifespan(_app: FastAPI):
             platform_live.start()
         except Exception as e:
             print(f"[platform_live] start failed: {type(e).__name__}: {e}")
+    if os.environ.get("CHARTINK_TRACKER", "1") != "0":
+        try:
+            from .chartink import tracker as _chartink_tracker
+            _chartink_tracker.Runner().start()
+        except Exception as e:
+            print(f"[chartink] tracker start failed: {type(e).__name__}: {e}")
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:
