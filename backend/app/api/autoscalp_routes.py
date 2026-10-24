@@ -112,6 +112,19 @@ def api_autoscalp_range_zone():
     return {"states": out, "note": "range = 24 closed 5m bars <= 3 ATR with both edges tested twice; zone = edge +/- 0.25 ATR; no demonstrated trading edge (see data/research/range_zone/FINDINGS_2026-10-24.md)"}
 
 
+@router.get("/api/autoscalp/option-flow")
+def api_autoscalp_option_flow(limit: int = 30):
+    """Live put-call-parity (F3) feed for NIFTY / SENSEX with its running forward statistics (observation only; see data/research/option_flow/)."""
+    import os as _os, sqlite3 as _sq
+    from ..autoscalp import option_flow_shadow as _of
+    rows = []
+    if _os.path.exists(_of._db()):
+        c = _sq.connect(f"file:{_of._db()}?mode=ro", uri=True, timeout=5)
+        try: rows = [dict(zip(("symbol", "bar_start", "status", "spot", "K", "F3m", "F3c", "F3z", "spread_w", "quote_age_s", "fwd30_bp"), r)) for r in c.execute("SELECT symbol, bar_start, status, spot, K, F3m, F3c, F3z, spread_w, quote_age_s, fwd30_bp FROM flow_live ORDER BY id DESC LIMIT ?", (min(limit, 500),)).fetchall()]
+        finally: c.close()
+    return {"latest": rows, "forward": _of.forward_report(), "enabled": _of.enabled()}
+
+
 @router.get("/api/autoscalp/net-edge")
 def api_autoscalp_net_edge():
     """Real rupee expectancy per symbol after charges + slippage (read-only). See app/autoscalp/net_edge.py."""

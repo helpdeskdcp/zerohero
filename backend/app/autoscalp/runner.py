@@ -790,6 +790,12 @@ class AutoScalpRunner:
             _prs.observe_async(sym)
         except Exception as e:
             _log.debug("pivot reversal shadow hook failed for %s (cosmetic): %r", sym, e)
+        # Live option-flow (put-call parity) feed for the replicated F3 signal: observation only, own SQLite file, daemon thread, no decision input, no message.
+        try:
+            from . import option_flow_shadow as _ofs
+            _ofs.observe_async(sym)
+        except Exception as e:
+            _log.debug("option flow shadow hook failed for %s (cosmetic): %r", sym, e)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
         if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):
