@@ -27,3 +27,10 @@ GROUP A (liquidity sweep / reversal, AND): high > previous bar's high; close < p
 GROUP B (support breakdown, AND): close < previous bar's low; volume > SMA(volume, 20) x 1.5; RSI(14) < 45.
 FINAL = CORE AND (A OR B). Purpose: bearish reversal / breakdown candidates for PE analysis. Same implementation choices (Chartink conventions, front-month futures with volume, same data, same costs). Short returns = -(exit/entry - 1).
 Variants now K = 6: FULL_BULL, A_BULL, B_BULL, FULL_BEAR, A_BEAR, B_BEAR (the Bonferroni level becomes 0.05 / 6); baselines: every bar long and every bar short. Verdict rules unchanged (pooled >= 300 signals per variant, mean net > 0, CI lower bound > 0, both halves positive, positive without any single instrument, >= 2 of 3 horizons). The live feed carries both scans.
+
+## Reading notes supplied by the owner (2026-10-24) and how they apply here
+1. These are Chartink filter specifications, not text to paste into the scanner box; each condition belongs in Chartink's filter builder with the (A OR B) grouping set explicitly. Here nothing is pasted into Chartink: the logic is implemented directly in app/scanner/intraday.py with the grouping FULL = CORE AND (A OR B) written explicitly and tested (tests/test_scanner_intraday.py).
+2. "Liquidity sweep" is only a proxy: a bar that trades beyond the previous bar's low / high and closes back inside it. It is not a measured sweep of resting orders.
+3. True order flow (bid/ask delta, footprint, order-book imbalance) cannot come from these clauses; this scan sees price and volume only.
+4. Stronger support / resistance needs separate swing-high / swing-low logic; the previous-bar high / low used here is the weakest possible level. A swing-level variant would be a NEW pre-registered variant (not added now).
+5. Live use: the feed is observation / paper only; a scanner signal alone is not a trade. Every message says so.
