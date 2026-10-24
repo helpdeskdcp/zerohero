@@ -71,3 +71,16 @@ def test_safeguard_enforce_symbols_only_listed(monkeypatch):
     sg = SG.Safeguards(base)
     assert sg.check_entry(underlying="CRUDEOIL", **kw)[0] is False and "net-edge suspended" in sg.check_entry(underlying="NATURALGAS", **kw)[1]
     assert "net-edge" not in sg.check_entry(underlying="SENSEX", **kw)[1]                      # unlisted symbol is not touched by the list
+
+
+def test_underlying_edge_uses_signal_direction_and_futures_cost(tmp_path):
+    import sqlite3
+    db = str(tmp_path / "c.db"); c = sqlite3.connect(db)
+    c.execute("CREATE TABLE scalp_signals (symbol TEXT, decision TEXT, created_ts TEXT, entry_ts TEXT, exit_ts TEXT, holding_sec REAL, r_multiple REAL, exit_reason TEXT)")
+    for i, (dec, p0, p1) in enumerate([("BUY_CE", 100.0, 100.10), ("BUY_PE", 100.0, 99.90), ("BUY_CE", 100.0, 99.95)]):
+        c.execute("INSERT INTO scalp_signals VALUES (?,?,?,?,?,?,?,?)", ("NIFTY", dec, f"2026-10-0{i + 1}T05:00:00Z", f"2026-10-0{i + 1}T05:00:00Z", f"2026-10-0{i + 1}T05:15:00Z", 900, 0.1, "TIME"))
+    c.commit(); c.close(); prices = {("2026-10-01T05:00:00Z"): 100.0}
+    def price_fn(sym, ts):
+        d = str(ts)[:10]; end = str(ts).endswith("05:15:00Z"); return {"2026-10-01": (100.0, 100.10), "2026-10-02": (100.0, 99.90), "2026-10-03": (100.0, 99.95)}[d][1 if end else 0]
+    out = NE.underlying_edge(db, price_fn)
+    assert out["NIFTY"]["n"] == 3 and abs(out["NIFTY"]["gross_bp"] - ((10 + 10 - 5) / 3)) < 0.01 and abs(out["NIFTY"]["net_bp_after_futures_cost"] - (out["NIFTY"]["gross_bp"] - 1.0)) < 0.01

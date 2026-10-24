@@ -79,10 +79,54 @@ def analyze(rows: pd.DataFrame, lot_fn=None, friction_fn=None) -> dict:
     return out
 
 
+FUT_COST_BP = {"NIFTY": 1.0, "BANKNIFTY": 1.0, "SENSEX": 1.5, "NATURALGAS": 4.0, "CRUDEOIL": 3.0, "GOLDM": 3.0}          # assumed round-trip cost of trading the FUTURE instead of the option (bp)
+_KIND = {"NIFTY": "INDEX", "BANKNIFTY": "INDEX", "SENSEX": "INDEX", "NATURALGAS": "FUTURE", "CRUDEOIL": "FUTURE", "GOLDM": "FUTURE"}
+
+
+def _underlying_price(sym: str, ts: str, hist_db: str | None = None):
+    """1-minute close of the underlying (index, or the most-traded future) nearest to ts, within 150 s; None if the capture has a hole there."""
+    from datetime import datetime, timezone
+    t = datetime.fromisoformat(str(ts).replace("Z", "+00:00")).astimezone(timezone.utc).timestamp()
+    f = lambda e: datetime.fromtimestamp(e, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    p = hist_db or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "market_history.db")
+    c = sqlite3.connect(f"file:{os.path.abspath(p)}?mode=ro", uri=True, timeout=10)
+    try: r = c.execute("SELECT bar_start, c, v FROM market_candles WHERE symbol=? AND kind=? AND tf='1m' AND bar_start BETWEEN ? AND ?", (sym, _KIND.get(sym, "INDEX"), f(t - 150), f(t + 30))).fetchall()
+    finally: c.close()
+    if not r: return None
+    best = max(r, key=lambda x: (x[0], x[2] or 0)); bt = datetime.fromisoformat(best[0].replace("Z", "+00:00")).timestamp()
+    return float(best[1]) if abs(bt - t) <= 150 else None
+
+
+def underlying_edge(db_path: str | None = None, price_fn=None) -> dict:
+    """Does the SIGNAL move the underlying in its direction between entry and exit? Option charges, theta and spread are irrelevant here: this is the edge a futures trade could capture,
+    minus an assumed futures cost. (2026-10-24: +0.27 bp gross over ~16 min, 46 % hit, net -2.2 bp -> switching the vehicle to futures would not rescue the signal.)"""
+    from .. import db as _db
+    price_fn = price_fn or _underlying_price; p = db_path or _db.DB_PATH
+    c = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=15)
+    try:
+        s = pd.read_sql_query("SELECT symbol, decision, created_ts, entry_ts, exit_ts, holding_sec FROM scalp_signals WHERE r_multiple IS NOT NULL AND exit_reason IS NOT NULL AND exit_reason!='TIME_NODATA' AND exit_ts IS NOT NULL", c)
+    finally:
+        c.close()
+    rows = []
+    for r in s.itertuples():
+        try: p0, p1 = price_fn(r.symbol, r.entry_ts or r.created_ts), price_fn(r.symbol, r.exit_ts)
+        except Exception: continue
+        if p0 and p1: sg = 1 if r.decision == "BUY_CE" else -1; rows.append((r.symbol, str(r.entry_ts or r.created_ts)[:10], sg * (p1 / p0 - 1) * 1e4, r.holding_sec or 0))
+    d = pd.DataFrame(rows, columns=["sym", "day", "bp", "hold"]); out = {}
+    if d.empty: return out
+    d["net"] = d["bp"] - d["sym"].map(FUT_COST_BP).fillna(3.0)
+    for k, g in list(d.groupby("sym")) + [("ALL", d)]:
+        lo, hi = _boot_ci(g["net"].values, g["day"].values)
+        out[k] = {"n": int(len(g)), "avg_hold_min": round(float(g["hold"].mean()) / 60, 1), "gross_bp": round(float(g["bp"].mean()), 2), "hit": round(float((g["bp"] > 0).mean()), 2), "net_bp_after_futures_cost": round(float(g["net"].mean()), 2), "net_ci90": [round(lo, 2), round(hi, 2)]}
+    return out
+
+
 def report(db_path: str | None = None, max_age: float = 300.0) -> dict:
     k = db_path or ""; hit = _cache.get(k)
     if hit and time.time() - hit[0] < max_age: return hit[1]
-    v = {"as_of": time.strftime("%F %T"), "per_symbol": analyze(load_rows(db_path)), "note": "Rs per 1 lot per trade, after charges + half-spread slippage, 90% day-block bootstrap CI; entries/exits are the stored signal marks"}
+    try: ue = underlying_edge(db_path)
+    except Exception as e: ue = {"error": repr(e)}
+    v = {"as_of": time.strftime("%F %T"), "per_symbol": analyze(load_rows(db_path)), "underlying_edge_bp": ue, "note": "Rs per 1 lot per trade, after charges + half-spread slippage, 90% day-block bootstrap CI; entries/exits are the stored signal marks"}
     _cache[k] = (time.time(), v); return v
 
 
