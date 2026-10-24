@@ -8,13 +8,14 @@ import sqlite3
 import threading
 import time
 
+from .settle import FUTURE_STAMP_SEC
 from .submit import norm_expiry
 
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
 _cache: dict = {}
 
 # A frame whose exchange stamp is ahead of its receive time (mis-stamped, see settle.FUTURE_STAMP_SEC) must never be shown as the 'latest' quote.
-NOT_FUTURE = " AND (exch_ts IS NULL OR strftime('%s',exch_ts)-strftime('%s',received_ts)<=30)"
+NOT_FUTURE = f" AND (exch_ts IS NULL OR strftime('%s',exch_ts)-strftime('%s',received_ts)<={FUTURE_STAMP_SEC})"
 
 
 def _ro(path):
