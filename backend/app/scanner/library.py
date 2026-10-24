@@ -1,0 +1,21 @@
+"""The fixed scan library (spec data/research/scanner/SPEC_2026-10-24.md). name -> (side, expression). Never edit an existing entry after its first historical result; add new ones."""
+SCANS = {
+    "BRK20_UP": ("LONG", "close > hh(20)"),
+    "BRK20_DN": ("SHORT", "close < ll(20)"),
+    "EMACROSS_UP": ("LONG", "crosses_above(ema(close, 20), ema(close, 50))"),
+    "EMACROSS_DN": ("SHORT", "crosses_below(ema(close, 20), ema(close, 50))"),
+    "RSI_OS_UP": ("LONG", "crosses_above(rsi(close, 14), 30)"),
+    "RSI_OB_DN": ("SHORT", "crosses_below(rsi(close, 14), 70)"),
+    "TDB_LOW20": ("LONG", "(close < ref(close, 1)) & (ref(close, 1) < ref(close, 2)) & (ref(close, 2) < ref(close, 3)) & (close - lowest(low, 20) < 0.5 * atr(14))"),
+    "TUB_HIGH20": ("SHORT", "(close > ref(close, 1)) & (ref(close, 1) > ref(close, 2)) & (ref(close, 2) > ref(close, 3)) & (highest(high, 20) - close < 0.5 * atr(14))"),
+    "GAP_DN_BUY": ("LONG", "open < ref(low, 1) - 0.5 * ref(atr(14), 1)"),
+    "GAP_UP_SELL": ("SHORT", "open > ref(high, 1) + 0.5 * ref(atr(14), 1)"),
+    "BBSQ_UP": ("LONG", "(lowest(bbw(20), 5) <= lowest(bbw(20), 120)) & (close > bb_upper(20))"),
+    "BBSQ_DN": ("SHORT", "(lowest(bbw(20), 5) <= lowest(bbw(20), 120)) & (close < bb_lower(20))"),
+    "BIGBAR_UP": ("LONG", "((high - low) > 2 * atr(14)) & (close >= high - 0.25 * (high - low))"),
+    "BIGBAR_DN": ("SHORT", "((high - low) > 2 * atr(14)) & (close <= low + 0.25 * (high - low))"),
+    "PWH_BRK_UP": ("LONG", "(close > pwh) & (ref(close, 1) <= ref(pwh, 1))"),
+    "PWL_BRK_DN": ("SHORT", "(close < pwl) & (ref(close, 1) >= ref(pwl, 1))"),
+    "PMH_BRK_UP": ("LONG", "(close > pmh) & (ref(close, 1) <= ref(pmh, 1))"),
+    "PML_BRK_DN": ("SHORT", "(close < pml) & (ref(close, 1) >= ref(pml, 1))"),
+}
