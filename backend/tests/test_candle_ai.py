@@ -74,3 +74,12 @@ def test_regime_layer_is_causal():
     mut = df.copy(); mut.loc[k:, ["o", "h", "l", "c"]] *= 1.2
     pd.testing.assert_frame_equal(regime_frame(mut, g, h).iloc[:k].reset_index(drop=True), cut, check_exact=False, atol=1e-9)
     assert np.allclose(full[[f"hmm_p{i}" for i in range(3)]].sum(axis=1), 1.0) and (full["sigma_next"] > 0).all()
+
+
+def test_pivot_reversal_signals_are_causal_and_fire_on_constructed_setup():
+    from app.candle_ai import pivot_reversal as PR
+    df = _bars(days=12, seed=9); k = len(df) - 50
+    full = PR.signals(df); cut = PR.signals(df.iloc[:k].reset_index(drop=True))
+    pd.testing.assert_frame_equal(full.iloc[:k].reset_index(drop=True), cut, check_exact=False)
+    mut = df.copy(); mut.loc[k:, ["o", "h", "l", "c"]] *= 1.2; pd.testing.assert_frame_equal(PR.signals(mut).iloc[:k].reset_index(drop=True), cut, check_exact=False)
+    lines, names = PR.pivot_lines(df); assert len(names) == 13 and lines.iloc[:75].isna().all().all()                 # first session has no previous session

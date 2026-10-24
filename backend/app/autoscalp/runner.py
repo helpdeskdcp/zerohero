@@ -784,6 +784,12 @@ class AutoScalpRunner:
                                      reason=sig.get("reason"), regime=sig.get("regime"))
         except Exception as e:
             _log.debug("renko tick shadow hook failed for %s (cosmetic): %r", sym, e)
+        # Pivot-line reversal SIGNAL feed (engulfing / harami at a pivot line after consolidation): observation only, own SQLite file, daemon thread, no decision input.
+        try:
+            from . import pivot_reversal_shadow as _prs
+            _prs.observe_async(sym)
+        except Exception as e:
+            _log.debug("pivot reversal shadow hook failed for %s (cosmetic): %r", sym, e)
         await self._emit("autoscalp_signal", {"symbol": sym, **{k: sig.get(k) for k in
                          ("decision", "signal_type", "direction", "probability", "confidence", "reason")}})
         if sig.get("false_risk") == "LIKELY_FALSE" or sig.get("filtered"):

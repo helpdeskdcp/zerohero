@@ -86,6 +86,21 @@ def api_autoscalp_report(day: str | None = None):
         raise HTTPException(500, f"{type(e).__name__}: {e}")
 
 
+@router.get("/api/autoscalp/pivot-reversal")
+def api_autoscalp_pivot_reversal(limit: int = 50):
+    """Pivot-line reversal signal feed (observation only): recent fired signals with their forward returns, plus the historical study verdict."""
+    import json as _json, os as _os, sqlite3 as _sq
+    from ..autoscalp import pivot_reversal_shadow as _ps
+    rows = []
+    if _os.path.exists(_ps._db()):
+        c = _sq.connect(f"file:{_ps._db()}?mode=ro", uri=True, timeout=5)
+        try: rows = [dict(zip(("symbol", "bar_start", "variant", "side", "close", "fwd3_bps", "fwd6_bps", "fwd12_bps"), r)) for r in c.execute("SELECT symbol, bar_start, variant, side, close, fwd3, fwd6, fwd12 FROM pivot_signals ORDER BY id DESC LIMIT ?", (min(limit, 500),)).fetchall()]
+        finally: c.close()
+    try: study = _json.load(open(_os.path.join(_os.path.dirname(_os.path.dirname(__file__)), "..", "data", "research", "pivot_reversal", "results.json")))["verdict"]
+    except Exception: study = None
+    return {"signals": rows, "study_verdict": study, "note": "forward returns are gross bps (no cost); the historical study found no demonstrated net edge", "enabled": _ps.enabled()}
+
+
 @router.get("/api/autoscalp/net-edge")
 def api_autoscalp_net_edge():
     """Real rupee expectancy per symbol after charges + slippage (read-only). See app/autoscalp/net_edge.py."""
