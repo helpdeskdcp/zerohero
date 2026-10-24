@@ -264,7 +264,7 @@ def test_sl_at_fill_does_not_fire_for_a_normal_stop_and_inactive_without_file(tm
 def _chain_db(tmp_path, fut_rows=None, index=None, name="c.db"):
     import sqlite3
     p = str(tmp_path / name); c = sqlite3.connect(p)
-    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL)")
+    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL, exch_ts TEXT)")
     rows = []
     for k in range(9200, 9700, 50):
         for ot in ("CE", "PE"): rows.append(("2026-10-20T13:00:00Z", "CRUDEOIL", "OPTION", "17NOV2026", float(k), ot, "2026-10-20", 500.0 - (k - 9400) * 0.5 if ot == "CE" else 500.0 + (k - 9400) * 0.5, None, None))
@@ -316,3 +316,15 @@ def test_load_snaps_retimes_future_stamped_frame(tmp_path):
     c.commit(); c.close()
     sn = S.load_snaps("NATURALGAS", "2026-10-23", 265.0, "PE", "2026-10-23", db)
     assert [x["ltp"] for x in sn] == [9.25, 9.25, 7.85] and sn[-1]["t"] == S._ep("2026-10-23T11:57:42Z")
+
+
+def test_last_quote_and_latest_quote_ignore_future_stamped_frame(tmp_path):
+    from app.arena import contracts as C
+    db = str(tmp_path / "m.db"); c = sqlite3.connect(db)
+    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, exch_ts TEXT, ltp REAL, bid REAL, ask REAL, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, source TEXT)")
+    for rt, et, px in [("11:48:03", "11:48:02", 9.25), ("11:48:08", "11:57:42", 7.85)]:
+        c.execute("INSERT INTO quote_snapshots (received_ts,exch_ts,ltp,bid,ask,symbol,kind,expiry,strike,option_type,session_date_ist,source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                  (f"2026-10-23T{rt}Z", f"2026-10-23T{et}Z", px, px - 0.05, px, "NATURALGAS", "OPTION", "23OCT2026", 265.0, "PE", "2026-10-23", "ANGELONE_QUOTE_FULL"))
+    c.commit(); c.close()
+    assert C.last_quote("NATURALGAS", "2026-10-23", 265.0, "PE", "2026-10-23", db)["ltp"] == 9.25
+    assert C.latest_quote("NATURALGAS", "2026-10-23", 265.0, "PE", db)["ltp"] == 9.25

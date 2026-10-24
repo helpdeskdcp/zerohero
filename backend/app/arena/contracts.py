@@ -13,6 +13,9 @@ from .submit import norm_expiry
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
 _cache: dict = {}
 
+# A frame whose exchange stamp is ahead of its receive time (mis-stamped, see settle.FUTURE_STAMP_SEC) must never be shown as the 'latest' quote.
+NOT_FUTURE = " AND (exch_ts IS NULL OR strftime('%s',exch_ts)-strftime('%s',received_ts)<=30)"
+
 
 def _ro(path):
     return sqlite3.connect(f"file:{os.path.abspath(path or DB)}?mode=ro", uri=True, timeout=20)
@@ -121,7 +124,7 @@ def last_quote(underlying: str, expiry_iso: str, strike: float, ot: str, day: st
     c = _ro(path)
     try:
         d = day or latest_day(path)
-        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE session_date_ist=? AND symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND ltp IS NOT NULL ORDER BY id DESC LIMIT 1",
+        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE session_date_ist=? AND symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY id DESC LIMIT 1",
                       (d, underlying, snap_expiry(expiry_iso), strike, ot)).fetchone()
     finally:
         c.close()
@@ -158,9 +161,9 @@ def spot_for(underlying: str, option_expiry_iso: str | None = None, path: str | 
     c = _ro(path)
     try:
         mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
-        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL ORDER BY id DESC LIMIT 1", (mx - 60000, underlying)).fetchone()
+        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY id DESC LIMIT 1", (mx - 60000, underlying)).fetchone()
         if r: return float(r[0]), f"INDEX @ {r[1]}"
-        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL ORDER BY id DESC", (mx - 60000, underlying)).fetchall()
+        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY id DESC", (mx - 60000, underlying)).fetchall()
     finally:
         c.close()
     best: dict = {}
@@ -212,7 +215,7 @@ def _chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path:
     try:
         mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
         qs: dict = {}
-        for k, ltp, bid, ask, ts in c.execute("SELECT strike, ltp, bid, ask, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='OPTION' AND expiry=? AND option_type=? AND strike BETWEEN ? AND ? AND ltp IS NOT NULL ORDER BY id DESC",
+        for k, ltp, bid, ask, ts in c.execute("SELECT strike, ltp, bid, ask, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='OPTION' AND expiry=? AND option_type=? AND strike BETWEEN ? AND ? AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY id DESC",
                                               (mx - 60000, underlying, snap_expiry(expiry_iso), option_type, win[0], win[-1])):
             qs.setdefault(float(k), {"ltp": ltp, "bid": bid, "ask": ask, "ts": ts})
     finally:
@@ -236,7 +239,7 @@ def latest_quote(underlying: str, expiry_iso: str, strike: float, ot: str, path:
     if hit and time.time() - hit[0] < 1.0: return hit[1]
     c = _ro(path)
     try:
-        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL ORDER BY exch_ts DESC LIMIT 1",
+        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY exch_ts DESC LIMIT 1",
                       (underlying, snap_expiry(expiry_iso), float(strike), ot)).fetchone()
     finally:
         c.close()

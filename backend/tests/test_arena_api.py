@@ -170,7 +170,7 @@ def test_events_flow_into_scored_signals_and_settlement(tmp_path):
 def _mkdb(tmp_path):
     import sqlite3
     p = str(tmp_path / "m.db"); c = sqlite3.connect(p)
-    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL)")
+    c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL, exch_ts TEXT)")
     rows = [("2026-10-20T13:20:00Z", "CRUDEOIL", "OPTION", "17NOV2026", k, ot, "2026-10-20", ltp, ltp - 1, ltp + 1) for k, ot, ltp in [(9400.0, "CE", 578.0), (9500.0, "CE", 534.0), (9500.0, "PE", 516.0), (9600.0, "CE", 490.0)]]
     c.executemany("INSERT INTO quote_snapshots (received_ts,symbol,kind,expiry,strike,option_type,session_date_ist,ltp,bid,ask) VALUES (?,?,?,?,?,?,?,?,?,?)", rows); c.commit(); c.close(); return p
 
