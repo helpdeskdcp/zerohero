@@ -125,6 +125,13 @@ def api_autoscalp_option_flow(limit: int = 30):
     return {"latest": rows, "forward": _of.forward_report(), "enabled": _of.enabled()}
 
 
+@router.get("/api/autoscalp/scan5m")
+def api_autoscalp_scan5m(limit: int = 40):
+    """The owner's 5-minute bullish / bearish scans (futures): latest candidates and forward returns (observation only; back-test found no edge)."""
+    from ..autoscalp import scan5m_shadow as _s5
+    return {**_s5.report(limit=limit), "enabled": _s5.enabled()}
+
+
 @router.get("/api/autoscalp/net-edge")
 def api_autoscalp_net_edge():
     """Real rupee expectancy per symbol after charges + slippage (read-only). See app/autoscalp/net_edge.py."""

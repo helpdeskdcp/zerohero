@@ -790,6 +790,12 @@ class AutoScalpRunner:
             _prs.observe_async(sym)
         except Exception as e:
             _log.debug("pivot reversal shadow hook failed for %s (cosmetic): %r", sym, e)
+        # Owner's 5-minute bullish/bearish scans on the futures: observation only, own SQLite file, daemon thread, no decision input.
+        try:
+            from . import scan5m_shadow as _s5
+            _s5.observe_async(sym)
+        except Exception as e:
+            _log.debug("scan5m shadow hook failed for %s (cosmetic): %r", sym, e)
         # Live option-flow (put-call parity) feed for the replicated F3 signal: observation only, own SQLite file, daemon thread, no decision input, no message.
         try:
             from . import option_flow_shadow as _ofs

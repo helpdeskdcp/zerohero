@@ -1,0 +1,592 @@
+{
+ "instruments": {
+  "NIFTY": {
+   "bars": 6009,
+   "from": "2026-07-01",
+   "to": "2026-10-23",
+   "sessions": 80
+  },
+  "BANKNIFTY": {
+   "bars": 5973,
+   "from": "2026-07-01",
+   "to": "2026-10-23",
+   "sessions": 80
+  },
+  "SENSEX": {
+   "bars": 3027,
+   "from": "2026-07-31",
+   "to": "2026-09-28",
+   "sessions": 41
+  },
+  "NATURALGAS": {
+   "bars": 13895,
+   "from": "2026-06-30",
+   "to": "2026-10-23",
+   "sessions": 83
+  },
+  "CRUDEOIL": {
+   "bars": 12862,
+   "from": "2026-07-02",
+   "to": "2026-10-23",
+   "sessions": 78
+  },
+  "GOLDM": {
+   "bars": 238,
+   "from": "2026-10-22",
+   "to": "2026-10-23",
+   "sessions": 2
+  }
+ },
+ "variants": {
+  "FULL_BULL": {
+   "horizons": {
+    "3": {
+     "n": 1463,
+     "n_by_inst": {
+      "BANKNIFTY": 194,
+      "CRUDEOIL": 496,
+      "GOLDM": 4,
+      "NATURALGAS": 500,
+      "NIFTY": 175,
+      "SENSEX": 94
+     },
+     "mean_net": -3.4472409994447513,
+     "hit": 0.3738892686261107,
+     "mean_gross": -0.7062977321856949,
+     "ci_lo": -5.370991007454491,
+     "halves": [
+      -4.7773370412364144,
+      -2.0365898452628897
+     ],
+     "drop_one": {
+      "NIFTY": -3.8152290763785497,
+      "BANKNIFTY": -3.878185733549579,
+      "SENSEX": -3.4508717766106116,
+      "NATURALGAS": -2.5519245099341465,
+      "CRUDEOIL": -3.2861408742485914,
+      "GOLDM": -3.4418712639091655
+     },
+     "pass": false
+    },
+    "6": {
+     "n": 1175,
+     "n_by_inst": {
+      "BANKNIFTY": 153,
+      "CRUDEOIL": 409,
+      "GOLDM": 4,
+      "NATURALGAS": 399,
+      "NIFTY": 137,
+      "SENSEX": 73
+     },
+     "mean_net": -2.8857888996845897,
+     "hit": 0.4374468085106383,
+     "mean_gross": -0.1330229422377818,
+     "ci_lo": -6.0127131381042656,
+     "halves": [
+      -5.343578876804085,
+      -0.3123885926309032
+     ],
+     "drop_one": {
+      "NIFTY": -3.300429115933764,
+      "BANKNIFTY": -3.3997588923239173,
+      "SENSEX": -2.982464004506095,
+      "NATURALGAS": -2.122460329622454,
+      "CRUDEOIL": -2.3034952706726686,
+      "GOLDM": -2.8654388123524086
+     },
+     "pass": false
+    },
+    "12": {
+     "n": 914,
+     "n_by_inst": {
+      "BANKNIFTY": 115,
+      "CRUDEOIL": 315,
+      "GOLDM": 3,
+      "NATURALGAS": 312,
+      "NIFTY": 108,
+      "SENSEX": 61
+     },
+     "mean_net": -2.3295182420426523,
+     "hit": 0.4540481400437637,
+     "mean_gross": 0.42376403366850834,
+     "ci_lo": -7.109030871579308,
+     "halves": [
+      -5.297382437745447,
+      0.7173135154083324
+     ],
+     "drop_one": {
+      "NIFTY": -2.650681519913873,
+      "BANKNIFTY": -2.7488596476198226,
+      "SENSEX": -2.3060304599259496,
+      "NATURALGAS": -0.3285658759896902,
+      "CRUDEOIL": -3.5188031633323655,
+      "GOLDM": -2.2398534227633196
+     },
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "A_BULL": {
+   "horizons": {
+    "3": {
+     "n": 277,
+     "n_by_inst": {
+      "BANKNIFTY": 49,
+      "CRUDEOIL": 84,
+      "GOLDM": 1,
+      "NATURALGAS": 83,
+      "NIFTY": 46,
+      "SENSEX": 14
+     },
+     "mean_net": -2.5537994792606344,
+     "hit": 0.37906137184115524,
+     "mean_gross": -0.015893342076518834
+    },
+    "6": {
+     "n": 255,
+     "n_by_inst": {
+      "BANKNIFTY": 40,
+      "CRUDEOIL": 82,
+      "GOLDM": 1,
+      "NATURALGAS": 78,
+      "NIFTY": 40,
+      "SENSEX": 14
+     },
+     "mean_net": 0.13991603790154122,
+     "hit": 0.4627450980392157,
+     "mean_gross": 2.735994469274089
+    },
+    "12": {
+     "n": 225,
+     "n_by_inst": {
+      "BANKNIFTY": 35,
+      "CRUDEOIL": 72,
+      "GOLDM": 1,
+      "NATURALGAS": 70,
+      "NIFTY": 34,
+      "SENSEX": 13
+     },
+     "mean_net": 3.2321610275354344,
+     "hit": 0.4488888888888889,
+     "mean_gross": 5.843272138646546
+    }
+   },
+   "npass": 0,
+   "verdict": "INSUFFICIENT_SAMPLE"
+  },
+  "B_BULL": {
+   "horizons": {
+    "3": {
+     "n": 1369,
+     "n_by_inst": {
+      "BANKNIFTY": 179,
+      "CRUDEOIL": 469,
+      "GOLDM": 3,
+      "NATURALGAS": 472,
+      "NIFTY": 153,
+      "SENSEX": 93
+     },
+     "mean_net": -3.367409671371273,
+     "hit": 0.379108838568298,
+     "mean_gross": -0.6095572243296371,
+     "ci_lo": -5.414960319483216,
+     "halves": [
+      -4.788040489128662,
+      -1.8413077777500788
+     ],
+     "drop_one": {
+      "NIFTY": -3.760444350024656,
+      "BANKNIFTY": -3.8230268787901727,
+      "SENSEX": -3.3639605956892855,
+      "NATURALGAS": -2.4707202671126725,
+      "CRUDEOIL": -3.1429520812483145,
+      "GOLDM": -3.3605492037503653
+     },
+     "pass": false
+    },
+    "6": {
+     "n": 1112,
+     "n_by_inst": {
+      "BANKNIFTY": 142,
+      "CRUDEOIL": 392,
+      "GOLDM": 3,
+      "NATURALGAS": 380,
+      "NIFTY": 123,
+      "SENSEX": 72
+     },
+     "mean_net": -2.901468455211783,
+     "hit": 0.44064748201438847,
+     "mean_gross": -0.13348284370099192,
+     "ci_lo": -6.290236735393878,
+     "halves": [
+      -5.712469728606141,
+      0.05475059614390759
+     ],
+     "drop_one": {
+      "NIFTY": -3.357615628162072,
+      "BANKNIFTY": -3.4666768865562743,
+      "SENSEX": -3.0217548239861824,
+      "NATURALGAS": -2.144934026829058,
+      "CRUDEOIL": -2.1515483326633857,
+      "GOLDM": -2.873737286441389
+     },
+     "pass": false
+    },
+    "12": {
+     "n": 877,
+     "n_by_inst": {
+      "BANKNIFTY": 108,
+      "CRUDEOIL": 306,
+      "GOLDM": 3,
+      "NATURALGAS": 301,
+      "NIFTY": 99,
+      "SENSEX": 60
+     },
+     "mean_net": -1.9609735884670974,
+     "hit": 0.4583808437856328,
+     "mean_gross": 0.8075554879297105,
+     "ci_lo": -6.859753519635217,
+     "halves": [
+      -5.532673917847139,
+      1.7350318567846401
+     ],
+     "drop_one": {
+      "NIFTY": -2.2310945734133143,
+      "BANKNIFTY": -2.3697743467030876,
+      "SENSEX": -1.9174115003157535,
+      "NATURALGAS": -0.24950474463951464,
+      "CRUDEOIL": -3.005673132952626,
+      "GOLDM": -1.846958635139252
+     },
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "FULL_BEAR": {
+   "horizons": {
+    "3": {
+     "n": 1511,
+     "n_by_inst": {
+      "BANKNIFTY": 209,
+      "CRUDEOIL": 412,
+      "GOLDM": 10,
+      "NATURALGAS": 526,
+      "NIFTY": 220,
+      "SENSEX": 134
+     },
+     "mean_net": -2.5406127086481107,
+     "hit": 0.385837193911317,
+     "mean_gross": 0.10664076587207472,
+     "ci_lo": -4.667079748336364,
+     "halves": [
+      -4.3752334700455435,
+      -0.7797575031564105
+     ],
+     "drop_one": {
+      "NIFTY": -2.8704017432022364,
+      "BANKNIFTY": -3.122300907251569,
+      "SENSEX": -2.6314095426158777,
+      "NATURALGAS": -1.8945505665679783,
+      "CRUDEOIL": -1.8452563317478583,
+      "GOLDM": -2.602188291324734
+     },
+     "pass": false
+    },
+    "6": {
+     "n": 1245,
+     "n_by_inst": {
+      "BANKNIFTY": 171,
+      "CRUDEOIL": 349,
+      "GOLDM": 8,
+      "NATURALGAS": 433,
+      "NIFTY": 175,
+      "SENSEX": 109
+     },
+     "mean_net": -2.687783995733727,
+     "hit": 0.41445783132530123,
+     "mean_gross": -0.027141425452602317,
+     "ci_lo": -5.821219631302899,
+     "halves": [
+      -4.934246197030203,
+      -0.5573362743164106
+     ],
+     "drop_one": {
+      "NIFTY": -2.9325210492526743,
+      "BANKNIFTY": -3.2634059399834867,
+      "SENSEX": -2.8313365270701816,
+      "NATURALGAS": -2.4195604595421676,
+      "CRUDEOIL": -1.6820326043708465,
+      "GOLDM": -2.74905195617104
+     },
+     "pass": false
+    },
+    "12": {
+     "n": 947,
+     "n_by_inst": {
+      "BANKNIFTY": 137,
+      "CRUDEOIL": 269,
+      "GOLDM": 5,
+      "NATURALGAS": 332,
+      "NIFTY": 127,
+      "SENSEX": 77
+     },
+     "mean_net": -0.7747038264300607,
+     "hit": 0.44350580781414994,
+     "mean_gross": 1.8963626994411116,
+     "ci_lo": -5.198762355558434,
+     "halves": [
+      -3.1696082373038275,
+      1.6354224345128197
+     ],
+     "drop_one": {
+      "NIFTY": -0.8923984280818905,
+      "BANKNIFTY": -1.224109952762415,
+      "SENSEX": -0.716461654790723,
+      "NATURALGAS": -1.2624145851177133,
+      "CRUDEOIL": 0.44271461798370637,
+      "GOLDM": -0.8974317907210845
+     },
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "A_BEAR": {
+   "horizons": {
+    "3": {
+     "n": 296,
+     "n_by_inst": {
+      "BANKNIFTY": 53,
+      "CRUDEOIL": 89,
+      "GOLDM": 1,
+      "NATURALGAS": 79,
+      "NIFTY": 52,
+      "SENSEX": 22
+     },
+     "mean_net": -2.6165774563966218,
+     "hit": 0.3614864864864865,
+     "mean_gross": -0.17063151045067598
+    },
+    "6": {
+     "n": 275,
+     "n_by_inst": {
+      "BANKNIFTY": 50,
+      "CRUDEOIL": 83,
+      "GOLDM": 1,
+      "NATURALGAS": 78,
+      "NIFTY": 43,
+      "SENSEX": 20
+     },
+     "mean_net": -1.258647028424344,
+     "hit": 0.43636363636363634,
+     "mean_gross": 1.239534789757474
+    },
+    "12": {
+     "n": 244,
+     "n_by_inst": {
+      "BANKNIFTY": 42,
+      "CRUDEOIL": 79,
+      "GOLDM": 1,
+      "NATURALGAS": 72,
+      "NIFTY": 35,
+      "SENSEX": 15
+     },
+     "mean_net": -1.0507870227496396,
+     "hit": 0.45491803278688525,
+     "mean_gross": 1.52093428872577
+    }
+   },
+   "npass": 0,
+   "verdict": "INSUFFICIENT_SAMPLE"
+  },
+  "B_BEAR": {
+   "horizons": {
+    "3": {
+     "n": 1423,
+     "n_by_inst": {
+      "BANKNIFTY": 193,
+      "CRUDEOIL": 390,
+      "GOLDM": 10,
+      "NATURALGAS": 506,
+      "NIFTY": 197,
+      "SENSEX": 127
+     },
+     "mean_net": -2.4381653807700276,
+     "hit": 0.38791286015460297,
+     "mean_gross": 0.23541156933538332,
+     "ci_lo": -4.515407510841239,
+     "halves": [
+      -3.962745960812639,
+      -0.9703622843979687
+     ],
+     "drop_one": {
+      "NIFTY": -2.755245221995049,
+      "BANKNIFTY": -2.982341055810972,
+      "SENSEX": -2.595377598562395,
+      "NATURALGAS": -1.619590909663305,
+      "CRUDEOIL": -1.8548249294485246,
+      "GOLDM": -2.502850785100411
+     },
+     "pass": false
+    },
+    "6": {
+     "n": 1178,
+     "n_by_inst": {
+      "BANKNIFTY": 159,
+      "CRUDEOIL": 332,
+      "GOLDM": 8,
+      "NATURALGAS": 417,
+      "NIFTY": 159,
+      "SENSEX": 103
+     },
+     "mean_net": -2.68675722108323,
+     "hit": 0.4091680814940577,
+     "mean_gross": -0.0038200394193925067,
+     "ci_lo": -5.802412283987675,
+     "halves": [
+      -4.561572721316788,
+      -0.892913818866404
+     ],
+     "drop_one": {
+      "NIFTY": -2.9251587856595807,
+      "BANKNIFTY": -3.20500528505335,
+      "SENSEX": -2.8673272051600227,
+      "NATURALGAS": -2.3522474712814496,
+      "CRUDEOIL": -1.7572571765962275,
+      "GOLDM": -2.7515266679753254
+     },
+     "pass": false
+    },
+    "12": {
+     "n": 908,
+     "n_by_inst": {
+      "BANKNIFTY": 128,
+      "CRUDEOIL": 259,
+      "GOLDM": 5,
+      "NATURALGAS": 323,
+      "NIFTY": 118,
+      "SENSEX": 75
+     },
+     "mean_net": -0.9023833415659929,
+     "hit": 0.44713656387665196,
+     "mean_gross": 1.7875946320022886,
+     "ci_lo": -5.4357183819201,
+     "halves": [
+      -2.6714964503785525,
+      0.8902656400910783
+     ],
+     "drop_one": {
+      "NIFTY": -1.1169933359780186,
+      "BANKNIFTY": -1.3576421905241205,
+      "SENSEX": -0.850221635180851,
+      "NATURALGAS": -1.4657908715173016,
+      "CRUDEOIL": 0.526021344587097,
+      "GOLDM": -1.0311188232247126
+     },
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "ALL_BARS_LONG": {
+   "horizons": {
+    "3": {
+     "n": 10358,
+     "n_by_inst": {
+      "BANKNIFTY": 1461,
+      "CRUDEOIL": 3180,
+      "GOLDM": 59,
+      "NATURALGAS": 3440,
+      "NIFTY": 1470,
+      "SENSEX": 748
+     },
+     "mean_net": -2.575786862433931,
+     "hit": 0.3824097316084186,
+     "mean_gross": 0.08206214316560574
+    },
+    "6": {
+     "n": 5831,
+     "n_by_inst": {
+      "BANKNIFTY": 831,
+      "CRUDEOIL": 1783,
+      "GOLDM": 33,
+      "NATURALGAS": 1930,
+      "NIFTY": 836,
+      "SENSEX": 418
+     },
+     "mean_net": -2.9963740560614367,
+     "hit": 0.40336134453781514,
+     "mean_gross": -0.34468480893401426
+    },
+    "12": {
+     "n": 3010,
+     "n_by_inst": {
+      "BANKNIFTY": 394,
+      "CRUDEOIL": 960,
+      "GOLDM": 18,
+      "NATURALGAS": 1040,
+      "NIFTY": 397,
+      "SENSEX": 201
+     },
+     "mean_net": -3.3174012555442567,
+     "hit": 0.42857142857142855,
+     "mean_gross": -0.5976338136837914
+    }
+   },
+   "npass": 0
+  },
+  "ALL_BARS_SHORT": {
+   "horizons": {
+    "3": {
+     "n": 10358,
+     "n_by_inst": {
+      "BANKNIFTY": 1461,
+      "CRUDEOIL": 3180,
+      "GOLDM": 59,
+      "NATURALGAS": 3440,
+      "NIFTY": 1470,
+      "SENSEX": 748
+     },
+     "mean_net": -2.739911148765142,
+     "hit": 0.38018922571925085,
+     "mean_gross": -0.08206214316560574
+    },
+    "6": {
+     "n": 5831,
+     "n_by_inst": {
+      "BANKNIFTY": 831,
+      "CRUDEOIL": 1783,
+      "GOLDM": 33,
+      "NATURALGAS": 1930,
+      "NIFTY": 836,
+      "SENSEX": 418
+     },
+     "mean_net": -2.3070044381934083,
+     "hit": 0.42737094837935174,
+     "mean_gross": 0.3446848089340143
+    },
+    "12": {
+     "n": 3010,
+     "n_by_inst": {
+      "BANKNIFTY": 394,
+      "CRUDEOIL": 960,
+      "GOLDM": 18,
+      "NATURALGAS": 1040,
+      "NIFTY": 397,
+      "SENSEX": 201
+     },
+     "mean_net": -2.122133628176674,
+     "hit": 0.4491694352159468,
+     "mean_gross": 0.5976338136837914
+    }
+   },
+   "npass": 0
+  }
+ }
+}
