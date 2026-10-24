@@ -14,8 +14,8 @@ from datetime import datetime, timedelta, timezone
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IST = timezone(timedelta(hours=5, minutes=30))
 BATCH, PAUSE = 5000, 0.2
-REMOTE = "gdrive-guardianx:ZeroHero-archive"
-QUOTA_GUARD = 11 * 2 ** 30
+REMOTE = os.environ.get("RETENTION_REMOTE", "gdrive-guardianx:ZeroHero-archive")            # rclone remote:folder
+QUOTA_GUARD = int(float(os.environ.get("RETENTION_QUOTA_GIB", "11")) * 2 ** 30)                # archive stops when the whole Drive account is above this
 DISK_PANIC_PCT = 92
 ARCHIVE = {("l2_capture.db", "snapquote_ticks"), ("market_history.db", "quote_snapshots"), ("market_history.db", "option_greeks")}
 # (db, table, time column, kind, keep_days, protected_from_contest_start)
@@ -43,7 +43,7 @@ def cutoff_id(c, table, col, kind, limit):
 
 
 class RcloneArchive:
-    def __init__(self, remote=REMOTE): self.remote = remote
+    def __init__(self, remote=None): self.remote = remote or REMOTE
 
     def _run(self, *a, timeout=1800): return subprocess.run(["rclone", *a], capture_output=True, text=True, timeout=timeout)
 
