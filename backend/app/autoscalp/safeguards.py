@@ -36,6 +36,8 @@ DEFAULTS = {
     # net-of-cost evidence (app/autoscalp/net_edge.py): when True, a symbol whose net Rs/trade has a 90 % CI entirely below 0 (>= 40 resolved trades) gets no NEW paper entries.
     # Default OFF: paper trades are free evidence; the monitor and the LIVE entry gate work regardless of this switch.
     "net_edge_enforce": False,
+    # ... or only for the listed underlyings (e.g. ["CRUDEOIL", "NATURALGAS"]); the same SUSPEND_RECOMMENDED rule decides, so a listed symbol resumes by itself if its evidence turns.
+    "net_edge_enforce_symbols": [],
 }
 
 
@@ -133,7 +135,7 @@ class Safeguards:
         except (TypeError, ValueError):
             return False, "feed age unavailable"
 
-        if c.get("net_edge_enforce"):
+        if c.get("net_edge_enforce") or str(underlying).upper() in {str(x).upper() for x in (c.get("net_edge_enforce_symbols") or [])}:
             try:
                 from . import net_edge
                 if net_edge.symbol_status(underlying) == "SUSPEND_RECOMMENDED": return False, f"net-edge suspended: {underlying} loses money after costs (see /api/autoscalp/net-edge)"

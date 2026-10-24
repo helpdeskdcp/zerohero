@@ -61,3 +61,13 @@ def test_live_entry_blocked_without_evidence_exits_never(monkeypatch):
     monkeypatch.delenv("CHANAKYA_NET_EDGE_OVERRIDE"); monkeypatch.setattr(NE, "report", lambda db_path=None, max_age=300.0: {"per_symbol": {"SENSEX": {"n": 150, "net_rs_per_trade": 120.0, "net_ci90": [10, 230], "status": "EVIDENCE_OK"}}})
     assert b.market_entry(_req()).ok
     assert NE.live_evidence_ok("UNKNOWNXYZ")[0] is False
+
+
+def test_safeguard_enforce_symbols_only_listed(monkeypatch):
+    monkeypatch.setattr(NE, "symbol_status", lambda s, db_path=None: "SUSPEND_RECOMMENDED")
+    monkeypatch.setattr(SG.killswitch, "is_active", lambda: False); monkeypatch.setattr(SG.Safeguards, "_trades_today", lambda self: 0); monkeypatch.setattr(SG.Safeguards, "_daily_realised", lambda self: 0.0)
+    base = {"allow_weekend": True, "session_start_hhmm": "00:00", "daily_cutoff_hhmm": "23:59", "mcx_daily_cutoff_hhmm": "23:59", "max_feed_age_sec": 99, "net_edge_enforce_symbols": ["CRUDEOIL", "naturalgas"]}
+    kw = dict(side="BUY_CE", open_keys=set(), feed_connected=True, feed_age_sec=1.0, open_count=0, exchange="MCX")
+    sg = SG.Safeguards(base)
+    assert sg.check_entry(underlying="CRUDEOIL", **kw)[0] is False and "net-edge suspended" in sg.check_entry(underlying="NATURALGAS", **kw)[1]
+    assert "net-edge" not in sg.check_entry(underlying="SENSEX", **kw)[1]                      # unlisted symbol is not touched by the list
