@@ -21,6 +21,7 @@ from ..instrument_profiles import get_instrument_profile
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
 LATENCY_SEC = 20
 RUNAWAY = 0.05
+FUTURE_STAMP_SEC = 30          # exch_ts more than this ahead of received_ts = mis-stamped frame (23-Oct-2026 NG 265 PE 17:18:08 false SL)
 IST_SEC = 19800
 SESSION_END_MIN = {"NSE": 15 * 60 + 15, "MCX": 23 * 60 + 15}
 MCX = {"NATURALGAS": "NATURALGAS_OPTION", "CRUDEOIL": "CRUDEOIL_OPTION", "GOLDM": "GOLDM_OPTION"}
@@ -38,13 +39,22 @@ def load_snaps(underlying: str, expiry_iso: str, strike: float, ot: str, day: st
     """Captured quotes of one contract for one session day. `since` (epoch) keeps only rows received at/after that instant: a settlement never needs the rows before its signal."""
     c = sqlite3.connect(f"file:{os.path.abspath(path or DB)}?mode=ro", uri=True, timeout=30)
     try:
-        q = "SELECT received_ts,ltp,bid,ask FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND session_date_ist=? AND ltp IS NOT NULL"
+        q = "SELECT received_ts,ltp,bid,ask,exch_ts FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND session_date_ist=? AND ltp IS NOT NULL"
         a = [underlying, snap_expiry(expiry_iso), strike, ot, day]
-        if since is not None: q += " AND received_ts>=?"; a.append(datetime.fromtimestamp(since, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"))
+        if since is not None:
+            sx = datetime.fromtimestamp(since, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"); q += " AND (received_ts>=? OR exch_ts>=?)"; a += [sx, sx]
         rows = c.execute(q + " ORDER BY received_ts", a).fetchall()
     finally:
         c.close()
-    return [{"t": _ep(r[0]), "ltp": r[1], "bid": r[2], "ask": r[3]} for r in rows]
+    out = []
+    for r in rows:
+        t = _ep(r[0])
+        try: te = _ep(r[4]) if r[4] else None
+        except ValueError: te = None
+        if te is not None and te - t > FUTURE_STAMP_SEC: t = te                                              # exchange stamp ahead of the receive time: the quote cannot have been seen yet -> placed at its exchange time
+        out.append({"t": t, "ltp": r[1], "bid": r[2], "ask": r[3]})
+    out.sort(key=lambda x: x["t"])
+    return [x for x in out if since is None or x["t"] >= since]
 
 
 def buy_px(s: dict, h: float) -> tuple[float, bool]:

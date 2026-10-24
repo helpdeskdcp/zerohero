@@ -92,8 +92,8 @@ def test_submission_validation_and_hash_chain(tmp_path):
 # ---------------- spread model + end-to-end ----------------
 def mkdb(tmp_path, rows):
     p = str(tmp_path / "m.db"); c = sqlite3.connect(p)
-    c.execute("CREATE TABLE quote_snapshots (received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL)")
-    c.executemany("INSERT INTO quote_snapshots VALUES (?,?,?,?,?,?,?,?,?,?)", rows); c.commit(); c.close(); return p
+    c.execute("CREATE TABLE quote_snapshots (received_ts TEXT, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT, ltp REAL, bid REAL, ask REAL, exch_ts TEXT)")
+    c.executemany("INSERT INTO quote_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,NULL)", rows); c.commit(); c.close(); return p
 
 
 def row(hhmm, und, ltp, bid, ask, strike=23000.0, ot="CE", exp="27OCT2026"):
@@ -303,3 +303,16 @@ def test_chain_endpoint_defaults_to_current_expiry_and_labels_roles(tmp_path, mo
     assert j["expiry"] == "2026-11-17" and j["expiries"][0]["role"] == "current" and j["atm"] == 9350.0 and len(j["rows"]) == 7
     assert cl.get("/api/arena/public/chain?underlying=TCS", headers={"X-Arena-Token": "tok"}).status_code == 422 and cl.get("/api/arena/public/chain?underlying=NIFTY").status_code == 401
     CT.warm(path=p)                                                                                                              # never raises, fills the cache
+
+
+def test_load_snaps_retimes_future_stamped_frame(tmp_path):
+    """23-Oct-2026 NG 265 PE: a frame received 11:48:08 but stamped (and volume-matching) 11:57:42 caused a false SL 9 min early."""
+    import sqlite3
+    from app.arena import settle as S
+    db = str(tmp_path / "m.db"); c = sqlite3.connect(db)
+    c.execute("CREATE TABLE quote_snapshots (received_ts TEXT, exch_ts TEXT, ltp REAL, bid REAL, ask REAL, symbol TEXT, kind TEXT, expiry TEXT, strike REAL, option_type TEXT, session_date_ist TEXT)")
+    for rt, et, px in [("11:48:03", "11:48:02", 9.25), ("11:48:08", "11:57:42", 7.85), ("11:48:11", "11:48:09", 9.25)]:
+        c.execute("INSERT INTO quote_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?)", (f"2026-10-23T{rt}Z", f"2026-10-23T{et}Z", px, px - 0.05, px, "NATURALGAS", "OPTION", "23OCT2026", 265.0, "PE", "2026-10-23"))
+    c.commit(); c.close()
+    sn = S.load_snaps("NATURALGAS", "2026-10-23", 265.0, "PE", "2026-10-23", db)
+    assert [x["ltp"] for x in sn] == [9.25, 9.25, 7.85] and sn[-1]["t"] == S._ep("2026-10-23T11:57:42Z")
