@@ -20,7 +20,7 @@ SYMBOLS = {"NIFTY": 50, "SENSEX": 100}
 IST = timezone(timedelta(hours=5, minutes=30))
 _DB = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "option_flow_live.db"))
 _SCHEMA = """CREATE TABLE IF NOT EXISTS flow_live (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, bar_start TEXT NOT NULL, key_ts INTEGER NOT NULL, status TEXT NOT NULL, spot REAL, K REAL, expiry TEXT,
-  F3m REAL, F3c REAL, F3z REAL, spread_w REAL, quote_age_s REAL, c_mid REAL, p_mid REAL, logged_ts REAL NOT NULL, fwd30_bp REAL, UNIQUE (symbol, key_ts));"""
+  F3m REAL, F3c REAL, F3z REAL, spread_w REAL, quote_age_s REAL, c_mid REAL, p_mid REAL, logged_ts REAL NOT NULL, fwd30_bp REAL, fwd15_bp REAL, UNIQUE (symbol, key_ts));"""
 _last: dict = {}
 _lock = threading.Lock()
 
@@ -35,7 +35,10 @@ def _db() -> str: return os.environ.get("CHANAKYA_OPTION_FLOW_DB", _DB)
 
 
 def _conn(path=None):
-    c = sqlite3.connect(path or _db(), timeout=5); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=5000"); c.executescript(_SCHEMA); return c
+    c = sqlite3.connect(path or _db(), timeout=5); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=5000"); c.executescript(_SCHEMA)
+    try: c.execute("ALTER TABLE flow_live ADD COLUMN fwd15_bp REAL")                           # migration for a log created before the 15-minute column (pre-registered horizon extension)
+    except sqlite3.OperationalError: pass
+    return c
 
 
 def observe(symbol: str, now_epoch: float | None = None, bars_provider=None, hist_db: str | None = None, db_path: str | None = None) -> dict | None:
@@ -50,9 +53,10 @@ def observe(symbol: str, now_epoch: float | None = None, bars_provider=None, his
     with _lock:
         fresh = _last.get(sym) != key; _last[sym] = key
     with _conn(db_path) as c:
-        for rid, kts, s0 in c.execute("SELECT id, key_ts, spot FROM flow_live WHERE symbol=? AND fwd30_bp IS NULL AND key_ts<=?", (sym, key - 1800)).fetchall():          # forward fill
-            fut = spot.get(kts + 1800)
-            if fut is not None and s0 and datetime.fromtimestamp(kts + 1800, IST).date() == datetime.fromtimestamp(kts, IST).date(): c.execute("UPDATE flow_live SET fwd30_bp=? WHERE id=?", (round((float(fut) / s0 - 1) * 1e4, 3), rid))
+        for col, mins in (("fwd30_bp", 30), ("fwd15_bp", 15)):                                                                                  # forward fill
+            for rid, kts, s0 in c.execute(f"SELECT id, key_ts, spot FROM flow_live WHERE symbol=? AND {col} IS NULL AND key_ts<=?", (sym, key - mins * 60)).fetchall():
+                fut = spot.get(kts + mins * 60)
+                if fut is not None and s0 and datetime.fromtimestamp(kts + mins * 60, IST).date() == datetime.fromtimestamp(kts, IST).date(): c.execute(f"UPDATE flow_live SET {col}=? WHERE id=?", (round((float(fut) / s0 - 1) * 1e4, 3), rid))
         if not fresh: return None
         s_now, s_prev = spot.get(key), spot.get(key - 900); row = {"symbol": sym, "bar_start": datetime.fromtimestamp(bin_start, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "key_ts": key, "logged_ts": now}
         if s_now is None or s_prev is None: return None
@@ -81,7 +85,7 @@ def forward_report(db_path: str | None = None) -> dict:
     p = db_path or _db()
     if not os.path.exists(p): return {"symbols": {}, "note": "no data yet"}
     c = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=5)
-    try: d = pd.read_sql_query("SELECT symbol, bar_start, status, F3m, F3c, F3z, fwd30_bp FROM flow_live", c)
+    try: d = pd.read_sql_query("SELECT symbol, bar_start, status, F3m, F3c, F3z, fwd30_bp, fwd15_bp FROM flow_live", c)
     finally: c.close()
     out = {}
     for sym, g in d.groupby("symbol"):
@@ -89,6 +93,8 @@ def forward_report(db_path: str | None = None) -> dict:
         r = {"logged": int(len(g)), "with_quotes": int((g["status"] == "OK").sum()), "no_quotes": int((g["status"] != "OK").sum()), "evaluated": int(len(ok)), "sessions": int(days.nunique())}
         if len(ok) >= 30 and (ok["fwd30_bp"] > 0).nunique() == 2:
             y = (ok["fwd30_bp"] > 0).astype(int).values; r["auc_F3m"] = E.auc(y, ok["F3m"].values); r["auc_F3c"] = E.auc(y, ok["F3c"].values)
+            ok15 = g[(g["status"] == "OK") & g["fwd15_bp"].notna() & g["F3m"].notna()]
+            if len(ok15) >= 30 and (ok15["fwd15_bp"] > 0).nunique() == 2: r["auc_F3m_15m"] = E.auc((ok15["fwd15_bp"] > 0).astype(int).values, ok15["F3m"].values); r["evaluated_15m"] = int(len(ok15))
             if len(ok) >= 90: r["tercile_mean_30m_bp"] = ok.groupby(pd.qcut(ok["F3m"], 3, labels=["low", "mid", "high"], duplicates="drop"), observed=True)["fwd30_bp"].mean().round(2).to_dict()
         r["conclusion_allowed"] = bool(r["sessions"] >= 60 or r["evaluated"] >= 3000); out[sym] = r
     return {"symbols": out, "rule": "no conclusion before 60 sessions or 3000 evaluated points per index; then replication criterion: univariate AUC of F3m > 0.510 (SPEC_BIDASK_PILOT)"}

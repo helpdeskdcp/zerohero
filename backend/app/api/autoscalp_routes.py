@@ -120,7 +120,7 @@ def api_autoscalp_option_flow(limit: int = 30):
     rows = []
     if _os.path.exists(_of._db()):
         c = _sq.connect(f"file:{_of._db()}?mode=ro", uri=True, timeout=5)
-        try: rows = [dict(zip(("symbol", "bar_start", "status", "spot", "K", "F3m", "F3c", "F3z", "spread_w", "quote_age_s", "fwd30_bp"), r)) for r in c.execute("SELECT symbol, bar_start, status, spot, K, F3m, F3c, F3z, spread_w, quote_age_s, fwd30_bp FROM flow_live ORDER BY id DESC LIMIT ?", (min(limit, 500),)).fetchall()]
+        try: rows = [dict(zip(("symbol", "bar_start", "status", "spot", "K", "F3m", "F3c", "F3z", "spread_w", "quote_age_s", "fwd30_bp", "fwd15_bp"), r)) for r in c.execute("SELECT symbol, bar_start, status, spot, K, F3m, F3c, F3z, spread_w, quote_age_s, fwd30_bp, fwd15_bp FROM flow_live ORDER BY id DESC LIMIT ?", (min(limit, 500),)).fetchall()]
         finally: c.close()
     return {"latest": rows, "forward": _of.forward_report(), "enabled": _of.enabled()}
 

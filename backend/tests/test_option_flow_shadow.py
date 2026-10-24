@@ -32,7 +32,7 @@ def test_logs_ok_and_no_quotes_dedupes_and_fills_forward(tmp_path):
     assert r["status"] == "OK" and np.isfinite(r["F3m"]) and abs(r["spread_w"] - 1.0) < 1e-9
     assert OFS.observe("NIFTY", now - 1800 - 300, prov, h, out) is None                                      # same bar twice -> not logged again
     OFS.observe("NIFTY", now, prov, h, out)                                                                  # 30 min later: first row gets its forward return, newest row logged
-    c = sqlite3.connect(out); rows = c.execute("SELECT status, fwd30_bp FROM flow_live ORDER BY key_ts").fetchall(); assert len(rows) == 2 and rows[0][1] is not None and rows[1][1] is None
+    c = sqlite3.connect(out); rows = c.execute("SELECT status, fwd30_bp, fwd15_bp FROM flow_live ORDER BY key_ts").fetchall(); assert len(rows) == 2 and rows[0][1] is not None and rows[0][2] is not None and rows[1][1] is None
     assert OFS.observe("BANKNIFTY", now, prov, h, out) is None
     h2 = str(tmp_path / "h2.db"); _hist(h2, b, with_quotes=False); OFS._last.clear(); r2 = OFS.observe("NIFTY", now, prov, h2, str(tmp_path / "o2.db")); assert r2["status"] == "NO_QUOTES"
 

@@ -7,9 +7,12 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from app.candle_ai import option_flow as OF, evaluate as E, patterns as P
+OF.TARGET_MIN = int(sys.argv[sys.argv.index("--horizon") + 1]) if "--horizon" in sys.argv else 30
 
 UND = "SENSEX" if "--underlying" in sys.argv and sys.argv[sys.argv.index("--underlying") + 1].upper() == "SENSEX" else "NIFTY"
 STEP_PTS, NEAR_PTS = (100, 500) if UND == "SENSEX" else (50, 250); COST = 1.5 if UND == "SENSEX" else 1.0; SUFFIX = "_sensex" if UND == "SENSEX" else ""
+HOR = int(sys.argv[sys.argv.index("--horizon") + 1]) if "--horizon" in sys.argv else 30
+if HOR != 30: SUFFIX += f"_h{HOR}"
 DB = os.path.join(HERE, "data", "historical", "option_flow", "option_flow_sensex.db" if UND == "SENSEX" else "option_flow.db"); MH = os.path.join(HERE, "data", "market_history.db"); IST_OFF = 19800
 FEATS = ["F1", "F2", "F3", "F4", "F5"]; BASE = ["r5", "r15", "r30", "tod"]
 
