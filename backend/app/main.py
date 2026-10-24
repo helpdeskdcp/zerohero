@@ -369,6 +369,13 @@ try:
 except Exception as _e:
     print(f"[scanner] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- Zone Breakout paper bot (owner's Angel One bot, all six indices; read-only views, observation only) ----
+try:
+    from .zone_breakout import api as _zb_api
+    app.include_router(_zb_api.router)
+except Exception as _e:
+    print(f"[zone_breakout] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Unified Signal Dashboard (read-only aggregator: every engine's read
 # side-by-side per symbol; no blending, no order path) ----
 try:
@@ -517,6 +524,11 @@ async def _lifespan(_app: FastAPI):
             _chartink_tracker.Runner().start()
         except Exception as e:
             print(f"[chartink] tracker start failed: {type(e).__name__}: {e}")
+    try:
+        from .zone_breakout import live as _zb_live
+        _zb_live.Runner().start()
+    except Exception as e:
+        print(f"[zone_breakout] runner start failed: {type(e).__name__}: {e}")
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:
