@@ -20,3 +20,10 @@ The same logic runs on each completed 5-minute bar of the six futures inside the
 
 ## Not claimed
 No option premium, theta, strikes or fills; the short futures history means a pass would be weak evidence and a fail is not proof of no effect.
+
+## Addendum, same day, before any run: the owner's BEARISH scan (mirror) — "BEARISH SCANNER — 5 MINUTE — BALANCED"
+CORE (AND): close < open; volume > SMA(volume, 20) x 1.5; RSI(14) < 50; close < EMA(close, 20).
+GROUP A (liquidity sweep / reversal, AND): high > previous bar's high; close < previous bar's high; close < open.
+GROUP B (support breakdown, AND): close < previous bar's low; volume > SMA(volume, 20) x 1.5; RSI(14) < 45.
+FINAL = CORE AND (A OR B). Purpose: bearish reversal / breakdown candidates for PE analysis. Same implementation choices (Chartink conventions, front-month futures with volume, same data, same costs). Short returns = -(exit/entry - 1).
+Variants now K = 6: FULL_BULL, A_BULL, B_BULL, FULL_BEAR, A_BEAR, B_BEAR (the Bonferroni level becomes 0.05 / 6); baselines: every bar long and every bar short. Verdict rules unchanged (pooled >= 300 signals per variant, mean net > 0, CI lower bound > 0, both halves positive, positive without any single instrument, >= 2 of 3 horizons). The live feed carries both scans.
