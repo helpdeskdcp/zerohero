@@ -56,6 +56,7 @@ def namespace(df: pd.DataFrame) -> dict:
           "bbw": lambda n: (4 * c.rolling(int(n), min_periods=int(n)).std(ddof=0)) / c.rolling(int(n), min_periods=int(n)).mean(),
           "bb_upper": lambda n: c.rolling(int(n), min_periods=int(n)).mean() + 2 * c.rolling(int(n), min_periods=int(n)).std(ddof=0),
           "bb_lower": lambda n: c.rolling(int(n), min_periods=int(n)).mean() - 2 * c.rolling(int(n), min_periods=int(n)).std(ddof=0),
+          "dom": pd.to_datetime(df["date"]).dt.day.reset_index(drop=True), "dow": pd.to_datetime(df["date"]).dt.dayofweek.reset_index(drop=True),
           "pdh": lev["PDH"], "pdl": lev["PDL"], "pdc": lev["PDC"], "pwh": lev["PWH"], "pwl": lev["PWL"], "pmh": lev["PMH"], "pml": lev["PML"],
           "fib_pivot_d": lev["FD_P"], "fib_r1_d": lev["FD_R1"], "fib_s1_d": lev["FD_S1"], "fib_pivot_w": lev["FW_P"], "fib_r1_w": lev["FW_R1"], "fib_s1_w": lev["FW_S1"],
           "fib_pivot_m": lev["FM_P"], "fib_r1_m": lev["FM_R1"], "fib_s1_m": lev["FM_S1"]}

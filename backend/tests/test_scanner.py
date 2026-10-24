@@ -65,3 +65,9 @@ def test_run_stores_hits_once(tmp_path, monkeypatch):
     r1 = engine.run(loader=lambda inst, now: df, path=db, scans={"BRK20_UP": SCANS["BRK20_UP"]}); r2 = engine.run(loader=lambda inst, now: df, path=db, scans={"BRK20_UP": SCANS["BRK20_UP"]})
     assert len(r1["new_hits"]) == 6 and r2["new_hits"] == []                                                # six instruments share the fake frame; second run adds nothing
     with store.conn(db) as c: assert c.execute("SELECT COUNT(*) FROM hits").fetchone()[0] == 6
+
+
+def test_library_size_and_calendar_names():
+    assert len(SCANS) == 35 and {v[0] for v in SCANS.values()} == {"LONG", "SHORT"}
+    df = _daily(60); ns = dsl.namespace(df); assert int(ns["dow"].max()) <= 4 and int(ns["dom"].max()) <= 31
+    assert dsl.run_expr("(dom >= 28) | (dom <= 3)", df, ns).sum() > 5
