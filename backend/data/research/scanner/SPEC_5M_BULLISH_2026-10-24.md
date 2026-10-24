@@ -34,3 +34,10 @@ Variants now K = 6: FULL_BULL, A_BULL, B_BULL, FULL_BEAR, A_BEAR, B_BEAR (the Bo
 3. True order flow (bid/ask delta, footprint, order-book imbalance) cannot come from these clauses; this scan sees price and volume only.
 4. Stronger support / resistance needs separate swing-high / swing-low logic; the previous-bar high / low used here is the weakest possible level. A swing-level variant would be a NEW pre-registered variant (not added now).
 5. Live use: the feed is observation / paper only; a scanner signal alone is not a trade. Every message says so.
+
+## Addendum 2 (swing-level variant requested by the owner), written BEFORE the swing variants are run
+Reading note 4 asked for a stronger level than the previous bar's high / low. New variants use the most recent CONFIRMED swing high / swing low of the same instrument's 5-minute series.
+- Swing low at bar i: low(i) is the minimum of low(i-3 .. i+3); swing high: high(i) is the maximum of high(i-3 .. i+3). It becomes known at bar i+3 (fractal confirmation) and is used from bar i+4 on, never earlier. The level in force at bar t is the latest swing confirmed at or before t-1 that is at most 80 bars old (about 6.5 hours); if there is none the variant cannot fire.
+- SW_A_BULL: CORE (bullish) and [low(t) < swing low, close(t) > swing low, close(t) > open(t)] (sweep of a real swing low and a close back above it). SW_B_BULL: CORE and [close(t) > swing high and close(t-1) <= swing high (a fresh break), volume > 1.5 x SMA20, RSI(14) > 55]. SW_FULL_BULL = CORE AND (SW_A OR SW_B).
+- Bearish mirror: SW_A_BEAR: CORE (bearish) and [high(t) > swing high, close(t) < swing high, close(t) < open(t)]; SW_B_BEAR: CORE and [close(t) < swing low and close(t-1) >= swing low, volume > 1.5 x SMA20, RSI(14) < 45]; SW_FULL_BEAR = CORE AND (SW_A OR SW_B).
+The family grows to 12 variants; Bonferroni level for the CI gate 0.05 / 12. Everything else (instruments, costs, horizons, verdict rules, sample gate of 300 pooled signals) unchanged. The owner's original FULL / A / B variants keep their results.
