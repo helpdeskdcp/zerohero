@@ -33,6 +33,9 @@ DEFAULTS = {
     "max_option_premium": None,
     "require_feed_connected": True,
     "allow_weekend": False,   # replay/paper-rehearsal only
+    # net-of-cost evidence (app/autoscalp/net_edge.py): when True, a symbol whose net Rs/trade has a 90 % CI entirely below 0 (>= 40 resolved trades) gets no NEW paper entries.
+    # Default OFF: paper trades are free evidence; the monitor and the LIVE entry gate work regardless of this switch.
+    "net_edge_enforce": False,
 }
 
 
@@ -130,6 +133,12 @@ class Safeguards:
         except (TypeError, ValueError):
             return False, "feed age unavailable"
 
+        if c.get("net_edge_enforce"):
+            try:
+                from . import net_edge
+                if net_edge.symbol_status(underlying) == "SUSPEND_RECOMMENDED": return False, f"net-edge suspended: {underlying} loses money after costs (see /api/autoscalp/net-edge)"
+            except Exception:
+                pass
         if open_count >= c["max_concurrent"]:
             return False, f"max concurrent {c['max_concurrent']}"
         if (underlying, side) in open_keys:

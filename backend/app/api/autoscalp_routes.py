@@ -86,6 +86,16 @@ def api_autoscalp_report(day: str | None = None):
         raise HTTPException(500, f"{type(e).__name__}: {e}")
 
 
+@router.get("/api/autoscalp/net-edge")
+def api_autoscalp_net_edge():
+    """Real rupee expectancy per symbol after charges + slippage (read-only). See app/autoscalp/net_edge.py."""
+    from ..autoscalp import net_edge as _ne
+    try:
+        return _ne.report()
+    except Exception as e:
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+
+
 @router.get("/api/autoscalp/selfcheck")
 def api_autoscalp_selfcheck():
     """One-glance operational readiness of the autonomous engine."""

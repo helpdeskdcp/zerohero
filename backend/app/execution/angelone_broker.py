@@ -9,6 +9,9 @@ LIVE order placement is triple-gated. `market_entry` / `limit_entry` /
     * os.environ["CHANAKYA_ALLOW_LIVE"] == "1"
     * os.environ["CHANAKYA_LIVE_CONFIRM_TOKEN"] is a non-empty string
 
+and, for ENTRY orders only, a fourth fail-closed gate: autoscalp's measured net-of-cost expectancy for that underlying has positive evidence
+(app/autoscalp/net_edge.py; explicit owner bypass CHANAKYA_NET_EDGE_OVERRIDE=1). Exits / stops / cancels are never blocked by it.
+
 Read methods (`get_order_status`, `get_order_book`, `get_positions`,
 `reconcile_position`, `login`, `refresh_session`) work in any mode — they are
 safe and let SHADOW mode reconcile against the real account.
@@ -98,6 +101,10 @@ class AngelOneBroker(BrokerBase):
     # ---------------------------------------------------------------- submit
     def _submit(self, req: OrderReq, *, is_exit: bool) -> OrderAck:
         self._guard_live("order submission")
+        if not is_exit:                                              # 4th gate (entries only, exits are never blocked): measured net-of-cost evidence for this underlying (app/autoscalp/net_edge.py)
+            from ..autoscalp import net_edge
+            ok, why = net_edge.live_evidence_ok(req.tradingsymbol or req.symbol)
+            if not ok: raise LiveDisabled(f"order submission blocked — {why}")
         blocked = self._rate()
         if blocked is not None:
             return blocked
