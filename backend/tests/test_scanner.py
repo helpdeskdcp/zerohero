@@ -83,3 +83,12 @@ def test_chart_payload_daily_and_5m_markers_and_validation():
     f5 = pd.DataFrame({"t": pd.date_range("2026-10-22 03:45", periods=n, freq="5min", tz="UTC"), "o": o, "h": c + 0.05, "l": o - 0.05, "c": c, "v": 1000.0}); f5.loc[n - 1, ["c", "h", "v"]] = [c[-1] + 1.0, c[-1] + 1.0, 8000.0]
     p5 = SA.chart_payload("NIFTY", "5m", "FULL_BULL", 100, fut5_df=f5)
     assert p5["side"] == "LONG" and isinstance(p5["candles"][0]["time"], int) and p5["candles"][-1]["time"] - p5["candles"][-2]["time"] == 300 and len(p5["markers"]) >= 1 and p5["markers"][-1]["time"] == p5["candles"][-1]["time"]
+
+
+def test_stocks_group_run_and_chart_accepts_stock(tmp_path, monkeypatch):
+    from app.scanner import api as SA
+    db = str(tmp_path / "s.db"); df = _daily(300); df.loc[df.index[-1], "c"] = df["h"].iloc[-21:-1].max() * 1.05; df.loc[df.index[-1], "h"] = df["c"].iloc[-1]
+    r = engine.run(group="STOCKS", instruments=["RELIANCE", "TCS"], loader=lambda inst, now: df, path=db, scans={"BRK20_UP": SCANS["BRK20_UP"]})
+    assert sorted(h["inst"] for h in r["new_hits"]) == ["RELIANCE", "TCS"]
+    out = SA.chart_payload("RELIANCE", "1d", "BRK20_UP", 100, daily_df=df); assert out["bars"] == 100 and "error" not in out
+    assert "error" in SA.chart_payload("RELIANCE", "5m", "FULL_BULL") and "RELIANCE" in SA.instruments()["stocks"]

@@ -23,11 +23,16 @@ def evaluate(df: pd.DataFrame, scans: dict | None = None) -> dict[str, pd.Series
     return out
 
 
-def run(group: str | None = None, now: datetime | None = None, loader=None, path: str | None = None, scans: dict | None = None) -> dict:
-    """Latest completed bar of each instrument (optionally only the NSE or MCX group) -> hits table. Idempotent per (instrument, scan, signal date)."""
-    loader = loader or D.load_daily; res = {"instruments": {}, "new_hits": []}
-    for inst in D.INSTRUMENTS:
-        if group and D.EXCH[inst] != group: continue
+def run(group: str | None = None, now: datetime | None = None, loader=None, path: str | None = None, scans: dict | None = None, instruments: list | None = None) -> dict:
+    """Latest completed bar of each instrument (optionally only the NSE / MCX group, or the STOCKS universe) -> hits table. Idempotent per (instrument, scan, signal date)."""
+    res = {"instruments": {}, "new_hits": []}
+    if group == "STOCKS":
+        from . import stocks as ST
+        keys = ST.keys() if instruments is None else {s: None for s in instruments}; loader = loader or (lambda inst, now: ST.load_stock(inst, ikey=keys[inst])); insts = list(keys)
+    else:
+        loader = loader or D.load_daily; insts = instruments or list(D.INSTRUMENTS)
+    for inst in insts:
+        if group and group != "STOCKS" and D.EXCH.get(inst) != group: continue
         try: df = loader(inst, now)
         except Exception as e:
             res["instruments"][inst] = {"error": repr(e)}; continue

@@ -1,0 +1,2456 @@
+{
+ "stocks": 53,
+ "calendar_days": 1940,
+ "from": "2018-12-27",
+ "to": "2026-10-23",
+ "scans": {
+  "BRK20_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 5259,
+     "mean_raw_net": -28.08184695035825,
+     "mean_excess_gross": -6.412169834656454,
+     "mean_excess_net": -21.412169834656453,
+     "hit_excess": 0.3960829054953413,
+     "mean_excess_net_cost5": -11.412169834656455,
+     "mean_excess_net_cost25": -31.412169834656453
+    },
+    "3": {
+     "n": 4130,
+     "mean_raw_net": -20.412409922723466,
+     "mean_excess_gross": -17.34071394006398,
+     "mean_excess_net": -32.34071394006398,
+     "hit_excess": 0.4145278450363196,
+     "mean_excess_net_cost5": -22.34071394006398,
+     "mean_excess_net_cost25": -42.34071394006398,
+     "ci_lo": -50.01598855965408,
+     "halves": [
+      -25.07529332643573,
+      -39.64847794726365
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -38.635786020010784,
+     "pass": false
+    },
+    "5": {
+     "n": 3549,
+     "mean_raw_net": -6.511232902093676,
+     "mean_excess_gross": -20.104228970592875,
+     "mean_excess_net": -35.10422897059288,
+     "hit_excess": 0.41335587489433645,
+     "mean_excess_net_cost5": -25.104228970592875,
+     "mean_excess_net_cost25": -45.10422897059288,
+     "ci_lo": -58.876264801614035,
+     "halves": [
+      -25.8028121012338,
+      -44.421384277971164
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -44.840582365492644,
+     "pass": false
+    },
+    "10": {
+     "n": 2810,
+     "mean_raw_net": 27.68693893217479,
+     "mean_excess_gross": -20.02249264189861,
+     "mean_excess_net": -35.022492641898616,
+     "hit_excess": 0.4419928825622776,
+     "mean_excess_net_cost5": -25.02249264189861,
+     "mean_excess_net_cost25": -45.022492641898616,
+     "ci_lo": -64.95088509433413,
+     "halves": [
+      -27.571174386400653,
+      -42.50569956325463
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -49.52456814001055,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "BRK20_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 3649,
+     "mean_raw_net": -26.10103478419111,
+     "mean_excess_gross": -0.7115169605954342,
+     "mean_excess_net": -15.711516960595434,
+     "hit_excess": 0.45245272677445875,
+     "mean_excess_net_cost5": -5.711516960595434,
+     "mean_excess_net_cost25": -25.711516960595436
+    },
+    "3": {
+     "n": 2912,
+     "mean_raw_net": -27.43788171342488,
+     "mean_excess_gross": -0.7915815312773626,
+     "mean_excess_net": -15.791581531277362,
+     "hit_excess": 0.4728708791208791,
+     "mean_excess_net_cost5": -5.791581531277363,
+     "mean_excess_net_cost25": -25.791581531277362,
+     "ci_lo": -31.138201957834085,
+     "halves": [
+      -7.640391546330502,
+      -24.021526975015984
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -24.323013019800964,
+     "pass": false
+    },
+    "5": {
+     "n": 2533,
+     "mean_raw_net": -21.518276784848737,
+     "mean_excess_gross": 4.833290365053853,
+     "mean_excess_net": -10.166709634946148,
+     "hit_excess": 0.49703908409001185,
+     "mean_excess_net_cost5": -0.166709634946148,
+     "mean_excess_net_cost25": -20.166709634946148,
+     "ci_lo": -32.730314552095436,
+     "halves": [
+      -5.232110486098427,
+      -15.160100671985063
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -22.15596997980314,
+     "pass": false
+    },
+    "10": {
+     "n": 2084,
+     "mean_raw_net": -67.97827889764172,
+     "mean_excess_gross": -4.667157099883977,
+     "mean_excess_net": -19.667157099883976,
+     "hit_excess": 0.5023992322456814,
+     "mean_excess_net_cost5": -9.667157099883976,
+     "mean_excess_net_cost25": -29.667157099883976,
+     "ci_lo": -54.85601612368979,
+     "halves": [
+      -25.953994515266825,
+      -13.36824122645044
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -32.182743370150604,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "EMACROSS_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 909,
+     "mean_raw_net": -15.052430268275128,
+     "mean_excess_gross": 3.1233213165939047,
+     "mean_excess_net": -11.876678683406098,
+     "hit_excess": 0.44994499449944997,
+     "mean_excess_net_cost5": -1.876678683406095,
+     "mean_excess_net_cost25": -21.876678683406094
+    },
+    "3": {
+     "n": 904,
+     "mean_raw_net": 3.231629902396528,
+     "mean_excess_gross": 5.185438236563697,
+     "mean_excess_net": -9.814561763436298,
+     "hit_excess": 0.4646017699115044,
+     "mean_excess_net_cost5": 0.18543823656369895,
+     "mean_excess_net_cost25": -19.814561763436302,
+     "ci_lo": -34.347610453868086,
+     "halves": [
+      -19.970792103541967,
+      0.3867072921465536
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -19.68306869919314,
+     "pass": false
+    },
+    "5": {
+     "n": 891,
+     "mean_raw_net": 21.840084471685643,
+     "mean_excess_gross": 3.0091796456634836,
+     "mean_excess_net": -11.990820354336515,
+     "hit_excess": 0.4567901234567901,
+     "mean_excess_net_cost5": -1.990820354336516,
+     "mean_excess_net_cost25": -21.990820354336517,
+     "ci_lo": -49.8074854147311,
+     "halves": [
+      -42.38741319097681,
+      18.47407943249848
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -26.318640271489585,
+     "pass": false
+    },
+    "10": {
+     "n": 871,
+     "mean_raw_net": 92.30726798199305,
+     "mean_excess_gross": 22.395143021324255,
+     "mean_excess_net": 7.395143021324258,
+     "hit_excess": 0.4764638346727899,
+     "mean_excess_net_cost5": 17.395143021324255,
+     "mean_excess_net_cost25": -2.6048569786757443,
+     "ci_lo": -51.22689386690032,
+     "halves": [
+      -7.699520481609435,
+      22.594147516213713
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -12.114960281249404,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "EMACROSS_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 922,
+     "mean_raw_net": -15.773840710407304,
+     "mean_excess_gross": -0.845737354365167,
+     "mean_excess_net": -15.845737354365168,
+     "hit_excess": 0.4631236442516269,
+     "mean_excess_net_cost5": -5.845737354365167,
+     "mean_excess_net_cost25": -25.84573735436517
+    },
+    "3": {
+     "n": 912,
+     "mean_raw_net": -3.115718386215525,
+     "mean_excess_gross": 9.477407031498295,
+     "mean_excess_net": -5.522592968501704,
+     "hit_excess": 0.5153508771929824,
+     "mean_excess_net_cost5": 4.477407031498295,
+     "mean_excess_net_cost25": -15.522592968501705,
+     "ci_lo": -30.751575414759014,
+     "halves": [
+      -12.75671262977412,
+      1.743325020952129
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -16.960912144831934,
+     "pass": false
+    },
+    "5": {
+     "n": 908,
+     "mean_raw_net": -2.853522203060003,
+     "mean_excess_gross": 15.12588812580129,
+     "mean_excess_net": 0.1258881258012902,
+     "hit_excess": 0.5308370044052864,
+     "mean_excess_net_cost5": 10.12588812580129,
+     "mean_excess_net_cost25": -9.874111874198707,
+     "ci_lo": -36.85878953713078,
+     "halves": [
+      -19.25736403027609,
+      19.59471755409094
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -18.37699891629316,
+     "pass": false
+    },
+    "10": {
+     "n": 888,
+     "mean_raw_net": -8.491784628077536,
+     "mean_excess_gross": 30.277159405355576,
+     "mean_excess_net": 15.277159405355578,
+     "hit_excess": 0.543918918918919,
+     "mean_excess_net_cost5": 25.277159405355576,
+     "mean_excess_net_cost25": 5.277159405355575,
+     "ci_lo": -35.74057053166393,
+     "halves": [
+      4.709611162324245,
+      25.940341569138315
+     ],
+     "years_positive": 7,
+     "years": 8,
+     "drop_top5_mean": -10.227137362381967,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "RSI_OS_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 1087,
+     "mean_raw_net": -30.12268314580355,
+     "mean_excess_gross": -3.28507831695641,
+     "mean_excess_net": -18.28507831695641,
+     "hit_excess": 0.4139834406623735,
+     "mean_excess_net_cost5": -8.28507831695641,
+     "mean_excess_net_cost25": -28.285078316956415
+    },
+    "3": {
+     "n": 964,
+     "mean_raw_net": -41.64944396976945,
+     "mean_excess_gross": -16.633442609933933,
+     "mean_excess_net": -31.633442609933933,
+     "hit_excess": 0.4242738589211618,
+     "mean_excess_net_cost5": -21.633442609933933,
+     "mean_excess_net_cost25": -41.63344260993394,
+     "ci_lo": -64.72891537301074,
+     "halves": [
+      -38.60924702666646,
+      -24.599506489728626
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -44.834477415706885,
+     "pass": false
+    },
+    "5": {
+     "n": 884,
+     "mean_raw_net": -51.238774351900936,
+     "mean_excess_gross": -28.634843469792436,
+     "mean_excess_net": -43.634843469792436,
+     "hit_excess": 0.43891402714932126,
+     "mean_excess_net_cost5": -33.634843469792436,
+     "mean_excess_net_cost25": -53.634843469792436,
+     "ci_lo": -89.34185940569199,
+     "halves": [
+      -51.32800755910417,
+      -35.87174152512334
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -62.73900679583887,
+     "pass": false
+    },
+    "10": {
+     "n": 747,
+     "mean_raw_net": -8.84352394576417,
+     "mean_excess_gross": -28.9265364041562,
+     "mean_excess_net": -43.926536404156195,
+     "hit_excess": 0.42302543507362783,
+     "mean_excess_net_cost5": -33.926536404156195,
+     "mean_excess_net_cost25": -53.926536404156195,
+     "ci_lo": -105.95183388034927,
+     "halves": [
+      -52.52991954231904,
+      -35.2537711439114
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -68.5518275531138,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "RSI_OB_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 2045,
+     "mean_raw_net": -10.664428200107132,
+     "mean_excess_gross": -2.5593957522112794,
+     "mean_excess_net": -17.55939575221128,
+     "hit_excess": 0.4508557457212714,
+     "mean_excess_net_cost5": -7.559395752211279,
+     "mean_excess_net_cost25": -27.55939575221128
+    },
+    "3": {
+     "n": 1832,
+     "mean_raw_net": -33.16531960825504,
+     "mean_excess_gross": -2.835256781970298,
+     "mean_excess_net": -17.835256781970298,
+     "hit_excess": 0.48799126637554585,
+     "mean_excess_net_cost5": -7.835256781970297,
+     "mean_excess_net_cost25": -27.835256781970298,
+     "ci_lo": -38.63203747271137,
+     "halves": [
+      -11.899525773515576,
+      -23.783962065853334
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -26.6022827190031,
+     "pass": false
+    },
+    "5": {
+     "n": 1656,
+     "mean_raw_net": -50.818581591287966,
+     "mean_excess_gross": -5.107971779906732,
+     "mean_excess_net": -20.10797177990673,
+     "hit_excess": 0.4921497584541063,
+     "mean_excess_net_cost5": -10.10797177990673,
+     "mean_excess_net_cost25": -30.10797177990673,
+     "ci_lo": -46.04231700993436,
+     "halves": [
+      -11.747600826801683,
+      -28.569926827217188
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -30.760833087429386,
+     "pass": false
+    },
+    "10": {
+     "n": 1392,
+     "mean_raw_net": -82.63210628962625,
+     "mean_excess_gross": 4.218156338977451,
+     "mean_excess_net": -10.781843661022549,
+     "hit_excess": 0.5201149425287356,
+     "mean_excess_net_cost5": -0.7818436610225497,
+     "mean_excess_net_cost25": -20.781843661022545,
+     "ci_lo": -51.65441612464786,
+     "halves": [
+      2.275098999547613,
+      -23.95183344419505
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -26.015221332894125,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "TDB_LOW20": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 2962,
+     "mean_raw_net": -13.556009692470415,
+     "mean_excess_gross": 3.058754791343785,
+     "mean_excess_net": -11.941245208656214,
+     "hit_excess": 0.43214044564483456,
+     "mean_excess_net_cost5": -1.941245208656215,
+     "mean_excess_net_cost25": -21.941245208656216
+    },
+    "3": {
+     "n": 2493,
+     "mean_raw_net": -6.084661430702794,
+     "mean_excess_gross": 3.0831781725370635,
+     "mean_excess_net": -11.916821827462934,
+     "hit_excess": 0.4556758924989972,
+     "mean_excess_net_cost5": -1.9168218274629352,
+     "mean_excess_net_cost25": -21.916821827462933,
+     "ci_lo": -27.529453398930812,
+     "halves": [
+      -13.185939406229645,
+      -10.642603293797649
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -18.907495548034767,
+     "pass": false
+    },
+    "5": {
+     "n": 2246,
+     "mean_raw_net": -2.6644500598639547,
+     "mean_excess_gross": 3.8633901459933613,
+     "mean_excess_net": -11.136609854006638,
+     "hit_excess": 0.45280498664292074,
+     "mean_excess_net_cost5": -1.1366098540066378,
+     "mean_excess_net_cost25": -21.136609854006636,
+     "ci_lo": -33.8649653206523,
+     "halves": [
+      -7.677465296295319,
+      -14.620484667715896
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -23.662449122529647,
+     "pass": false
+    },
+    "10": {
+     "n": 1947,
+     "mean_raw_net": 24.360811966255824,
+     "mean_excess_gross": -2.3539289580396057,
+     "mean_excess_net": -17.353928958039607,
+     "hit_excess": 0.47098099640472524,
+     "mean_excess_net_cost5": -7.353928958039608,
+     "mean_excess_net_cost25": -27.35392895803961,
+     "ci_lo": -54.79234256762611,
+     "halves": [
+      -9.50592078473151,
+      -25.226159378796186
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -33.25511016935616,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "TUB_HIGH20": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 3926,
+     "mean_raw_net": -5.77664660465626,
+     "mean_excess_gross": 1.8295954589546313,
+     "mean_excess_net": -13.17040454104537,
+     "hit_excess": 0.48369842078451347,
+     "mean_excess_net_cost5": -3.1704045410453685,
+     "mean_excess_net_cost25": -23.170404541045368
+    },
+    "3": {
+     "n": 3261,
+     "mean_raw_net": -13.44968872651927,
+     "mean_excess_gross": 9.263488660006804,
+     "mean_excess_net": -5.736511339993199,
+     "hit_excess": 0.5157927016252684,
+     "mean_excess_net_cost5": 4.263488660006804,
+     "mean_excess_net_cost25": -15.736511339993198,
+     "ci_lo": -23.217105430872174,
+     "halves": [
+      -13.733520448798558,
+      2.275225225734458
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -11.31973937758531,
+     "pass": false
+    },
+    "5": {
+     "n": 2941,
+     "mean_raw_net": -23.405870138622365,
+     "mean_excess_gross": 13.729471166285375,
+     "mean_excess_net": -1.2705288337146263,
+     "hit_excess": 0.5297517851071064,
+     "mean_excess_net_cost5": 8.729471166285373,
+     "mean_excess_net_cost25": -11.270528833714629,
+     "ci_lo": -30.017514864150417,
+     "halves": [
+      -8.527369163595317,
+      5.9912481222408065
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -6.986815743947315,
+     "pass": false
+    },
+    "10": {
+     "n": 2432,
+     "mean_raw_net": -81.48501336468979,
+     "mean_excess_gross": 3.58637671796425,
+     "mean_excess_net": -11.413623282035747,
+     "hit_excess": 0.5263157894736842,
+     "mean_excess_net_cost5": -1.4136232820357502,
+     "mean_excess_net_cost25": -21.413623282035744,
+     "ci_lo": -50.07547215000297,
+     "halves": [
+      -17.924476646555974,
+      -4.892052463417541
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -23.559242487196276,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "GAP_DN_BUY": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 1235,
+     "mean_raw_net": 1.2916665339531204,
+     "mean_excess_gross": 2.300847091924246,
+     "mean_excess_net": -12.699152908075753,
+     "hit_excess": 0.42591093117408907,
+     "mean_excess_net_cost5": -2.699152908075753,
+     "mean_excess_net_cost25": -22.699152908075757
+    },
+    "3": {
+     "n": 1176,
+     "mean_raw_net": -70.39287199985564,
+     "mean_excess_gross": -7.51830782872918,
+     "mean_excess_net": -22.51830782872918,
+     "hit_excess": 0.4549319727891156,
+     "mean_excess_net_cost5": -12.51830782872918,
+     "mean_excess_net_cost25": -32.51830782872918,
+     "ci_lo": -46.77958883882071,
+     "halves": [
+      -20.65183920943806,
+      -24.39113579595656
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -36.14127441941578,
+     "pass": false
+    },
+    "5": {
+     "n": 1096,
+     "mean_raw_net": -26.017160879167506,
+     "mean_excess_gross": -2.4349723235170537,
+     "mean_excess_net": -17.434972323517055,
+     "hit_excess": 0.4470802919708029,
+     "mean_excess_net_cost5": -7.434972323517052,
+     "mean_excess_net_cost25": -27.434972323517055,
+     "ci_lo": -57.16956680191457,
+     "halves": [
+      -18.502011284073426,
+      -16.348282553374
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -35.708464608045226,
+     "pass": false
+    },
+    "10": {
+     "n": 1008,
+     "mean_raw_net": -16.129888042022905,
+     "mean_excess_gross": -8.801029533778847,
+     "mean_excess_net": -23.80102953377885,
+     "hit_excess": 0.4603174603174603,
+     "mean_excess_net_cost5": -13.80102953377885,
+     "mean_excess_net_cost25": -33.801029533778845,
+     "ci_lo": -96.98919604717473,
+     "halves": [
+      -20.945069534651168,
+      -26.668345238668454
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -52.2577113635527,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "GAP_UP_SELL": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 1040,
+     "mean_raw_net": 18.508428720912896,
+     "mean_excess_gross": 11.503004002716562,
+     "mean_excess_net": -3.4969959972834346,
+     "hit_excess": 0.5144230769230769,
+     "mean_excess_net_cost5": 6.503004002716563,
+     "mean_excess_net_cost25": -13.496995997283435
+    },
+    "3": {
+     "n": 1013,
+     "mean_raw_net": -17.129426563192332,
+     "mean_excess_gross": 4.411528925443298,
+     "mean_excess_net": -10.588471074556704,
+     "hit_excess": 0.508390918065153,
+     "mean_excess_net_cost5": -0.5884710745567017,
+     "mean_excess_net_cost25": -20.588471074556704,
+     "ci_lo": -49.26137528238431,
+     "halves": [
+      -20.97286947983385,
+      0.32145356580532247
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -23.874787053287704,
+     "pass": false
+    },
+    "5": {
+     "n": 975,
+     "mean_raw_net": -62.19346713447397,
+     "mean_excess_gross": 7.552731692195096,
+     "mean_excess_net": -7.447268307804899,
+     "hit_excess": 0.5097435897435898,
+     "mean_excess_net_cost5": 2.552731692195099,
+     "mean_excess_net_cost25": -17.447268307804897,
+     "ci_lo": -49.77302183376887,
+     "halves": [
+      -14.891799134901628,
+      0.07401025977735735
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -28.088339738009058,
+     "pass": false
+    },
+    "10": {
+     "n": 928,
+     "mean_raw_net": -125.73292969413885,
+     "mean_excess_gross": 11.318645091746392,
+     "mean_excess_net": -3.681354908253611,
+     "hit_excess": 0.5204741379310345,
+     "mean_excess_net_cost5": 6.318645091746391,
+     "mean_excess_net_cost25": -13.681354908253613,
+     "ci_lo": -60.06634926033454,
+     "halves": [
+      -11.002434540468448,
+      3.864002874619885
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -31.37732933661762,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "BBSQ_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 505,
+     "mean_raw_net": -39.53783330187312,
+     "mean_excess_gross": -11.131325346365283,
+     "mean_excess_net": -26.13132534636528,
+     "hit_excess": 0.3920792079207921,
+     "mean_excess_net_cost5": -16.131325346365283,
+     "mean_excess_net_cost25": -36.13132534636528
+    },
+    "3": {
+     "n": 371,
+     "mean_raw_net": -32.22766961947959,
+     "mean_excess_gross": -16.096575365470947,
+     "mean_excess_net": -31.096575365470947,
+     "hit_excess": 0.4555256064690027,
+     "mean_excess_net_cost5": -21.096575365470947,
+     "mean_excess_net_cost25": -41.09657536547095
+    },
+    "5": {
+     "n": 354,
+     "mean_raw_net": -19.30137430858888,
+     "mean_excess_gross": -29.584660157787056,
+     "mean_excess_net": -44.584660157787056,
+     "hit_excess": 0.4350282485875706,
+     "mean_excess_net_cost5": -34.58466015778706,
+     "mean_excess_net_cost25": -54.58466015778706
+    },
+    "10": {
+     "n": 352,
+     "mean_raw_net": -17.127957063439183,
+     "mean_excess_gross": -46.68888085645825,
+     "mean_excess_net": -61.68888085645825,
+     "hit_excess": 0.4403409090909091,
+     "mean_excess_net_cost5": -51.68888085645825,
+     "mean_excess_net_cost25": -71.68888085645825
+    }
+   },
+   "npass": 0,
+   "verdict": "INSUFFICIENT_SAMPLE"
+  },
+  "BBSQ_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 391,
+     "mean_raw_net": -5.013694546775131,
+     "mean_excess_gross": 1.7459555262132531,
+     "mean_excess_net": -13.254044473786749,
+     "hit_excess": 0.49872122762148335,
+     "mean_excess_net_cost5": -3.254044473786746,
+     "mean_excess_net_cost25": -23.254044473786745
+    },
+    "3": {
+     "n": 291,
+     "mean_raw_net": -23.87708350921051,
+     "mean_excess_gross": 2.773420396621763,
+     "mean_excess_net": -12.226579603378235,
+     "hit_excess": 0.5189003436426117,
+     "mean_excess_net_cost5": -2.2265796033782355,
+     "mean_excess_net_cost25": -22.226579603378234
+    },
+    "5": {
+     "n": 283,
+     "mean_raw_net": -29.41220660612422,
+     "mean_excess_gross": 6.544102366219569,
+     "mean_excess_net": -8.455897633780433,
+     "hit_excess": 0.48056537102473496,
+     "mean_excess_net_cost5": 1.5441023662195659,
+     "mean_excess_net_cost25": -18.455897633780438
+    },
+    "10": {
+     "n": 280,
+     "mean_raw_net": -85.78681301251474,
+     "mean_excess_gross": -6.294362962160324,
+     "mean_excess_net": -21.294362962160324,
+     "hit_excess": 0.5178571428571429,
+     "mean_excess_net_cost5": -11.294362962160324,
+     "mean_excess_net_cost25": -31.294362962160324
+    }
+   },
+   "npass": 0,
+   "verdict": "INSUFFICIENT_SAMPLE"
+  },
+  "BIGBAR_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 900,
+     "mean_raw_net": -24.195444080316467,
+     "mean_excess_gross": 1.3098089747326325,
+     "mean_excess_net": -13.690191025267369,
+     "hit_excess": 0.42333333333333334,
+     "mean_excess_net_cost5": -3.6901910252673678,
+     "mean_excess_net_cost25": -23.690191025267364
+    },
+    "3": {
+     "n": 876,
+     "mean_raw_net": -32.92081720187834,
+     "mean_excess_gross": 4.211885874904872,
+     "mean_excess_net": -10.78811412509513,
+     "hit_excess": 0.4509132420091324,
+     "mean_excess_net_cost5": -0.7881141250951269,
+     "mean_excess_net_cost25": -20.788114125095127,
+     "ci_lo": -60.10135575926013,
+     "halves": [
+      7.317637498916305,
+      -29.05997356217088
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -29.2657959749906,
+     "pass": false
+    },
+    "5": {
+     "n": 859,
+     "mean_raw_net": 1.7850478397870684,
+     "mean_excess_gross": 6.807680020397747,
+     "mean_excess_net": -8.192319979602253,
+     "hit_excess": 0.45052386495925495,
+     "mean_excess_net_cost5": 1.8076800203977499,
+     "mean_excess_net_cost25": -18.192319979602253,
+     "ci_lo": -63.801882105121,
+     "halves": [
+      23.978817779467427,
+      -40.58895636782428
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -26.63192378101789,
+     "pass": false
+    },
+    "10": {
+     "n": 815,
+     "mean_raw_net": 1.8655337959262197,
+     "mean_excess_gross": -9.794542649941707,
+     "mean_excess_net": -24.79454264994171,
+     "hit_excess": 0.4601226993865031,
+     "mean_excess_net_cost5": -14.794542649941706,
+     "mean_excess_net_cost25": -34.79454264994172,
+     "ci_lo": -95.75454587489155,
+     "halves": [
+      -4.939208623306801,
+      -44.69866128106466
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -56.931678771058856,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "BIGBAR_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 651,
+     "mean_raw_net": -34.49090372616338,
+     "mean_excess_gross": 20.2343081254436,
+     "mean_excess_net": 5.234308125443602,
+     "hit_excess": 0.4915514592933948,
+     "mean_excess_net_cost5": 15.2343081254436,
+     "mean_excess_net_cost25": -4.765691874556397
+    },
+    "3": {
+     "n": 644,
+     "mean_raw_net": -52.886767203062064,
+     "mean_excess_gross": 19.440396944447386,
+     "mean_excess_net": 4.440396944447389,
+     "hit_excess": 0.5295031055900621,
+     "mean_excess_net_cost5": 14.440396944447386,
+     "mean_excess_net_cost25": -5.559603055552614,
+     "ci_lo": -41.2447801576385,
+     "halves": [
+      26.941957512206802,
+      -18.484390467846676
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -9.351708440626503,
+     "pass": false
+    },
+    "5": {
+     "n": 635,
+     "mean_raw_net": -49.63243553543052,
+     "mean_excess_gross": 27.01884731486545,
+     "mean_excess_net": 12.018847314865447,
+     "hit_excess": 0.5165354330708661,
+     "mean_excess_net_cost5": 22.018847314865447,
+     "mean_excess_net_cost25": 2.0188473148654453,
+     "ci_lo": -37.121762021751096,
+     "halves": [
+      25.901891585982142,
+      -1.9079920485891686
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -4.209719025035932,
+     "pass": false
+    },
+    "10": {
+     "n": 617,
+     "mean_raw_net": -93.28888959469695,
+     "mean_excess_gross": 9.779775406424228,
+     "mean_excess_net": -5.220224593575769,
+     "hit_excess": 0.5040518638573744,
+     "mean_excess_net_cost5": 4.779775406424229,
+     "mean_excess_net_cost25": -15.220224593575772,
+     "ci_lo": -81.39730155150065,
+     "halves": [
+      25.522247722033025,
+      -36.06251013098848
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -40.26722625031351,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "PWH_BRK_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 7541,
+     "mean_raw_net": -26.9586588766288,
+     "mean_excess_gross": -6.869458825917786,
+     "mean_excess_net": -21.86945882591779,
+     "hit_excess": 0.39305131945365335,
+     "mean_excess_net_cost5": -11.869458825917787,
+     "mean_excess_net_cost25": -31.869458825917793
+    },
+    "3": {
+     "n": 6566,
+     "mean_raw_net": -13.916956215786232,
+     "mean_excess_gross": -13.367322477906143,
+     "mean_excess_net": -28.367322477906143,
+     "hit_excess": 0.43085592445933596,
+     "mean_excess_net_cost5": -18.367322477906143,
+     "mean_excess_net_cost25": -38.36732247790614,
+     "ci_lo": -39.354140970828006,
+     "halves": [
+      -24.412241229386154,
+      -32.3272255261805
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -33.29990152086086,
+     "pass": false
+    },
+    "5": {
+     "n": 5837,
+     "mean_raw_net": 3.2165695335709303,
+     "mean_excess_gross": -14.680054759244678,
+     "mean_excess_net": -29.68005475924468,
+     "hit_excess": 0.43172862771971904,
+     "mean_excess_net_cost5": -19.68005475924468,
+     "mean_excess_net_cost25": -39.680054759244676,
+     "ci_lo": -44.25237036177169,
+     "halves": [
+      -27.58821023156713,
+      -31.772616163045495
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -39.181502636757536,
+     "pass": false
+    },
+    "10": {
+     "n": 4526,
+     "mean_raw_net": 44.27185873839645,
+     "mean_excess_gross": -16.501157105310842,
+     "mean_excess_net": -31.50115710531085,
+     "hit_excess": 0.4465311533362793,
+     "mean_excess_net_cost5": -21.501157105310842,
+     "mean_excess_net_cost25": -41.50115710531085,
+     "ci_lo": -51.840951160638866,
+     "halves": [
+      -30.875537627461703,
+      -32.1278833845361
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -43.909036423652616,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "PWL_BRK_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 6548,
+     "mean_raw_net": -15.350548478994188,
+     "mean_excess_gross": -0.8415543698000058,
+     "mean_excess_net": -15.841554369800004,
+     "hit_excess": 0.45418448381185095,
+     "mean_excess_net_cost5": -5.841554369800005,
+     "mean_excess_net_cost25": -25.8415543698
+    },
+    "3": {
+     "n": 5726,
+     "mean_raw_net": -27.16468479287484,
+     "mean_excess_gross": 1.3271496658766833,
+     "mean_excess_net": -13.672850334123316,
+     "hit_excess": 0.48672720922109675,
+     "mean_excess_net_cost5": -3.672850334123317,
+     "mean_excess_net_cost25": -23.672850334123318,
+     "ci_lo": -24.88608087305144,
+     "halves": [
+      -10.3568535975181,
+      -16.99116432910492
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -18.839137012927285,
+     "pass": false
+    },
+    "5": {
+     "n": 5158,
+     "mean_raw_net": -38.780708496557516,
+     "mean_excess_gross": -0.0961403391588934,
+     "mean_excess_net": -15.096140339158891,
+     "hit_excess": 0.49243892981775883,
+     "mean_excess_net_cost5": -5.096140339158894,
+     "mean_excess_net_cost25": -25.096140339158893,
+     "ci_lo": -29.563186928871943,
+     "halves": [
+      -12.8788284276353,
+      -17.322066516073015
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -21.93145992883372,
+     "pass": false
+    },
+    "10": {
+     "n": 4142,
+     "mean_raw_net": -91.46926775432141,
+     "mean_excess_gross": -8.66365732036813,
+     "mean_excess_net": -23.66365732036813,
+     "hit_excess": 0.496861419604056,
+     "mean_excess_net_cost5": -13.66365732036813,
+     "mean_excess_net_cost25": -33.66365732036814,
+     "ci_lo": -42.516401627840146,
+     "halves": [
+      -26.831723495096483,
+      -20.4894663197824
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -33.83975276246444,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "PMH_BRK_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 3613,
+     "mean_raw_net": -23.761300295016085,
+     "mean_excess_gross": -2.752567785863264,
+     "mean_excess_net": -17.752567785863263,
+     "hit_excess": 0.40409631884860225,
+     "mean_excess_net_cost5": -7.752567785863263,
+     "mean_excess_net_cost25": -27.752567785863263
+    },
+    "3": {
+     "n": 3198,
+     "mean_raw_net": -17.747986562215534,
+     "mean_excess_gross": -14.422413896313225,
+     "mean_excess_net": -29.422413896313223,
+     "hit_excess": 0.42120075046904315,
+     "mean_excess_net_cost5": -19.422413896313223,
+     "mean_excess_net_cost25": -39.42241389631322,
+     "ci_lo": -47.167512036987524,
+     "halves": [
+      -23.656940359070678,
+      -35.202328193824385
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -35.562553914430225,
+     "pass": false
+    },
+    "5": {
+     "n": 2879,
+     "mean_raw_net": -6.0116500927744125,
+     "mean_excess_gross": -20.56410013566152,
+     "mean_excess_net": -35.56410013566152,
+     "hit_excess": 0.4234109065647794,
+     "mean_excess_net_cost5": -25.564100135661523,
+     "mean_excess_net_cost25": -45.56410013566151,
+     "ci_lo": -62.61831983331324,
+     "halves": [
+      -27.729030504264887,
+      -43.4373630034229
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -43.665353397602814,
+     "pass": false
+    },
+    "10": {
+     "n": 2430,
+     "mean_raw_net": 24.747120603787405,
+     "mean_excess_gross": -23.051655100013598,
+     "mean_excess_net": -38.05165510001359,
+     "hit_excess": 0.44156378600823043,
+     "mean_excess_net_cost5": -28.051655100013594,
+     "mean_excess_net_cost25": -48.05165510001359,
+     "ci_lo": -69.81051223015908,
+     "halves": [
+      -22.013217913312868,
+      -54.142980785268996
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -57.78357510342498,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "PML_BRK_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 2474,
+     "mean_raw_net": -12.501388303719885,
+     "mean_excess_gross": 3.1232116802010323,
+     "mean_excess_net": -11.876788319798969,
+     "hit_excess": 0.46402586903799514,
+     "mean_excess_net_cost5": -1.876788319798969,
+     "mean_excess_net_cost25": -21.87678831979897
+    },
+    "3": {
+     "n": 2167,
+     "mean_raw_net": -15.574802685829763,
+     "mean_excess_gross": 2.7623976799615346,
+     "mean_excess_net": -12.237602320038466,
+     "hit_excess": 0.490539916935856,
+     "mean_excess_net_cost5": -2.2376023200384663,
+     "mean_excess_net_cost25": -22.237602320038462,
+     "ci_lo": -28.606518951768678,
+     "halves": [
+      -15.083475746093974,
+      -9.389101125353172
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -20.42037055510308,
+     "pass": false
+    },
+    "5": {
+     "n": 1960,
+     "mean_raw_net": -11.981547898041201,
+     "mean_excess_gross": -1.2784347865144257,
+     "mean_excess_net": -16.278434786514428,
+     "hit_excess": 0.4816326530612245,
+     "mean_excess_net_cost5": -6.278434786514427,
+     "mean_excess_net_cost25": -26.278434786514428,
+     "ci_lo": -33.703859792570626,
+     "halves": [
+      -15.968321207265648,
+      -16.58981672396055
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -27.02062980859239,
+     "pass": false
+    },
+    "10": {
+     "n": 1679,
+     "mean_raw_net": -37.931506839428074,
+     "mean_excess_gross": 3.8665503110779453,
+     "mean_excess_net": -11.13344968892205,
+     "hit_excess": 0.5104228707564026,
+     "mean_excess_net_cost5": -1.1334496889220536,
+     "mean_excess_net_cost25": -21.13344968892205,
+     "ci_lo": -45.53266657514238,
+     "halves": [
+      -18.807125200062043,
+      -3.450627961439819
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -28.822112823456177,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "RSI2_DIP_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 3930,
+     "mean_raw_net": -9.108651588973299,
+     "mean_excess_gross": 7.620684228465183,
+     "mean_excess_net": -7.3793157715348165,
+     "hit_excess": 0.4582697201017812,
+     "mean_excess_net_cost5": 2.620684228465182,
+     "mean_excess_net_cost25": -17.379315771534817
+    },
+    "3": {
+     "n": 3135,
+     "mean_raw_net": 2.8676304082942417,
+     "mean_excess_gross": 1.8260854969547422,
+     "mean_excess_net": -13.173914503045255,
+     "hit_excess": 0.46220095693779906,
+     "mean_excess_net_cost5": -3.173914503045257,
+     "mean_excess_net_cost25": -23.173914503045257,
+     "ci_lo": -28.398413073369145,
+     "halves": [
+      -14.929583959889024,
+      -11.40813562514481
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -19.48831472508083,
+     "pass": false
+    },
+    "5": {
+     "n": 2773,
+     "mean_raw_net": 8.041564646325664,
+     "mean_excess_gross": -3.489881307640455,
+     "mean_excess_net": -18.489881307640452,
+     "hit_excess": 0.45834835917778577,
+     "mean_excess_net_cost5": -8.489881307640454,
+     "mean_excess_net_cost25": -28.489881307640456,
+     "ci_lo": -39.31547775060638,
+     "halves": [
+      -29.74408258582009,
+      -7.227560115118701
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -25.979577710147048,
+     "pass": false
+    },
+    "10": {
+     "n": 2291,
+     "mean_raw_net": 59.557009003798214,
+     "mean_excess_gross": 4.060136215176398,
+     "mean_excess_net": -10.939863784823604,
+     "hit_excess": 0.4622435617634221,
+     "mean_excess_net_cost5": -0.9398637848236017,
+     "mean_excess_net_cost25": -20.9398637848236,
+     "ci_lo": -42.647042161177254,
+     "halves": [
+      -24.83224659773211,
+      3.013290606444077
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -24.71732879493693,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "RSI2_POP_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 2024,
+     "mean_raw_net": -9.206939206125089,
+     "mean_excess_gross": 4.1895729527374375,
+     "mean_excess_net": -10.810427047262564,
+     "hit_excess": 0.5064229249011858,
+     "mean_excess_net_cost5": -0.8104270472625634,
+     "mean_excess_net_cost25": -20.810427047262564
+    },
+    "3": {
+     "n": 1562,
+     "mean_raw_net": -23.697849194823885,
+     "mean_excess_gross": 14.432899320626992,
+     "mean_excess_net": -0.5671006793730067,
+     "hit_excess": 0.5204865556978233,
+     "mean_excess_net_cost5": 9.432899320626992,
+     "mean_excess_net_cost25": -10.567100679373006,
+     "ci_lo": -24.209090603102368,
+     "halves": [
+      6.089375604493741,
+      -7.292112111593598
+     ],
+     "years_positive": 5,
+     "years": 8,
+     "drop_top5_mean": -8.917451184232215,
+     "pass": false
+    },
+    "5": {
+     "n": 1393,
+     "mean_raw_net": -11.134742868509083,
+     "mean_excess_gross": 42.19414508866156,
+     "mean_excess_net": 27.194145088661553,
+     "hit_excess": 0.5642498205312275,
+     "mean_excess_net_cost5": 37.19414508866155,
+     "mean_excess_net_cost25": 17.194145088661553,
+     "ci_lo": -13.28852548489388,
+     "halves": [
+      41.16240355385815,
+      13.00352650317962
+     ],
+     "years_positive": 6,
+     "years": 8,
+     "drop_top5_mean": 14.643801141357129,
+     "pass": false
+    },
+    "10": {
+     "n": 1124,
+     "mean_raw_net": -81.09908190697982,
+     "mean_excess_gross": 32.90977430462609,
+     "mean_excess_net": 17.90977430462609,
+     "hit_excess": 0.5364768683274022,
+     "mean_excess_net_cost5": 27.90977430462609,
+     "mean_excess_net_cost25": 7.909774304626089,
+     "ci_lo": -29.7536999283795,
+     "halves": [
+      41.47625727666847,
+      -5.825040688645172
+     ],
+     "years_positive": 5,
+     "years": 8,
+     "drop_top5_mean": -4.2396614481823285,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "DIP_UPTREND3": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 3929,
+     "mean_raw_net": -13.821206536540616,
+     "mean_excess_gross": 5.616055200088816,
+     "mean_excess_net": -9.383944799911184,
+     "hit_excess": 0.44769661491473656,
+     "mean_excess_net_cost5": 0.6160552000888158,
+     "mean_excess_net_cost25": -19.383944799911188
+    },
+    "3": {
+     "n": 3275,
+     "mean_raw_net": -3.8369710517632396,
+     "mean_excess_gross": 0.6724600493835877,
+     "mean_excess_net": -14.327539950616412,
+     "hit_excess": 0.443969465648855,
+     "mean_excess_net_cost5": -4.327539950616411,
+     "mean_excess_net_cost25": -24.32753995061641,
+     "ci_lo": -27.42802136001426,
+     "halves": [
+      -21.7499310179139,
+      -6.900614740944274
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -21.7105681396829,
+     "pass": false
+    },
+    "5": {
+     "n": 2964,
+     "mean_raw_net": 4.166263878304958,
+     "mean_excess_gross": -5.137041041944589,
+     "mean_excess_net": -20.13704104194459,
+     "hit_excess": 0.4493927125506073,
+     "mean_excess_net_cost5": -10.13704104194459,
+     "mean_excess_net_cost25": -30.13704104194459,
+     "ci_lo": -39.549611136510165,
+     "halves": [
+      -30.42734428226833,
+      -9.818926171241593
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -29.79308655461292,
+     "pass": false
+    },
+    "10": {
+     "n": 2401,
+     "mean_raw_net": 47.05324158779959,
+     "mean_excess_gross": -5.043880220693446,
+     "mean_excess_net": -20.043880220693445,
+     "hit_excess": 0.45147855060391506,
+     "mean_excess_net_cost5": -10.043880220693447,
+     "mean_excess_net_cost25": -30.043880220693445,
+     "ci_lo": -55.66199774493677,
+     "halves": [
+      -31.537200551086414,
+      -8.50259110761938
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -37.47056287840564,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "BBL_UPTREND": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 1301,
+     "mean_raw_net": -4.90356138131685,
+     "mean_excess_gross": 4.950751608993275,
+     "mean_excess_net": -10.049248391006724,
+     "hit_excess": 0.4565718677940046,
+     "mean_excess_net_cost5": -0.0492483910067245,
+     "mean_excess_net_cost25": -20.049248391006724
+    },
+    "3": {
+     "n": 1011,
+     "mean_raw_net": 3.6667035592036568,
+     "mean_excess_gross": -3.7672146117007532,
+     "mean_excess_net": -18.767214611700755,
+     "hit_excess": 0.466864490603363,
+     "mean_excess_net_cost5": -8.767214611700751,
+     "mean_excess_net_cost25": -28.767214611700755,
+     "ci_lo": -47.66826468736869,
+     "halves": [
+      -21.31672819625789,
+      -16.21265248539202
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -32.18105654386301,
+     "pass": false
+    },
+    "5": {
+     "n": 910,
+     "mean_raw_net": 2.0494388817823688,
+     "mean_excess_gross": -3.2727789508400456,
+     "mean_excess_net": -18.272778950840046,
+     "hit_excess": 0.4703296703296703,
+     "mean_excess_net_cost5": -8.272778950840046,
+     "mean_excess_net_cost25": -28.272778950840046,
+     "ci_lo": -51.36719817894686,
+     "halves": [
+      -18.83510718788837,
+      -17.707973496888428
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -35.81575831642773,
+     "pass": false
+    },
+    "10": {
+     "n": 832,
+     "mean_raw_net": 31.64021975670158,
+     "mean_excess_gross": -5.272303860610053,
+     "mean_excess_net": -20.27230386061006,
+     "hit_excess": 0.47115384615384615,
+     "mean_excess_net_cost5": -10.272303860610057,
+     "mean_excess_net_cost25": -30.27230386061005,
+     "ci_lo": -79.24293929650693,
+     "halves": [
+      -6.371160797204853,
+      -34.240440384561786
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -43.72929076443779,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "BBU_DOWNTREND": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 697,
+     "mean_raw_net": -0.29485033473882183,
+     "mean_excess_gross": 10.51848162998215,
+     "mean_excess_net": -4.4815183700178505,
+     "hit_excess": 0.5107604017216643,
+     "mean_excess_net_cost5": 5.5184816299821495,
+     "mean_excess_net_cost25": -14.48151837001785
+    },
+    "3": {
+     "n": 530,
+     "mean_raw_net": -17.131473788742806,
+     "mean_excess_gross": 22.227601202614615,
+     "mean_excess_net": 7.227601202614617,
+     "hit_excess": 0.5377358490566038,
+     "mean_excess_net_cost5": 17.227601202614615,
+     "mean_excess_net_cost25": -2.772398797385382,
+     "ci_lo": -57.84354097753139,
+     "halves": [
+      1.039336736871837,
+      13.462746459764537
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -12.328521226286211,
+     "pass": false
+    },
+    "5": {
+     "n": 479,
+     "mean_raw_net": -34.91197518465115,
+     "mean_excess_gross": 22.035841940635567,
+     "mean_excess_net": 7.035841940635573,
+     "hit_excess": 0.5407098121085595,
+     "mean_excess_net_cost5": 17.035841940635574,
+     "mean_excess_net_cost25": -2.964158059364426
+    },
+    "10": {
+     "n": 429,
+     "mean_raw_net": -73.98427837914275,
+     "mean_excess_gross": 28.509625563570296,
+     "mean_excess_net": 13.509625563570294,
+     "hit_excess": 0.5477855477855478,
+     "mean_excess_net_cost5": 23.509625563570296,
+     "mean_excess_net_cost25": 3.5096255635702946
+    }
+   },
+   "npass": 0,
+   "verdict": "INSUFFICIENT_SAMPLE"
+  },
+  "SMA200_CAPIT": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 7325,
+     "mean_raw_net": -15.596448259645422,
+     "mean_excess_gross": 2.4112660684724623,
+     "mean_excess_net": -12.588733931527539,
+     "hit_excess": 0.4255290102389078,
+     "mean_excess_net_cost5": -2.5887339315275377,
+     "mean_excess_net_cost25": -22.58873393152754
+    },
+    "3": {
+     "n": 3865,
+     "mean_raw_net": 3.1973899478997314,
+     "mean_excess_gross": 2.3641316768217684,
+     "mean_excess_net": -12.63586832317823,
+     "hit_excess": 0.4569210866752911,
+     "mean_excess_net_cost5": -2.6358683231782316,
+     "mean_excess_net_cost25": -22.635868323178233,
+     "ci_lo": -31.983225816056247,
+     "halves": [
+      -20.30417107728023,
+      -4.963596468271827
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -19.271668666265704,
+     "pass": false
+    },
+    "5": {
+     "n": 2680,
+     "mean_raw_net": 14.776620206991446,
+     "mean_excess_gross": 7.603201428454726,
+     "mean_excess_net": -7.396798571545273,
+     "hit_excess": 0.4783582089552239,
+     "mean_excess_net_cost5": 2.6032014284547267,
+     "mean_excess_net_cost25": -17.39679857154527,
+     "ci_lo": -33.81715369279494,
+     "halves": [
+      -5.125752195185657,
+      -9.67463432421687
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -16.286500914317646,
+     "pass": false
+    },
+    "10": {
+     "n": 1582,
+     "mean_raw_net": 54.20874514833021,
+     "mean_excess_gross": 5.848970808581615,
+     "mean_excess_net": -9.151029191418386,
+     "hit_excess": 0.47029077117572693,
+     "mean_excess_net_cost5": 0.8489708085816123,
+     "mean_excess_net_cost25": -19.151029191418388,
+     "ci_lo": -55.622629761004205,
+     "halves": [
+      -5.189746200206125,
+      -13.122340747165364
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -25.040840625749752,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "NEAR_52W_HIGH": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 5038,
+     "mean_raw_net": -27.426635373669207,
+     "mean_excess_gross": -5.684049761003567,
+     "mean_excess_net": -20.684049761003568,
+     "hit_excess": 0.3947995236204843,
+     "mean_excess_net_cost5": -10.684049761003566,
+     "mean_excess_net_cost25": -30.684049761003568
+    },
+    "3": {
+     "n": 3108,
+     "mean_raw_net": -22.344827475529687,
+     "mean_excess_gross": -17.19207541252573,
+     "mean_excess_net": -32.19207541252573,
+     "hit_excess": 0.4362934362934363,
+     "mean_excess_net_cost5": -22.19207541252573,
+     "mean_excess_net_cost25": -42.19207541252573,
+     "ci_lo": -47.854835473274,
+     "halves": [
+      -30.63984370298471,
+      -33.74830771925629
+     ],
+     "years_positive": 0,
+     "years": 7,
+     "drop_top5_mean": -39.39700599103173,
+     "pass": false
+    },
+    "5": {
+     "n": 2379,
+     "mean_raw_net": -9.177142774871534,
+     "mean_excess_gross": -20.0185366390009,
+     "mean_excess_net": -35.0185366390009,
+     "hit_excess": 0.43463640184951663,
+     "mean_excess_net_cost5": -25.0185366390009,
+     "mean_excess_net_cost25": -45.01853663900089,
+     "ci_lo": -58.44624378296462,
+     "halves": [
+      -31.219047902252264,
+      -38.8404506886983
+     ],
+     "years_positive": 1,
+     "years": 7,
+     "drop_top5_mean": -46.81817263740086,
+     "pass": false
+    },
+    "10": {
+     "n": 1625,
+     "mean_raw_net": 23.131722545354794,
+     "mean_excess_gross": -22.11473049690546,
+     "mean_excess_net": -37.11473049690546,
+     "hit_excess": 0.4270769230769231,
+     "mean_excess_net_cost5": -27.114730496905462,
+     "mean_excess_net_cost25": -47.11473049690546,
+     "ci_lo": -79.64962503310815,
+     "halves": [
+      -42.378839643914375,
+      -31.83114868967333
+     ],
+     "years_positive": 2,
+     "years": 7,
+     "drop_top5_mean": -58.037028408568595,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "DONCH55_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 3362,
+     "mean_raw_net": -34.425271675531675,
+     "mean_excess_gross": -10.029433456004154,
+     "mean_excess_net": -25.029433456004156,
+     "hit_excess": 0.3822129684711481,
+     "mean_excess_net_cost5": -15.029433456004156,
+     "mean_excess_net_cost25": -35.029433456004156
+    },
+    "3": {
+     "n": 2672,
+     "mean_raw_net": -31.409275530908406,
+     "mean_excess_gross": -24.221344749508443,
+     "mean_excess_net": -39.22134474950845,
+     "hit_excess": 0.40119760479041916,
+     "mean_excess_net_cost5": -29.221344749508443,
+     "mean_excess_net_cost25": -49.22134474950845,
+     "ci_lo": -60.9776547661966,
+     "halves": [
+      -30.007303889317903,
+      -48.44918941623111
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -49.043104598615585,
+     "pass": false
+    },
+    "5": {
+     "n": 2314,
+     "mean_raw_net": -19.070104218900923,
+     "mean_excess_gross": -25.67739328635328,
+     "mean_excess_net": -40.67739328635328,
+     "hit_excess": 0.4062229904926534,
+     "mean_excess_net_cost5": -30.67739328635328,
+     "mean_excess_net_cost25": -50.67739328635328,
+     "ci_lo": -69.06308819130803,
+     "halves": [
+      -32.670903502569665,
+      -48.71161117328418
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -52.92667453267194,
+     "pass": false
+    },
+    "10": {
+     "n": 1850,
+     "mean_raw_net": 11.239912294006166,
+     "mean_excess_gross": -34.916820838274106,
+     "mean_excess_net": -49.916820838274106,
+     "hit_excess": 0.43189189189189187,
+     "mean_excess_net_cost5": -39.916820838274106,
+     "mean_excess_net_cost25": -59.91682083827411,
+     "ci_lo": -91.4000537590625,
+     "halves": [
+      -55.191726080104196,
+      -44.630498052630514
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -69.30285994402362,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "DONCH55_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 1767,
+     "mean_raw_net": -33.76698631965567,
+     "mean_excess_gross": 1.0986059707371802,
+     "mean_excess_net": -13.90139402926282,
+     "hit_excess": 0.45444255800792305,
+     "mean_excess_net_cost5": -3.9013940292628178,
+     "mean_excess_net_cost25": -23.901394029262818
+    },
+    "3": {
+     "n": 1404,
+     "mean_raw_net": -22.02458371802938,
+     "mean_excess_gross": -4.317182574356314,
+     "mean_excess_net": -19.317182574356313,
+     "hit_excess": 0.45726495726495725,
+     "mean_excess_net_cost5": -9.317182574356316,
+     "mean_excess_net_cost25": -29.317182574356316,
+     "ci_lo": -42.07609713173358,
+     "halves": [
+      -4.963161754987238,
+      -33.71215637751817
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -34.54351726277888,
+     "pass": false
+    },
+    "5": {
+     "n": 1213,
+     "mean_raw_net": -17.460223552009847,
+     "mean_excess_gross": -9.587940000978575,
+     "mean_excess_net": -24.587940000978577,
+     "hit_excess": 0.4765045342126958,
+     "mean_excess_net_cost5": -14.587940000978577,
+     "mean_excess_net_cost25": -34.58794000097858,
+     "ci_lo": -52.95804166477339,
+     "halves": [
+      -23.180927563425165,
+      -25.997274241234212
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -45.5550747261022,
+     "pass": false
+    },
+    "10": {
+     "n": 990,
+     "mean_raw_net": -30.206303513096557,
+     "mean_excess_gross": -5.826938476321106,
+     "mean_excess_net": -20.826938476321107,
+     "hit_excess": 0.4858585858585859,
+     "mean_excess_net_cost5": -10.826938476321107,
+     "mean_excess_net_cost25": -30.826938476321107,
+     "ci_lo": -67.48173258611678,
+     "halves": [
+      -25.275896517327197,
+      -16.359968459440495
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -45.28336052444319,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "MACD_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 3875,
+     "mean_raw_net": -22.787128379286646,
+     "mean_excess_gross": -1.5527456547277176,
+     "mean_excess_net": -16.55274565472772,
+     "hit_excess": 0.40774193548387094,
+     "mean_excess_net_cost5": -6.552745654727717,
+     "mean_excess_net_cost25": -26.552745654727715
+    },
+    "3": {
+     "n": 3749,
+     "mean_raw_net": -6.088600023413052,
+     "mean_excess_gross": -5.136246104797138,
+     "mean_excess_net": -20.136246104797134,
+     "hit_excess": 0.4438516937850093,
+     "mean_excess_net_cost5": -10.136246104797136,
+     "mean_excess_net_cost25": -30.136246104797134,
+     "ci_lo": -33.60132704220146,
+     "halves": [
+      -14.394379630476234,
+      -25.893448760940483
+     ],
+     "years_positive": 0,
+     "years": 8,
+     "drop_top5_mean": -25.551630346783348,
+     "pass": false
+    },
+    "5": {
+     "n": 3621,
+     "mean_raw_net": 10.536152651515774,
+     "mean_excess_gross": -6.351080540730889,
+     "mean_excess_net": -21.351080540730894,
+     "hit_excess": 0.44103838718586025,
+     "mean_excess_net_cost5": -11.35108054073089,
+     "mean_excess_net_cost25": -31.351080540730887,
+     "ci_lo": -40.1974524066004,
+     "halves": [
+      -18.4102383192357,
+      -24.309844792384776
+     ],
+     "years_positive": 1,
+     "years": 8,
+     "drop_top5_mean": -28.224872393686574,
+     "pass": false
+    },
+    "10": {
+     "n": 3302,
+     "mean_raw_net": 53.56360472502832,
+     "mean_excess_gross": 0.9522247306953248,
+     "mean_excess_net": -14.047775269304672,
+     "hit_excess": 0.4609327680193822,
+     "mean_excess_net_cost5": -4.047775269304674,
+     "mean_excess_net_cost25": -24.047775269304676,
+     "ci_lo": -43.464667453313275,
+     "halves": [
+      -6.633210790269416,
+      -21.471327099223615
+     ],
+     "years_positive": 4,
+     "years": 8,
+     "drop_top5_mean": -28.676258799119072,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "MACD_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 3869,
+     "mean_raw_net": -14.517642139003062,
+     "mean_excess_gross": -2.6296998357558166,
+     "mean_excess_net": -17.629699835755815,
+     "hit_excess": 0.4528301886792453,
+     "mean_excess_net_cost5": -7.629699835755815,
+     "mean_excess_net_cost25": -27.629699835755815
+    },
+    "3": {
+     "n": 3753,
+     "mean_raw_net": -28.557409825614954,
+     "mean_excess_gross": -0.9799472125668899,
+     "mean_excess_net": -15.979947212566888,
+     "hit_excess": 0.4908073541167066,
+     "mean_excess_net_cost5": -5.9799472125668895,
+     "mean_excess_net_cost25": -25.979947212566888,
+     "ci_lo": -29.554074126083712,
+     "halves": [
+      -5.243951520370325,
+      -26.72166571696612
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -20.577607323252327,
+     "pass": false
+    },
+    "5": {
+     "n": 3631,
+     "mean_raw_net": -47.944930002817976,
+     "mean_excess_gross": -1.765312941653949,
+     "mean_excess_net": -16.76531294165395,
+     "hit_excess": 0.488846047920683,
+     "mean_excess_net_cost5": -6.765312941653948,
+     "mean_excess_net_cost25": -26.76531294165395,
+     "ci_lo": -34.7148776403439,
+     "halves": [
+      -2.7083968410219725,
+      -30.829973899641647
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -23.425277464736556,
+     "pass": false
+    },
+    "10": {
+     "n": 3284,
+     "mean_raw_net": -95.26249123627663,
+     "mean_excess_gross": -0.5351900057587453,
+     "mean_excess_net": -15.535190005758748,
+     "hit_excess": 0.5076126674786845,
+     "mean_excess_net_cost5": -5.5351900057587455,
+     "mean_excess_net_cost25": -25.535190005758746,
+     "ci_lo": -36.14940240076977,
+     "halves": [
+      1.9336559292370088,
+      -33.04664288205936
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -26.001303492290326,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "INSIDE_BRK_UP": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 4006,
+     "mean_raw_net": -23.153970886695713,
+     "mean_excess_gross": -1.1260840836697048,
+     "mean_excess_net": -16.126084083669706,
+     "hit_excess": 0.40089865202196706,
+     "mean_excess_net_cost5": -6.126084083669705,
+     "mean_excess_net_cost25": -26.126084083669706
+    },
+    "3": {
+     "n": 3713,
+     "mean_raw_net": -15.474839920705476,
+     "mean_excess_gross": -4.151222418526826,
+     "mean_excess_net": -19.151222418526828,
+     "hit_excess": 0.4365741987611096,
+     "mean_excess_net_cost5": -9.151222418526828,
+     "mean_excess_net_cost25": -29.151222418526828,
+     "ci_lo": -31.997898675849278,
+     "halves": [
+      -20.66045388024997,
+      -17.6411777933006
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -26.413467757541902,
+     "pass": false
+    },
+    "5": {
+     "n": 3450,
+     "mean_raw_net": 8.325530808971834,
+     "mean_excess_gross": -1.6806664049538833,
+     "mean_excess_net": -16.68066640495388,
+     "hit_excess": 0.4492753623188406,
+     "mean_excess_net_cost5": -6.680666404953881,
+     "mean_excess_net_cost25": -26.680666404953886,
+     "ci_lo": -33.07925616272358,
+     "halves": [
+      -17.34091674641559,
+      -16.01965011181994
+     ],
+     "years_positive": 0,
+     "years": 9,
+     "drop_top5_mean": -28.323654464441503,
+     "pass": false
+    },
+    "10": {
+     "n": 2937,
+     "mean_raw_net": 45.068186834390325,
+     "mean_excess_gross": -1.9962339283857427,
+     "mean_excess_net": -16.996233928385738,
+     "hit_excess": 0.4616956077630235,
+     "mean_excess_net_cost5": -6.9962339283857435,
+     "mean_excess_net_cost25": -26.996233928385745,
+     "ci_lo": -43.886553072097044,
+     "halves": [
+      -19.35969843249185,
+      -14.611753666035192
+     ],
+     "years_positive": 2,
+     "years": 9,
+     "drop_top5_mean": -32.51964526580691,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "INSIDE_BRK_DN": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 3835,
+     "mean_raw_net": -11.21685871584322,
+     "mean_excess_gross": -0.8776065402264323,
+     "mean_excess_net": -15.87760654022643,
+     "hit_excess": 0.455019556714472,
+     "mean_excess_net_cost5": -5.877606540226432,
+     "mean_excess_net_cost25": -25.87760654022643
+    },
+    "3": {
+     "n": 3528,
+     "mean_raw_net": -24.94109034793445,
+     "mean_excess_gross": -3.910299732936379,
+     "mean_excess_net": -18.91029973293638,
+     "hit_excess": 0.4685374149659864,
+     "mean_excess_net_cost5": -8.910299732936378,
+     "mean_excess_net_cost25": -28.91029973293638,
+     "ci_lo": -33.891114403761705,
+     "halves": [
+      -19.387968974395854,
+      -18.431546111814118
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -25.763844747082715,
+     "pass": false
+    },
+    "5": {
+     "n": 3303,
+     "mean_raw_net": -32.016945027028925,
+     "mean_excess_gross": -3.350763787821121,
+     "mean_excess_net": -18.35076378782112,
+     "hit_excess": 0.5004541326067211,
+     "mean_excess_net_cost5": -8.350763787821121,
+     "mean_excess_net_cost25": -28.350763787821123,
+     "ci_lo": -38.735630862730964,
+     "halves": [
+      -19.885972997010644,
+      -16.814624712363162
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -24.030917257474243,
+     "pass": false
+    },
+    "10": {
+     "n": 2832,
+     "mean_raw_net": -69.92177039319014,
+     "mean_excess_gross": -4.48310602312162,
+     "mean_excess_net": -19.48310602312162,
+     "hit_excess": 0.4982344632768362,
+     "mean_excess_net_cost5": -9.483106023121621,
+     "mean_excess_net_cost25": -29.483106023121625,
+     "ci_lo": -45.59220784385938,
+     "halves": [
+      -22.41834843259934,
+      -16.539560240491202
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -30.449671423028988,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "GAP_DN_RECLAIM": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 1996,
+     "mean_raw_net": -35.00559640743444,
+     "mean_excess_gross": 1.7245490679512865,
+     "mean_excess_net": -13.275450932048715,
+     "hit_excess": 0.44288577154308617,
+     "mean_excess_net_cost5": -3.2754509320487126,
+     "mean_excess_net_cost25": -23.275450932048713
+    },
+    "3": {
+     "n": 1893,
+     "mean_raw_net": -72.10629662066701,
+     "mean_excess_gross": -4.579623894570635,
+     "mean_excess_net": -19.579623894570638,
+     "hit_excess": 0.4574749075541469,
+     "mean_excess_net_cost5": -9.579623894570636,
+     "mean_excess_net_cost25": -29.579623894570638,
+     "ci_lo": -40.24934859371443,
+     "halves": [
+      -15.388403144325531,
+      -23.775275110725083
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -32.07844142960291,
+     "pass": false
+    },
+    "5": {
+     "n": 1756,
+     "mean_raw_net": -4.54656130163541,
+     "mean_excess_gross": 2.9835256086716555,
+     "mean_excess_net": -12.016474391328343,
+     "hit_excess": 0.45785876993166286,
+     "mean_excess_net_cost5": -2.0164743913283436,
+     "mean_excess_net_cost25": -22.016474391328344,
+     "ci_lo": -37.6128466878694,
+     "halves": [
+      -0.2875980549470341,
+      -23.825777308301983
+     ],
+     "years_positive": 2,
+     "years": 8,
+     "drop_top5_mean": -25.04051095581455,
+     "pass": false
+    },
+    "10": {
+     "n": 1576,
+     "mean_raw_net": -1.280523519346381,
+     "mean_excess_gross": -1.4453420724433486,
+     "mean_excess_net": -16.44534207244335,
+     "hit_excess": 0.46256345177664976,
+     "mean_excess_net_cost5": -6.445342072443348,
+     "mean_excess_net_cost25": -26.445342072443353,
+     "ci_lo": -55.97217197832771,
+     "halves": [
+      -5.70113528875354,
+      -27.21685306651103
+     ],
+     "years_positive": 3,
+     "years": 8,
+     "drop_top5_mean": -40.730864585700054,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "FIB_S1W_RECLAIM": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 9684,
+     "mean_raw_net": -20.85460436115241,
+     "mean_excess_gross": 1.7394044654874636,
+     "mean_excess_net": -13.260595534512536,
+     "hit_excess": 0.43411813300289137,
+     "mean_excess_net_cost5": -3.2605955345125364,
+     "mean_excess_net_cost25": -23.26059553451254
+    },
+    "3": {
+     "n": 7681,
+     "mean_raw_net": -13.037745626787755,
+     "mean_excess_gross": -0.3262981598478065,
+     "mean_excess_net": -15.326298159847806,
+     "hit_excess": 0.4462960552011457,
+     "mean_excess_net_cost5": -5.326298159847807,
+     "mean_excess_net_cost25": -25.326298159847806,
+     "ci_lo": -24.789210192095233,
+     "halves": [
+      -18.80336549597487,
+      -11.848325337435291
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -19.171573437629874,
+     "pass": false
+    },
+    "5": {
+     "n": 6526,
+     "mean_raw_net": 9.549233689455841,
+     "mean_excess_gross": 6.559570383392449,
+     "mean_excess_net": -8.440429616607553,
+     "hit_excess": 0.4603125957707631,
+     "mean_excess_net_cost5": 1.559570383392448,
+     "mean_excess_net_cost25": -18.440429616607553,
+     "ci_lo": -20.115908916602134,
+     "halves": [
+      -7.239678799717593,
+      -9.642653295585085
+     ],
+     "years_positive": 2,
+     "years": 9,
+     "drop_top5_mean": -15.18788456908572,
+     "pass": false
+    },
+    "10": {
+     "n": 4909,
+     "mean_raw_net": 43.09627820334071,
+     "mean_excess_gross": -1.7722262918396576,
+     "mean_excess_net": -16.772226291839658,
+     "hit_excess": 0.45447137909961294,
+     "mean_excess_net_cost5": -6.772226291839657,
+     "mean_excess_net_cost25": -26.77222629183966,
+     "ci_lo": -33.81417525163827,
+     "halves": [
+      -17.436725035694167,
+      -16.10745676610094
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -27.30907851364924,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "FIB_R1W_REJECT": {
+   "side": "SHORT",
+   "horizons": {
+    "1": {
+     "n": 10919,
+     "mean_raw_net": -8.587612308582823,
+     "mean_excess_gross": 1.2376294741016318,
+     "mean_excess_net": -13.762370525898366,
+     "hit_excess": 0.4756845865005953,
+     "mean_excess_net_cost5": -3.7623705258983677,
+     "mean_excess_net_cost25": -23.76237052589837
+    },
+    "3": {
+     "n": 8464,
+     "mean_raw_net": -24.17493510608493,
+     "mean_excess_gross": 1.2650141231448415,
+     "mean_excess_net": -13.73498587685516,
+     "hit_excess": 0.493265595463138,
+     "mean_excess_net_cost5": -3.7349858768551587,
+     "mean_excess_net_cost25": -23.73498587685516,
+     "ci_lo": -23.477966495830742,
+     "halves": [
+      -11.163001839305908,
+      -16.310618981376578
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -17.166905370791316,
+     "pass": false
+    },
+    "5": {
+     "n": 7175,
+     "mean_raw_net": -35.477944340647674,
+     "mean_excess_gross": 3.73031407572175,
+     "mean_excess_net": -11.269685924278251,
+     "hit_excess": 0.5045296167247387,
+     "mean_excess_net_cost5": -1.2696859242782497,
+     "mean_excess_net_cost25": -21.26968592427825,
+     "ci_lo": -22.913816861385662,
+     "halves": [
+      -10.038341764607864,
+      -12.504811431172637
+     ],
+     "years_positive": 1,
+     "years": 9,
+     "drop_top5_mean": -16.899163027961432,
+     "pass": false
+    },
+    "10": {
+     "n": 5367,
+     "mean_raw_net": -73.79168418922482,
+     "mean_excess_gross": 11.432021127874876,
+     "mean_excess_net": -3.567978872125122,
+     "hit_excess": 0.5163033351965717,
+     "mean_excess_net_cost5": 6.4320211278748785,
+     "mean_excess_net_cost25": -13.567978872125124,
+     "ci_lo": -17.124399655142515,
+     "halves": [
+      0.817941698859419,
+      -7.958805394531345
+     ],
+     "years_positive": 2,
+     "years": 9,
+     "drop_top5_mean": -11.415251202137682,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "TURN_OF_MONTH": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 12187,
+     "mean_raw_net": -23.630390861861212,
+     "mean_excess_gross": -1.6418218953806861e-15,
+     "mean_excess_net": -15.0,
+     "hit_excess": 0.4229096578321162,
+     "mean_excess_net_cost5": -5.000000000000002,
+     "mean_excess_net_cost25": -25.000000000000004
+    },
+    "3": {
+     "n": 7468,
+     "mean_raw_net": 12.44258214949831,
+     "mean_excess_gross": -1.7049981018774766e-15,
+     "mean_excess_net": -15.000000000000002,
+     "hit_excess": 0.44469737546866633,
+     "mean_excess_net_cost5": -5.000000000000002,
+     "mean_excess_net_cost25": -25.000000000000004,
+     "ci_lo": -15.000000000000009,
+     "halves": [
+      -15.0,
+      -15.000000000000004
+     ],
+     "years_positive": 0,
+     "years": 9,
+     "drop_top5_mean": -21.25659527888805,
+     "pass": false
+    },
+    "5": {
+     "n": 4875,
+     "mean_raw_net": 45.53070257086562,
+     "mean_excess_gross": -5.2237644409522035e-15,
+     "mean_excess_net": -15.000000000000005,
+     "hit_excess": 0.4502564102564103,
+     "mean_excess_net_cost5": -5.000000000000006,
+     "mean_excess_net_cost25": -25.000000000000007,
+     "ci_lo": -15.000000000000018,
+     "halves": [
+      -15.000000000000012,
+      -15.0
+     ],
+     "years_positive": 0,
+     "years": 9,
+     "drop_top5_mean": -23.417246706031673,
+     "pass": false
+    },
+    "10": {
+     "n": 4875,
+     "mean_raw_net": 80.3498808749349,
+     "mean_excess_gross": 4.4775123779590315e-15,
+     "mean_excess_net": -14.999999999999995,
+     "hit_excess": 0.4584615384615385,
+     "mean_excess_net_cost5": -4.999999999999994,
+     "mean_excess_net_cost25": -24.999999999999993,
+     "ci_lo": -15.000000000000005,
+     "halves": [
+      -14.999999999999986,
+      -15.000000000000005
+     ],
+     "years_positive": 0,
+     "years": 9,
+     "drop_top5_mean": -27.66229667533379,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  },
+  "OWNER_BULLENG_PIVOT_WEEKLOW": {
+   "side": "LONG",
+   "horizons": {
+    "1": {
+     "n": 1833,
+     "mean_raw_net": -30.933425590682806,
+     "mean_excess_gross": 0.04061282075701582,
+     "mean_excess_net": -14.959387179242983,
+     "hit_excess": 0.425531914893617,
+     "mean_excess_net_cost5": -4.959387179242984,
+     "mean_excess_net_cost25": -24.95938717924298
+    },
+    "3": {
+     "n": 1755,
+     "mean_raw_net": -28.90622020751925,
+     "mean_excess_gross": 0.22933101263827269,
+     "mean_excess_net": -14.770668987361729,
+     "hit_excess": 0.4427350427350427,
+     "mean_excess_net_cost5": -4.770668987361728,
+     "mean_excess_net_cost25": -24.770668987361727,
+     "ci_lo": -34.5920059707076,
+     "halves": [
+      -12.744331935807203,
+      -16.79931657147219
+     ],
+     "years_positive": 3,
+     "years": 9,
+     "drop_top5_mean": -27.0872304287477,
+     "pass": false
+    },
+    "5": {
+     "n": 1677,
+     "mean_raw_net": -16.401651451176125,
+     "mean_excess_gross": -5.157341785290338,
+     "mean_excess_net": -20.15734178529034,
+     "hit_excess": 0.44663088849135363,
+     "mean_excess_net_cost5": -10.157341785290338,
+     "mean_excess_net_cost25": -30.15734178529034,
+     "ci_lo": -46.26678767421329,
+     "halves": [
+      -19.312948474414874,
+      -21.00274272541506
+     ],
+     "years_positive": 3,
+     "years": 9,
+     "drop_top5_mean": -34.847226354989786,
+     "pass": false
+    },
+    "10": {
+     "n": 1519,
+     "mean_raw_net": 7.909024719768834,
+     "mean_excess_gross": -0.5332598780695613,
+     "mean_excess_net": -15.533259878069561,
+     "hit_excess": 0.47662936142198814,
+     "mean_excess_net_cost5": -5.53325987806956,
+     "mean_excess_net_cost25": -25.533259878069565,
+     "ci_lo": -48.91297703734558,
+     "halves": [
+      -12.023347971678454,
+      -19.0570632563857
+     ],
+     "years_positive": 4,
+     "years": 9,
+     "drop_top5_mean": -36.645582514986145,
+     "pass": false
+    }
+   },
+   "npass": 0,
+   "verdict": "NO-GO"
+  }
+ }
+}

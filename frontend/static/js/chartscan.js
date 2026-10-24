@@ -30,7 +30,7 @@
     const $ = (id) => document.getElementById(id);
     const q = new URLSearchParams(location.search);
     const st = { tf: q.get("tf") || "1d", inst: (q.get("i") || "NIFTY").toUpperCase(), scan: q.get("scan") || "BRK20_UP", bars: parseInt(q.get("bars") || "250", 10) };
-    const INSTS = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM"];
+    let CORE = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM"], STOCKS = [];
     const chart = LightweightCharts.createChart($("chart"), { autoSize: true, layout: { background: { color: "transparent" }, textColor: "#cbd5e1" }, grid: { vertLines: { color: "#1f2937" }, horzLines: { color: "#1f2937" } },
       rightPriceScale: { borderColor: "#334155" }, timeScale: { borderColor: "#334155", timeVisible: true } });
     const candle = chart.addSeries(LightweightCharts.CandlestickSeries, { upColor: "#34d399", downColor: "#f87171", borderVisible: false, wickUpColor: "#34d399", wickDownColor: "#f87171" });
@@ -68,13 +68,13 @@
     }
     const shift = (isoDay, days) => { const d = new Date(isoDay + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
 
+    const fillInst = () => fill($("inst"), (st.tf === "1d" ? CORE.concat(STOCKS) : CORE).map((x) => ({ v: x, t: CORE.includes(x) ? x : x + " (stock)" })), st.inst);
     fill($("tf"), [{ v: "1d", t: "Daily" }, { v: "5m", t: "5-minute (futures)" }], st.tf);
-    fill($("inst"), INSTS.map((x) => ({ v: x, t: x })), st.inst);
-    $("tf").addEventListener("change", async () => { st.tf = $("tf").value; st.scan = st.tf === "1d" ? "BRK20_UP" : "FULL_BULL"; await loadScans(); loadChart(); });
+    $("tf").addEventListener("change", async () => { st.tf = $("tf").value; st.scan = st.tf === "1d" ? "BRK20_UP" : "FULL_BULL"; if (st.tf === "5m" && !CORE.includes(st.inst)) st.inst = "NIFTY"; fillInst(); await loadScans(); loadChart(); });
     $("inst").addEventListener("change", () => { st.inst = $("inst").value; loadChart(); });
     $("scan").addEventListener("change", () => { st.scan = $("scan").value; loadChart(); });
     $("refresh").addEventListener("click", async () => { await loadScans(); loadChart(); });
-    loadScans().then(loadChart).catch((e) => { $("status").textContent = "error: " + e; });
+    j("/api/scanner/instruments").then((r) => { CORE = r.core; STOCKS = r.stocks; fillInst(); }).catch(() => fillInst()).then(loadScans).then(loadChart).catch((e) => { $("status").textContent = "error: " + e; });
   }
 
   const api = { Logic, bootstrap };

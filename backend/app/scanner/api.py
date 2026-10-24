@@ -72,7 +72,10 @@ def _cached(key, ttl, fn):
     v = fn(); _ccache[key] = (time.time(), v); return v
 
 
-def _daily_df(inst: str): return _cached(("d", inst), 600, lambda: D.load_daily(inst))
+def _daily_df(inst: str):
+    from . import stocks as ST
+    if inst in ST.UNIVERSE: return _cached(("d", inst), 600, lambda: ST.load_stock(inst))
+    return _cached(("d", inst), 600, lambda: D.load_daily(inst))
 
 
 def _fut5_df(inst: str): return _cached(("5", inst), 90, lambda: I.futures_5m(inst, since_epoch=time.time() - 12 * 86400, until_epoch=time.time()))
@@ -90,7 +93,9 @@ def _bt_summary(tf: str, scan: str) -> dict | None:
 
 def chart_payload(inst: str, tf: str, scan: str, bars: int = 250, daily_df=None, fut5_df=None) -> dict:
     inst = inst.upper(); bars = max(20, min(int(bars), 1500))
-    if inst not in D.INSTRUMENTS: return {"error": f"unknown instrument {inst}"}
+    from . import stocks as ST
+    if inst not in D.INSTRUMENTS and inst not in ST.UNIVERSE: return {"error": f"unknown instrument {inst}"}
+    if tf == "5m" and inst not in D.INSTRUMENTS: return {"error": "5-minute scans run on the six futures only"}
     if tf == "1d":
         df = daily_df if daily_df is not None else _daily_df(inst)
         if df is None or df.empty: return {"error": "no data"}
@@ -114,6 +119,22 @@ def chart_payload(inst: str, tf: str, scan: str, bars: int = 250, daily_df=None,
 def chart(inst: str = "NIFTY", tf: str = "1d", scan: str = "BRK20_UP", bars: int = 250): return chart_payload(inst, tf, scan, bars)
 
 
+@router.get("/instruments")
+def instruments():
+    from . import stocks as ST
+    return {"core": D.INSTRUMENTS, "stocks": list(ST.UNIVERSE)}
+
+
+@router.get("/stock-hits")
+def stock_hits():
+    """Latest stored hits of the stock universe (filled by the STOCKS daily run), grouped by scan."""
+    from . import stocks as ST
+    with store.conn() as c:
+        d = c.execute("SELECT MAX(signal_date) FROM hits WHERE inst NOT IN (%s)" % ",".join("?" * len(D.INSTRUMENTS)), D.INSTRUMENTS).fetchone()[0]
+        rows = [dict(r) for r in c.execute("SELECT inst, scan, side, signal_date, close FROM hits WHERE signal_date=? AND inst NOT IN (%s)" % ",".join("?" * len(D.INSTRUMENTS)), (d, *D.INSTRUMENTS)).fetchall()] if d else []
+    return {"signal_date": d, "hits": rows}
+
+
 @router.get("/results")
 def results(tf: str = "1d"):
     """Latest-bar hits across the six instruments (Chartink-style result table); each row opens in the chart."""
@@ -135,4 +156,8 @@ def results(tf: str = "1d"):
             except Exception as e:
                 rows.append({"inst": inst, "error": repr(e)[:120]})
         return rows
-    return {"tf": tf, "results": _cached(("r", tf), 120, build), "scans": ([{"name": k, "side": v[0]} for k, v in SCANS.items()] if tf == "1d" else [{"name": v, "side": "LONG" if "BULL" in v else "SHORT"} for v in I.VARIANTS])}
+    extra = []
+    if tf == "1d":
+        try: extra = [{**h, "bar": h["signal_date"]} for h in stock_hits()["hits"]]
+        except Exception: extra = []
+    return {"tf": tf, "results": _cached(("r", tf), 120, build) + extra, "scans": ([{"name": k, "side": v[0]} for k, v in SCANS.items()] if tf == "1d" else [{"name": v, "side": "LONG" if "BULL" in v else "SHORT"} for v in I.VARIANTS])}

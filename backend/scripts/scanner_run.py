@@ -9,5 +9,11 @@ group = sys.argv[sys.argv.index("--group") + 1] if "--group" in sys.argv else No
 res = engine.run(group=group); print(json.dumps(res, default=str)[:3000])
 if "--send" in sys.argv and res["new_hits"]:
     from app.connectors import telegram
-    lines = [f"{h['inst']}: {h['scan']} ({h['date']})" for h in res["new_hits"]]
-    telegram._send("ZeroHero scanner (" + (group or "ALL") + ", daily close) new hits:\n" + "\n".join(lines[:25]) + "\nObservation only. Historical test (NIFTY/BN/SENSEX): no scan passed the pre-registered gates.", os.environ.get("TELEGRAM_CHAT_ID"))
+    if group == "STOCKS":
+        by = {}
+        for h in res["new_hits"]: by.setdefault(h["scan"], []).append(h["inst"])
+        lines = [f"{k} ({len(v)}): {', '.join(v[:6])}{' ...' if len(v) > 6 else ''}" for k, v in sorted(by.items(), key=lambda kv: -len(kv[1]))]
+        tail = "\nObservation only. 53-stock back-test (2019-26): 0 of 36 scans passed; breakout scans have UNDERperformed the basket (about -20 bp over 5 days). A hit is a candidate, not a trade."
+    else:
+        lines = [f"{h['inst']}: {h['scan']} ({h['date']})" for h in res["new_hits"]]; tail = "\nObservation only. Historical test (NIFTY/BN/SENSEX): no scan passed the pre-registered gates."
+    telegram._send("ZeroHero scanner (" + (group or "ALL") + ", daily close) new hits:\n" + "\n".join(lines[:25]) + tail, os.environ.get("TELEGRAM_CHAT_ID"))
