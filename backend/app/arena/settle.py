@@ -5,6 +5,7 @@
   * ABOVE x: waits for ltp >= x, fills at max(ask, x). LIMIT x: buy limit, fills at the ask once ask <= x (valid to session end). NEAR/MARKET: next snapshot ask; MISSED if it is >5% above the stated entry high.
   * SL-at-fill (effective only for signals submitted after the deployment time in data/arena/rule_effective.json, never retroactive): if the stop is at/above the sell price of the fill snapshot, exit there at once (reason SL_AT_FILL).
   * management events (amend SL / targets, trailing stop, emergency exit, cancel) take effect 20 s after their server timestamp, never retroactively; the AI's own recorded management is replayed as the same event types.
+  * (from gap_chase_rules_from_ts) DATA_GAP: a quote gap > 60 s right before the fill/miss decision voids the signal; ABOVE x filling > 5% above x is MISSED; a first target already at/below the fill is INVALID_LEVELS.
   * exit on the first snapshot whose sell price <= SL (gap: that price) or >= target (T1 policy by default; 'LAST' = last target); forced exit at session end.
   * resolution is the snapshot interval (about 1-3 minutes per strike): brief spikes between snapshots are NOT seen, for either side.
   * costs: brokerage + STT/exchange/regulatory-fee/stamp/GST via the cost models, slippage already inside the fills (not added twice). One lot per signal."""
@@ -21,6 +22,7 @@ from ..instrument_profiles import get_instrument_profile
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
 LATENCY_SEC = 20
 RUNAWAY = 0.05
+MAX_FILL_GAP_SEC = 60            # DATA_GAP rule: no quote for longer than this around the execution instant -> the fill price is unknowable, the signal is void (not a loss, not a win)
 FUTURE_STAMP_SEC = 30          # exch_ts more than this ahead of received_ts = mis-stamped frame (23-Oct-2026 NG 265 PE 17:18:08 false SL)
 IST_SEC = 19800
 SESSION_END_MIN = {"NSE": 15 * 60 + 15, "MCX": 23 * 60 + 15}
@@ -102,6 +104,15 @@ def cost_total_rs(und: str, entry: float, exit_: float, unit: int, lots: int = 1
 RULES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "rule_effective.json")
 
 
+def rule_from(name: str) -> float | None:
+    """Epoch from which a named rule applies (rule_effective.json; NOT retroactive). Absent -> inactive."""
+    try:
+        import json
+        v = json.load(open(RULES_FILE)).get(name); return float(v) if v is not None else None
+    except Exception:
+        return None
+
+
 def sl_at_fill_from() -> float | None:
     """Epoch from which the SL-at-fill rule applies (written at deployment; NOT retroactive). Absent file -> rule inactive."""
     try:
@@ -125,13 +136,16 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     """Event-driven. sig: underlying, strike, option_type, entry_mode (ABOVE|NEAR|MARKET|LIMIT), entry (low), entry_hi (opt), sl, targets[], t (epoch) and optional events[]
     ({t, action: AMEND_SL|AMEND_TARGETS|TRAIL_SL|EXIT_NOW|CANCEL, ...}). An event is effective on the first snapshot at/after event.t + latency (same delay for every action, both sides);
     events never act retroactively and are ignored once the trade is closed. LIMIT: a buy limit at `entry`, fills at the ask as soon as ask <= entry (valid to session end).
-    Returns status SETTLED | MISSED | NOT_TRIGGERED | CANCELLED | NO_DATA:reason."""
+    Returns status SETTLED | MISSED | DATA_GAP | INVALID_LEVELS | NOT_TRIGGERED | CANCELLED | NO_DATA:reason."""
     und = sig["underlying"]; base = {"id": sig.get("id"), "participant": sig.get("participant"), "underlying": und, "strike": sig["strike"], "type": sig["option_type"], "t": sig["t"], "entry_mode": sig["entry_mode"]}
     try: lot = int(get_instrument_profile(und).lot_size.value)
     except Exception: lot = None
     if not lot: return {**base, "status": "NO_DATA:no_lot_size"}
+    if sig.get("void_status"): return {**base, "status": sig["void_status"], "void_reason": sig.get("void_reason")}        # ledger correction (HUMAN_STATUS_CORRECTION): signal voided after the fact
+    _rf = rule_from("gap_chase_rules_from_ts"); new_rules = _rf is not None and sig["t"] >= _rf                          # DATA_GAP + ABOVE-chase + stale-levels rules: only for signals posted after deployment
     exch = "MCX" if und in MCX else "NSE"; end_min = SESSION_END_MIN[exch]; t0 = sig["t"] + latency
     live = [s for s in snaps if s["t"] >= t0]
+    prev_t = max((x["t"] for x in snaps if x["t"] < t0), default=sig["t"])                      # last quote known at the execution instant (the signal time if there is none)
     if not live: return {**base, "status": "NO_DATA:no_snapshot_after_signal"}
     evs = sorted(({**e, "t_eff": e["t"] + latency} for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
     st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None, "lots": max(1, int(sig.get("lots") or 1)), "filled": False}
@@ -149,20 +163,29 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         vs = sig.get("valid_sec")
         if vs and s["t"] - sig["t"] > vs: break                      # a range/limit entry that is not filled inside its validity window EXPIRES (never filled hours later)
         mode = sig["entry_mode"]; p, real = buy_px(s, half_spread)
+        gap = s["t"] - (live[i - 1]["t"] if i > 0 else prev_t)                                   # silence in the capture just before this quote
         if mode == "ABOVE":
             if s["ltp"] >= sig["entry"]:
                 top = sig.get("entry_hi")                                                              # an entry ZONE (above 570 - 575): no chasing above its upper end, wait until the ask is back inside
                 if top and top > sig["entry"] and p > top: continue
+                if new_rules and gap > MAX_FILL_GAP_SEC: return {**base, "status": "DATA_GAP", "gap_sec": round(gap, 1)}
+                if new_rules and not (top and top > sig["entry"]) and p > sig["entry"] * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}      # ABOVE x already far past x when it fills: same no-chase limit as NEAR
                 fill, real_fill, j = max(p, sig["entry"]), real, i; break
         elif mode == "LIMIT":
-            if p <= sig["entry"]: fill, real_fill, j = p, real, i; break
+            if p <= sig["entry"]:
+                if new_rules and gap > MAX_FILL_GAP_SEC: return {**base, "status": "DATA_GAP", "gap_sec": round(gap, 1)}
+                fill, real_fill, j = p, real, i; break
         else:                                                    # NEAR / MARKET: first snapshot only
+            if new_rules and gap > MAX_FILL_GAP_SEC: return {**base, "status": "DATA_GAP", "gap_sec": round(gap, 1)}
             if p > sig.get("entry_hi", sig["entry"]) * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}
             fill, real_fill, j = p, real, i; break
     if fill is not None: st["filled"] = True                                                              # from here the quantity cannot change
     if fill is None:
         vu = (sig["t"] + sig["valid_sec"]) if sig.get("valid_sec") else None                                  # a limit / above entry may still be waiting until this instant (None = until the session end)
         return {**base, "status": "NOT_TRIGGERED", "events_applied": applied, "valid_until": vu}
+    if new_rules and st["targets"]:                                                                       # levels set from a stale entry: the target is already behind the fill price -> a "TARGET" exit would be a loss
+        drain(live[j]["t"]); tg0 = (st["targets"][0] if policy == "T1" else st["targets"][-1]) if st["targets"] else None
+        if tg0 is not None and tg0 <= fill: return {**base, "status": "INVALID_LEVELS", "fill": fill, "target": tg0, "events_applied": applied}
     hwm = sell_px(live[j], half_spread)[0]; px = why = None; k_exit = j; real_exit = False
     _from = sl_at_fill_from()
     if _from is not None and sig["t"] >= _from and st["sl"] is not None:                    # SL-at-fill rule: a stop already at/above the market at the moment of the fill is hit immediately
@@ -178,7 +201,7 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         eff_sl = st["sl"] if trail is None else max(st["sl"] if st["sl"] is not None else -1e18, trail)
         if eff_sl is not None and sp <= eff_sl: px, real_exit, why = sp, real, ("TRAIL" if (trail is not None and trail >= (st["sl"] or -1e18)) else "SL"); break
         tg = (st["targets"][0] if policy == "T1" else st["targets"][-1]) if st["targets"] else None
-        if tg is not None and sp >= tg: px, real_exit, why = sp, real, "TARGET"; break
+        if tg is not None and sp >= tg and (sp > fill or not new_rules): px, real_exit, why = sp, real, "TARGET"; break
     if px is None:                                                                                      # still open: what a live screen needs (fill, lot, the stop / targets in force, the last quote)
         ls = live[-1]; return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill, "fill_t": live[j]["t"], "lot": lot, "lots": st["lots"], "sl_now": st["sl"], "targets_now": list(st["targets"]), "last": {"t": ls["t"], "bid": ls.get("bid"), "ask": ls.get("ask"), "ltp": ls.get("ltp")}}
     c = cost_points(und, fill, px, lot)

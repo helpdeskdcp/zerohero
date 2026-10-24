@@ -23,7 +23,7 @@ except Exception: pass
 led = {r["id"]: r for r in SU.load() if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL"}
 corr = {}
 for r in SU.load():
-    if r.get("type") in ("HUMAN_TS_CORRECTION", "HUMAN_PARTICIPANT_CORRECTION"): corr.setdefault(r["signal_id"], []).append(r)
+    if r.get("type") in ("HUMAN_TS_CORRECTION", "HUMAN_PARTICIPANT_CORRECTION", "HUMAN_STATUS_CORRECTION"): corr.setdefault(r["signal_id"], []).append(r)
 posts = {}
 lp = os.path.join(HERE, "data", "arena", "channel_ingest_log.jsonl")
 if os.path.exists(lp):

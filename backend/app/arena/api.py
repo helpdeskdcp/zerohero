@@ -343,10 +343,11 @@ def live(request: Request):
             elif q and s["entry_mode"] == "ABOVE" and q.get("ltp"): need = f"waiting for the price to trade up to {s['entry']:g} (ltp now {q['ltp']:g})"
             row.update(state="WAITING" if still else "EXPIRED", waiting_note=need if still else "not filled inside its validity: expired", valid_until_ist=(datetime.fromtimestamp(vu, tz=IST).strftime("%H:%M:%S") if vu else None))
         elif st == "MISSED": row.update(state="MISSED")
+        elif st in ("DATA_GAP", "INVALID_LEVELS"): row.update(state="VOID", why=st)
         elif st.startswith("NO_DATA:no_snapshot_after_signal"): row.update(state="WAITING", waiting_note="order is being placed: it reaches the market after the 20 s execution delay, then fills at the next quote", valid_until_ist=None)
         else: row.update(state="NO DATA", why=st)
         rows.append(row)
-    order = {"ACTIVE": 0, "WAITING": 1, "CLOSED": 2, "EXPIRED": 3, "CANCELLED": 3, "MISSED": 3}
+    order = {"ACTIVE": 0, "WAITING": 1, "CLOSED": 2, "EXPIRED": 3, "CANCELLED": 3, "MISSED": 3, "VOID": 3}
     rows.sort(key=lambda x: (order.get(x["state"], 4), x["posted_ist"]), reverse=False)
     return {"now_ist": datetime.now(IST).strftime("%H:%M:%S"), "date": today, "rows": rows, "total_open_pnl_rs": round(sum(x.get("pnl_rs") or 0 for x in rows if x["state"] == "ACTIVE"), 1), "realised_today_rs": round(sum(x.get("pnl_rs") or 0 for x in rows if x["state"] == "CLOSED"), 1)}
 

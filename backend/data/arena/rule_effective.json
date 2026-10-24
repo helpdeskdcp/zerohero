@@ -1,1 +1,6 @@
-{"sl_at_fill_from_ts": 1792504996.082024, "note": "SL-at-fill rule effective for signals submitted after this instant; not retroactive (see ARENA_RULE_CHANGES.md)"}
+{
+ "sl_at_fill_from_ts": 1792504996.082024,
+ "note": "SL-at-fill rule effective for signals submitted after this instant; not retroactive (see ARENA_RULE_CHANGES.md)",
+ "gap_chase_rules_from_ts": 1792808548.3386278,
+ "gap_chase_note": "DATA_GAP (quote gap >60 s at fill/miss decision), ABOVE-chase (>5% past trigger = MISSED) and INVALID_LEVELS (target at/below fill) apply to signals posted after this instant; not retroactive. Two earlier cases voided by ledger correction."
+}

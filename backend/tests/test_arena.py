@@ -328,3 +328,41 @@ def test_last_quote_and_latest_quote_ignore_future_stamped_frame(tmp_path):
     c.commit(); c.close()
     assert C.last_quote("NATURALGAS", "2026-10-23", 265.0, "PE", "2026-10-23", db)["ltp"] == 9.25
     assert C.latest_quote("NATURALGAS", "2026-10-23", 265.0, "PE", db)["ltp"] == 9.25
+
+
+# ---------------- DATA_GAP / ABOVE-chase / stale levels (rules from gap_chase_rules_from_ts, not retroactive) ----------------
+def _rules(tmp_path, monkeypatch, from_ts):
+    p = tmp_path / "rule_effective.json"; p.write_text(json.dumps({"gap_chase_rules_from_ts": from_ts})); monkeypatch.setattr(S, "RULES_FILE", str(p))
+
+
+def test_data_gap_voids_near_fill_and_missed_only_for_new_signals(tmp_path, monkeypatch):
+    sn = snaps([("10:00", 100, 99, 100.5), ("10:02", 100, 99, 101), ("10:05", 130, 129, 131)])        # 100 s of silence around the execution instant
+    _rules(tmp_path, monkeypatch, ep("09:00"))
+    r = S.settle(sig(t=ep("10:00")), sn, half_spread=H); assert r["status"] == "DATA_GAP" and r["gap_sec"] > 60
+    _rules(tmp_path, monkeypatch, ep("11:00"))                                                                                 # rule deployed after the signal: old behaviour
+    assert S.settle(sig(t=ep("10:00")), sn, half_spread=H)["status"] == "SETTLED"
+    _rules(tmp_path, monkeypatch, ep("09:00"))
+    dense = snaps([("10:00", 100, 99, 100.5), ("10:01", 100, 99, 101), ("10:05", 130, 129, 131)])
+    assert S.settle(sig(t=ep("10:00")), dense, half_spread=H)["status"] == "SETTLED"
+
+
+def test_above_chase_is_missed_and_stale_target_is_invalid(tmp_path, monkeypatch):
+    _rules(tmp_path, monkeypatch, ep("09:00"))
+    chase = snaps([("10:00", 100, 99, 100.5), ("10:01", 168, 167, 168.5), ("10:05", 190, 189, 191)])
+    assert S.settle(sig(entry_mode="ABOVE", entry=150.0, entry_hi=150.0, sl=114.0, targets=[185.0]), chase, half_spread=H)["status"] == "MISSED"        # fills 12% above its trigger
+    stale = snaps([("10:00", 330, 329, 331), ("10:01", 343, 342, 344), ("10:02", 344, 343, 345)])
+    r = S.settle(sig(entry_mode="ABOVE", entry=200.0, entry_hi=200.0, sl=168.0, targets=[231.0]), stale, half_spread=H)
+    assert r["status"] == "MISSED"                                                                                              # the chase limit catches it first; with a zone-less near-market ABOVE the stale target never produces a fake TARGET
+    near = snaps([("10:00", 100, 99, 100.5), ("10:01", 100, 99, 101), ("10:02", 101, 100, 102)])
+    r = S.settle(sig(entry_mode="NEAR", entry=100.0, entry_hi=100.0, sl=85.0, targets=[100.5]), near, half_spread=H); assert r["status"] == "INVALID_LEVELS"
+
+
+def test_void_status_from_ledger_correction():
+    r = S.settle(sig(void_status="DATA_GAP", void_reason="capture blackout"), snaps([("10:01", 100, 99, 101)]), half_spread=H)
+    assert r["status"] == "DATA_GAP" and r["void_reason"] == "capture blackout"
+
+
+def test_status_correction_rejects_unknown_signal_and_bad_status(tmp_path):
+    p = str(tmp_path / "h.jsonl")
+    with pytest.raises(SU.SubmissionError): SU.submit_status_correction("nope", "DATA_GAP", "x", path=p)
+    with pytest.raises(SU.SubmissionError): SU.submit_status_correction("nope", "WIN", "x", path=p)

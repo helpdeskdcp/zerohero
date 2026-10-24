@@ -141,6 +141,16 @@ def submit_validity_correction(signal_id: str, valid_sec: int, reason: str, path
     return L.append(p, {"type": "HUMAN_VALIDITY_CORRECTION", "id": f"V{n + 1:05d}", "signal_id": signal_id, "valid_sec": int(valid_sec), "reason": reason[:300], "server_ts": time.time()})
 
 
+def submit_status_correction(signal_id: str, status: str, reason: str, path: str | None = None) -> dict:
+    """Voids a signal after the fact (the original row is never touched): status DATA_GAP (no quote around the execution instant) or INVALID_LEVELS (levels built from a stale entry)."""
+    p = path or PATH; recs = load(p)
+    if status not in ("DATA_GAP", "INVALID_LEVELS"): raise SubmissionError("status must be DATA_GAP or INVALID_LEVELS")
+    if not any(r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and r["id"] == signal_id for r in recs): raise SubmissionError("unknown signal_id")
+    if any(r.get("type") == "HUMAN_STATUS_CORRECTION" and r["signal_id"] == signal_id for r in recs): raise SubmissionError("signal already voided")
+    n = sum(1 for r in recs if r.get("type") == "HUMAN_STATUS_CORRECTION")
+    return L.append(p, {"type": "HUMAN_STATUS_CORRECTION", "id": f"S{n + 1:05d}", "signal_id": signal_id, "status": status, "reason": reason[:400], "server_ts": time.time()})
+
+
 def default_lots(participant: str, participants_file: str | None = None) -> int:
     """Default quantity (lots) of a profile: `default_lots` in data/arena/participants.json, else 1."""
     import json as _j
