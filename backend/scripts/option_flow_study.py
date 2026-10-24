@@ -8,13 +8,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from app.candle_ai import option_flow as OF, evaluate as E, patterns as P
 
-DB = os.path.join(HERE, "data", "historical", "option_flow", "option_flow.db"); MH = os.path.join(HERE, "data", "market_history.db"); IST_OFF = 19800
-FEATS = ["F1", "F2", "F3", "F4", "F5"]; BASE = ["r5", "r15", "r30", "tod"]; COST = 1.0
+UND = "SENSEX" if "--underlying" in sys.argv and sys.argv[sys.argv.index("--underlying") + 1].upper() == "SENSEX" else "NIFTY"
+STEP_PTS, NEAR_PTS = (100, 500) if UND == "SENSEX" else (50, 250); COST = 1.5 if UND == "SENSEX" else 1.0; SUFFIX = "_sensex" if UND == "SENSEX" else ""
+DB = os.path.join(HERE, "data", "historical", "option_flow", "option_flow_sensex.db" if UND == "SENSEX" else "option_flow.db"); MH = os.path.join(HERE, "data", "market_history.db"); IST_OFF = 19800
+FEATS = ["F1", "F2", "F3", "F4", "F5"]; BASE = ["r5", "r15", "r30", "tod"]
 
 
 def index_minutes():
     c = sqlite3.connect(f"file:{MH}?mode=ro", uri=True, timeout=60)
-    try: d = pd.read_sql_query("SELECT bar_start, o, h, l, c FROM market_candles WHERE symbol='NIFTY' AND kind='INDEX' AND tf='1m' AND session_date_ist>='2024-09-01' ORDER BY bar_start", c)
+    try: d = pd.read_sql_query("SELECT bar_start, o, h, l, c FROM market_candles WHERE symbol=? AND kind='INDEX' AND tf='1m' AND session_date_ist>='2024-09-01' ORDER BY bar_start", c, params=(UND,))
     finally: c.close()
     d["ts"] = pd.to_datetime(d["bar_start"], utc=True).astype("int64") if False else (pd.to_datetime(d["bar_start"], utc=True) - pd.Timestamp("1970-01-01", tz="UTC")).dt.total_seconds().astype(int)
     d = d.drop_duplicates("ts").set_index("ts"); d["day"] = ((d.index + IST_OFF) // 86400); return d
@@ -43,7 +45,7 @@ def build(max_expiries=None):
         if keys.empty or bars.empty: continue
         keys["t"] = keys["key"] - 60 + 60                                          # t = epoch of the last minute's bar start of the 5m bin
         keys["t"] = keys["key"]
-        fl = OF.flow_features(bars, spot, keys["t"].tolist()); m = keys.merge(fl, on="t", how="left")
+        fl = OF.flow_features(bars, spot, keys["t"].tolist(), STEP_PTS, NEAR_PTS); m = keys.merge(fl, on="t", how="left")
         fut = spot.reindex(m["t"] + OF.TARGET_MIN * 60).values; now = spot.reindex(m["t"]).values; m["ret_bp"] = (fut / now - 1) * 1e4
         m["same_day"] = (((m["t"] + OF.TARGET_MIN * 60 + IST_OFF) // 86400) == m["day"]).values; m.loc[~m["same_day"], "ret_bp"] = np.nan
         m["expiry"] = e.expiry; m["is_expiry_day"] = [pd.Timestamp(e.expiry).strftime("%Y-%m-%d") == pd.Timestamp(d * 86400, unit="s").strftime("%Y-%m-%d") for d in m["day"]]
@@ -94,7 +96,7 @@ def main():
         e0 = m["is_expiry_day"].values; res["models"][nm]["auc_expiry_day"] = E.auc(y[e0], P_[k][e0]) if e0.sum() > 200 else None; res["models"][nm]["auc_other_days"] = E.auc(y[~e0], P_[k][~e0])
     enough = res["models"]["logit_flow"]["signals"] >= 300 and len(res["test_quarters"]) >= 5
     res["verdict"] = "INSUFFICIENT_SAMPLE" if not enough else ("GO-SHADOW" if any(v["all"] for v in res["models"].values()) else "NO-GO")
-    name = "results_smoke.json" if mx else "results.json"; json.dump(res, open(os.path.join(HERE, "data", "research", "option_flow", name), "w"), indent=1, default=float)
+    name = ("results_smoke" if mx else "results") + SUFFIX + ".json"; json.dump(res, open(os.path.join(HERE, "data", "research", "option_flow", name), "w"), indent=1, default=float)
     print(json.dumps({k: v for k, v in res.items() if k != "models"}, default=float)[:900]); print(json.dumps(res["models"], default=float)[:2400])
 
 

@@ -18,15 +18,15 @@ def _series(df: pd.DataFrame, field: str) -> dict:
     return out
 
 
-def flow_features(bars: pd.DataFrame, spot: pd.Series, t_list: list[int]) -> pd.DataFrame:
+def flow_features(bars: pd.DataFrame, spot: pd.Series, t_list: list[int], step: int = STEP, near_pts: int = NEAR) -> pd.DataFrame:
     """bars: columns ts (epoch s, minute), strike, otype ('CE'/'PE'), c, v, oi for ONE expiry. spot: index close by minute epoch. t_list: epoch seconds of the minute that closes each 5m bar.
     Returns one row per t with F1..F5 (NaN when the needed contracts/minutes are missing)."""
     C, V, OI = _series(bars, "c"), _series(bars, "v"), _series(bars, "oi"); rows = []
     for t in t_list:
         s_t = spot.get(t); s_p = spot.get(t - LOOK * 60)
         if s_t is None or s_p is None or not np.isfinite(s_t) or not np.isfinite(s_p): rows.append((t,) + (np.nan,) * 5); continue
-        K = round(s_t / STEP) * STEP; Kp = round(s_p / STEP) * STEP
-        near = [K + STEP * j for j in range(-NEAR // STEP, NEAR // STEP + 1)]
+        K = round(s_t / step) * step; Kp = round(s_p / step) * step
+        near = [K + step * j for j in range(-near_pts // step, near_pts // step + 1)]
         def win_sum(side, d, lo, hi):
             tot = 0.0; ok = False
             for k in near:
@@ -57,6 +57,6 @@ def flow_features(bars: pd.DataFrame, spot: pd.Series, t_list: list[int]) -> pd.
         f3 = (d_now - d_old) / s_t * 1e4
         st_now, st_old = c_now + p_now, c_old + p_old; f4 = st_now / st_old - 1 if np.isfinite(st_now) and np.isfinite(st_old) and st_old > 0 else np.nan
         def skew(tt):
-            st = px("CE", K, tt) + px("PE", K, tt); return (px("PE", K - 100, tt) - px("CE", K + 100, tt)) / st if st and np.isfinite(st) and st > 0 else np.nan
+            st = px("CE", K, tt) + px("PE", K, tt); return (px("PE", K - 2 * step, tt) - px("CE", K + 2 * step, tt)) / st if st and np.isfinite(st) and st > 0 else np.nan
         rows.append((t, f1, f2, f3, f4, skew(t) - skew(t - LOOK * 60)))
     return pd.DataFrame(rows, columns=["t", "F1", "F2", "F3", "F4", "F5"])
