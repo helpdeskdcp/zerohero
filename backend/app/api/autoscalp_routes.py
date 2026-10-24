@@ -101,6 +101,17 @@ def api_autoscalp_pivot_reversal(limit: int = 50):
     return {"signals": rows, "study_verdict": study, "note": "forward returns are gross bps (no cost); the historical study found no demonstrated net edge", "enabled": _ps.enabled()}
 
 
+@router.get("/api/autoscalp/range-zone")
+def api_autoscalp_range_zone():
+    """Live range and zone picture of NIFTY / BANKNIFTY / SENSEX (5m): range high/low/mid, the two edge zones, where price sits (observation only)."""
+    from ..autoscalp import pivot_reversal_shadow as _ps
+    out = {}
+    for s in _ps.SYMBOLS:
+        try: out[s] = _ps.current_state(s)
+        except Exception as e: out[s] = {"symbol": s, "status": f"ERROR {type(e).__name__}"}
+    return {"states": out, "note": "range = 24 closed 5m bars <= 3 ATR with both edges tested twice; zone = edge +/- 0.25 ATR; no demonstrated trading edge (see data/research/range_zone/FINDINGS_2026-10-24.md)"}
+
+
 @router.get("/api/autoscalp/net-edge")
 def api_autoscalp_net_edge():
     """Real rupee expectancy per symbol after charges + slippage (read-only). See app/autoscalp/net_edge.py."""

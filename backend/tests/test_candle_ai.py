@@ -83,3 +83,18 @@ def test_pivot_reversal_signals_are_causal_and_fire_on_constructed_setup():
     pd.testing.assert_frame_equal(full.iloc[:k].reset_index(drop=True), cut, check_exact=False)
     mut = df.copy(); mut.loc[k:, ["o", "h", "l", "c"]] *= 1.2; pd.testing.assert_frame_equal(PR.signals(mut).iloc[:k].reset_index(drop=True), cut, check_exact=False)
     lines, names = PR.pivot_lines(df); assert len(names) == 13 and lines.iloc[:75].isna().all().all()                 # first session has no previous session
+
+
+def test_range_zone_box_and_signals_are_causal_and_logical():
+    from app.candle_ai import range_zone as RZ
+    rng = np.random.default_rng(4); n = 75 * 3; t0 = pd.Timestamp("2026-10-19")
+    ts = [(t0 + pd.Timedelta(days=d, hours=9, minutes=15 + 5 * k)).tz_localize("Asia/Kolkata").tz_convert("UTC") for d in range(3) for k in range(75)]
+    c = 20000 + np.cumsum(rng.normal(0, 3, n)); o = np.r_[c[0], c[:-1]]; h = np.maximum(o, c) + 2; l = np.minimum(o, c) - 2
+    # day 3: build a tight range for 30 bars then a breakout bar
+    s = 150; base = 20100.0
+    for k in range(s, s + 30): o[k] = base + (3 if k % 2 else -3); c[k] = base + (-3 if k % 2 else 3); h[k] = base + 8; l[k] = base - 8
+    o[s + 30], c[s + 30], h[s + 30], l[s + 30] = base, base + 20, base + 21, base - 1
+    df = pd.DataFrame({"t": ts, "o": o, "h": h, "l": l, "c": c, "v": 0.0})
+    sg = RZ.signals(df); assert bool(sg["BRK_UP"].iloc[s + 30]) and not sg["BRK_DN"].iloc[s + 30] and float(sg["rh"].iloc[s + 30]) == base + 8
+    k = s + 20; cut = RZ.signals(df.iloc[:k].reset_index(drop=True)); pd.testing.assert_frame_equal(sg.iloc[:k].reset_index(drop=True), cut, check_exact=False)
+    assert not sg.iloc[:RZ.N_BOX].valid.any()                                                                          # box needs 24 bars of the same session
