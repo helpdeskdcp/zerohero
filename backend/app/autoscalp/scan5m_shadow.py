@@ -46,7 +46,7 @@ def _fill_forward(c, df: pd.DataFrame, sym: str):
     for rid, bs, direction, f3, f6, f12 in rows:
         i = idx.get(bs)
         if i is None: continue
-        sg = 1.0 if direction == "BULL" else -1.0; upd = {}
+        sg = 1.0 if direction.startswith("BULL") else -1.0; upd = {}
         for h, cur in zip(HORIZONS, (f3, f6, f12)):
             if cur is None and i + 1 < len(df) and i + h < len(df) and day[i + h] == day[i]: upd[f"fwd{h}"] = round(sg * (cl[i + h] / o[i + 1] - 1) * 1e4, 2)
         if upd: c.execute("UPDATE scan5m_hits SET " + ", ".join(f"{k}=?" for k in upd) + " WHERE id=?", (*upd.values(), rid))
@@ -64,12 +64,14 @@ def observe(symbol: str, now_epoch: float | None = None, frame_provider=None, db
     f = I.scan_flags(df); last = f.iloc[-1]; bs = pd.Timestamp(df["t"].iloc[-1]).strftime("%Y-%m-%dT%H:%M:%SZ"); new = []
     with _conn(db_path) as c:
         _fill_forward(c, df, sym)
-        for direction in ("BULL", "BEAR"):
-            if bool(last[f"FULL_{direction}"]):
-                grp = ("A" if bool(last[f"A_{direction}"]) else "") + ("B" if bool(last[f"B_{direction}"]) else "")
+        for direction, pre in (("BULL", ""), ("BEAR", ""), ("BULL_SW", "SW_"), ("BEAR_SW", "SW_")):
+            side = direction.split("_")[0]
+            if bool(last[f"{pre}FULL_{side}"]):
+                grp = ("A" if bool(last[f"{pre}A_{side}"]) else "") + ("B" if bool(last[f"{pre}B_{side}"]) else "")
                 if c.execute("INSERT OR IGNORE INTO scan5m_hits (symbol, bar_start, direction, grp, close, rsi, vol_ratio, logged_ts) VALUES (?,?,?,?,?,?,?,?)", (sym, bs, direction, grp, float(df["c"].iloc[-1]), float(last["rsi"]), float(last["vol_ratio"]), now)).rowcount:
                     new.append({"symbol": sym, "bar_start": bs, "direction": direction, "grp": grp, "close": float(df["c"].iloc[-1]), "rsi": float(last["rsi"]), "vol_ratio": float(last["vol_ratio"])})
     for n in new:
+        if n["direction"].endswith("_SW"): continue                                                           # swing variants are logged for the forward record only, no message
         key = (n["symbol"], n["direction"])
         if now - _last_tg.get(key, 0) < COOLDOWN_SEC: continue
         _last_tg[key] = now

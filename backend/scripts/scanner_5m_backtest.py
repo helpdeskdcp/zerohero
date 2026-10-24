@@ -4,7 +4,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.ins
 import numpy as np, pandas as pd
 from app.scanner import intraday as I
 
-COST = {"NIFTY": 1.0, "BANKNIFTY": 1.0, "SENSEX": 1.5, "CRUDEOIL": 3.0, "NATURALGAS": 4.0, "GOLDM": 3.0}; HZ = (3, 6, 12); ALPHA = 0.05 / 6; MIN_N = 300
+COST = {"NIFTY": 1.0, "BANKNIFTY": 1.0, "SENSEX": 1.5, "CRUDEOIL": 3.0, "NATURALGAS": 4.0, "GOLDM": 3.0}; HZ = (3, 6, 12); ALPHA = 0.05 / 12; MIN_N = 300
 
 
 def trades(df, flag, side, h, cost):

@@ -12,12 +12,25 @@ import pandas as pd
 VOL_MULT = 1.5
 HERE = os.path.dirname(os.path.abspath(__file__)); MH = os.path.abspath(os.path.join(HERE, "..", "..", "data", "market_history.db"))
 INSTRUMENTS = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM"]
-VARIANTS = ("FULL_BULL", "A_BULL", "B_BULL", "FULL_BEAR", "A_BEAR", "B_BEAR")
+VARIANTS = ("FULL_BULL", "A_BULL", "B_BULL", "FULL_BEAR", "A_BEAR", "B_BEAR", "SW_FULL_BULL", "SW_A_BULL", "SW_B_BULL", "SW_FULL_BEAR", "SW_A_BEAR", "SW_B_BEAR")
+SWING_K, SWING_MAXAGE = 3, 80
 
 
 def rsi(x: pd.Series, n: int = 14) -> pd.Series:
     d = x.diff(); up = d.clip(lower=0).ewm(alpha=1.0 / n, adjust=False, min_periods=n).mean(); dn = (-d.clip(upper=0)).ewm(alpha=1.0 / n, adjust=False, min_periods=n).mean()
-    return 100 - 100 / (1 + up / dn.replace(0, np.nan))
+    out = 100 - 100 / (1 + up / dn.replace(0, np.nan))
+    return out.where(~((dn == 0) & up.notna()), np.where(up > 0, 100.0, 50.0))                       # no losses in the window: RSI is 100 (50 if nothing moved), not NaN
+
+
+def swing_levels(h: pd.Series, l: pd.Series, k: int = SWING_K, maxage: int = SWING_MAXAGE) -> tuple[pd.Series, pd.Series]:
+    """Latest CONFIRMED swing high / low usable at each bar t (confirmed at i+k, usable from i+k+1, at most `maxage` bars old). NaN when none."""
+    n = len(l); ar = np.arange(n, dtype=float)
+    is_sl = l == l.rolling(2 * k + 1, center=True, min_periods=2 * k + 1).min(); is_sh = h == h.rolling(2 * k + 1, center=True, min_periods=2 * k + 1).max()
+    out = []
+    for flag, val in ((is_sh, h), (is_sl, l)):
+        lvl = pd.Series(np.where(flag, val, np.nan)).shift(k).shift(1).ffill(); idx = pd.Series(np.where(flag, ar, np.nan)).shift(k).shift(1).ffill()
+        out.append(lvl.where((ar - idx) <= maxage + k + 1))
+    return out[0], out[1]
 
 
 def scan_flags(df: pd.DataFrame) -> pd.DataFrame:
@@ -26,9 +39,13 @@ def scan_flags(df: pd.DataFrame) -> pd.DataFrame:
     ph, pl = h.shift(1), l.shift(1)
     bull_core = (c > o) & vol_ok & (r > 50) & (c > e20); bull_a = (l < pl) & (c > pl) & (c > o); bull_b = (c > ph) & vol_ok & (r > 55)
     bear_core = (c < o) & vol_ok & (r < 50) & (c < e20); bear_a = (h > ph) & (c < ph) & (c < o); bear_b = (c < pl) & vol_ok & (r < 45)
+    sh, sl = swing_levels(h, l); pc = c.shift(1)
+    sw_bull_a = (l < sl) & (c > sl) & (c > o); sw_bull_b = (c > sh) & (pc <= sh) & vol_ok & (r > 55); sw_bear_a = (h > sh) & (c < sh) & (c < o); sw_bear_b = (c < sl) & (pc >= sl) & vol_ok & (r < 45)
     out = pd.DataFrame({"A_BULL": bull_core & bull_a, "B_BULL": bull_core & bull_b, "FULL_BULL": bull_core & (bull_a | bull_b),
-                        "A_BEAR": bear_core & bear_a, "B_BEAR": bear_core & bear_b, "FULL_BEAR": bear_core & (bear_a | bear_b)}).fillna(False)
-    out["rsi"] = r.values; out["vol_ratio"] = (v / v.rolling(20, min_periods=20).mean()).values; out.index = df.index; return out
+                        "A_BEAR": bear_core & bear_a, "B_BEAR": bear_core & bear_b, "FULL_BEAR": bear_core & (bear_a | bear_b),
+                        "SW_A_BULL": bull_core & sw_bull_a, "SW_B_BULL": bull_core & sw_bull_b, "SW_FULL_BULL": bull_core & (sw_bull_a | sw_bull_b),
+                        "SW_A_BEAR": bear_core & sw_bear_a, "SW_B_BEAR": bear_core & sw_bear_b, "SW_FULL_BEAR": bear_core & (sw_bear_a | sw_bear_b)}).fillna(False)
+    out["swing_high"] = sh.values; out["swing_low"] = sl.values; out["rsi"] = r.values; out["vol_ratio"] = (v / v.rolling(20, min_periods=20).mean()).values; out.index = df.index; return out
 
 
 def futures_5m(sym: str, since_epoch: float | None = None, until_epoch: float | None = None, db: str | None = None, days_back: int | None = None) -> pd.DataFrame:

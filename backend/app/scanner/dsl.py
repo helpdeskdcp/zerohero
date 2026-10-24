@@ -37,7 +37,8 @@ def _atr(h, l, c, n):
 
 def _rsi(x, n):
     d = x.diff(); up = d.clip(lower=0).ewm(alpha=1.0 / n, adjust=False, min_periods=n).mean(); dn = (-d.clip(upper=0)).ewm(alpha=1.0 / n, adjust=False, min_periods=n).mean()
-    return 100 - 100 / (1 + up / dn.replace(0, np.nan))
+    out = 100 - 100 / (1 + up / dn.replace(0, np.nan))
+    return out.where(~((dn == 0) & up.notna()), np.where(up > 0, 100.0, 50.0))                       # no losses in the window: RSI is 100 (50 if nothing moved), not NaN
 
 
 def namespace(df: pd.DataFrame) -> dict:
