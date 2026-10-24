@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 
 NAMES = ["doji", "spinning_top", "marubozu_bull", "marubozu_bear", "hammer_shape", "shooting_shape", "pin_bull", "pin_bear", "engulf_bull", "engulf_bear",
-         "harami_bull", "harami_bear", "piercing", "dark_cloud", "morning_star", "evening_star", "three_soldiers", "three_crows", "tweezer_top", "tweezer_bottom",
+         "harami_bull", "harami_bear", "piercing", "dark_cloud", "morning_star", "evening_star", "three_up_bars", "three_down_bars", "tweezer_top", "tweezer_bottom",
          "inside_bar", "outside_bar", "nr7", "big_bull", "big_bear"]
 # dominance: lower index = stronger, used to give each bar ONE dominant pattern id for the conditional table
-PRIORITY = ["morning_star", "evening_star", "three_soldiers", "three_crows", "engulf_bull", "engulf_bear", "piercing", "dark_cloud", "harami_bull", "harami_bear", "tweezer_bottom",
+PRIORITY = ["morning_star", "evening_star", "three_up_bars", "three_down_bars", "engulf_bull", "engulf_bear", "piercing", "dark_cloud", "harami_bull", "harami_bear", "tweezer_bottom",
             "tweezer_top", "pin_bull", "pin_bear", "hammer_shape", "shooting_shape", "marubozu_bull", "marubozu_bear", "big_bull", "big_bear", "outside_bar", "inside_bar", "nr7", "doji", "spinning_top"]
 
 
@@ -44,7 +44,7 @@ def detect(o, h, l, c) -> pd.DataFrame:
     small1 = body1 <= 0.35 * np.where(np.isnan(a), np.inf, a)
     f["morning_star"] = bull & (c2 < o2) & (body2 >= 0.6 * np.where(np.isnan(a), np.inf, a)) & small1 & (c > (o2 + c2) / 2)
     f["evening_star"] = bear & (c2 > o2) & (body2 >= 0.6 * np.where(np.isnan(a), np.inf, a)) & small1 & (c < (o2 + c2) / 2)
-    f["three_soldiers"] = bull & bull1 & (c2 > o2) & (c > c1) & (c1 > c2) & (o > o1) & (o1 > o2); f["three_crows"] = bear & bear1 & (c2 < o2) & (c < c1) & (c1 < c2) & (o < o1) & (o1 < o2)
+    f["three_up_bars"] = bull & bull1 & (c2 > o2) & (c > c1) & (c1 > c2) & (o > o1) & (o1 > o2); f["three_down_bars"] = bear & bear1 & (c2 < o2) & (c < c1) & (c1 < c2) & (o < o1) & (o1 < o2)
     tol = 0.05 * np.where(np.isnan(a), np.inf, a)
     f["tweezer_top"] = bear & bull1 & (np.abs(h - h1) <= tol); f["tweezer_bottom"] = bull & bear1 & (np.abs(l - l1) <= tol)
     f["inside_bar"] = (h <= h1) & (l >= l1); f["outside_bar"] = (h > h1) & (l < l1)

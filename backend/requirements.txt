@@ -12,3 +12,4 @@ scipy==1.17.1
 scikit-learn==1.9.1
 pandas==3.0.5
 httpx2==2.13.0
+TA-Lib==0.8.2
