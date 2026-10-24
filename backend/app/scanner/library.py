@@ -36,4 +36,6 @@ SCANS = {
     "FIB_S1W_RECLAIM": ("LONG", "(low <= fib_s1_w) & (close > fib_s1_w)"),
     "FIB_R1W_REJECT": ("SHORT", "(high >= fib_r1_w) & (close < fib_r1_w)"),
     "TURN_OF_MONTH": ("LONG", "(dom >= 28) | (dom <= 3)"),
+    # ---- batch 3: owner-supplied Chartink clause (SPEC "Batch 3"); the unknown custom indicator ^7111 flag_higherhigh^ is omitted
+    "OWNER_BULLENG_PIVOT_WEEKLOW": ("LONG", "(close > (ref(high, 1) + ref(low, 1) + ref(close, 1)) / 3) & (close > open) & (ref(close, 1) < ref(open, 1)) & (close > ref(open, 1)) & (open < ref(close, 1)) & (close <= 1.05 * pwl)"),
 }

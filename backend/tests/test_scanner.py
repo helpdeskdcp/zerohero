@@ -68,6 +68,6 @@ def test_run_stores_hits_once(tmp_path, monkeypatch):
 
 
 def test_library_size_and_calendar_names():
-    assert len(SCANS) == 35 and {v[0] for v in SCANS.values()} == {"LONG", "SHORT"}
+    assert len(SCANS) == 36 and {v[0] for v in SCANS.values()} == {"LONG", "SHORT"}
     df = _daily(60); ns = dsl.namespace(df); assert int(ns["dow"].max()) <= 4 and int(ns["dom"].max()) <= 31
     assert dsl.run_expr("(dom >= 28) | (dom <= 3)", df, ns).sum() > 5
