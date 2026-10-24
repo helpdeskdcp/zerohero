@@ -63,3 +63,14 @@ def test_target_never_crosses_the_overnight_gap():
 def test_volume_features_nan_without_volume_and_causal_with():
     d0 = _bars(vol=False); assert F.build(d0)["relvol"].isna().all()
     d1 = _bars(); f = F.build(d1); assert f["relvol"].notna().sum() > 100
+
+
+def test_regime_layer_is_causal():
+    from app.candle_ai.regime import GarchRegime, HMMRegime, regime_frame
+    df = _bars(days=60, seed=5); k = len(df) - 60
+    g = GarchRegime().fit(df.iloc[:1500]); h = HMMRegime().fit(df.iloc[:1500])
+    full = regime_frame(df, g, h); cut = regime_frame(df.iloc[:k].reset_index(drop=True), g, h)
+    pd.testing.assert_frame_equal(full.iloc[:k].reset_index(drop=True), cut, check_exact=False, atol=1e-9)
+    mut = df.copy(); mut.loc[k:, ["o", "h", "l", "c"]] *= 1.2
+    pd.testing.assert_frame_equal(regime_frame(mut, g, h).iloc[:k].reset_index(drop=True), cut, check_exact=False, atol=1e-9)
+    assert np.allclose(full[[f"hmm_p{i}" for i in range(3)]].sum(axis=1), 1.0) and (full["sigma_next"] > 0).all()
