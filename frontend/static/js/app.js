@@ -558,7 +558,22 @@
       finish();
       return;
     }
-    $("#monErr").hidden = true;
+    // Render failures must still release the in-flight latch, otherwise one bad
+    // payload freezes the page for good.
+    try {
+      renderMonitor(m);
+      const secErr = Object.keys(m.section_errors || {});
+      const el = $("#monErr");
+      el.hidden = secErr.length === 0;
+      if (secErr.length) el.textContent = "partial data — unavailable: " + secErr.join(", ");
+    } catch (e) {
+      console.error(e);
+      const el = $("#monErr"); el.hidden = false; el.textContent = "monitor render failed: " + e.message;
+    }
+    finish();
+  }
+
+  function renderMonitor(m) {
     const r = m.runner || {}, feed = m.feed || {};
     const set = (id, txt, cls) => { const el = $("#" + id); if (!el) return; el.textContent = txt; el.className = cls || ""; };
     set("monRunner",
@@ -571,7 +586,8 @@
       (r.manage_latency_ms != null && r.manage_latency_ms < 50) ? "on" : "warn");
     set("monSession", r.session_note || (r.session_open ? "open" : "closed"), r.session_open ? "on" : "warn");
     set("monOpen", `${(m.positions || []).filter(x => x.status === "OPEN").length} pos · ${r.open_scalps || 0} scalp`);
-    set("monClock", new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    const tsDate = new Date(m.ts);
+    set("monClock", isNaN(tsDate) ? "—" : tsDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
 
     const pnlCls = v => v > 0 ? "stat-value pos" : v < 0 ? "stat-value neg" : "";
     const near = (v, warn) => v == null ? "" : (Math.abs(v) <= warn ? ' style="color:var(--gold-soft)"' : "");
@@ -599,7 +615,11 @@
         if (t === null) return;
         const s = prompt("Combined STOP (cut both when CE+PE mark ≤):", b.dataset.s);
         if (s === null) return;
-        await api("/api/positions/combo/levels", { method: "POST", body: JSON.stringify({ combo_id: b.dataset.id, target: parseFloat(t), stop: parseFloat(s) }) });
+        const tv = parseFloat(t), sv = parseFloat(s);
+        if (!isFinite(tv) || !isFinite(sv)) { alert("Enter numeric target and stop."); return; }
+        try {
+          await api("/api/positions/combo/levels", { method: "POST", body: JSON.stringify({ combo_id: b.dataset.id, target: tv, stop: sv }) });
+        } catch (e) { alert("set levels failed: " + e.message); }
         loadMonitor();
       }));
     }
@@ -639,7 +659,12 @@
       const body = { trade_id: b.dataset.id };
       if (tgt !== "") body.target = parseFloat(tgt);
       if (stp !== "") body.stop = parseFloat(stp);
-      await api("/api/positions/levels", { method: "POST", body: JSON.stringify(body) });
+      if ((body.target !== undefined && !isFinite(body.target)) || (body.stop !== undefined && !isFinite(body.stop))) {
+        alert("Enter numeric target and stop."); return;
+      }
+      try {
+        await api("/api/positions/levels", { method: "POST", body: JSON.stringify(body) });
+      } catch (e) { alert("set levels failed: " + e.message); }
       loadMonitor();
     }));
 
@@ -752,9 +777,9 @@
         </tr>`).join("");
     }
 
-    $("#monMarks").innerHTML = Object.entries(feed.marks || {}).map(([t, mk]) =>
-      `<div class="mon-mark"><span title="${text(t)}">${text(mk.label || t)}</span><b>${fmt(mk.ltp, 2)}</b><em>${Math.round(mk.age_sec)}s</em></div>`
-    ).join("") || `<span class="hint">No live marks yet.</span>`;
+    $("#monMarks").innerHTML = Object.entries(feed.marks || {}).map(([t, mk0]) => { const mk = mk0 || {}; return
+      `<div class="mon-mark"><span title="${text(t)}">${text(mk.label || t)}</span><b>${fmt(mk.ltp, 2)}</b><em>${mk.age_sec != null && isFinite(mk.age_sec) ? Math.round(mk.age_sec) + "s" : "—"}</em></div>`;
+    }).join("") || `<span class="hint">No live marks yet.</span>`;
 
     const stream = $("#monStream");
     stream.innerHTML = (m.recent_signals || []).slice(0, 20).map(s => `
@@ -763,7 +788,6 @@
         <span class="feed-meta">${text(s.underlying || s.symbol)} · ${text(s.decision)} · ${text(s.market_regime)} · ${text((s.reason || "").slice(0, 80), "")}</span>
         <span class="feed-time">${timeStr(s.created_ts)}</span>
       </li>`).join("") || `<li class="feed-empty">No signals yet.</li>`;
-    finish();
   }
 
   // ---------------- Scalping ----------------
@@ -3140,7 +3164,7 @@
   setInterval(() => { if (state.view === "signalshub") loadSignalsHub(); }, 15000);
   setInterval(() => { if (state.view === "overview") loadOverview(); }, 15000);
   setInterval(() => { if (state.view === "scalp") loadScalp(); }, 3000);
-  setInterval(() => { if (state.view === "monitor") loadMonitor(); }, 1500);
+  setInterval(() => { if (state.view === "monitor" && !document.hidden) loadMonitor(); }, 1500);
   setInterval(() => { if (state.view === "autoscalp") loadAutoscalp(); }, 3000);
   setInterval(() => { if (state.view === "mathscalp") loadMathScalp(); }, 12000);
   setInterval(() => { if (state.view === "orderflow") loadOrderflow(); }, 20000);

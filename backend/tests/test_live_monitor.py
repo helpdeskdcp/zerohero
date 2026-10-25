@@ -160,3 +160,16 @@ def test_paper_monitor_ignores_invalid_direction_or_quote(fresh_db):
     assert update_trade_price(t["trade_id"], 200)["pnl"] == 0
     fresh_db.update_trade(t["trade_id"], {"direction": "BUY"})
     assert update_trade_price(t["trade_id"], float("nan"))["pnl"] == 0
+
+
+def test_monitor_degrades_when_one_section_fails(monkeypatch):
+    from app.api import monitor_routes
+
+    def boom():
+        raise RuntimeError("combo store down")
+
+    monkeypatch.setattr(monitor_routes.combos, "snapshot", boom)
+    out = monitor_routes.api_monitor()
+    assert out["combos"] == []
+    assert "combos" in out["section_errors"]
+    assert "positions" in out and "recent_signals" in out

@@ -4,6 +4,7 @@ distance-to-target/stop). Split out of app/main.py.
 """
 from __future__ import annotations
 
+import logging
 import math
 from datetime import datetime, timezone
 
@@ -13,6 +14,18 @@ from .. import combos, db, runtime
 from ..connectors.angel_ws import LTP_MAX_AGE_SEC, is_ltp_fresh
 
 router = APIRouter()
+log = logging.getLogger(__name__)
+
+
+def _safe(label, fn, default, errors):
+    """Run one snapshot section; a failing source degrades to `default` and is
+    reported in `section_errors` instead of 500-ing the whole page."""
+    try:
+        return fn()
+    except Exception as e:  # noqa: BLE001 - monitor must keep serving
+        log.warning("monitor section %s failed: %s", label, e)
+        errors[label] = str(e)[:200]
+        return default
 
 
 @router.get("/api/monitor")
@@ -20,15 +33,19 @@ def api_monitor():
     """One-shot snapshot for the Live Monitor page: runner health, live feed
     marks, open positions/scalps with live P&L + distance-to-target/stop, and
     the most recent signals. Deltas thereafter arrive over the WebSocket."""
-    st = runtime.scalp_runner.status()
+    errors: dict = {}
+    st = _safe("runner", runtime.scalp_runner.status, {}, errors) or {}
     feed_marks = (st.get("feed") or {}).get("marks") or {}
 
     def enrich(rows):
         out = []
         for r in rows:
             m = feed_marks.get(str(r.get("symboltoken") or ""))
-            entry = r.get("entry") or 0
-            qty = r.get("quantity") or 0
+            try:
+                entry = float(r.get("entry") or 0)
+                qty = float(r.get("quantity") or 0)
+            except (TypeError, ValueError):
+                entry, qty = 0.0, 0.0
             direction = r.get("direction")
             direction_valid = direction in ("BUY", "SELL")
             sign = 1 if direction == "BUY" else -1
@@ -86,6 +103,11 @@ def api_monitor():
             })
         return out
 
+    reversals = _safe("reversals", lambda: [
+        v for v in (runtime.scalp_runner.reversals or {}).values() if v.get("reversal")], [], errors)
+    turning = _safe("turning_points", lambda: [
+        v for v in (runtime.scalp_runner.turning_points or {}).values()
+        if v.get("direction") != "NO_TURN"], [], errors)
     return {
         "ts": datetime.now(timezone.utc).isoformat(),
         "runner": {k: st.get(k) for k in (
@@ -96,14 +118,14 @@ def api_monitor():
             "traded_today", "daily_cap", "poll_sec")},
         "feed": st.get("feed"),
         "ltp_max_age_sec": LTP_MAX_AGE_SEC,
-        "positions": enrich(db.list_trades(strategy="MANUAL", limit=100)),
-        "scalps": enrich(db.list_trades(strategy="SCALP", limit=100)),
-        "combos": combos.snapshot(),
-        "reversals": [v for v in (runtime.scalp_runner.reversals or {}).values() if v.get("reversal")],
-        "turning_points": [v for v in (runtime.scalp_runner.turning_points or {}).values()
-                           if v.get("direction") != "NO_TURN"],
+        "positions": _safe("positions", lambda: enrich(db.list_trades(strategy="MANUAL", limit=100)), [], errors),
+        "scalps": _safe("scalps", lambda: enrich(db.list_trades(strategy="SCALP", limit=100)), [], errors),
+        "combos": _safe("combos", combos.snapshot, [], errors),
+        "reversals": reversals,
+        "turning_points": turning,
         "execution": {**(st.get("execution") or {}),
-                      "kill_switch": runtime._ks_state(),
-                      "orders": db.list_broker_orders(limit=25)},
-        "recent_signals": db.list_signals(limit=20),
+                      "kill_switch": _safe("kill_switch", runtime._ks_state, {}, errors),
+                      "orders": _safe("orders", lambda: db.list_broker_orders(limit=25), [], errors)},
+        "recent_signals": _safe("signals", lambda: db.list_signals(limit=20), [], errors),
+        "section_errors": errors,
     }
