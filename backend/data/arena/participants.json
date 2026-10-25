@@ -28,5 +28,13 @@
  "MACMONEY": {
   "display": "Macmoney",
   "token_sha256": "abc7f5e37f9668368a5353c83058b09515a2e9b0f75e345a411774965e6ee0bb"
+ },
+ "ARUSH_CHOPRA": {
+  "display": "Arush Chopra",
+  "token_sha256": "901c09e6229b2b0858f353b17d38b554ada8cdd9ba4f46b6611814906b463488"
+ },
+ "AVINASH": {
+  "display": "Avinash",
+  "token_sha256": "a10f907cfce459ec60aefbc70c3c4efcd723f3938f4f26627207b4c7b6b2341e"
  }
 }
