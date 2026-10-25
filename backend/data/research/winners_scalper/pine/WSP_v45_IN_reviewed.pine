@@ -1,0 +1,432 @@
+//@version=6
+// Winners Scalper Pro v4.5 - INDIA EDITION  -  REVIEWED 2026-10-25 (Pine v6 review against the pinescript skill checklist)
+// SIGNAL LOGIC IS UNCHANGED (verified bar-for-bar against the original in the Smart Chart's Pine interpreter and against the Python port: 0 mismatches).
+// Review changes:
+//  R1 request.security: explicit gaps_off / lookahead_off everywhere (the pdh/pdl and htf calls keep the [1] + lookahead_on non-repainting form on purpose).
+//  R2 dynamic RSI length is now ONE expression (a length assigned inside an `if` can become a series int, which ta.rsi rejects on some compilers).
+//  R3 the three trend MAs are computed on every bar and then selected (no ta.* call inside a switch branch).
+//  R4 isTrendStable is explicit about Pine's barssince quirk: no signal can fire before the FIRST direction flip of the loaded history (barssince is na until then). Behaviour unchanged.
+//  R5 NEW input 'Signals on bar close only' (default ON): labels, alertcondition and the JSON alert fire only on a confirmed bar, so what you see equals what the back-test used
+//     (entry = next bar open). With it OFF the original intrabar behaviour returns (signals can appear and vanish while the bar is forming = repainting).
+//  R6 NEW alert(): one JSON message per confirmed signal with side, entry (signal close), stop (the stop line), TP1-3, ATR and a strong flag - use 'Any alert() function call' when creating the alert.
+//     The two alertcondition entries are kept for people who prefer them; do not enable both for the same signal or you get duplicates.
+//  R7 Risk Gauge / Trap Check (India VIX or DXY) only feeds the dashboard - it never changes a signal. Back-test of using it as an entry filter: no benefit (see FINDINGS_VIXTRAP).
+//  R8 Volume layers are inert on spot indices without a futures proxy; none of them affects a signal.
+indicator('Winners Scalper Pro v4.5 - India Edition', shorttitle = 'WSPv4.5-IN', overlay = true, max_labels_count = 500)
+
+const string mktGroup = '🇮🇳 India Market Settings'
+volMode     = input.string('Auto', 'Volume Source', options = ['Auto', 'Chart', 'Custom Symbol'], group = mktGroup, tooltip = 'Auto: chart volume; if chart has none (spot index) use near-month futures volume.\nCustom Symbol: always use the symbol below.')
+customVolSym = input.symbol('NSE:NIFTY1!', 'Custom Volume Symbol', group = mktGroup)
+riskMode    = input.string('Auto', 'Risk Gauge Source', options = ['Auto', 'Custom Symbol', 'Off'], group = mktGroup, tooltip = 'Auto: NSE/BSE -> NSE:INDIAVIX, MCX -> TVC:DXY')
+customRiskSym = input.symbol('FX_IDC:USDINR', 'Custom Risk Symbol', group = mktGroup)
+riskLookback = input.int(3, 'Risk Gauge Lookback (bars)', minval = 1, group = mktGroup)
+
+string exPrefix = syminfo.prefix
+bool isMCX = exPrefix == 'MCX'
+bool isNSE = exPrefix == 'NSE'
+bool isBSE = exPrefix == 'BSE'
+string mktName = isMCX ? 'MCX' : isNSE ? 'NSE' : isBSE ? 'BSE' : exPrefix
+
+string tk = syminfo.ticker
+string autoFutSym = tk == 'NIFTY' ? 'NSE:NIFTY1!' :
+     tk == 'BANKNIFTY' ? 'NSE:BANKNIFTY1!' :
+     tk == 'CNXFINANCE' or tk == 'FINNIFTY' ? 'NSE:FINNIFTY1!' :
+     tk == 'NIFTY_MID_SELECT' or tk == 'MIDCPNIFTY' ? 'NSE:MIDCPNIFTY1!' :
+     tk == 'SENSEX' ? 'BSE:SENSEX1!' :
+     tk == 'BANKEX' ? 'BSE:BANKEX1!' : ''
+
+bool useProxy = volMode == 'Custom Symbol' or (volMode == 'Auto' and autoFutSym != '')
+string volSym = volMode == 'Custom Symbol' ? customVolSym : autoFutSym != '' ? autoFutSym : syminfo.tickerid
+float proxyVol = request.security(volSym, timeframe.period, volume, gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off, ignore_invalid_symbol = true)
+
+float chartVol = nz(volume)
+float vol = switch volMode
+    'Chart'         => chartVol
+    'Custom Symbol' => nz(proxyVol)
+    => chartVol > 0 ? chartVol : useProxy ? nz(proxyVol) : 0.0
+
+bool volOK = ta.cum(vol) > 0
+string volSrcName = not volOK ? 'NONE' : (volMode == 'Chart' or chartVol > 0) ? 'CHART' : 'FUT PROXY'
+
+const string calcGroup = 'Calculation'
+length = input.int(6, title = 'ATR Period', group = calcGroup)
+mult = input.float(2.1, step = 0.1, title = 'ATR Multiplier', group = calcGroup)
+
+const string filterGroup = 'Strength & Confirmation'
+maType = input.string('34', title = 'Main Trend MA Type', options = ['21', '34', '50'], group = filterGroup)
+adxLen = input.int(16, title = 'ADX Length', group = filterGroup)
+adxThresh = input.int(14, title = 'ADX Strength Threshold', group = filterGroup)
+slopePct = input.float(0.05, title = 'Reversal Sensitivity (%)', group = filterGroup)
+minBars = input.int(0, title = 'Min. Bars to Confirm', minval = 0, group = filterGroup)
+
+const string rsiGroup = 'RSI Settings'
+rsiLenInput = input.int(6, title = 'RSI Length (Manual)', group = rsiGroup)
+
+const string visualGroup = 'Visuals'
+showLabels = input.bool(true, title = 'Show Labels', group = visualGroup)
+confirmedOnly = input.bool(true, title = 'Signals on bar close only (non-repainting)', group = visualGroup, tooltip = 'ON: labels and alerts appear only after the bar has closed (matches the back-test, entry = next bar open).\nOFF: original behaviour, signals may appear and vanish while the bar is forming.')
+useJsonAlert = input.bool(true, title = 'JSON alert() with entry / stop / targets', group = visualGroup)
+
+const string megaGroup = 'WSPv4.5- Optional Layers'
+useDynRSI  = input.bool(false, title = '🔄 Enable Dynamic RSI (Auto 6/14)', group = megaGroup)
+showCrash  = input.bool(true, title = '⚠️ Show Crash/Volatility Warnings', group = megaGroup)
+showTP     = input.bool(true, title = '🎯 Show ATR Take Profit Targets', group = megaGroup)
+useVolDiv  = input.bool(true, title = '📊 Volume Divergence Check', group = megaGroup)
+showSMExit = input.bool(true, title = '🟣 Show Smart Money Exit Tracker', group = megaGroup)
+
+const string intelGroup = 'CROSS-MARKET INTELLIGENCE (VWMA + VWAP + EMA)'
+useIntel   = input.bool(true, title = '🧠 Activate Cross-Market Intelligence', group = intelGroup)
+crashSens  = input.float(1.8, title = 'Crash Sensitivity', step = 0.1, group = intelGroup)
+rocketSens = input.float(1.8, title = 'Rocket Sensitivity', step = 0.1, group = intelGroup)
+showDash   = input.bool(true, title = '💻 Show Intelligence Dashboard', group = intelGroup)
+
+atr = ta.atr(length)
+[plus, minus, adx] = ta.dmi(adxLen, adxLen)
+volSMA = ta.sma(vol, 50)
+
+int tfSec = timeframe.in_seconds()
+
+int finalRsiLen = useDynRSI ? (tfSec <= 1800 ? 6 : 14) : rsiLenInput   // R2: single expression keeps the length 'simple'
+
+rsiVal = ta.rsi(close, finalRsiLen)
+
+float ma21 = ta.sma(close, 21)   // R3: all MAs on every bar, then select
+float ma34 = ta.sma(close, 34)
+float ma50 = ta.sma(close, 50)
+float maFilter = maType == '21' ? ma21 : maType == '50' ? ma50 : ma34
+
+longStop = ta.highest(close, length) - mult * atr
+longStopPrev = nz(longStop[1], longStop)
+longStop := close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+
+shortStop = ta.lowest(close, length) + mult * atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := close[1] < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+
+var int dir = 1
+dir := close > shortStopPrev ? 1 : close < longStopPrev ? -1 : dir
+
+float barsSinceFlip = ta.barssince(dir != dir[1])
+bool isTrendStable = not na(barsSinceFlip) and barsSinceFlip >= minBars   // R4: na (no flip yet) -> not stable, exactly as the original behaves
+buyChange = dir == 1 and dir[1] == -1
+sellChange = dir == -1 and dir[1] == 1
+
+var bool hasStrongFired = false
+if buyChange or sellChange
+    hasStrongFired := false
+
+isCondStrongBuy = adx > adxThresh and (close > maFilter or close > longStop * (1 + slopePct / 100))
+isCondStrongSell = adx > adxThresh and (close < maFilter or close < shortStop * (1 - slopePct / 100))
+
+bool sigOK = not confirmedOnly or barstate.isconfirmed   // R5
+initialBuy = buyChange and isTrendStable
+initialSell = sellChange and isTrendStable
+lateStrongBuy = dir == 1 and not hasStrongFired and isCondStrongBuy and not buyChange and isTrendStable
+lateStrongSell = dir == -1 and not hasStrongFired and isCondStrongSell and not sellChange and isTrendStable
+
+if (initialBuy and isCondStrongBuy) or (initialSell and isCondStrongSell) or lateStrongBuy or lateStrongSell
+    hasStrongFired := true
+
+bool newSession = timeframe.change('D')
+var float cumPV = 0.0
+var float cumV = 0.0
+if newSession
+    cumPV := 0.0
+    cumV := 0.0
+cumPV += hlc3 * vol
+cumV += vol
+float sessVWAP = cumV > 0 ? cumPV / cumV : na
+
+float sumV20 = math.sum(vol, 20)
+float vwma20 = sumV20 > 0 ? math.sum(close * vol, 20) / sumV20 : na
+float ema20 = ta.ema(close, 20)
+
+float basisCalc = (nz(vwma20, ema20) + nz(sessVWAP, ema20) + ema20) / 3
+float avg_val_intel = useIntel ? basisCalc : maFilter
+
+isCrashingIntel  = useIntel and close < avg_val_intel - atr * crashSens
+isSqueezingIntel = useIntel and close > avg_val_intel + atr * rocketSens
+
+isCrashCandle = showCrash and volOK and (high - low > atr * 3) and (vol > volSMA * 1.5)
+plotshape(isCrashCandle, title = 'CRASH WARNING', text = '⚠️\nHIGH VOL', style = shape.labeldown, location = location.abovebar, color = color.new(color.red, 0), textcolor = color.white, size = size.small)
+
+plotshape(isCrashingIntel, 'INTEL CRASH', shape.labeldown, location.abovebar, color = color.rgb(255, 82, 82, 64), text = '⛔Crash', textcolor = color.rgb(255, 255, 255, 49), size = size.tiny)
+plotshape(isSqueezingIntel, 'INTEL ROCKET', shape.labelup, location.belowbar, color = color.rgb(38, 255, 0, 75), text = '🚀Rocket', textcolor = color.rgb(248, 249, 253, 49), size = size.tiny)
+plot(useIntel ? avg_val_intel : na, 'Cross-Market Basis', color = color.new(color.aqua, 70), linewidth = 1, style = plot.style_stepline)
+
+var float tp1Level = na
+var float tp2Level = na
+var float tp3Level = na
+
+if buyChange or sellChange
+    tp1Level := na
+    tp2Level := na
+    tp3Level := na
+
+if initialBuy or lateStrongBuy
+    tp1Level := close + atr * 1.5
+    tp2Level := close + atr * 3.0
+    tp3Level := close + atr * 4.0
+if initialSell or lateStrongSell
+    tp1Level := close - atr * 1.5
+    tp2Level := close - atr * 3.0
+    tp3Level := close - atr * 4.0
+
+plot(showTP ? tp1Level : na, title = 'TP1', color = dir == 1 ? color.new(color.green, 20) : color.new(color.red, 20), style = plot.style_linebr, linewidth = 1)
+plot(showTP ? tp2Level : na, title = 'TP2', color = dir == 1 ? color.new(color.lime, 10) : color.new(color.orange, 10), style = plot.style_linebr, linewidth = 1)
+plot(showTP ? tp3Level : na, title = 'TP3', color = dir == 1 ? color.new(color.teal, 5) : color.new(color.maroon, 5), style = plot.style_linebr, linewidth = 2)
+
+var label tpLab1 = na
+var label tpLab2 = na
+var label tpLab3 = na
+if barstate.islast
+    label.delete(tpLab1)
+    label.delete(tpLab2)
+    label.delete(tpLab3)
+    if showTP and not na(tp1Level)
+        tpLab1 := label.new(bar_index + 2, tp1Level, 'TP1', color = color.new(color.gray, 100), textcolor = dir == 1 ? color.green : color.red, style = label.style_none, size = size.tiny)
+        tpLab2 := label.new(bar_index + 2, tp2Level, 'TP2', color = color.new(color.gray, 100), textcolor = dir == 1 ? color.lime : color.orange, style = label.style_none, size = size.tiny)
+        tpLab3 := label.new(bar_index + 2, tp3Level, 'TP3 🏁', color = color.new(color.gray, 100), textcolor = dir == 1 ? color.teal : color.maroon, style = label.style_none, size = size.tiny)
+
+const color longColor = color.green
+const color shortColor = color.red
+const color warnColor = color.orange
+const color redText = color.red
+
+bool volDivBuy = useVolDiv and volOK and close > close[1] and vol < vol[1]
+bool volDivSell = useVolDiv and volOK and close < close[1] and vol < vol[1]
+
+f_drawLabel(_x, _y, _text, _color, _tcolor, _style, _size) =>
+    showLabels ? label.new(_x, _y, text = _text, color = _color, textcolor = _tcolor, style = _style, size = _size) : na
+
+if buyChange and isTrendStable and sigOK
+    isStrong = isCondStrongBuy
+    if volDivBuy and isStrong
+        f_drawLabel(bar_index, longStop - atr * 0.8, '⚠️ LOW VOL', warnColor, redText, label.style_label_up, size.tiny)
+    labelTxt = (isStrong ? 'STRONG BUY' : 'Weak Buy') + '\n' + str.tostring(longStop, format.mintick)
+    f_drawLabel(bar_index, longStop, labelTxt, isStrong ? longColor : color.new(longColor, 50), color.white, label.style_label_up, isStrong ? size.small : size.tiny)
+
+if sellChange and isTrendStable and sigOK
+    isStrong = isCondStrongSell
+    if volDivSell and isStrong
+        f_drawLabel(bar_index, shortStop + atr * 0.8, '⚠️ LOW VOL', warnColor, redText, label.style_label_down, size.tiny)
+    labelTxt = (isStrong ? 'STRONG SELL' : 'Weak Sell') + '\n' + str.tostring(shortStop, format.mintick)
+    f_drawLabel(bar_index, shortStop, labelTxt, isStrong ? shortColor : color.new(shortColor, 50), color.white, label.style_label_down, isStrong ? size.small : size.tiny)
+
+if lateStrongBuy and showLabels and sigOK
+    if volDivBuy
+        f_drawLabel(bar_index, low - atr * 1.2, '⚠️ LOW VOL', warnColor, redText, label.style_label_up, size.tiny)
+    f_drawLabel(bar_index, low, 'STRONG BUY\n(Confirmed)', longColor, color.white, label.style_label_up, size.small)
+
+if lateStrongSell and showLabels and sigOK
+    if volDivSell
+        f_drawLabel(bar_index, high + atr * 1.2, '⚠️ LOW VOL', warnColor, redText, label.style_label_down, size.tiny)
+    f_drawLabel(bar_index, high, 'STRONG SELL\n(Confirmed)', shortColor, color.white, label.style_label_down, size.small)
+
+plot(maFilter, title = 'Active Trend MA', color = color.new(color.orange, 60), linewidth = 1)
+plot(dir == 1 ? longStop : na, title = 'Long Stop', style = plot.style_linebr, linewidth = 2, color = longColor)
+plot(dir == 1 ? na : shortStop, title = 'Short Stop', style = plot.style_linebr, linewidth = 2, color = shortColor)
+
+rsiCross50Up = ta.crossover(rsiVal, 50)
+rsiCross50Dn = ta.crossunder(rsiVal, 50)
+plotshape(rsiCross50Up, title = 'RSI > 50', style = shape.triangleup, location = location.belowbar, color = color.new(color.green, 40), size = size.tiny)
+plotshape(rsiCross50Dn, title = 'RSI < 50', style = shape.triangledown, location = location.abovebar, color = color.new(color.orange, 40), size = size.tiny)
+plotshape(ta.crossover(rsiVal, 80), title = 'Bull', style = shape.labelup, location = location.belowbar, color = color.lime, text = '🐂', textcolor = color.black, size = size.tiny)
+plotshape(ta.crossunder(rsiVal, 70), title = 'Corr', style = shape.labeldown, location = location.abovebar, color = color.red, text = '🐻', textcolor = color.white, size = size.tiny)
+plotshape(ta.crossunder(rsiVal, 30), title = 'Dump', style = shape.labeldown, location = location.abovebar, color = color.red, text = '🐻', textcolor = color.white, size = size.tiny)
+plotshape(ta.crossover(rsiVal, 20), title = 'Bnc', style = shape.labelup, location = location.belowbar, color = color.lime, text = '🐂', textcolor = color.black, size = size.tiny)
+
+bool sigBuy = (initialBuy or lateStrongBuy) and sigOK
+bool sigSell = (initialSell or lateStrongSell) and sigOK
+alertcondition(sigBuy, title = 'Buy Signal (All)', message = '{{ticker}} Buy Signal at {{close}}')
+alertcondition(sigSell, title = 'Sell Signal (All)', message = '{{ticker}} Sell Signal at {{close}}')
+
+// R6: one structured message per confirmed signal (create the alert with 'Any alert() function call')
+f_alertJson(string side, float stopLvl, float t1, float t2, float t3, bool strong) =>
+    '{"sym":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","side":"' + side + '","entry":' + str.tostring(close, format.mintick) + ',"sl":' + str.tostring(stopLvl, format.mintick) +
+     ',"tp1":' + str.tostring(t1, format.mintick) + ',"tp2":' + str.tostring(t2, format.mintick) + ',"tp3":' + str.tostring(t3, format.mintick) + ',"atr":' + str.tostring(atr, format.mintick) + ',"strong":' + (strong ? 'true' : 'false') + '}'
+if useJsonAlert and (initialBuy or lateStrongBuy) and barstate.isconfirmed
+    alert(f_alertJson('BUY', longStop, tp1Level, tp2Level, tp3Level, (initialBuy and isCondStrongBuy) or lateStrongBuy), alert.freq_once_per_bar_close)
+if useJsonAlert and (initialSell or lateStrongSell) and barstate.isconfirmed
+    alert(f_alertJson('SELL', shortStop, tp1Level, tp2Level, tp3Level, (initialSell and isCondStrongSell) or lateStrongSell), alert.freq_once_per_bar_close)
+
+float volSMA_50 = ta.sma(vol, 34)
+float price_sma_50 = ta.sma(close, 50)
+float main_atr_14 = ta.atr(14)
+float main_rsi_14 = ta.rsi(close, 14)
+
+bool is_sm_dist = volOK and close > close[1] and vol > volSMA_50 * 1.5 and (high - low) < main_atr_14
+bool is_sm_div  = ta.highest(high, 5) >= ta.highest(high, 20) and main_rsi_14 < main_rsi_14[5]
+bool sm_exit_signal = is_sm_dist or (is_sm_div and volOK and vol > volSMA_50)
+
+plotshape(showSMExit and sm_exit_signal, 'SM EXIT', shape.xcross, location.abovebar, color.rgb(255, 251, 0), text = 'SM EXIT', textcolor = color.rgb(217, 255, 1), size = size.tiny)
+
+string dynamicHTF = tfSec <= 600 ? '15' : tfSec <= 1800 ? '60' : tfSec < 14400 ? '240' : tfSec < 86400 ? 'D' : tfSec < 604800 ? 'W' : 'M'
+int htf_dir = request.security(syminfo.tickerid, dynamicHTF, dir[1], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_on)   // dir[1] + lookahead_on = last CONFIRMED HTF value (non-repainting)
+
+string mm_sentiment = 'NEUTRAL'
+color mm_color = color.gray
+bool isHighVol = volOK and vol > volSMA_50 * 1.5
+bool isAboveMA = close > price_sma_50
+if isHighVol and htf_dir != dir
+    mm_sentiment := 'HUNTING'
+    mm_color := color.orange
+else if isAboveMA and htf_dir == 1
+    mm_sentiment := 'ACCUMULATION'
+    mm_color := color.lime
+else if not isAboveMA and htf_dir == -1
+    mm_sentiment := 'DISTRIBUTION'
+    mm_color := color.red
+
+float buy_pressure_pct = math.min(100, (close - low) / (high - low + 0.00001) * 100)
+string vol_label = buy_pressure_pct > 50 ? 'BULLISH' : 'BEARISH'
+color vol_col = buy_pressure_pct > 50 ? color.green : color.red
+
+float v_risk = atr / close * 1000
+int r_val = math.min(10, math.round(v_risk + (adx > 35 ? 2 : 0)))
+color r_col = r_val <= 4 ? color.green : r_val <= 7 ? color.orange : color.red
+
+string w_act = volOK ? 'STABLE' : 'N/A'
+if volOK and vol > volSMA_50 * 2.5
+    w_act := 'AGGRESSIVE'
+else if volOK and vol > volSMA_50 * 1.5
+    w_act := 'RISING'
+
+var dashTable = table.new(position.bottom_right, 2, 10, bgcolor = color.new(color.black, 40), border_width = 1, border_color = color.new(color.gray, 60))
+if showDash and barstate.islast
+    string dHTF = dynamicHTF == '240' ? '4H' : dynamicHTF == '60' ? '1H' : dynamicHTF == '15' ? '15m' : dynamicHTF
+    table.cell(dashTable, 0, 0, 'WSP v4.5 IN', bgcolor = color.new(#0052FF, 20), text_color = color.white, text_size = size.small)
+    table.cell(dashTable, 1, 0, 'HTF: ' + dHTF, bgcolor = color.new(#0052FF, 40), text_color = color.white, text_size = size.small)
+    table.cell(dashTable, 0, 1, 'Market:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 1, mktName + ' · ' + tk, text_color = color.white, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 2, 'Vol Source:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 2, volSrcName, text_color = volOK ? color.aqua : color.orange, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 3, 'Market State:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 3, dir == 1 ? 'BULLISH' : 'BEARISH', text_color = dir == 1 ? color.green : color.red, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 4, 'HTF Trend:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 4, htf_dir == dir ? 'ALIGNED' : 'CONFLICT', text_color = htf_dir == dir ? color.green : color.red, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 5, 'MM Sentiment:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 5, mm_sentiment, text_color = mm_color, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 6, 'Candle Pressure:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 6, str.tostring(math.round(buy_pressure_pct, 1)) + '% ' + vol_label, text_color = vol_col, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 7, 'Risk Score:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 7, str.tostring(r_val) + ' / 10', text_color = r_col, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 0, 8, 'Whale Act:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 8, w_act, text_color = color.white, text_size = size.small, text_halign = text.align_left)
+    string gTxt = (isCrashingIntel or r_val > 8) ? 'DANGER' : 'SECURE'
+    table.cell(dashTable, 0, 9, 'Safety Guard:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTable, 1, 9, gTxt, text_color = gTxt == 'DANGER' ? color.red : color.lime, text_size = size.small, text_halign = text.align_left)
+
+const string megaUpdateGroup = 'WSP v4.0 - MEGA UPDATE SETTINGS'
+showSMZones = input.bool(true, 'Show SM Login/Exit Zones (Footprint)', group = megaUpdateGroup)
+useZScore   = input.bool(true, 'Enable Z-Score Intel', group = megaUpdateGroup)
+zLen        = input.int(20, 'Z-Score Length', group = megaUpdateGroup)
+zThresh     = input.float(3.0, 'Z-Score Warning Threshold', step = 0.1, group = megaUpdateGroup)
+showRev     = input.bool(true, 'Show Trend Exhaustion Warning', group = megaUpdateGroup)
+
+z_sma = ta.sma(close, zLen)
+z_stdev = ta.stdev(close, zLen)
+float z_val = z_stdev > 0 ? (close - z_sma) / z_stdev : 0.0
+bool is_z_extreme = useZScore and math.abs(z_val) >= zThresh
+
+string autoRiskSym = isMCX ? 'TVC:DXY' : 'NSE:INDIAVIX'
+string riskSym = riskMode == 'Custom Symbol' ? customRiskSym : autoRiskSym
+float riskVal = request.security(riskSym, timeframe.period, close, gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off, ignore_invalid_symbol = true)
+bool riskOK = riskMode != 'Off' and not na(riskVal) and not na(riskVal[riskLookback])
+bool risk_trend_up = riskOK and riskVal > riskVal[riskLookback]
+string riskName = riskMode == 'Off' ? 'OFF' : str.replace(riskSym, 'NSE:', '')
+
+is_fake_buy_risk  = riskOK and risk_trend_up and (initialBuy or lateStrongBuy)
+is_fake_sell_risk = riskOK and not risk_trend_up and (initialSell or lateStrongSell)
+
+bool bull_sig_fired = initialBuy or isSqueezingIntel
+bool bear_sig_fired = initialSell or isCrashCandle or isCrashingIntel
+int recent_bull_count = int(math.sum(bull_sig_fired ? 1 : 0, 15))
+int recent_bear_count = int(math.sum(bear_sig_fired ? 1 : 0, 15))
+bool vol_dropping = atr < ta.sma(atr, 20)
+
+float volSMA_50_global = ta.sma(vol, 50)
+float volPeak_50 = ta.highest(vol, 50)
+float volThreshold = volPeak_50 * 0.85
+bool isHighVolFootprint = volOK and vol > 0 and (vol >= volThreshold or vol > volSMA_50_global * 2.5)
+float barRange = high - low
+bool isBullishRejection = (close - low) > barRange * 0.6
+bool is_sm_login = isHighVolFootprint and isBullishRejection and close > open
+plotshape(is_sm_login, 'SM ENTER', shape.arrowup, location.belowbar, color.rgb(0, 255, 242), text = 'SM ENTER', textcolor = color.rgb(0, 255, 242), size = size.small)
+
+var float loginZone = na
+var float exitZone = na
+if is_sm_login
+    loginZone := low
+if sm_exit_signal
+    exitZone := high
+plot(showSMZones ? loginZone : na, 'SM Enter Zone', color.new(color.aqua, 0), style = plot.style_linebr, linewidth = 2)
+plot(showSMZones ? exitZone : na, 'SM Exit Zone', color.new(color.orange, 0), style = plot.style_linebr, linewidth = 2)
+
+bool is_top_exhaustion = recent_bull_count >= 5 and vol_dropping
+bool is_bot_exhaustion = recent_bear_count >= 5 and vol_dropping
+bool is_exhaustion_zone = is_top_exhaustion or is_bot_exhaustion
+int recent_sig_count = math.max(recent_bull_count, recent_bear_count)
+string exhaustion_type = is_top_exhaustion ? ' (TOP)' : is_bot_exhaustion ? ' (BOTTOM)' : ''
+plotshape(showRev and is_top_exhaustion, 'Top Exhaustion', shape.arrowdown, location.abovebar, color.rgb(250, 151, 3), text = '\nExhaust', textcolor = color.white, size = size.small)
+plotshape(showRev and is_bot_exhaustion, 'Bot Exhaustion', shape.arrowup, location.belowbar, color.rgb(7, 11, 255), text = '\nExhaust', textcolor = color.white, size = size.small)
+
+var dashTablePro = table.new(position.middle_right, 2, 6, bgcolor = color.new(color.black, 20), border_width = 1, border_color = color.new(color.gray, 60))
+if showDash and barstate.islast
+    table.cell(dashTablePro, 0, 0, 'INTELLIGENCE', bgcolor = color.new(#3cff00, 20), text_color = color.white, text_size = size.small)
+    table.cell(dashTablePro, 1, 0, 'IN MASTER', bgcolor = color.new(#016e1d, 10), text_color = color.rgb(233, 237, 248), text_size = size.small)
+    table.cell(dashTablePro, 0, 1, 'Z-Score:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTablePro, 1, 1, useZScore ? str.tostring(z_val, '#.##') : 'OFF', text_color = is_z_extreme ? color.red : color.green, text_size = size.small)
+    string riskTxt = not riskOK ? 'N/A' : risk_trend_up ? 'RISING (Risk)' : 'FALLING (Safe)'
+    color riskCol = not riskOK ? color.gray : risk_trend_up ? color.red : color.lime
+    table.cell(dashTablePro, 0, 2, riskName + ':', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTablePro, 1, 2, riskTxt, text_color = riskCol, text_size = size.small)
+    string trap_msg = riskOK ? 'VALID' : 'N/A'
+    color trap_col = riskOK ? color.lime : color.gray
+    if is_fake_buy_risk
+        trap_msg := '⚠️ BULL TRAP'
+        trap_col := color.red
+    else if is_fake_sell_risk
+        trap_msg := '⚠️ BEAR TRAP'
+        trap_col := color.rgb(0, 255, 76)
+    table.cell(dashTablePro, 0, 3, 'Trap Check:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTablePro, 1, 3, trap_msg, text_color = trap_col, text_size = size.small)
+    table.cell(dashTablePro, 0, 4, 'Density:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTablePro, 1, 4, str.tostring(recent_sig_count) + exhaustion_type, text_color = is_exhaustion_zone ? color.fuchsia : color.white, text_size = size.small)
+    string sm_action = not volOK ? 'NO VOLUME' : is_sm_login ? 'INST. LOGIN' : sm_exit_signal ? 'INST. EXIT' : 'RETAIL FLOW'
+    color sm_act_col = is_sm_login ? color.aqua : sm_exit_signal ? color.orange : color.gray
+    table.cell(dashTablePro, 0, 5, 'SM Action:', text_color = color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(dashTablePro, 1, 5, sm_action, text_color = sm_act_col, text_size = size.small)
+
+const string keyGrp = '🎯 Key Levels (PDH / PDL / Manual)'
+showKey   = input.bool(true, 'Enable Key Level Warnings (intraday only)', group = keyGrp)
+showPDLines = input.bool(true, 'Plot Previous Day High/Low', group = keyGrp)
+manL1     = input.float(0.0, 'Manual Level 1 (0 = off)', group = keyGrp)
+manL2     = input.float(0.0, 'Manual Level 2 (0 = off)', group = keyGrp)
+keyProx   = input.float(0.10, 'Proximity (%)', minval = 0.01, step = 0.01, group = keyGrp) / 100
+
+[pdh, pdl] = request.security(syminfo.tickerid, 'D', [high[1], low[1]], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_on)   // previous day's confirmed high/low
+
+f_near(float lvl) =>
+    lvl > 0 and math.abs(close - lvl) <= lvl * keyProx
+
+bool keyOn = showKey and timeframe.isintraday
+bool nearPDH = keyOn and f_near(pdh)
+bool nearPDL = keyOn and f_near(pdl)
+bool nearM1  = keyOn and f_near(manL1)
+bool nearM2  = keyOn and f_near(manL2)
+
+plot(showPDLines and timeframe.isintraday ? pdh : na, 'PDH', color.new(color.red, 50), style = plot.style_stepline)
+plot(showPDLines and timeframe.isintraday ? pdl : na, 'PDL', color.new(color.green, 50), style = plot.style_stepline)
+
+plotshape(nearPDH and not nearPDH[1], 'Near PDH', shape.labeldown, location.abovebar, color.new(color.orange, 0), text = 'PDH ZONE', textcolor = color.white, size = size.tiny)
+plotshape(nearPDL and not nearPDL[1], 'Near PDL', shape.labelup, location.belowbar, color.new(color.teal, 0), text = 'PDL ZONE', textcolor = color.white, size = size.tiny)
+plotshape(nearM1 and not nearM1[1], 'Near L1', shape.labeldown, location.abovebar, color.new(color.purple, 0), text = 'L1 ZONE', textcolor = color.white, size = size.tiny)
+plotshape(nearM2 and not nearM2[1], 'Near L2', shape.labeldown, location.abovebar, color.new(color.maroon, 0), text = 'L2 ZONE', textcolor = color.white, size = size.tiny)
+
+bool keyTouch = (nearPDH and not nearPDH[1]) or (nearPDL and not nearPDL[1]) or (nearM1 and not nearM1[1]) or (nearM2 and not nearM2[1])
+if keyTouch
+    alert(syminfo.ticker + ' approaching key level at ' + str.tostring(close, format.mintick), alert.freq_once_per_bar)
+
+bgcolor(nearPDH or nearM1 or nearM2 ? color.new(color.orange, 92) : na)
+bgcolor(nearPDL ? color.new(color.teal, 92) : na)

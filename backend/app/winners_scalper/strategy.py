@@ -60,8 +60,9 @@ def signals(df: pd.DataFrame, p: Params | None = None) -> pd.DataFrame:
         cur_dir = nd; dr[i] = nd
         stable = last_change is not None and (i - last_change) >= p.min_bars
         if flip_buy or flip_sell: fired = False
-        cs_buy = (adx[i] > p.adx_thresh) and (c[i] > ma[i] or c[i] > ls[i] * (1 + p.slope_pct / 100)) if not (np.isnan(adx[i]) or np.isnan(ma[i]) or np.isnan(ls[i])) else False
-        cs_sell = (adx[i] > p.adx_thresh) and (c[i] < ma[i] or c[i] < ss[i] * (1 - p.slope_pct / 100)) if not (np.isnan(adx[i]) or np.isnan(ma[i]) or np.isnan(ss[i])) else False
+        # Pine: any comparison with na is false, but `or` still lets the other side decide (e.g. SMA(34) is na for the first 33 bars while the stop term can be true)
+        cs_buy = bool((adx[i] > p.adx_thresh) and (c[i] > ma[i] or c[i] > ls[i] * (1 + p.slope_pct / 100)))
+        cs_sell = bool((adx[i] > p.adx_thresh) and (c[i] < ma[i] or c[i] < ss[i] * (1 - p.slope_pct / 100)))
         ib[i] = flip_buy and stable; isl[i] = flip_sell and stable
         lb[i] = nd == 1 and not fired and cs_buy and not flip_buy and stable; lsl[i] = nd == -1 and not fired and cs_sell and not flip_sell and stable
         if (ib[i] and cs_buy) or (isl[i] and cs_sell) or lb[i] or lsl[i]: fired = True
