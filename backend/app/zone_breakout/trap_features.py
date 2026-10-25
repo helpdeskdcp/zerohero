@@ -23,7 +23,7 @@ def _ema(x, n):
     return e
 
 
-def build(bars: pd.DataFrame, trades: pd.DataFrame, zone_len: int = 20) -> pd.DataFrame:
+def build(bars: pd.DataFrame, trades: pd.DataFrame, zone_len: int = 20, only: int | None = None) -> pd.DataFrame:
     """bars: columns timestamp/open/high/low/close with a RangeIndex (the frame the trades were simulated on); trades: output of backtest.run."""
     if len(trades) == 0: return pd.DataFrame(columns=FEATURES)
     o, h, l, c = (bars[k].to_numpy(float) for k in ("open", "high", "low", "close")); ts = pd.DatetimeIndex(bars["timestamp"]).tz_convert("Asia/Kolkata")
@@ -36,6 +36,7 @@ def build(bars: pd.DataFrame, trades: pd.DataFrame, zone_len: int = 20) -> pd.Da
     days = sorted(first); prev = {d: days[k - 1] for k, d in enumerate(days) if k}
     t = trades.sort_values("entry_ts").reset_index(drop=True); rows = []
     for k, r in t.iterrows():
+        if only is not None and k != only: continue
         i = int(r["signal_i"]); a = atr[i]; dr = 1.0 if r["side"] == "BUY" else -1.0; rng = max(h[i] - l[i], 1e-9); d = day[i]; f0 = first[d]
         adv = (h[i] - max(o[i], c[i])) if dr > 0 else (min(o[i], c[i]) - l[i]); cl = (c[i] - l[i]) / rng if dr > 0 else (h[i] - c[i]) / rng
         z0 = max(0, i - zone_len); zh, zl = h[z0:i].max() if i > z0 else h[i], l[z0:i].min() if i > z0 else l[i]
@@ -50,4 +51,4 @@ def build(bars: pd.DataFrame, trades: pd.DataFrame, zone_len: int = 20) -> pd.Da
                          pd_dist_atr=pdist, pd_beyond=float(pdist < 0) if pdd else np.nan, day_pos=(r["entry"] - dl) / max(dh - dl, 1e-9), vwap_dist=dr * (r["entry"] - vw) / a, mins_open=float(mins[i]),
                          gap_pct=(o[f0] / lastc[pdd] - 1) * 100 if pdd else np.nan, prior12=dr * (c[i] - c[max(0, i - 12)]) / a, atr_pct=float((atr[max(0, i - 100):i + 1] <= a).mean()),
                          ema_slope=dr * (ema[i] - ema[max(0, i - 5)]) / a, dirn=dr, risk_bp_f=float(r["risk_bp"]), weekday=float(ts[i].weekday())))
-    X = pd.DataFrame(rows, columns=FEATURES); X.index = t.index; return pd.concat([t, X], axis=1)
+    X = pd.DataFrame(rows, columns=FEATURES); X.index = t.index[t.index == only] if only is not None else t.index; t = t.loc[X.index]; return pd.concat([t, X], axis=1)

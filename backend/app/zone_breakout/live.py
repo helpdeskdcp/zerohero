@@ -35,7 +35,25 @@ def _db() -> str: return os.environ.get("ZONE_BREAKOUT_DB", DB)
 
 
 def _conn(path=None):
-    c = sqlite3.connect(path or _db(), timeout=5); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=5000"); c.executescript(SCHEMA); return c
+    c = sqlite3.connect(path or _db(), timeout=5); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=5000"); c.executescript(SCHEMA)
+    try: c.execute("ALTER TABLE trades ADD COLUMN features TEXT")                                       # trap-filter features at entry (forward dataset, data/research/trap_filter)
+    except sqlite3.OperationalError: pass
+    return c
+
+
+def _entry_features(c, sym: str, di: pd.DataFrame, i: int, ts, side: str, px: float, sl: float) -> str | None:
+    """Causal trap features of the trade being opened on bar i (signal bar = i-1), stored as JSON for the forward trap-filter test. Never raises."""
+    try:
+        from . import trap_features as TF
+        sess = pd.Timestamp(ts).tz_convert("Asia/Kolkata").date()
+        prior = pd.DataFrame([dict(side=r[0], entry=r[1], entry_ts=pd.Timestamp(r[2]), exit_ts=pd.Timestamp(r[3]), reason=r[4], session=sess, risk_bp=1.0, signal_i=max(i - 1, 0))
+                              for r in c.execute("SELECT side, entry, entry_ts, exit_ts, reason FROM trades WHERE symbol=? AND status='CLOSED' AND exit_ts IS NOT NULL", (sym,)).fetchall()
+                              if pd.Timestamp(r[2]).tz_convert("Asia/Kolkata").date() == sess])
+        cur = pd.DataFrame([dict(side=side, entry=px, entry_ts=pd.Timestamp(ts), exit_ts=pd.NaT, reason="", session=sess, risk_bp=abs(px - sl) / px * 1e4, signal_i=max(i - 1, 0))])
+        t = pd.concat([prior, cur], ignore_index=True); f = TF.build(di.iloc[:i + 1].reset_index(drop=True), t, only=len(t) - 1)
+        return json.dumps({k: (None if pd.isna(f.iloc[0][k]) else float(f.iloc[0][k])) for k in TF.FEATURES})
+    except Exception as e:
+        _log.debug("trap features failed (cosmetic): %r", e); return None
 
 
 def recent_5m(sym: str, now_epoch: float, days: int = 9, db: str | None = None) -> pd.DataFrame:
@@ -94,6 +112,8 @@ def process(sym: str, d: pd.DataFrame, c, cfg: ZB.Config | None = None, send=Non
             if k.startswith("PAPER_ENTRY"):                                                          # from the event itself: the position may already be closed again on the same bar
                 side = k.rsplit("_", 1)[-1]; p = {"side": side, "entry": float(px), "sl": float(sl), "tp": float(tp)}
                 c.execute("INSERT OR IGNORE INTO trades (symbol, side, entry_ts, entry, sl, tp, status, risk_bp, logged_ts) VALUES (?,?,?,?,?,?,?,?,?)", (sym, side, str(ts), p["entry"], p["sl"], p["tp"], "OPEN", abs(p["entry"] - p["sl"]) / p["entry"] * 1e4, time.time()))
+                fj = _entry_features(c, sym, di, i, ts, side, p["entry"], p["sl"])
+                if fj: c.execute("UPDATE trades SET features=? WHERE symbol=? AND entry_ts=?", (fj, sym, str(ts)))
                 out.append({"kind": "ENTRY", "symbol": sym, **p}); send and send(card("ENTRY", sym, p, tf))
         for t in closed:
             c.execute("UPDATE trades SET exit_ts=?, exit=?, reason=?, R=?, status='CLOSED' WHERE symbol=? AND entry_ts=?", (str(t["exit_ts"]), t["exit"], t["reason"], t["R"], sym, str(t["entry_ts"])))

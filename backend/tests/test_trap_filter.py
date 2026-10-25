@@ -29,3 +29,15 @@ def test_prior_fail_never_counts_the_trade_itself():
     assert len(same_bar), "fixture must contain a stop on the entry bar"
     first_of_day = same_bar.groupby(["session", "side"]).head(1)
     assert (first_of_day["prior_fail"] == 0).all()
+
+
+def test_live_runner_stores_entry_features(tmp_path):
+    import json, sqlite3
+    from app.zone_breakout import live
+    b = _bars(1200); db = str(tmp_path / "zb.db"); cfg = ZB.Config(cons_bars=2, max_cons_atr=3.0)
+    with live._conn(db) as c:
+        live.process("TEST", b.iloc[:200].reset_index(drop=True), c, cfg=cfg, send=None)          # first run only remembers the last bar
+        for n in range(200, 1200, 5): live.process("TEST", b.iloc[:n + 5].reset_index(drop=True), c, cfg=cfg, send=None)
+        rows = c.execute("SELECT features FROM trades").fetchall()
+    assert rows and any(r[0] for r in rows)
+    f = json.loads([r[0] for r in rows if r[0]][0]); assert set(f) == set(TF.FEATURES)
