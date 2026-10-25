@@ -1,5 +1,11 @@
 {
- "start": "2026-10-20",
+ "start": "2026-10-26",
  "end": "2026-12-03",
- "official_start": "2026-11-02"
+ "official_start": "2026-11-02",
+ "trial": {
+  "from": "2026-10-26",
+  "to_inclusive": "2026-10-30",
+  "decided_by_owner": "2026-10-25",
+  "note": "One-week paper trial: scoring window restarted Monday 2026-10-26 (all P&L start from zero in the leaderboard). Ledger rows are untouched; previous window was 2026-10-20 (backup: snapshots/contest_before_trial_reset.json). Official cut-over 2026-11-02 still scheduled."
+ }
 }

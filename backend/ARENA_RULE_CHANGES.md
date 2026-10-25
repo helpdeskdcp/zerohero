@@ -78,3 +78,8 @@ Rules apply ONLY to signals posted after `gap_chase_rules_from_ts` in rule_effec
 3. INVALID_LEVELS: if the first target is already at/below the fill price, the signal is void; a TARGET exit now also needs exit > fill.
 Past cases, by ledger correction rows (original rows untouched): H00061 (Arush, 23-Oct) -> DATA_GAP (quote blackout 14:35-14:41:32 IST; MISSED was an artefact); H00048 (Neeraj, 23-Oct) -> INVALID_LEVELS (ABOVE 200 posted while the option traded 331; T1 231.85 was below the 343.7 fill, a loss booked as TARGET).
 Infrastructure (no scoring rule): the two capture stalls were already fixed on 23-Oct (17:41, 17:58, 19:06 IST). Verified on the MCX evening session after the fix: median gap 4.0 s, max 20 s, zero gaps over 60 s (before: max 1,485 s). Settlement and latest-quote paths ignore frames whose exchange stamp is ahead of the receive time (24-Oct).
+
+## 2026-10-25 — One-week paper trial: scoring window restarted at Monday 2026-10-26 (owner decision; no scoring rule changed)
+- contest.json `start` 2026-10-20 -> 2026-10-26 (trial 26-30 Oct). Leaderboard / standings / daily reports count only signals from that day, so every participant's P&L starts at zero. Ledger rows (human_signals.jsonl, chanakya.db) are NOT deleted or edited; the previous window is kept in data/arena/snapshots/contest_before_trial_reset.json and the daily reports of 20-23 Oct stay in data/arena/daily/.
+- The official cut-over on 2026-11-02 (cron `5 0 2 11 *`) is unchanged and will restart the window again at that date unless the owner says otherwise.
+- Trial purpose (owner): paper only, no live orders; if the AI issues no signals during the trial week the project is reviewed for shutdown. Trial criteria are recorded in data/research/trial_2026-10-26/CRITERIA.md.
