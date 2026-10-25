@@ -36,5 +36,10 @@
  "AVINASH": {
   "display": "Avinash",
   "token_sha256": "a10f907cfce459ec60aefbc70c3c4efcd723f3938f4f26627207b4c7b6b2341e"
+ },
+ "ZEROHERO_PINE_AI": {
+  "display": "ZeroHero AI - Winners Scalper (Pine) on NG",
+  "token_sha256": "8a50bcaa6f884f0110abb0437572fef6d3c82b6dedbfa121655ecafe1af16fdc",
+  "risk_module": true
  }
 }

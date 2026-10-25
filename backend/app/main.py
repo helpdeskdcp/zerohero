@@ -186,6 +186,11 @@ for _mod in (engines_routes, instruments_routes, analysis_routes, scalp_routes,
             data_routes, system_routes, hedging_routes, dhan_routes):
     app.include_router(_mod.router)
 
+# Smart Chart (Vela + PineTS + Upstox candles, paper-only): self-contained package, own DB, no order path.
+from .smart_chart import routes as _smart_chart_routes  # noqa: E402
+
+app.include_router(_smart_chart_routes.router)
+
 # Re-exports for backward compatibility: a handful of tests call these route
 # handlers / helpers directly as `main.X` (unit-testing the function rather
 # than going through HTTP). Keep them reachable under their old home so those
@@ -529,6 +534,11 @@ async def _lifespan(_app: FastAPI):
         _zb_live.Runner().start()
     except Exception as e:
         print(f"[zone_breakout] runner start failed: {type(e).__name__}: {e}")
+    try:
+        from .winners_scalper import live as _wp_live
+        _wp_live.Runner().start()
+    except Exception as e:
+        print(f"[winners_pine] runner start failed: {type(e).__name__}: {e}")
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:

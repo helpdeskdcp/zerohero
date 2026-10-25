@@ -35,3 +35,38 @@ def test_backtest_runs_both_variants_and_stays_intraday():
     for v in ("X1", "X2"):
         t = WB.simulate(b, v); assert len(t) > 5 and (t["risk_bp"] > 0).all()
         assert (pd.DatetimeIndex(t["entry_ts"]).tz_convert("Asia/Kolkata").hour * 60 + pd.DatetimeIndex(t["entry_ts"]).tz_convert("Asia/Kolkata").minute < 15 * 60 + 15).all()
+
+
+def test_live_process_records_each_signal_once_and_never_trades_stale(tmp_path):
+    from app.winners_scalper import live
+    b = _bars(1300); b["timestamp"] = pd.DatetimeIndex(b["timestamp"]); db = str(tmp_path / "w.db"); calls = []
+    submit = lambda sym, side, strong, ts, close, stop, now=None: (calls.append((side, str(ts))) or dict(status="SUBMITTED", detail="x", arena_id="H1"))
+    c = live._conn(db); first = b.iloc[:1000].reset_index(drop=True)
+    assert live.process("NATURALGAS", first, c, submit, send=lambda t: None, now=0) == []                                           # first run only remembers
+    n_before = len(calls)
+    for n in range(1001, 1301):
+        now = (b["timestamp"].iat[n - 1] + pd.Timedelta(minutes=15)).timestamp() + 10                                              # right after the bar closes -> fresh
+        live.process("NATURALGAS", b.iloc[:n].reset_index(drop=True), c, submit, send=lambda t: None, now=now)
+    sigs = c.execute("SELECT bar_ts, side, status FROM signals").fetchall(); assert len(sigs) == len(calls) - n_before >= 1 and len({s[0] for s in sigs}) == len(sigs)
+    c2 = live._conn(db); full = b.iloc[:1300].reset_index(drop=True)                                                               # restart: the same bars must not be re-submitted
+    k = len(calls); live.process("NATURALGAS", full, c2, submit, send=lambda t: None, now=(b["timestamp"].iat[1299] + pd.Timedelta(minutes=15)).timestamp() + 10); assert len(calls) == k
+    stale = live._conn(str(tmp_path / "s.db")); live.process("NATURALGAS", b.iloc[:1000].reset_index(drop=True), stale, submit, send=lambda t: None, now=0)
+    k = len(calls); live.process("NATURALGAS", b.iloc[:1300].reset_index(drop=True), stale, submit, send=lambda t: None, now=(b["timestamp"].iat[1299] + pd.Timedelta(hours=9)).timestamp())
+    assert len(calls) == k and all(r[0] == "SKIPPED" for r in stale.execute("SELECT status FROM signals").fetchall())               # found 9h late -> recorded as stale, nothing submitted
+
+
+def test_live_load_bars_splices_a_contract_roll(tmp_path):
+    import sqlite3
+    from app.winners_scalper import live
+    p = str(tmp_path / "mh.db"); c = sqlite3.connect(p)
+    c.execute("CREATE TABLE market_candles (id INTEGER PRIMARY KEY, symbol TEXT, kind TEXT, tf TEXT, bar_start TEXT, session_date_ist TEXT, expiry TEXT, o REAL, h REAL, l REAL, c REAL, v REAL)")
+    t0 = pd.Timestamp("2026-10-20 04:00", tz="UTC")
+    for i in range(120): c.execute("INSERT INTO market_candles (symbol,kind,tf,bar_start,session_date_ist,expiry,o,h,l,c,v) VALUES ('NG','FUTURE','1m',?,?,?,?,?,?,?,1)", ((t0 + pd.Timedelta(minutes=i)).strftime("%Y-%m-%dT%H:%M:%SZ"), "2026-10-20", "27OCT2026", 250.0, 250.5, 249.5, 250.0))
+    for i in range(120, 240): c.execute("INSERT INTO market_candles (symbol,kind,tf,bar_start,session_date_ist,expiry,o,h,l,c,v) VALUES ('NG','FUTURE','1m',?,?,?,?,?,?,?,1)", ((t0 + pd.Timedelta(minutes=i)).strftime("%Y-%m-%dT%H:%M:%SZ"), "2026-10-20", "2026-11-25", 262.0, 262.5, 261.5, 262.0))
+    c.commit(); c.close(); b = live.load_bars("NG", (t0 + pd.Timedelta(hours=6)).timestamp(), path=p)
+    assert len(b) >= 14 and b["close"].diff().abs().max() < 1.0                                                                       # the 12-point roll gap is gone
+
+
+def test_live_quote_timestamp_parsing():
+    from app.winners_scalper import live
+    assert abs(live._epoch("2026-10-23T18:04:59.939004Z") - pd.Timestamp("2026-10-23T18:04:59.939004Z").timestamp()) < 1e-3 and live._epoch(5) == 5.0
