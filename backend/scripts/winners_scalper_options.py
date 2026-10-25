@@ -28,7 +28,7 @@ def trades_for(sym):
         if pe is None or pxx is None or tx <= te: skip["no_price"] = skip.get("no_price", 0) + 1; continue
         s = cfg["slip"]; fe, fx = pe + s, max(0.05, pxx - s); cost = estimate_index_option_cost(fe, fx, cfg["lot"], lots=1, slippage_points=0.0); cost = cost.get("total_cost", cost.get("total", 0.0))
         gross = (fx - fe) * cfg["lot"]; bx = pd.Timestamp(r.exit_ts); idx_x = opn.get(bx, cls.get(bx - pd.Timedelta(minutes=15), np.nan)); sgn = 1 if r.side == "BUY" else -1
-        rows.append(dict(sym=sym, day=D, year=int(D[:4]), side=r.side, expiry=ex, dte0=(ex == D), strike=atm, prem_in=pe, prem_out=pxx, reason=r.reason, gross=gross, cost=cost, net=gross - cost, prem_ret=(fx - fe) / fe,
+        rows.append(dict(sym=sym, entry_ts=str(r.entry_ts), day=D, year=int(D[:4]), side=r.side, expiry=ex, dte0=(ex == D), strike=atm, prem_in=pe, prem_out=pxx, reason=r.reason, gross=gross, cost=cost, net=gross - cost, prem_ret=(fx - fe) / fe,
                          idx_ctrl_bp=sgn * (idx_x - r.open_j) / r.open_j * 1e4 - DT.COST_BP[sym]))
     return pd.DataFrame(rows), skip, len(t)
 
