@@ -1,0 +1,27 @@
+{
+ "A": {
+  "n_stocks": 53,
+  "n_oos": 262,
+  "n_oos_expiry": 55,
+  "r2_oos_nonexpiry": 0.970363442404733,
+  "r2_oos_expiry": 0.9649771160575167,
+  "resid_sd_ratio_expiry_over_non": 1.0935089370277553,
+  "p_ratio_gt1": 0.2159,
+  "p_ratio_lt1": 0.7841,
+  "claim_less_explained_on_expiry": false
+ },
+ "B": {
+  "n": 106,
+  "median_pull": -0.7389653804749257,
+  "mean_pull": -4.418847087890078,
+  "placebo_mean_pull": -2.7606846624882753,
+  "placebo_97_5": -1.8882974310301668,
+  "p_mean": 0.994,
+  "share_close_within_25pts": 0.05660377358490566,
+  "placebo_share": 0.12118301886792451,
+  "p_share": 0.9929,
+  "mean_abs_dist_0930": 101.91556603773594,
+  "mean_abs_dist_1515": 162.04349056603758,
+  "claim_pinning": false
+ }
+}
