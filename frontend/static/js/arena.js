@@ -192,7 +192,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
   mg.oninput = showMg; showMg();
   mg.onsubmit = async (ev) => { ev.preventDefault(); const v = { signal_id: mg.signal_id.value, action: mg.action.value, sl: mg.sl.value, lots: mg.lots.value, targets: mg.targets.value, trail_points: mg.trail_points.value, trail_pct: mg.trail_pct.value, confirm: mg.confirm.checked };
     const r = validateEvent(v); if (!r.ok) return msg("mgmsg", r.errors.join(" · "), true); $("mgGo").disabled = true;
-    try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${fmtIsoIST(j.server_iso, true)} IST${j.practice ? " (PRACTICE)" : ""} — takes effect ~20 s later, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
+    try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${fmtIsoIST(j.server_iso, true)} IST${j.practice ? " (PRACTICE)" : ""} — takes effect after the contest execution delay, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
     catch (e) { msg("mgmsg", e.message, true); } finally { $("mgGo").disabled = false; } };
   $("tokenIn").value = token; if (token) loadState().then((s) => { if (s) { loadGuide(); show("guide"); refreshContracts(); } });
 })();

@@ -105,6 +105,23 @@ def rule_from(name: str) -> float | None:
         return None
 
 
+def latency_at(t: float, default: float = LATENCY_SEC) -> float:
+    """Execution delay for a signal / management event stamped at `t`: LATENCY_SEC (20 s) unless rule_effective.json holds `latency_from_ts` <= t and `latency_sec` (owner's broker-like fill decision 2026-10-26,
+    same for every participant and both sides, NEVER retroactive: earlier signals and events keep their original delay). The value can only shorten the delay, never lengthen it."""
+    try:
+        import json
+        d = json.load(open(RULES_FILE)); f, v = d.get("latency_from_ts"), d.get("latency_sec")
+        if f is not None and v is not None and t >= float(f): return min(float(default), float(v))
+    except Exception:
+        pass
+    return float(default)
+
+
+def current_latency(now: float | None = None) -> float:
+    import time as _t
+    return latency_at(now or _t.time(), LATENCY_SEC)
+
+
 def sl_at_fill_from() -> float | None:
     """Epoch from which the SL-at-fill rule applies (written at deployment; NOT retroactive). Absent file -> rule inactive."""
     try:
@@ -135,12 +152,12 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     if not lot: return {**base, "status": "NO_DATA:no_lot_size"}
     if sig.get("void_status"): return {**base, "status": sig["void_status"], "void_reason": sig.get("void_reason")}        # ledger correction (HUMAN_STATUS_CORRECTION): signal voided after the fact
     _rf = rule_from("gap_chase_rules_from_ts"); new_rules = _rf is not None and sig["t"] >= _rf                          # DATA_GAP + ABOVE-chase + stale-levels rules: only for signals posted after deployment
-    exch = "MCX" if und in MCX else "NSE"; end_min = SESSION_END_MIN[exch]; t0 = sig["t"] + latency
+    exch = "MCX" if und in MCX else "NSE"; end_min = SESSION_END_MIN[exch]; t0 = sig["t"] + latency_at(sig["t"], latency)
     live = [s for s in snaps if s["t"] >= t0]
     prev_t = max((x["t"] for x in snaps if x["t"] < t0), default=sig["t"])                      # last quote known at the execution instant (the signal time if there is none)
     if not live: return {**base, "status": "NO_DATA:no_snapshot_after_signal"}
     _xf = rule_from("exit_now_latency_from_ts")                                                                                 # EXIT_NOW posted after deployment: short execution delay (same for every participant, both sides); earlier events keep 20 s
-    evs = sorted(({**e, "t_eff": e["t"] + (min(latency, EXIT_NOW_LATENCY_SEC) if (e.get("action") == "EXIT_NOW" and _xf is not None and e["t"] >= _xf) else latency)}
+    evs = sorted(({**e, "t_eff": e["t"] + (min(latency_at(e["t"], latency), EXIT_NOW_LATENCY_SEC) if (e.get("action") == "EXIT_NOW" and _xf is not None and e["t"] >= _xf) else latency_at(e["t"], latency))}
                   for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
     st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None, "lots": max(1, int(sig.get("lots") or 1)), "filled": False}
     applied = 0

@@ -169,3 +169,16 @@ def test_exit_now_has_a_short_execution_delay_only_after_the_rule_is_effective_a
     monkeypatch.setattr(S, "rule_from", lambda name: (t0 + 50) if name == "exit_now_latency_from_ts" else None)
     sl = S.settle({**base, "sl": 50.0, "events": [{"t": t0 + 100, "action": "AMEND_SL", "sl": 85.0}]}, snaps, half_spread=0.0)   # other actions keep 20 s: the stop 85 is live only from t0+120 (bid 70 -> stopped there)
     assert sl["exit_reason"] == "SL" and sl["exit"] == 70
+
+
+def test_broker_like_latency_rule_shortens_the_delay_for_everything_posted_after_it_and_never_retroactively(monkeypatch, tmp_path):
+    import json as _j
+    t0 = 1_760_000_000.0; base = {"id": "L1", "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": "NEAR", "entry": 100.0, "entry_hi": 110.0, "sl": None, "targets": [], "t": t0, "events": []}
+    snaps = [{"t": t0 + 4, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 8, "ltp": 104, "bid": 103, "ask": 105}, {"t": t0 + 22, "ltp": 108, "bid": 107, "ask": 109}]
+    rf = tmp_path / "rules.json"; monkeypatch.setattr(S, "RULES_FILE", str(rf))
+    rf.write_text("{}"); assert S.latency_at(t0) == 20 and S.settle(base, snaps, half_spread=0.0)["fill"] == 109.0                              # no rule: 20 s -> the snapshot at t0+22
+    rf.write_text(_j.dumps({"latency_from_ts": t0 - 1, "latency_sec": 3})); assert S.latency_at(t0) == 3 and S.settle(base, snaps, half_spread=0.0)["fill"] == 100.0   # rule: 3 s -> first snapshot at/after t0+3 = t0+4
+    rf.write_text(_j.dumps({"latency_from_ts": t0 + 1, "latency_sec": 3})); assert S.latency_at(t0) == 20                                              # posted BEFORE the rule: untouched (never retroactive)
+    rf.write_text(_j.dumps({"latency_from_ts": t0 - 1, "latency_sec": 99})); assert S.latency_at(t0) == 20                                             # can only shorten, never lengthen
+    rf.write_text(_j.dumps({"latency_from_ts": t0 - 1, "latency_sec": 3})); ev = S.settle({**base, "sl": 50.0, "events": [{"t": t0 + 5, "action": "AMEND_SL", "sl": 108.0}]}, snaps, half_spread=0.0)
+    assert ev["status"] == "SETTLED" and ev["exit_reason"] == "SL"                                                                                      # an SL amended at t0+5 is live from t0+8 (3 s), stopping at the t0+8 bid 103

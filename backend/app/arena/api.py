@@ -39,6 +39,12 @@ def is_public_path(path: str) -> bool:
     return enabled() and (path.startswith("/api/arena/public/") or path in PUBLIC_STATIC)
 
 
+def _latency_now() -> float:
+    """The contest's execution delay right now (20 s, or the shorter broker-like value once rule_effective.json holds it)."""
+    from . import settle as _s
+    return _s.current_latency()
+
+
 PARTICIPANTS_FILE = os.path.join(BASE, "data", "arena", "participants.json")
 CONTEST_FILE = os.path.join(BASE, "data", "arena", "contest.json")                      # runtime contest dates (start / end / official_start): changed without a restart
 
@@ -283,7 +289,7 @@ def standings(request: Request):
                         active = {"summary": {}, "groups": {}, "trades_per_day": 0.0, "verdict": "UNAVAILABLE", "results": [], "error": f"{type(e).__name__}"}
                     _cache["by"][c["name"]] = (time.time(), {"mode": mode(c), "ai": ai["summary"], "human": hu["summary"], "human_name": c["name"], "active": active, "ai_results": ai["results"][-200:], "human_results": hu["results"][-200:],
                                                     "comparison": CMP.compare(ai["results"], hu["results"]), "spread_models": {k: v["source"] for k, v in out.get("_spread_models", {}).items()},
-                                                    "caveats": ["Identical settlement for both sides (ask in / bid out, 20 s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Contracts with a signal are captured every few seconds, all others every 1-3 minutes; a missing bid/ask uses a modelled spread.",
+                                                    "caveats": [f"Identical settlement for both sides (ask in / bid out, {int(_latency_now())} s delay, SL/T1, session-end exit, brokerage+STT+charges).", "Contracts with a signal are captured every few seconds, all others every 1-3 minutes; a missing bid/ask uses a modelled spread.",
                                                                 "Win rate alone does not decide; primary = net return after costs; differences inside the noise are a DRAW.", "Not a profitability claim."]})
             finally:
                 lk.release()
@@ -369,7 +375,7 @@ def live(request: Request):
             row.update(state="WAITING" if still else "EXPIRED", waiting_note=need if still else "not filled inside its validity: expired", valid_until_ist=(datetime.fromtimestamp(vu, tz=IST).strftime("%H:%M:%S") if vu else None))
         elif st == "MISSED": row.update(state="MISSED")
         elif st in ("DATA_GAP", "INVALID_LEVELS"): row.update(state="VOID", why=st)
-        elif st.startswith("NO_DATA:no_snapshot_after_signal"): row.update(state="WAITING", waiting_note="order is being placed: it reaches the market after the 20 s execution delay, then fills at the next quote", valid_until_ist=None)
+        elif st.startswith("NO_DATA:no_snapshot_after_signal"): row.update(state="WAITING", waiting_note=f"order is being placed: it reaches the market after the {int(_latency_now())} s execution delay, then fills at the next quote", valid_until_ist=None)
         else: row.update(state="NO DATA", why=st)
         rows.append(row)
     order = {"ACTIVE": 0, "WAITING": 1, "CLOSED": 2, "EXPIRED": 3, "CANCELLED": 3, "MISSED": 3, "VOID": 3}
