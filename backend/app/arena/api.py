@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 IST = timezone(timedelta(hours=5, minutes=30))
 EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
-PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
+PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY, RATE_PER_MIN = 4096, 900                                   # per IP; many participants may share one office address
 _sf: dict = defaultdict(threading.Lock)                                  # single-flight: only ONE request recomputes a stale entry, the others get the previous value (or wait if there is none)
@@ -292,6 +292,31 @@ def standings(request: Request):
     return _cache["by"][c["name"]][1]
 
 
+@router.get("/chart")
+def chart(request: Request, underlying: str, expiry: str, strike: float, option_type: str = "CE", tf: int = 1, since: float | None = None):
+    """Terminal tab: candles (tf minutes) of one option contract from the captured quotes of today's session; `since` = UTC epoch of the newest candle the client already has (incremental refresh)."""
+    _auth(request); u = underlying.upper(); ot = option_type.upper()
+    if u not in SU.ALLOWED or ot not in ("CE", "PE") or tf not in (1, 3, 5, 15): raise HTTPException(422, "bad underlying / option_type / tf")
+    try: e = SU.norm_expiry(expiry)
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    from . import terminal as TM
+    try:                                                                                          # the contract is on someone's screen: keep its quotes ~3 s fresh (same mechanism as the chain ladder), 5 min after the last look
+        from ..histcap import priority
+        priority.request_watch(u, e, float(strike), ot, ttl_sec=300)
+    except Exception:
+        pass
+    return TM.premium(u, e, float(strike), ot, int(tf), since)
+
+
+@router.get("/chart/underlying")
+def chart_underlying(request: Request, underlying: str, tf: int = 15):
+    """Terminal tab: the underlying's candles with the Winners Scalper (Pine) indicator (trailing stop, BUY/SELL markers) and the live spot."""
+    _auth(request); u = underlying.upper()
+    if u not in SU.ALLOWED or tf not in (5, 15): raise HTTPException(422, "bad underlying / tf")
+    from . import terminal as TM
+    return TM.underlying_view(u, int(tf))
+
+
 @router.get("/live")
 def live(request: Request):
     """Broker-style watch of the caller's signals of TODAY: WAITING (not filled yet) / ACTIVE (live ltp, bid/ask, open P&L) / CLOSED (final) / EXPIRED / CANCELLED. The settlement part is cached 5 s, the quote overlay is ~1 s fresh."""
@@ -321,7 +346,7 @@ def live(request: Request):
     for s, r in base:
         q = CT.latest_quote(s["underlying"], s["expiry"], s["strike"], s["option_type"]) if s.get("expiry") else None
         st = str(r.get("status", "")); label = f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})"
-        row = {"id": s["id"], "lots": r.get("lots") or s.get("lots") or 1, "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
+        row = {"id": s["id"], "underlying": s["underlying"], "expiry": s["expiry"], "strike": s["strike"], "option_type": s["option_type"], "posted_ts": s["t"], "lots": r.get("lots") or s.get("lots") or 1, "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
                "quote_age_s": (round(min(now - q["t"], chk) if chk is not None else now - q["t"], 1) if q else None), "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)

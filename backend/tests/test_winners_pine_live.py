@@ -3,6 +3,7 @@ import json, os, re, shutil, subprocess
 import numpy as np, pandas as pd
 import pytest
 from app.winners_scalper import live, strategy as WS
+from app.arena import pine_submitter as P
 
 IST = live.IST
 NOW = pd.Timestamp("2026-10-26 10:00:20", tz=IST).timestamp()
@@ -16,7 +17,7 @@ class Env:
         from app import market_calendar as mc, sl_detector
         from app.arena import contracts as CT, submit as SU
         mp.setattr(mc, "is_trading", lambda ex, *a, **k: trading)
-        mp.setattr(live, "listed_option_expiries", lambda sym, path=None: set(listed) if listed is not None else None)
+        mp.setattr(P, "listed_option_expiries", lambda sym, path=None: set(listed) if listed is not None else None)
         mp.setattr(CT, "captured", lambda s, *a, **k: dict(day=day, expiries={e: dict(raw=e, strikes=[245.0, 250.0, 255.0]) for e in expiries}))
         mp.setattr(CT, "chain", lambda s, e, ot, n=7, path=None: dict(atm=atm, rows=[dict(strike=atm, quote=q)], problems=[], expiry=e, option_type=ot))
         mp.setattr(CT, "check", lambda *a, **k: dict(problems=problems or []))
@@ -25,7 +26,7 @@ class Env:
 
 
 def _go(side="BUY", now=NOW):
-    return live.submit_to_arena("NATURALGAS", side, True, pd.Timestamp("2026-10-26 09:45", tz=IST), 252.0, 249.0, now=now)
+    return P.submit_to_arena("NATURALGAS", side, True, pd.Timestamp("2026-10-26 09:45", tz=IST), 252.0, 249.0, now=now)
 
 
 def test_buy_maps_to_call_and_sell_maps_to_put_long_only(monkeypatch):
@@ -57,7 +58,7 @@ def test_expiry_must_be_exchange_listed_and_verifiable(monkeypatch):
 def test_instrument_master_parser(tmp_path):
     p = tmp_path / "m.json"; p.write_text(json.dumps([dict(name="NATURALGAS", exch_seg="MCX", instrumenttype="OPTFUT", expiry="20NOV2026"), dict(name="NATURALGAS", exch_seg="MCX", instrumenttype="FUTCOM", expiry="27OCT2026"),
                                                        dict(name="CRUDEOIL", exch_seg="MCX", instrumenttype="OPTFUT", expiry="19NOV2026")]))
-    assert live.listed_option_expiries("NATURALGAS", str(p)) == {"2026-11-20"} and live.listed_option_expiries("NATURALGAS", str(tmp_path / "missing.json")) is None
+    assert P.listed_option_expiries("NATURALGAS", str(p)) == {"2026-11-20"} and P.listed_option_expiries("NATURALGAS", str(tmp_path / "missing.json")) is None
 
 
 def test_expiry_today_is_allowed_but_next_expiry_is_preferred(monkeypatch):
@@ -91,37 +92,47 @@ def _first_signal_index(b, start=1000):
     s = WS.signals(b); idx = [i for i in range(start, len(b)) if s["buy"].iat[i] or s["sell"].iat[i]]; assert idx, "fixture must contain a signal after the warm-up"; return idx[0]
 
 
-def test_signal_expiry_stale_capture_bar_and_fresh_tick_bar(tmp_path):
-    b = _bars(); i = _first_signal_index(b); calls = []
-    submit = lambda *a, **k: (calls.append(a) or dict(status="SUBMITTED", detail="ok", arena_id="H1", opt_expiry="2026-11-23", strike=250.0, opt_type="CE", entry=2.4, opt_sl=1.3, opt_targets="[3.5]", quote_ts="t", quote_age_s=5.0, risk_per_unit=1.1, valid_until=1.0))
-    end = (b["timestamp"].iat[i] + pd.Timedelta(minutes=15)).timestamp()
-    def run(src, age, name):
-        c = live._conn(str(tmp_path / name)); bb = b.iloc[:i + 1].copy().reset_index(drop=True); bb["src"] = src
-        c.execute("INSERT INTO state VALUES (?,?)", ("NATURALGAS", str(bb["timestamp"].iat[i - 1]))); c.commit()
-        live.process("NATURALGAS", bb, c, submit, send=lambda t: None, now=end + age); return c.execute("SELECT status, detail, bar_source FROM signals").fetchall()
-    assert run("TICK", 5, "a.db")[0][0] == "SUBMITTED"
-    st = run("TICK", 301, "b.db")[0]; assert st[0] == "SKIPPED" and "STALE_SIGNAL" in st[1]
-    cp = run("CAPTURE", 120, "c.db")[0]; assert cp[0] == "SKIPPED" and "CAPTURE_BAR" in cp[1] and len(calls) == 1
+def _ready(tmp_path, name, src="TICK", age=5):
+    """a db whose state sits one bar before the first fixture signal; returns (conn, bars, signal bar end epoch)"""
+    b = _bars(); i = _first_signal_index(b); end = (b["timestamp"].iat[i] + pd.Timedelta(minutes=15)).timestamp(); c = live._conn(str(tmp_path / name)); bb = b.iloc[:i + 1].copy().reset_index(drop=True); bb["src"] = src
+    c.execute("INSERT INTO state VALUES (?,?)", ("NATURALGAS", str(bb["timestamp"].iat[i - 1]))); c.commit(); return c, bb, end
 
 
-def test_crash_between_submit_and_ledger_cannot_double_submit(tmp_path):
-    b = _bars(); i = _first_signal_index(b); end = (b["timestamp"].iat[i] + pd.Timedelta(minutes=15)).timestamp() + 5; c = live._conn(str(tmp_path / "x.db")); bb = b.iloc[:i + 1].reset_index(drop=True)
-    c.execute("INSERT INTO state VALUES (?,?)", ("NATURALGAS", str(bb["timestamp"].iat[i - 1]))); c.commit(); n = []
-    def boom(*a, **k): n.append(1); raise RuntimeError("process died after the arena write")
-    with pytest.raises(RuntimeError): live.process("NATURALGAS", bb, c, boom, send=lambda t: None, now=end)
-    assert c.execute("SELECT status FROM signals").fetchall() == [("PENDING",)]                                                       # reserved before the submit
-    live.process("NATURALGAS", bb, c, lambda *a, **k: (n.append(1) or dict(status="SUBMITTED", detail="x")), send=lambda t: None, now=end + 1)
+def test_generator_records_a_fresh_tick_signal_as_new_and_nothing_else(tmp_path):
+    c, bb, end = _ready(tmp_path, "a.db"); out = live.process("NATURALGAS", bb, c, now=end + 5)
+    assert len(out) == 1 and out[0]["status"] == "NEW" and c.execute("SELECT status, bar_source FROM signals").fetchall() == [("NEW", "TICK")]
+    assert live.process("NATURALGAS", bb, c, now=end + 6) == []                                                                  # same bars again: nothing new
+
+
+def test_signal_expiry_and_delayed_capture_bars_are_recorded_as_skipped(tmp_path):
+    c, bb, end = _ready(tmp_path, "b.db"); live.process("NATURALGAS", bb, c, now=end + 301)
+    st = c.execute("SELECT status, detail FROM signals").fetchone(); assert st[0] == "SKIPPED" and "STALE_SIGNAL" in st[1]
+    c, bb, end = _ready(tmp_path, "c.db", src="CAPTURE"); live.process("NATURALGAS", bb, c, now=end + 120)
+    st = c.execute("SELECT status, detail FROM signals").fetchone(); assert st[0] == "SKIPPED" and "CAPTURE_BAR" in st[1]
+
+
+def test_consumer_submits_once_even_if_it_crashes_after_claiming(tmp_path):
+    c, bb, end = _ready(tmp_path, "d.db"); live.process("NATURALGAS", bb, c, now=end + 5); n = []; db = str(tmp_path / "d.db")
+    def boom(*a, **k): n.append(1); raise RuntimeError("process died after the ledger write")
+    with pytest.raises(RuntimeError): P.drain(db, submit=boom, send=lambda t: None, now=end + 6)
+    assert c.execute("SELECT status FROM signals").fetchall() == [("PENDING",)]                                                       # claimed before the submit
+    P.drain(db, submit=lambda *a, **k: (n.append(1) or dict(status="SUBMITTED", detail="x")), send=lambda t: None, now=end + 7)
     assert len(n) == 1                                                                                                                # the restart did NOT submit a second time
 
 
-def test_ledger_row_is_complete_and_consistent(tmp_path):
-    b = _bars(); i = _first_signal_index(b); end = (b["timestamp"].iat[i] + pd.Timedelta(minutes=15)).timestamp() + 5; c = live._conn(str(tmp_path / "l.db")); bb = b.iloc[:i + 1].reset_index(drop=True)
-    c.execute("INSERT INTO state VALUES (?,?)", ("NATURALGAS", str(bb["timestamp"].iat[i - 1]))); c.commit()
+def test_consumer_ledger_row_is_complete_and_consistent(tmp_path):
+    c, bb, end = _ready(tmp_path, "e.db"); live.process("NATURALGAS", bb, c, now=end + 5); sent = []
     res = dict(status="SUBMITTED", detail="d", arena_id="H7", opt_expiry="2026-11-23", strike=250.0, opt_type="CE", entry=2.4, opt_sl=1.3, opt_targets="[3.5, 4.6, 5.7]", quote_ts="2026-10-26T04:30:00Z", quote_age_s=7.0, risk_per_unit=1.1, valid_until=end + 900)
-    live.process("NATURALGAS", bb, c, lambda *a, **k: res, send=lambda t: None, now=end)
-    r = c.execute("SELECT status, arena_id, opt_expiry, strike, opt_type, entry, opt_sl, opt_targets, quote_ts, quote_age_s, risk_per_unit, valid_until, stop, close, atr FROM signals").fetchone()
+    out = P.drain(str(tmp_path / "e.db"), submit=lambda *a, **k: res, send=sent.append, now=end + 6)
+    r = c.execute("SELECT status, ledger_id, opt_expiry, strike, opt_type, entry, opt_sl, opt_targets, quote_ts, quote_age_s, risk_per_unit, valid_until, stop, close, atr FROM signals").fetchone()
     assert r[:12] == ("SUBMITTED", "H7", "2026-11-23", 250.0, "CE", 2.4, 1.3, "[3.5, 4.6, 5.7]", "2026-10-26T04:30:00Z", 7.0, 1.1, end + 900) and r[12] > 0 and r[13] > 0 and r[14] > 0
-    assert c.execute("SELECT COUNT(*) FROM signals WHERE status='PENDING'").fetchone()[0] == 0
+    assert c.execute("SELECT COUNT(*) FROM signals WHERE status IN ('NEW','PENDING')").fetchone()[0] == 0 and len(sent) == 1 and "PAPER" in sent[0] and out[0]["status"] == "SUBMITTED"
+
+
+def test_consumer_refuses_a_signal_it_picks_up_too_late(tmp_path):
+    c, bb, end = _ready(tmp_path, "f.db"); live.process("NATURALGAS", bb, c, now=end + 5); calls = []
+    P.drain(str(tmp_path / "f.db"), submit=lambda *a, **k: calls.append(1), send=lambda t: None, now=end + 400)
+    assert calls == [] and c.execute("SELECT status, detail FROM signals").fetchone()[0] == "SKIPPED"
 
 
 def test_tick_builder_partial_bars_never_feed_signals_and_roll_is_spliced(tmp_path):
@@ -140,10 +151,17 @@ def test_tick_builder_partial_bars_never_feed_signals_and_roll_is_spliced(tmp_pa
     assert m["close"].diff().abs().iloc[-3:].max() < 3                                                                                  # the 11-point contract roll did not reach the series
 
 
-def test_runner_loop_has_no_live_order_pathway():
-    src = open(live.__file__, encoding="utf-8").read()
-    assert not re.search(r"import[^\n]*(execution|angelone_orders|order_manager|place_order)|place_order|\.execution\.", src)             # paper only: no broker / order-manager import
-    assert "PAPER" in src
+def test_no_live_order_pathway_and_information_barrier():
+    for mod in (live, P):
+        src = open(mod.__file__, encoding="utf-8").read()
+        assert not re.search(r"import[^\n]*(execution|angelone_orders|order_manager|place_order)|place_order|\.execution\.", src)             # paper only: no broker / order-manager import
+    src = open(live.__file__, encoding="utf-8").read().lower()
+    assert "arena" not in src and "sl_detector" not in src                                                                           # the generator has no contest / estimator reference (barrier tests)
+    assert "PAPER" in open(P.__file__, encoding="utf-8").read()
+
+
+def test_quote_timestamp_parsing():
+    assert abs(P._epoch("2026-10-23T18:04:59.939004Z") - pd.Timestamp("2026-10-23T18:04:59.939004Z").timestamp()) < 1e-3 and P._epoch(5) == 5.0
 
 
 @pytest.mark.skipif(shutil.which("node") is None or not os.path.isdir(os.path.join(os.path.dirname(live.__file__), "..", "smart_chart", "node_modules", "pinets")), reason="Pine interpreter (node + pinets) not installed")

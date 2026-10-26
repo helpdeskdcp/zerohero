@@ -148,7 +148,7 @@ app.add_middleware(_AuthGateMiddleware)
 
 class _ArenaNoCacheMiddleware:
     """Pure ASGI: the arena pages/script are always revalidated (a participant must never see a stale page after a wording or rule change)."""
-    _PATHS = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html")
+    _PATHS = ("/static/arena.html", "/static/js/arena.js", "/static/js/arena_terminal.js", "/static/leaderboard.html")
 
     def __init__(self, app): self.app = app
 
@@ -539,6 +539,11 @@ async def _lifespan(_app: FastAPI):
         _wp_live.Runner().start()
     except Exception as e:
         print(f"[winners_pine] runner start failed: {type(e).__name__}: {e}")
+    try:
+        from .arena import pine_submitter as _wp_sub
+        _wp_sub.Runner().start()
+    except Exception as e:
+        print(f"[winners_pine] submitter start failed: {type(e).__name__}: {e}")
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:

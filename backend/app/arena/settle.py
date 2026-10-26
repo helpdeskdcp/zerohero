@@ -87,18 +87,9 @@ def cost_points(und: str, entry: float, exit_: float, lot: int) -> float | None:
 
 
 def cost_total_rs(und: str, entry: float, exit_: float, unit: int, lots: int = 1) -> float | None:
-    """Round-trip cost in RUPEES for `lots` lots (one buy order, one sell order: the flat brokerage is paid once, every other charge scales with the quantity)."""
-    lots = max(1, int(lots or 1))
-    if und == "GOLDM":
-        buy, sell = entry * unit * lots, max(exit_, 0.05) * unit * lots
-        brokerage = 2 * 20.0; exch = (buy + sell) * 0.000418; regfee = (buy + sell) * 0.000001; ctt = sell * 0.0005; stamp = buy * 0.00003; gst = 0.18 * (brokerage + exch + regfee)
-        return brokerage + exch + regfee + ctt + stamp + gst
-    if und in MCX:
-        from ..institutional_edge.costs import KNOWN_COST_PROFILES
-        pr = KNOWN_COST_PROFILES.get(("MCX", MCX[und]))
-        if pr is None: return None
-        return pr.brokerage + (pr.round_trip_total - pr.brokerage) * lots
-    return estimate_index_option_cost(entry, max(exit_, 0.05), unit, lots=lots, slippage_points=0.0)["total_cost"]
+    """Round-trip cost in RUPEES for `lots` lots (formula lives in institutional_edge.costs so trading code can use it without importing this package)."""
+    from ..institutional_edge.costs import option_round_trip_cost_rs
+    return option_round_trip_cost_rs(und, entry, exit_, unit, lots)
 
 
 RULES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "rule_effective.json")

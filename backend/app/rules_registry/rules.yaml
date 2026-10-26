@@ -197,6 +197,20 @@ env_patterns:
   - {re: "^(HUB_[A-Z_]+_SEC|CHANAKYA_[A-Z_]+_(TTL_SEC|WARN_SEC|STALE_SEC)|CHANAKYA_MAX_DATA_AGE_SEC|CHANAKYA_PCR_[A-Z_]+|CHANAKYA_CORS_ORIGINS|SMART_SCALPER_POLL_SEC)$", category: TUNING}
   - {re: "^(PYTEST_CURRENT_TEST|TEST_DATABASE_URL)$", category: TEST_ONLY}
 env_flags:
+  - {name: CHANAKYA_NET_EDGE_OVERRIDE, category: SAFETY_SWITCH, note: "net-edge suspension manual override (autoscalp)"}
+  - {name: CHANAKYA_OPTION_FLOW_SHADOW, category: FEATURE_FLAG, note: "option-flow shadow feed (observation only)"}
+  - {name: CHANAKYA_PIVOT_SHADOW, category: FEATURE_FLAG, note: "pivot-reversal shadow feed (observation only)"}
+  - {name: CHANAKYA_PIVOT_SHADOW_TG, category: FEATURE_FLAG, note: "pivot-reversal Telegram card"}
+  - {name: CHANAKYA_SCAN5M_SHADOW, category: FEATURE_FLAG, note: "5-minute scanner shadow feed (observation only)"}
+  - {name: CHANAKYA_SCAN5M_TG, category: FEATURE_FLAG, note: "5-minute scanner Telegram card"}
+  - {name: CHARTINK_SCANS, category: TUNING, note: "chartink scan list"}
+  - {name: CHARTINK_TRACKER, category: FEATURE_FLAG, note: "chartink forward tracker (observation only)"}
+  - {name: CHARTINK_WEBHOOK_TOKEN, category: SECRET_OR_ID, note: "chartink webhook path secret"}
+  - {name: WINNERS_PINE_LIVE, category: FEATURE_FLAG, note: "Winners Scalper (Pine) NG live paper signal generator; 0 = off"}
+  - {name: WINNERS_PINE_SUBMIT, category: FEATURE_FLAG, note: "submit the Pine signals to the paper contest; 0 = record only"}
+  - {name: WINNERS_PINE_TG, category: FEATURE_FLAG, note: "Telegram card per Pine signal"}
+  - {name: ZONE_BREAKOUT_LIVE, category: FEATURE_FLAG, note: "zone-breakout paper runner; 0 = off"}
+  - {name: ZONE_BREAKOUT_TG, category: FEATURE_FLAG, note: "zone-breakout Telegram cards"}
   - {name: CHANAKYA_ALLOW_LIVE, category: SAFETY_SWITCH, rule: EXEC-LIVE-GATE}
   - {name: CHANAKYA_LIVE_CONFIRM_TOKEN, category: SAFETY_SWITCH, rule: EXEC-LIVE-GATE}
   - {name: AI_BREAKER_FORCE, category: SAFETY_SWITCH, rule: AI-BREAKER}
@@ -212,6 +226,7 @@ env_flags:
   - {name: SMART_SCALPER_UNIVERSE, category: TUNING}
   - {name: L2_CAPTURE_SYMBOLS, category: TUNING}
   - {name: Z2H_EXPIRY_CLOSE, category: TUNING}
+  - {name: SMARTCHART_NODE, category: PATH_OR_DATA}
   - {name: DHAN_POSTBACK_SECRET, category: SECRET_OR_ID}
   - {name: ORDERFLOW_H1H7_SHADOW_CSV, category: PATH_OR_DATA}
   - {name: RULES_REGISTRY, category: FEATURE_FLAG, note: "this inventory API"}

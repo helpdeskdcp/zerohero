@@ -18,13 +18,27 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 .livePanel .nums{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px}.livePanel .nums b{font-weight:600}.livePanel .big{font-size:20px;font-weight:700;text-align:right}
 .pnlpos{color:#4ade80}.pnlneg{color:#f87171}.tickup{animation:fup .9s}.tickdn{animation:fdn .9s}@keyframes fup{from{background:rgba(74,222,128,.35)}to{background:transparent}}@keyframes fdn{from{background:rgba(248,113,113,.35)}to{background:transparent}}
 .livePanel .tot{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13px;color:var(--mut);margin-bottom:4px}
+
+main.wide{max-width:none}
+.tm-wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:10px;height:calc(100vh - 150px);min-height:520px}
+.tm-left{display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0b0f14}
+.tm-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tm-bar b{font-size:15px}#tmPnl{font-weight:700;font-size:16px}.tm-tools{margin-left:auto;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.tm-tools button{padding:3px 9px;font-size:12px}#tmChart{flex:1;min-height:320px;position:relative}.tm-note{padding:4px 10px;font-size:12px;border-top:1px solid var(--line);background:var(--panel)}
+.tm-right{display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.tm-tabs{display:flex}.tm-tabs button{flex:1;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:8px 4px}.tm-tabs button.on{border-bottom-color:var(--hi);color:var(--hi)}
+.tm-tabs .n{display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:9px;background:#1b2740;font-size:11px}
+#tmList{flex:1;overflow-y:auto}.tm-row{padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}.tm-row:hover{background:#16213a}.tm-row.sel{background:#14233f;box-shadow:inset 3px 0 0 var(--hi)}
+.tm-l1{display:flex;align-items:center;gap:8px}.tm-l1 .big{margin-left:auto;font-size:16px;font-weight:700}.tm-l2{font-size:11px}.tm-l3{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12.5px;margin-top:2px}
+.tm-empty{padding:18px;text-align:center}.tm-foot{padding:6px 10px;border-top:1px solid var(--line);font-size:12.5px}.tm-row .chip,#tmState{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;border:1px solid var(--line)}
+@media(max-width:900px){.tm-wrap{grid-template-columns:1fr;height:auto}.tm-left{height:60vh}.tm-right{height:50vh}}
 </style></head><body>
 <header><h1>ZeroHero Arena · Institution side</h1><span id="mode" class="banner prac">enter your arena token</span><span id="who" class="mut"></span><span class="banner">paper trading · no real money · costs included</span><a class="banner" href="/static/leaderboard.html" style="text-decoration:none;color:inherit">🏆 Leaderboard</a></header>
 <main>
 <section id="conn" class="card"><b>Arena access token</b><div class="mut">You received it privately. It is kept only in this browser tab.</div>
 <input id="tokenIn" type="password" placeholder="paste token" autocomplete="off" style="margin-top:6px"><button id="saveToken" style="margin-top:6px">Connect</button><div id="connmsg" class="msg bad" hidden></div></section>
 <div id="app" hidden>
-<div class="tabs"><button data-tab="guide">Guide</button><button data-tab="submit">Submit a signal</button><button data-tab="mine">My signals</button><button data-tab="standings">Standings</button></div>
+<div class="tabs"><button data-tab="guide">Guide</button><button data-tab="submit">Submit a signal</button><button data-tab="mine">My signals</button><button data-tab="standings">Standings</button><button data-tab="terminal">Terminal</button></div>
 <section data-pane="guide" class="card"><div id="guide">loading…</div></section>
 <section data-pane="submit" class="card" hidden><b>Submit BEFORE you take the trade</b> <span class="mut">(long options only · one lot · cannot be edited)</span>
 <form id="f" autocomplete="off"><div class="grid">
@@ -55,4 +69,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <ul id="caveats" class="mut"></ul><div id="spread" class="mut"></div>
 <h3>ZeroHero AI — settled signals</h3><div class="wrap"><table><thead><tr><th>time (IST)</th><th>option</th><th>status</th><th>fill</th><th>exit</th><th>why</th><th>net</th></tr></thead><tbody id="aiRows"></tbody></table></div>
 <h3>Your settled signals</h3><div class="wrap"><table><thead><tr><th>time (IST)</th><th>option</th><th>status</th><th>fill</th><th>exit</th><th>why</th><th>net</th></tr></thead><tbody id="huRows"></tbody></table></div></section>
-</div></main><script src="/static/js/arena.js"></script></body></html>
+<section data-pane="terminal" class="card" hidden style="padding:8px"><div class="tm-wrap">
+<div class="tm-left"><div class="tm-bar"><b id="tmTitle">Select an order or a position →</b><span id="tmState" class="chip"></span><span id="tmLtp" class="mut"></span><span id="tmPnl"></span>
+<span class="tm-tools"><button data-tmview="option" class="on">Option</button><button data-tmview="underlying">Underlying + Pine</button>
+<span id="tmTfOpt"><button data-tmtf="1" class="on">1m</button><button data-tmtf="5">5m</button><button data-tmtf="15">15m</button></span><span id="tmTfUnd" hidden><button data-tmutf="5">5m</button><button data-tmutf="15" class="on">15m</button></span>
+<button id="tmZoomOut" title="zoom out">−</button><button id="tmZoomIn" title="zoom in">+</button><button id="tmFit" title="auto fit">Fit</button></span></div>
+<div id="tmChart"></div><div class="tm-note mut" id="tmNote">Click an order or position on the right.</div></div>
+<div class="tm-right"><div class="tm-tabs"><button data-tm="orders" class="on">Orders<span class="n" id="tmCntOrders">0</span></button><button data-tm="positions">Positions<span class="n" id="tmCntPos">0</span></button><button data-tm="closed">Closed<span class="n" id="tmCntClosed">0</span></button></div>
+<div id="tmList"></div><div class="tm-foot" id="tmTot"></div></div></div></section>
+</div></main><script src="/static/js/arena.js"></script><script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script><script src="/static/js/arena_terminal.js"></script></body></html>

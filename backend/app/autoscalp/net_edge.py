@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 MIN_N_SUSPEND, N_EVIDENCE, CI_Q = 40, 100, 5            # 90 % two-sided -> 5th / 95th percentile
-HALF = {"NIFTY": 0.0012, "BANKNIFTY": 0.0019, "SENSEX": 0.0014, "NATURALGAS": 0.0046, "CRUDEOIL": 0.0018, "GOLDM": 0.0033}      # measured median half-spread of the traded option (arena spread_model, 21-23 Oct 2026)
+HALF = {"NIFTY": 0.0012, "BANKNIFTY": 0.0019, "SENSEX": 0.0014, "NATURALGAS": 0.0046, "CRUDEOIL": 0.0018, "GOLDM": 0.0033}      # measured median half-spread of the traded option (paper-contest spread model, 21-23 Oct 2026)
 UNDERLYINGS = ("BANKNIFTY", "NIFTY", "SENSEX", "BANKEX", "FINNIFTY", "MIDCPNIFTY", "NATURALGAS", "NATGASMINI", "CRUDEOILM", "CRUDEOIL", "GOLDM")      # longest prefix first for tradingsymbol -> underlying
 _cache: dict = {}
 
@@ -36,8 +36,8 @@ def _lot(und: str) -> int:
 
 
 def _friction_rs(und: str, entry: float, exit_: float, lot: int) -> float:
-    from ..arena.settle import cost_total_rs
-    cost = cost_total_rs(und, entry, exit_, lot, 1) or 0.0
+    from ..institutional_edge.costs import option_round_trip_cost_rs
+    cost = option_round_trip_cost_rs(und, entry, exit_, lot, 1) or 0.0
     return float(cost + (entry + exit_) * HALF.get(und, 0.003) * lot)
 
 

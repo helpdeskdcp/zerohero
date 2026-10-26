@@ -208,3 +208,21 @@ def estimate_index_option_cost(entry_premium: float, exit_premium: float, lot_si
         "total_cost_points": round(total / denom, 4) if denom else None,
         "note": rates.source,
     }
+
+
+_MCX_OPTION_PROFILE = {"NATURALGAS": "NATURALGAS_OPTION", "CRUDEOIL": "CRUDEOIL_OPTION", "GOLDM": "GOLDM_OPTION"}
+
+
+def option_round_trip_cost_rs(und: str, entry: float, exit_: float, unit: int, lots: int = 1) -> float | None:
+    """Round-trip cost in RUPEES for `lots` lots of a LONG option (one buy order, one sell order: the flat brokerage is paid once, every other charge scales with the quantity). Neutral home of the formula used by the
+    paper contest settlement (its cost_total_rs delegates here) and by the autoscalp net-edge monitor, so trading code never has to import the contest package."""
+    lots = max(1, int(lots or 1))
+    if und == "GOLDM":
+        buy, sell = entry * unit * lots, max(exit_, 0.05) * unit * lots
+        brokerage = 2 * 20.0; exch = (buy + sell) * 0.000418; regfee = (buy + sell) * 0.000001; ctt = sell * 0.0005; stamp = buy * 0.00003; gst = 0.18 * (brokerage + exch + regfee)
+        return brokerage + exch + regfee + ctt + stamp + gst
+    if und in _MCX_OPTION_PROFILE:
+        pr = KNOWN_COST_PROFILES.get(("MCX", _MCX_OPTION_PROFILE[und]))
+        if pr is None: return None
+        return pr.brokerage + (pr.round_trip_total - pr.brokerage) * lots
+    return estimate_index_option_cost(entry, max(exit_, 0.05), unit, lots=lots, slippage_points=0.0)["total_cost"]
