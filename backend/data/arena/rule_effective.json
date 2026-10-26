@@ -2,5 +2,9 @@
  "sl_at_fill_from_ts": 1792504996.082024,
  "note": "SL-at-fill rule effective for signals submitted after this instant; not retroactive (see ARENA_RULE_CHANGES.md)",
  "gap_chase_rules_from_ts": 1792808548.3386278,
- "gap_chase_note": "DATA_GAP (quote gap >60 s at fill/miss decision), ABOVE-chase (>5% past trigger = MISSED) and INVALID_LEVELS (target at/below fill) apply to signals posted after this instant; not retroactive. Two earlier cases voided by ledger correction."
+ "gap_chase_note": "DATA_GAP (quote gap >60 s at fill/miss decision), ABOVE-chase (>5% past trigger = MISSED) and INVALID_LEVELS (target at/below fill) apply to signals posted after this instant; not retroactive. Two earlier cases voided by ledger correction.",
+ "latency_from_ts": 1793000585.1470459,
+ "latency_sec": 3.0,
+ "exit_now_latency_from_ts": 1793000585.1470459,
+ "latency_note": "Broker-like execution delay 3 s (was 20 s) for every signal and management event stamped at/after latency_from_ts; not retroactive; both sides (owner's decision 2026-10-26)."
 }

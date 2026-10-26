@@ -86,3 +86,8 @@ Infrastructure (no scoring rule): the two capture stalls were already fixed on 2
 
 ## 2026-10-26 09:37 IST — Owner-requested emergency exit for Anwar Hussain (no scoring rule changed)
 - At the owner's request EXIT_NOW was recorded at 09:37:05 IST (server time, event E00048) for Anwar Hussain's only open trade H00081 (NIFTY 22400 PE, 2 lots, filled 81.95 at 09:30:49). It was applied like any other management event: effective after the normal 20 s execution delay, never retroactive, at the first stored quote after that. Result: exit 88.75, reason EMERGENCY, net +Rs 809.84. No other participant's signal was touched.
+
+## 2026-10-26 13:13:05 IST — Broker-like execution delay: 20 s -> 3 s (owner's decision; same for every participant and both sides)
+- Why: participants measured the 20 s wait as the real lag of the system; a fast market moved 12 premium points inside it (an emergency exit pressed at +Rs 435 settled at -Rs 1,251). The delay is now 3 s: BUY fills at the ASK and exits at the BID of the first stored quote at/after signal time + 3 s (quotes are ~4 s apart under dense capture).
+- Applies ONLY to signals and management events (amend / trail / exit / cancel) stamped at or after 2026-10-26 13:13:05 IST (`latency_from_ts` in rule_effective.json); everything earlier keeps its original 20 s result. Never retroactive. The delay can only be shortened by a rule, never lengthened.
+- Entry rules (ABOVE / NEAR / LIMIT / MARKET, the 5 % chase limit, DATA_GAP, INVALID_LEVELS) are unchanged.
