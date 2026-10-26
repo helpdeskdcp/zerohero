@@ -21,6 +21,7 @@ from ..instrument_profiles import get_instrument_profile
 
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
 LATENCY_SEC = 20
+EXIT_NOW_LATENCY_SEC = 3                      # EXIT_NOW only, from rule_effective.json `exit_now_latency_from_ts` (owner's decision 2026-10-26: a 20 s wait on an emergency exit turned a cut into a loss); every other action keeps LATENCY_SEC
 RUNAWAY = 0.05
 MAX_FILL_GAP_SEC = 60            # DATA_GAP rule: no quote for longer than this around the execution instant -> the fill price is unknowable, the signal is void (not a loss, not a win)
 FUTURE_STAMP_SEC = 30          # exch_ts more than this ahead of received_ts = mis-stamped frame (23-Oct-2026 NG 265 PE 17:18:08 false SL)
@@ -138,7 +139,9 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     live = [s for s in snaps if s["t"] >= t0]
     prev_t = max((x["t"] for x in snaps if x["t"] < t0), default=sig["t"])                      # last quote known at the execution instant (the signal time if there is none)
     if not live: return {**base, "status": "NO_DATA:no_snapshot_after_signal"}
-    evs = sorted(({**e, "t_eff": e["t"] + latency} for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
+    _xf = rule_from("exit_now_latency_from_ts")                                                                                 # EXIT_NOW posted after deployment: short execution delay (same for every participant, both sides); earlier events keep 20 s
+    evs = sorted(({**e, "t_eff": e["t"] + (min(latency, EXIT_NOW_LATENCY_SEC) if (e.get("action") == "EXIT_NOW" and _xf is not None and e["t"] >= _xf) else latency)}
+                  for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
     st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None, "lots": max(1, int(sig.get("lots") or 1)), "filled": False}
     applied = 0
 

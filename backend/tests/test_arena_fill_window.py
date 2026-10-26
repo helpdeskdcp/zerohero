@@ -154,3 +154,18 @@ def test_above_entry_zone_does_not_chase_above_its_upper_end():
     assert S.settle({k: v for k, v in sig.items() if k != "entry_hi"}, gap, half_spread=0.0)["status"] != "NOT_TRIGGERED"   # without a zone (all older signals) the old behaviour is unchanged
     assert SU.validate({"participant": "P", "underlying": "SENSEX", "expiry": "22OCT2026", "strike": 72800, "option_type": "CE", "entry_mode": "ABOVE", "entry": 570, "entry_hi": 575})["entry_hi"] == 575.0
     with pytest.raises(SU.SubmissionError): SU.validate({"participant": "P", "underlying": "SENSEX", "expiry": "22OCT2026", "strike": 72800, "option_type": "CE", "entry_mode": "ABOVE", "entry": 570, "entry_hi": 560})
+
+
+def test_exit_now_has_a_short_execution_delay_only_after_the_rule_is_effective_and_only_for_exit_now(monkeypatch):
+    t0 = 1_760_000_000.0; base = {"id": "X", "participant": "P", "underlying": "NIFTY", "expiry": "2026-10-27", "strike": 23000.0, "option_type": "CE", "entry_mode": "NEAR", "entry": 100.0, "entry_hi": 100.0, "sl": None, "targets": [], "t": t0}
+    snaps = [{"t": t0 + 30, "ltp": 100, "bid": 99, "ask": 100}, {"t": t0 + 105, "ltp": 80, "bid": 80, "ask": 81}, {"t": t0 + 130, "ltp": 70, "bid": 70, "ask": 71}]
+    ev = [{"t": t0 + 100, "action": "EXIT_NOW"}]
+    monkeypatch.setattr(S, "rule_from", lambda name: None)                                                                      # rule not effective: 20 s -> first snapshot at/after t0+120 = bid 70
+    assert S.settle({**base, "events": ev}, snaps, half_spread=0.0)["exit"] == 70
+    monkeypatch.setattr(S, "rule_from", lambda name: (t0 + 50) if name == "exit_now_latency_from_ts" else None)                # effective: 3 s -> first snapshot at/after t0+103 = bid 80
+    assert S.settle({**base, "events": ev}, snaps, half_spread=0.0)["exit"] == 80
+    monkeypatch.setattr(S, "rule_from", lambda name: (t0 + 101) if name == "exit_now_latency_from_ts" else None)               # event posted BEFORE the effective instant: never retroactive, still 20 s
+    assert S.settle({**base, "events": ev}, snaps, half_spread=0.0)["exit"] == 70
+    monkeypatch.setattr(S, "rule_from", lambda name: (t0 + 50) if name == "exit_now_latency_from_ts" else None)
+    sl = S.settle({**base, "sl": 50.0, "events": [{"t": t0 + 100, "action": "AMEND_SL", "sl": 85.0}]}, snaps, half_spread=0.0)   # other actions keep 20 s: the stop 85 is live only from t0+120 (bid 70 -> stopped there)
+    assert sl["exit_reason"] == "SL" and sl["exit"] == 70

@@ -55,7 +55,9 @@ if (typeof document !== "undefined") (function () {
     let j = {}; try { j = await r.json(); } catch (e) { /* non-json error body */ }
     if (!r.ok) throw new Error(j.detail || (path + " " + r.status)); return j;
   }
-  const EXIT_DELAY_MS = (typeof window !== "undefined" && window.TM_EXIT_DELAY_MS) || 2000; const exitState = {}; let exitTimer = null;
+  // EXIT_DELAY_MS: 0 = the tap sends immediately (owner 2026-10-26: no extra wait on an exit); >0 = countdown with tap-again-to-cancel
+  const EXIT_DELAY_MS = (typeof window !== "undefined" && typeof window.TM_EXIT_DELAY_MS === "number") ? window.TM_EXIT_DELAY_MS : 0;
+  const exitState = {}; let exitTimer = null;
   const exitUiOf = (id) => exitState[id] || null;
   function exitTick() {
     const now = Date.now(); let any = false;
@@ -63,7 +65,7 @@ if (typeof document !== "undefined") (function () {
     renderList(); renderExitBtn(); if (!any && exitTimer) { clearInterval(exitTimer); exitTimer = null; }
   }
   async function postExit(id) {
-    try { await apiPost("/amend", { signal_id: id, action: "EXIT_NOW", note: "terminal one-tap exit" }); exitState[id].phase = "sent"; setNote(`Exit recorded for ${id} — it settles after the normal 20 s execution delay.`); }
+    try { await apiPost("/amend", { signal_id: id, action: "EXIT_NOW", note: "terminal one-tap exit" }); exitState[id].phase = "sent"; setNote(`Exit recorded for ${id} — it settles after the contest execution delay, at the bid.`); }
     catch (e) { exitState[id].phase = "error"; setNote("Exit failed: " + e.message, true); }
     renderList(); renderExitBtn(); liveTick();
   }
@@ -71,6 +73,7 @@ if (typeof document !== "undefined") (function () {
     const e = exitState[id];
     if (e && (e.phase === "sending" || e.phase === "sent")) return;
     if (e && e.phase === "counting") { delete exitState[id]; setNote("Exit cancelled."); renderList(); renderExitBtn(); return; }      // second tap during the countdown = cancel
+    if (EXIT_DELAY_MS <= 0) { exitState[id] = { phase: "sending" }; setNote(`Exit ${id} sent…`); renderList(); renderExitBtn(); postExit(id); return; }
     exitState[id] = { phase: "counting", deadline: Date.now() + EXIT_DELAY_MS, left: Math.ceil(EXIT_DELAY_MS / 1000) }; setNote(`Exit ${id} in ${Math.ceil(EXIT_DELAY_MS / 1000)} s — tap again to cancel.`);
     if (!exitTimer) exitTimer = setInterval(exitTick, 200); renderList(); renderExitBtn();
   }
