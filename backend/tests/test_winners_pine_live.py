@@ -11,6 +11,8 @@ TODAY = "2026-10-26"
 
 
 class Env:
+    """Mocked world: market open/closed, captured expiries, a put-call-parity strike `atm` whose CE and PE both quote like `quote` (away from it call and put diverge, so |C-P| is smallest at `atm`), risk module, arena ledger."""
+
     def __init__(self, mp, *, listed=("2026-11-20", "2026-11-23", TODAY), trading=True, day=TODAY, expiries=("2026-11-23",), quote=None, atm=250.0, problems=None, plan=None):
         self.submitted = []
         q = quote if quote is not None else dict(ltp=2.3, bid=2.3, ask=2.4, ts=pd.Timestamp(NOW - 10, unit="s", tz="UTC").strftime("%Y-%m-%dT%H:%M:%S.000000Z"))
@@ -18,8 +20,15 @@ class Env:
         from app.arena import contracts as CT, submit as SU
         mp.setattr(mc, "is_trading", lambda ex, *a, **k: trading)
         mp.setattr(P, "listed_option_expiries", lambda sym, path=None: set(listed) if listed is not None else None)
-        mp.setattr(CT, "captured", lambda s, *a, **k: dict(day=day, expiries={e: dict(raw=e, strikes=[245.0, 250.0, 255.0]) for e in expiries}))
-        mp.setattr(CT, "chain", lambda s, e, ot, n=7, path=None: dict(atm=atm, rows=[dict(strike=atm, quote=q)], problems=[], expiry=e, option_type=ot))
+        cap = lambda s, *a, **k: dict(day=day, expiries={e: dict(raw=e, strikes=[atm - 10, atm - 5, atm, atm + 5, atm + 10]) for e in expiries})
+        mp.setattr(CT, "captured", cap); mp.setattr(CT, "captured_fresh", cap)
+
+        def lq(u, e, k, ot, path=None):
+            if not q or q.get("ltp") is None: return None
+            t = pd.Timestamp(q["ts"]).timestamp() if q.get("ts") else NOW - 10
+            if k == atm: return dict(ltp=q["ltp"], bid=q.get("bid"), ask=q.get("ask"), t=t)
+            ltp = round(q["ltp"] + (2.0 * abs(k - atm) if ot == "CE" else 0.0), 2); return dict(ltp=ltp, bid=ltp - 0.05, ask=ltp + 0.05, t=t)
+        mp.setattr(CT, "latest_quote", lq)
         mp.setattr(CT, "check", lambda *a, **k: dict(problems=problems or []))
         mp.setattr(sl_detector, "plan_for", lambda s, e, k, ot, entry, t, **kw: plan or dict(sl=round(entry * 0.55, 2), targets=[round(entry * 1.45, 2), round(entry * 1.9, 2), round(entry * 2.35, 2)]))
         mp.setattr(SU, "submit", lambda body, practice=False, **k: (self.submitted.append((body, practice)) or {"id": "H99999"}))
@@ -68,9 +77,22 @@ def test_expiry_today_is_allowed_but_next_expiry_is_preferred(monkeypatch):
 
 def test_missing_stale_or_crossed_quotes_are_skipped_with_reason(monkeypatch):
     old = pd.Timestamp(NOW - 400, unit="s", tz="UTC").strftime("%Y-%m-%dT%H:%M:%S.000000Z"); fresh = pd.Timestamp(NOW - 2, unit="s", tz="UTC").strftime("%Y-%m-%dT%H:%M:%S.000000Z")
-    for quote, word in ((dict(ltp=2.3, bid=2.3, ask=2.4, ts=old), "STALE_QUOTE"), (dict(ltp=2.3, bid=2.3, ask=None, ts=fresh), "no ATM quote"), (dict(ltp=2.3, bid=2.9, ask=2.4, ts=fresh), "INVALID_QUOTE"), ({}, "no ATM quote")):
+    for quote, word in ((dict(ltp=2.3, bid=2.3, ask=2.4, ts=old), "NO_PARITY_ATM"), (dict(ltp=2.3, bid=2.3, ask=None, ts=fresh), "NO_ASK"), (dict(ltp=2.3, bid=2.9, ask=2.4, ts=fresh), "INVALID_QUOTE"), ({}, "NO_PARITY_ATM")):
         e = Env(monkeypatch, quote=quote); r = _go()
         assert r["status"] == "SKIPPED" and word in r["detail"] and e.submitted == []
+
+
+def test_atm_is_the_put_call_parity_strike_not_the_front_future_atm(monkeypatch):
+    """NG 26-Oct-2026: Nov options on the Nov future (forward ~285) while the captured front future was 240 -> the old chain ATM 240 was a Rs 49 deep-ITM call / Rs 3.85 put."""
+    e = Env(monkeypatch, atm=285.0); r = _go("BUY"); assert r["status"] == "SUBMITTED" and e.submitted[-1][0]["strike"] == 285.0 and "parity ATM" in r["detail"]
+    r = _go("SELL"); assert e.submitted[-1][0]["strike"] == 285.0 and e.submitted[-1][0]["option_type"] == "PE"
+
+
+def test_parity_atm_refuses_a_window_that_does_not_bracket_the_forward(monkeypatch):
+    Env(monkeypatch, atm=250.0)
+    from app.arena import contracts as CT
+    monkeypatch.setattr(CT, "latest_quote", lambda u, e, k, ot, path=None: dict(ltp=50.0 if ot == "CE" else 1.0, bid=0.0, ask=0.0, t=NOW - 5))   # every strike: call 50 / put 1 -> forward far outside the captured strikes
+    k, why, f = P.parity_atm("NATURALGAS", "2026-11-23", "CE", NOW); assert k is None and "do not bracket" in why
 
 
 def test_premium_too_low_or_undefined_stop_is_skipped(monkeypatch):

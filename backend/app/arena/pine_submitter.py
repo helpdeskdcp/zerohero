@@ -61,6 +61,25 @@ def _contest():
     except Exception: return {}
 
 
+def parity_atm(sym: str, expiry: str, ot: str, now: float, path: str | None = None):
+    """The option-implied ATM strike of ONE expiry: among the captured strikes that have a fresh CE and PE quote, the one where call and put prices are closest (put-call parity: C - P = F - K, so |C - P| is smallest at K ~ F).
+    Needed because the arena's `chain.atm` uses the FRONT future's price, which is wrong for an option expiry whose underlying is a later future (NG Nov options: front future 240, Nov-future forward 285 -> the 'ATM' 240 was a deep-ITM
+    call at Rs 49 and an Rs 3.85 put). -> (strike, quote of `ot` at that strike, implied forward) or (None, reason, None)."""
+    ks = (CT.captured_fresh(sym).get("expiries", {}).get(expiry) or {}).get("strikes") or []
+    best = None
+    for k in ks:
+        qc, qp = CT.latest_quote(sym, expiry, float(k), "CE", path), CT.latest_quote(sym, expiry, float(k), "PE", path)
+        if not qc or not qp or not qc.get("ltp") or not qp.get("ltp"): continue
+        if now - qc["t"] > MAX_QUOTE_AGE_S or now - qp["t"] > MAX_QUOTE_AGE_S: continue
+        d = abs(float(qc["ltp"]) - float(qp["ltp"]))
+        if best is None or d < best[0]: best = (d, float(k), qc, qp)
+    if best is None: return None, f"no strike of {expiry} has a fresh CE and PE quote (max {MAX_QUOTE_AGE_S}s)", None
+    d, k, qc, qp = best; tot = float(qc["ltp"]) + float(qp["ltp"])
+    if d > 0.25 * tot: return None, f"captured strikes do not bracket the forward of {expiry} (best strike {k:g}: call {qc['ltp']}, put {qp['ltp']})", None
+    q = dict(qc if ot == "CE" else qp); q["ts"] = datetime.fromtimestamp(q["t"], timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return k, q, k + float(qc["ltp"]) - float(qp["ltp"])
+
+
 def submit_to_arena(sym: str, side: str, strong: bool, bar_ts, fut_close: float, stop: float, now: float | None = None, path: str | None = None) -> dict:
     """-> {"status": SUBMITTED|SKIPPED, "detail": ..., "arena_id": ..., plus ledger fields}. Never raises. BUY -> long ATM CALL, SELL -> long ATM PUT (never a short)."""
     try:
@@ -71,7 +90,7 @@ def submit_to_arena(sym: str, side: str, strong: bool, bar_ts, fut_close: float,
         ct = _contest(); today = datetime.fromtimestamp(now, IST).strftime("%Y-%m-%d")
         if ct.get("end") and today > ct["end"]: return dict(status="SKIPPED", detail="arena ended")
         practice = bool(ct.get("start") and today < ct["start"])
-        ot = "CE" if side == "BUY" else "PE"; cap = CT.captured(sym)
+        ot = "CE" if side == "BUY" else "PE"; cap = CT.captured_fresh(sym)
         if cap.get("day") != today: return dict(status="SKIPPED", detail=f"STALE_CAPTURE_DAY: option capture is for {cap.get('day')}, today is {today}")
         exps = sorted(e for e in cap["expiries"])
         if not exps: return dict(status="SKIPPED", detail="no captured option expiries")
@@ -81,8 +100,9 @@ def submit_to_arena(sym: str, side: str, strong: bool, bar_ts, fut_close: float,
         listed = listed_option_expiries(sym)
         if not listed: return dict(status="SKIPPED", detail="EXPIRY_UNVERIFIED: the broker instrument master could not be read, so the option expiry cannot be confirmed")
         if expiry not in listed: return dict(status="SKIPPED", detail=f"EXPIRY_NOT_LISTED: captured expiry {expiry} is not an exchange-listed {sym} option expiry (listed: {sorted(listed)[:4]})")
-        ch = CT.chain(sym, expiry, ot, 3); atm = ch.get("atm"); row = next((r for r in ch.get("rows", []) if r["strike"] == atm), None); q = (row or {}).get("quote") or {}
-        if not atm or not q.get("ask") or not q.get("ts"): return dict(status="SKIPPED", detail=f"no ATM quote ({expiry} {atm} {ot}): {ch.get('problems')}")
+        atm, q, fwd = parity_atm(sym, expiry, ot, now)
+        if atm is None: return dict(status="SKIPPED", detail=f"NO_PARITY_ATM: {q}")
+        if not q.get("ask"): return dict(status="SKIPPED", detail=f"NO_ASK: {expiry} {atm:g} {ot} has a last price but no ask")
         qage = now - _epoch(q["ts"])
         if qage > MAX_QUOTE_AGE_S: return dict(status="SKIPPED", detail=f"STALE_QUOTE: {expiry} {atm:g} {ot} quote is {qage:.0f}s old (max {MAX_QUOTE_AGE_S}s)")
         if float(q["ask"]) <= 0 or (q.get("bid") and float(q["bid"]) > float(q["ask"])): return dict(status="SKIPPED", detail=f"INVALID_QUOTE: bid {q.get('bid')} ask {q.get('ask')}")
@@ -94,7 +114,7 @@ def submit_to_arena(sym: str, side: str, strong: bool, bar_ts, fut_close: float,
         chk = CT.check(sym, expiry, float(atm), ot, entry, "NEAR", sl=plan["sl"])
         if chk.get("problems"): return dict(status="SKIPPED", detail="unscorable: " + "; ".join(chk["problems"])[:300])
         rec = SU.submit(body, practice=practice)
-        return dict(status="SUBMITTED", detail=f"{expiry} {atm:g} {ot} entry {entry} sl {plan['sl']} targets {plan['targets']}{' (practice)' if practice else ''}", arena_id=rec.get("id"), opt_expiry=expiry, strike=float(atm),
+        return dict(status="SUBMITTED", detail=f"{expiry} {atm:g} {ot} (parity ATM, implied fwd {fwd:.1f}) entry {entry} sl {plan['sl']} targets {plan['targets']}{' (practice)' if practice else ''}", arena_id=rec.get("id"), opt_expiry=expiry, strike=float(atm),
                     opt_type=ot, entry=entry, opt_sl=plan["sl"], opt_targets=json.dumps(plan["targets"]), quote_ts=str(q["ts"]), quote_age_s=round(qage, 1), risk_per_unit=round(entry - plan["sl"], 2), valid_until=now + 900)
     except Exception as e:
         return dict(status="SKIPPED", detail=f"error {e!r}"[:300])
