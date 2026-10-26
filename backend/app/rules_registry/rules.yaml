@@ -222,6 +222,11 @@ env_flags:
   - {name: PLATFORM_STREAM, category: FEATURE_FLAG, note: "platform live stream"}
   - {name: DHAN_ORDERFLOW_AUTO_FUTURES, category: FEATURE_FLAG, note: "Dhan MCX/NSE futures auto-roll for the orderflow feed"}
   - {name: SMART_SCALPER_AUTO_ARM, category: FEATURE_FLAG, note: "smart index scalper auto-arm (research/paper)"}
+  - {name: ENABLE_LIVE_ORDERS, category: SAFETY_SWITCH, note: "NIFTY direction engine is paper-only: if truthy the paper book and evaluate() refuse to run (never enables orders)"}
+  - {name: NIFTY_DIR_ADAPTER, category: FEATURE_FLAG, note: "registered market-data adapter for the NIFTY direction live mode; unset = NO_ADAPTER_CONFIGURED"}
+  - {name: NIFTY_DIR_MAX_QUOTE_AGE_SEC, category: TUNING, note: "NIFTY direction: max constituent quote age (default 5 s), older quotes are dropped"}
+  - {name: NIFTY_DIR_MIN_WEIGHT_COVERAGE, category: TUNING, note: "NIFTY direction: min share of index weight with valid quotes to score (default 0.90)"}
+  - {name: NIFTY_DIR_MAX_DERIV_AGE_SEC, category: TUNING, note: "NIFTY direction: max futures/option-chain age (default 60 s)"}
   - {name: SMART_SCALPER_PROFILE, category: TUNING}
   - {name: SMART_SCALPER_PROFILE_OVERRIDES, category: TUNING}
   - {name: SMART_SCALPER_UNIVERSE, category: TUNING}
