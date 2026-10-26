@@ -19,6 +19,7 @@ MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NO
 MCX_SYMS = {"NATURALGAS", "CRUDEOIL", "CRUDEOILM", "NATGASMINI", "GOLDM", "GOLD", "SILVER", "SILVERM", "COPPER", "ZINC"}
 CLOSE = {"NSE": (15, 35), "MCX": (23, 35)}
 HEARTBEAT_SEC = 15                                # an unchanged quote is stored again every 15 s (light row) so a settlement can see that it was still standing
+SIGNAL_HEARTBEAT_SEC = 4                         # a contract with a live contest signal re-stores an unchanged quote every 4 s (the contest execution delay is 3 s: an illiquid contract must not look 15 s stale)
 MAX_TOKENS = 50                                  # one batched broker request carries up to 50 tokens
 _lock = threading.Lock()
 
@@ -87,7 +88,7 @@ class PriorityCapture:
         t = now or time.time(); active = [e for e in _load(self.path) if e.get("until", 0) > t]
         if not active: self.last_note = "idle: empty watch list"; return 0
         active.sort(key=lambda e: (e.get("kind") != "signal", -e.get("added", 0)))                        # signal contracts first, then the most recently viewed
-        metas = [m for m in (self._meta(e) for e in active[:MAX_TOKENS]) if m]
+        pairs = [(e, self._meta(e)) for e in active[:MAX_TOKENS]]; metas = [m for _, m in pairs if m]; kind_of = {m["token"]: e.get("kind") for e, m in pairs if m}
         if not metas: self.last_note = "no watched contract resolvable from the captured chain yet"; return 0
         sdk = self._sdk()
         if sdk is None: self.last_note = "no market SDK"; return 0
@@ -99,16 +100,17 @@ class PriorityCapture:
         by_ex: dict[str, list] = {}
         for m in metas: by_ex.setdefault(m["exchange"], []).append(m["token"])
         t_f0 = time.time(); quotes = sdk.get_quotes_batch(by_ex, mode="FULL"); t_fetch = time.time() - t_f0; recv = N.now_utc_iso(); rows = []
+        hb_of: dict = {}
         for m in metas:
             q = quotes.get(m["token"]) if isinstance(quotes, dict) else None
             if not isinstance(q, dict): continue
             nq = N.norm_quote(q, m, recv)
-            if nq.get("ltp") is not None: rows.append(nq)
+            if nq.get("ltp") is not None: rows.append(nq); hb_of[nq["instrument_key"]] = SIGNAL_HEARTBEAT_SEC if kind_of.get(m["token"]) == "signal" else HEARTBEAT_SEC
         keep = []
         for nq in rows:                                                                              # the table's dedup key drops a row whose exchange timestamp did not change: store a light heartbeat every HEARTBEAT_SEC instead
             k = nq["instrument_key"]; last = self._seen.get(k); ex = nq.get("exch_ts")
             if last and last[0] == ex:
-                if t - last[1] < HEARTBEAT_SEC: continue
+                if t - last[1] < hb_of.get(k, HEARTBEAT_SEC): continue
                 nq = {**nq, "snap_key": "HB|" + str(nq["received_ts"])[:19], "depth_json": None}
             keep.append(nq); self._seen[k] = (ex, t)
         rows = keep

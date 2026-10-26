@@ -61,14 +61,17 @@ def test_view_watches_expire_signals_do_not_and_signals_are_fetched_first(tmp_pa
     assert [e for e in json.load(open(w)) if e["until"] > t + 4000 and e["kind"] == "view"] == []                                                                    # views are short-lived
 
 
-def test_unchanged_quote_is_stored_as_a_light_heartbeat_every_15_s_only(tmp_path):
+def test_unchanged_quote_heartbeat_is_4_s_for_a_signal_contract_and_15_s_for_a_viewed_one(tmp_path):
     w = str(tmp_path / "w.json"); now = time.time()
     json.dump([{"symbol": "SENSEX", "expiry": "22OCT2026", "strike": 73800.0, "option_type": "PE", "until": now + 600, "kind": "signal"}], open(w, "w"))
     st, sdk = FakeStore(), FakeSdk(); cap = P.PriorityCapture(store=st, sdk_provider=lambda: sdk, meta_fn=meta, interval=3, path=w)
     assert cap.step(now) == 1                                              # first sight: stored
-    assert cap.step(now + 4) == 0 and cap.step(now + 10) == 0              # same exchange timestamp, less than 15 s later: nothing new to store
-    assert cap.step(now + 16) == 1                                         # 15 s passed: a heartbeat row says "the quote is still standing"
+    assert cap.step(now + 2) == 0                                          # same exchange timestamp, less than 4 s later: nothing new to store
+    assert cap.step(now + 5) == 1                                          # 4 s passed: a heartbeat row says "the quote is still standing" (contest execution delay is 3 s)
     hb = st.rows[-1][1]; assert hb["snap_key"].startswith("HB|") and hb["depth_json"] is None and hb["bid"] == 99.5
+    w2 = str(tmp_path / "w2.json"); json.dump([{"symbol": "SENSEX", "expiry": "22OCT2026", "strike": 73800.0, "option_type": "PE", "until": now + 600, "kind": "view"}], open(w2, "w"))
+    st2, sdk2 = FakeStore(), FakeSdk(); cap2 = P.PriorityCapture(store=st2, sdk_provider=lambda: sdk2, meta_fn=meta, interval=3, path=w2)
+    assert cap2.step(now) == 1 and cap2.step(now + 5) == 0 and cap2.step(now + 10) == 0 and cap2.step(now + 16) == 1        # a merely VIEWED contract keeps the light 15 s heartbeat
     assert cap.status()["last_cycle_age_s"] is not None
 
 

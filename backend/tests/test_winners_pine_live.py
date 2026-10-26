@@ -38,6 +38,13 @@ def _go(side="BUY", now=NOW):
     return P.submit_to_arena("NATURALGAS", side, True, pd.Timestamp("2026-10-26 09:45", tz=IST), 252.0, 249.0, now=now)
 
 
+def test_a_submitted_pine_signal_asks_for_dense_quote_capture_but_a_skipped_one_does_not(monkeypatch):
+    from app.histcap import priority
+    calls = []; monkeypatch.setattr(priority, "request_watch", lambda *a, **k: calls.append(a))
+    e = Env(monkeypatch); r = _go("BUY"); assert r["status"] == "SUBMITTED" and calls == [("NATURALGAS", "2026-11-23", 250.0, "CE")]     # H00093: no watch -> quotes 37 min apart -> DATA_GAP
+    calls.clear(); Env(monkeypatch, trading=False); assert _go("BUY")["status"] == "SKIPPED" and calls == []
+
+
 def test_buy_maps_to_call_and_sell_maps_to_put_long_only(monkeypatch):
     e = Env(monkeypatch)
     assert _go("BUY")["status"] == "SUBMITTED" and _go("SELL")["status"] == "SUBMITTED"

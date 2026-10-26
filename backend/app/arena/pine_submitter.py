@@ -114,6 +114,10 @@ def submit_to_arena(sym: str, side: str, strong: bool, bar_ts, fut_close: float,
         chk = CT.check(sym, expiry, float(atm), ot, entry, "NEAR", sl=plan["sl"])
         if chk.get("problems"): return dict(status="SKIPPED", detail="unscorable: " + "; ".join(chk["problems"])[:300])
         rec = SU.submit(body, practice=practice)
+        try:                                                                                                                  # dense (~3-4 s) quotes for this contract, exactly as the arena API and the Telegram ingest do: without it NG option quotes were 37 min apart -> DATA_GAP (H00093)
+            from ..histcap import priority
+            priority.request_watch(sym, expiry, float(atm), ot)
+        except Exception as e: _log.warning("pine submitter: priority watch not registered (%r)", e)
         return dict(status="SUBMITTED", detail=f"{expiry} {atm:g} {ot} (parity ATM, implied fwd {fwd:.1f}) entry {entry} sl {plan['sl']} targets {plan['targets']}{' (practice)' if practice else ''}", arena_id=rec.get("id"), opt_expiry=expiry, strike=float(atm),
                     opt_type=ot, entry=entry, opt_sl=plan["sl"], opt_targets=json.dumps(plan["targets"]), quote_ts=str(q["ts"]), quote_age_s=round(qage, 1), risk_per_unit=round(entry - plan["sl"], 2), valid_until=now + 900)
     except Exception as e:
