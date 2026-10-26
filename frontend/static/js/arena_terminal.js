@@ -38,7 +38,7 @@ if (typeof module !== "undefined") module.exports = { tmBucket, tmSnap, tmLevels
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
   if (!pane) return;
-  const POLL_MS = 1500; let token = "", rows = [], sel = null, bucketTab = "orders", chart = null, series = {}, view = "option", tf = 1, utf = 15, timers = {}, lastLtp = {}, htmlCache = {}, lastBar = null, userZoomed = false, lines = [], mk = null, gen = 0, lastUnderlying = null;
+  const POLL_MS = 1500; let token = "", rows = [], sel = null, bucketTab = "orders", chart = null, series = {}, view = "option", tf = 1, utf = 15, timers = {}, lastLtp = {}, htmlCache = {}, lastBar = null, forming = null, userZoomed = false, lines = [], mk = null, gen = 0, lastUnderlying = null;
   const readToken = () => { try { token = sessionStorage.getItem("arena_token") || ""; } catch (e) { token = ""; } return token; };
   async function api(path) {
     const r = await fetch("/api/arena/public" + path, { headers: { "X-Arena-Token": readToken() }, cache: "no-store" });
@@ -59,7 +59,7 @@ if (typeof document !== "undefined") (function () {
   }
   function clearChart() {
     for (const k of Object.keys(series)) { try { chart.removeSeries(series[k]); } catch (e) { /* ok */ } }
-    series = {}; lines = []; mk = null; lastBar = null;
+    series = {}; lines = []; mk = null; lastBar = null; forming = null;
   }
   const lineStyle = (s) => ({ solid: 0, dotted: 1, dashed: 2 }[s] ?? 0);
   function addCandles() {
@@ -104,7 +104,11 @@ if (typeof document !== "undefined") (function () {
   }
   async function refreshUnderlying(r) {
     const u = await api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=${utf}`); if (!u.candles.length || !series.c) return;
-    const last = u.candles[u.candles.length - 1]; if (u.spot) { last.close = u.spot; last.high = Math.max(last.high, u.spot); last.low = Math.min(last.low, u.spot); }
+    let last = u.candles[u.candles.length - 1], span = utf * 60, nowIst = Math.floor(Date.now() / 1000) + IST_SHIFT, bucket = Math.floor(nowIst / span) * span;
+    if (u.spot) {                                                                                  // broker-style: the live feed price drives the forming candle even when the stored candles are minutes behind
+      if (bucket === last.time) { last.close = u.spot; last.high = Math.max(last.high, u.spot); last.low = Math.min(last.low, u.spot); }
+      else if (bucket > last.time && bucket - last.time <= span * 3) { if (!forming || forming.time !== bucket) forming = { time: bucket, open: u.spot, high: u.spot, low: u.spot, close: u.spot }; forming.high = Math.max(forming.high, u.spot); forming.low = Math.min(forming.low, u.spot); forming.close = u.spot; last = { ...forming }; }
+    }
     if (!lastBar || last.time >= lastBar.time) { series.c.update(last); lastBar = last; }
     if (u.markers.length !== (lastUnderlying ? lastUnderlying.markers.length : -1)) loadUnderlying(r, gen);                                  // a new Pine signal: redraw everything once
     lastUnderlying = u;
