@@ -21,6 +21,19 @@ from app.histcap.store import HistStore
 _NOW = datetime.now(timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_now():
+    """`_NOW` was evaluated once at import (collection) time; the engine judges staleness against the WALL clock (90 s), so in a long full-suite run (this module executes minutes after collection) every
+    snapshot looked STALE. Re-evaluate it for each test."""
+    global _NOW
+    _NOW = datetime.now(timezone.utc)
+    yield
+
+
+def test_now_fixture_is_fresh_for_every_test():
+    assert abs((datetime.now(timezone.utc) - _NOW).total_seconds()) < 5
+
+
 def _iso(dt):
     return dt.isoformat().replace("+00:00", "Z")
 
