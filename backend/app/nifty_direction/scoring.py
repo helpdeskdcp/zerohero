@@ -24,7 +24,7 @@ def _clip(x): return max(-1.0, min(1.0, x))
 
 
 def score(cfg: ScoreConfig, *, snapshot: dict | None, trend: dict | None, entry: dict | None, deriv: dict | None) -> dict:
-    comps, missing = {}, []
+    comps, missing, basis = {}, [], {}
     # contribution + breadth + sector need a tradable universe snapshot (weights validated)
     if snapshot and snapshot.get("status") == "OK":
         net = snapshot["contribution"]["net"]                          # index-% contribution; +-0.5 index-% counts as full strength
@@ -34,7 +34,16 @@ def score(cfg: ScoreConfig, *, snapshot: dict | None, trend: dict | None, entry:
         comps["sector"] = _clip(sum((1 if s["contrib"] > 0 else -1 if s["contrib"] < 0 else 0) * s["weight_pct"] for s in sec) / tw) * cfg.w_sector
     else:
         why = (snapshot or {}).get("reason", "NO_SNAPSHOT")
-        missing += [{"component": k, "dependency": "VERIFIED_OFFICIAL_WEIGHTS" if why == "UNIVERSE_NOT_TRADABLE" else why} for k in ("contribution", "breadth", "sector")]
+        uw = (snapshot or {}).get("unweighted") or {}
+        missing.append({"component": "contribution", "dependency": "VERIFIED_OFFICIAL_WEIGHTS" if why == "UNIVERSE_NOT_TRADABLE" else why})
+        if uw.get("status") == "OK":                                   # weight-free substitutes, scored on counts only and labelled as such
+            comps["breadth"] = _clip(uw["adv_dec_ratio"]) * cfg.w_breadth
+            n = sum(x["n"] for x in uw["sectors"]) or 1
+            comps["sector"] = _clip(sum(x["n"] * (1 if x["strength"] > 0 else -1 if x["strength"] < 0 else 0) for x in uw["sectors"]) / n) * cfg.w_sector
+            basis["breadth"] = basis["sector"] = "UNWEIGHTED"
+        else:
+            miss = uw.get("reason") or why
+            missing += [{"component": k, "dependency": "VERIFIED_OFFICIAL_WEIGHTS" if why == "UNIVERSE_NOT_TRADABLE" and not uw else miss} for k in ("breadth", "sector")]
     t = (trend or {}).get("state")
     if t in ("BULLISH", "BEARISH"): comps["trend15"] = (1 if t == "BULLISH" else -1) * cfg.w_trend15
     else: missing.append({"component": "trend15", "dependency": t or "NO_TREND"})
@@ -52,4 +61,4 @@ def score(cfg: ScoreConfig, *, snapshot: dict | None, trend: dict | None, entry:
     actionable = bool(not blocked and aligned and grade in ("STRONG", "MODERATE"))
     reason = "ACTIONABLE" if actionable else ("BLOCKED_BY_" + blocked[0]["dependency"] if blocked else "NOT_ALIGNED_OR_BELOW_THRESHOLD")
     return {"total": round(total, 2), "abs": round(mag, 2), "side": side, "grade": grade, "actionable": actionable, "reason": reason, "components": {k: round(v, 2) for k, v in comps.items()},
-            "missing": missing, "max_possible_now": round(sum({"contribution": cfg.w_contribution, "breadth": cfg.w_breadth, "sector": cfg.w_sector, "trend15": cfg.w_trend15, "entry5": cfg.w_entry5, "derivatives": cfg.w_derivatives}[k] for k in comps), 1)}
+            "missing": missing, "basis": basis, "max_possible_now": round(sum({"contribution": cfg.w_contribution, "breadth": cfg.w_breadth, "sector": cfg.w_sector, "trend15": cfg.w_trend15, "entry5": cfg.w_entry5, "derivatives": cfg.w_derivatives}[k] for k in comps), 1)}

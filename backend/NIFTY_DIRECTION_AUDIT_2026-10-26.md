@@ -26,3 +26,18 @@ Method: traced every status string to its code path, then queried the real data 
 
 ## Proposed order and what stays fail-closed
 1. (now, safe, testable) unweighted breadth + sector counts incl. unchanged; weights file `as_of`/`source` validation. 2. Captured futures + chain providers (needs cadence decision + app/optionchain mapping). 3. History refresh for BSE/TMPV. 4. Live stock-quote adapter (next NSE session). Scoring stays **non-actionable while contribution is blocked**; no weight is estimated, equal-weighted or copied from the top-10; live orders stay disabled.
+
+## Repair status (updated after step 1; commit below)
+| # | feature | status now | evidence |
+|---|---|---|---|
+| 1 | Official weights | **BLOCKED** (data) — validation repaired | weights file now needs `as_of` (effective date) + `source`, rejected as INCOMPLETE/STALE (>45 d, env `NIFTY_DIR_WEIGHTS_MAX_AGE_DAYS`) / future-dated; master + `/status` carry `weights_as_of`/`weights_source`; test_weights_provenance_required_and_staleness. Still no authoritative full-50 file |
+| 2 | Breadth (UNIVERSE_NOT_TRADABLE) | **FIXED** (weight-free) | `engine.unweighted()`: advancers/decliners/unchanged from valid quotes when >= 90% of the 50 have one, labelled UNWEIGHTED; weighted breadth still gated. Real last close (2026-10-23): 14 adv / 34 dec / 0 unch of 48 valid. Tests: unweighted_breadth_and_sectors_without_weights, unavailable_when_quotes_insufficient |
+| 3 | Sector strength | **FIXED** (unweighted: adv/dec/unch + median % per sector) / weighted contribution **BLOCKED** | same block; UI shows adv/dec/unch + median change with an explicit "unweighted" note |
+| 4 | Contribution ranking | **BLOCKED** (genuine) | unchanged, still `VERIFIED_OFFICIAL_WEIGHTS` |
+| 5 | Futures NO_FUTURES | **NOT YET FIXED** (wiring gap confirmed, data exists) | next step |
+| 6 | Options chain NO_CHAIN | **NOT YET FIXED** (wiring gap confirmed, data exists) | next step |
+| 7 | 5m entry TREND_NEUTRAL | **NOT_APPLICABLE** (correct result) | UI now explains it: "EMA gap 1.93 vs neutral band 10.14"; test_trend_reports_neutral_band |
+| 8 | Derivatives scoring | **NOT YET FIXED** (follows 5+6) | |
+| 9 | Freshness NOT_LIVE | **NOT_APPLICABLE** for last_close/replay; live **BLOCKED** (no stock-quote source/adapter) | |
+Scoring behaviour now: breadth + sector score from the UNWEIGHTED block when weighted data is unavailable (`score.basis` says so); contribution stays missing; the signal stays **non-actionable** (`BLOCKED_BY_VERIFIED_OFFICIAL_WEIGHTS`) — verified on real last-close data (components breadth -8.33, sector -8.12; missing: contribution, trend15, entry5, derivatives).
+Tests: 65 passed (nifty_direction x4 files + rules_registry), node nifty_direction + chartscan green. Full suite not re-run after this step. Not deployed (running service still has eea2ee2); the next restart will load it.

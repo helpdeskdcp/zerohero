@@ -227,6 +227,7 @@ env_flags:
   - {name: NIFTY_DIR_MAX_QUOTE_AGE_SEC, category: TUNING, note: "NIFTY direction: max constituent quote age (default 5 s), older quotes are dropped"}
   - {name: NIFTY_DIR_MIN_WEIGHT_COVERAGE, category: TUNING, note: "NIFTY direction: min share of index weight with valid quotes to score (default 0.90)"}
   - {name: NIFTY_DIR_MAX_DERIV_AGE_SEC, category: TUNING, note: "NIFTY direction: max futures/option-chain age (default 60 s)"}
+  - {name: NIFTY_DIR_WEIGHTS_MAX_AGE_DAYS, category: TUNING, note: "NIFTY direction: official weights file older than this many days (default 45) is STALE and cannot enable weighted scoring"}
   - {name: SMART_SCALPER_PROFILE, category: TUNING}
   - {name: SMART_SCALPER_PROFILE_OVERRIDES, category: TUNING}
   - {name: SMART_SCALPER_UNIVERSE, category: TUNING}

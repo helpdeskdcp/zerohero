@@ -10,4 +10,8 @@ assert.strictEqual(Logic.fmt(null), "–");
 const ml = Logic.metaLine({ mode: "last_close", data_kind: "HISTORICAL", timezone: "Asia/Kolkata", source: "historical", freshness: "NOT_LIVE", session: "2026-10-23", last_update_utc: "2026-10-23T10:00:00+00:00", market_open_now: false, note: "lag", signals: { provisional_intrabar: "NOT_COMPUTED" } });
 assert.ok(ml.startsWith("LAST MARKET CLOSE") && ml.includes("HISTORICAL") && !ml.includes("LIVE MARKET") && ml.includes("NSE closed now") && ml.includes("session 2026-10-23"));
 assert.ok(Logic.metaLine({ mode: "live", data_kind: "NONE" }).startsWith("LIVE MARKET")); assert.strictEqual(Logic.metaLine(null), "");
+const u = { status: "OK", advancers: 30, decliners: 15, unchanged: 3, valid: 48, sectors: [{ sector: "<IT>", n: 4, advancers: 3, decliners: 1, unchanged: 0, median_chg_pct: 0.5, strength: 0.5 }] };
+assert.ok(Logic.unweightedBreadth(u).includes("UNWEIGHTED") && Logic.unweightedBreadth(u).includes("Unch 3") && Logic.unweightedBreadth({ status: "UNAVAILABLE" }) === "");
+assert.ok(Logic.unweightedSectorRows(u).includes("&lt;IT&gt;") && Logic.unweightedSectorRows(u).includes("3/1/0"));
+assert.ok(Logic.trendExplain({ ema_fast: 10, ema_slow: 8, neutral_band: 5 }).includes("EMA gap 2.00 vs neutral band 5.00") && Logic.trendExplain({}) === "");
 console.log("nifty_direction.test.js ok");

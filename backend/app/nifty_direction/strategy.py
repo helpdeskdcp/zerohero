@@ -39,7 +39,7 @@ def trend15(c15: list[dict], now: float, cfg: StrategyConfig | None = None) -> d
     elif gap > 0 and px > es and st != "LH_LL": state = "BULLISH"
     elif gap < 0 and px < es and st != "HH_HL": state = "BEARISH"
     else: state = "NEUTRAL"
-    return {"state": state, "ema_fast": ef, "ema_slow": es, "atr": a, "structure": st, "close": px, "last_bar_t": c15[-1]["t"]}
+    return {"state": state, "ema_fast": ef, "ema_slow": es, "atr": a, "neutral_band": cfg.neutral_band_atr * a, "structure": st, "close": px, "last_bar_t": c15[-1]["t"]}
 
 
 def entry5(c5: list[dict], trend: dict, now: float, cfg: StrategyConfig | None = None) -> dict:

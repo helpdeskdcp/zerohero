@@ -28,6 +28,18 @@
       if (meta.market_open_now === false) parts.push("NSE closed now");
       return parts.join(" · ") + (meta.note ? " — " + meta.note : "") + (meta.signals ? " · signals: closed-candle only (intrabar provisional " + String(meta.signals.provisional_intrabar).toLowerCase().replace("_", " ") + ")" : "");
     },
+    unweightedBreadth(u) {
+      if (!u || u.status !== "OK") return "";
+      return "<span class='mut'>UNWEIGHTED (counts only)</span> · Adv " + u.advancers + " / Dec " + u.decliners + " / Unch " + u.unchanged + " · " + u.valid + "/50 quotes";
+    },
+    unweightedSectorRows(u) {
+      if (!u || u.status !== "OK") return "";
+      return u.sectors.map((s) => "<tr><td>" + esc(s.sector) + "</td><td>" + s.advancers + "/" + s.decliners + "/" + s.unchanged + "</td><td class='" + (s.strength >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(s.median_chg_pct, 2) + "%</td></tr>").join("");
+    },
+    trendExplain(t) {
+      if (!t || t.ema_fast == null) return "";
+      return " (EMA gap " + Logic.fmt(Math.abs(t.ema_fast - t.ema_slow), 2) + " vs neutral band " + Logic.fmt(t.neutral_band, 2) + ")";
+    },
     heatmapHtml(rows) {
       return (rows || []).map((r) => '<div class="nd-cell" title="' + esc(r.symbol + " · " + r.sector + " · w=" + (r.weight_pct == null ? "n/a" : r.weight_pct) + " · " + r.status) + '" style="background:' + Logic.heatColor(r.chg_pct) + '"><b>' + esc(r.symbol) + "</b><br>" + (r.chg_pct == null ? esc(r.status) : Logic.fmt(r.chg_pct) + "%") + "</div>").join("");
     },
@@ -51,11 +63,12 @@
       if (o.status === "NO_ADAPTER_CONFIGURED") { $("ndStatus").textContent = ""; return; }
       $("ndStatus").textContent = new Date(o.ts * 1000).toLocaleTimeString();
       const sc = o.score || {}, t = o.trend15 || {}, e = o.entry5 || {};
-      $("ndOverview").innerHTML = "<b>" + esc(sc.side || "NO SIDE") + "</b> · score " + Logic.fmt(sc.total, 1) + " (" + esc(sc.grade) + ") · <span class='" + (sc.actionable ? "ok" : "warn") + "'>" + (sc.actionable ? "ACTIONABLE (paper)" : "NOT ACTIONABLE — " + esc(sc.reason)) + "</span><br>15m: " + esc(t.state) + (t.reason ? " (" + esc(t.reason) + ")" : "") + " · 5m: " + esc(e.signal || "none") + " (" + esc(e.reason) + ") · spot " + Logic.fmt(o.spot);
+      $("ndOverview").innerHTML = "<b>" + esc(sc.side || "NO SIDE") + "</b> · score " + Logic.fmt(sc.total, 1) + " (" + esc(sc.grade) + ") · <span class='" + (sc.actionable ? "ok" : "warn") + "'>" + (sc.actionable ? "ACTIONABLE (paper)" : "NOT ACTIONABLE — " + esc(sc.reason)) + "</span><br>15m: " + esc(t.state) + (t.reason ? " (" + esc(t.reason) + ")" : "") + Logic.trendExplain(t) + " · 5m: " + esc(e.signal || "none") + " (" + esc(e.reason) + ") · spot " + Logic.fmt(o.spot);
       $("ndHeat").innerHTML = Logic.heatmapHtml(o.heatmap);
       const snap = o.snapshot || {};
-      $("ndBreadth").innerHTML = snap.status === "OK" ? "Adv " + snap.breadth.advancers + " / Dec " + snap.breadth.decliners + " · weighted adv " + Logic.fmt(snap.breadth.weighted_adv * 100, 0) + "%" : "<span class='warn'>disabled: " + esc(snap.reason || "no snapshot") + "</span>";
-      $("ndSectors").innerHTML = snap.status === "OK" ? snap.sectors.map((s) => "<tr><td>" + esc(s.sector) + "</td><td>" + Logic.fmt(s.weight_pct, 1) + "</td><td class='" + (s.contrib >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(s.contrib, 3) + "</td></tr>").join("") : "<tr><td colspan=3 class='warn'>disabled (weights)</td></tr>";
+      const uw = snap.unweighted, uwb = Logic.unweightedBreadth(uw);
+      $("ndBreadth").innerHTML = snap.status === "OK" ? "Adv " + snap.breadth.advancers + " / Dec " + snap.breadth.decliners + " · weighted adv " + Logic.fmt(snap.breadth.weighted_adv * 100, 0) + "%" : (uwb ? uwb + "<br><span class='warn'>weighted breadth disabled: " + esc(snap.reason || "no snapshot") + "</span>" : "<span class='warn'>disabled: " + esc(snap.reason || "no snapshot") + (uw && uw.reason ? " / " + esc(uw.reason) : "") + "</span>");
+      $("ndSectors").innerHTML = snap.status !== "OK" && uw && uw.status === "OK" ? Logic.unweightedSectorRows(uw) + "<tr><td colspan=3 class='mut'>unweighted: adv/dec/unch and median % change; weighted contribution needs verified weights</td></tr>" : snap.status === "OK" ? snap.sectors.map((s) => "<tr><td>" + esc(s.sector) + "</td><td>" + Logic.fmt(s.weight_pct, 1) + "</td><td class='" + (s.contrib >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(s.contrib, 3) + "</td></tr>").join("") : "<tr><td colspan=3 class='warn'>disabled (weights)</td></tr>";
       $("ndTop").innerHTML = snap.status === "OK" ? snap.top.map((r) => "<tr><td>" + esc(r.symbol) + "</td><td>" + Logic.fmt(r.weight_pct, 2) + "</td><td>" + Logic.fmt(r.chg_pct) + "%</td><td class='" + (r.contrib >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(r.contrib, 3) + "</td></tr>").join("") : "<tr><td colspan=4 class='warn'>disabled: verified official weights required</td></tr>";
       const d = o.derivatives || {}, f = d.futures || {}, c = d.chain || {};
       $("ndDeriv").innerHTML = "Futures: " + (f.available ? esc(f.activity) + " · price " + Logic.fmt(f.price_chg_pct) + "% · OI " + Logic.fmt(f.oi_chg_pct) + "% · basis " + Logic.fmt(f.basis) : "<span class='warn'>unavailable (" + esc(f.reason) + ")</span>") + "<br>Chain: " + (c.available ? "PCR " + Logic.fmt(c.pcr) + " · OI walls " + esc(c.support_strike) + " / " + esc(c.resistance_strike) + " · IV " + Logic.fmt(c.iv_mean, 1) : "<span class='warn'>unavailable (" + esc(c.reason) + ")</span>");

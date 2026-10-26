@@ -3,7 +3,8 @@ import pytest
 from app.nifty_direction import adapters, constituents as C, validation as V, engine as E
 
 CSV = ("Company Name,Industry,Symbol,Series,ISIN Code\n" + "".join(f"Co{i},{'Fin' if i%2 else 'IT'},S{i},EQ,INE{i:03d}\n" for i in range(50))).encode()
-W = ("symbol,weight_pct\n" + "".join(f"S{i},2.0\n" for i in range(50))).encode()
+import datetime as _dt
+W = ("symbol,weight_pct,as_of,source\n" + "".join(f"S{i},2.0,{_dt.date.today().isoformat()},NSE Indices test\n" for i in range(50))).encode()
 
 
 def mk(w=W): return C.build_master(CSV, w)

@@ -44,7 +44,8 @@ def test_no_write_routes_except_refresh_and_no_order_routes():
 
 def test_refresh_master_uses_cached_csv_and_checks_schema(client, tmp_path, monkeypatch):
     m = C.refresh(fetch=lambda u: CSV, root=str(tmp_path)); assert m["count"] == 50 and m["weights_status"] == "MISSING" and (tmp_path / "constituents.csv").exists()
-    (tmp_path / "weights.csv").write_text("symbol,weight_pct\n" + "".join(f"S{i},2.0\n" for i in range(50)))
+    import datetime as _dt
+    (tmp_path / "weights.csv").write_text("symbol,weight_pct,as_of,source\n" + "".join(f"S{i},2.0,{_dt.date.today().isoformat()},NSE Indices test\n" for i in range(50)))
     assert C.refresh(fetch=lambda u: CSV, root=str(tmp_path))["weights_status"] == "COMPLETE"
     with pytest.raises(ValueError): C.refresh(fetch=lambda u: b"x,y\n1,2\n", root=str(tmp_path))
     assert (tmp_path / "constituents.csv").read_bytes() == CSV                          # bad download did not overwrite the cached copy

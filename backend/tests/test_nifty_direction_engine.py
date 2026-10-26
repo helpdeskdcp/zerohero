@@ -217,3 +217,59 @@ def test_service_label_and_blocked_when_no_weights(tmp_path, monkeypatch):
     out = service.evaluate(a, m, now, persist=True, db_path=str(tmp_path / "s.db"))
     assert out["data_kind"] == "MOCK" and out["score"]["actionable"] is False and out["health"]["weights_status"] == "MISSING" and out["snapshot"]["status"] == "NO_SIGNAL"
     assert len(out["heatmap"]) == 50 and out["signal_id"] and store.rows("health_events", path=str(tmp_path / "s.db"))
+
+
+# ---- unweighted breadth / sector (weights not required) + weights provenance ----
+from app.nifty_direction import engine as EN
+import datetime as _dtm
+
+
+def _uw_setup(n_valid=48, chg=None):
+    m = C.build_master(CSV, None); now = time.time(); a = A.MockAdapter(); chg = chg or {}
+    for i in range(n_valid): a.set_quote(f"S{i}", 100 + chg.get(i, 1), 100, ts=now - 1)
+    return m, V.validate_universe(m, a.quotes([f"S{i}" for i in range(50)]), now)
+
+
+def test_unweighted_breadth_and_sectors_without_weights():
+    chg = {0: 0, 1: 0, 2: -1, 3: -1}                     # 2 unchanged, 2 decliners, rest advancers
+    m, v = _uw_setup(48, chg); s = EN.snapshot(m, v); u = s["unweighted"]
+    assert s["status"] == "NO_SIGNAL" and s["reason"] == "UNIVERSE_NOT_TRADABLE"          # weighted block stays closed
+    assert u["status"] == "OK" and u["basis"] == "UNWEIGHTED" and u["advancers"] == 44 and u["decliners"] == 2 and u["unchanged"] == 2 and u["valid"] == 48
+    assert sum(x["n"] for x in u["sectors"]) == 48 and all("weight_pct" not in x for x in u["sectors"]) and {x["sector"] for x in u["sectors"]} == {"Fin", "IT"}
+
+
+def test_unweighted_unavailable_when_quotes_insufficient():
+    m, v = _uw_setup(40); u = EN.snapshot(m, v)["unweighted"]
+    assert u["status"] == "UNAVAILABLE" and u["reason"] == "INSUFFICIENT_QUOTES" and u["count_coverage"] == 0.8
+
+
+def test_scoring_uses_unweighted_for_breadth_and_sector_but_stays_non_actionable():
+    m, v = _uw_setup(48); snap = EN.snapshot(m, v)
+    sc = S.score(S.ScoreConfig(), snapshot=snap, trend={"state": "BULLISH"}, entry={"signal": "LONG"}, deriv={"available": True, "bias": 1})
+    assert sc["basis"] == {"breadth": "UNWEIGHTED", "sector": "UNWEIGHTED"} and sc["components"]["breadth"] == 20 and sc["components"]["sector"] == 15 and "contribution" not in sc["components"]
+    assert [x["component"] for x in sc["missing"]] == ["contribution"] and sc["actionable"] is False and sc["reason"] == "BLOCKED_BY_VERIFIED_OFFICIAL_WEIGHTS" and sc["total"] == 70
+
+
+def test_scoring_breadth_missing_names_the_real_reason_when_quotes_insufficient():
+    m, v = _uw_setup(40); sc = S.score(S.ScoreConfig(), snapshot=EN.snapshot(m, v), trend={"state": "BULLISH"}, entry={"signal": "LONG"}, deriv=None)
+    deps = {x["component"]: x["dependency"] for x in sc["missing"]}
+    assert deps["breadth"] == "INSUFFICIENT_QUOTES" and deps["sector"] == "INSUFFICIENT_QUOTES" and deps["contribution"] == "VERIFIED_OFFICIAL_WEIGHTS"
+
+
+def _wcsv(d, src="NSE Indices factsheet", asof=True, total=2.0):
+    return ("symbol,weight_pct" + (",as_of,source" if asof else "") + "\n" + "".join(f"S{i},{total}" + (f",{d},{src}" if asof else "") + "\n" for i in range(50))).encode()
+
+
+def test_weights_provenance_required_and_staleness():
+    today = _dtm.date(2026, 10, 26); ok = C.build_master(CSV, _wcsv("2026-10-20"), today=today)
+    assert ok["weights_status"] == "COMPLETE" and ok["weights_as_of"] == "2026-10-20" and ok["weights_source"] == "NSE Indices factsheet" and C.validate(ok) == []
+    assert C.build_master(CSV, _wcsv("", asof=False), today=today)["weights_status"] == "INCOMPLETE"                     # no as_of / source columns
+    assert C.build_master(CSV, _wcsv("2026-10-20", src=""), today=today)["weights_status"] == "INCOMPLETE"               # source blank
+    st = C.build_master(CSV, _wcsv("2026-08-01"), today=today); assert st["weights_status"] == "STALE" and "days old" in st["weights_notes"][0] and C.validate(st)
+    assert C.build_master(CSV, _wcsv("2026-12-01"), today=today)["weights_status"] == "INCOMPLETE"                       # future date
+    assert C.build_master(CSV, _wcsv("20-10-2026"), today=today)["weights_status"] == "INCOMPLETE"                       # bad format
+    assert all(x["weight_pct"] is None for x in st["members"])                                                          # a stale file never feeds the engine
+
+
+def test_trend_reports_neutral_band():
+    t = ST.trend15(bars([100] * 60, 900, T0 - 900 * 60), T0 + 5); assert t["state"] == "NEUTRAL" and t["neutral_band"] == pytest.approx(0.15 * t["atr"])

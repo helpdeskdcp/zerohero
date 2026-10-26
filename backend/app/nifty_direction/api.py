@@ -35,8 +35,8 @@ def _adapter(mode: str, as_of: str | None):
 def status():
     m = C.current()
     return {"paper_only": True, "live_orders_enabled": False, "adapters_registered": A.names(), "live_adapter_configured": os.environ.get("NIFTY_DIR_ADAPTER") or None,
-            "master": None if m is None else {k: m[k] for k in ("count", "weights_status", "weights_notes", "csv_sha256", "weights_sha256", "fetched_at", "source")},
-            "blockers": ([] if m is None else C.validate(m)) or None, "weights_howto": "drop a symbol,weight_pct CSV (50 rows, sum ~100, from NSE Indices) at data/nifty_direction/weights.csv then POST /refresh-master"}
+            "master": None if m is None else {k: m[k] for k in ("count", "weights_status", "weights_notes", "weights_as_of", "weights_source", "csv_sha256", "weights_sha256", "fetched_at", "source") if k in m},
+            "blockers": ([] if m is None else C.validate(m)) or None, "weights_howto": "drop a symbol,weight_pct,as_of,source CSV (50 rows, sum ~100, as_of = effective date YYYY-MM-DD within 45 days, source = the official publication) at data/nifty_direction/weights.csv then POST /refresh-master"}
 
 
 def _last_close() -> dict:

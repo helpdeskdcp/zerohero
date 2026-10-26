@@ -13,6 +13,7 @@ import time
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "nifty_direction")
 CSV_URL = "https://www.niftyindices.com/IndexConstituent/ind_nifty50list.csv"
 WEIGHT_TOL = 0.5          # |sum(weights) - 100| allowed (percentage points) for COMPLETE
+WEIGHTS_MAX_AGE_DAYS = int(os.environ.get("NIFTY_DIR_WEIGHTS_MAX_AGE_DAYS", "45"))   # effective date older than this = stale -> not COMPLETE
 
 
 def sha256(b: bytes) -> str: return hashlib.sha256(b).hexdigest()
@@ -27,28 +28,46 @@ def parse_constituents_csv(raw: bytes) -> list[dict]:
 
 
 def parse_weights(raw: bytes) -> dict[str, float]:
-    """Weights file: CSV `symbol,weight_pct[,as_of,source]`. Returns symbol -> pct."""
-    out = {}
+    """Weights file: CSV `symbol,weight_pct,as_of,source` (as_of = effective date YYYY-MM-DD, source = the official publication). Returns symbol -> pct."""
+    return parse_weights_full(raw)["weights"]
+
+
+def parse_weights_full(raw: bytes) -> dict:
+    out, as_of, src = {}, set(), set()
     for r in csv.DictReader(io.StringIO(raw.decode("utf-8-sig"))):
         out[r["symbol"].strip()] = float(r["weight_pct"])
-    return out
+        as_of.add((r.get("as_of") or "").strip()); src.add((r.get("source") or "").strip())
+    return {"weights": out, "as_of": as_of, "source": src}
 
 
-def build_master(csv_raw: bytes, weights_raw: bytes | None = None, *, fetched_at: float | None = None) -> dict:
+def build_master(csv_raw: bytes, weights_raw: bytes | None = None, *, fetched_at: float | None = None, today=None) -> dict:
     members = parse_constituents_csv(csv_raw)
     syms = [m["symbol"] for m in members]
     if len(set(syms)) != len(syms): raise ValueError("duplicate symbols in constituent CSV")
     status, notes, w = "MISSING", [], {}
+    weights_meta: dict = {}
     if weights_raw is not None:
-        w = parse_weights(weights_raw)
+        pw = parse_weights_full(weights_raw); w = pw["weights"]
         unknown = sorted(set(w) - set(syms)); missing = sorted(set(syms) - set(w)); total = sum(w.values())
         if unknown: notes.append(f"weights for non-members: {unknown}")
         if missing: notes.append(f"no weight for: {missing}")
         status = "COMPLETE" if not unknown and not missing and abs(total - 100) <= WEIGHT_TOL else "INCOMPLETE"
         if status == "INCOMPLETE" and not missing and not unknown: notes.append(f"weights sum {total:.2f} not ~100")
+        if status == "COMPLETE":                                    # provenance: one effective date, not stale, and a named source
+            from datetime import date, datetime
+            a = {x for x in pw["as_of"] if x}; sr = {x for x in pw["source"] if x}
+            if len(a) != 1 or "" in pw["as_of"]: status = "INCOMPLETE"; notes.append("weights file needs one as_of (effective date) on every row")
+            elif not sr or "" in pw["source"]: status = "INCOMPLETE"; notes.append("weights file needs a source on every row")
+            else:
+                try:
+                    age = ((today or date.today()) - datetime.strptime(next(iter(a)), "%Y-%m-%d").date()).days
+                    if age < 0: status = "INCOMPLETE"; notes.append("weights as_of is in the future")
+                    elif age > WEIGHTS_MAX_AGE_DAYS: status = "STALE"; notes.append(f"weights as_of {next(iter(a))} is {age} days old (limit {WEIGHTS_MAX_AGE_DAYS})")
+                    else: weights_meta = {"weights_as_of": next(iter(a)), "weights_source": next(iter(sr)) if len(sr) == 1 else sorted(sr)}
+                except ValueError: status = "INCOMPLETE"; notes.append("weights as_of must be YYYY-MM-DD")
     for m in members: m["weight_pct"] = w.get(m["symbol"]) if status == "COMPLETE" else None
     return {"count": len(members), "members": members, "weights_status": status, "weights_notes": notes,
-            "csv_sha256": sha256(csv_raw), "weights_sha256": sha256(weights_raw) if weights_raw else None,
+            "csv_sha256": sha256(csv_raw), "weights_sha256": sha256(weights_raw) if weights_raw else None, **weights_meta,
             "fetched_at": fetched_at or time.time(), "source": CSV_URL}
 
 
