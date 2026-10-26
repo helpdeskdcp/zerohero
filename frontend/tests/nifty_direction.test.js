@@ -14,4 +14,9 @@ const u = { status: "OK", advancers: 30, decliners: 15, unchanged: 3, valid: 48,
 assert.ok(Logic.unweightedBreadth(u).includes("UNWEIGHTED") && Logic.unweightedBreadth(u).includes("Unch 3") && Logic.unweightedBreadth({ status: "UNAVAILABLE" }) === "");
 assert.ok(Logic.unweightedSectorRows(u).includes("&lt;IT&gt;") && Logic.unweightedSectorRows(u).includes("3/1/0"));
 assert.ok(Logic.trendExplain({ ema_fast: 10, ema_slow: 8, neutral_band: 5 }).includes("EMA gap 2.00 vs neutral band 5.00") && Logic.trendExplain({}) === "");
+const dt = Logic.derivText({ available: true, bias: -0.25, futures: { available: true, expiry: "27OCT2026", identity: "LISTED_IN_MASTER", activity: "LONG_UNWINDING", price_chg_pct: -0.6, oi_chg_pct: -7.5, basis: -25.8, age_sec: 96 },
+  chain: { available: true, expiry: "27OCT2026", identity: "LISTED_IN_MASTER", pcr: 0.77, oi_scope: "NEAR_MONEY", strikes: 21, support_strike: 22500, resistance_strike: 23000, iv_mean: 0.16, age_sec: 103 } });
+assert.ok(dt.includes("LONG_UNWINDING") && dt.includes("near-money OI, 21 strikes") && dt.includes("96s old") && dt.includes("IV 16.0%") && dt.includes("never alone"));
+const dn = Logic.derivText({ futures: { available: false, reason: "STALE", age_sec: 500, limit_sec: 420 }, chain: { available: false, reason: "NO_CHAIN" } });
+assert.ok(dn.includes("unavailable (STALE, 500s old > 420s)") && dn.includes("unavailable (NO_CHAIN)") && !dn.includes("never alone"));
 console.log("nifty_direction.test.js ok");

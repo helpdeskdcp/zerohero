@@ -228,6 +228,8 @@ env_flags:
   - {name: NIFTY_DIR_MIN_WEIGHT_COVERAGE, category: TUNING, note: "NIFTY direction: min share of index weight with valid quotes to score (default 0.90)"}
   - {name: NIFTY_DIR_MAX_DERIV_AGE_SEC, category: TUNING, note: "NIFTY direction: max futures/option-chain age (default 60 s)"}
   - {name: NIFTY_DIR_WEIGHTS_MAX_AGE_DAYS, category: TUNING, note: "NIFTY direction: official weights file older than this many days (default 45) is STALE and cannot enable weighted scoring"}
+  - {name: NIFTY_DIR_CAPTURED_FUT_MAX_AGE_SEC, category: TUNING, note: "NIFTY direction, stored-history modes only: max age of the captured futures row (default 420 s = ~2.6x the measured ~160 s capture cadence); live limit stays 60 s"}
+  - {name: NIFTY_DIR_CAPTURED_CHAIN_MAX_AGE_SEC, category: TUNING, note: "NIFTY direction, stored-history modes only: max age of the captured option-greek snapshot (default 1800 s = ~1.9x the measured ~960 s cadence)"}
   - {name: SMART_SCALPER_PROFILE, category: TUNING}
   - {name: SMART_SCALPER_PROFILE_OVERRIDES, category: TUNING}
   - {name: SMART_SCALPER_UNIVERSE, category: TUNING}

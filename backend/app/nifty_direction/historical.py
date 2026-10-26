@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sqlite3
 
-from .adapters import Quote, CAP_QUOTES, CAP_CANDLES
+from .adapters import Quote, CAP_QUOTES, CAP_CANDLES, CAP_FUTURES, CAP_CHAIN
 from .indicators import IST, session_day
 
 DB = os.environ.get("NIFTY_DIR_HIST_DB") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "historical", "stocks_1m", "stocks_1m.db"))
@@ -18,7 +18,30 @@ class HistoricalAdapter:
     def __init__(self, as_of: float, path: str | None = None):
         self.as_of = as_of; self.path = path or DB; self._c = sqlite3.connect(f"file:{self.path}?mode=ro", uri=True, timeout=15)
 
-    def capabilities(self): return {CAP_QUOTES, CAP_CANDLES}
+    # capture cadence measured on 2026-10-23: futures ~160 s, option-greek snapshots ~960 s -> limits ~2.6x / ~1.9x (env-overridable); the live limit stays 60 s
+    deriv_max_age = {"futures": float(os.environ.get("NIFTY_DIR_CAPTURED_FUT_MAX_AGE_SEC", "420")), "chain": float(os.environ.get("NIFTY_DIR_CAPTURED_CHAIN_MAX_AGE_SEC", "1800"))}
+
+    def capabilities(self):
+        caps = {CAP_QUOTES, CAP_CANDLES}
+        try:
+            from .captured_derivatives import DB as _MH
+            if os.path.exists(_MH): caps |= {CAP_FUTURES, CAP_CHAIN}
+        except Exception: pass
+        return caps
+
+    def _deriv(self):
+        from .captured_derivatives import CapturedDerivatives
+        return CapturedDerivatives(self.as_of)
+
+    def futures(self):
+        d = self._deriv()
+        try: return d.futures()
+        finally: d.close()
+
+    def option_chain(self):
+        d = self._deriv()
+        try: return d.option_chain()
+        finally: d.close()
 
     def _one(self, sym, lo, hi):
         return self._c.execute("SELECT ts,o,h,l,c,v FROM bars WHERE sym=? AND ts>=? AND ts<? ORDER BY ts", (sym, lo, hi)).fetchall()

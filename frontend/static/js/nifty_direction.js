@@ -36,6 +36,15 @@
       if (!u || u.status !== "OK") return "";
       return u.sectors.map((s) => "<tr><td>" + esc(s.sector) + "</td><td>" + s.advancers + "/" + s.decliners + "/" + s.unchanged + "</td><td class='" + (s.strength >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(s.median_chg_pct, 2) + "%</td></tr>").join("");
     },
+    derivText(d) {
+      const f = (d && d.futures) || {}, c = (d && d.chain) || {};
+      const age = (x) => (x == null ? "" : " · " + Math.round(x) + "s old");
+      const ft = f.available ? "Futures " + esc(f.expiry) + " (" + esc(f.identity) + "): " + esc(f.activity) + " · price " + Logic.fmt(f.price_chg_pct) + "% · OI " + Logic.fmt(f.oi_chg_pct) + "% · basis " + Logic.fmt(f.basis) + age(f.age_sec)
+        : "Futures: <span class='warn'>unavailable (" + esc(f.reason) + (f.age_sec != null ? ", " + Math.round(f.age_sec) + "s old > " + f.limit_sec + "s" : "") + ")</span>";
+      const ct = c.available ? "Chain " + esc(c.expiry) + " (" + esc(c.identity) + "): PCR " + Logic.fmt(c.pcr) + " (" + esc(String(c.oi_scope || "").toLowerCase().replace("_", "-")) + " OI, " + c.strikes + " strikes) · OI walls " + esc(c.support_strike) + " / " + esc(c.resistance_strike) + " · IV " + Logic.fmt(c.iv_mean == null ? null : c.iv_mean * 100, 1) + "%" + age(c.age_sec)
+        : "Chain: <span class='warn'>unavailable (" + esc(c.reason) + (c.age_sec != null ? ", " + Math.round(c.age_sec) + "s old > " + c.limit_sec + "s" : "") + ")</span>";
+      return ft + "<br>" + ct + (d && d.available ? "<br><span class='mut'>OI is read together with price, never alone; bias " + Logic.fmt(d.bias) + "</span>" : "");
+    },
     trendExplain(t) {
       if (!t || t.ema_fast == null) return "";
       return " (EMA gap " + Logic.fmt(Math.abs(t.ema_fast - t.ema_slow), 2) + " vs neutral band " + Logic.fmt(t.neutral_band, 2) + ")";
@@ -70,8 +79,7 @@
       $("ndBreadth").innerHTML = snap.status === "OK" ? "Adv " + snap.breadth.advancers + " / Dec " + snap.breadth.decliners + " · weighted adv " + Logic.fmt(snap.breadth.weighted_adv * 100, 0) + "%" : (uwb ? uwb + "<br><span class='warn'>weighted breadth disabled: " + esc(snap.reason || "no snapshot") + "</span>" : "<span class='warn'>disabled: " + esc(snap.reason || "no snapshot") + (uw && uw.reason ? " / " + esc(uw.reason) : "") + "</span>");
       $("ndSectors").innerHTML = snap.status !== "OK" && uw && uw.status === "OK" ? Logic.unweightedSectorRows(uw) + "<tr><td colspan=3 class='mut'>unweighted: adv/dec/unch and median % change; weighted contribution needs verified weights</td></tr>" : snap.status === "OK" ? snap.sectors.map((s) => "<tr><td>" + esc(s.sector) + "</td><td>" + Logic.fmt(s.weight_pct, 1) + "</td><td class='" + (s.contrib >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(s.contrib, 3) + "</td></tr>").join("") : "<tr><td colspan=3 class='warn'>disabled (weights)</td></tr>";
       $("ndTop").innerHTML = snap.status === "OK" ? snap.top.map((r) => "<tr><td>" + esc(r.symbol) + "</td><td>" + Logic.fmt(r.weight_pct, 2) + "</td><td>" + Logic.fmt(r.chg_pct) + "%</td><td class='" + (r.contrib >= 0 ? "ok" : "bad") + "'>" + Logic.fmt(r.contrib, 3) + "</td></tr>").join("") : "<tr><td colspan=4 class='warn'>disabled: verified official weights required</td></tr>";
-      const d = o.derivatives || {}, f = d.futures || {}, c = d.chain || {};
-      $("ndDeriv").innerHTML = "Futures: " + (f.available ? esc(f.activity) + " · price " + Logic.fmt(f.price_chg_pct) + "% · OI " + Logic.fmt(f.oi_chg_pct) + "% · basis " + Logic.fmt(f.basis) : "<span class='warn'>unavailable (" + esc(f.reason) + ")</span>") + "<br>Chain: " + (c.available ? "PCR " + Logic.fmt(c.pcr) + " · OI walls " + esc(c.support_strike) + " / " + esc(c.resistance_strike) + " · IV " + Logic.fmt(c.iv_mean, 1) : "<span class='warn'>unavailable (" + esc(c.reason) + ")</span>");
+      $("ndDeriv").innerHTML = Logic.derivText(o.derivatives);
       $("ndReasons").innerHTML = Logic.scoreRows(sc).map((r) => "<tr><td>" + esc(r.k) + "</td><td>" + (r.v == null ? "<span class='warn'>missing: " + esc(r.why) + "</span>" : Logic.fmt(r.v, 1)) + "</td></tr>").join("");
       const h = o.health || {}; $("ndHealth").innerHTML = "kind " + esc(h.data_kind) + " · caps " + esc((h.capabilities || []).join(",")) + " · valid quotes " + h.quotes_valid + "/" + h.constituents + " · weight coverage " + Logic.fmt((h.weight_coverage || 0) * 100, 0) + "% · weights " + esc(h.weights_status) + " · csv " + esc((h.csv_sha256 || "").slice(0, 10)) + (Object.keys(h.quotes_invalid || {}).length ? "<br>invalid: " + esc(JSON.stringify(h.quotes_invalid).slice(0, 300)) : "");
     }
