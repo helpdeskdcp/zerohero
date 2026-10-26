@@ -68,3 +68,19 @@ def save(master: dict, path: str | None = None) -> str:
 def load(path: str | None = None) -> dict | None:
     try: return json.load(open(path or os.path.join(ROOT, "master.json")))
     except Exception: return None
+
+
+def refresh(fetch=None, root: str | None = None) -> dict:
+    """Download the official constituent CSV (kept as constituents.csv with its sha256), rebuild master.json using weights.csv ONLY if the operator supplied one."""
+    root = root or ROOT; os.makedirs(root, exist_ok=True)
+    if fetch is None:
+        import requests
+        fetch = lambda u: requests.get(u, timeout=30, headers={"User-Agent": "Mozilla/5.0"}).content
+    raw = fetch(CSV_URL); parse_constituents_csv(raw)                  # schema check before overwriting the cached copy
+    open(os.path.join(root, "constituents.csv"), "wb").write(raw)
+    wp = os.path.join(root, "weights.csv"); w = open(wp, "rb").read() if os.path.exists(wp) else None
+    m = build_master(raw, w); save(m, os.path.join(root, "master.json")); return m
+
+
+def current(root: str | None = None) -> dict | None:
+    return load(os.path.join(root or ROOT, "master.json"))

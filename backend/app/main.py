@@ -374,6 +374,13 @@ try:
 except Exception as _e:
     print(f"[scanner] router disabled: {type(_e).__name__}: {_e}")
 
+# ---- NIFTY 50 constituents direction engine (paper only, read-only views; no order path) ----
+try:
+    from .nifty_direction import api as _nd_api
+    app.include_router(_nd_api.router)
+except Exception as _e:
+    print(f"[nifty_direction] router disabled: {type(_e).__name__}: {_e}")
+
 # ---- Zone Breakout paper bot (owner's Angel One bot, all six indices; read-only views, observation only) ----
 try:
     from .zone_breakout import api as _zb_api

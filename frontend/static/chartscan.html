@@ -10,14 +10,23 @@ h1{font-size:18px;margin:0 0 2px}.mut{color:var(--mut)}.ok{color:var(--ok)}.bad{
 table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;font-size:13px}#res tr[data-i]{cursor:pointer}#res tr[data-i]:hover{background:rgba(148,163,184,.12)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.chip{padding:1px 8px;border-radius:9px;border:1px solid var(--line);font-size:12px}
 code{font-size:12px;color:var(--mut);word-break:break-word}#hits button{margin:2px 2px 0 0;padding:2px 8px;font-size:12px}
+.nd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:4px}.nd-cell{padding:4px 6px;border-radius:6px;font-size:12px;line-height:1.25}#nd input,#nd select{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:inherit}
 </style></head><body>
 <h1>Chart scan</h1><div class="mut">NIFTY · BANKNIFTY · SENSEX · NATURALGAS · CRUDEOIL · GOLDM, plus 53 large-cap stocks on the daily timeframe. Pick a scan, see where it fired on the chart. Observation only: a scan hit is a candidate for your own analysis, not a trade; so far no scan has passed the pre-registered tests.</div>
 <div class="bar"><label>Timeframe <select id="tf"></select></label><label>Instrument <select id="inst"></select></label><label>Scan <select id="scan"></select></label><button id="refresh">Refresh</button><span id="status" class="mut"></span></div>
 <div class="grid"><div><div id="chart"></div>
 <div class="card" style="margin-top:10px"><div id="bt"></div><div style="margin-top:6px"><code id="expr"></code></div><div style="margin-top:8px"><span class="mut">Jump to a signal:</span> <span id="hits"></span></div></div></div>
 <div class="card"><b>Scan results now</b> <span class="mut">(latest bar, click a row)</span><table style="margin-top:6px"><thead><tr><th>Instrument</th><th>Scan</th><th>Side</th><th>Bar</th><th>Close</th></tr></thead><tbody id="res"></tbody></table></div></div>
+<section id="nd" class="card" style="margin-top:14px"><h2 style="font-size:16px;margin:0 0 4px">NIFTY 50 constituents direction <span id="ndKind" class="chip">data: –</span></h2>
+<div class="mut">Paper only, observation only: no order is ever placed. Contribution / breadth / sector scoring stays disabled until verified official weights exist; nothing is estimated or equal-weighted.</div>
+<div class="bar"><label>Mode <select id="ndMode"><option value="live">Live</option><option value="replay">Replay (historical)</option></select></label><input id="ndAsOf" value="2026-10-23T14:00:00+05:30" size="26"><button id="ndLoad">Load</button><span id="ndStatus" class="mut"></span></div>
+<div id="ndBlock"></div><div id="ndOverview" style="margin:6px 0"></div><div id="ndHeat" class="nd-grid"></div>
+<div class="grid" style="margin-top:10px"><div><b>Breadth</b><div id="ndBreadth"></div><b style="display:block;margin-top:8px">Sector strength</b><table><thead><tr><th>Sector</th><th>Wt %</th><th>Contribution</th></tr></thead><tbody id="ndSectors"></tbody></table>
+<b style="display:block;margin-top:8px">Contribution ranking</b><table><thead><tr><th>Stock</th><th>Wt %</th><th>Chg</th><th>Contrib</th></tr></thead><tbody id="ndTop"></tbody></table></div>
+<div><b>Derivatives</b><div id="ndDeriv"></div><b style="display:block;margin-top:8px">Signal reasons (100-pt score components)</b><table><tbody id="ndReasons"></tbody></table><b style="display:block;margin-top:8px">Data health</b><div id="ndHealth" class="mut"></div></div></div></section>
 <!-- TradingView Lightweight Charts 5.2.1 (Apache-2.0), see static/vendor/THIRD_PARTY_NOTICES.md; its attribution link stays visible -->
 <script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script>
 <script src="/static/js/chartscan.js"></script>
-<script>ChartScan.bootstrap();</script>
+<script src="/static/js/nifty_direction.js"></script>
+<script>ChartScan.bootstrap();NiftyDir.bootstrap();</script>
 </body></html>

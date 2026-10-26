@@ -1,15 +1,28 @@
 # NIFTY 50 Constituents Direction Engine — status 2026-10-26 (PARTIAL, paper only)
-Checkpoint tag: `pre-nifty-direction-2026-10-26` (rollback: `git reset --hard` to it; code only).
+Checkpoint tag: `pre-nifty-direction-2026-10-26`. Ops/config/rollback: `backend/NIFTY_DIRECTION_OPS.md`.
 
-## Audit (VERIFIED)
-- Chart Scanner = `app/scanner/*` + `frontend/static/chartscan.html` + `js/chartscan.js` (daily/intraday DSL scans, observation only). Broker layers present: Angel (REST+WS), Dhan, Upstox read-only; `app/instruments.py`, `feed_registry`, `market_hub`.
-- `app/scanner/stocks.py` hardcodes a 53-symbol UNIVERSE (not the official 50) — pre-existing, left untouched; the new engine does not use it.
-- Official constituent CSV (symbol/industry/ISIN, 50 rows) is downloadable from niftyindices.com. The factsheet PDF publishes only the TOP-10 weights and sector weights. nseindia.com API returns 403 from this VPS.
+## Item status
+| item | status | evidence |
+|---|---|---|
+| Adapter contract, registry, mock, capabilities | COMPLETE | tests/test_nifty_direction*.py, contract test per adapter, no order surface |
+| Official constituent master (50, ISIN, sector, sha256) | COMPLETE | `refresh()` downloaded the official CSV; schema check; cached copy not overwritten by a bad download |
+| Official per-stock weights | **BLOCKED** | CSV has none; factsheet only top-10 + sector; nseindia.com 403. Drop `data/nifty_direction/weights.csv`. Never estimated |
+| Fail-closed validation (5 s age, coverage) | COMPLETE | tests |
+| Contribution / breadth / sector | COMPLETE code, DISABLED at runtime | `NO_SIGNAL: UNIVERSE_NOT_TRADABLE` until weights COMPLETE |
+| Indicators (EMA/SMA/ATR/rel-vol/VWAP/OR/swings/S-R/breakout/breakdown/retest/rejection), closed-candle only | COMPLETE | no-look-ahead tests |
+| 15m trend + 5m entry, states, dedup, invalidation | COMPLETE | tests |
+| Futures + option-chain confirmation | COMPLETE code, mock-tested only | no live provider tested |
+| 100-pt scoring (30/20/15/15/10/10), thresholds 70/55/45 | COMPLETE | non-actionable while contribution blocked; missing dependency listed |
+| Chart Scanner UI (overview, 50 heatmap, breadth, sectors, contribution rank, derivatives, reasons, health, data-kind chip) | COMPLETE (not browser-verified; node logic test only) | static/chartscan.html + js/nifty_direction.js |
+| DB persistence + versioned migrations (v2) | COMPLETE | store.py, migration tests incl. v1->v2 |
+| API routes | COMPLETE | /status /overview /signals /health-events /paper /config /replay, POST /refresh-master (tests: no other write/order route) |
+| Paper simulation (costs, slippage, risk caps, dedup, ENABLE_LIVE_ORDERS guard) | COMPLETE | tests |
+| Historical replay + OOS split | COMPLETE for the 15m/5m sub-engine on NIFTY index only | HistoricalAdapter causal test; 60 sessions: 163 trades, gross -403 pts, net -1556 pts (assumed 3 bps cost), IS -1512 / OOS -44 -> **no edge** |
+| Live provider adapter | **NOT BUILT / NOT TESTED** | only mock + historical exist; mode=live returns NO_ADAPTER_CONFIGURED |
+| Ops docs | COMPLETE | NIFTY_DIRECTION_OPS.md |
+| Full regression suite | **PENDING** | run in progress at commit time (a failure seen at ~7% not yet investigated); baseline earlier stopped at 1 failure in a receive-loop test after 234 passed |
 
-## BLOCKER (not invented around)
-Official weights for constituents #11-50 are not obtainable here. The master reports `weights_status=INCOMPLETE/MISSING`, the engine returns `NO_SIGNAL (UNIVERSE_NOT_TRADABLE)`. Unblock = drop a `symbol,weight_pct` CSV (50 rows, sum ≈ 100, from NSE Indices) into the loader; checksums are recorded.
-
-## Built (tests: tests/test_nifty_direction.py, 9 pass)
-`app/nifty_direction/`: adapters.py (base protocol, registry, mock; no order surface, tested), constituents.py (CSV parse, weights file, checksums, fail-closed validate), validation.py (5 s quote age, coverage >= 90 %), engine.py (contribution/breadth/sector).
-## Not built yet
-Indicators + 15m/5m strategy, derivatives confirmation, 100-pt scoring, DB persistence, API routes, dashboard A-I, replay, real Angel/Dhan adapter wrapper, deploy/rollback doc. ENABLE_LIVE_ORDERS is not read anywhere; no order API exists in this package.
+## Files
+New: app/nifty_direction/{adapters,constituents,validation,engine,indicators,strategy,derivatives,scoring,store,paper,historical,service,replay,api}.py; tests/test_nifty_direction{,_engine,_api}.py; frontend/static/js/nifty_direction.js; frontend/tests/nifty_direction.test.js; backend/NIFTY_DIRECTION_OPS.md.
+Modified: backend/app/main.py (router block), frontend/static/chartscan.html (panel + script). Not changed: scanner modules, connectors.
+Tests run: targeted 40 python (pass) + node test (pass). Service NOT restarted: the router goes live at the next restart.

@@ -1,0 +1,10 @@
+const assert = require("assert");
+const { Logic } = require("../static/js/nifty_direction.js");
+assert.strictEqual(Logic.kindClass("LIVE"), "ok"); assert.strictEqual(Logic.kindClass("MOCK"), "bad"); assert.strictEqual(Logic.kindClass("HISTORICAL"), "warn");
+assert.ok(Logic.heatColor(null).includes("148,163,184")); assert.ok(Logic.heatColor(1).startsWith("rgba(52,211,153")); assert.ok(Logic.heatColor(-1).startsWith("rgba(248,113,113"));
+assert.ok(Logic.heatmapHtml([{ symbol: "<X>", sector: "s", weight_pct: null, chg_pct: null, status: "STALE" }]).includes("&lt;X&gt;"));
+const b = Logic.blockers({ health: { weights_status: "MISSING" }, score: { missing: [{ component: "contribution", dependency: "VERIFIED_OFFICIAL_WEIGHTS" }] } });
+assert.ok(b.some((x) => x.includes("MISSING")) && b.some((x) => x.includes("VERIFIED_OFFICIAL_WEIGHTS")));
+assert.ok(Logic.blockers({ status: "NO_ADAPTER_CONFIGURED" })[0].includes("No live"));
+assert.strictEqual(Logic.fmt(null), "–");
+console.log("nifty_direction.test.js ok");

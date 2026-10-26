@@ -61,3 +61,33 @@ class MockAdapter:
 
 
 register("mock", MockAdapter)
+
+
+# ---- optional capabilities (futures / option chain). An adapter advertises what it really has; callers never assume. ----
+CAP_QUOTES, CAP_CANDLES, CAP_FUTURES, CAP_CHAIN = "quotes", "candles", "futures", "option_chain"
+
+
+def capabilities(adapter) -> set[str]:
+    fn = getattr(adapter, "capabilities", None)
+    return set(fn()) if callable(fn) else {CAP_QUOTES, CAP_CANDLES}
+
+
+def _mock_caps(self):
+    c = {CAP_QUOTES, CAP_CANDLES}
+    if getattr(self, "_fut", None) is not None: c.add(CAP_FUTURES)
+    if getattr(self, "_chain", None) is not None: c.add(CAP_CHAIN)
+    return c
+
+
+def _mock_set_futures(self, d): self._fut = d                   # dict: symbol, expiry, ltp, prev_close, volume, oi, prev_oi, ts
+def _mock_set_chain(self, d): self._chain = d                   # dict: underlying, expiry, ts, spot, rows=[{strike,ce_oi,pe_oi,ce_vol,pe_vol,ce_iv,pe_iv,ce_delta,pe_delta}]
+def _mock_futures(self): return self._fut
+def _mock_chain(self): return self._chain
+
+
+MockAdapter.capabilities = _mock_caps
+MockAdapter.set_futures = _mock_set_futures
+MockAdapter.set_chain = _mock_set_chain
+MockAdapter.futures = _mock_futures
+MockAdapter.option_chain = _mock_chain
+MockAdapter.data_kind = "MOCK"
