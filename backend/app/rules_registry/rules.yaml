@@ -197,6 +197,7 @@ env_patterns:
   - {re: "^(HUB_[A-Z_]+_SEC|CHANAKYA_[A-Z_]+_(TTL_SEC|WARN_SEC|STALE_SEC)|CHANAKYA_MAX_DATA_AGE_SEC|CHANAKYA_PCR_[A-Z_]+|CHANAKYA_CORS_ORIGINS|SMART_SCALPER_POLL_SEC)$", category: TUNING}
   - {re: "^(PYTEST_CURRENT_TEST|TEST_DATABASE_URL)$", category: TEST_ONLY}
 env_flags:
+  - {name: TG_POLL_SEC, category: TUNING, note: "channel reader poll interval in seconds (default 2.5; doubles after a FloodWait up to 15, then decays)"}
   - {name: CHANAKYA_NET_EDGE_OVERRIDE, category: SAFETY_SWITCH, note: "net-edge suspension manual override (autoscalp)"}
   - {name: CHANAKYA_OPTION_FLOW_SHADOW, category: FEATURE_FLAG, note: "option-flow shadow feed (observation only)"}
   - {name: CHANAKYA_PIVOT_SHADOW, category: FEATURE_FLAG, note: "pivot-reversal shadow feed (observation only)"}

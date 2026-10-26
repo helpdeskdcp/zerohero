@@ -126,3 +126,14 @@ def test_check_looks_again_fresh_before_calling_a_real_contract_unscorable(monke
     fresh = {"day": "2026-10-23", "expiries": {"2026-10-29": {"strikes": [22850.0], "raw": "29OCT2026"}}}
     monkeypatch.setattr(CT_, "captured", lambda u, d=None, p=None: stale); monkeypatch.setattr(CT_, "captured_fresh", lambda u, d=None, p=None, max_age=30.0: fresh); monkeypatch.setattr(CT_, "last_quote", lambda *a, **k: None)
     assert CT_.check("NIFTY", "2026-10-29", 22850.0, "PE", 155.0, "LIMIT")["found"] is True
+
+
+def test_poll_interval_is_fast_by_default_backs_off_after_a_flood_wait_and_recovers():
+    from app.arena import tg_reader as T
+    assert T.POLL_SEC <= 3.0                                                                        # was 15 s: median post -> reader lag 9 s
+    p = T.next_poll(T.POLL_SEC, True, 0.0); assert p == min(T.POLL_MAX_SEC, T.POLL_SEC * 2)         # FloodWait: slow down
+    for _ in range(6): p = T.next_poll(p, True, 0.0)
+    assert p == T.POLL_MAX_SEC                                                                      # bounded
+    assert T.next_poll(p, False, 10.0) == p                                                         # not calm yet: keep the slow rate
+    for _ in range(6): p = T.next_poll(p, False, 301.0)
+    assert p == T.POLL_SEC                                                                          # calm for 5 min: back to the fast rate, never below base

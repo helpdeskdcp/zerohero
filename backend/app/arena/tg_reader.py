@@ -20,7 +20,15 @@ SESSION = os.path.join(DIR, "reader")
 STATUS = os.path.join(DIR, "status.json")
 QUARANTINE = os.path.join(CI.DIR, "channel_quarantine.jsonl")
 LAST_IDS = os.path.join(DIR, "last_ids.json")
-POLL_SEC = 15
+POLL_SEC = float(os.environ.get("TG_POLL_SEC", "2.5"))   # was 15 s (median post->reader lag 9 s on 2026-10-26, p90 15 s); Telegram does not push these channel posts in real time to this session, so the loop is the only fast path
+POLL_MAX_SEC = 15.0                                        # after a FloodWait the interval doubles up to this and decays back by itself
+
+
+def next_poll(poll: float, flooded: bool, since_flood: float, base: float = POLL_SEC, cap: float = POLL_MAX_SEC, calm_sec: float = 300.0) -> float:
+    """Adaptive polling interval: x2 (up to `cap`) right after a FloodWait, halved (down to `base`) once `calm_sec` seconds passed without one."""
+    if flooded: return min(cap, max(poll, base) * 2)
+    if poll > base and since_flood >= calm_sec: return max(base, poll / 2)
+    return poll
 LOOKS_LIKE_SIGNAL = re.compile(r"\b(CE|PE|TARGET|STOP\s*LOSS|STOPLOSS|BUY\s*(RANGE|ABOVE)|NEAR\s*LEVEL)\b", re.I)
 CLAIM_LIKE = re.compile(r"\b(GAINING|PROFIT|TARGET\s*HIT|ALL\s*TARGET|FULL\s*HIT|ACHIEVED|BOOKED|RESULT)\b", re.I)          # result/claim chatter is not a missed signal: no alert
 _counts: dict = {}
@@ -143,7 +151,7 @@ async def run() -> None:                                                       #
     async def poll_loop():
         # Telegram pushes channel posts to this session only in ~30-minute batches, so every POLL_SEC seconds the new messages are fetched directly.
         # Read-only; ids are persisted so a restart back-fills only the gap (the per-post dedupe makes overlap with the push events harmless).
-        last = CI._load(LAST_IDS, {})
+        last = CI._load(LAST_IDS, {}); poll = POLL_SEC; last_flood = 0.0
         while True:
             try:
                 for cid in chats:
@@ -157,10 +165,11 @@ async def run() -> None:                                                       #
                     retry_pending(state, mode_fn=lambda: api.mode(api.cfg()), default_participant=c["name"]); json.dump(state, open(CI.STATE, "w"))
                 write_status(connected=True, last_poll=time.time())
             except FloodWaitError as e:
-                _bump("flood_wait"); await asyncio.sleep(min(int(e.seconds) + 5, 3600))
+                _bump("flood_wait"); last_flood = time.time(); poll = next_poll(poll, True, 0.0); await asyncio.sleep(min(int(e.seconds) + 5, 3600))
             except Exception as e:
                 _bump("poll_errors"); write_status(last_error=type(e).__name__)
-            await asyncio.sleep(POLL_SEC)
+            poll = next_poll(poll, False, time.time() - last_flood)
+            await asyncio.sleep(poll)
 
     client.add_event_handler(lambda ev: handle(ev, False), events.NewMessage(chats=chats))
     client.add_event_handler(lambda ev: handle(ev, True), events.MessageEdited(chats=chats))
