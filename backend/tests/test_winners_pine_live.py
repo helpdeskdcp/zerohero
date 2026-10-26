@@ -176,3 +176,14 @@ def test_pine_script_vs_python_port_regression():
     out = json.loads(p.stdout.decode().strip().splitlines()[-1]); assert out["ok"], out.get("diagnostics")
     pl = {x["title"]: np.array([np.nan if v is None else v for v in x["values"]], float) for x in out["plots"]}; py = WS.signals(b)
     assert ((pl["DBG_BUY"] > 0) == py["buy"].values).all() and ((pl["DBG_SELL"] > 0) == py["sell"].values).all() and py["buy"].sum() + py["sell"].sum() > 10
+
+
+def test_two_threads_opening_an_old_schema_db_at_startup_do_not_crash(tmp_path):
+    import sqlite3, threading
+    db = str(tmp_path / "old.db"); c0 = sqlite3.connect(db); c0.executescript("CREATE TABLE signals (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, bar_ts TEXT, side TEXT, strong INTEGER, close REAL, atr REAL, stop REAL, tp1 REAL, tp2 REAL, tp3 REAL, status TEXT, detail TEXT, arena_id TEXT, logged_ts REAL, UNIQUE(symbol, bar_ts));"); c0.commit(); c0.close()
+    errs = []
+    def go():
+        try: live._conn(db).close()
+        except Exception as e: errs.append(repr(e))
+    ts = [threading.Thread(target=go) for _ in range(8)]; [t.start() for t in ts]; [t.join() for t in ts]
+    assert errs == [] and "ledger_id" in {r[1] for r in live._conn(db).execute("PRAGMA table_info(signals)")}

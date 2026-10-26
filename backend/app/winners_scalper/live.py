@@ -54,7 +54,9 @@ def _conn(path=None):
     c = sqlite3.connect(path or os.environ.get("WINNERS_PINE_DB", DB), timeout=5); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=5000"); c.executescript(SCHEMA)
     have = {r[1] for r in c.execute("PRAGMA table_info(signals)")}
     for col in LEDGER_COLS:
-        if col.split()[0] not in have: c.execute(f"ALTER TABLE signals ADD COLUMN {col}")
+        if col.split()[0] not in have:
+            try: c.execute(f"ALTER TABLE signals ADD COLUMN {col}")
+            except sqlite3.OperationalError: pass                                                                                    # another thread added it first (two runners open the db at startup)
     return c
 
 
@@ -179,7 +181,11 @@ class Runner:
     def __init__(self, period: float = 2.0): self.period, self._t, self._stop = period, None, threading.Event()
 
     def _loop(self):
-        c = _conn(); tb = TickBuilder(c); subscribed = {}; ticks = gaps = bars = 0; day = ""; last_hb = 0.0
+        c = None
+        while c is None and not self._stop.is_set():
+            try: c = _conn()
+            except Exception as e: _log.warning("winners pine: db open failed, retrying: %r", e); self._stop.wait(2.0)
+        tb = TickBuilder(c); subscribed = {}; ticks = gaps = bars = 0; day = ""; last_hb = 0.0
         while not self._stop.is_set():
             now = time.time()
             try:
