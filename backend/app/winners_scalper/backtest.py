@@ -8,9 +8,9 @@ from ..zone_breakout import backtest as ZBB, data as DT
 from . import strategy as WS
 
 
-def simulate(df: pd.DataFrame, variant: str, p: WS.Params | None = None, strong_only: bool = False) -> pd.DataFrame:
+def simulate(df: pd.DataFrame, variant: str, p: WS.Params | None = None, strong_only: bool = False, end_min: int = 15 * 60 + 15, last_sig_min: int = 15 * 60) -> pd.DataFrame:
     d = WS.signals(df, p); ts = pd.DatetimeIndex(d["timestamp"]).tz_convert("Asia/Kolkata"); day = np.array([x.date() for x in ts]); mins = (ts.hour * 60 + ts.minute).to_numpy()
-    o, h, l, c = (d[k].to_numpy(float) for k in ("open", "high", "low", "close")); n = len(d); rows = []; i = 0; END = 15 * 60 + 15; LAST_SIG = 15 * 60; iv = pd.Timedelta(minutes=int(round(pd.Series(d["timestamp"]).diff().dt.total_seconds().median() / 60)))
+    o, h, l, c = (d[k].to_numpy(float) for k in ("open", "high", "low", "close")); n = len(d); rows = []; i = 0; END = end_min; LAST_SIG = last_sig_min; iv = pd.Timedelta(minutes=int(round(pd.Series(d["timestamp"]).diff().dt.total_seconds().median() / 60)))
     while i < n - 2:
         side = 1 if d["buy"].iat[i] else -1 if d["sell"].iat[i] else 0
         if side == 0 or mins[i] > LAST_SIG or (strong_only and not d["strong"].iat[i]): i += 1; continue
