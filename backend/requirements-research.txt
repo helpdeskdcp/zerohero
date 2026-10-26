@@ -1,0 +1,3 @@
+# research scripts only (scripts/candle_ai_cpcv.py)
+-r requirements.txt
+skfolio==1.10.3

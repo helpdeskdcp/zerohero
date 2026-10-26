@@ -1,3 +1,5 @@
+# RUNTIME dependencies of the service (app/). Dev/test tools: requirements-dev.txt. Research-only tools: requirements-research.txt.
+# Phase-12 audit 2026-10-26: polars, duckdb, quantstats and ruptures were removed - nothing in app/, scripts/ or tests/ imports them and no installed package requires them.
 fastapi==0.141.1
 starlette==1.3.1
 uvicorn[standard]==0.30.6
@@ -6,17 +8,10 @@ requests==2.33.0
 pyotp==2.9.0
 python-dotenv==1.2.2
 websockets==13.1
-pytest==9.0.3
 numpy==2.4.6
 scipy==1.17.1
 scikit-learn==1.9.1
 pandas==3.0.5
-httpx2==2.13.0
 TA-Lib==0.8.2
-skfolio==1.10.3
-quantstats==0.0.86
 arch==8.0.0
 hmmlearn==0.3.3
-ruptures==1.1.10
-duckdb==2.0.0
-polars==2.0.0

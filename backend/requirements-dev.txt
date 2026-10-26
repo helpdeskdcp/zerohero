@@ -1,0 +1,4 @@
+# test tooling (not needed on a production host)
+-r requirements.txt
+pytest==9.0.3
+httpx2==2.13.0          # imported by starlette.testclient (fastapi TestClient)
