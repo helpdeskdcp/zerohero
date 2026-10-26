@@ -25,15 +25,20 @@ def premium(underlying: str, expiry_iso: str, strike: float, ot: str, tf: int = 
     lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
     c = CT._ro(path)
     try:
-        rows = c.execute("SELECT exch_ts, ltp FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL AND exch_ts>=?" + CT.NOT_FUTURE + " ORDER BY exch_ts",
-                         (underlying, snap_expiry(expiry_iso), float(strike), ot, _iso(lo))).fetchall()
+        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL AND exch_ts>=?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
+                         (underlying, snap_expiry(expiry_iso), float(strike), ot, _iso(day0 - 2 * 86400))).fetchall()                       # the contract's (symbol, expiry, strike, type, exch_ts) index: a few thousand rows, never a table scan (heartbeat rows keep an OLD exch_ts, hence the 2-day lower bound)
     finally: c.close()
-    seen, bars = set(), {}
+    # time axis = when OUR capture stored the price (heartbeat rows included): an illiquid contract whose exchange timestamp does not change still stands at that price, so its chart is continuous instead of 6 candles in 5 hours
+    bars, last_b, last_px = {}, None, None
     for ts, ltp in rows:
-        if ts in seen: continue
-        seen.add(ts); b = int(_ep(ts) // tfs)
+        t = _ep(ts)
+        if t < lo: continue
+        b = int(t // tfs)
+        if last_b is not None and 1 < b - last_b <= max(2, int(900 // tfs)):                       # carry the last price flat across a gap of up to 15 minutes (never longer: a longer silence stays a visible gap)
+            for k in range(last_b + 1, b): bars.setdefault(k, [last_px, last_px, last_px, last_px])
         if b not in bars: bars[b] = [ltp, ltp, ltp, ltp]
         else: x = bars[b]; x[1] = max(x[1], ltp); x[2] = min(x[2], ltp); x[3] = ltp
+        last_b, last_px = b, ltp
     out["candles"] = [dict(time=b * tfs + IST_S, open=v[0], high=v[1], low=v[2], close=v[3]) for b, v in sorted(bars.items())]
     out["last"] = CT.latest_quote(underlying, expiry_iso, float(strike), ot, path); return out
 
