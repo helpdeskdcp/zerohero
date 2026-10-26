@@ -54,3 +54,39 @@ NOT deployed, service NOT restarted (oi-dashboard.service still runs the pre-cha
 
 ## Remaining blockers
 1. Official per-stock weights (BLOCKED, nothing estimated; contribution scoring + actionable signal stay disabled). 2. No tested live adapter (live mode = NO_ADAPTER_CONFIGURED). 3. Angel WS timing test needs a low-load re-run. 4. Dashboard not browser-verified (node logic + API tests only). 5. Owner approval for the deploy window.
+
+## Deployment + post-deploy follow-up (2026-10-26 evening)
+**Deployed:** `oi-dashboard.service` restarted 21:11:21 IST per NIFTY_DIRECTION_DEPLOY_PLAN.md (PID 1392451, 0 restarts; health 200; journal shows no "router disabled"; arena-tg-reader/nginx active; Winners-Pine NG heartbeat resumed). Pre-restart: no active/pending arena trades, NSE closed. Rollback anchors: tag `pre-nifty-deploy-202610262110`, data copy `data/nifty_direction.bak.202610262110`, tag `pre-nifty-direction-2026-10-26`.
+**Running code vs repo:** the running service has the engine as of commit bd4bc9c. The follow-up below (layout move, last_close mode, meta line) is committed after that and is **NOT yet loaded by the running API** (static HTML/JS are served from disk immediately; the API change needs one more restart, not done, awaiting approval). Until then the UI's "Last market close" option gets a 400 from the old API.
+
+### Changes in this follow-up
+- `frontend/static/chartscan.html`: the panel moved from the page bottom into the left column directly under the chart (same `.grid > div` as `#chart`; Scan results stays the right column); inner grid is `.nd-two` (auto-fit, 260 px min) so it fits the narrower column; <=600 px breakpoint for the heatmap/as-of input; mode select = Live market / Last market close / Historical replay; new `#ndMeta` line.
+- `frontend/static/js/nifty_direction.js`: `metaLine()` (mode label, data kind, timezone, source, freshness, session, as-of, "NSE closed now", note, "closed-candle only; intrabar provisional not computed"); a 401 now shows "not signed in (401)" instead of a silent failure; changing mode reloads.
+- `backend/app/nifty_direction/api.py`: `mode=last_close` (latest completed session present in the stored 1-minute history, as-of 15:30 IST, always labelled HISTORICAL) + `meta` block on every overview; `_last_close()` also reports the exchange calendar's own latest session and a `data_lag` flag. Today it shows session 2026-10-23 vs calendar 2026-10-26 (`data_lag: true`): the stored history is one session behind and the UI says so.
+- Tests added: last_close labelled HISTORICAL + lag flag, live-without-adapter meta, bad mode 400; node `metaLine` test.
+
+### Verification actually performed
+- Python: `test_nifty_direction{,_engine,_api,_gate}.py` + `test_rules_registry.py` = **59 passed**. Node: `nifty_direction.test.js` ok; `chartscan.test.js` 2 pass / 0 fail. The FULL regression suite was **not** re-run after this follow-up (last full run: 4006 passed, 1 failed = Angel WS timing test, see above).
+- Layout: structural DOM parse only — `#nd` is in the same left-column container as `#chart`, is the next element after it, `#bt` follows it, `#res` is the right column; div/section tags balanced. **No rendered-browser verification**: no Chrome is connected to this session (list_connected_browsers = []) and no headless browser is installed on the VPS. Pixel alignment, the responsive layout at desktop/tablet/mobile, browser console errors and screenshots are therefore NOT verified.
+- Reproducible check for the owner: open `/static/chartscan.html` in your already-authenticated browser, hard-refresh; expect the panel right under the chart with the chart/panel/Scan-results columns aligned; switch the Mode select through the three modes (Live => "data: NONE / NO_ADAPTER_CONFIGURED"; Last close => HISTORICAL + the lag note; Replay => HISTORICAL); open DevTools console: no errors; narrow the window to <900 px (columns stack) and <600 px.
+
+### The HTTP 401s
+Expected, not a bug: every `/api/*` call and the static pages go through `_AuthGateMiddleware` (Bearer `CHANAKYA_API_TOKEN` or HTTP Basic from `.env`); my curl had no credentials. The gate is unchanged. Authenticated behaviour (401 without/with a wrong token, 200 with a valid one, routes mounted) is covered by tests/test_nifty_direction_gate.py against the real app; production credentials were never read.
+
+### Status of the other requested items (honest)
+| item | status |
+|---|---|
+| Live / last-close / replay modes with timezone, source, freshness, as-of | IMPLEMENTED (API + UI), tested via API tests; live mode has no adapter so it reports NO_ADAPTER_CONFIGURED; not browser-verified |
+| Official versioned weights | **BLOCKED** (no authoritative full-50 weights obtainable: CSV has none, factsheet top-10 only, nseindia 403). VERIFIED_OFFICIAL_WEIGHTS / UNIVERSE_NOT_TRADABLE are therefore genuine blockers, not mapping bugs; nothing was hardcoded |
+| NO_ADAPTER_CONFIGURED | genuine: no live adapter implemented/tested |
+| NO_FUTURES / NO_CHAIN / NO_VALID_DERIVATIVES_DATA | genuine for the same reason (derivative logic is mock-tested; no provider wired to the engine) — NOT investigated against the instrument master/permissions in this run |
+| TREND_NEUTRAL | legitimate result (last-close 2026-10-23: NEUTRAL), not an error |
+| DATA_GAP | arena-side status, unrelated to this engine |
+| Advancing/declining/unchanged counts | NOT done: breadth shows advancers/decliners only and is itself disabled without weights |
+| Provisional intrabar signals | NOT computed (stated in the meta line) |
+| Per-instrument engine (BANKNIFTY/SENSEX constituents, commodities) | NOT implemented; BANKNIFTY/SENSEX weights would hit the same blocker; commodities would need their own underlying-direction path |
+| Live orders | still disabled (ENABLE_LIVE_ORDERS unset; engine refuses to run if set) |
+
+### Remaining actions for the owner
+1. Approve a second restart so the API serves `last_close` + `meta` (plan unchanged: same checks/rollback). 2. Browser check per the procedure above (or connect Chrome to this session). 3. Supply the official weights file. 4. Decide whether to scope the per-instrument (BANKNIFTY/SENSEX/commodities) extension.
+**Overall status: DEPLOYED (engine as of bd4bc9c), PARTIALLY VERIFIED** — API/auth/tests verified; rendered UI not verified; follow-up changes committed but not yet running.

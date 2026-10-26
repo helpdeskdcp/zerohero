@@ -7,4 +7,7 @@ const b = Logic.blockers({ health: { weights_status: "MISSING" }, score: { missi
 assert.ok(b.some((x) => x.includes("MISSING")) && b.some((x) => x.includes("VERIFIED_OFFICIAL_WEIGHTS")));
 assert.ok(Logic.blockers({ status: "NO_ADAPTER_CONFIGURED" })[0].includes("No live"));
 assert.strictEqual(Logic.fmt(null), "–");
+const ml = Logic.metaLine({ mode: "last_close", data_kind: "HISTORICAL", timezone: "Asia/Kolkata", source: "historical", freshness: "NOT_LIVE", session: "2026-10-23", last_update_utc: "2026-10-23T10:00:00+00:00", market_open_now: false, note: "lag", signals: { provisional_intrabar: "NOT_COMPUTED" } });
+assert.ok(ml.startsWith("LAST MARKET CLOSE") && ml.includes("HISTORICAL") && !ml.includes("LIVE MARKET") && ml.includes("NSE closed now") && ml.includes("session 2026-10-23"));
+assert.ok(Logic.metaLine({ mode: "live", data_kind: "NONE" }).startsWith("LIVE MARKET")); assert.strictEqual(Logic.metaLine(null), "");
 console.log("nifty_direction.test.js ok");

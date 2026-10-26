@@ -19,6 +19,15 @@
       const sc = o && o.score; if (sc && sc.missing) sc.missing.forEach((m) => out.push(m.component + " ← " + m.dependency));
       return out;
     },
+    metaLine(meta) {
+      if (!meta) return "";
+      const lab = { live: "LIVE MARKET", last_close: "LAST MARKET CLOSE", replay: "HISTORICAL REPLAY" }[meta.mode] || String(meta.mode || "").toUpperCase();
+      const parts = [lab, "data: " + (meta.data_kind || "NONE"), "tz " + (meta.timezone || "–"), "source " + (meta.source || "–"), "freshness " + (meta.freshness || "–")];
+      if (meta.session) parts.push("session " + meta.session);
+      if (meta.last_update_utc) parts.push("as of " + meta.last_update_utc.replace("T", " ").slice(0, 19) + "Z");
+      if (meta.market_open_now === false) parts.push("NSE closed now");
+      return parts.join(" · ") + (meta.note ? " — " + meta.note : "") + (meta.signals ? " · signals: closed-candle only (intrabar provisional " + String(meta.signals.provisional_intrabar).toLowerCase().replace("_", " ") + ")" : "");
+    },
     heatmapHtml(rows) {
       return (rows || []).map((r) => '<div class="nd-cell" title="' + esc(r.symbol + " · " + r.sector + " · w=" + (r.weight_pct == null ? "n/a" : r.weight_pct) + " · " + r.status) + '" style="background:' + Logic.heatColor(r.chg_pct) + '"><b>' + esc(r.symbol) + "</b><br>" + (r.chg_pct == null ? esc(r.status) : Logic.fmt(r.chg_pct) + "%") + "</div>").join("");
     },
@@ -33,8 +42,9 @@
       const mode = $("ndMode").value, asOf = $("ndAsOf").value.trim();
       $("ndStatus").textContent = "loading…";
       const url = "/api/nifty-direction/overview?mode=" + mode + (mode === "replay" ? "&as_of=" + encodeURIComponent(asOf) : "");
-      let o; try { o = await j(url); } catch (e) { $("ndStatus").textContent = "error"; return; }
-      if (o.detail) { $("ndStatus").textContent = String(o.detail); return; }
+      let o; try { const r = await fetch(url, { credentials: "same-origin" }); o = await r.json(); if (r.status === 401) { $("ndStatus").textContent = "not signed in (401): open this page through your authenticated session"; return; } } catch (e) { $("ndStatus").textContent = "error: " + e; return; }
+      if (o.detail && !o.status) { $("ndStatus").textContent = String(o.detail); $("ndMeta").textContent = ""; return; }
+      $("ndMeta").textContent = Logic.metaLine(o.meta);
       const kind = o.data_kind || "NONE";
       $("ndKind").className = "chip " + Logic.kindClass(kind); $("ndKind").textContent = "data: " + kind;
       $("ndBlock").innerHTML = Logic.blockers(o).map((b) => "<div class='warn'>⚠ " + esc(b) + "</div>").join("");
@@ -52,7 +62,7 @@
       $("ndReasons").innerHTML = Logic.scoreRows(sc).map((r) => "<tr><td>" + esc(r.k) + "</td><td>" + (r.v == null ? "<span class='warn'>missing: " + esc(r.why) + "</span>" : Logic.fmt(r.v, 1)) + "</td></tr>").join("");
       const h = o.health || {}; $("ndHealth").innerHTML = "kind " + esc(h.data_kind) + " · caps " + esc((h.capabilities || []).join(",")) + " · valid quotes " + h.quotes_valid + "/" + h.constituents + " · weight coverage " + Logic.fmt((h.weight_coverage || 0) * 100, 0) + "% · weights " + esc(h.weights_status) + " · csv " + esc((h.csv_sha256 || "").slice(0, 10)) + (Object.keys(h.quotes_invalid || {}).length ? "<br>invalid: " + esc(JSON.stringify(h.quotes_invalid).slice(0, 300)) : "");
     }
-    $("ndLoad").onclick = load; $("ndMode").onchange = () => { $("ndAsOf").style.display = $("ndMode").value === "replay" ? "" : "none"; }; $("ndMode").onchange(); load();
+    $("ndLoad").onclick = load; $("ndMode").onchange = () => { $("ndAsOf").style.display = $("ndMode").value === "replay" ? "" : "none"; if ($("ndMode").value !== "replay") load(); }; $("ndMode").onchange();
   }
   const api = { Logic, bootstrap }; if (typeof module !== "undefined" && module.exports) module.exports = api; else root.NiftyDir = api;
 })(typeof window !== "undefined" ? window : globalThis);

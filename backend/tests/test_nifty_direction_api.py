@@ -48,3 +48,29 @@ def test_refresh_master_uses_cached_csv_and_checks_schema(client, tmp_path, monk
     assert C.refresh(fetch=lambda u: CSV, root=str(tmp_path))["weights_status"] == "COMPLETE"
     with pytest.raises(ValueError): C.refresh(fetch=lambda u: b"x,y\n1,2\n", root=str(tmp_path))
     assert (tmp_path / "constituents.csv").read_bytes() == CSV                          # bad download did not overwrite the cached copy
+
+
+def _hist_db(tmp_path, day_start_epoch, n=375):
+    import sqlite3
+    db = str(tmp_path / "h.db"); c = sqlite3.connect(db); c.execute("CREATE TABLE bars (sym TEXT, ts INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL, PRIMARY KEY (sym, ts)) WITHOUT ROWID")
+    for i in range(n): c.execute("INSERT INTO bars VALUES ('NIFTY',?,?,?,?,?,0)", (day_start_epoch + i * 60, 100 + i * .01, 101 + i * .01, 99 + i * .01, 100.5 + i * .01))
+    c.commit(); c.close(); return db
+
+
+def test_last_close_mode_is_labelled_historical_and_flags_lag(client, tmp_path, monkeypatch):
+    from datetime import datetime, timedelta
+    from app.nifty_direction import historical as H, indicators as I
+    C.save(C.build_master(CSV, None), str(tmp_path / "master.json"))
+    d = (datetime.now(I.IST) - timedelta(days=9)).replace(hour=9, minute=15, second=0, microsecond=0)
+    while d.weekday() >= 5: d -= timedelta(days=1)
+    monkeypatch.setattr(H, "DB", _hist_db(tmp_path, int(d.timestamp())))
+    o = client.get("/api/nifty-direction/overview?mode=last_close").json()
+    assert o["data_kind"] == "HISTORICAL" and o["meta"]["mode"] == "last_close" and o["meta"]["session"] == d.strftime("%Y-%m-%d") and o["meta"]["freshness"] == "NOT_LIVE"
+    assert o["meta"]["data_lag"] is True and "stored history ends" in o["meta"]["note"] and o["meta"]["timezone"] == "Asia/Kolkata"
+    assert o["meta"]["signals"]["provisional_intrabar"] == "NOT_COMPUTED" and o["score"]["actionable"] is False
+
+
+def test_live_without_adapter_has_meta_and_bad_mode_rejected(client, tmp_path):
+    C.save(C.build_master(CSV, None), str(tmp_path / "master.json"))
+    o = client.get("/api/nifty-direction/overview?mode=live").json(); assert o["status"] == "NO_ADAPTER_CONFIGURED" and o["meta"]["freshness"] == "NO_DATA" and o["meta"]["mode"] == "live"
+    assert client.get("/api/nifty-direction/overview?mode=bogus").status_code == 400

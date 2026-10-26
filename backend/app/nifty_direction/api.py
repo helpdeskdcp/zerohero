@@ -39,12 +39,58 @@ def status():
             "blockers": ([] if m is None else C.validate(m)) or None, "weights_howto": "drop a symbol,weight_pct CSV (50 rows, sum ~100, from NSE Indices) at data/nifty_direction/weights.csv then POST /refresh-master"}
 
 
+def _last_close() -> dict:
+    """Latest completed NSE session that the HISTORICAL store actually holds, plus the calendar's own latest session so a data lag is visible (never hidden)."""
+    import sqlite3
+    from datetime import date, timedelta
+    from . import indicators as I
+    from .historical import DB
+    from .. import market_calendar as mc
+    today = datetime.now(I.IST); cal = None; d = today.date()
+    if today.hour * 60 + today.minute < 15 * 60 + 30: d -= timedelta(days=1)                      # today's session is not complete yet
+    for _ in range(10):
+        if d.weekday() < 5 and not mc.is_holiday(d, "NSE"): cal = d; break
+        d -= timedelta(days=1)
+    c = sqlite3.connect(f"file:{DB}?mode=ro", uri=True, timeout=15)
+    try:
+        hi = int(time.time()); lo = hi - 86400 * 12
+        days = sorted({datetime.fromtimestamp(r[0], I.IST).strftime("%Y-%m-%d") for r in c.execute("SELECT ts FROM bars WHERE sym='NIFTY' AND ts BETWEEN ? AND ? AND ts%1800=0", (lo, hi))})
+    finally:
+        c.close()
+    if not days: raise HTTPException(503, "no historical session available for last_close")
+    sess = days[-1]; as_of = datetime.fromisoformat(sess + "T15:30:00+05:30")
+    return {"session": sess, "as_of": as_of.isoformat(), "calendar_last_session": str(cal) if cal else None, "data_lag": bool(cal and str(cal) != sess)}
+
+
+def _meta(mode: str, out: dict, ad, extra: dict | None = None) -> dict:
+    from .. import market_calendar as mc
+    h = out.get("health", {}); kind = out.get("data_kind")
+    try: open_now = bool(mc.is_trading("NSE"))
+    except Exception: open_now = None
+    live = mode == "live"
+    fresh = "FRESH" if live and h.get("quotes_valid", 0) and not h.get("quotes_invalid") else ("STALE_OR_PARTIAL" if live else "NOT_LIVE")
+    m = {"mode": mode, "data_kind": kind, "timezone": "Asia/Kolkata", "source": getattr(ad, "name", None), "last_update_utc": datetime.fromtimestamp(out["ts"], tz=__import__("datetime").timezone.utc).isoformat(),
+         "freshness": fresh, "market_open_now": open_now, "signals": {"confirmed_closed_candle": True, "provisional_intrabar": "NOT_COMPUTED"}}
+    if live and open_now is False: m["note"] = "NSE is closed: fresh live updates are not available; use LAST CLOSE or REPLAY"
+    if extra: m.update(extra)
+    return m
+
+
 @router.get("/overview")
 def overview(mode: str = "live", as_of: str | None = None, persist: bool = False):
-    assert_paper_only(); m = _master(); ad = _adapter(mode, as_of)
-    if ad is None: return {"status": "NO_ADAPTER_CONFIGURED", "data_kind": "NONE", "detail": "no live market-data adapter is configured/tested; use mode=replay or set NIFTY_DIR_ADAPTER", "master": {"weights_status": m["weights_status"], "count": m["count"]}}
-    now = datetime.fromisoformat(as_of).timestamp() if mode == "replay" else time.time()
-    try: return service.evaluate(ad, m, now, max_age=120 if mode == "replay" else None, persist=persist)
+    """mode=live (adapter) | last_close (latest completed stored session) | replay (as_of). Anything not live is labelled HISTORICAL and never as live."""
+    assert_paper_only(); m = _master()
+    if mode not in ("live", "last_close", "replay"): raise HTTPException(400, "mode must be live, last_close or replay")
+    extra = None
+    if mode == "last_close":
+        lc = _last_close(); as_of = lc["as_of"]; extra = {"session": lc["session"], "calendar_last_session": lc["calendar_last_session"], "data_lag": lc["data_lag"]}
+        if lc["data_lag"]: extra["note"] = f"stored history ends {lc['session']} but the exchange's latest completed session is {lc['calendar_last_session']}"
+    ad = _adapter("replay" if mode in ("last_close", "replay") else "live", as_of)
+    if ad is None: return {"status": "NO_ADAPTER_CONFIGURED", "data_kind": "NONE", "meta": {"mode": mode, "data_kind": "NONE", "freshness": "NO_DATA", "timezone": "Asia/Kolkata"}, "detail": "no live market-data adapter is configured/tested; use mode=last_close or mode=replay", "master": {"weights_status": m["weights_status"], "count": m["count"]}}
+    now = datetime.fromisoformat(as_of).timestamp() if mode != "live" else time.time()
+    try:
+        out = service.evaluate(ad, m, now, max_age=120 if mode != "live" else None, persist=persist)
+        out["meta"] = _meta(mode, out, ad, extra); return out
     finally:
         close = getattr(ad, "close", None)
         if callable(close): close()
