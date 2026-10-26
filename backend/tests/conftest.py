@@ -254,3 +254,13 @@ def _captured_fresh_follows_captured(monkeypatch):
     from app.arena import contracts as _CT
     if not hasattr(_CT, "_real_captured_fresh"): _CT._real_captured_fresh = _CT.captured_fresh        # kept so one test can exercise the real function
     monkeypatch.setattr(_CT, "captured_fresh", lambda u, d=None, p=None, max_age=30.0: _CT.captured(u, d, p))
+
+
+@pytest.fixture(autouse=True)
+def _restore_environ():
+    """Whatever a test (or a script/module it imports) does to os.environ must not reach the next test. Root cause of the 2026-10-26 full-suite-only failure: a cron script loaded the real .env
+    (GROQ/OPENAI/Telegram keys) into os.environ at import time and every later test saw the keys. HARD GUARD #3 above only strips the keys once, at session start."""
+    snap = dict(os.environ)
+    yield
+    if dict(os.environ) != snap:
+        os.environ.clear(); os.environ.update(snap)

@@ -3,8 +3,6 @@
 import json, os, sys, time
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
-for l in open(os.path.join(HERE, ".env")):
-    if "=" in l and not l.startswith("#"): k, v = l.strip().split("=", 1); os.environ.setdefault(k, v)
 STATUS = os.path.join(HERE, "data", "tg", "status.json"); MEMO = os.path.join(HERE, "data", "tg", "watchdog_state.json")
 MAX_AGE_SEC = 180
 
@@ -18,7 +16,14 @@ def evaluate(status: dict | None, now: float) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _load_env() -> None:
+    """Cron entry only: read backend/.env into os.environ. Deliberately NOT done at import time - a module that mutates the process environment on import leaks the real keys into any test (or tool) that imports it."""
+    for l in open(os.path.join(HERE, ".env")):
+        if "=" in l and not l.startswith("#"): k, v = l.strip().split("=", 1); os.environ.setdefault(k, v)
+
+
 def main() -> int:
+    _load_env()
     try: st = json.load(open(STATUS))
     except Exception: st = None
     ok, why = evaluate(st, time.time())

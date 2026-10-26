@@ -4,8 +4,6 @@
 import json, os, sqlite3, sys, time
 from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, HERE)
-for l in open(os.path.join(HERE, ".env")):
-    if "=" in l and not l.startswith("#"): k, v = l.strip().split("=", 1); os.environ.setdefault(k, v)
 MAX_AGE_SEC = 90; MEMO = os.path.join(HERE, "data", "priority_watchdog_state.json"); WATCH = os.path.join(HERE, "data", "priority_watch.json")
 EXCH = {"NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX", "NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE"}
 
@@ -15,7 +13,14 @@ def stale_contracts(ages: dict, max_age: float = MAX_AGE_SEC) -> list:
     return sorted(k for k, a in ages.items() if a is None or a > max_age)
 
 
+def _load_env() -> None:
+    """Cron entry only: read backend/.env into os.environ. Deliberately NOT done at import time - a module that mutates the process environment on import leaks the real keys into any test (or tool) that imports it."""
+    for l in open(os.path.join(HERE, ".env")):
+        if "=" in l and not l.startswith("#"): k, v = l.strip().split("=", 1); os.environ.setdefault(k, v)
+
+
 def main() -> int:
+    _load_env()
     from app import market_calendar
     now = time.time()
     try: watch = [e for e in json.load(open(WATCH)) if e.get("until", 0) > now and e.get("kind") == "signal"]
