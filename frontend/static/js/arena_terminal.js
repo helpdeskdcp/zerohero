@@ -20,7 +20,12 @@ function tmLevels(r) {
   if (r.exit != null) L.push({ price: r.exit, color: "#94a3b8", style: "dashed", title: "EXIT" });
   return L;
 }
-function tmRowHtml(r, prev) {
+/* one-tap exit button: label / css class per phase (idle -> counting [2 s, tap again = cancel] -> sending -> sent | error) */
+function tmExitUi(ex) {
+  const p = (ex && ex.phase) || "idle";
+  return { phase: p, cls: p, text: p === "counting" ? `Exiting in ${ex.left}s · tap to CANCEL` : p === "sending" ? "Sending…" : p === "sent" ? "EXIT SENT ✓ settling…" : p === "error" ? "Failed · tap to retry" : "EXIT" };
+}
+function tmRowHtml(r, prev, ex) {
   const live = r.state === "ACTIVE" || r.state === "WAITING", dir = live && r.ltp != null && prev != null && r.ltp !== prev ? (r.ltp > prev ? "tickup" : "tickdn") : "";
   const pn = r.pnl_rs, cls = pn > 0 ? "pnlpos" : pn < 0 ? "pnlneg" : "";
   const side = `<span class="chip ${tmEsc(r.state)}">${tmEsc(r.state)}</span>`;
@@ -31,9 +36,10 @@ function tmRowHtml(r, prev) {
   if (r.state === "WAITING") nums.push(`<span>${tmEsc(r.entry_mode || "")} <b>${tmNum(r.entry)}</b></span>`, `<span>SL <b>${tmNum(r.sl)}</b></span>`);
   if (r.state === "CLOSED") nums.push(`<span>fill <b>${tmNum(r.fill)}</b></span>`, `<span>exit <b>${tmNum(r.exit)}</b></span>`, `<span class="mut">${tmEsc(r.why || "")}</span>`);
   if (!["ACTIVE", "WAITING", "CLOSED"].includes(r.state)) nums.push(`<span class="mut">${tmEsc(r.why || r.waiting_note || "")}</span>`);
-  return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} lot · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>`;
+  const btn = r.state === "ACTIVE" ? (() => { const u = tmExitUi(ex); return `<div class="tm-l4"><button class="tm-exit ${u.cls}" data-exit="${tmEsc(r.id)}">${tmEsc(u.text)}</button></div>`; })() : "";
+  return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} lot · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>${btn}`;
 }
-if (typeof module !== "undefined") module.exports = { tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs };
+if (typeof module !== "undefined") module.exports = { tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -43,6 +49,34 @@ if (typeof document !== "undefined") (function () {
   async function api(path) {
     const r = await fetch("/api/arena/public" + path, { headers: { "X-Arena-Token": readToken() }, cache: "no-store" });
     if (!r.ok) throw new Error(path.split("?")[0] + " " + r.status); return r.json();
+  }
+  async function apiPost(path, body) {
+    const r = await fetch("/api/arena/public" + path, { method: "POST", headers: { "X-Arena-Token": readToken(), "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
+    let j = {}; try { j = await r.json(); } catch (e) { /* non-json error body */ }
+    if (!r.ok) throw new Error(j.detail || (path + " " + r.status)); return j;
+  }
+  const EXIT_DELAY_MS = (typeof window !== "undefined" && window.TM_EXIT_DELAY_MS) || 2000; const exitState = {}; let exitTimer = null;
+  const exitUiOf = (id) => exitState[id] || null;
+  function exitTick() {
+    const now = Date.now(); let any = false;
+    for (const id of Object.keys(exitState)) { const e = exitState[id]; if (e.phase !== "counting") continue; any = true; e.left = Math.max(1, Math.ceil((e.deadline - now) / 1000)); if (now >= e.deadline) { e.phase = "sending"; postExit(id); } }
+    renderList(); renderExitBtn(); if (!any && exitTimer) { clearInterval(exitTimer); exitTimer = null; }
+  }
+  async function postExit(id) {
+    try { await apiPost("/amend", { signal_id: id, action: "EXIT_NOW", note: "terminal one-tap exit" }); exitState[id].phase = "sent"; setNote(`Exit recorded for ${id} — it settles after the normal 20 s execution delay.`); }
+    catch (e) { exitState[id].phase = "error"; setNote("Exit failed: " + e.message, true); }
+    renderList(); renderExitBtn(); liveTick();
+  }
+  function exitClick(id) {
+    const e = exitState[id];
+    if (e && (e.phase === "sending" || e.phase === "sent")) return;
+    if (e && e.phase === "counting") { delete exitState[id]; setNote("Exit cancelled."); renderList(); renderExitBtn(); return; }      // second tap during the countdown = cancel
+    exitState[id] = { phase: "counting", deadline: Date.now() + EXIT_DELAY_MS, left: Math.ceil(EXIT_DELAY_MS / 1000) }; setNote(`Exit ${id} in ${Math.ceil(EXIT_DELAY_MS / 1000)} s — tap again to cancel.`);
+    if (!exitTimer) exitTimer = setInterval(exitTick, 200); renderList(); renderExitBtn();
+  }
+  function renderExitBtn() {
+    const b = $("tmExit"); if (!b) return; const r = sel; b.hidden = !(r && r.state === "ACTIVE"); if (b.hidden) return;
+    const u = tmExitUi(exitUiOf(r.id)); b.textContent = u.text; b.className = "tm-exit " + u.cls;
   }
   const setNote = (t, bad) => { const n = $("tmNote"); n.textContent = t || ""; n.style.color = bad ? "#f87171" : "var(--mut)"; };
 
@@ -126,7 +160,8 @@ if (typeof document !== "undefined") (function () {
 
   /* ---------------------------------------------------------------- right panel */
   function renderHeader() {
-    const r = sel; if (!r) { $("tmTitle").textContent = "Select an order or a position →"; $("tmState").textContent = ""; $("tmLtp").textContent = ""; $("tmPnl").textContent = ""; return; }
+    const r = sel; if (!r) { renderExitBtn(); $("tmTitle").textContent = "Select an order or a position →"; $("tmState").textContent = ""; $("tmLtp").textContent = ""; $("tmPnl").textContent = ""; return; }
+    renderExitBtn();
     $("tmTitle").textContent = r.label; $("tmState").className = "chip " + r.state; $("tmState").textContent = r.state;
     $("tmLtp").textContent = r.ltp != null ? `LTP ${tmNum(r.ltp)}  (${tmNum(r.bid)} / ${tmNum(r.ask)})` : ""; const p = r.pnl_rs; $("tmPnl").textContent = p != null ? tmRs(p) : ""; $("tmPnl").className = p > 0 ? "pnlpos" : p < 0 ? "pnlneg" : "";
   }
@@ -139,8 +174,8 @@ if (typeof document !== "undefined") (function () {
     list.querySelectorAll(".tm-row").forEach((e) => { if (!ids.has(e.dataset.id)) e.remove(); });
     want.forEach((r, i) => {
       let el = list.querySelector(`.tm-row[data-id="${CSS.escape(r.id)}"]`);
-      if (!el) { el = document.createElement("div"); el.className = "tm-row"; el.dataset.id = r.id; el.onclick = () => { const cur = rows.find((x) => x.id === el.dataset.id); if (cur) openChart(cur); }; list.append(el); }
-      const h = tmRowHtml(r, lastLtp[r.id]); if (htmlCache[r.id] !== h) { el.innerHTML = h; htmlCache[r.id] = h; }
+      if (!el) { el = document.createElement("div"); el.className = "tm-row"; el.dataset.id = r.id; el.onclick = (ev) => { const b = ev && ev.target && ev.target.closest ? ev.target.closest("[data-exit]") : null; if (b) { ev.stopPropagation(); exitClick(el.dataset.id); return; } const cur = rows.find((x) => x.id === el.dataset.id); if (cur) openChart(cur); }; list.append(el); }
+      const h = tmRowHtml(r, lastLtp[r.id], exitUiOf(r.id)); if (htmlCache[r.id] !== h) { el.innerHTML = h; htmlCache[r.id] = h; }
       if (list.children[i] !== el) list.insertBefore(el, list.children[i] || null); lastLtp[r.id] = r.ltp;
     });
     if (!want.length) { if (!list.querySelector(".tm-empty")) { const d = document.createElement("div"); d.className = "tm-empty mut"; d.textContent = { orders: "No pending orders.", positions: "No open positions.", closed: "No closed trades today." }[bucketTab]; list.append(d); } }
@@ -150,7 +185,7 @@ if (typeof document !== "undefined") (function () {
   async function liveTick() {
     if (document.hidden) return;
     try {
-      const d = await api("/live"); rows = d.rows || []; renderList();
+      const d = await api("/live"); rows = d.rows || []; for (const id of Object.keys(exitState)) { const r0 = rows.find((x) => x.id === id); if (!r0 || r0.state !== "ACTIVE") delete exitState[id]; } renderList();
       $("tmTot").innerHTML = `Open P&amp;L <b class="${d.total_open_pnl_rs > 0 ? "pnlpos" : d.total_open_pnl_rs < 0 ? "pnlneg" : ""}">${tmRs(d.total_open_pnl_rs)}</b> · Closed today <b class="${d.realised_today_rs > 0 ? "pnlpos" : d.realised_today_rs < 0 ? "pnlneg" : ""}">${tmRs(d.realised_today_rs)}</b> · <span class="mut">${tmEsc(d.now_ist)} IST</span>`;
       if (sel) { const cur = rows.find((x) => x.id === sel.id); if (cur) { const re = cur.sl !== sel.sl || cur.state !== sel.state || cur.fill !== sel.fill || JSON.stringify(cur.targets) !== JSON.stringify(sel.targets); sel = cur; renderHeader(); if (re && series.c && view === "option") drawLevels(cur); } }
       else if (rows.length) { const first = rows.find((x) => x.state === "ACTIVE") || rows.find((x) => x.state === "WAITING") || rows[0]; bucketTab = tmBucket(first); renderList(); openChart(first); }
@@ -164,6 +199,7 @@ if (typeof document !== "undefined") (function () {
   document.querySelectorAll("[data-tmview]").forEach((b) => (b.onclick = () => { view = b.dataset.tmview; document.querySelectorAll("[data-tmview]").forEach((x) => x.classList.toggle("on", x === b)); $("tmTfOpt").hidden = view !== "option"; $("tmTfUnd").hidden = view === "option"; if (sel) openChart(sel); }));
   document.querySelectorAll("[data-tmtf]").forEach((b) => (b.onclick = () => { tf = Number(b.dataset.tmtf); document.querySelectorAll("[data-tmtf]").forEach((x) => x.classList.toggle("on", x === b)); if (sel && view === "option") openChart(sel); }));
   document.querySelectorAll("[data-tmutf]").forEach((b) => (b.onclick = () => { utf = Number(b.dataset.tmutf); document.querySelectorAll("[data-tmutf]").forEach((x) => x.classList.toggle("on", x === b)); if (sel && view !== "option") openChart(sel); }));
+  if ($("tmExit")) $("tmExit").onclick = () => { if (sel && sel.state === "ACTIVE") exitClick(sel.id); };
   const zoom = (f) => { if (!chart) return; userZoomed = true; const ts = chart.timeScale(), o = ts.options(); ts.applyOptions({ barSpacing: Math.max(1, Math.min(60, (o.barSpacing || 6) * f)) }); };
   $("tmZoomIn").onclick = () => zoom(1.35); $("tmZoomOut").onclick = () => zoom(1 / 1.35); $("tmFit").onclick = () => { userZoomed = false; if (chart) { chart.timeScale().fitContent(); chart.priceScale("right").applyOptions({ autoScale: true }); } };
   document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => { const on = b.dataset.tab === "terminal"; document.querySelector("main").classList.toggle("wide", on); if (on) setTimeout(start, 50); else stop(); }));

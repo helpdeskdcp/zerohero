@@ -31,6 +31,7 @@ main.wide{max-width:none}
 #tmList{flex:1;overflow-y:auto}.tm-row{padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}.tm-row:hover{background:#16213a}.tm-row.sel{background:#14233f;box-shadow:inset 3px 0 0 var(--hi)}
 .tm-l1{display:flex;align-items:center;gap:8px}.tm-l1 .big{margin-left:auto;font-size:16px;font-weight:700}.tm-l2{font-size:11px}.tm-l3{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12.5px;margin-top:2px}
 .tm-empty{padding:18px;text-align:center}.tm-foot{padding:6px 10px;border-top:1px solid var(--line);font-size:12.5px}.tm-row .chip,#tmState{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;border:1px solid var(--line)}
+.tm-exit{padding:4px 14px;border:1px solid #ef4444;color:#fecaca;background:#2a1215;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer}.tm-exit.counting{background:#f59e0b;border-color:#f59e0b;color:#111}.tm-exit.sending,.tm-exit.sent{opacity:.65;cursor:default}.tm-exit.error{border-color:#f59e0b;color:#fde68a}.tm-l4{margin-top:6px;display:flex}.tm-l4 .tm-exit{margin-left:auto}
 @media(max-width:900px){.tm-wrap{grid-template-columns:1fr;height:auto}.tm-left{height:60vh}.tm-right{height:50vh}}
 </style></head><body>
 <header><h1>ZeroHero Arena · Institution side</h1><span id="mode" class="banner prac">enter your arena token</span><span id="who" class="mut"></span><span class="banner">paper trading · no real money · costs included</span><a class="banner" href="/static/leaderboard.html" style="text-decoration:none;color:inherit">🏆 Leaderboard</a></header>
@@ -70,7 +71,7 @@ main.wide{max-width:none}
 <h3>ZeroHero AI — settled signals</h3><div class="wrap"><table><thead><tr><th>time (IST)</th><th>option</th><th>status</th><th>fill</th><th>exit</th><th>why</th><th>net</th></tr></thead><tbody id="aiRows"></tbody></table></div>
 <h3>Your settled signals</h3><div class="wrap"><table><thead><tr><th>time (IST)</th><th>option</th><th>status</th><th>fill</th><th>exit</th><th>why</th><th>net</th></tr></thead><tbody id="huRows"></tbody></table></div></section>
 <section data-pane="terminal" class="card" hidden style="padding:8px"><div class="tm-wrap">
-<div class="tm-left"><div class="tm-bar"><b id="tmTitle">Select an order or a position →</b><span id="tmState" class="chip"></span><span id="tmLtp" class="mut"></span><span id="tmPnl"></span>
+<div class="tm-left"><div class="tm-bar"><b id="tmTitle">Select an order or a position →</b><span id="tmState" class="chip"></span><span id="tmLtp" class="mut"></span><span id="tmPnl"></span><button id="tmExit" class="tm-exit" hidden>EXIT</button>
 <span class="tm-tools"><button data-tmview="option" class="on">Option</button><button data-tmview="underlying">Underlying + Pine</button>
 <span id="tmTfOpt"><button data-tmtf="1" class="on">1m</button><button data-tmtf="5">5m</button><button data-tmtf="15">15m</button></span><span id="tmTfUnd" hidden><button data-tmutf="5">5m</button><button data-tmutf="15" class="on">15m</button></span>
 <button id="tmZoomOut" title="zoom out">−</button><button id="tmZoomIn" title="zoom in">+</button><button id="tmFit" title="auto fit">Fit</button></span></div>
