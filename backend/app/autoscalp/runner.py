@@ -152,6 +152,8 @@ def _underlying_ref(sym):
 _IDXFUT_TOK_TTL = 3600        # future rolls monthly -> re-resolve hourly
 _IDXFUT_VWAP_TTL = 60         # hit the broker at most once/min regardless of decide_every_sec
 _IDXFUT_VWAP_CACHE: dict[str, tuple] = {}   # SYM -> (expiry_epoch, vwap, status)
+_IDXFUT_EXCH: dict[str, str] = {}           # SYM -> exchange of its front-month future (NIFTY/BANKNIFTY: NFO, SENSEX: BFO)
+_IDXFUT_VWAP_FAIL_TTL = 300   # a failed/unavailable VWAP is remembered 5 min (was 60 s): no point re-asking a flaky endpoint every minute
 
 
 def _index_future_token(sym):
@@ -166,6 +168,7 @@ def _index_future_token(sym):
         fut = instruments.resolve_index_future(str(sym or "").upper(), "AUTO") or {}
         if fut.get("status") == "OK":
             tok = str(fut.get("symboltoken") or "")
+            _IDXFUT_EXCH[str(sym or "").upper()] = str(fut.get("exchange") or "NFO").upper()
     except Exception as e:
         _log.debug("_index_future_token(%s) failed (VWAP-only, cosmetic): %r", sym, e)
         tok = ""
@@ -186,7 +189,7 @@ def _index_future_vwap(sym):
         try:
             from ..connectors import angelone
             from ..engines.signal_engine import _vwap
-            conn = angelone.fetch_candles("NFO", key, "NFO", tok, None, None, None, "1m", "FUTURE")
+            exch = _IDXFUT_EXCH.get(key, "NFO"); conn = angelone.fetch_candles(exch, key, exch, tok, None, None, None, "1m", "FUTURE")      # SENSEX future lives on BFO: asking NFO returned an empty body (JSONDecodeError) every time
             rows = conn.get("candles") or []
             n = len(rows)
             V = [float(r.get("v") or 0) for r in rows]
@@ -201,7 +204,7 @@ def _index_future_vwap(sym):
         except Exception as e:
             _log.debug("_index_future_vwap(%s) failed (VWAP-only, cosmetic): %r", key, e)
             vwap, status = None, "unavailable"
-    _IDXFUT_VWAP_CACHE[key] = (time.time() + _IDXFUT_VWAP_TTL, vwap, status)
+    _IDXFUT_VWAP_CACHE[key] = (time.time() + (_IDXFUT_VWAP_TTL if status == "available" else _IDXFUT_VWAP_FAIL_TTL), vwap, status)
     return vwap, status
 
 

@@ -860,3 +860,18 @@ def test_ai_shadow_mode_enabled_logs_without_altering_the_trade(fresh_db, monkey
     assert len(shadow) == 1
     assert shadow[0]["ai_status"] == "CONFIG_REQUIRED"    # no GROQ_API_KEY in test env
     assert shadow[0]["fused_final_state"] in ("SELL", "WEAK_SELL", "STRONG_SELL")
+
+
+def test_index_future_vwap_asks_the_exchange_the_future_trades_on_and_remembers_failures_longer(monkeypatch):
+    import time
+    from app.autoscalp import runner as ascr
+    from app.connectors import angelone
+    calls = []
+    def fake(market, symbol, exchange, symboltoken, *a, **k): calls.append((symbol, market, exchange, symboltoken)); return {"candles": []}
+    monkeypatch.setattr(angelone, "fetch_candles", fake)
+    monkeypatch.setattr(ascr, "_index_future_token", lambda sym: (ascr._IDXFUT_EXCH.__setitem__(sym.upper(), "BFO") or "999") if sym.upper() == "SENSEX" else (ascr._IDXFUT_EXCH.__setitem__(sym.upper(), "NFO") or "111"))
+    ascr._IDXFUT_VWAP_CACHE.clear(); ascr._IDXFUT_EXCH.clear()
+    v, st = ascr._index_future_vwap("SENSEX"); assert (v, st) == (None, "insufficient_data") and calls[-1][1:] == ("BFO", "BFO", "999")
+    ascr._index_future_vwap("NIFTY"); assert calls[-1][1:] == ("NFO", "NFO", "111")
+    exp = ascr._IDXFUT_VWAP_CACHE["SENSEX"][0] - time.time(); assert ascr._IDXFUT_VWAP_FAIL_TTL - 5 <= exp <= ascr._IDXFUT_VWAP_FAIL_TTL          # not 'available' -> remembered for the long TTL
+    ascr._IDXFUT_VWAP_CACHE.clear(); ascr._IDXFUT_EXCH.clear()
