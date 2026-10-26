@@ -137,3 +137,9 @@ def test_poll_interval_is_fast_by_default_backs_off_after_a_flood_wait_and_recov
     assert T.next_poll(p, False, 10.0) == p                                                         # not calm yet: keep the slow rate
     for _ in range(6): p = T.next_poll(p, False, 301.0)
     assert p == T.POLL_SEC                                                                          # calm for 5 min: back to the fast rate, never below base
+
+
+def test_event_handlers_are_coroutines_not_lambdas():
+    import re
+    src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "arena", "tg_reader.py"), encoding="utf-8").read() if "os" in globals() else open("app/arena/tg_reader.py", encoding="utf-8").read()
+    assert not re.search(r"add_event_handler\(\s*lambda", src) and "async def on_new" in src and "async def on_edit" in src

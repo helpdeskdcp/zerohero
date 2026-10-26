@@ -171,8 +171,10 @@ async def run() -> None:                                                       #
             poll = next_poll(poll, False, time.time() - last_flood)
             await asyncio.sleep(poll)
 
-    client.add_event_handler(lambda ev: handle(ev, False), events.NewMessage(chats=chats))
-    client.add_event_handler(lambda ev: handle(ev, True), events.MessageEdited(chats=chats))
+    async def on_new(ev): handle(ev, False)                                              # Telethon awaits the callback: a plain lambda returned None -> "TypeError: NoneType can't be used in 'await'" on every pushed event
+    async def on_edit(ev): handle(ev, True)
+    client.add_event_handler(on_new, events.NewMessage(chats=chats))
+    client.add_event_handler(on_edit, events.MessageEdited(chats=chats))
     backoff = 5
     while True:
         try:
