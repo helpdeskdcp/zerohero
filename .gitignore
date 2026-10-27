@@ -97,3 +97,4 @@ backend/data/**/dataset.pkl
 backend/app/smart_chart/node_modules/
 backend/data/smart_chart.db*
 backend/data/upstox_nse_eq_keys.json
+backend/data/.id_window_none.json

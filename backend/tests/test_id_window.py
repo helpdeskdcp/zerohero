@@ -12,6 +12,11 @@ OLD = ("SELECT received_ts FROM quote_snapshots WHERE symbol=? AND kind='OPTION'
 WHERE = "symbol=? AND kind='OPTION' AND source='DHAN_CHAIN' AND julianday(received_ts)<=julianday(?)"
 
 
+@pytest.fixture(autouse=True)
+def neg_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(W, "NEG_STATE", str(tmp_path / "none.json"))                                    # tests never touch the real watermark file
+
+
 @pytest.fixture(scope="module")
 def db():
     c = sqlite3.connect(":memory:")
@@ -62,3 +67,26 @@ def test_window_query_uses_the_rowid_range_not_the_symbol_index(db):
     db, _ = db
     plan = " ".join(str(x[3]) for x in db.execute("EXPLAIN QUERY PLAN SELECT received_ts FROM quote_snapshots NOT INDEXED WHERE id>? AND id<=? AND " + WHERE + " ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1", (0, 10, "NIFTY", "2030-01-01")))
     assert "INTEGER PRIMARY KEY" in plan and "ix_quotes_lookup" not in plan
+
+
+def test_a_miss_is_remembered_and_a_repeat_scans_only_the_new_ids(db, monkeypatch):
+    db, t_end = db; monkeypatch.setattr(W, "WINDOWS", (5_000, 30_000, 400_000)); seen = []
+    db.set_trace_callback(lambda q: seen.append(q) if "NOT INDEXED" in q else None)
+    try:
+        cut = "2030-01-01T00:00:00+00:00"; args = (db, "id", WHERE, ("BANKNIFTY", cut), cut)
+        assert W.newest_matching(*args, order="id DESC") is None; first = len(seen)
+        assert first == 3                                                                                  # all three widening windows were scanned once
+        seen.clear(); assert W.newest_matching(*args, order="id DESC") is None
+        assert seen == []                                                                                  # the watermark covers everything: no table scan at all
+        # a matching row appended later is found: only the ids after the watermark are scanned
+        t = t_end + timedelta(seconds=5)
+        db.execute("INSERT INTO quote_snapshots(received_ts, symbol, kind, source, exchange, token, snap_key) VALUES (?,?,?,?,?,?,?)", (t.strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "BANKNIFTY", "OPTION", "DHAN_CHAIN", "NSE", "new", "new")); db.commit()
+        seen.clear(); r = W.newest_matching(*args, order="id DESC"); assert r is not None and len(seen) == 1 and "id>180000 AND id<=180201" in seen[0]      # only the 201 ids after the watermark
+    finally:
+        db.set_trace_callback(None); db.execute("DELETE FROM quote_snapshots WHERE token='new'"); db.commit()
+
+
+def test_a_different_symbol_does_not_inherit_the_watermark(db, monkeypatch):
+    db, t_end = db; monkeypatch.setattr(W, "WINDOWS", (5_000, 30_000, 400_000)); cut = "2030-01-01T00:00:00+00:00"
+    assert W.newest_matching(db, "id", WHERE, ("BANKNIFTY", cut), cut, order="id DESC") is None
+    assert W.newest_matching(db, "id", WHERE, ("NIFTY", cut), cut, order="id DESC") is not None             # NIFTY has DHAN rows: its own key, found normally
