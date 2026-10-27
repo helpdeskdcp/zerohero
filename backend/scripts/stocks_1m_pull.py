@@ -1,4 +1,5 @@
-"""Pull 1-minute Upstox v3 candles for the 53 large caps + NIFTY 50 index, month by month, resumable. Data -> data/historical/stocks_1m/stocks_1m.db (research only)."""
+"""Pull 1-minute Upstox v3 candles for the 53 large caps + NIFTY 50 index, month by month, resumable. Data -> data/historical/stocks_1m/stocks_1m.db (research only).
+Optional args: symbols to pull instead of the default universe, e.g. `stocks_1m_pull.py BSE TMPV` (resolved from the NSE master, NSE_EQ/EQ only)."""
 import os, sqlite3, sys, time
 from datetime import date, timedelta
 from urllib.parse import quote
@@ -18,6 +19,11 @@ def main():
     c = sqlite3.connect(DB); c.execute("PRAGMA journal_mode=WAL")
     c.execute("CREATE TABLE IF NOT EXISTS bars (sym TEXT, ts INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL, PRIMARY KEY (sym, ts)) WITHOUT ROWID"); c.execute("CREATE TABLE IF NOT EXISTS done (sym TEXT, ym TEXT, n INTEGER, PRIMARY KEY (sym, ym))")
     keys = dict(S.keys()); keys["NIFTY"] = "NSE_INDEX|Nifty 50"; from datetime import datetime
+    if len(sys.argv) > 1:                                               # explicit symbols (e.g. new index constituents not in the hardcoded universe)
+        eq = {r["trading_symbol"]: r["instrument_key"] for r in S._master() if r.get("segment") == "NSE_EQ" and r.get("instrument_type") == "EQ"}
+        want = [a.upper() for a in sys.argv[1:]]; miss = [w for w in want if w not in eq]
+        if miss: sys.exit(f"not in the NSE master: {miss}")
+        keys = {w: eq[w] for w in want}
     for sym, ik in keys.items():
         for a, b in months():
             ym = a.strftime("%Y-%m")

@@ -273,3 +273,9 @@ def test_weights_provenance_required_and_staleness():
 
 def test_trend_reports_neutral_band():
     t = ST.trend15(bars([100] * 60, 900, T0 - 900 * 60), T0 + 5); assert t["state"] == "NEUTRAL" and t["neutral_band"] == pytest.approx(0.15 * t["atr"])
+
+
+def test_demerger_style_jump_fails_closed():
+    """TMPV's stored history is not demerger-adjusted before 2025-10-14 (664 -> 399, -39.9 %): such a quote must be refused, never scored."""
+    now = time.time(); a = A.MockAdapter(); a.set_quote("TMPV", 399.0, 664.0, ts=now - 1)
+    assert V.check_quote(a.quotes(["TMPV"])["TMPV"], now) == "IMPLAUSIBLE_MOVE"
