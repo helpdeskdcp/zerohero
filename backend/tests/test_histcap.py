@@ -683,3 +683,14 @@ def test_independent_transaction_writes_while_the_shared_store_lock_is_held(stor
             assert conn.execute("SELECT COUNT(*) FROM _t").fetchone()[0] == 1
     finally:
         store._lock.release()
+
+
+def test_run_records_stage_timings_and_flags_a_slow_cycle(store, monkeypatch, capsys):
+    import json as _json
+    w = _worker(store, monkeypatch, _FakeSDK())
+    r = w.run_once("POLL_ONCE", do_candles=True)
+    assert set(r["stage_s"]) >= {"quotes", "greeks", "candles", "dhan"} and r["cycle_s"] >= sum(r["stage_s"].values()) - 0.01 and r["slow"] is False
+    with store._conn() as c: notes = c.execute("SELECT notes FROM capture_runs WHERE id=?", (r["run_id"],)).fetchone()[0]
+    t = _json.loads(notes.split(" | ", 1)[1]); assert t["stage_s"].keys() == r["stage_s"].keys() and "greeks_unavailable" in t and t["cycle_s"] == r["cycle_s"]
+    monkeypatch.setenv("CHANAKYA_HIST_SLOW_CYCLE_SEC", "0")                                                    # any cycle is now 'slow'
+    r2 = w.run_once("POLL_ONCE", do_candles=False); assert r2["slow"] is True and "[histcap] SLOW cycle" in capsys.readouterr().out and w.slow_cycles == 1

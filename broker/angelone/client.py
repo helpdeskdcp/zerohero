@@ -13,6 +13,21 @@ GREEKS = "https://apiconnect.angelone.in/rest/secure/angelbroking/marketData/v1/
 MASTER = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
 CANDLES = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getCandleData"
 
+
+_SEGMENT_OF = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "FINNIFTY": "NSE", "MIDCPNIFTY": "NSE", "SENSEX": "BSE", "BANKEX": "BSE",
+               "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "CRUDEOILM": "MCX", "GOLDM": "MCX", "GOLD": "MCX", "SILVER": "MCX"}
+
+
+def _segment_open(underlying: str, now=None) -> bool:
+    """Is the exchange segment of this underlying inside its trading hours right now (IST, weekdays)? Exchange holidays are not modelled here: on a holiday the segment looks open and
+    the old long TTL applies, which is the previous behaviour. NSE / BSE 09:15-15:30, MCX 09:00-23:30."""
+    from datetime import datetime, timedelta, timezone as _tz
+    t = now or datetime.now(_tz(timedelta(hours=5, minutes=30)))
+    if t.weekday() >= 5: return False
+    seg = _SEGMENT_OF.get(str(underlying).upper(), "NSE"); m = t.hour * 60 + t.minute
+    lo, hi = (9 * 60, 23 * 60 + 30) if seg == "MCX" else (9 * 60 + 15, 15 * 60 + 30)
+    return lo <= m <= hi
+
 class AngelOneClient:
     def __init__(self, *, cache_path=None, timeout=15):
         self.timeout = timeout; self.cache_path = cache_path or os.getenv("ANGEL_MASTER_CACHE", "/tmp/angelone_instrument_master.json")
@@ -366,8 +381,12 @@ class AngelOneClient:
         if st == "OK":
             new = {"status": "AVAILABLE", "reason": "", "checked_at": checked, "retry_after": 0}
         elif st == "NO_DATA":
+            # A "no greeks" verdict is long-lived (greek_cap_ttl, 6 h) only when it was reached while the instrument's segment is OPEN.
+            # Before the open / after the close the broker answers AB9019 for everything, so that verdict is cached only briefly
+            # (2026-10-27: a pre-open probe switched NIFTY / SENSEX greeks off for 6 h and the whole afternoon cascade followed).
+            ttl = self._greek_cap_ttl if _segment_open(underlying) else min(self._greek_cap_ttl, float(os.getenv("ANGEL_GREEK_CLOSED_TTL_SEC", "300")))
             new = {"status": "UNAVAILABLE", "reason": res.get("errorcode") or "NO_DATA",
-                   "checked_at": checked, "retry_after": now + self._greek_cap_ttl}
+                   "checked_at": checked, "retry_after": now + ttl, "ttl_sec": ttl}
         else:
             # transient — don't downgrade a known capability on a blip
             return

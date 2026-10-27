@@ -9,6 +9,7 @@ never aborts the cycle or affects anything else.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 import threading
@@ -251,6 +252,11 @@ class CaptureWorker:
         # unconditionally afterward, gated solely by Dhan's own session via
         # self._dhan_auth_checker(). AngelOne remains the unchanged fallback
         # -- its capture logic below is untouched.
+        t_cycle = time.time(); stage: dict = {}                                    # per-stage seconds of this cycle (quotes / greeks / candles / dhan), stored in capture_runs.notes
+        def timed(name, fn, *a):
+            t = time.time()
+            try: return fn(*a)
+            finally: stage[name] = round(stage.get(name, 0.0) + time.time() - t, 2)
         state = market_calendar.status_all().get("segments", {})
         sdk = self._sdk_provider()
         auth_ok = self._auth_ok()
@@ -277,24 +283,29 @@ class CaptureWorker:
                     # NO transaction around the whole symbol: each phase fetches from the broker FIRST (no DB lock held)
                     # and writes in its own short transaction, so the shared store lock is never held across a broker call
                     # (it used to be held for minutes and starved the 3-second priority capture of live trades).
-                    self._capture_quotes(None, sdk, sym, refs, recv, rid, counts, integ, errors)
-                    self._capture_greeks(None, sdk, sym, refs, recv, rid, counts, integ, errors)
+                    timed("quotes", self._capture_quotes, None, sdk, sym, refs, recv, rid, counts, integ, errors)
+                    timed("greeks", self._capture_greeks, None, sdk, sym, refs, recv, rid, counts, integ, errors)
                     if do_candles:
-                        self._capture_candles(None, sdk, sym, refs, recv, rid, counts, integ, errors)
+                        timed("candles", self._capture_candles, None, sdk, sym, refs, recv, rid, counts, integ, errors)
                 except Exception as e:
                     errors.append({"symbol": sym, "stage": "cycle", "status": type(e).__name__,
                                    "message": str(e)[:200]})
                     traceback.print_exc()
 
-        self._capture_dhan_all(N.now_utc_iso(), rid, counts, integ, errors)
+        timed("dhan", self._capture_dhan_all, N.now_utc_iso(), rid, counts, integ, errors)
 
         notes = (f"symbols={','.join(self.cfg['symbols'])}" if (sdk and auth_ok) else
                  "ANGEL_* credentials unavailable -> no AngelOne market rows written")
+        cycle_s = round(time.time() - t_cycle, 2); slow_sec = float(_env("CHANAKYA_HIST_SLOW_CYCLE_SEC", "120"))
+        notes += " | " + json.dumps({"cycle_s": cycle_s, "stage_s": stage, "greeks_unavailable": counts.get("greeks_unavailable", 0)}, sort_keys=True)     # visible per run: a silent greeks skip or a slow stage
         self.store.finish_run(rid, instruments_n=n_instr, counts=counts, integrity=integ,
                               errors=errors, notes=notes)
+        if cycle_s > slow_sec:                                                                       # alert: one log line per slow cycle, with the stage that ate the time
+            self.slow_cycles = getattr(self, "slow_cycles", 0) + 1
+            print(f"[histcap] SLOW cycle {cycle_s:.0f}s (> {slow_sec:.0f}s) stages={stage}", flush=True)
         self.last_run = {"run_id": rid, "auth_ok": bool(sdk and auth_ok), "instruments": n_instr, **counts,
                          "flagged": integ.get("flagged", 0), "rejected": len(integ.get("rejected", [])),
-                         "errors": len(errors)}
+                         "errors": len(errors), "cycle_s": cycle_s, "stage_s": stage, "slow": cycle_s > slow_sec}
 
         # derive Greek exposure from what this cycle just captured (read-only,
         # append-only, own tables). A failure here never affects the capture.
