@@ -22,4 +22,4 @@ DOW="$(date +%u)"
 [ "$DOW" -ge 6 ] && { echo "$(date '+%F %T') skip (weekend)"; exit 0; }
 
 echo "=== run $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
-./venv/bin/python scripts/hedging_scan.py
+nice -n 10 timeout 240 ./venv/bin/python scripts/hedging_scan.py
