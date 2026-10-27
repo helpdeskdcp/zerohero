@@ -12,3 +12,12 @@
   Pages that render the chart keep the library's TradingView attribution link visible (do not hide it with `attributionLogo: false`).
 - Dependency note: the standalone build bundles `fancy-canvas` 2.1.0 (declared npm dependency); no separate install is required.
 - Changes made by ZeroHero: none to the vendored file. To upgrade: repeat the download, integrity check and inspection above, then update this file.
+
+## Smart Chart bundle (Vela, Vela-PineTS, PineTS and their dependencies)
+- Files: `vendor/smartchart/smartchart-vendor.js` (built, not hand-vendored) plus licence material in the same directory.
+- Source: npm packages pinned in `backend/app/smart_chart/package.json` / `package-lock.json` (integrity hashes recorded in `vendor/smartchart/THIRD_PARTY_NOTICES.md`);
+  built by `backend/app/smart_chart/web/build.mjs` (esbuild). Restore with `npm ci`, rebuild with `npm run build:web`.
+- Licences: `@luxalgo/vela` Apache-2.0 (its NOTICE requires a visible attribution; the built-in watermark is left on and the page footer links Vela);
+  `@luxalgo/vela-pinets` and `pinets` AGPL-3.0-only; the remaining packages are MIT. Full texts: `vendor/smartchart/THIRD_PARTY_LICENSES.txt`,
+  `LICENSE-*.txt`, `NOTICE-vela.txt`. How AGPL-3.0 applies to this deployment is an open owner decision: see `backend/SMART_CHART.md` ("Licensing").
+- Changes made by ZeroHero to the upstream packages: none. To upgrade: bump the pins, `npm ci`, `npm run build:web`, review the regenerated notices, run the Smart Chart tests.

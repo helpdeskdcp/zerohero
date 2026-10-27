@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZeroHero Smart Chart</title>
+<style>
+:root{--bg:#0b1220;--fg:#e5e7eb;--mut:#94a3b8;--line:#1f2937;--card:#111827;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--acc:#60a5fa;--ed:#0d1424}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f8fafc;--fg:#0f172a;--mut:#64748b;--line:#e2e8f0;--card:#fff;--acc:#2563eb;--ed:#f1f5f9}}
+:root[data-theme="dark"]{--bg:#0b1220;--fg:#e5e7eb;--mut:#94a3b8;--line:#1f2937;--card:#111827;--ed:#0d1424}
+:root[data-theme="light"]{--bg:#f8fafc;--fg:#0f172a;--mut:#64748b;--line:#e2e8f0;--card:#fff;--acc:#2563eb;--ed:#f1f5f9}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--acc)}
+.mut{color:var(--mut)}.pos{color:var(--ok)}.neg{color:var(--bad)}.warn{color:var(--warn)}
+header.top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+header.top h1{font-size:16px;margin:0}
+header.top .sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--mut);display:inline-block}
+.pill.LIVE i,.pill.OK i{background:var(--ok)}.pill.DELAYED i,.pill.CLOSED i{background:var(--warn)}.pill.STALE i,.pill.ERROR i,.pill.DOWN i{background:var(--bad)}
+.pill.paper{color:var(--warn);border-color:var(--warn)}
+main.layout{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:12px;padding:12px 16px;align-items:start}
+@media (max-width:1100px){main.layout{grid-template-columns:1fr;padding:8px 16px}}
+#chartWrap{border:1px solid var(--line);border-radius:8px;background:var(--card);overflow:hidden;position:relative}
+#chart{height:calc(100vh - 150px);min-height:420px}
+@media (max-width:1100px){#chart{height:62vh;min-height:340px}}
+#attrib{font-size:11px;color:var(--mut);padding:4px 10px;border-top:1px solid var(--line)}
+#chartErr{padding:14px;color:var(--bad)}
+.side{min-width:0}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:8px;scrollbar-width:thin}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--mut);padding:8px 10px;font:inherit;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--acc)}
+.panel{display:none}.panel.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.card h3{margin:0 0 6px;font-size:13px}
+label.f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--mut);min-width:0}
+input,select,textarea,button{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0}
+button{cursor:pointer}button:hover:not(:disabled){border-color:var(--acc)}button:disabled{opacity:.5;cursor:not-allowed}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.sm{padding:2px 8px;font-size:12px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;margin:6px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;font-size:12px;vertical-align:top}th{color:var(--mut);font-weight:500}
+.tw{overflow-x:auto}
+.empty{color:var(--mut);padding:10px 4px;font-size:13px}
+.err{color:var(--bad);font-size:12px;margin:4px 0}
+.diag{font-size:12px;margin:2px 0;padding:3px 6px;border-left:3px solid var(--mut);cursor:pointer;background:var(--ed);border-radius:0 4px 4px 0}
+.diag.error{border-left-color:var(--bad)}.diag.warning{border-left-color:var(--warn)}.diag.info{border-left-color:var(--acc)}
+.diag b{font-weight:600}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.kv span:nth-child(odd){color:var(--mut)}
+.stat{background:var(--ed);border-radius:6px;padding:6px 8px}.stat small{display:block;color:var(--mut);font-size:11px}.stat b{font-size:15px}
+.badge{font-size:11px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--mut)}
+.badge.OK{color:var(--ok);border-color:var(--ok)}.badge.ERROR,.badge.HALTED{color:var(--bad);border-color:var(--bad)}.badge.RUNNING{color:var(--ok);border-color:var(--ok)}.badge.UNCOMPILED,.badge.STOPPED{color:var(--warn);border-color:var(--warn)}
+/* code editor: textarea over a highlighted <pre> mirror, with a line-number gutter */
+.ed{position:relative;display:flex;border:1px solid var(--line);border-radius:6px;background:var(--ed);height:340px;overflow:hidden}
+.ed .gut,.ed pre,.ed textarea{font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;tab-size:2;white-space:pre;margin:0;padding:6px 8px}
+.ed .gut{color:var(--mut);text-align:right;user-select:none;overflow:hidden;border-right:1px solid var(--line);min-width:38px;white-space:pre}
+.ed .code{position:relative;flex:1;min-width:0}
+.ed pre,.ed textarea{position:absolute;inset:0;overflow:auto;border:0;border-radius:0;background:transparent;width:100%;height:100%}
+.ed pre{pointer-events:none;color:var(--fg)}
+.ed textarea{color:transparent;caret-color:var(--fg);resize:none;outline:none}
+.ed textarea::selection{background:rgba(96,165,250,.35)}
+.tk-com{color:#6b7280}.tk-str{color:#a7f3d0}.tk-num{color:#fbbf24}.tk-kw{color:#c084fc}.tk-ns{color:#60a5fa}.tk-fn{color:#f472b6}.tk-ver{color:#fb923c}
+.ln-err{background:rgba(248,113,113,.18)}
+.eq{width:100%;height:90px;background:var(--ed);border-radius:6px}
+.eq path{fill:none;stroke:var(--acc);stroke-width:1.5}
+ul.plain{margin:4px 0;padding-left:18px;font-size:12px;color:var(--mut)}
+.banner{border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<header class="top">
+  <a href="/" title="Back to the dashboard">&larr; Dashboard</a>
+  <h1>Smart Chart</h1>
+  <span class="pill NONE" id="pillData" title="Market-data source and freshness"><i></i><span>Data: connecting…</span></span>
+  <span class="pill NONE" id="pillRuntime" title="Server-side Pine runtime (compile, backtest, paper)"><i></i><span>Pine runtime: checking…</span></span>
+  <span class="pill paper" title="No broker or order path exists in this feature">PAPER ONLY</span>
+  <span class="sp"></span>
+  <span class="mut" id="clock"></span>
+</header>
+
+<main class="layout">
+  <section>
+    <div id="chartWrap">
+      <div id="chart"></div>
+      <div id="chartErr" hidden></div>
+      <div id="attrib">Chart: <a href="https://velacharts.dev" target="_blank" rel="noopener">Vela&trade;</a> by LuxAlgo (Apache-2.0) · Pine runtime: <a href="https://github.com/LuxAlgo/PineTS" target="_blank" rel="noopener">PineTS</a> (AGPL-3.0, independent of TradingView; practical compatibility only) · Data: Upstox · <a href="/api/smart-chart/license" target="_blank">licences &amp; source</a></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="scripts" aria-selected="true">Scripts</button>
+      <button role="tab" data-tab="editor" aria-selected="false">Editor</button>
+      <button role="tab" data-tab="backtest" aria-selected="false">Backtest</button>
+      <button role="tab" data-tab="paper" aria-selected="false">Paper</button>
+      <button role="tab" data-tab="ai" aria-selected="false">AI Analysis</button>
+      <button role="tab" data-tab="about" aria-selected="false">Runtime</button>
+    </nav>
+
+    <!-- Scripts library -->
+    <div class="panel on" id="p-scripts">
+      <div class="row">
+        <label class="f" style="flex:1">Search<input id="scQ" placeholder="name or description" maxlength="80"></label>
+        <label class="f">Type<select id="scKind"><option value="">All</option><option value="indicator">Indicators</option><option value="strategy">Strategies</option></select></label>
+      </div>
+      <div class="row">
+        <label class="f" style="flex:1">New from template<select id="scTpl"></select></label>
+        <button id="scNew" class="pri">New</button>
+      </div>
+      <div id="scList"></div>
+      <div class="err" id="scErr"></div>
+    </div>
+
+    <!-- Editor -->
+    <div class="panel" id="p-editor">
+      <div class="grid2">
+        <label class="f">Name<input id="edName" maxlength="120"></label>
+        <label class="f">Type<select id="edKind"><option value="indicator">Indicator</option><option value="strategy">Strategy</option></select></label>
+      </div>
+      <label class="f" style="margin-top:6px">Description<input id="edDesc" maxlength="2000"></label>
+      <div class="ed" id="edBox" style="margin-top:8px"><div class="gut" id="edGut">1</div><div class="code"><pre id="edPre" aria-hidden="true"></pre><textarea id="edTa" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Pine Script source"></textarea></div></div>
+      <div class="row">
+        <button id="edSave" class="pri">Save</button><button id="edSaveAs">Save As…</button><button id="edCompile">Compile</button>
+        <button id="edAdd">Add to chart</button><button id="edFav" title="Pin to top of the library">☆</button>
+        <span class="mut" id="edMeta"></span>
+      </div>
+      <div id="edDiag"></div>
+      <div class="card" id="edInputsCard" hidden><h3>Inputs</h3><div id="edInputs"></div><div class="row"><button id="edApply" class="sm">Apply to chart &amp; save</button></div></div>
+      <div class="row"><label class="f">Version history<select id="edVer"></select></label><button id="edRestore" class="sm">Load version</button></div>
+    </div>
+
+    <!-- Backtest -->
+    <div class="panel" id="p-backtest">
+      <div class="banner">Simulation on past data — not a forecast, not a broker fill. Fills happen at the <b>next bar's open</b>; the forming bar is excluded.</div>
+      <div class="grid2">
+        <label class="f">Strategy<select id="btScript"></select></label>
+        <label class="f">Bars<input id="btBars" type="number" min="60" max="10000" value="3000"></label>
+        <label class="f">Initial capital<input id="btCap" type="number" min="1000" step="1000" value="100000"></label>
+        <label class="f">Commission % / side<input id="btComm" type="number" min="0" max="5" step="0.01" value="0.03"></label>
+        <label class="f">Slippage (ticks of 0.05)<input id="btSlip" type="number" min="0" max="1000" step="1" value="1"></label>
+        <label class="f">Check for look-ahead<select id="btCaus"><option value="1">Yes (re-runs on cut history)</option><option value="0">No</option></select></label>
+      </div>
+      <div class="row"><button id="btRun" class="pri">Run backtest on chart symbol</button><span class="mut" id="btCtx"></span></div>
+      <div class="err" id="btErr"></div>
+      <div id="btOut"></div>
+      <div class="card"><h3>Past backtests</h3><div id="btHist"></div></div>
+    </div>
+
+    <!-- Paper -->
+    <div class="panel" id="p-paper">
+      <div class="banner">PAPER TRADING ONLY — hypothetical positions. No order is ever sent to a broker; a BUY/SELL marker is not an order.</div>
+      <div class="card"><h3>New paper portfolio (forward-only: trades from now on)</h3>
+        <div class="grid2">
+          <label class="f">Strategy<select id="ppScript"></select></label>
+          <label class="f">Capital<input id="ppCap" type="number" min="1000" step="1000" value="100000"></label>
+          <label class="f">Commission % / side<input id="ppComm" type="number" min="0" max="5" step="0.01" value="0.03"></label>
+          <label class="f">Slippage (ticks)<input id="ppSlip" type="number" min="0" step="1" value="1"></label>
+          <label class="f">Daily loss limit (₹)<input id="ppLoss" type="number" min="0" step="500" value="5000"></label>
+          <label class="f">&nbsp;<button id="ppCreate" class="pri">Create for chart symbol</button></label>
+        </div><div class="err" id="ppErr"></div></div>
+      <div id="ppList"></div>
+      <div class="card" id="ppTradesCard" hidden><h3>Simulated trades <span class="mut" id="ppTradesFor"></span></h3><div class="tw" id="ppTrades"></div></div>
+    </div>
+
+    <!-- AI analysis -->
+    <div class="panel" id="p-ai">
+      <div class="row">
+        <label class="f" style="flex:1">Indicator script for signals (optional)<select id="aiScript"></select></label>
+        <label class="f">AI commentary<select id="aiOn"><option value="0">Off (deterministic only)</option><option value="1">On (uses the configured AI provider)</option></select></label>
+      </div>
+      <div class="row"><button id="aiRun" class="pri">Analyse chart symbol</button><button id="aiLevels" disabled>Plot reference levels on chart</button></div>
+      <div class="err" id="aiErr"></div>
+      <div id="aiOut" class="empty">Runs on closed candles only. Trend, structure and levels are computed deterministically; AI (optional) only comments on that summary.</div>
+    </div>
+
+    <!-- Runtime / capabilities -->
+    <div class="panel" id="p-about"><div id="abOut" class="empty">Loading…</div></div>
+  </aside>
+</main>
+
+<script src="/static/vendor/smartchart/smartchart-vendor.js"></script>
+<script src="/static/js/smartchart_core.js"></script>
+<script src="/static/js/smartchart.js"></script>
+</body>
+</html>
