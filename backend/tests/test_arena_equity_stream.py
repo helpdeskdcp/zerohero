@@ -91,3 +91,25 @@ def test_stream_sends_changes_then_ends_and_releases_its_slot(client, monkeypatc
     assert A._streams["INSTITUTION_TRADER"] == 0
     assert client.get("/api/arena/public/equity/stream", params={"symbols": "NOSUCH"}, headers=H).status_code == 404
     A._streams["INSTITUTION_TRADER"] = 6; assert client.get("/api/arena/public/equity/stream", params={"symbols": "RELIANCE"}, headers=H).status_code == 429
+
+
+def test_failover_to_upstox_only_when_angel_has_nothing_fresh_and_nse_is_open(monkeypatch):
+    feed = FakeFeed(); monkeypatch.setattr(EQ, "_ws_feed", lambda: feed); now = 1000.0
+    monkeypatch.setattr(EQ, "latest_quote", lambda s, path=None: None); calls = []
+    monkeypatch.setattr(EQ, "_upstox_ltp", lambda syms: (calls.append(list(syms)), {s: 55.5 for s in syms})[1]); monkeypatch.setattr(EQ, "_nse_open", lambda: True); monkeypatch.delenv("ARENA_EQUITY_FAILOVER", raising=False)
+    t = EQ.ticks(["RELIANCE"], sdk=FakeSdk(), now=now)["RELIANCE"]; assert t["src"] == "upstox" and t["ltp"] == 55.5 and t["bid"] is None and calls == [["RELIANCE"]]      # display price only: no bid / ask invented
+    feed.ltp["102"] = {"ltp": 100.4, "ts_ms": 0, "recv": now - 0.1}; calls.clear()
+    t = EQ.ticks(["RELIANCE"], sdk=FakeSdk(), now=now)["RELIANCE"]; assert t["src"] == "ws" and calls == []                                       # Angel fresh: the second broker is not asked
+    feed.ltp.clear(); monkeypatch.setattr(EQ, "_nse_open", lambda: False); assert EQ.ticks(["RELIANCE"], sdk=FakeSdk(), now=now)["RELIANCE"]["src"] is None and calls == []   # market closed: no failover
+    monkeypatch.setattr(EQ, "_nse_open", lambda: True); monkeypatch.setenv("ARENA_EQUITY_FAILOVER", "0"); assert EQ.ticks(["RELIANCE"], sdk=FakeSdk(), now=now)["RELIANCE"]["src"] is None   # kill switch
+    monkeypatch.delenv("ARENA_EQUITY_FAILOVER"); monkeypatch.setattr(EQ, "_upstox_ltp", lambda syms: (_ for _ in ()).throw(RuntimeError("down")))
+    before = EQ._src_stats["upstox"]["errors"]; assert EQ.ticks(["RELIANCE"], sdk=FakeSdk(), now=now)["RELIANCE"]["src"] is None and EQ._src_stats["upstox"]["errors"] == before + 1   # a failing backup never breaks the answer
+
+
+def test_upstox_ltp_maps_answers_by_instrument_token_and_caches(monkeypatch):
+    monkeypatch.setattr(EQ, "_up_keys", {"RELIANCE": "NSE_EQ|INE002A01018", "TCS": "NSE_EQ|INE467B01029"}); EQ._up_cache.clear(); n = []
+    from app.connectors import upstox as U
+    def fake(keys, token=None): n.append(keys); return {"json": {"data": {"NSE_EQ:RELIANCE": {"last_price": 1196.2, "instrument_token": "NSE_EQ|INE002A01018"}, "NSE_EQ:TCS": {"last_price": 2496.9, "instrument_token": "NSE_EQ|INE467B01029"}}}}
+    monkeypatch.setattr(U, "get_ltp", fake)
+    assert EQ._upstox_ltp(["RELIANCE", "TCS", "NOSUCH"]) == {"RELIANCE": 1196.2, "TCS": 2496.9} and len(n) == 1 and n[0].count(",") == 1
+    EQ._upstox_ltp(["RELIANCE"]); assert len(n) == 1                                                            # 2-second cache: no second request

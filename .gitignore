@@ -92,3 +92,8 @@ backend/data/**/*.db-shm
 backend/data/scanner/*.json.gz
 backend/data/historical/stocks_1m/pull.log
 backend/data/**/dataset.pkl
+
+# Smart Chart: npm deps are restored with `npm ci` in backend/app/smart_chart; the built browser bundle in frontend/static/vendor/smartchart IS committed
+backend/app/smart_chart/node_modules/
+backend/data/smart_chart.db*
+backend/data/upstox_nse_eq_keys.json

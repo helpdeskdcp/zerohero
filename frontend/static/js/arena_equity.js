@@ -49,7 +49,7 @@ function eqParseSse(buf) {
 }
 /* price of a symbol's tick for the entry field: the live last-traded price */
 function eqTickPrice(t) { return t && t.ltp != null && t.ltp > 0 ? Number(t.ltp) : null; }
-function eqSrcLabel(t) { return !t || t.src == null ? "no quote" : t.src === "ws" ? "live push" : "3 s tape" + (t.age_s != null ? ` · ${t.age_s}s old` : ""); }
+function eqSrcLabel(t) { return !t || t.src == null ? "no quote" : t.src === "ws" ? "live push" : t.src === "upstox" ? "backup feed (Upstox)" : "3 s tape" + (t.age_s != null ? ` · ${t.age_s}s old` : ""); }
 if (typeof module !== "undefined") module.exports = { eqValidate, eqAutoLevels, eqQuoteLine, eqParseSse, eqTickPrice, eqSrcLabel, EQ_MODES };
 
 

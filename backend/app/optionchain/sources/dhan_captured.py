@@ -16,9 +16,10 @@ def fetch(underlying, expiry, *, db_path=None, at_ts=None, expiry_dates=None):
     try:
         with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as c:
             c.row_factory = sqlite3.Row
-            latest = c.execute("SELECT received_ts FROM quote_snapshots WHERE symbol=? "
-                "AND kind='OPTION' AND source='DHAN_CHAIN' AND julianday(received_ts)<=julianday(?) "
-                "ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1", (underlying.upper(), cutoff)).fetchone()
+            from ...histcap.id_window import newest_matching      # bounded id window instead of sorting every OPTION row of the symbol (was 260 s per call)
+            latest = newest_matching(c, "received_ts", "symbol=? AND kind='OPTION' AND source='DHAN_CHAIN' AND julianday(received_ts)<=julianday(?)",
+                                     (underlying.upper(), cutoff), cutoff, order="julianday(received_ts) DESC, id DESC",
+                                     exists=("SELECT 1 FROM quote_snapshots INDEXED BY sqlite_autoindex_quote_snapshots_1 WHERE source='DHAN_CHAIN' AND symbol=? AND kind='OPTION' LIMIT 1", (underlying.upper(),)))
             if not latest:
                 return None
             session = rc.instant(cutoff if at_ts else latest[0]).astimezone(rc.IST).date().isoformat()

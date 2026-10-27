@@ -29,3 +29,4 @@ assert.strictEqual(Q.eqParseSse("retry: 1000\n\n").events.length, 0); assert.str
 assert.strictEqual(Q.eqTickPrice({ ltp: 101.5 }), 101.5); assert.strictEqual(Q.eqTickPrice({ ltp: null }), null); assert.strictEqual(Q.eqTickPrice(null), null);
 assert.strictEqual(Q.eqSrcLabel({ src: "ws" }), "live push"); assert.strictEqual(Q.eqSrcLabel({ src: "db", age_s: 2.1 }), "3 s tape · 2.1s old"); assert.strictEqual(Q.eqSrcLabel(null), "no quote");
 console.log("arena_equity stream helpers: ok");
+assert.strictEqual(Q.eqSrcLabel({ src: "upstox" }), "backup feed (Upstox)"); console.log("failover label: ok");

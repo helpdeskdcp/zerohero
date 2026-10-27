@@ -2,6 +2,8 @@
 Read-only broker calls through the shared market SDK; nothing here can place an order."""
 from __future__ import annotations
 
+import json
+import os
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -101,7 +103,7 @@ def search(q: str, limit: int = 12, sdk=None) -> list[dict]:
 # ----------------------------------------------------------------------------- live ticks (quote router)
 _want: dict = {}                       # symbol -> last time a screen asked for it (epoch); idle symbols are dropped from the websocket after IDLE_SEC
 IDLE_SEC, MAX_WATCH = 120.0, 40
-_src_stats = {"ws": {"hits": 0, "errors": 0}, "db": {"hits": 0, "errors": 0}}
+_src_stats = {"ws": {"hits": 0, "errors": 0}, "db": {"hits": 0, "errors": 0}, "upstox": {"hits": 0, "errors": 0}}
 EQ_OWNER = "arena_equity"
 
 
@@ -138,11 +140,74 @@ def ticks(symbols: list[str], *, path: str | None = None, sdk=None, now: float |
         w = feed.ltp.get(r["token"]) if (feed is not None and r) else None
         if w and now - w["recv"] <= 5.0 and (rec["t"] is None or w["recv"] >= rec["t"]):
             rec.update(ltp=w["ltp"], t=w["recv"], src="ws"); _src_stats["ws"]["hits"] += 1
-        if rec["t"] is not None: rec["age_s"] = round(now - rec["t"], 2)
         out[s] = rec
+    stale = [s for s, r in out.items() if r["t"] is None or now - r["t"] > FAILOVER_AGE_SEC]
+    if stale and _failover_enabled() and _nse_open():                                                            # nothing fresh from Angel while the market is open: ask the second broker
+        try:
+            for s, p in _upstox_ltp(stale).items():
+                out[s].update(ltp=p, t=now, src="upstox"); _src_stats["upstox"]["hits"] += 1
+        except Exception:
+            _src_stats["upstox"]["errors"] += 1
+    for r in out.values():
+        if r["t"] is not None: r["age_s"] = round(now - r["t"], 2)
     return out
 
 
 def source_status() -> dict:
     f = _ws_feed()
     return {"ws_connected": bool(f is not None and getattr(f, "connected", False)), "watching": len(_want), "stats": _src_stats}
+
+
+# ----------------------------------------------------------------------------- display-only failover: Upstox last price
+# Used ONLY when neither the Angel websocket nor the 3-second tape has a price newer than FAILOVER_AGE_SEC while NSE is open. It feeds the order ticket's number and nothing else:
+# settlement keeps reading the captured Angel tape, so a second broker's prices never enter a contest result. Kill switch ARENA_EQUITY_FAILOVER=0.
+FAILOVER_AGE_SEC = 10.0
+_UP_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "upstox_nse_eq_keys.json")
+_UP_URL = "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz"
+_up_keys: dict | None = None; _up_cache: dict = {}; _up_lock = threading.Lock()
+
+
+def _upstox_keys() -> dict:
+    """{NSE symbol: Upstox instrument_key} for cash equity, from Upstox's public instrument file; cached on disk for 7 days."""
+    global _up_keys
+    if _up_keys is not None: return _up_keys
+    with _up_lock:
+        if _up_keys is not None: return _up_keys
+        try:
+            if os.path.exists(_UP_FILE) and time.time() - os.path.getmtime(_UP_FILE) < 7 * 86400:
+                _up_keys = json.load(open(_UP_FILE)); return _up_keys
+        except Exception:
+            pass
+        import gzip, requests
+        r = requests.get(_UP_URL, timeout=30); r.raise_for_status()
+        rows = json.loads(gzip.decompress(r.content))
+        keys = {x["trading_symbol"].upper(): x["instrument_key"] for x in rows if x.get("segment") == "NSE_EQ" and x.get("instrument_type") == "EQ" and x.get("instrument_key") and x.get("trading_symbol")}
+        os.makedirs(os.path.dirname(_UP_FILE), exist_ok=True); tmp = _UP_FILE + ".tmp"; json.dump(keys, open(tmp, "w")); os.replace(tmp, _UP_FILE); _up_keys = keys
+    return _up_keys
+
+
+def _upstox_ltp(symbols: list[str]) -> dict:
+    """{symbol: last_price} from Upstox (one request for all symbols; each answer cached 2 s). Raises on any failure; the caller treats that as 'no failover price'."""
+    now = time.time(); out = {}; need = [s for s in symbols if not (_up_cache.get(s) and now - _up_cache[s][0] < 2.0)]
+    if need:
+        keys = _upstox_keys(); ik = {s: keys[s] for s in need if s in keys}
+        if ik:
+            from ..connectors import upstox as U
+            j = (U.get_ltp(",".join(ik.values())).get("json") or {}).get("data") or {}
+            by_tok = {v.get("instrument_token"): v.get("last_price") for v in j.values() if isinstance(v, dict)}
+            for s, k in ik.items():
+                p = by_tok.get(k)
+                if p: _up_cache[s] = (now, float(p))
+    return {s: _up_cache[s][1] for s in symbols if _up_cache.get(s) and now - _up_cache[s][0] < 5.0}
+
+
+def _failover_enabled() -> bool:
+    return os.environ.get("ARENA_EQUITY_FAILOVER", "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def _nse_open() -> bool:
+    try:
+        from .. import market_calendar as mc
+        return bool(mc.is_trading("NSE"))
+    except Exception:
+        return False
