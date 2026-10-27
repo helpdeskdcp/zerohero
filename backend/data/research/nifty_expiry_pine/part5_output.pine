@@ -1,0 +1,265 @@
+
+// ───────────────────────────────────────── 20 CHART OUTPUT (levels, zones, events) ───────────────────────────────────
+plot(i_showLvls ? prevH : na, "Prev-day high", color=color.new(color.orange, 20), style=plot.style_linebr, linewidth=1)
+plot(i_showLvls ? prevL : na, "Prev-day low", color=color.new(color.orange, 20), style=plot.style_linebr, linewidth=1)
+plot(i_showLvls ? prevC : na, "Prev-day close", color=color.new(color.gray, 40), style=plot.style_linebr, linewidth=1)
+plot(i_showLvls and orDone ? orH : na, "Opening range high", color=color.new(color.aqua, 30), style=plot.style_linebr)
+plot(i_showLvls and orDone ? orL : na, "Opening range low", color=color.new(color.aqua, 30), style=plot.style_linebr)
+plot(i_showLvls ? vwapLine : na, "VWAP / TWAP", color=color.new(color.purple, 20), linewidth=1)
+
+var array<box> zBoxes = array.new<box>()
+if isNewDay and i_showLvls
+    while array.size(zBoxes) > 0
+        box.delete(array.pop(zBoxes))
+    for z = 0 to 4
+        float lo = array.get(sLo, z)
+        if not na(lo)
+            array.push(zBoxes, box.new(bar_index, array.get(sHi, z), bar_index + 76, lo, border_color=color.new(i_cBull, 40), bgcolor=color.new(i_cBull, 90), text="S:" + array.get(zNames, z), text_size=size.tiny, text_color=color.new(i_cBull, 20)))
+        float rl = array.get(rLo, z)
+        if not na(rl)
+            array.push(zBoxes, box.new(bar_index, array.get(rHi, z), bar_index + 76, rl, border_color=color.new(i_cBear, 40), bgcolor=color.new(i_cBear, 90), text="R:" + array.get(zNames, z), text_size=size.tiny, text_color=color.new(i_cBear, 20)))
+
+plotshape(sigBull, "CE signal", shape.triangleup, location.belowbar, color=i_cBull, size=size.small, text="CE")
+plotshape(sigBear, "PE signal", shape.triangledown, location.abovebar, color=i_cBear, size=size.small, text="PE")
+if i_showLbl
+    if bosUp
+        label.new(bar_index, low, "BOS↑", style=label.style_label_up, color=color.new(i_cBull, 60), textcolor=i_cHead, size=size.tiny)
+    if chochUp
+        label.new(bar_index, low, "CHoCH↑", style=label.style_label_up, color=color.new(i_cBull, 40), textcolor=i_cHead, size=size.tiny)
+    if bosDn
+        label.new(bar_index, high, "BOS↓", style=label.style_label_down, color=color.new(i_cBear, 60), textcolor=i_cHead, size=size.tiny)
+    if chochDn
+        label.new(bar_index, high, "CHoCH↓", style=label.style_label_down, color=color.new(i_cBear, 40), textcolor=i_cHead, size=size.tiny)
+    if sweepLo
+        label.new(bar_index, low, "SWEEP LOW", style=label.style_label_up, color=color.new(color.teal, 50), textcolor=i_cHead, size=size.tiny)
+    if sweepHi
+        label.new(bar_index, high, "SWEEP HIGH", style=label.style_label_down, color=color.new(color.maroon, 50), textcolor=i_cHead, size=size.tiny)
+    if stressBull and not nz(stressBull[1])
+        label.new(bar_index, low, "POTENTIAL SELLER STRESS (call side)", style=label.style_label_up, color=color.new(i_cBull, 30), textcolor=i_cHead, size=size.tiny)
+    if stressBear and not nz(stressBear[1])
+        label.new(bar_index, high, "POTENTIAL SELLER STRESS (put side)", style=label.style_label_down, color=color.new(i_cBear, 30), textcolor=i_cHead, size=size.tiny)
+    if isNewDay and not na(gapPts)
+        label.new(bar_index, high, gapClass + str.format(" {0,number,0.0}pts ({1,number,0.00}%)", gapPts, gapPct), style=label.style_label_down, color=color.new(color.gray, 50), textcolor=i_cHead, size=size.tiny)
+
+// Data-window series (no chart clutter): export/inspect every evidence component bar by bar.  TradingView allows 64 plots per script, so related
+// flags are packed into one number (base-3 for -1/0/+1 components); scripts/pine_nifty_audit.py unpacks them.
+//   compPack = sum((e_k + 1) * 3^k), k = HTF, gap, levels, opening, structure, sweep, volume, momentum, vwap, premium, OI
+//   htfPack  = sum((vote_k + 1) * 3^k) for the four HTF votes
+float compPack = (htfEv + 1) + 3 * (gapEv + 1) + 9 * (lvlEv + 1) + 27 * (openEv + 1) + 81 * (structEv + 1) + 243 * (sweepEv + 1) + 729 * (volEv + 1) + 2187 * (momEv + 1) + 6561 * (vwapEv + 1) + 19683 * (premEv + 1) + 59049 * (oiEv + 1)
+float htfPack = (v1 + 1) + 3 * (v2 + 1) + 9 * (v3 + 1) + 27 * (v4 + 1)
+plot(netIdx, "Evidence index (net)", display=display.data_window)
+plot(bullIdx, "Evidence bull", display=display.data_window)
+plot(bearIdx, "Evidence bear", display=display.data_window)
+plot(nActive, "Active components", display=display.data_window)
+plot(compPack, "Components pack", display=display.data_window)
+plot(htfPack, "HTF votes pack", display=display.data_window)
+plot(scn, "Gap scenario code", display=display.data_window)
+plot(scnValid ? 1 : 0, "Scenario validated", display=display.data_window)
+plot(gapAtr, "Gap / daily ATR", display=display.data_window)
+plot(gapPts, "Gap points", display=display.data_window)
+plot(dailyATR, "Daily ATR", display=display.data_window)
+plot(gapClass == "FLAT" ? 0 : gapClass == "GAP UP" ? 1 : gapClass == "GAP DOWN" ? -1 : gapClass == "EXCEPTIONAL UP" ? 2 : gapClass == "EXCEPTIONAL DOWN" ? -2 : na, "Gap class code", display=display.data_window)
+plot((bosUp ? 1 : 0) + (bosDn ? 2 : 0) + (chochUp ? 4 : 0) + (chochDn ? 8 : 0) + (sweepHi ? 16 : 0) + (sweepLo ? 32 : 0) + (fbUp ? 64 : 0) + (fbDn ? 128 : 0) + (retestUp ? 256 : 0) + (retestDn ? 512 : 0), "Event bits", display=display.data_window)
+plot((fvgBull ? 1 : 0) - (fvgBear ? 1 : 0), "FVG formed (+1 bull / -1 bear)", display=display.data_window)
+plot(fvgBullOpen, "Open bull FVG", display=display.data_window)
+plot(fvgBearOpen, "Open bear FVG", display=display.data_window)
+plot((stressBull ? 1 : 0) + (stressBear ? 2 : 0), "Stress flags (1 bull, 2 bear)", display=display.data_window)
+plot((stressBullZone + 1) * 10 + (stressBearZone + 1), "Stress zone slots", display=display.data_window)
+plot(proxyDir, "Candle/volume proxy dir", display=display.data_window)
+plot(bullState ? 1 : bearState ? -1 : 0, "Setup state (+1/-1)", display=display.data_window)
+plot(sigBull ? 1 : sigBear ? -1 : 0, "Signal (+1 CE / -1 PE)", display=display.data_window)
+plot(slBull, "Planned SL (CE)", display=display.data_window)
+plot(slBear, "Planned SL (PE)", display=display.data_window)
+plot(riskBull, "Risk CE (pts)", display=display.data_window)
+plot(riskBear, "Risk PE (pts)", display=display.data_window)
+plot(bullN, "Tracker bull resolved", display=display.data_window)
+plot(bullW, "Tracker bull wins", display=display.data_window)
+plot(bullTO, "Tracker bull timeouts", display=display.data_window)
+plot(bearN, "Tracker bear resolved", display=display.data_window)
+plot(bearW, "Tracker bear wins", display=display.data_window)
+plot(bearTO, "Tracker bear timeouts", display=display.data_window)
+plot(tradesToday, "Trades today", display=display.data_window)
+plot(dayBar, "Bar of day", display=display.data_window)
+plot(dayHalt ? 1 : 0, "Day halted", display=display.data_window)
+plot(orH, "Ref orH", display=display.data_window)
+plot(orL, "Ref orL", display=display.data_window)
+plot(atr, "Ref ATR", display=display.data_window)
+plot(rsi, "Ref RSI", display=display.data_window)
+plot(swH, "Ref swing high", display=display.data_window)
+plot(swL, "Ref swing low", display=display.data_window)
+
+// ───────────────────────────────────────── 21 DASHBOARD ──────────────────────────────────────────────────────────────
+var table dash = table.new(f_pos(i_dashPos), 2, 26, bgcolor=color.new(i_cBg, i_bgTransp), border_color=i_cBorder, border_width=i_borderW, frame_color=i_cBorder, frame_width=i_borderW)
+f_row(int r, string a, string b, color c) =>
+    table.cell(dash, 0, r, a, text_color=i_cNeu, text_size=f_size(i_dashSize), text_halign=text.align_left, bgcolor=color.new(i_cBg, i_bgTransp))
+    table.cell(dash, 1, r, b, text_color=c, text_size=f_size(i_dashSize), text_halign=text.align_left, bgcolor=color.new(i_cBg, i_bgTransp))
+f_col(int s) => s > 0 ? i_cBull : s < 0 ? i_cBear : i_cNeu
+f_n(x, fmt) => na(x) ? "-" : str.tostring(x, fmt)
+f_sg(x) => na(x) ? "-" : (x >= 0 ? "+" : "") + str.tostring(x, "#.#")
+
+int  decision = bullState and gatesOk and rrBullOk ? 1 : bearState and gatesOk and rrBearOk ? -1 : 0
+string decTxt = strategy.position_size > 0 ? "IN CE (long)" : strategy.position_size < 0 ? "IN PE (short)" : decision > 0 ? "CE (bullish setup)" : decision < 0 ? "PE (bearish setup)" : "WAIT / NO TRADE"
+// candidate (or live) plan numbers
+float shEntry = strategy.position_size != 0 ? posEntry : close
+float shStop  = strategy.position_size != 0 ? posStop : (decision > 0 ? slBull : decision < 0 ? slBear : na)
+int   shDir   = strategy.position_size != 0 ? posDir : decision
+float shRisk  = na(shStop) ? na : math.abs(shEntry - shStop)
+float shT1 = shDir != 0 and not na(shRisk) ? shEntry + shDir * i_rr1 * shRisk : na
+float shT2 = shDir != 0 and not na(shRisk) ? shEntry + shDir * i_rr2 * shRisk : na
+float shT3 = shDir != 0 and not na(shRisk) ? shEntry + shDir * i_rr3 * shRisk : na
+string htfTxt = str.format("{0}:{1}  {2}:{3}  {4}:{5}  {6}:{7}", i_tf1, ok1 ? str.tostring(v1) : "x", i_tf2, ok2 ? str.tostring(v2) : "x", i_tf3, ok3 ? str.tostring(v3) : "x", i_tf4, ok4 ? str.tostring(v4) : "x") + "  =>  " + (htfEv > 0 ? "BULL" : htfEv < 0 ? "BEAR" : "MIXED")
+string orTxt = not orDone ? "forming " + f_n(orH, "#.#") + " / " + f_n(orL, "#.#") : "H " + f_n(orH, "#.#") + " / L " + f_n(orL, "#.#") + (orBrk == 0 ? "  inside" : orFail ? "  BREAK FAILED" : orBrk > 0 ? "  BREAKOUT UP" : "  BREAKDOWN")
+string zoneS = "-"
+string zoneR = "-"
+float bestSW = 0.0
+float bestRW = 0.0
+for z = 0 to 4
+    if not na(array.get(sLo, z)) and array.get(sW, z) > bestSW
+        bestSW := array.get(sW, z)
+        int bs = array.get(sBrk, z)
+        zoneS := array.get(zNames, z) + " " + f_n(array.get(sK, z), "#.#") + (bs == 1 ? " BROKEN - may now act as RESISTANCE" : bs == 2 ? " reclaimed" : " intact") + " | tests " + str.tostring(array.get(sResp, z)) + " | price " + f_sg(close - array.get(sK, z)) + " pts from strike | open was " + openVsS
+    if not na(array.get(rLo, z)) and array.get(rW, z) > bestRW
+        bestRW := array.get(rW, z)
+        int br = array.get(rBrk, z)
+        zoneR := array.get(zNames, z) + " " + f_n(array.get(rK, z), "#.#") + (br == 1 ? " BROKEN - may now act as SUPPORT" : br == 2 ? " reclaimed" : " intact") + " | tests " + str.tostring(array.get(rResp, z)) + " | price " + f_sg(close - array.get(rK, z)) + " pts from strike | open was " + openVsR
+string stressTxt = stressBull ? "POTENTIAL SELLER STRESS - call side (" + array.get(zNames, math.max(stressBullZone, 0)) + " broke up, holding)" : stressBear ? "POTENTIAL SELLER STRESS - put side (" + array.get(zNames, math.max(stressBearZone, 0)) + " broke down, holding)" : "none"
+string structTxt = (trendS > 0 ? "up" : trendS < 0 ? "down" : "undefined") + (structEv > 0 ? " | recent BOS/CHoCH up" : structEv < 0 ? " | recent BOS/CHoCH down" : "") + (sweepEv > 0 ? " | sweep LOW" : sweepEv < 0 ? " | sweep HIGH" : "")
+string premTxt = ceOk and peOk ? "CE " + f_n(ceC, "#.##") + (ceUp ? " up" : ceDn ? " dn" : " flat") + " rsi " + f_n(ceRsi, "#") + (ceC > ceVw ? " >vwap" : " <vwap") + " | PE " + f_n(peC, "#.##") + (peUp ? " up" : peDn ? " dn" : " flat") + " rsi " + f_n(peRsi, "#") + (peC > peVw ? " >vwap" : " <vwap") + " | ev " + str.tostring(premEv) + " | spread: UNAVAILABLE in Pine" : (ceSel or peSel) ? "PARTIAL: select BOTH contracts" : "OPTION DATA UNAVAILABLE - pick CE and PE symbols manually"
+string premPlan = "-"
+if decision > 0 and ceOk
+    float pr = i_prAtrM * ceAtr
+    premPlan := "CE " + f_n(ceC, "#.##") + " SL " + f_n(ceC - pr, "#.##") + " T1 " + f_n(ceC + i_rr1 * pr, "#.##") + " T2 " + f_n(ceC + i_rr2 * pr, "#.##") + " (premium ATR " + f_n(ceAtr, "#.##") + ")"
+else if decision < 0 and peOk
+    float pr2 = i_prAtrM * peAtr
+    premPlan := "PE " + f_n(peC, "#.##") + " SL " + f_n(peC - pr2, "#.##") + " T1 " + f_n(peC + i_rr1 * pr2, "#.##") + " T2 " + f_n(peC + i_rr2 * pr2, "#.##") + " (premium ATR " + f_n(peAtr, "#.##") + ")"
+else if (decision != 0) and not (ceOk and peOk)
+    premPlan := "OPTION DATA UNAVAILABLE"
+
+if barstate.islast and i_dashOn
+    int r = 0
+    f_row(r, "NXI | paper analysis only", decTxt, strategy.position_size > 0 or decision > 0 ? i_cBull : strategy.position_size < 0 or decision < 0 ? i_cBear : i_cNeu)
+    r += 1
+    f_row(r, "Why / blocked", decision != 0 or strategy.position_size != 0 ? lastEntryWhy == "-" ? (decision > 0 ? whyBull : whyBear) : lastEntryWhy : (noTradeWhy != "" ? noTradeWhy : "no trigger + evidence yet"), i_cGen)
+    r += 1
+    f_row(r, "Entry / SL", shDir == 0 ? "-" : f_n(shEntry, "#.#") + " / " + f_n(shStop, "#.#") + "  risk " + f_n(shRisk, "#.#") + " pts = " + f_n(shRisk * (strategy.position_size != 0 ? posQty : (shDir > 0 ? qtyBull : qtyBear)), "#") + " acct ccy | trail: " + (i_trailBE ? "BE after T1, T1 after T2" : "off"), i_cGen)
+    r += 1
+    f_row(r, "T1 / T2 / T3", shDir == 0 ? "-" : f_n(shT1, "#.#") + " / " + f_n(shT2, "#.#") + " / " + f_n(shT3, "#.#") + "  (" + str.tostring(i_rr1) + "R/" + str.tostring(i_rr2) + "R/" + str.tostring(i_rr3) + "R)", i_cGen)
+    r += 1
+    f_row(r, "Evidence index", "bull " + str.tostring(bullIdx, "#.##") + " | bear " + str.tostring(bearIdx, "#.##") + " | NET " + str.tostring(netIdx, "#.##") + "  (" + str.tostring(nActive) + " active / " + str.tostring(nAvail) + " avail) - not a probability", f_col(netIdx >= i_entryThr ? 1 : netIdx <= -i_entryThr ? -1 : 0))
+    r += 1
+    if not i_compact
+        f_row(r, "Components", breakdown, i_cGen)
+        r += 1
+    f_row(r, "Probability", (netIdx >= 0 ? "CE: " + probBull : "PE: " + probBear), i_cNeu)
+    r += 1
+    f_row(r, "Trend (HTF votes)", htfTxt, f_col(htfEv))
+    r += 1
+    f_row(r, "Gap", gapClass + (na(gapPts) ? "" : str.format("  {0,number,0.0} pts | {1,number,0.00}% | {2,number,0.00} dATR", gapPts, gapPct, nz(gapAtr))), gapSign > 0 ? i_cBull : gapSign < 0 ? i_cBear : i_cNeu)
+    r += 1
+    f_row(r, "Scenario", scnText, f_col(scnSign))
+    r += 1
+    if not i_compact
+        f_row(r, "1st 5m candle", fcText + " | 2nd: " + openStatus, f_col(openEv != 0 ? openEv : fcSign))
+        r += 1
+        f_row(r, "Opening range", orTxt, f_col(orBrk))
+        r += 1
+        f_row(r, "Prev day H/L/C/VW", f_n(prevH, "#.#") + " / " + f_n(prevL, "#.#") + " / " + f_n(prevC, "#.#") + " / " + f_n(prevVw, "#.#") + "   dist(H) " + f_n(prevH - close, "#.#") + " dist(L) " + f_n(close - prevL, "#.#") + " dist(C) " + f_n(close - prevC, "#.#") + (na(fcFill) ? "" : " | 1st candle moved " + str.tostring(fcFill * 100, "#") + "% of the gap toward prev close (negative = away)"), i_cGen)
+        r += 1
+    f_row(r, "Support zone", zoneS, i_cBull)
+    r += 1
+    f_row(r, "Resistance zone", zoneR, i_cBear)
+    r += 1
+    if not i_compact
+        f_row(r, "OI data status", oiStatus + oiOrderWarn + (i_oiExpiry != "" ? " | exp " + i_oiExpiry : ""), oiProvided ? i_cGen : i_cNeu)
+        r += 1
+        f_row(r, "Structure / sweep", structTxt, f_col(structEv != 0 ? structEv : sweepEv))
+        r += 1
+    f_row(r, "Seller-stress", stressTxt, stressBull ? i_cBull : stressBear ? i_cBear : i_cNeu)
+    r += 1
+    f_row(r, "CANDLE/VOLUME PROXY", proxyDir > 0 ? "bullish impulse " + str.tostring(pxBull) + "/6" : proxyDir < 0 ? "bearish impulse " + str.tostring(pxBear) + "/6" : "none", f_col(proxyDir))
+    r += 1
+    f_row(r, "CE/PE premium", premTxt, f_col(premEv))
+    r += 1
+    if not i_compact
+        f_row(r, "Premium plan", premPlan, i_cGen)
+        r += 1
+    f_row(r, "Data quality", "vol " + (volAvail ? "OK" : "UNAVAILABLE (no volume on chart)") + " | " + vwapName + " | tf " + (onFiveMin ? "5m OK" : "NOT 5m") + " | NEWS AI NOT CONNECTED | REAL ORDER BOOK NOT CONNECTED", i_cNeu)
+    r += 1
+    f_row(r, "Risk state", "trades " + str.tostring(tradesToday) + "/" + str.tostring(i_maxTrades) + " | day P&L " + f_n(dayPL, "#.#") + " (acct ccy, limit -" + str.tostring(i_maxLoss, "#") + ")" + (dayHalt ? " | HALTED" : "") + (bar_index < coolUntil ? " | cooldown" : "") + " | last exit " + lastExit, dayHalt ? i_cBear : i_cNeu)
+    r += 1
+    f_row(r, "Expiry session", (isExpiry ? "YES" : "no") + " (assumed " + i_expDow + (i_expForce ? ", FORCED" : "") + ")", isExpiry ? i_cBull : i_cNeu)
+
+// ───────────────────────────────────────── 22 BACKTEST STATISTICS PANEL ──────────────────────────────────────────────
+// Aggregates per ENTRY (partial exits of one entry are summed) from the Strategy Tester's own closed-trade list.
+f_agg(array<float> pnl, array<string> cm, array<int> et, string tag, int oosMode) =>
+    int n = 0
+    int w = 0
+    float net = 0.0
+    float gw = 0.0
+    float gl = 0.0
+    for i = 0 to math.max(array.size(pnl) - 1, 0)
+        bool ok = i < array.size(pnl) and (tag == "" or str.contains(array.get(cm, i), tag)) and (oosMode == 0 or (oosMode == 1 and array.get(et, i) < i_oosDate) or (oosMode == 2 and array.get(et, i) >= i_oosDate))
+        if ok
+            float p = array.get(pnl, i)
+            n += 1
+            net += p
+            if p > 0
+                w += 1
+                gw += p
+            else
+                gl += -p
+    [n, w, net, gw, gl]
+f_fmt(int n, int w, float net, float gw, float gl) =>
+    n == 0 ? "no trades" : str.tostring(n) + " trades | win " + str.tostring(w * 100.0 / n, "#") + "% | net " + str.tostring(net, "#") + " | PF " + (gl > 0 ? str.tostring(gw / gl, "#.##") : (gw > 0 ? "inf" : "-")) + " | exp/trade " + str.tostring(net / n, "#.#") + " | avg win " + (w > 0 ? str.tostring(gw / w, "#") : "-") + " / avg loss " + (n - w > 0 ? str.tostring(-gl / (n - w), "#") : "-")
+
+var table stat = table.new(position.bottom_left, 2, 14, bgcolor=color.new(i_cBg, i_bgTransp), border_color=i_cBorder, border_width=i_borderW, frame_color=i_cBorder, frame_width=i_borderW)
+if barstate.islast and i_showStats
+    array<float> ePnl = array.new<float>()
+    array<string> eCm = array.new<string>()
+    array<int> eT = array.new<int>()
+    int nCt = strategy.closedtrades
+    float sumProfit = 0.0
+    if nCt > 0
+        for i = 0 to math.min(nCt, 800) - 1
+            int et = strategy.closedtrades.entry_time(i)
+            float pr = strategy.closedtrades.profit(i)
+            sumProfit += pr
+            int ix = array.indexof(eT, et)
+            if ix < 0
+                array.push(eT, et)
+                array.push(ePnl, pr)
+                array.push(eCm, strategy.closedtrades.entry_comment(i))
+            else
+                array.set(ePnl, ix, array.get(ePnl, ix) + pr)
+    [nA, wA, netA, gwA, glA] = f_agg(ePnl, eCm, eT, "", 0)
+    [nC, wC, netC, gwC, glC] = f_agg(ePnl, eCm, eT, "CE|", 0)
+    [nP, wP, netP, gwP, glP] = f_agg(ePnl, eCm, eT, "PE|", 0)
+    [nE, wE, netE, gwE, glE] = f_agg(ePnl, eCm, eT, "EXP1", 0)
+    [nN, wN, netN, gwN, glN] = f_agg(ePnl, eCm, eT, "EXP0", 0)
+    [nGU, wGU, netGU, gwGU, glGU] = f_agg(ePnl, eCm, eT, "|GU|", 0)
+    [nGD, wGD, netGD, gwGD, glGD] = f_agg(ePnl, eCm, eT, "|GD|", 0)
+    [nFL, wFL, netFL, gwFL, glFL] = f_agg(ePnl, eCm, eT, "|FL|", 0)
+    [nIS, wIS, netIS, gwIS, glIS] = f_agg(ePnl, eCm, eT, "", 1)
+    [nOS, wOS, netOS, gwOS, glOS] = f_agg(ePnl, eCm, eT, "", 2)
+    table.cell(stat, 0, 0, "BACKTEST (per entry, after declared costs)", text_color=i_cHead, text_size=f_size(i_dashSize), text_halign=text.align_left)
+    table.cell(stat, 1, 0, "index-proxy test, NOT option P&L; commission 0.015%/side + 10-tick slippage", text_color=i_cNeu, text_size=f_size(i_dashSize), text_halign=text.align_left)
+    string labels = "All|CE (long)|PE (short)|Expiry sessions|Non-expiry|Gap up|Gap down|Flat open|Before OOS date|From OOS date"
+    array<string> lb = str.split(labels, "|")
+    string v0 = f_fmt(nA, wA, netA, gwA, glA)
+    string v1s = f_fmt(nC, wC, netC, gwC, glC)
+    string v2s = f_fmt(nP, wP, netP, gwP, glP)
+    string v3s = f_fmt(nE, wE, netE, gwE, glE)
+    string v4s = f_fmt(nN, wN, netN, gwN, glN)
+    string v5s = f_fmt(nGU, wGU, netGU, gwGU, glGU)
+    string v6s = f_fmt(nGD, wGD, netGD, gwGD, glGD)
+    string v7s = f_fmt(nFL, wFL, netFL, gwFL, glFL)
+    string v8s = f_fmt(nIS, wIS, netIS, gwIS, glIS)
+    string v9s = f_fmt(nOS, wOS, netOS, gwOS, glOS)
+    array<string> vals = array.from(v0, v1s, v2s, v3s, v4s, v5s, v6s, v7s, v8s, v9s)
+    for k = 0 to 9
+        table.cell(stat, 0, k + 1, array.get(lb, k), text_color=i_cNeu, text_size=f_size(i_dashSize), text_halign=text.align_left)
+        table.cell(stat, 1, k + 1, array.get(vals, k), text_color=i_cGen, text_size=f_size(i_dashSize), text_halign=text.align_left)
+    table.cell(stat, 0, 11, "Max drawdown / recon", text_color=i_cNeu, text_size=f_size(i_dashSize), text_halign=text.align_left)
+    table.cell(stat, 1, 11, str.tostring(strategy.max_drawdown, "#") + " | sum(trade P&L) vs netprofit diff " + str.tostring(sumProfit - strategy.netprofit, "#.##") + (nCt > 800 ? " (list capped at 800)" : ""), text_color=i_cGen, text_size=f_size(i_dashSize), text_halign=text.align_left)
+    table.cell(stat, 0, 12, "Caveats", text_color=i_cNeu, text_size=f_size(i_dashSize), text_halign=text.align_left)
+    table.cell(stat, 1, 12, "history has no OI zones (price levels only) | no option P&L | in-sample unless you split by date", text_color=i_cNeu, text_size=f_size(i_dashSize), text_halign=text.align_left)

@@ -1,0 +1,303 @@
+
+// ───────────────────────────────────── 03 CLOCK, SESSIONS, PREVIOUS DAY, GAP ─────────────────────────────────────
+// All session logic uses the exchange clock (NSE: Asia/Kolkata). Nothing here looks ahead: a day's values are final only
+// once the next day's first bar appears, and they are used only from that bar on.
+int  minOfDay   = hour * 60 + minute
+int  sessOpen   = 9 * 60 + 15
+bool tfChgD     = timeframe.change("D")          // evaluated on every bar (ta/timeframe functions must not sit behind a lazy `or`)
+bool isNewDay   = barstate.isfirst or tfChgD
+bool onFiveMin  = timeframe.in_seconds() == 300
+
+var float dayO = na, var float dayH = na, var float dayL = na, var float dayC = na
+var float prevO = na, var float prevH = na, var float prevL = na, var float prevC = na, var float prevVw = na
+var float cumPV = 0.0, var float cumV = 0.0, var float cumTP = 0.0
+var int   dayBar = 0, var int nDays = 0, var int cumN = 0
+var array<float> trArr = array.new<float>()
+var int   dayStamp = 0
+
+if isNewDay
+    if not na(dayH)
+        float refC = na(prevC) ? dayO : prevC
+        float trv = math.max(dayH - dayL, math.max(math.abs(dayH - refC), math.abs(dayL - refC)))
+        array.push(trArr, trv)
+        if array.size(trArr) > i_atrDays
+            array.shift(trArr)
+        prevVw := cumV > 0 ? cumPV / cumV : (cumN > 0 ? cumTP / cumN : na)
+        prevO := dayO, prevH := dayH, prevL := dayL, prevC := dayC
+        nDays += 1
+    dayO := open, dayH := high, dayL := low
+    cumPV := 0.0, cumV := 0.0, cumTP := 0.0, cumN := 0
+    dayBar := 0
+    dayStamp := time
+else
+    dayH := math.max(dayH, high)
+    dayL := math.min(dayL, low)
+    dayBar += 1
+dayC := close
+cumTP += hlc3
+cumN  += 1
+cumPV += hlc3 * nz(volume)
+cumV  += nz(volume)
+
+float dailyATR = array.size(trArr) >= math.min(5, i_atrDays) ? array.avg(trArr) : na
+bool  haveGapCtx = not na(prevC) and not na(dailyATR)
+
+var float gapPts = na, var float gapPct = na, var float gapAtr = na
+var string gapClass = "N/A"
+var int gapSign = 0
+if isNewDay and not na(prevC)
+    gapPts := open - prevC
+    gapPct := 100.0 * gapPts / prevC
+    gapAtr := na(dailyATR) ? na : gapPts / dailyATR
+    gapSign := f_sgn(gapPts)
+    gapClass := na(gapAtr) ? "UNKNOWN (ATR warm-up)" : math.abs(gapAtr) < i_flatThr ? "FLAT" : math.abs(gapAtr) >= i_excThr ? (gapPts > 0 ? "EXCEPTIONAL UP" : "EXCEPTIONAL DOWN") : (gapPts > 0 ? "GAP UP" : "GAP DOWN")
+bool gapExceptional = str.startswith(gapClass, "EXCEPTIONAL")
+
+bool isExpiry = i_expForce or (f_dowNum(i_expDow) != -1 and dayofweek == f_dowNum(i_expDow))
+
+// ───────────────────────────────────────── 04 CHART-TF INDICATORS ─────────────────────────────────────────────────
+float atr    = ta.atr(i_atrLen)
+float emaF   = ta.ema(close, i_emaF)
+float emaS   = ta.ema(close, i_emaS)
+float rsi    = ta.rsi(close, i_rsiLen)
+float volSma = ta.sma(nz(volume), i_volBaseN)
+bool  volAvail = i_volMode == "Auto" and volSma > 0 and nz(volume) > 0
+float relVol = volAvail ? nz(volume) / volSma : na
+float vwapLine = cumV > 0 ? cumPV / cumV : cumTP / cumN          // TWAP of hlc3 when the chart has no volume
+string vwapName = cumV > 0 ? "VWAP" : "TWAP (no volume)"
+float rng  = high - low
+float body = math.abs(close - open)
+float bodyRatio = f_ratio(body, rng)
+float closeLoc  = rng > 0 ? (close - low) / rng : 0.5
+float upWick = f_ratio(high - math.max(open, close), rng)
+float loWick = f_ratio(math.min(open, close) - low, rng)
+
+// ─────────────────────────────── 05 HIGHER-TIMEFRAME CONTEXT (previous completed HTF bar) ─────────────────────────
+// lookahead_on + [1] on every series = the last COMPLETED HTF bar only, so the value never changes after it is shown.
+[hf1, hs1, hc1] = request.security(syminfo.tickerid, i_tf1, f_htf(), lookahead = barmerge.lookahead_on)
+[hf2, hs2, hc2] = request.security(syminfo.tickerid, i_tf2, f_htf(), lookahead = barmerge.lookahead_on)
+[hf3, hs3, hc3] = request.security(syminfo.tickerid, i_tf3, f_htf(), lookahead = barmerge.lookahead_on)
+[hf4, hs4, hc4] = request.security(syminfo.tickerid, i_tf4, f_htf(), lookahead = barmerge.lookahead_on)
+bool ok1 = timeframe.in_seconds(i_tf1) >= timeframe.in_seconds()
+bool ok2 = timeframe.in_seconds(i_tf2) >= timeframe.in_seconds()
+bool ok3 = timeframe.in_seconds(i_tf3) >= timeframe.in_seconds()
+bool ok4 = timeframe.in_seconds(i_tf4) >= timeframe.in_seconds()
+int v1 = ok1 ? f_vote(hf1, hs1, hc1) : 0
+int v2 = ok2 ? f_vote(hf2, hs2, hc2) : 0
+int v3 = ok3 ? f_vote(hf3, hs3, hc3) : 0
+int v4 = ok4 ? f_vote(hf4, hs4, hc4) : 0
+int htfN   = (ok1 and not na(hc1) ? 1 : 0) + (ok2 and not na(hc2) ? 1 : 0) + (ok3 and not na(hc3) ? 1 : 0) + (ok4 and not na(hc4) ? 1 : 0)
+float htfAvg = htfN > 0 ? (v1 + v2 + v3 + v4) / htfN : 0.0
+int   htfEv  = htfN == 0 ? 0 : htfAvg >= 0.5 ? 1 : htfAvg <= -0.5 ? -1 : 0
+int   htfBull = (v1 > 0 ? 1 : 0) + (v2 > 0 ? 1 : 0) + (v3 > 0 ? 1 : 0) + (v4 > 0 ? 1 : 0)
+int   htfBear = (v1 < 0 ? 1 : 0) + (v2 < 0 ? 1 : 0) + (v3 < 0 ? 1 : 0) + (v4 < 0 ? 1 : 0)
+
+// ───────────────────────────────────────── 06 OPENING RANGE + FIRST CANDLE ────────────────────────────────────────
+var float orH = na, var float orL = na
+var bool  orDone = false
+bool inOR = minOfDay < sessOpen + i_orMin
+if isNewDay
+    orH := high, orL := low, orDone := false
+else if inOR
+    orH := math.max(orH, high)
+    orL := math.min(orL, low)
+else if not orDone
+    orDone := true
+
+var float fcO = na, var float fcH = na, var float fcL = na, var float fcC = na
+var float fcBody = na, var float fcLoc = na, var float fcFill = na
+var float fcUpW = na
+var float fcLoW = na
+var float fcRngAtr = na
+var int   fcSign = 0
+var string fcText = "n/a"
+if isNewDay
+    fcO := open, fcH := high, fcL := low, fcC := close, fcBody := bodyRatio, fcLoc := closeLoc
+    fcSign := close > open and bodyRatio >= i_strongBody and closeLoc >= i_locHi ? 1 : close < open and bodyRatio >= i_strongBody and closeLoc <= i_locLo ? -1 : 0
+    float gapSpan = na(prevC) ? na : prevC - open
+    fcFill := na(gapSpan) or gapSpan == 0 ? na : (close - open) / gapSpan          // >0 = first candle moved TOWARD the previous close
+    fcUpW := upWick
+    fcLoW := loWick
+    fcRngAtr := na(dailyATR) ? na : 100.0 * rng / dailyATR
+    fcText := (fcSign > 0 ? "BULLISH" : fcSign < 0 ? "BEARISH" : "INDECISIVE") + str.format(" (body {0,number,0.00}, close-loc {1,number,0.00}, wicks up {2,number,0.00} / dn {3,number,0.00}, range {4,number,0}% of daily ATR, rel.vol {5})", bodyRatio, closeLoc, upWick, loWick, nz(fcRngAtr), volAvail ? str.tostring(relVol, "#.##") : "n/a")
+
+// second candle validates / invalidates the first (decided once, at the close of the 2nd candle, never revised)
+var int    openEv = 0
+var string openStatus = "PENDING"
+if isNewDay
+    openEv := 0, openStatus := "PENDING"
+else if dayBar == 1
+    if fcSign > 0
+        openEv := close > fcC and low >= fcL ? 1 : 0
+        openStatus := openEv == 1 ? "VALIDATED BULL" : (close < fcL ? "INVALIDATED" : "UNVALIDATED")
+    else if fcSign < 0
+        openEv := close < fcC and high <= fcH ? -1 : 0
+        openStatus := openEv == -1 ? "VALIDATED BEAR" : (close > fcH ? "INVALIDATED" : "UNVALIDATED")
+    else
+        openStatus := "NO DIRECTIONAL FIRST CANDLE"
+
+// opening-range breakout / failure (close-based, first break only; failure = close back inside within the fail window)
+var int   orBrk = 0
+var int   orBrkBar = na
+var float orBrkLvl = na
+var bool  orFail = false
+if isNewDay
+    orBrk := 0, orBrkBar := na, orBrkLvl := na, orFail := false
+if orDone and orBrk == 0 and not na(orH)
+    if close > orH
+        orBrk := 1, orBrkBar := bar_index, orBrkLvl := orH
+    else if close < orL
+        orBrk := -1, orBrkBar := bar_index, orBrkLvl := orL
+if orBrk != 0 and not orFail and bar_index > orBrkBar and bar_index - orBrkBar <= i_fbBars
+    if (orBrk == 1 and close < orBrkLvl) or (orBrk == -1 and close > orBrkLvl)
+        orFail := true
+
+// ───────────────────────────────────────── 07 GAP SCENARIO (progressive, never back-dated) ────────────────────────
+// 1 gap-down continuation  2 gap-down reversal  3 gap-up continuation  4 gap-up reversal  5 flat-open breakout  6 no-trade / conflicting
+var int    scn = 6
+var string scnText = "NO TRADE (no context yet)"
+var int    scnSign = 0
+var bool   scnValid = false
+if isNewDay
+    bool gDown = gapClass == "GAP DOWN" or gapClass == "EXCEPTIONAL DOWN"
+    bool gUp   = gapClass == "GAP UP" or gapClass == "EXCEPTIONAL UP"
+    bool filled = not na(fcFill) and fcFill >= i_fillFrac
+    scnValid := false
+    if gDown
+        if fcSign < 0
+            scn := 1, scnSign := -1, scnText := "GAP-DOWN CONTINUATION (provisional)"
+        else if fcSign > 0 and filled
+            scn := 2, scnSign := 1, scnText := "GAP-DOWN REVERSAL (provisional)"
+        else
+            scn := 6, scnSign := 0, scnText := "NO TRADE (gap-down, conflicting first candle)"
+    else if gUp
+        if fcSign > 0
+            scn := 3, scnSign := 1, scnText := "GAP-UP CONTINUATION (provisional)"
+        else if fcSign < 0 and filled
+            scn := 4, scnSign := -1, scnText := "GAP-UP REVERSAL (provisional)"
+        else
+            scn := 6, scnSign := 0, scnText := "NO TRADE (gap-up, conflicting first candle)"
+    else if gapClass == "FLAT"
+        scn := 5, scnSign := 0, scnText := "FLAT OPEN (await opening-range breakout)"
+    else
+        scn := 6, scnSign := 0, scnText := "NO TRADE (" + gapClass + ")"
+if not isNewDay and dayBar == 1 and (scn >= 1 and scn <= 4)
+    if openEv == scnSign and openEv != 0                    // the 2nd candle must agree with the (continuation OR reversal) direction of the 1st
+        scnValid := true
+        scnText := str.replace(scnText, "(provisional)", "(validated by 2nd candle)")
+    else
+        scn := 6, scnSign := 0, scnValid := false, scnText := "NO TRADE (2nd candle did not validate the scenario)"
+if scn == 5 and orBrk != 0 and not orFail and orDone
+    scnSign := orBrk, scnValid := true, scnText := "FLAT-OPEN BREAKOUT " + (orBrk > 0 ? "UP" : "DOWN")
+if scn == 5 and orFail
+    scn := 6, scnSign := 0, scnValid := false, scnText := "NO TRADE (opening-range breakout failed)"
+if gapExceptional and i_blockExc
+    scnValid := false
+int gapEv = scnValid ? scnSign : 0
+
+// ──────────────────────────────── 08 POSITIONING ZONES (manual OI + previous-day price levels) ────────────────────
+// slot 0,1 = OI #1,#2 | 2,3 = extra zones | 4 = previous-day low (support) / high (resistance). Per-session counters reset at the open.
+var array<float>  sLo = array.new<float>(5, na)
+var array<float>  sHi = array.new<float>(5, na)
+var array<float>  sW  = array.new<float>(5, 0.0)
+var array<float>  sK  = array.new<float>(5, na)
+var array<int>    sResp = array.new<int>(5, 0)
+var array<int>    sBrk  = array.new<int>(5, 0)         // 0 intact, 1 closed beyond (broken), 2 reclaimed
+var array<int>    sBrkBar = array.new<int>(5, na)
+var array<int>    sRejBar = array.new<int>(5, na)
+var array<float>  rLo = array.new<float>(5, na)
+var array<float>  rHi = array.new<float>(5, na)
+var array<float>  rW  = array.new<float>(5, 0.0)
+var array<float>  rK  = array.new<float>(5, na)
+var array<int>    rResp = array.new<int>(5, 0)
+var array<int>    rBrk  = array.new<int>(5, 0)
+var array<int>    rBrkBar = array.new<int>(5, na)
+var array<int>    rRejBar = array.new<int>(5, na)
+var array<string> zNames = array.from("OI#1", "OI#2", "X1", "X2", "PD")
+
+if barstate.isfirst and i_oiOn
+    if i_p1K > 0
+        array.set(sK, 0, i_p1K), array.set(sW, 0, i_wRank1)
+    if i_p2K > 0
+        array.set(sK, 1, i_p2K), array.set(sW, 1, i_wRank2)
+    if i_c1K > 0
+        array.set(rK, 0, i_c1K), array.set(rW, 0, i_wRank1)
+    if i_c2K > 0
+        array.set(rK, 1, i_c2K), array.set(rW, 1, i_wRank2)
+    if i_x1K > 0
+        if i_x1Type == "PUT"
+            array.set(sK, 2, i_x1K), array.set(sW, 2, i_wExtra)
+        else
+            array.set(rK, 2, i_x1K), array.set(rW, 2, i_wExtra)
+    if i_x2K > 0
+        if i_x2Type == "PUT"
+            array.set(sK, 3, i_x2K), array.set(sW, 3, i_wExtra)
+        else
+            array.set(rK, 3, i_x2K), array.set(rW, 3, i_wExtra)
+
+if isNewDay
+    for z = 0 to 4
+        array.set(sResp, z, 0), array.set(sBrk, z, 0), array.set(sBrkBar, z, na), array.set(sRejBar, z, na)
+        array.set(rResp, z, 0), array.set(rBrk, z, 0), array.set(rBrkBar, z, na), array.set(rRejBar, z, na)
+    if not na(prevL)
+        array.set(sK, 4, prevL), array.set(sW, 4, i_wPrice)
+        array.set(rK, 4, prevH), array.set(rW, 4, i_wPrice)
+    for z = 0 to 4
+        float ks = array.get(sK, z)
+        float kr = array.get(rK, z)
+        array.set(sLo, z, na(ks) ? na : ks - i_zoneW), array.set(sHi, z, na(ks) ? na : ks + i_zoneW)
+        array.set(rLo, z, na(kr) ? na : kr - i_zoneW), array.set(rHi, z, na(kr) ? na : kr + i_zoneW)
+
+// OI data validity (manual): MANUAL OI INPUT / STALE / NOT PROVIDED / ORDER CHECK
+bool oiProvided = i_oiOn and (i_p1K > 0 or i_p2K > 0 or i_c1K > 0 or i_c2K > 0 or i_x1K > 0 or i_x2K > 0)
+bool oiDateGiven = i_oiDate > timestamp("1 Jan 2001 00:00 +0000")
+bool oiDateIsPrev = oiDateGiven and not na(prevO) and (math.abs(i_oiDate - dayStamp) < 6 * 86400000) and (i_oiDate < dayStamp)
+string oiStatus = not i_oiOn ? "OI ZONES OFF" : not oiProvided ? "NOT PROVIDED (price levels only)" : not oiDateGiven ? "MANUAL OI INPUT (no date given)" : oiDateIsPrev ? "MANUAL OI INPUT (dated)" : "MANUAL OI INPUT - DATE NOT PREVIOUS SESSION (stale?)"
+string oiOrderWarn = (i_p1OI > 0 and i_p2OI > i_p1OI) or (i_c1OI > 0 and i_c2OI > i_c1OI) ? " | CHECK: #2 OI > #1 OI" : ""
+
+// per-bar zone state machine (closed bars only)
+for z = 0 to 4
+    float lo = array.get(sLo, z)
+    float hi = array.get(sHi, z)
+    if not na(lo)
+        if array.get(sBrk, z) == 0
+            if low <= hi and close > hi
+                array.set(sResp, z, array.get(sResp, z) + 1)
+            if close < lo
+                array.set(sBrk, z, 1), array.set(sBrkBar, z, bar_index)
+        else if array.get(sBrk, z) == 1
+            if high >= lo and close < lo
+                array.set(sRejBar, z, bar_index)
+            if close > hi
+                array.set(sBrk, z, 2)
+    float rlo = array.get(rLo, z)
+    float rhi = array.get(rHi, z)
+    if not na(rlo)
+        if array.get(rBrk, z) == 0
+            if high >= rlo and close < rlo
+                array.set(rResp, z, array.get(rResp, z) + 1)
+            if close > rhi
+                array.set(rBrk, z, 1), array.set(rBrkBar, z, bar_index)
+        else if array.get(rBrk, z) == 1
+            if low <= rhi and close > rhi
+                array.set(rRejBar, z, bar_index)
+            if close < rlo
+                array.set(rBrk, z, 2)
+
+// where did the session OPEN relative to the highest-weight support / resistance zone (set once at the first bar)
+var string openVsS = "n/a"
+var string openVsR = "n/a"
+if isNewDay
+    float wS0 = 0.0
+    float wR0 = 0.0
+    openVsS := "n/a"
+    openVsR := "n/a"
+    for z = 0 to 4
+        float slo0 = array.get(sLo, z)
+        if not na(slo0) and array.get(sW, z) > wS0
+            wS0 := array.get(sW, z)
+            openVsS := (open > array.get(sHi, z) ? "ABOVE " : open < slo0 ? "BELOW " : "INSIDE ") + array.get(zNames, z)
+        float rlo0 = array.get(rLo, z)
+        if not na(rlo0) and array.get(rW, z) > wR0
+            wR0 := array.get(rW, z)
+            openVsR := (open > array.get(rHi, z) ? "ABOVE " : open < rlo0 ? "BELOW " : "INSIDE ") + array.get(zNames, z)

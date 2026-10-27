@@ -1,0 +1,112 @@
+{
+ "bars": 12000,
+ "first": 1772423100000,
+ "last": 1793008500000,
+ "engine": "PineTS (not TradingView)",
+ "reference": {
+  "Ref prevH": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Ref prevL": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Ref prevC": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Gap points": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Daily ATR": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Ref orH": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Ref orL": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Ref ATR": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "Ref RSI": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "HTF vote 1": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "HTF vote 2": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "HTF vote 3": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  },
+  "HTF vote 4": {
+   "bars": 12000,
+   "mismatches": 0,
+   "first_bad": []
+  }
+ },
+ "pivot_delay": {
+  "swing_highs_seen": 1159,
+  "bad": 0,
+  "first_bad": []
+ },
+ "causality": [
+  {
+   "cut_bar": 4200,
+   "plot_series_checked": 72,
+   "plot_diffs": 0,
+   "first_diffs": [],
+   "trades_in_truncated": 26,
+   "trades_match_full_prefix": true
+  },
+  {
+   "cut_bar": 6600,
+   "plot_series_checked": 72,
+   "plot_diffs": 0,
+   "first_diffs": [],
+   "trades_in_truncated": 42,
+   "trades_match_full_prefix": true
+  },
+  {
+   "cut_bar": 9000,
+   "plot_series_checked": 72,
+   "plot_diffs": 0,
+   "first_diffs": [],
+   "trades_in_truncated": 54,
+   "trades_match_full_prefix": true
+  },
+  {
+   "cut_bar": 11040,
+   "plot_series_checked": 72,
+   "plot_diffs": 0,
+   "first_diffs": [],
+   "trades_in_truncated": 65,
+   "trades_match_full_prefix": true
+  }
+ ]
+}

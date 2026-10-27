@@ -1,0 +1,247 @@
+
+// ───────────────────────────────────── 16 RISK STATE, GATES, SIGNALS ───────────────────────────────────────────────
+int lateCutMin = int(f_hhmm(i_lateCut))      // f_hhmm returns float: explicit int() or Pine rejects the declaration
+int sqMin      = int(f_hhmm(i_squareOff))
+var float npDayStart = 0.0
+var int   tradesToday = 0
+var bool  dayHalt = false
+var int   coolUntil = 0
+var int   closedAtEntry = 0
+if isNewDay
+    npDayStart := strategy.netprofit
+    tradesToday := 0
+    dayHalt := false
+float dayPL = strategy.netprofit - npDayStart + strategy.openprofit
+if not dayHalt and dayPL <= -i_maxLoss
+    dayHalt := true
+
+// position transitions are detected FIRST so that a cooldown created by a loss that closed on THIS bar already blocks an entry decided on this bar.
+// Loss = sum of the closed-trade profits since the entry (identical in every engine; netprofit deltas differ in when entry commission is booked).
+float sizePrev = nz(strategy.position_size[1])
+bool opened = strategy.position_size != 0 and sizePrev == 0
+bool closedNow = strategy.position_size == 0 and sizePrev != 0
+if opened
+    closedAtEntry := strategy.closedtrades
+if closedNow
+    float tradePL = 0.0
+    if strategy.closedtrades > closedAtEntry
+        for ci = closedAtEntry to strategy.closedtrades - 1
+            tradePL += strategy.closedtrades.profit(ci)
+    if tradePL < 0
+        coolUntil := bar_index + i_cooldown
+
+bool dataOk   = onFiveMin and rng > 0 and not na(atr) and atr > 0 and not na(prevC) and not na(emaS) and not na(rsi)
+bool volOk    = not na(atr) and rng <= i_spikeAtr * atr
+bool timeOk   = minOfDay < lateCutMin and minOfDay < sqMin and (not i_noEarly or dayBar >= i_waitBars)
+bool sessOk   = not (gapExceptional and i_blockExc)
+bool riskOk   = not dayHalt and tradesToday < i_maxTrades and bar_index >= coolUntil
+string noTradeWhy = not onFiveMin ? "RUN ON 5-MIN CHART" : not dataOk ? "DATA NOT READY / BAD BAR" : not volOk ? "ABNORMAL VOLATILITY BAR" : not sessOk ? "EXCEPTIONAL GAP SESSION" : not timeOk ? "OUTSIDE ENTRY WINDOW" : dayHalt ? "SESSION LOSS LIMIT HIT" : tradesToday >= i_maxTrades ? "MAX TRADES REACHED" : bar_index < coolUntil ? "COOLDOWN AFTER LOSS" : ""
+
+bool trigBullStress = stressBull
+bool trigBearStress = stressBear
+bool trigBullGap = scnValid and scnSign == 1 and (bullStructFresh or bullDispFresh)
+bool trigBearGap = scnValid and scnSign == -1 and (bearStructFresh or bearDispFresh)
+bool trigBull = i_trig == "Stress only" ? trigBullStress : i_trig == "Gap scenario only" ? trigBullGap : (trigBullStress or trigBullGap)
+bool trigBear = i_trig == "Stress only" ? trigBearStress : i_trig == "Gap scenario only" ? trigBearGap : (trigBearStress or trigBearGap)
+
+bool bullState = trigBull and netIdx >= i_entryThr and nActive >= i_minComp
+bool bearState = trigBear and netIdx <= -i_entryThr and nActive >= i_minComp
+// one signal per rising edge (a state that persists does not re-fire); never both directions on one bar
+bool bullEdge = bullState and not nz(bullState[1]) and not bearState
+bool bearEdge = bearState and not nz(bearState[1]) and not bullState
+
+// structure-based invalidation (nearest valid structure at least 0.4 ATR away) + ATR buffer
+float slBullRaw = na
+float slBearRaw = na
+if lastSweepLoPx < close and not na(lastSweepLoPx) and bullSweepFresh and close - lastSweepLoPx >= 0.4 * atr
+    slBullRaw := lastSweepLoPx
+if not na(swL) and swL < close and close - swL >= 0.4 * atr
+    slBullRaw := na(slBullRaw) ? swL : math.max(slBullRaw, swL)
+if stressBullZone >= 0
+    float zl = array.get(rLo, stressBullZone)
+    if not na(zl) and zl < close and close - zl >= 0.4 * atr
+        slBullRaw := na(slBullRaw) ? zl : math.max(slBullRaw, zl)
+if orDone and not na(orL) and orL < close and close - orL >= 0.4 * atr
+    slBullRaw := na(slBullRaw) ? orL : math.max(slBullRaw, orL)
+if lastSweepHiPx > close and not na(lastSweepHiPx) and bearSweepFresh and lastSweepHiPx - close >= 0.4 * atr
+    slBearRaw := lastSweepHiPx
+if not na(swH) and swH > close and swH - close >= 0.4 * atr
+    slBearRaw := na(slBearRaw) ? swH : math.min(slBearRaw, swH)
+if stressBearZone >= 0
+    float zh = array.get(sHi, stressBearZone)
+    if not na(zh) and zh > close and zh - close >= 0.4 * atr
+        slBearRaw := na(slBearRaw) ? zh : math.min(slBearRaw, zh)
+if orDone and not na(orH) and orH > close and orH - close >= 0.4 * atr
+    slBearRaw := na(slBearRaw) ? orH : math.min(slBearRaw, orH)
+float slBull = na(slBullRaw) ? na : slBullRaw - i_slBuf * atr
+float slBear = na(slBearRaw) ? na : slBearRaw + i_slBuf * atr
+float riskBull = na(slBull) ? na : close - slBull
+float riskBear = na(slBear) ? na : slBear - close
+bool riskBullOk = not na(riskBull) and riskBull <= i_maxRisk * atr
+bool riskBearOk = not na(riskBear) and riskBear <= i_maxRisk * atr
+bool rrBullOk = riskBullOk and (na(nearUp) or (nearUp - close) >= i_minRR * riskBull)
+bool rrBearOk = riskBearOk and (na(nearDn) or (close - nearDn) >= i_minRR * riskBear)
+
+string whyBull = (stressBull ? "STRESS(" + array.get(zNames, math.max(stressBullZone, 0)) + " broken up)" : "") + (trigBullGap ? " GAP:" + str.substring(scnText, 0, 12) : "") + (bullStructFresh ? " +BOS/CHoCH" : "") + (bullSweepFresh ? " +SWEEP" : "") + (retestUp ? " +RETEST" : "")
+string whyBear = (stressBear ? "STRESS(" + array.get(zNames, math.max(stressBearZone, 0)) + " broken down)" : "") + (trigBearGap ? " GAP:" + str.substring(scnText, 0, 12) : "") + (bearStructFresh ? " +BOS/CHoCH" : "") + (bearSweepFresh ? " +SWEEP" : "") + (retestDn ? " +RETEST" : "")
+
+bool gatesOk = dataOk and volOk and timeOk and sessOk
+bool sigBull = bullEdge and gatesOk and rrBullOk
+bool sigBear = bearEdge and gatesOk and rrBearOk
+bool sigBullAny = bullEdge and gatesOk and rrBullOk          // virtual signal for the probability tracker (ignores position / session limits)
+bool sigBearAny = bearEdge and gatesOk and rrBearOk
+string gapCode = gapClass == "GAP UP" ? "GU" : gapClass == "GAP DOWN" ? "GD" : gapClass == "EXCEPTIONAL UP" ? "XU" : gapClass == "EXCEPTIONAL DOWN" ? "XD" : gapClass == "FLAT" ? "FL" : "NA"
+string tagBase = (isExpiry ? "EXP1" : "EXP0") + "|" + gapCode + "|" + (i_trig == "Stress only" ? "ST" : i_trig == "Gap scenario only" ? "GP" : "SG")
+
+// ───────────────────────────────────── 17 ORDERS: entry, stop, 3 targets, trailing, square-off ─────────────────────
+var int   planDir = 0
+var float planStop = na
+var string planWhy = ""
+var float posEntry = na
+var float posStop = na
+var float posRisk = na
+var float posT1 = na
+var float posT2 = na
+var float posT3 = na
+var float posQty = na
+var int   posDir = 0
+var bool  t1Done = false
+var bool  t2Done = false
+var string lastExit = "-"
+var string lastEntryWhy = "-"
+float qtyBull = i_sizeMode == "Fixed quantity" or na(riskBull) ? i_qty : math.max(10, math.floor(i_riskAmt / riskBull / 10) * 10)
+float qtyBear = i_sizeMode == "Fixed quantity" or na(riskBear) ? i_qty : math.max(10, math.floor(i_riskAmt / riskBear / 10) * 10)
+
+if sigBull and riskOk and strategy.position_size == 0
+    planDir := 1
+    planStop := slBull
+    planWhy := whyBull
+    strategy.entry("CE", strategy.long, qty=qtyBull, comment="CE|" + tagBase)
+if sigBear and riskOk and strategy.position_size == 0
+    planDir := -1
+    planStop := slBear
+    planWhy := whyBear
+    strategy.entry("PE", strategy.short, qty=qtyBear, comment="PE|" + tagBase)
+
+if opened
+    posDir := strategy.position_size > 0 ? 1 : -1
+    posQty := math.abs(strategy.position_size)
+    posEntry := strategy.position_avg_price
+    posStop := planStop
+    posRisk := math.abs(posEntry - posStop)
+    posT1 := posEntry + posDir * i_rr1 * posRisk
+    posT2 := posEntry + posDir * i_rr2 * posRisk
+    posT3 := posEntry + posDir * i_rr3 * posRisk
+    t1Done := i_q1 <= 0
+    t2Done := i_q2 <= 0
+    tradesToday += 1
+    lastEntryWhy := planWhy
+    bool badFill = na(posRisk) or posRisk < 0.2 * atr or (posDir > 0 and posEntry <= posStop) or (posDir < 0 and posEntry >= posStop)
+    if badFill
+        strategy.close_all(comment="INVALID FILL")
+if closedNow
+    posDir := 0
+    int nct = strategy.closedtrades
+    lastExit := nct > 0 ? strategy.closedtrades.exit_comment(nct - 1) : "-"
+
+if strategy.position_size != 0 and posDir != 0
+    float absSz = math.abs(strategy.position_size)
+    if not t1Done and absSz <= posQty - math.floor(posQty * i_q1 / 100) + 0.000001
+        t1Done := true
+    if not t2Done and absSz <= posQty - math.floor(posQty * (i_q1 + i_q2) / 100) + 0.000001
+        t2Done := true
+    float curStop = not i_trailBE ? posStop : (t2Done and i_q2 > 0 ? posT1 : (t1Done and i_q1 > 0 ? posEntry : posStop))
+    string eid = posDir > 0 ? "CE" : "PE"
+    float q1u = math.floor(posQty * i_q1 / 100)
+    float q2u = math.floor(posQty * i_q2 / 100)
+    if not t1Done and q1u > 0
+        strategy.exit("X1", from_entry=eid, qty=q1u, limit=posT1, stop=curStop, comment_profit="T1", comment_loss=curStop == posStop ? "SL" : "TRAIL")
+    if not t2Done and q2u > 0
+        strategy.exit("X2", from_entry=eid, qty=q2u, limit=posT2, stop=curStop, comment_profit="T2", comment_loss=curStop == posStop ? "SL" : "TRAIL")
+    strategy.exit("X3", from_entry=eid, limit=posT3, stop=curStop, comment_profit="T3", comment_loss=curStop == posStop ? "SL" : "TRAIL")
+    bool flipAgainst = (posDir > 0 and (chochDn or (netIdx <= -i_entryThr and nActive >= i_minComp))) or (posDir < 0 and (chochUp or (netIdx >= i_entryThr and nActive >= i_minComp)))
+    if i_flipExit and flipAgainst and bar_index > nz(strategy.opentrades.entry_bar_index(0), bar_index)
+        strategy.close_all(comment="EVIDENCE FLIP")
+    if minOfDay >= sqMin
+        strategy.close_all(comment="SQUARE-OFF")
+    if dayHalt
+        strategy.close_all(comment="SESSION LOSS LIMIT")
+
+// ───────────────────────────────────── 18 PROBABILITY TRACKER (virtual signals; running, in-sample, honest) ────────
+// Target: P(Target 1 is reached before the stop within N bars | a confirmed signal fired).  Uses ONLY already-resolved past outcomes.
+// This is an empirical hit-rate of THIS rule set on THIS chart history - no out-of-sample split exists inside Pine, so it is never
+// shown as a calibrated forecast. Same-bar stop/target ambiguity is resolved against the trade (stop first).
+var array<int>   vDir = array.new<int>()
+var array<float> vStop = array.new<float>()
+var array<float> vEnt = array.new<float>()
+var array<float> vT1 = array.new<float>()
+var array<int>   vBar = array.new<int>()
+var array<int>   vState = array.new<int>()         // 0 pending-entry, 1 live
+var int bullN = 0
+var int bullW = 0
+var int bearN = 0
+var int bearW = 0
+var int bullTO = 0
+var int bearTO = 0
+int vi = array.size(vDir) - 1
+while vi >= 0
+    int vd = array.get(vDir, vi)
+    int vs = array.get(vState, vi)
+    if vs == 0
+        float e0 = open
+        float r0 = math.abs(e0 - array.get(vStop, vi))
+        array.set(vEnt, vi, e0)
+        array.set(vT1, vi, e0 + vd * i_rr1 * r0)
+        array.set(vState, vi, 1)
+        vs := 1
+    if vs == 1
+        float st = array.get(vStop, vi)
+        float t1 = array.get(vT1, vi)
+        bool hitStop = (vd > 0 and low <= st) or (vd < 0 and high >= st)
+        bool hitT1 = (vd > 0 and high >= t1) or (vd < 0 and low <= t1)
+        bool timeout = bar_index - array.get(vBar, vi) >= i_probHorizon
+        bool badE = (vd > 0 and array.get(vEnt, vi) <= st) or (vd < 0 and array.get(vEnt, vi) >= st)
+        if badE
+            array.remove(vDir, vi), array.remove(vStop, vi), array.remove(vEnt, vi), array.remove(vT1, vi), array.remove(vBar, vi), array.remove(vState, vi)
+        else if hitStop or hitT1 or timeout
+            if hitStop
+                if vd > 0
+                    bullN += 1
+                else
+                    bearN += 1
+            else if hitT1
+                if vd > 0
+                    bullN += 1
+                    bullW += 1
+                else
+                    bearN += 1
+                    bearW += 1
+            else
+                if vd > 0
+                    bullTO += 1
+                else
+                    bearTO += 1
+            array.remove(vDir, vi), array.remove(vStop, vi), array.remove(vEnt, vi), array.remove(vT1, vi), array.remove(vBar, vi), array.remove(vState, vi)
+    vi -= 1
+if sigBullAny
+    array.push(vDir, 1), array.push(vStop, slBull), array.push(vEnt, close), array.push(vT1, close), array.push(vBar, bar_index), array.push(vState, 0)
+if sigBearAny
+    array.push(vDir, -1), array.push(vStop, slBear), array.push(vEnt, close), array.push(vT1, close), array.push(vBar, bar_index), array.push(vState, 0)
+[bullLo, bullHi] = f_wilson(bullW, bullN)
+[bearLo, bearHi] = f_wilson(bearW, bearN)
+string probBull = bullN < i_minSamples ? "PROBABILITY NOT CALIBRATED (n=" + str.tostring(bullN) + "/" + str.tostring(i_minSamples) + ")" : "EMPIRICAL (in-sample, running) " + str.tostring(bullW / bullN * 100, "#.#") + "% [" + str.tostring(bullLo * 100, "#") + "-" + str.tostring(bullHi * 100, "#") + "] n=" + str.tostring(bullN)
+string probBear = bearN < i_minSamples ? "PROBABILITY NOT CALIBRATED (n=" + str.tostring(bearN) + "/" + str.tostring(i_minSamples) + ")" : "EMPIRICAL (in-sample, running) " + str.tostring(bearW / bearN * 100, "#.#") + "% [" + str.tostring(bearLo * 100, "#") + "-" + str.tostring(bearHi * 100, "#") + "] n=" + str.tostring(bearN)
+
+// ───────────────────────────────────── 19 ALERTS (strategy scripts use alert(); alertcondition is indicator-only) ──
+if sigBull and riskOk and strategy.position_size == 0
+    alert("NXI|CE ENTRY|" + syminfo.ticker + "|close=" + str.tostring(close, "#.##") + "|SL=" + str.tostring(slBull, "#.##") + "|why=" + whyBull + "|idx=" + str.tostring(netIdx, "#.##"), alert.freq_once_per_bar_close)
+if sigBear and riskOk and strategy.position_size == 0
+    alert("NXI|PE ENTRY|" + syminfo.ticker + "|close=" + str.tostring(close, "#.##") + "|SL=" + str.tostring(slBear, "#.##") + "|why=" + whyBear + "|idx=" + str.tostring(netIdx, "#.##"), alert.freq_once_per_bar_close)
+if t1Done and not nz(t1Done[1]) and strategy.position_size != 0 and i_q1 > 0
+    alert("NXI|TARGET 1 hit|" + syminfo.ticker + "|stop moves to entry (if trailing)", alert.freq_once_per_bar_close)
+if t2Done and not nz(t2Done[1]) and strategy.position_size != 0 and i_q2 > 0
+    alert("NXI|TARGET 2 hit|" + syminfo.ticker, alert.freq_once_per_bar_close)
+if closedNow
+    alert("NXI|EXIT|" + syminfo.ticker + "|reason=" + lastExit, alert.freq_once_per_bar_close)
+if dayHalt and not nz(dayHalt[1])
+    alert("NXI|SESSION LOSS LIMIT HIT - no more entries today", alert.freq_once_per_bar_close)

@@ -1,0 +1,359 @@
+{
+ "bars": 38284,
+ "first": "2024-10-01T09:15:00+05:30",
+ "last": "2026-10-26T15:25:00+05:30",
+ "closed_trade_rows": 276,
+ "entries": 130,
+ "engine": "PineTS 0.13.0 (NOT TradingView)",
+ "pine_summary": {
+  "netprofit": -8653.450837500071,
+  "grossprofit": 23055.027072499997,
+  "grossloss": 31708.477910000063,
+  "equity": 991346.5491625,
+  "max_drawdown": 9375.26449500001,
+  "wintrades": 107,
+  "losstrades": 169
+ },
+ "overall": {
+  "n": 130,
+  "win_rate": 0.431,
+  "net": -8653.5,
+  "profit_factor": 0.721,
+  "expectancy": -66.57,
+  "avg_win": 400.0,
+  "avg_loss": -419.6,
+  "max_dd": 9019.3
+ },
+ "by_direction": {
+  "CE (long)": {
+   "n": 63,
+   "win_rate": 0.413,
+   "net": -5608.3,
+   "profit_factor": 0.641,
+   "expectancy": -89.02,
+   "avg_win": 385.5,
+   "avg_loss": -422.5,
+   "max_dd": 5684.7
+  },
+  "PE (short)": {
+   "n": 67,
+   "win_rate": 0.448,
+   "net": -3045.1,
+   "profit_factor": 0.803,
+   "expectancy": -45.45,
+   "avg_win": 412.5,
+   "avg_loss": -416.8,
+   "max_dd": 5832.6
+  }
+ },
+ "by_gap_class": {
+  "gap down": {
+   "n": 28,
+   "win_rate": 0.25,
+   "net": -8125.6,
+   "profit_factor": 0.163,
+   "expectancy": -290.2,
+   "avg_win": 226.5,
+   "avg_loss": -462.4,
+   "max_dd": 8693.0
+  },
+  "flat": {
+   "n": 63,
+   "win_rate": 0.524,
+   "net": 1025.5,
+   "profit_factor": 1.08,
+   "expectancy": 16.28,
+   "avg_win": 418.3,
+   "avg_loss": -425.9,
+   "max_dd": 3526.7
+  },
+  "gap up": {
+   "n": 39,
+   "win_rate": 0.41,
+   "net": -1553.4,
+   "profit_factor": 0.819,
+   "expectancy": -39.83,
+   "avg_win": 438.1,
+   "avg_loss": -372.3,
+   "max_dd": 4035.5
+  }
+ },
+ "by_expiry_session": {
+  "expiry sessions (rule-based)": {
+   "n": 35,
+   "win_rate": 0.486,
+   "net": -1061.9,
+   "profit_factor": 0.84,
+   "expectancy": -30.34,
+   "avg_win": 327.4,
+   "avg_loss": -368.2,
+   "max_dd": 3417.9
+  },
+  "other sessions": {
+   "n": 95,
+   "win_rate": 0.411,
+   "net": -7591.5,
+   "profit_factor": 0.689,
+   "expectancy": -79.91,
+   "avg_win": 431.6,
+   "avg_loss": -436.1,
+   "max_dd": 8760.4
+  }
+ },
+ "in_sample_first60pct_of_entries": {
+  "n": 78,
+  "win_rate": 0.423,
+  "net": -6372.1,
+  "profit_factor": 0.681,
+  "expectancy": -81.69,
+  "avg_win": 411.7,
+  "avg_loss": -443.5,
+  "max_dd": 6372.1
+ },
+ "out_of_sample_last40pct_of_entries": {
+  "n": 52,
+  "win_rate": 0.442,
+  "net": -2281.4,
+  "profit_factor": 0.794,
+  "expectancy": -43.87,
+  "avg_win": 383.2,
+  "avg_loss": -382.6,
+  "max_dd": 2647.3
+ },
+ "by_half_year": {
+  "2024-H2": {
+   "n": 12,
+   "win_rate": 0.333,
+   "net": -1890.5,
+   "profit_factor": 0.494,
+   "expectancy": -157.54,
+   "avg_win": 461.1,
+   "avg_loss": -466.9,
+   "max_dd": 1890.5
+  },
+  "2025-H1": {
+   "n": 38,
+   "win_rate": 0.447,
+   "net": -3166.9,
+   "profit_factor": 0.708,
+   "expectancy": -83.34,
+   "avg_win": 450.7,
+   "avg_loss": -515.7,
+   "max_dd": 4968.6
+  },
+  "2025-H2": {
+   "n": 35,
+   "win_rate": 0.4,
+   "net": -2375.5,
+   "profit_factor": 0.658,
+   "expectancy": -67.87,
+   "avg_win": 326.7,
+   "avg_loss": -330.9,
+   "max_dd": 4683.8
+  },
+  "2026-H1": {
+   "n": 29,
+   "win_rate": 0.517,
+   "net": -60.8,
+   "profit_factor": 0.991,
+   "expectancy": -2.1,
+   "avg_win": 455.2,
+   "avg_loss": -492.1,
+   "max_dd": 1530.5
+  },
+  "2026-H2": {
+   "n": 16,
+   "win_rate": 0.375,
+   "net": -1159.8,
+   "profit_factor": 0.562,
+   "expectancy": -72.49,
+   "avg_win": 248.4,
+   "avg_loss": -265.0,
+   "max_dd": 1541.6
+  }
+ },
+ "R_multiples_gross": {
+  "n": 130,
+  "mean_R": -0.002,
+  "median_R": -0.084,
+  "share_R_ge_1": 0.146
+ },
+ "cost_sensitivity": {
+  "gross_pnl_before_any_cost": 894.1,
+  "entries": 130,
+  "gross_pnl_per_entry": 6.88,
+  "net_at_bps_per_side": {
+   "0": 894.1,
+   "0.5": -2288.5,
+   "1.0": -5471.2,
+   "1.5": -8653.9,
+   "2.0": -11836.6,
+   "3.0": -18201.9
+  },
+  "declared_run_net": -8653.5,
+  "note": "declared run = 1.5 bps/side commission + 10 ticks (0.5 pt) slippage per fill"
+ },
+ "invariants": {
+  "checked_entries": 130,
+  "violations": {},
+  "examples": {}
+ },
+ "tracker_check": {
+  "python_bull_resolved_wins_timeouts": [
+   60,
+   26,
+   14
+  ],
+  "pine_bull": [
+   60.0,
+   26.0,
+   14.0
+  ],
+  "python_bear_resolved_wins_timeouts": [
+   64,
+   32,
+   17
+  ],
+  "pine_bear": [
+   64.0,
+   32.0,
+   17.0
+  ],
+  "signals": 155,
+  "match": true
+ },
+ "calibration_study": {
+  "bull (CE)": {
+   "n": 60,
+   "train": 36,
+   "test": 24,
+   "base_rate_train": 0.472,
+   "test_win_rate": 0.375,
+   "brier_model": 0.2766,
+   "brier_base_rate": 0.2438,
+   "model_beats_base_rate": false,
+   "auc_test": 0.489,
+   "reliability_test": [
+    {
+     "pred_range": [
+      0,
+      0.4
+     ],
+     "n": 5,
+     "mean_pred": 0.283,
+     "observed": 0.6
+    },
+    {
+     "pred_range": [
+      0.4,
+      0.5
+     ],
+     "n": 8,
+     "mean_pred": 0.451,
+     "observed": 0.25
+    },
+    {
+     "pred_range": [
+      0.5,
+      0.6
+     ],
+     "n": 9,
+     "mean_pred": 0.586,
+     "observed": 0.333
+    },
+    {
+     "pred_range": [
+      0.6,
+      1.0
+     ],
+     "n": 2,
+     "mean_pred": 0.706,
+     "observed": 0.5
+    }
+   ],
+   "verdict": "NOT CALIBRATED / no skill over the base rate"
+  },
+  "bear (PE)": {
+   "n": 64,
+   "train": 38,
+   "test": 26,
+   "base_rate_train": 0.447,
+   "test_win_rate": 0.577,
+   "brier_model": 0.2624,
+   "brier_base_rate": 0.2609,
+   "model_beats_base_rate": false,
+   "auc_test": 0.497,
+   "reliability_test": [
+    {
+     "pred_range": [
+      0,
+      0.4
+     ],
+     "n": 3,
+     "mean_pred": 0.397,
+     "observed": 0.333
+    },
+    {
+     "pred_range": [
+      0.4,
+      0.5
+     ],
+     "n": 21,
+     "mean_pred": 0.45,
+     "observed": 0.619
+    },
+    {
+     "pred_range": [
+      0.5,
+      0.6
+     ],
+     "n": 2,
+     "mean_pred": 0.504,
+     "observed": 0.5
+    }
+   ],
+   "verdict": "NOT CALIBRATED / no skill over the base rate"
+  },
+  "both sides pooled": {
+   "n": 124,
+   "train": 74,
+   "test": 50,
+   "base_rate_train": 0.473,
+   "test_win_rate": 0.46,
+   "brier_model": 0.2574,
+   "brier_base_rate": 0.2486,
+   "model_beats_base_rate": false,
+   "auc_test": 0.436,
+   "reliability_test": [
+    {
+     "pred_range": [
+      0,
+      0.4
+     ],
+     "n": 5,
+     "mean_pred": 0.38,
+     "observed": 0.6
+    },
+    {
+     "pred_range": [
+      0.4,
+      0.5
+     ],
+     "n": 29,
+     "mean_pred": 0.457,
+     "observed": 0.483
+    },
+    {
+     "pred_range": [
+      0.5,
+      0.6
+     ],
+     "n": 16,
+     "mean_pred": 0.535,
+     "observed": 0.375
+    }
+   ],
+   "verdict": "NOT CALIBRATED / no skill over the base rate"
+  }
+ }
+}
