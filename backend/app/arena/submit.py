@@ -13,6 +13,9 @@ ALLOWED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM")
 MODES = ("ABOVE", "NEAR", "MARKET", "LIMIT")
 ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL", "AMEND_LOTS", "AMEND_ENTRY")
 MAX_LOTS = 10
+MAX_EQ_QTY = 100000                     # shares per equity signal (hard sanity cap; the notional cap below is the real limit)
+MAX_EQ_NOTIONAL = 2_500_000.0           # Rs per equity signal (paper)
+EQ_SYMBOL_RE = re.compile(r"[A-Z0-9&-]{1,20}")
 MAX_EVENTS_PER_SIGNAL = 20
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "human_signals.jsonl")
 
@@ -29,7 +32,32 @@ def norm_expiry(s: str) -> str:
     return datetime.strptime(f"{m.group(1)}{m.group(2)}{m.group(3)}", "%d%b%Y").date().isoformat()
 
 
+def validate_equity(d: dict) -> dict:
+    """NSE cash equity, intraday (MIS, squared off at the session end like every contest trade). BUY (long) or SELL (short). Stored with instrument=EQUITY; expiry / strike / option_type are neutral
+    placeholders so every reader of the option ledger keeps working. Levels are checked per side: BUY stop < entry < targets, SELL stop > entry > targets."""
+    need = lambda c, m: (_ for _ in ()).throw(SubmissionError(m)) if not c else None
+    sym = str(d.get("underlying") or d.get("symbol") or "").strip().upper(); need(EQ_SYMBOL_RE.fullmatch(sym) is not None, "equity symbol: NSE trading symbol, e.g. RELIANCE")
+    side = str(d.get("side", "BUY")).upper(); need(side in ("BUY", "SELL"), "side BUY|SELL")
+    mode = str(d.get("entry_mode", "NEAR")).upper(); need(mode in MODES, f"entry_mode {MODES}")
+    num = lambda k: float(d[k]) if d.get(k) is not None else None
+    entry, sl = num("entry"), num("sl"); need(entry and entry > 0, "entry > 0")
+    tg = sorted({float(x) for x in (d.get("targets") or [])}, reverse=(side == "SELL"))
+    if side == "BUY": need(sl is None or 0 < sl < entry, "stop-loss is optional; for BUY it must be below the entry"); need(all(x > entry for x in tg), "for BUY every target must be above the entry")
+    else: need(sl is None or sl > entry, "stop-loss is optional; for SELL it must be above the entry"); need(all(0 < x < entry for x in tg), "for SELL every target must be below the entry (and above 0)")
+    try: qty = int(d.get("qty", d.get("lots")))
+    except (TypeError, ValueError): qty = 0
+    need(1 <= qty <= MAX_EQ_QTY and qty == float(d.get("qty", d.get("lots"))), f"quantity: whole number of shares, 1 to {MAX_EQ_QTY}")
+    need(qty * entry <= MAX_EQ_NOTIONAL, f"order value (entry x quantity) is above the paper limit of Rs {MAX_EQ_NOTIONAL:,.0f}")
+    need(str(d.get("participant", "")).strip(), "participant required")
+    out = {"participant": str(d["participant"]).strip(), "instrument": "EQUITY", "side": side, "underlying": sym, "expiry": "", "strike": 0.0, "option_type": "EQ", "entry_mode": mode, "entry": entry, "sl": sl,
+           "targets": tg, "lots": qty, "qty": qty, "note": str(d.get("note", ""))[:300]}
+    if d.get("valid_sec") is not None:
+        vs = int(d["valid_sec"]); need(60 <= vs <= 28800, "valid_sec between 60 and 28800"); out["valid_sec"] = vs
+    return out
+
+
 def validate(d: dict) -> dict:
+    if str(d.get("instrument", "")).upper() == "EQUITY": return validate_equity(d)
     need = lambda c, m: (_ for _ in ()).throw(SubmissionError(m)) if not c else None
     u = str(d.get("underlying", "")).upper(); need(u in ALLOWED, f"underlying must be one of {ALLOWED}")
     ot = str(d.get("option_type", "")).upper(); need(ot in ("CE", "PE"), "option_type CE|PE")
@@ -66,7 +94,7 @@ def load(path: str | None = None) -> list[dict]:
     return [json.loads(x) for x in open(p) if x.strip()] if os.path.exists(p) else []
 
 
-def validate_event(d: dict) -> dict:
+def validate_event(d: dict, equity: bool = False, side: str = "BUY") -> dict:
     """A management event for an already submitted signal. Effective from its SERVER timestamp (+ execution delay); never retroactive."""
     need = lambda c, m: (_ for _ in ()).throw(SubmissionError(m)) if not c else None
     a = str(d.get("action", "")).upper(); need(a in ACTIONS, f"action must be one of {ACTIONS}")
@@ -78,21 +106,22 @@ def validate_event(d: dict) -> dict:
     elif a == "AMEND_LOTS":
         try: lots = int(d.get("lots"))
         except (TypeError, ValueError): lots = 0
-        need(1 <= lots <= MAX_LOTS and lots == float(d["lots"]), f"quantity must be a whole number of lots, 1 to {MAX_LOTS}"); out["lots"] = lots
+        cap = MAX_EQ_QTY if equity else MAX_LOTS
+        need(1 <= lots <= cap and lots == float(d["lots"]), f"quantity must be a whole number of {'shares' if equity else 'lots'}, 1 to {cap}"); out["lots"] = lots
     elif a == "AMEND_TARGETS":
         tg = sorted({float(x) for x in (d.get("targets") or [])}); need(tg and all(x > 0 for x in tg), "targets: at least one value > 0"); out["targets"] = tg
     elif a == "TRAIL_SL":
         pts, pct = d.get("trail_points"), d.get("trail_pct"); need((pts is None) != (pct is None), "give exactly one of trail_points or trail_pct")
         if pts is not None: need(float(pts) > 0, "trail_points > 0"); out["trail_points"] = float(pts)
-        else: need(0 < float(pct) < 100, "0 < trail_pct < 100"); out["trail_pct"] = float(pct)
+        else: need(0 < float(pct) < 100, "0 < trail_pct < 100"); need(not (equity and side == "SELL"), "a SELL (short) trails by points only"); out["trail_pct"] = float(pct)
     out["note"] = str(d.get("note", ""))[:200]
     return out
 
 
 def submit_event(d: dict, participant: str, path: str | None = None, now: float | None = None) -> dict:
-    p = path or PATH; ev = validate_event(d); recs = load(p)
-    pm = participant_map(recs)
-    sig = next((r for r in recs if r.get("type") == "HUMAN_SIGNAL" and r["id"] == ev["signal_id"] and pm.get(r["id"]) == participant), None)
+    p = path or PATH; recs = load(p); pm = participant_map(recs); sid0 = str(d.get("signal_id", "")).strip()
+    sig = next((r for r in recs if r.get("type") == "HUMAN_SIGNAL" and r["id"] == sid0 and pm.get(r["id"]) == participant), None)
+    ev = validate_event(d, equity=bool(sig and sig.get("instrument") == "EQUITY"), side=(sig or {}).get("side", "BUY"))
     if sig is None: raise SubmissionError("unknown signal_id for this participant")
     nev = [r for r in recs if r.get("type") == "HUMAN_EVENT" and r["signal_id"] == ev["signal_id"]]
     if len(nev) >= MAX_EVENTS_PER_SIGNAL: raise SubmissionError(f"at most {MAX_EVENTS_PER_SIGNAL} management events per signal")

@@ -226,3 +226,32 @@ def option_round_trip_cost_rs(und: str, entry: float, exit_: float, unit: int, l
         if pr is None: return None
         return pr.brokerage + (pr.round_trip_total - pr.brokerage) * lots
     return estimate_index_option_cost(entry, max(exit_, 0.05), unit, lots=lots, slippage_points=0.0)["total_cost"]
+
+
+# ---------------------------------------------------------------------------
+# NSE cash EQUITY, intraday (MIS), Angel One -- used by the contest for equity paper trades.
+# FORMULA_ESTIMATE from the published rate schedule, NOT validated against a real contract note
+# (same standing as the option rate card above). Re-verify before any real-capital decision.
+# ---------------------------------------------------------------------------
+@dataclass
+class EquityIntradayRates:
+    brokerage_flat: float = 20.0                 # Rs per executed order ...
+    brokerage_pct_cap: float = 0.1 / 100         # ... or this share of the order value, whichever is LOWER
+    exchange_txn_pct: float = 0.00297 / 100      # NSE cash, both legs, on turnover
+    stt_sell_pct: float = 0.025 / 100            # intraday: sell side only
+    stamp_buy_pct: float = 0.003 / 100           # buy side only
+    sebi_pct: float = 0.0001 / 100               # Rs 10 / crore, both legs
+    ipft_pct: float = 0.0001 / 100               # NSE investor protection fund, both legs
+    gst_pct: float = 0.18                        # on brokerage + exchange txn + SEBI fee (not on STT / stamp)
+    status: str = "FORMULA_ESTIMATE (published schedule; not checked against a real contract note)"
+
+
+def equity_intraday_round_trip_cost_rs(buy_px: float, sell_px: float, qty: int, rates: EquityIntradayRates | None = None) -> float:
+    """Round-trip Rs cost of buying `qty` shares at buy_px and selling them at sell_px the same day. Works for a short as well:
+    a short sells first and buys later, but the charges depend only on which leg is the buy and which the sell."""
+    r = rates or EquityIntradayRates()
+    bv, sv = float(buy_px) * qty, max(float(sell_px), 0.0) * qty
+    brokerage = min(r.brokerage_flat, bv * r.brokerage_pct_cap) + min(r.brokerage_flat, sv * r.brokerage_pct_cap)
+    txn = (bv + sv) * r.exchange_txn_pct; sebi = (bv + sv) * r.sebi_pct; ipft = (bv + sv) * r.ipft_pct
+    stt = sv * r.stt_sell_pct; stamp = bv * r.stamp_buy_pct; gst = (brokerage + txn + sebi) * r.gst_pct
+    return round(brokerage + txn + sebi + ipft + stt + stamp + gst, 2)

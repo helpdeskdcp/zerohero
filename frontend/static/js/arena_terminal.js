@@ -10,6 +10,12 @@ const IST_SHIFT = 19800;
 function tmBucket(r) { return r.state === "WAITING" || r.state === "NO DATA" ? "orders" : r.state === "ACTIVE" ? "positions" : "closed"; }
 /* nearest candle time at or before t (t and candle times are both already IST-shifted seconds) */
 function tmSnap(times, t) { let lo = 0, hi = times.length - 1, ans = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (times[m] <= t) { ans = times[m]; lo = m + 1; } else hi = m - 1; } return ans; }
+/* chart request of a /live row: an option contract, or an NSE cash-equity symbol */
+function tmChartPath(r, tf, since) {
+  const sfx = `&tf=${tf}` + (since ? `&since=${since}` : "");
+  return r.instrument === "EQUITY" ? `/chart/equity?symbol=${encodeURIComponent(r.underlying)}${sfx}`
+    : `/chart?underlying=${encodeURIComponent(r.underlying)}&expiry=${encodeURIComponent(r.expiry)}&strike=${r.strike}&option_type=${r.option_type}${sfx}`;
+}
 /* levels drawn as lines on the option chart */
 function tmLevels(r) {
   const L = [];
@@ -37,14 +43,14 @@ function tmRowHtml(r, prev, ex) {
   if (r.state === "CLOSED") nums.push(`<span>fill <b>${tmNum(r.fill)}</b></span>`, `<span>exit <b>${tmNum(r.exit)}</b></span>`, `<span class="mut">${tmEsc(r.why || "")}</span>`);
   if (!["ACTIVE", "WAITING", "CLOSED"].includes(r.state)) nums.push(`<span class="mut">${tmEsc(r.why || r.waiting_note || "")}</span>`);
   const btn = r.state === "ACTIVE" ? (() => { const u = tmExitUi(ex); return `<div class="tm-l4"><button class="tm-exit ${u.cls}" data-exit="${tmEsc(r.id)}">${tmEsc(u.text)}</button></div>`; })() : "";
-  return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} lot · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>${btn}`;
+  return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} ${r.instrument === "EQUITY" ? "sh" : "lot"} · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>${btn}`;
 }
 
 /* ---- order editor (broker-style modify): which fields an order allows, and the /amend events a form produces ---- */
 function tmEditable(r) {
   if (!r) return null;
   if (r.state === "WAITING") return { entry: r.entry_mode === "ABOVE" || r.entry_mode === "LIMIT", sl: true, targets: true, lots: true, trail: false, cancel: true };
-  if (r.state === "ACTIVE") return { entry: false, sl: true, targets: true, lots: false, trail: true, cancel: false };
+  if (r.state === "ACTIVE") return { entry: false, sl: true, targets: true, lots: false, trail: true, trailPct: !(r.instrument === "EQUITY" && r.side === "SELL"), cancel: false };
   return null;
 }
 const tmParseList = (v) => String(v == null ? "" : v).split(",").map((x) => x.trim()).filter(Boolean).map(Number);
@@ -59,12 +65,19 @@ function tmEditEvents(r, f) {
   const raw = String(f.targets == null ? "" : f.targets).trim();
   if (raw) { const t = tmParseList(raw); if (!t.length || t.some((x) => !(x > 0))) err.push("Targets: comma separated numbers > 0"); else { const cur = (r.targets || []).slice().sort((a, b) => a - b), nw = [...new Set(t)].sort((a, b) => a - b); if (JSON.stringify(cur) !== JSON.stringify(nw)) ev.push({ action: "AMEND_TARGETS", targets: nw }); } }
   if (ed.lots) { const q = num(f.lots); if (q !== null) { if (!(Number.isInteger(q) && q >= 1)) err.push("Lots: whole number >= 1"); else if (q !== (r.lots || 1)) ev.push({ action: "AMEND_LOTS", lots: q }); } }
-  if (ed.trail) { const tp = num(f.trail_points), tc = num(f.trail_pct); if (tp !== null && tc !== null) err.push("Trail: give points OR percent, not both"); else if (tp !== null) { if (!(tp > 0)) err.push("Trail points must be > 0"); else ev.push({ action: "TRAIL_SL", trail_points: tp }); } else if (tc !== null) { if (!(tc > 0 && tc < 100)) err.push("Trail % must be between 0 and 100"); else ev.push({ action: "TRAIL_SL", trail_pct: tc }); } }
+  const short = r.instrument === "EQUITY" && r.side === "SELL";
+  if (ed.trail) { const tp = num(f.trail_points), tc = ed.trailPct === false ? null : num(f.trail_pct); if (tp !== null && tc !== null) err.push("Trail: give points OR percent, not both"); else if (tp !== null) { if (!(tp > 0)) err.push("Trail points must be > 0"); else ev.push({ action: "TRAIL_SL", trail_points: tp }); } else if (tc !== null) { if (!(tc > 0 && tc < 100)) err.push("Trail % must be between 0 and 100"); else ev.push({ action: "TRAIL_SL", trail_pct: tc }); } }
   const eSl = ev.find((e) => e.action === "AMEND_SL"), eTg = ev.find((e) => e.action === "AMEND_TARGETS"), eEn = ev.find((e) => e.action === "AMEND_ENTRY");
   const ref = r.state === "ACTIVE" ? r.fill : (eEn ? eEn.entry : r.entry), slN = eSl ? eSl.sl : r.sl, tgN = eTg ? eTg.targets : (r.targets || []);
-  if (ref != null && slN != null && slN >= ref) warn.push("Stop-loss is at/above the entry price: it will trigger at once.");
-  if (ref != null && tgN.length && tgN[0] <= ref) warn.push("First target is at/below the entry price.");
-  if (r.state === "ACTIVE" && r.bid != null && eSl && eSl.sl >= r.bid) warn.push("Stop-loss is at/above the current bid: the position exits immediately.");
+  if (!short) {
+    if (ref != null && slN != null && slN >= ref) warn.push("Stop-loss is at/above the entry price: it will trigger at once.");
+    if (ref != null && tgN.length && tgN[0] <= ref) warn.push("First target is at/below the entry price.");
+    if (r.state === "ACTIVE" && r.bid != null && eSl && eSl.sl >= r.bid) warn.push("Stop-loss is at/above the current bid: the position exits immediately.");
+  } else {                                                                                        // a short: the stop sits ABOVE the entry, targets BELOW it; it exits at the ask
+    if (ref != null && slN != null && slN <= ref) warn.push("Stop-loss is at/below the entry price (a short's stop must be above it): it will trigger at once.");
+    if (ref != null && tgN.length && tgN[0] >= ref) warn.push("First target is at/above the entry price (a short's targets must be below it).");
+    if (r.state === "ACTIVE" && r.ask != null && eSl && eSl.sl <= r.ask) warn.push("Stop-loss is at/below the current ask: the position is covered immediately.");
+  }
   return { ev, warn, err };
 }
 function tmEditHtml(r) {
@@ -73,11 +86,11 @@ function tmEditHtml(r) {
   const cur = r.state === "ACTIVE" ? `fill <b>${tmNum(r.fill)}</b> · SL <b>${tmNum(r.sl)}</b> · T <b>${tmEsc((r.targets || []).map((x) => tmNum(x)).join(", ") || "–")}</b>` : `${tmEsc(r.entry_mode || "")} <b>${tmNum(r.entry)}</b> · SL <b>${tmNum(r.sl)}</b> · T <b>${tmEsc((r.targets || []).map((x) => tmNum(x)).join(", ") || "–")}</b>`;
   return `<div class="tm-edit-h"><b>${r.state === "ACTIVE" ? "Modify position" : "Modify order"}</b> <span class="mut">${tmEsc(r.label)} · ${tmEsc(r.id)}</span></div>`
     + `<div class="tm-edit-cur mut" id="tmEditCur">now: ${cur}</div>`
-    + `<div class="tm-edit-g">${ed.entry ? inp("entry", "Entry", r.entry) : ""}${inp("sl", "Stop-loss", r.sl)}${inp("targets", "Targets (a, b)", (r.targets || []).join(", "))}${ed.lots ? inp("lots", "Lots", r.lots || 1) : ""}${ed.trail ? inp("trail_points", "Trail pts", "") + inp("trail_pct", "Trail %", "") : ""}</div>`
+    + `<div class="tm-edit-g">${ed.entry ? inp("entry", "Entry", r.entry) : ""}${inp("sl", "Stop-loss", r.sl)}${inp("targets", "Targets (a, b)", (r.targets || []).join(", "))}${ed.lots ? inp("lots", r.instrument === "EQUITY" ? "Qty (shares)" : "Lots", r.lots || 1) : ""}${ed.trail ? inp("trail_points", "Trail pts", "") + (ed.trailPct === false ? "" : inp("trail_pct", "Trail %", "")) : ""}</div>`
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -153,16 +166,16 @@ if (typeof document !== "undefined") (function () {
   }
 
   async function loadOption(r, myGen) {
-    const q = `/chart?underlying=${encodeURIComponent(r.underlying)}&expiry=${encodeURIComponent(r.expiry)}&strike=${r.strike}&option_type=${r.option_type}&tf=${tf}`;
-    const [c, u] = await Promise.all([api(q), api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=15`).catch(() => null)]);
+    const q = tmChartPath(r, tf);
+    const [c, u] = await Promise.all([api(q), r.instrument === "EQUITY" ? Promise.resolve(null) : api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=15`).catch(() => null)]);
     if (myGen !== gen) return; clearChart(); addCandles(); series.c.setData(c.candles); lastBar = c.candles.length ? c.candles[c.candles.length - 1] : null; drawLevels(r);
     const times = c.candles.map((x) => x.time), mks = u ? pineMarkers(times, u.markers) : [];
     if (r.posted_ts) { const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); if (t != null) mks.push({ time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" }); }
     setMarkers(mks); lastUnderlying = u; if (!userZoomed) chart.timeScale().fitContent();
-    setNote(c.candles.length ? `${c.candles.length} candles · ${tf}m · exchange-stamped quotes · Pine arrows = Winners Scalper signals on ${r.underlying}` : "No quotes captured for this contract yet today.");
+    setNote(c.candles.length ? `${c.candles.length} candles · ${tf}m · exchange-stamped quotes` + (r.instrument === "EQUITY" ? ` · ${r.underlying} cash equity` : ` · Pine arrows = Winners Scalper signals on ${r.underlying}`) : "No quotes captured for this contract yet today.");
   }
   async function refreshOption(r) {
-    const since = lastBar ? lastBar.time - IST_SHIFT : undefined; const c = await api(`/chart?underlying=${encodeURIComponent(r.underlying)}&expiry=${encodeURIComponent(r.expiry)}&strike=${r.strike}&option_type=${r.option_type}&tf=${tf}` + (since ? `&since=${since}` : ""));
+    const since = lastBar ? lastBar.time - IST_SHIFT : undefined; const c = await api(tmChartPath(r, tf, since));
     for (const b of c.candles) { if (!lastBar || b.time >= lastBar.time) { series.c.update(b); lastBar = b; } }
   }
   async function loadUnderlying(r, myGen) {
@@ -190,6 +203,7 @@ if (typeof document !== "undefined") (function () {
   }
   async function openChart(r) {
     if (!ensureChart()) { setNote("chart library not loaded", true); return; }
+    if (r.instrument === "EQUITY" && view !== "option") { view = "option"; document.querySelectorAll("[data-tmview]").forEach((x) => x.classList.toggle("on", x.dataset.tmview === "option")); }          // cash equity has no Pine / underlying view
     sel = r; gen += 1; userZoomed = false; const my = gen; renderHeader(); highlight();
     try { if (view === "option") await loadOption(r, my); else await loadUnderlying(r, my); } catch (e) { setNote("chart: " + e.message, true); }
   }

@@ -18,6 +18,36 @@ def _iso(ts: float) -> str: return datetime.fromtimestamp(ts, timezone.utc).strf
 def _ep(s: str) -> float: return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
 
 
+def _candles(rows, tf: int, lo: float) -> list[dict]:
+    """(received_ts, ltp) rows -> OHLC candles on the capture-time axis, a gap of up to 15 minutes carried flat (shared by the option and the equity chart)."""
+    tfs = tf * 60
+    bars, last_b, last_px = {}, None, None
+    for ts, ltp in rows:
+        t = _ep(ts)
+        if t < lo: continue
+        b = int(t // tfs)
+        if last_b is not None and 1 < b - last_b <= max(2, int(900 // tfs)):                       # carry the last price flat across a gap of up to 15 minutes (never longer: a longer silence stays a visible gap)
+            for k in range(last_b + 1, b): bars.setdefault(k, [last_px, last_px, last_px, last_px])
+        if b not in bars: bars[b] = [ltp, ltp, ltp, ltp]
+        else: x = bars[b]; x[1] = max(x[1], ltp); x[2] = min(x[2], ltp); x[3] = ltp
+        last_b, last_px = b, ltp
+    return [dict(time=b * tfs + IST_S, open=v[0], high=v[1], low=v[2], close=v[3]) for b, v in sorted(bars.items())]
+
+
+def premium_equity(symbol: str, tf: int = 1, since: float | None = None, now: float | None = None, path: str | None = None) -> dict:
+    """OHLC candles (tf minutes) of an NSE cash-equity symbol's last-traded price for today's session, from the captured quotes (same shape as premium())."""
+    now = now or time.time(); tfs = tf * 60
+    day0 = datetime.fromtimestamp(now, IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
+    c = CT._ro(path)
+    try:
+        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND kind='EQUITY' AND ltp IS NOT NULL AND exch_ts>=?" + CT.NOT_FUTURE + " ORDER BY exch_ts", (symbol, _iso(day0 - 2 * 86400))).fetchall()
+    finally: c.close()
+    out["candles"] = _candles(rows, tf, lo)
+    from . import equity as EQ
+    out["last"] = EQ.latest_quote(symbol, path); return out
+
+
 def premium(underlying: str, expiry_iso: str, strike: float, ot: str, tf: int = 1, since: float | None = None, now: float | None = None, path: str | None = None) -> dict:
     """OHLC candles (tf minutes) of the contract's last-traded price for today's session, from the exchange-stamped quotes (one per exchange second). `since` (UTC epoch of the last candle the client has) returns only that candle onwards."""
     now = now or time.time(); tfs = tf * 60
@@ -29,17 +59,7 @@ def premium(underlying: str, expiry_iso: str, strike: float, ot: str, tf: int = 
                          (underlying, snap_expiry(expiry_iso), float(strike), ot, _iso(day0 - 2 * 86400))).fetchall()                       # the contract's (symbol, expiry, strike, type, exch_ts) index: a few thousand rows, never a table scan (heartbeat rows keep an OLD exch_ts, hence the 2-day lower bound)
     finally: c.close()
     # time axis = when OUR capture stored the price (heartbeat rows included): an illiquid contract whose exchange timestamp does not change still stands at that price, so its chart is continuous instead of 6 candles in 5 hours
-    bars, last_b, last_px = {}, None, None
-    for ts, ltp in rows:
-        t = _ep(ts)
-        if t < lo: continue
-        b = int(t // tfs)
-        if last_b is not None and 1 < b - last_b <= max(2, int(900 // tfs)):                       # carry the last price flat across a gap of up to 15 minutes (never longer: a longer silence stays a visible gap)
-            for k in range(last_b + 1, b): bars.setdefault(k, [last_px, last_px, last_px, last_px])
-        if b not in bars: bars[b] = [ltp, ltp, ltp, ltp]
-        else: x = bars[b]; x[1] = max(x[1], ltp); x[2] = min(x[2], ltp); x[3] = ltp
-        last_b, last_px = b, ltp
-    out["candles"] = [dict(time=b * tfs + IST_S, open=v[0], high=v[1], low=v[2], close=v[3]) for b, v in sorted(bars.items())]
+    out["candles"] = _candles(rows, tf, lo)
     out["last"] = CT.latest_quote(underlying, expiry_iso, float(strike), ot, path); return out
 
 

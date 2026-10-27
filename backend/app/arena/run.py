@@ -44,7 +44,7 @@ def human_signals(path: str | None = None, start: str | None = None, end: str | 
         if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct", "lots") if k in r} | {"t": r["server_ts"]})
     rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or (start is not None or end is not None) or not r.get("practice")) and r["id"] not in (exclude_ids or set()) and (not start or day(r) >= start) and (not end or day(r) <= end)]
     return [{"id": r["id"], "participant": pmap.get(r["id"], r["participant"]), "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
-             "entry": r["entry"], "entry_hi": r.get("entry_hi") or r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], []), **({"valid_sec": r.get("valid_sec") or vcorr[r["id"]]} if (r.get("valid_sec") or r["id"] in vcorr) else {}), "lots": int(r.get("lots") or 1)} | ({"void_status": scorr[r["id"]]["status"], "void_reason": scorr[r["id"]]["reason"]} if r["id"] in scorr else {}) for r in rows]
+             "entry": r["entry"], "entry_hi": r.get("entry_hi") or r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], []), **({"valid_sec": r.get("valid_sec") or vcorr[r["id"]]} if (r.get("valid_sec") or r["id"] in vcorr) else {}), "lots": int(r.get("lots") or 1)} | ({"instrument": "EQUITY", "side": r.get("side", "BUY")} if r.get("instrument") == "EQUITY" else {}) | ({"void_status": scorr[r["id"]]["status"], "void_reason": scorr[r["id"]]["reason"]} if r["id"] in scorr else {}) for r in rows]
 
 
 def _is_final(r: dict, day: str) -> bool:
@@ -63,6 +63,8 @@ def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", c
         if key is not None and key in cache:
             r = cache[key]; spread_cache.setdefault(s["underlying"], {"half_spread": None, "source": r.get("spread_source")}); by_part.setdefault(s["participant"], []).append(r); continue
         hs = spread_cache.get(s["underlying"])
+        if hs is None and s.get("instrument") == "EQUITY":                                                    # equity quotes carry a real bid / ask; this only backs up a one-sided frame
+            hs = {"half_spread": 0.0005, "source": "EQUITY_FALLBACK 0.05% [assumption]"}; spread_cache[s["underlying"]] = hs
         if hs is None:                                                                                      # the measured half-spread of an underlying/day barely moves: reused for 10 minutes across refreshes
             hk = ("hs", s["underlying"], day, market_db); hit = cache.get(hk) if cache is not None else None
             if hit and time.time() - hit[0] < 600: hs = hit[1]
@@ -70,7 +72,7 @@ def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", c
                 hs = SM.half_spread(s["underlying"], [day], market_db)
                 if cache is not None: cache[hk] = (time.time(), hs)
             spread_cache[s["underlying"]] = hs
-        snaps = S.load_snaps(s["underlying"], s["expiry"], s["strike"], s["option_type"], day, market_db, since=s["t"] - 60)
+        snaps = S.load_snaps(s["underlying"], s["expiry"], s["strike"], s["option_type"], day, market_db, since=s["t"] - 60, instrument=s.get("instrument", "OPTION"))
         r = S.settle(s, snaps, half_spread=hs["half_spread"], policy=policy); r["spread_source"] = hs["source"]
         if key is not None and _is_final(r, day): cache[key] = r
         by_part.setdefault(s["participant"], []).append(r)

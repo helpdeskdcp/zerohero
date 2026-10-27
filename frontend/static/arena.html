@@ -42,7 +42,7 @@ main.wide{max-width:none}
 <div id="app" hidden>
 <div class="tabs"><button data-tab="guide">Guide</button><button data-tab="submit">Submit a signal</button><button data-tab="mine">My signals</button><button data-tab="standings">Standings</button><button data-tab="terminal">Terminal</button></div>
 <section data-pane="guide" class="card"><div id="guide">loading…</div></section>
-<section data-pane="submit" class="card" hidden><b>Submit BEFORE you take the trade</b> <span class="mut">(long options only · one lot · cannot be edited)</span>
+<section data-pane="submit" class="card" hidden><b>Submit BEFORE you take the trade</b> <span class="mut">(options: long only · equity below · cannot be edited)</span>
 <form id="f" autocomplete="off"><div class="grid">
 <div><label>Underlying</label><select name="underlying"><option>NIFTY</option><option>BANKNIFTY</option><option>SENSEX</option><option>NATURALGAS</option><option>CRUDEOIL</option><option>GOLDM</option></select></div>
 <div><label>Expiry <span class="mut">(auto: current first, then next)</span></label><select name="expiry" id="expSel"></select></div>
@@ -54,7 +54,20 @@ main.wide{max-width:none}
 <div><label>Targets (premium, comma separated) <span class="mut">· optional, leave blank for none</span></label><input name="targets" placeholder="120, 140"></div></div>
 <label>Note (optional)</label><textarea name="note" rows="2" maxlength="300"></textarea>
 <label style="color:var(--tx)"><input type="checkbox" name="confirmNotEntered" style="width:auto"> I have <b>not</b> entered this trade yet</label>
-<div id="riskNote" class="mut" hidden>Entry-only profile: leave <b>stop-loss</b> and <b>targets</b> blank and ZeroHero's rule-based risk module sets them (stop from the contract's recent swing low, targets at 1:1 / 1:2 / 1:3 of that risk). The entry stays valid for 15 minutes. Use <b>Preview</b> to see them first.</div><div id="prev" class="mut"></div><div id="hint" class="mut"></div><button type="button" id="refreshChain" style="margin-top:6px">Refresh prices</button><button type="button" id="previewRisk" style="margin-top:8px">Preview stop &amp; targets</button><button id="go" type="submit" style="margin-top:8px">Submit (final)</button><div id="submsg" class="msg" hidden></div></form></section>
+<div id="riskNote" class="mut" hidden>Entry-only profile: leave <b>stop-loss</b> and <b>targets</b> blank and ZeroHero's rule-based risk module sets them (stop from the contract's recent swing low, targets at 1:1 / 1:2 / 1:3 of that risk). The entry stays valid for 15 minutes. Use <b>Preview</b> to see them first.</div><div id="prev" class="mut"></div><div id="hint" class="mut"></div><button type="button" id="refreshChain" style="margin-top:6px">Refresh prices</button><button type="button" id="previewRisk" style="margin-top:8px">Preview stop &amp; targets</button><button id="go" type="submit" style="margin-top:8px">Submit (final)</button><div id="submsg" class="msg" hidden></div></form><div class="card" id="eqCard" style="margin-top:14px"><b>Equity — NSE cash, intraday</b> <span class="mut">(BUY or SELL = short · squared off at 15:15 · paper · cannot be edited, but entry / stop / targets / quantity can be modified from the Terminal tab)</span>
+<div class="grid">
+<div><label>Symbol <span class="mut">(NSE, e.g. RELIANCE)</span></label><input id="eqSym" autocapitalize="characters" autocomplete="off" placeholder="RELIANCE"></div>
+<div><label>Side</label><select id="eqSide"><option>BUY</option><option>SELL</option></select></div>
+<div><label>Quantity (shares)</label><input id="eqQty" inputmode="numeric" value="1"></div>
+<div><label>Entry mode <span class="mut">(LIMIT = at your price or better; ABOVE = BUY when it trades up to it / SELL when it trades down to it)</span></label><select id="eqMode"><option>NEAR</option><option>LIMIT</option><option>ABOVE</option><option>MARKET</option></select></div>
+<div><label>Entry price</label><input id="eqEntry" inputmode="decimal"></div>
+<div><label>Stop-loss <span class="mut">· optional</span></label><input id="eqSl" inputmode="decimal" placeholder="optional"></div>
+<div><label>Targets <span class="mut">· optional, comma separated</span></label><input id="eqTg" placeholder="1010, 1020"></div></div>
+<div id="eqQuote" class="mut" style="margin:6px 0"></div>
+<label>Note (optional)</label><textarea id="eqNote" rows="1" maxlength="300"></textarea>
+<label style="color:var(--tx)"><input type="checkbox" id="eqConfirm" style="width:auto"> I have <b>not</b> entered this trade yet</label>
+<button type="button" id="eqAuto" style="margin-top:6px">Auto stop &amp; targets (0.5% · 1R / 2R)</button><button type="button" id="eqGo" style="margin-top:6px">Place equity order</button><div id="eqMsg" class="msg" hidden></div></div>
+</section>
 <section data-pane="mine" class="card" hidden><b>My submitted signals</b> <span class="mut">(server time, hash-chained, read-only)</span><div class="card livePanel"><b>Live trades</b> <span class="mut">(today · updates every 3 s without reloading)</span><div class="liveBody mut">connecting…</div></div><div class="wrap"><table><thead><tr><th>id</th><th>server time (IST)</th><th>type</th><th>option</th><th>mode</th><th>entry</th><th>lots</th><th>SL</th><th>targets</th><th>management</th><th>hash</th></tr></thead><tbody id="mine"></tbody></table></div>
 <h3 style="margin:14px 0 4px">Manage a signal <span class="mut">(time-stamped; applies after the contest execution delay (see Guide); never retroactive; cannot be undone)</span></h3>
 <form id="mg" autocomplete="off"><div class="grid">
@@ -79,4 +92,4 @@ main.wide{max-width:none}
 <div id="tmChart"></div><div class="tm-note mut" id="tmNote">Click an order or position on the right.</div></div>
 <div class="tm-right"><div class="tm-tabs"><button data-tm="orders" class="on">Orders<span class="n" id="tmCntOrders">0</span></button><button data-tm="positions">Positions<span class="n" id="tmCntPos">0</span></button><button data-tm="closed">Closed<span class="n" id="tmCntClosed">0</span></button></div>
 <div id="tmList"></div><div class="tm-edit" id="tmEdit" hidden></div><div class="tm-foot" id="tmTot"></div></div></div></section>
-</div></main><script src="/static/js/arena.js"></script><script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script><script src="/static/js/arena_terminal.js?v=20261027e"></script></body></html>
+</div></main><script src="/static/js/arena.js"></script><script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script><script src="/static/js/arena_terminal.js?v=20261027f"></script><script src="/static/js/arena_equity.js?v=20261027a"></script></body></html>

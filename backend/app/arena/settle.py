@@ -38,12 +38,15 @@ def snap_expiry(iso: str) -> str:
 def _ep(ts: str) -> float: return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
 
 
-def load_snaps(underlying: str, expiry_iso: str, strike: float, ot: str, day: str, path: str | None = None, since: float | None = None) -> list[dict]:
+def load_snaps(underlying: str, expiry_iso: str, strike: float, ot: str, day: str, path: str | None = None, since: float | None = None, instrument: str = "OPTION") -> list[dict]:
     """Captured quotes of one contract for one session day. `since` (epoch) keeps only rows received at/after that instant: a settlement never needs the rows before its signal."""
     c = sqlite3.connect(f"file:{os.path.abspath(path or DB)}?mode=ro", uri=True, timeout=30)
     try:
-        q = "SELECT received_ts,ltp,bid,ask,exch_ts FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND session_date_ist=? AND ltp IS NOT NULL"
-        a = [underlying, snap_expiry(expiry_iso), strike, ot, day]
+        if instrument == "EQUITY":                                                                           # cash equity: one row series per NSE symbol (no expiry / strike)
+            q = "SELECT received_ts,ltp,bid,ask,exch_ts FROM quote_snapshots WHERE symbol=? AND kind='EQUITY' AND session_date_ist=? AND ltp IS NOT NULL"; a = [underlying, day]
+        else:
+            q = "SELECT received_ts,ltp,bid,ask,exch_ts FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND expiry=? AND strike=? AND option_type=? AND session_date_ist=? AND ltp IS NOT NULL"
+            a = [underlying, snap_expiry(expiry_iso), strike, ot, day]
         if since is not None:
             sx = datetime.fromtimestamp(since, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"); q += " AND (received_ts>=? OR exch_ts>=?)"; a += [sx, sx]
         rows = c.execute(q + " ORDER BY received_ts", a).fetchall()
@@ -144,14 +147,45 @@ def _apply(ev: dict, st: dict) -> None:
     elif a == "CANCEL" or a == "EXIT_NOW": st[a] = True
 
 
+def equity_cost_rs(side: str, fill: float, exit_: float, qty: int) -> float:
+    """Round-trip Rs cost of an equity trade by its REAL prices: a BUY buys at `fill` and sells at `exit_`, a SELL (short) sells at `fill` and buys back at `exit_`."""
+    from ..institutional_edge.costs import equity_intraday_round_trip_cost_rs as _c
+    return _c(fill, exit_, qty) if side != "SELL" else _c(exit_, fill, qty)
+
+
+def _settle_short(sig: dict, snaps: list[dict], *, half_spread: float, policy: str, latency: int) -> dict:
+    """A SELL (short) is the long engine run on the mirrored price y = K - x (K = 2 x entry): selling at the bid is buying at y_ask = K - bid, a stop ABOVE the entry is a stop below it in y, a target BELOW the entry is
+    above it in y, a trailing stop in points mirrors exactly. The result is mapped back to real prices, so P&L = (sell price - buy-back price) x qty. The 5 % no-chase limit is measured on y (about 5 % of the entry)."""
+    K = 2.0 * float(sig["entry"]); m = lambda x: None if x is None else K - float(x)
+    ms = [{**x, "ltp": m(x["ltp"]), "bid": m(x.get("ask")), "ask": m(x.get("bid"))} for x in snaps]
+    me = []
+    for e in (sig.get("events") or []):
+        e = dict(e)
+        if e.get("action") == "AMEND_SL" and e.get("sl") is not None: e["sl"] = m(e["sl"])
+        elif e.get("action") == "AMEND_TARGETS": e["targets"] = [m(x) for x in e["targets"]]
+        elif e.get("action") == "AMEND_ENTRY" and e.get("entry") is not None: e["entry"] = m(e["entry"]); e["entry_hi"] = None
+        me.append(e)
+    msig = {**sig, "_mirror_K": K, "entry": m(sig["entry"]), "entry_hi": m(sig["entry"]), "sl": m(sig.get("sl")), "targets": sorted(m(x) for x in sig.get("targets") or []), "events": me}
+    r = settle(msig, ms, half_spread=half_spread, policy=policy, latency=latency)
+    for k in ("fill", "exit", "ask_at_entry", "target", "entry_now", "sl_now"):
+        if r.get(k) is not None: r[k] = K - r[k]
+    if r.get("targets_now") is not None: r["targets_now"] = sorted((K - x for x in r["targets_now"]), reverse=True)
+    if r.get("last"): r["last"] = {**r["last"], "bid": m(r["last"].get("ask")), "ask": m(r["last"].get("bid")), "ltp": m(r["last"].get("ltp"))}
+    return r
+
+
 def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T1", latency: int = LATENCY_SEC) -> dict:
     """Event-driven. sig: underlying, strike, option_type, entry_mode (ABOVE|NEAR|MARKET|LIMIT), entry (low), entry_hi (opt), sl, targets[], t (epoch) and optional events[]
     ({t, action: AMEND_SL|AMEND_TARGETS|TRAIL_SL|EXIT_NOW|CANCEL, ...}). An event is effective on the first snapshot at/after event.t + latency (same delay for every action, both sides);
     events never act retroactively and are ignored once the trade is closed. LIMIT: a buy limit at `entry`, fills at the ask as soon as ask <= entry (valid to session end).
     Returns status SETTLED | MISSED | DATA_GAP | INVALID_LEVELS | NOT_TRIGGERED | CANCELLED | NO_DATA:reason."""
     und = sig["underlying"]; base = {"id": sig.get("id"), "participant": sig.get("participant"), "underlying": und, "strike": sig["strike"], "type": sig["option_type"], "t": sig["t"], "entry_mode": sig["entry_mode"]}
-    try: lot = int(get_instrument_profile(und).lot_size.value)
-    except Exception: lot = None
+    eq = sig.get("instrument") == "EQUITY"; Kmir = sig.get("_mirror_K")
+    if eq and sig.get("side") == "SELL" and Kmir is None: return _settle_short(sig, snaps, half_spread=half_spread, policy=policy, latency=latency)
+    if eq: lot = 1                                                                                      # a share is the unit: quantity (shares) rides in `lots`
+    else:
+        try: lot = int(get_instrument_profile(und).lot_size.value)
+        except Exception: lot = None
     if not lot: return {**base, "status": "NO_DATA:no_lot_size"}
     if sig.get("void_status"): return {**base, "status": sig["void_status"], "void_reason": sig.get("void_reason")}        # ledger correction (HUMAN_STATUS_CORRECTION): signal voided after the fact
     _rf = rule_from("gap_chase_rules_from_ts"); new_rules = _rf is not None and sig["t"] >= _rf                          # DATA_GAP + ABOVE-chase + stale-levels rules: only for signals posted after deployment
@@ -218,9 +252,13 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         if tg is not None and sp >= tg and (sp > fill or not new_rules): px, real_exit, why = sp, real, "TARGET"; break
     if px is None:                                                                                      # still open: what a live screen needs (fill, lot, the stop / targets in force, the last quote)
         ls = live[-1]; return {**base, "status": "NO_DATA:no_exit_snapshot", "fill": fill, "fill_t": live[j]["t"], "lot": lot, "lots": st["lots"], "sl_now": st["sl"], "targets_now": list(st["targets"]), "last": {"t": ls["t"], "bid": ls.get("bid"), "ask": ls.get("ask"), "ltp": ls.get("ltp")}}
-    c = cost_points(und, fill, px, lot)
+    c = 0.0 if eq else cost_points(und, fill, px, lot)
     if c is None: return {**base, "status": "NO_DATA:no_cost_model"}
-    lots = st["lots"]; ct1 = cost_total_rs(und, fill, px, lot, 1); ctn = cost_total_rs(und, fill, px, lot, lots)
+    lots = st["lots"]
+    if eq:                                                                                                  # real prices: undo the mirror for a short before the charges are computed
+        rf, rx, sd = (Kmir - fill, Kmir - px, "SELL") if Kmir is not None else (fill, px, "BUY")
+        ct1 = equity_cost_rs(sd, rf, rx, 1); ctn = equity_cost_rs(sd, rf, rx, lots)
+    else: ct1 = cost_total_rs(und, fill, px, lot, 1); ctn = cost_total_rs(und, fill, px, lot, lots)
     if ct1 is None or ctn is None: return {**base, "status": "NO_DATA:no_cost_model", "fill": fill}
     gross = (px - fill) * lot * lots; cost = ctn; gross1 = (px - fill) * lot; cost1 = ct1
     return {**base, "status": "SETTLED", "fill": fill, "exit": px, "exit_reason": why, "fill_real_quote": real_fill, "exit_real_quote": real_exit, "lot": lot, "lots": lots, "gross_rs": gross, "cost_rs": cost, "net_rs_1lot": gross1 - cost1,

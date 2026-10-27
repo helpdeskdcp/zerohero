@@ -53,6 +53,24 @@ def request_watch(symbol: str, expiry_iso: str, strike: float, option_type: str,
     return e
 
 
+def request_watch_equity(symbol: str, *, now: float | None = None, path: str | None = None, ttl_sec: float | None = None) -> dict:
+    """Register an NSE cash-equity symbol for the 3-second quote capture (same file, same expiry-at-close rule as request_watch; no expiry / strike / option type)."""
+    path = path or WATCH; t = now or time.time(); day = datetime.fromtimestamp(t, tz=IST)
+    close = datetime(day.year, day.month, day.day, CLOSE["NSE"][0], CLOSE["NSE"][1], tzinfo=IST).timestamp()
+    until = close if ttl_sec is None else min(close, t + float(ttl_sec))
+    e = {"symbol": symbol.upper(), "expiry": "", "strike": 0.0, "option_type": "EQ", "until": until, "added": t, "kind": "signal" if ttl_sec is None else "view", "inst": "EQUITY"}
+    key = lambda x: (x["symbol"], x["expiry"], x["strike"], x["option_type"])
+    try:
+        with _lock:
+            items = [x for x in _load(path) if x.get("until", 0) > t]; old = next((x for x in items if key(x) == key(e)), None)
+            if old is not None and old["until"] >= until - 30 and (old.get("kind") == "signal" or e["kind"] == "view"): return old
+            if old is not None: e["until"] = max(until, old["until"]); e["kind"] = "signal" if "signal" in (old.get("kind"), e["kind"]) else "view"
+            items = [x for x in items if key(x) != key(e)] + [e]; os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path + ".tmp"; json.dump(items, open(tmp, "w")); os.replace(tmp, path)
+    except Exception:
+        pass
+    return e
+
+
 class PriorityCapture:
     def __init__(self, store=None, sdk_provider=None, meta_fn=None, interval: float | None = None, path: str | None = None):
         self.store = store; self._sdk_provider = sdk_provider; self._meta_fn = meta_fn or self._meta_from_db
@@ -70,8 +88,15 @@ class PriorityCapture:
         from .worker import CaptureWorker
         return CaptureWorker._default_sdk()
 
+    def _meta_equity(self, e: dict) -> dict | None:
+        """NSE cash-equity token from the broker instrument master (no captured history is needed: the first priority poll creates it)."""
+        from .equity_master import resolve as _resolve
+        r = _resolve(e["symbol"], self._sdk())
+        return {"instrument_key": f'NSE:{r["token"]}', "symbol": e["symbol"], "kind": "EQUITY", "exchange": "NSE", "token": r["token"], "expiry": None, "strike": None, "option_type": None} if r else None
+
     def _meta_from_db(self, e: dict) -> dict | None:
         """Token / exchange of the contract from its LATEST captured row (any day: a contract's token does not change), via the (symbol, expiry, strike, option_type, exch_ts) index."""
+        if e.get("inst") == "EQUITY": return self._meta_equity(e)
         st = self._store()
         with st._conn() as c:
             r = c.execute("SELECT exchange, token, instrument_key FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' ORDER BY exch_ts DESC LIMIT 1",

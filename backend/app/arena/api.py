@@ -18,6 +18,7 @@ from . import compare as CMP, contracts as CT, run as R, submit as SU
 router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 IST = timezone(timedelta(hours=5, minutes=30))
+from . import equity as EQ  # noqa: E402
 EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
@@ -108,7 +109,7 @@ def state(request: Request):
     c = _auth(request)
     if time.time() - _warm["t"] > 120:                                                  # keep the quote pages hot so contract/strike pickers answer instantly
         _warm["t"] = time.time(); threading.Thread(target=CT.warm, daemon=True).start()
-    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "risk_module": c["flags"].get(c["name"], {}).get("risk_module", False), "default_lots": c["flags"].get(c["name"], {}).get("default_lots", 1), "max_lots": SU.MAX_LOTS, "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED),
+    return {"mode": mode(c), "start": c["start"], "end": c["end"], "official_start": c.get("official_start"), "phase": ("REHEARSAL" if c.get("official_start") and datetime.now(IST).strftime("%Y-%m-%d") < c["official_start"] else "OFFICIAL"), "participant": c["name"], "risk_module": c["flags"].get(c["name"], {}).get("risk_module", False), "default_lots": c["flags"].get(c["name"], {}).get("default_lots", 1), "max_lots": SU.MAX_LOTS, "now_ist": datetime.now(IST).isoformat(timespec="seconds"), "allowed_underlyings": list(SU.ALLOWED), "equity": os.environ.get("ARENA_EQUITY", "1").strip().lower() not in ("0", "false", "off", "no"), "equity_max_notional_rs": SU.MAX_EQ_NOTIONAL,
             "entry_modes": list(SU.MODES), "capital": R.CAPITAL, "notes": ["PRACTICE entries (before the start date) are stored but never scored.", "Submit BEFORE you enter the trade; the server stamps the time; entries cannot be edited."]}
 
 
@@ -167,6 +168,32 @@ def quote(request: Request, underlying: str, expiry: str, strike: float, option_
     return {"expiry": e, "last": CT.last_quote(u, e, float(strike), option_type.upper())}
 
 
+async def _submit_equity(c, body: dict, m: str):
+    """NSE cash equity, intraday paper: BUY or SELL (short) of N shares. Same ledger, same rules (server timestamp, execution delay, ask-in / bid-out, session end 15:15), equity charges."""
+    import asyncio
+    if os.environ.get("ARENA_EQUITY", "1").strip().lower() in ("0", "false", "off", "no"): raise HTTPException(409, "equity trading is switched off in this arena")
+    body = {**body, "instrument": "EQUITY"}
+    if m == "ARENA_LIVE":
+        try:
+            from .. import market_calendar as mc
+            if not mc.is_trading("NSE"): raise HTTPException(409, "NSE is not open: scored signals can only be submitted while the market is trading")
+        except HTTPException: raise
+        except Exception: pass
+    try: v = SU.validate({**body, "participant": c["name"]})
+    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    try: chk = await asyncio.get_running_loop().run_in_executor(None, lambda: EQ.check(v["underlying"], v["side"], v["entry"], v["entry_mode"], sl=v["sl"]))
+    except Exception: chk = None                                                                  # data unavailable: do not block, report nothing
+    if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable: " + "; ".join(chk["problems"]))
+    try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    _stale_all()
+    try: EQ.watch(rec["underlying"])                                                              # dense quotes for this symbol until the close
+    except Exception: pass
+    out = {k: rec.get(k) for k in ("id", "server_iso", "practice", "instrument", "side", "underlying", "entry_mode", "entry", "sl", "targets", "qty", "hash")}
+    if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]
+    return out
+
+
 @router.post("/submit")
 async def submit(request: Request):
     c = _auth(request)
@@ -176,6 +203,7 @@ async def submit(request: Request):
     if not isinstance(body, dict): raise HTTPException(400, "object expected")
     m = mode(c)
     if m == "ENDED": raise HTTPException(409, "arena has ended")
+    if str(body.get("instrument", "")).upper() == "EQUITY": return await _submit_equity(c, body, m)
     if c["flags"].get(c["name"], {}).get("risk_module") and (not body.get("sl") or not body.get("targets")):          # entry-only profile: ZeroHero's rule-based risk module sets what is missing
         try:
             from .. import sl_detector
@@ -229,6 +257,7 @@ async def amend(request: Request):
         try:
             from .. import market_calendar as mc
             if sig and sig["underlying"] in EXCH and not mc.is_trading(EXCH[sig["underlying"]]): raise HTTPException(409, f"{EXCH[sig['underlying']]} is not open")
+            if sig and sig.get("instrument") == "EQUITY" and not mc.is_trading("NSE"): raise HTTPException(409, "NSE is not open")
         except HTTPException: raise
         except Exception: pass
     if str(body.get("action", "")).upper() in ("AMEND_LOTS", "AMEND_ENTRY"):                              # the quantity / the entry can change only while the trade is NOT active
@@ -265,7 +294,7 @@ def signals(request: Request):
     day = lambda r: datetime.fromtimestamp(r["server_ts"] + 19800, tz=timezone.utc).strftime("%Y-%m-%d")
     for r in recs:
         if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r.get(k) for k in ("id", "server_iso", "action", "sl", "targets", "trail_points", "trail_pct", "lots", "hash")})
-    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "lots", "note", "hash")}, "events": evs.get(r["id"], []),
+    return {"signals": [{**{k: r.get(k) for k in ("id", "server_iso", "practice", "instrument", "side", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "lots", "note", "hash")}, "events": evs.get(r["id"], []),
                          "scored": c["start"] <= day(r) <= c["end"] and r["id"] not in c["exclude"], "excluded": r["id"] in c["exclude"]}
                         for r in recs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and pm.get(r["id"]) == c["name"]]}
 
@@ -315,6 +344,30 @@ def chart(request: Request, underlying: str, expiry: str, strike: float, option_
     return TM.premium(u, e, float(strike), ot, int(tf), since)
 
 
+@router.get("/chart/equity")
+def chart_equity(request: Request, symbol: str, tf: int = 1, since: float | None = None):
+    """Terminal tab: candles (tf minutes) of an NSE cash-equity symbol from today's captured quotes; keeps the symbol under the 3-second capture while it is on a screen."""
+    _auth(request); sym = symbol.strip().upper()
+    if SU.EQ_SYMBOL_RE.fullmatch(sym) is None or tf not in (1, 3, 5, 15): raise HTTPException(422, "bad symbol / tf")
+    from . import terminal as TM
+    try: EQ.watch(sym, ttl_sec=300)
+    except Exception: pass
+    return TM.premium_equity(sym, int(tf), since)
+
+
+@router.get("/equity/quote")
+def equity_quote(request: Request, symbol: str):
+    """Order ticket: does this NSE symbol exist, and what is its latest captured quote (also puts the symbol under the 3-second capture for 5 minutes)."""
+    _auth(request); sym = symbol.strip().upper()
+    if SU.EQ_SYMBOL_RE.fullmatch(sym) is None: raise HTTPException(422, "bad symbol")
+    r = EQ.resolve(sym)
+    if r is None: raise HTTPException(404, f"{sym} is not an NSE cash-equity symbol in the broker instrument master")
+    try: EQ.watch(sym, ttl_sec=300)
+    except Exception: pass
+    q = EQ.latest_quote(sym)
+    return {"symbol": sym, "name": r["name"], "last": q, "age_s": (round(time.time() - q["t"], 1) if q else None), "max_notional_rs": SU.MAX_EQ_NOTIONAL}
+
+
 @router.get("/chart/underlying")
 def chart_underlying(request: Request, underlying: str, tf: int = 15):
     """Terminal tab: the underlying's candles with the Winners Scalper (Pine) indicator (trailing stop, BUY/SELL markers) and the live spot."""
@@ -351,15 +404,24 @@ def live(request: Request):
     except Exception:
         chk = None
     for s, r in base:
-        q = CT.latest_quote(s["underlying"], s["expiry"], s["strike"], s["option_type"]) if s.get("expiry") else None
-        st = str(r.get("status", "")); label = f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})"
+        eqs = s.get("instrument") == "EQUITY"
+        q = EQ.latest_quote(s["underlying"]) if eqs else (CT.latest_quote(s["underlying"], s["expiry"], s["strike"], s["option_type"]) if s.get("expiry") else None)
+        st = str(r.get("status", "")); label = (f"{s['underlying']} {s.get('side', 'BUY')} {s.get('lots') or 1} sh" if eqs else f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})")
         row = {"id": s["id"], "underlying": s["underlying"], "expiry": s["expiry"], "strike": s["strike"], "option_type": s["option_type"], "posted_ts": s["t"], "lots": r.get("lots") or s.get("lots") or 1, "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
                "quote_age_s": (round(min(now - q["t"], chk) if chk is not None else now - q["t"], 1) if q else None), "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
+        if eqs: row.update(instrument="EQUITY", side=s.get("side", "BUY"), qty=r.get("lots") or s.get("lots") or 1)
         if st == "NOT_TRIGGERED":                                                                     # a waiting order shows its levels AFTER the amendments already in force
             row.update(entry=r.get("entry_now", row["entry"]), sl=r.get("sl_now", row["sl"]), targets=r.get("targets_now", row["targets"]), lots=r.get("lots", row["lots"]))
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
         elif st == "CANCELLED": row.update(state="CANCELLED")
+        elif st.startswith("NO_DATA:no_exit_snapshot") and eqs:                                           # open equity position: a long marks at the bid, a short at the ask (what closing would cost)
+            sd = s.get("side", "BUY"); fill = r["fill"]; qty = r.get("lots") or s.get("lots") or 1; lq = r.get("last") or {}
+            mark = ((q or {}).get("bid") or lq.get("bid")) if sd == "BUY" else ((q or {}).get("ask") or lq.get("ask")); sl_n = r.get("sl_now", s["sl"]); tg_n = r.get("targets_now") or s["targets"]
+            pnl = None if not mark else round(((mark - fill) if sd == "BUY" else (fill - mark)) * qty - _S.equity_cost_rs(sd, fill, mark, qty), 1)
+            sgn = 1 if sd == "BUY" else -1
+            row.update(state="ACTIVE", fill=fill, sl=sl_n, targets=tg_n, pnl_rs=pnl, pnl_pct=(round(100 * sgn * (mark - fill) / fill, 2) if mark else None), lot=1,
+                       to_sl=(round(sgn * (mark - sl_n), 2) if (mark and sl_n is not None) else None), to_t1=(round(sgn * (tg_n[0] - mark), 2) if (mark and tg_n) else None), pnl_note="open P&L = (mark - fill) x qty - estimated charges (a long marks at the bid, a short at the ask)")
         elif st.startswith("NO_DATA:no_exit_snapshot"):
             lot = r.get("lot") or 1; bid = (q or {}).get("bid") or (r.get("last") or {}).get("bid"); fill = r["fill"]
             lots = r.get("lots") or s.get("lots") or 1; pnl = None if not bid else round((bid - fill) * lot * lots - (_S.cost_total_rs(s["underlying"], fill, bid, lot, lots) or 0), 1)
@@ -369,11 +431,14 @@ def live(request: Request):
             vu = r.get("valid_until"); still = (now < vu) if vu else True
             try:
                 from .. import market_calendar as mc
-                still = still and mc.is_trading(EXCH.get(s["underlying"], "NSE"))
+                still = still and mc.is_trading(EXCH.get(s["underlying"], "NSE"))                      # an equity symbol is not in EXCH -> NSE
             except Exception:
                 pass
             need = None
-            if q and s["entry_mode"] == "LIMIT" and q.get("ask"): need = f"waiting for the ask to come down to {s['entry']:g} (ask now {q['ask']:g})"
+            if eqs and s.get("side") == "SELL":
+                if q and s["entry_mode"] == "LIMIT" and q.get("bid"): need = f"waiting for the bid to rise to {s['entry']:g} (bid now {q['bid']:g})"
+                elif q and s["entry_mode"] == "ABOVE" and q.get("ltp"): need = f"waiting for the price to trade down to {s['entry']:g} (ltp now {q['ltp']:g})"
+            elif q and s["entry_mode"] == "LIMIT" and q.get("ask"): need = f"waiting for the ask to come down to {s['entry']:g} (ask now {q['ask']:g})"
             elif q and s["entry_mode"] == "ABOVE" and q.get("ltp"): need = f"waiting for the price to trade up to {s['entry']:g} (ltp now {q['ltp']:g})"
             row.update(state="WAITING" if still else "EXPIRED", waiting_note=need if still else "not filled inside its validity: expired", valid_until_ist=(datetime.fromtimestamp(vu, tz=IST).strftime("%H:%M:%S") if vu else None))
         elif st == "MISSED": row.update(state="MISSED")

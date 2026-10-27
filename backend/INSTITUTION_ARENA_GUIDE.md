@@ -16,6 +16,7 @@ Every signal of the ZeroHero AI is posted to Telegram at the moment it is raised
 
 ## 3. What you may trade
 - BUY of an **option** on **NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL, GOLDM** (MCX gold mini), nearest expiry. Long only (no selling/writing). **Quantity is in lots (default 1; your profile may have another default, shown on the form), 1 to 10.** No averaging down. A signal that hit its stop is finished; a new idea is a new signal.
+- **Equity (NSE cash, intraday)** — **BUY or SELL (short)** of any NSE-listed share by its trading symbol (e.g. RELIANCE), quantity in **shares** (up to ₹25 lakh order value). Squared off at 15:15 like every other trade; no overnight. A BUY has its stop below the entry and targets above; a SELL (short) has its stop **above** the entry and targets **below**. The same entry modes apply (NEAR / MARKET / LIMIT / ABOVE: for a SELL, LIMIT = sell when the bid rises to your price, ABOVE = sell when the price trades *down* to it). Use the **Equity** card on the Submit tab. A BUY fills at the ask and exits at the bid; a SELL fills at the bid and covers at the ask. Charges are the intraday equity schedule (brokerage ₹20 or 0.1% per order, STT 0.025% on the sell side, exchange fee, SEBI fee, stamp duty on the buy side, GST) — a published-schedule estimate, not checked against a real contract note.
 - Scored signals can be submitted only while that exchange is trading.
 
 ## 4. How to submit a signal — BEFORE you take the trade
@@ -40,7 +41,7 @@ A trade you did not submit before entering **does not exist** for scoring.
 **Speed-ups on the form:** the entry price is pre-filled from the quote of the strike you pick (bid for LIMIT, ask otherwise) and can be edited; "Refresh prices" reloads the chain. Prices come from the captured quotes (~1-3 minutes old).
 
 ## 4b. Managing the trade after entry (amend, trail, emergency exit)
-In **My signals → Manage a signal** you can, at any time while the exchange is open:
+In the **Terminal** tab, click a waiting order or an open position to **modify** it (entry price of a waiting LIMIT/ABOVE order, stop-loss, targets, quantity of a waiting order, trailing stop, cancel a waiting order, "SL → cost"); or use **My signals → Manage a signal**. At any time while the exchange is open you can:
 - **Change targets** (e.g. move the target further if it is not being reached) — **Change stop-loss** — **Trailing stop** (by points or %, follows the highest bid since entry) — **Emergency exit** (sell at the next bid) — **Cancel** a still-pending entry.
 Each action is recorded with the **server time** and takes effect **3 seconds later** (the same delay everything has; **20 seconds** for anything stamped before 26 Oct 2026 13:13 IST) It is never applied retroactively and cannot be undone; a signal can have at most 20 actions. The same rules are applied to the AI: its own real-time management (stops, trailing, time exit) is replayed as the same kind of timed events, so both sides are managed under the same mechanics.
 

@@ -247,6 +247,7 @@ env_flags:
   - {name: EVIDENCE_FEED, category: FEATURE_FLAG, note: "hash-chained Telegram evidence posts of the AI's paper signals"}
   - {name: ACTIVE_ARM_SHADOW, category: FEATURE_FLAG, note: "ACTIVE arm shadow recorder (log only)"}
   - {name: ARENA_PUBLIC, category: FEATURE_FLAG, note: "Institution-side arena public API + its static files (kill switch)"}
+  - {name: ARENA_EQUITY, category: FEATURE_FLAG, note: "NSE cash-equity BUY/SELL paper signals in the arena (default on; 0 = off)"}
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: PRIORITY_CAPTURE, category: FEATURE_FLAG, note: "~3 s quote capture for contracts with a registered signal (read-only; kill switch)"}
