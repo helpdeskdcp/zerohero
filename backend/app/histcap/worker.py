@@ -11,10 +11,11 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import threading
 import time
 import traceback
 from contextlib import nullcontext
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -124,6 +125,12 @@ class CaptureWorker:
         self.started_at: str | None = None
         self._owner = f"{os.uname().nodename}:{os.getpid()}"
         self.is_leader = False
+        # greeks_engine CYCLE pass: runs OFF the capture thread, single-flight, rate-limited (see _kick_greeks_engine)
+        self._ge_lock = threading.Lock()
+        self._ge_running = False
+        self._ge_last_start = 0.0
+        self._ge_skipped = 0
+        self._ge_last: dict | None = None
 
     @staticmethod
     def _default_sdk():
@@ -252,6 +259,7 @@ class CaptureWorker:
         integ: dict = {"issues": [], "rejected": [], "flagged": 0}
         errors: list = []
         n_instr = 0
+        nifty_expiry = None
 
         if not (sdk and auth_ok):
             errors.append({"stage": "auth", "status": "AUTH_UNAVAILABLE",
@@ -265,6 +273,7 @@ class CaptureWorker:
                         errors.append({"symbol": sym, "stage": "resolve", "status": "NO_REFS"})
                         continue
                     n_instr += len(refs["tokens_meta"])
+                    if sym == "NIFTY": nifty_expiry = refs.get("opt_expiry")
                     # NO transaction around the whole symbol: each phase fetches from the broker FIRST (no DB lock held)
                     # and writes in its own short transaction, so the shared store lock is never held across a broker call
                     # (it used to be held for minutes and starved the 3-second priority capture of live trades).
@@ -289,13 +298,37 @@ class CaptureWorker:
 
         # derive Greek exposure from what this cycle just captured (read-only,
         # append-only, own tables). A failure here never affects the capture.
-        if counts.get("greeks", 0) > 0 and "NIFTY" in self.cfg["symbols"]:
-            try:
-                from ..greeks_engine.engine import greeks_engine
-                greeks_engine().run_once("NIFTY", mode="CYCLE")
-            except Exception as e:
-                self.last_error = f"greeks_engine: {type(e).__name__}: {e}"
+        if counts.get("greeks", 0) > 0 and "NIFTY" in self.cfg["symbols"] and nifty_expiry:
+            self._kick_greeks_engine(nifty_expiry)
         return self.last_run
+
+    # ---------------------------------------------------------------- greeks engine (off the capture thread)
+    def _kick_greeks_engine(self, expiry: str) -> bool:
+        """Start ONE background greeks_engine pass for today's session and the expiry this cycle just captured. Never blocks the capture loop, never runs two at once,
+        and at most one per GREEKS_ENGINE_MIN_SEC. The old inline call scanned every expiry in 3.2 M rows (100-1500 s per cycle) and collapsed the capture cadence."""
+        now = time.time(); min_sec = float(_env("CHANAKYA_HIST_GREEKS_ENGINE_MIN_SEC", "60"))
+        with self._ge_lock:
+            if self._ge_running or (now - self._ge_last_start) < min_sec:
+                self._ge_skipped += 1
+                return False
+            self._ge_running = True; self._ge_last_start = now
+        threading.Thread(target=self._run_greeks_engine, args=(expiry,), daemon=True, name="histcap-greeks-engine").start()
+        return True
+
+    def _run_greeks_engine(self, expiry: str) -> None:
+        t0 = time.time()
+        try:
+            from ..greeks_engine.engine import greeks_engine
+            day = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
+            res = greeks_engine().run_once("NIFTY", expiries=[expiry], mode="CYCLE", session_date_ist=day,
+                                           deadline_sec=float(_env("CHANAKYA_HIST_GREEKS_ENGINE_TIMEOUT_SEC", "120")))
+            self._ge_last = {"expiry": expiry, "sec": round(time.time() - t0, 2), "snapshots": res.get("snapshots_written"), "errors": len(res.get("errors") or [])}
+        except Exception as e:
+            self.last_error = f"greeks_engine: {type(e).__name__}: {e}"
+            self._ge_last = {"expiry": expiry, "sec": round(time.time() - t0, 2), "error": f"{type(e).__name__}"}
+        finally:
+            with self._ge_lock:
+                self._ge_running = False
 
     # ---------------------------------------------------------------- resolution
     def _refs(self, sdk, sym: str) -> dict | None:
@@ -623,6 +656,7 @@ class CaptureWorker:
                                                 "tfs", "quote_sec", "candle_sec", "candle_delay_sec",
                                                 "option_candles", "dhan_capture", "raw_retention_days")},
             "last_run": self.last_run, "store": self.store.summary(),
+            "greeks_engine": {"running": self._ge_running, "skipped": self._ge_skipped, "last": self._ge_last},
         }
 
 

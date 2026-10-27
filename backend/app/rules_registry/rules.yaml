@@ -230,6 +230,8 @@ env_flags:
   - {name: NIFTY_DIR_WEIGHTS_MAX_AGE_DAYS, category: TUNING, note: "NIFTY direction: official weights file older than this many days (default 45) is STALE and cannot enable weighted scoring"}
   - {name: NIFTY_DIR_CAPTURED_FUT_MAX_AGE_SEC, category: TUNING, note: "NIFTY direction, stored-history modes only: max age of the captured futures row (default 420 s = ~2.6x the measured ~160 s capture cadence); live limit stays 60 s"}
   - {name: NIFTY_DIR_CAPTURED_CHAIN_MAX_AGE_SEC, category: TUNING, note: "NIFTY direction, stored-history modes only: max age of the captured option-greek snapshot (default 1800 s = ~1.9x the measured ~960 s cadence)"}
+  - {name: CHANAKYA_HIST_GREEKS_ENGINE_MIN_SEC, category: TUNING, note: "histcap: minimum seconds between greeks_engine CYCLE passes (default 60); the pass runs off the capture thread, single-flight"}
+  - {name: CHANAKYA_HIST_GREEKS_ENGINE_TIMEOUT_SEC, category: TUNING, note: "histcap: statement deadline for one greeks_engine CYCLE pass (default 120 s); a pass past it is aborted and recorded as errors"}
   - {name: SMART_SCALPER_PROFILE, category: TUNING}
   - {name: SMART_SCALPER_PROFILE_OVERRIDES, category: TUNING}
   - {name: SMART_SCALPER_UNIVERSE, category: TUNING}

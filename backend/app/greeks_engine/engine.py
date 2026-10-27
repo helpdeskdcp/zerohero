@@ -15,6 +15,7 @@ import json
 import os
 import sqlite3
 import threading
+import time
 from datetime import datetime, timezone
 
 from . import schema
@@ -58,13 +59,14 @@ class GreeksEngine:
         p = [underlying.upper(), _GREEK_SOURCE] + ([session_date_ist] if session_date_ist else [])
         return [r["expiry"] for r in conn.execute(q, p).fetchall()]
 
-    def _target_ts(self, conn, underlying: str, expiry: str, as_of: str | None) -> str | None:
+    def _target_ts(self, conn, underlying: str, expiry: str, as_of: str | None, session_date_ist: str | None = None) -> str | None:
         r = conn.execute(
             "SELECT received_ts t FROM option_greeks WHERE underlying=? AND expiry=? "
             "AND source=? AND broker_status='OK' AND julianday(received_ts)<=julianday(?) "
             "AND (server_ts IS NULL OR julianday(server_ts)<=julianday(received_ts)) "
+            + ("AND session_date_ist=? " if session_date_ist else "") +
             "ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1",
-            (underlying.upper(), expiry, _GREEK_SOURCE, as_of or _now())).fetchone()
+            (underlying.upper(), expiry, _GREEK_SOURCE, as_of or _now()) + ((session_date_ist,) if session_date_ist else ())).fetchone()
         return r["t"] if r and r["t"] else None
 
     def _greek_rows(self, conn, underlying: str, expiry: str, ts: str) -> list[dict]:
@@ -75,14 +77,15 @@ class GreeksEngine:
             "AND (server_ts IS NULL OR julianday(server_ts)<=julianday(received_ts))",
             (underlying.upper(), expiry, ts, _GREEK_SOURCE)).fetchall()]
 
-    def _oi_map(self, conn, underlying: str, expiry: str, ts: str) -> tuple[dict, float | None, float | None]:
+    def _oi_map(self, conn, underlying: str, expiry: str, ts: str, session_date_ist: str | None = None) -> tuple[dict, float | None, float | None]:
         """{(strike, side): oi} at exactly `ts` (same capture cycle), plus the
         min/max option strike captured (for the coverage band)."""
         rows = conn.execute(
             "SELECT strike, option_type, oi FROM quote_snapshots WHERE symbol=? AND expiry=? "
             "AND kind='OPTION' AND received_ts=? AND source=? "
-            "AND (exch_ts IS NULL OR julianday(exch_ts)<=julianday(received_ts))",
-            (underlying.upper(), expiry, ts, _QUOTE_SOURCE)).fetchall()
+            "AND (exch_ts IS NULL OR julianday(exch_ts)<=julianday(received_ts))"
+            + (" AND session_date_ist=?" if session_date_ist else ""),
+            (underlying.upper(), expiry, ts, _QUOTE_SOURCE) + ((session_date_ist,) if session_date_ist else ())).fetchall()
         m = {(float(r["strike"]), str(r["option_type"]).upper()): r["oi"]
              for r in rows if r["strike"] is not None}
         strikes = [float(r["strike"]) for r in rows if r["strike"] is not None]
@@ -126,8 +129,13 @@ class GreeksEngine:
     # ------------------------------------------------------------------ run
     def run_once(self, underlying: str = "NIFTY", expiries: list[str] | None = None,
                  as_of: str | None = None, mode: str = "ONCE",
-                 session_date_ist: str | None = None) -> dict:
+                 session_date_ist: str | None = None, deadline_sec: float | None = None) -> dict:
+        """session_date_ist (CYCLE mode: today) scopes every read to that one session day; deadline_sec aborts any single statement that runs past the
+        budget (the remaining expiries are recorded as errors, the run row is still closed). Without them behaviour is unchanged (ONCE/BACKFILL)."""
         with self._lock, self._conn() as conn:
+            if deadline_sec:
+                t_end = time.time() + float(deadline_sec)
+                conn.set_progress_handler(lambda: 1 if time.time() > t_end else 0, 50000)
             rid = conn.execute(
                 "INSERT INTO greek_engine_runs(started_ts, mode, underlying, expiries_json) "
                 "VALUES (?,?,?,?)", (_now(), mode, underlying.upper(),
@@ -138,13 +146,13 @@ class GreeksEngine:
             written, quality, errors, provenance = 0, {}, [], {}
             for exp in exps:
                 try:
-                    ts = self._target_ts(conn, underlying, exp, as_of)
+                    ts = self._target_ts(conn, underlying, exp, as_of, session_date_ist)
                     if not ts:
                         errors.append({"expiry": exp, "reason": "no OK greek rows"})
                         quality[exp] = "NO_DATA"
                         continue
                     greeks = self._greek_rows(conn, underlying, exp, ts)
-                    oi_map, s_lo, s_hi = self._oi_map(conn, underlying, exp, ts)
+                    oi_map, s_lo, s_hi = self._oi_map(conn, underlying, exp, ts, session_date_ist)
                     uq = self._underlying_quote(conn, underlying, ts)
                     px = float(uq["ltp"]) if uq else None
                     px_src = f"ANGELONE_QUOTE:{uq['kind']}" if uq else None
@@ -174,6 +182,8 @@ class GreeksEngine:
                 except Exception as e:
                     errors.append({"expiry": exp, "error": f"{type(e).__name__}: {e}"})
 
+            if deadline_sec:
+                conn.set_progress_handler(None, 0)               # the closing UPDATE must never be interrupted
             conn.execute(
                 "UPDATE greek_engine_runs SET ended_ts=?, snapshots_written=?, quality_json=?, "
                 "errors_json=?, notes=? WHERE id=?",
