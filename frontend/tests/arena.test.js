@@ -52,30 +52,14 @@ test("entry-only profile: stop and targets may be blank, everyone else still nee
   A.setRiskModule(false); assert.equal(A.validateForm(blank).ok, true);
 });
 
-test("live watch rows: WAITING stays amber with the reason, ACTIVE shows ltp and green/red open P&L, nothing for empty", () => {
-  const d = { now_ist: "10:15:03", total_open_pnl_rs: 1200, realised_today_rs: -300, rows: [
-    { id: "H1", label: "SENSEX 73600 PE (22/10)", state: "ACTIVE", entry_mode: "LIMIT", entry: 520, fill: 513.95, ltp: 560.5, bid: 560, ask: 561, quote_age_s: 3, pnl_rs: 1200.4, pnl_pct: 8.9, sl: 380, to_sl: 180, targets: [600, 700], to_t1: 40, posted_ist: "09:19:54" },
-    { id: "H2", label: "NIFTY 23100 PE (27/10)", state: "WAITING", entry_mode: "LIMIT", entry: 175, ltp: 190, bid: 189, ask: 190.5, quote_age_s: 5, sl: 90, targets: [220], waiting_note: "waiting for the ask to come down to 175 (ask now 190.5)", valid_until_ist: "09:37:52", posted_ist: "09:22:52" },
-    { id: "H3", label: "NG 270 CE (23/10)", state: "ACTIVE", ltp: 5, bid: 4.9, ask: 5, fill: 5.4, sl: 4.5, targets: [6], pnl_rs: -640, pnl_pct: -9, to_sl: 0.4, to_t1: 1.1, quote_age_s: 80, posted_ist: "10:00:00" }] };
-  const h = A.liveRows(d);
-  assert.ok(h.includes("chip ACTIVE") && h.includes("chip WAITING") && h.includes("pnlpos") && h.includes("pnlneg") && h.includes("+₹1,200") && h.includes("−₹640"));
-  assert.ok(h.includes("waiting for the ask to come down to 175") && h.includes("valid till") && h.includes("price not refreshed for 80 s"));
-  assert.ok(A.liveRows({ ...d, rows: [] }).includes("No signals today yet"));
-  const d2 = { ...d, rows: [{ ...d.rows[0], ltp: 565 }] }; assert.ok(A.liveRows(d2).includes("tickup"), "an up-tick flashes");                // second render with a higher ltp
-  const d3 = { ...d, rows: [{ ...d.rows[0], ltp: 561 }] }; assert.ok(A.liveRows(d3).includes("tickdn"), "a down-tick flashes");
-  assert.ok(!A.liveRows({ ...d, rows: [{ id: "<b>", label: "<script>x</script>", state: "CLOSED", pnl_rs: 5, fill: 1, exit: 2, why: "TARGET", posted_ist: "1" }] }).includes("<script>"), "labels are escaped");
-});
-
 test("stop-loss is optional for everyone; a stop that is given must still be below the entry", () => {
   const none = { ...ok, sl: "" }; assert.equal(A.validateForm(none).ok, true); assert.ok(Number.isNaN(A.validateForm(none).payload.sl) || A.validateForm(none).payload.sl === null || A.validateForm(none).payload.sl === undefined);
   assert.equal(A.validateForm({ ...ok, sl: "120" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "0" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "85" }).ok, true);
-  assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H9", label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, to_sl: null, targets: [6], to_t1: 1, pnl_rs: 0, posted_ist: "1" }] }).includes("no stop-loss set"));
 });
 
 test("targets are optional; any target that is given must be above the entry", () => {
   assert.equal(A.validateForm({ ...ok, targets: "" }).ok, true); assert.deepEqual(A.validateForm({ ...ok, targets: "" }).payload.targets, []);
   assert.equal(A.validateForm({ ...ok, targets: "90" }).ok, false); assert.equal(A.validateForm({ ...ok, sl: "", targets: "" }).ok, true);
-  assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H8", label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, targets: [], to_sl: null, to_t1: null, pnl_rs: 0, posted_ist: "1" }] }).includes("no target"));
 });
 
 test("quantity (lots): optional whole number 1..max; the change-quantity event needs one", () => {
@@ -84,5 +68,4 @@ test("quantity (lots): optional whole number 1..max; the change-quantity event n
   const base = { signal_id: "H1", confirm: true };
   assert.equal(A.validateEvent({ ...base, action: "AMEND_LOTS", lots: "3" }).payload.lots, 3);
   for (const bad of ["", "0", "11", "2.5"]) assert.equal(A.validateEvent({ ...base, action: "AMEND_LOTS", lots: bad }).ok, false, bad);
-  assert.ok(A.liveRows({ now_ist: "10:00:00", total_open_pnl_rs: 0, realised_today_rs: 0, rows: [{ id: "H7", lots: 2, label: "X", state: "ACTIVE", fill: 5, ltp: 5, bid: 5, ask: 5.1, sl: null, targets: [], pnl_rs: 0, posted_ist: "1" }] }).includes("2 lots"));
 });

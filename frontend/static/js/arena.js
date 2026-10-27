@@ -4,27 +4,6 @@ const ALLOWED = ["NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLD
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 /* ---- live watch (broker style): WAITING -> ACTIVE with ltp and open P&L, refreshed every 3 s without reloading the page ---- */
-const lastLtp = {}; let liveTimer = null, liveBusy = false;
-function liveRows(d) {
-  const f = (x, n = 2) => (x === null || x === undefined ? "–" : Number(x).toLocaleString("en-IN", { maximumFractionDigits: n }));
-  const pn = (x) => (x === null || x === undefined ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "") + "₹" + Math.abs(Math.round(x)).toLocaleString("en-IN"));
-  const cls = (x) => (x > 0 ? "pnlpos" : x < 0 ? "pnlneg" : "");
-  if (!d.rows.length) return '<span class="mut">No signals today yet. When you submit one it shows here: WAITING until it fills, then ACTIVE with the live price and P&amp;L.</span>';
-  let o = `<div class="tot"><span>Open P&amp;L <b class="${cls(d.total_open_pnl_rs)}">${pn(d.total_open_pnl_rs)}</b></span><span>Closed today <b class="${cls(d.realised_today_rs)}">${pn(d.realised_today_rs)}</b></span><span>${esc(d.now_ist)} IST</span></div>`;
-  for (const r of d.rows) {
-    const live = r.state === "ACTIVE" || r.state === "WAITING", prev = lastLtp[r.id], dir = live && r.ltp != null && prev != null && r.ltp !== prev ? (r.ltp > prev ? "tickup" : "tickdn") : ""; if (r.ltp != null) lastLtp[r.id] = r.ltp;
-    const age = r.quote_age_s, stale = live && age != null && age > 45;
-    const big = r.state === "ACTIVE" ? `<div class="big ${cls(r.pnl_rs)}">${pn(r.pnl_rs)}</div>` : r.state === "CLOSED" ? `<div class="big ${cls(r.pnl_rs)}">${pn(r.pnl_rs)}</div>` : '<div class="big mut">–</div>';
-    const nums = [];
-    if (live) nums.push(`<span class="${dir}">LTP <b>${f(r.ltp)}</b></span>`, `<span>bid <b>${f(r.bid)}</b> / ask <b>${f(r.ask)}</b></span>`);
-    if (r.state === "ACTIVE") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, (r.sl == null ? `<span class="mut">no stop-loss set</span>` : `<span>SL <b>${f(r.sl)}</b> (${f(r.to_sl)} away)</span>`), ((r.targets || []).length ? `<span>T1 <b>${f((r.targets || [])[0])}</b> (${f(r.to_t1)} away)</span>` : `<span class="mut">no target</span>`), `<span>${r.pnl_pct == null ? "" : (r.pnl_pct > 0 ? "+" : "") + r.pnl_pct + "%"}</span>`);
-    if (r.state === "WAITING") nums.push(`<span>${esc(r.entry_mode)} <b>${f(r.entry)}</b></span>`, (r.sl == null ? `<span class="mut">no stop-loss</span>` : `<span>SL <b>${f(r.sl)}</b></span>`), ((r.targets || []).length ? `<span>T1 <b>${f((r.targets || [])[0])}</b></span>` : `<span class="mut">no target</span>`), r.valid_until_ist ? `<span>valid till <b>${esc(r.valid_until_ist)}</b></span>` : "");
-    if (r.state === "CLOSED") nums.push(`<span>fill <b>${f(r.fill)}</b></span>`, `<span>exit <b>${f(r.exit)}</b> (${esc(r.why)})</span>`);
-    const note = r.waiting_note ? `<div class="nums mut">${esc(r.waiting_note)}</div>` : r.why && r.state !== "CLOSED" ? `<div class="nums mut">${esc(r.why)}</div>` : "";
-    o += `<div class="row"><span class="chip ${esc(r.state)}">${esc(r.state)}</span><div><b>${esc(r.label)}</b> <span class="mut">${esc(r.id)} · ${r.lots || 1} ${r.instrument === "EQUITY" ? "sh" : "lot" + ((r.lots || 1) > 1 ? "s" : "")} · posted ${esc(r.posted_ist)}</span>${stale ? ' <span class="pnlneg">price not refreshed for ' + Math.round(age) + ' s</span>' : age != null && live ? ' <span class="mut">· checked ' + Math.round(age) + ' s ago</span>' : ""}</div>${big}<div class="nums">${nums.join("")}</div>${note}</div>`;
-  }
-  return o + '<div class="mut" style="font-size:11px;margin-top:4px">Open P&amp;L = (bid − fill) × lot − estimated costs. The final result is booked by the contest rules at the exit. Prices are the latest captured quotes (a few seconds old).</div>';
-}
 const rs = (x, d = 0) => (x === null || x === undefined || Number.isNaN(x) ? "—" : (x < 0 ? "−" : x > 0 ? "+" : "") + "₹" + Math.abs(x).toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: d }));
 const pct = (x, d = 1) => (x === null || x === undefined ? "—" : (x * 100).toFixed(d) + "%");
 
@@ -107,7 +86,7 @@ function validateEvent(v) {
   return { ok: err.length === 0, errors: err, payload };
 }
 
-if (typeof module !== "undefined") module.exports = { validateForm, validateEvent, renderMarkdown, sideCard, verdictText, rs, pct, esc, ALLOWED, fmtIST, fmtIsoIST, liveRows, setRiskModule: (b) => { RISK_MODULE = !!b; } };
+if (typeof module !== "undefined") module.exports = { validateForm, validateEvent, renderMarkdown, sideCard, verdictText, rs, pct, esc, ALLOWED, fmtIST, fmtIsoIST, setRiskModule: (b) => { RISK_MODULE = !!b; } };
 
 if (typeof window !== "undefined" && typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id);
@@ -119,15 +98,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     return j;
   }
   const msg = (id, text, bad) => { const e = $(id); e.textContent = text; e.className = "msg " + (bad ? "bad" : "ok"); e.hidden = !text; };
-  async function liveTick() {
-    if (typeof document === "undefined" || document.hidden || liveBusy || !token) return; liveBusy = true;
-    try { const d = await api("/live"); const html = liveRows(d); document.querySelectorAll(".livePanel .liveBody").forEach((e) => { e.classList.remove("mut"); e.innerHTML = html; }); }
-    catch (e) { document.querySelectorAll(".livePanel .liveBody").forEach((x) => { x.textContent = "live data unavailable (" + String(e.message || e) + ")"; }); }
-    finally { liveBusy = false; }
-  }
-  const startLive = () => { stopLive(); liveTick(); liveTimer = setInterval(liveTick, 1500); }, stopLive = () => { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } };
-
-  const show = (tab) => { document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== tab)); document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); if (tab === "mine") loadMine(); if (tab === "standings") loadStandings(); if (tab === "mine" || tab === "standings") startLive(); else stopLive(); };
+  const show = (tab) => { document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== tab)); document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); if (tab === "mine") loadMine(); if (tab === "standings") loadStandings(); };
   async function loadState() {
     try { const s = await api("/state"); $("mode").textContent = s.mode === "PRACTICE" ? `PRACTICE until ${s.start} — entries are stored but NOT scored` : s.mode === "ARENA_LIVE" ? (s.phase === "REHEARSAL" ? `REHEARSAL — official contest starts ${s.official_start} (ends ${s.end})` : `OFFICIAL CONTEST (${s.start} → ${s.end})`) : "ARENA ENDED";
       RISK_MODULE = !!s.risk_module; MAX_LOTS = s.max_lots || 10; { const d = document.getElementById("lotsDefault"), m = document.getElementById("lotsMax"); if (d) d.textContent = s.default_lots || 1; if (m) m.textContent = MAX_LOTS; const f = document.querySelector("form[name=submitForm], #sf"); const li = document.querySelector("input[name=lots]"); if (li) { li.defaultValue = String(s.default_lots || 1); if (!li.dataset.touched) li.value = s.default_lots || 1; } } { const n = document.getElementById("riskNote"); if (n) n.hidden = !RISK_MODULE; }

@@ -12,12 +12,12 @@ button,input,select,textarea{background:var(--panel);color:var(--tx);border:1px 
 label{display:block;color:var(--mut);font-size:12px;margin:6px 0 2px}input,select,textarea{width:100%}.msg{padding:8px 10px;border-radius:6px;margin:8px 0}.msg.ok{border:1px solid var(--up)}.msg.bad{border:1px solid var(--dn);color:#fecaca}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;border-top:1px solid var(--line);text-align:left}.wrap{overflow-x:auto}small,.mut{color:var(--mut)}code{background:#0b1220;padding:1px 4px;border-radius:4px}
 #guide h2,#guide h3{margin:14px 0 6px}#guide ul{padding-left:20px}
-.livePanel .row{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0;display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center}
-.livePanel .chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid var(--line);letter-spacing:.03em}
+
+
 .chip.ACTIVE{border-color:#38bdf8;color:#7dd3fc}.chip.WAITING{border-color:var(--warn);color:#fde68a}.chip.CLOSED{border-color:var(--line);color:var(--mut)}.chip.EXPIRED,.chip.CANCELLED,.chip.MISSED,.chip.VOID{color:var(--mut)}
-.livePanel .nums{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px}.livePanel .nums b{font-weight:600}.livePanel .big{font-size:20px;font-weight:700;text-align:right}
+
 .pnlpos{color:#4ade80}.pnlneg{color:#f87171}.tickup{animation:fup .9s}.tickdn{animation:fdn .9s}@keyframes fup{from{background:rgba(74,222,128,.35)}to{background:transparent}}@keyframes fdn{from{background:rgba(248,113,113,.35)}to{background:transparent}}
-.livePanel .tot{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13px;color:var(--mut);margin-bottom:4px}
+
 
 main.wide{max-width:none}
 .tm-wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:10px;height:calc(100vh - 150px);min-height:520px}
@@ -72,7 +72,7 @@ main.wide{max-width:none}
 <label style="color:var(--tx)"><input type="checkbox" id="eqConfirm" style="width:auto"> I have <b>not</b> entered this trade yet</label>
 <button type="button" id="eqAuto" style="margin-top:6px">Auto stop &amp; targets (0.5% · 1R / 2R)</button><button type="button" id="eqLiveBtn" style="margin-top:6px">Follow live price</button><button type="button" id="eqGo" style="margin-top:6px">Place equity order</button><div id="eqMsg" class="msg" hidden></div></div>
 </section>
-<section data-pane="mine" class="card" hidden><b>My submitted signals</b> <span class="mut">(server time, hash-chained, read-only)</span><div class="card livePanel"><b>Live trades</b> <span class="mut">(today · updates every 1.5 s without reloading)</span><div class="liveBody mut">connecting…</div></div><div class="wrap"><table><thead><tr><th>id</th><th>server time (IST)</th><th>type</th><th>option</th><th>mode</th><th>entry</th><th>lots</th><th>SL</th><th>targets</th><th>management</th><th>hash</th></tr></thead><tbody id="mine"></tbody></table></div>
+<section data-pane="mine" class="card" hidden><b>My submitted signals</b> <span class="mut">(server time, hash-chained, read-only)</span><div class="wrap"><table><thead><tr><th>id</th><th>server time (IST)</th><th>type</th><th>option</th><th>mode</th><th>entry</th><th>lots</th><th>SL</th><th>targets</th><th>management</th><th>hash</th></tr></thead><tbody id="mine"></tbody></table></div>
 <h3 style="margin:14px 0 4px">Manage a signal <span class="mut">(time-stamped; applies after the contest execution delay (see Guide); never retroactive; cannot be undone)</span></h3>
 <form id="mg" autocomplete="off"><div class="grid">
 <div><label>Signal</label><select name="signal_id" id="mgSignal"></select></div>
@@ -83,7 +83,7 @@ main.wide{max-width:none}
 <div data-for="TRAIL_SL"><label>or trail by % (0-100)</label><input name="trail_pct" inputmode="decimal"></div></div>
 <label style="color:var(--tx)"><input type="checkbox" name="confirm" style="width:auto"> I understand this is recorded with the server time and cannot be undone</label>
 <button id="mgGo" type="submit" style="margin-top:8px">Send (final)</button><div id="mgmsg" class="msg" hidden></div></form></section>
-<section data-pane="standings" class="card" hidden><b>Standings</b> <span class="mut">same program, same recorded quotes, costs included</span><div class="card livePanel"><b>Live trades</b> <span class="mut">(today · updates every 1.5 s without reloading)</span><div class="liveBody mut">connecting…</div></div>
+<section data-pane="standings" class="card" hidden><b>Standings</b> <span class="mut">same program, same recorded quotes, costs included</span>
 <div class="grid"><div class="card" id="aiCard"></div><div class="card" id="huCard"></div><div class="card" id="acCard"></div></div><div class="card"><b>Verdict</b><div id="verdict">…</div></div>
 <ul id="caveats" class="mut"></ul><div id="spread" class="mut"></div>
 <h3>ZeroHero AI — settled signals</h3><div class="wrap"><table><thead><tr><th>time (IST)</th><th>option</th><th>status</th><th>fill</th><th>exit</th><th>why</th><th>net</th></tr></thead><tbody id="aiRows"></tbody></table></div>
@@ -96,4 +96,4 @@ main.wide{max-width:none}
 <div id="tmChart"></div><div class="tm-note mut" id="tmNote">Click an order or position on the right.</div></div>
 <div class="tm-right"><div class="tm-tabs"><button data-tm="orders" class="on">Orders<span class="n" id="tmCntOrders">0</span></button><button data-tm="positions">Positions<span class="n" id="tmCntPos">0</span></button><button data-tm="closed">Closed<span class="n" id="tmCntClosed">0</span></button></div>
 <div id="tmList"></div><div class="tm-edit" id="tmEdit" hidden></div><div class="tm-foot" id="tmTot"></div></div></div></section>
-</div></main><script src="/static/js/arena.js"></script><script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script><script src="/static/js/arena_terminal.js?v=20261027f"></script><script src="/static/js/arena_equity.js?v=20261027b"></script></body></html>
+</div></main><script src="/static/js/arena.js?v=20261027c"></script><script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script><script src="/static/js/arena_terminal.js?v=20261027f"></script><script src="/static/js/arena_equity.js?v=20261027b"></script></body></html>
