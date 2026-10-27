@@ -16,6 +16,9 @@ _cache: dict = {}
 
 # A frame whose exchange stamp is ahead of its receive time (mis-stamped, see settle.FUTURE_STAMP_SEC) must never be shown as the 'latest' quote.
 NOT_FUTURE = f" AND (exch_ts IS NULL OR strftime('%s',exch_ts)-strftime('%s',received_ts)<={FUTURE_STAMP_SEC})"
+# Underlying SPOT (ATM detection only) tolerates a larger exch-vs-receive skew: when a capture cycle runs for minutes, received_ts is the cycle start while the broker stamp is taken later in the cycle (27-Oct-2026: every NG future frame was 150-350 s "ahead" -> NO_SPOT -> empty strike list). A price a few minutes old is fine for finding the ATM; settlement and last_quote keep the strict 30 s guard.
+SPOT_STAMP_SEC = 900
+NOT_FUTURE_SPOT = f" AND (exch_ts IS NULL OR strftime('%s',exch_ts)-strftime('%s',received_ts)<={SPOT_STAMP_SEC})"
 
 
 def _ro(path):
@@ -162,9 +165,9 @@ def spot_for(underlying: str, option_expiry_iso: str | None = None, path: str | 
     c = _ro(path)
     try:
         mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
-        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY id DESC LIMIT 1", (mx - 60000, underlying)).fetchone()
+        r = c.execute("SELECT ltp, received_ts FROM quote_snapshots WHERE id>? AND symbol=? AND kind='INDEX' AND ltp IS NOT NULL" + NOT_FUTURE_SPOT + " ORDER BY id DESC LIMIT 1", (mx - 60000, underlying)).fetchone()
         if r: return float(r[0]), f"INDEX @ {r[1]}"
-        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY id DESC", (mx - 60000, underlying)).fetchall()
+        rows = c.execute("SELECT expiry, ltp, received_ts, id FROM quote_snapshots WHERE id>? AND symbol=? AND kind='FUTURE' AND ltp IS NOT NULL" + NOT_FUTURE_SPOT + " ORDER BY id DESC", (mx - 60000, underlying)).fetchall()
     finally:
         c.close()
     best: dict = {}
