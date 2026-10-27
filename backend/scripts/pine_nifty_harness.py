@@ -27,6 +27,21 @@ def candles(tf="5", d_from=None, d_to=None, sym="NIFTY", bars=None):
     return rows[-bars:] if bars else rows
 
 
+def run_multi(source, tf="3", d_from=None, d_to=None, bars=None, inputs=None, base_rows=None):
+    """Run on a `tf`-minute chart whose every timeframe (incl. request.security) is aggregated from 1-minute bars by the research worker."""
+    from app.smart_chart import runner
+    base = base_rows if base_rows is not None else candles("1", d_from, d_to)
+    chart = candles(tf, d_from, d_to) if base_rows is None else None
+    if bars and chart is not None:
+        chart = chart[-bars:]; t0 = chart[0]["time"]; base = [b for b in base if b["time"] >= t0]
+    old = runner.WORKER; runner.WORKER = os.path.join(os.path.dirname(runner.WORKER), "worker_research.mjs")
+    try:
+        res = runner.execute({"op": "run", "source": source, "candles": chart or base[:5], "base_candles": base, "base_tf": "1", "tf": tf, "symbol": "NIFTY", "inputs": inputs or {}, "props": {}}, "multi", timeout=1500, count=False)
+    finally:
+        runner.WORKER = old
+    return res
+
+
 def unpack(pl):
     """expand the packed data-window plots into the individual series the audit/tests use (see part5_output.pine)"""
     import math as _m

@@ -53,7 +53,7 @@ def agg(entries):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("run"); ap.add_argument("--out"); a = ap.parse_args()
+    ap = argparse.ArgumentParser(); ap.add_argument("run"); ap.add_argument("--out"); ap.add_argument("--tf", default="5"); ap.add_argument("--mode", default="Off"); a = ap.parse_args()
     d, times, pl = load(a.run); tr = d["strategy"]["closed_trades"]; n = len(times)
     sess = [datetime.fromtimestamp(t / 1000, IST) for t in times]
     ent = per_entry(tr); rep = {"bars": n, "first": sess[0].isoformat(), "last": sess[-1].isoformat(), "closed_trade_rows": len(tr), "entries": len(ent), "engine": "PineTS 0.13.0 (NOT TradingView)", "pine_summary": d["strategy"]["pine_summary"]}
@@ -61,10 +61,12 @@ def main():
     exp = expiry_days(sess[0].date(), sess[-1].date())
     rows = []
     for k, e in ent.items():
-        i = idx_of[k]; si = i - 1                                       # signal bar = the bar before the fill bar
+        i = idx_of[k]; di = i - 1                                       # decision bar = the bar before the fill bar
+        si = di
+        while si > 0 and i - si <= 12 and pl["Signal (+1 CE / -1 PE)"][si] != e["dir"]: si -= 1
         gap = pl["Gap class code"][i]; sl = pl["Planned SL (PE)"][si] if e["dir"] < 0 else pl["Planned SL (CE)"][si]
         risk = abs(e["entry_price"] - sl) if not math.isnan(sl) else nan
-        rows.append({**e, "i": i, "si": si, "date": sess[i].date(), "gap": gap, "risk": risk, "expiry": sess[i].date() in exp, "R": (e["gross_pts_units"] / e["units"] / risk) if risk and risk > 0 else nan, "net_idx": pl["Evidence index (net)"][si], "n_active": pl["Active components"][si]})
+        rows.append({**e, "i": i, "si": si, "di": di, "date": sess[i].date(), "gap": gap, "risk": risk, "expiry": sess[i].date() in exp, "R": (e["gross_pts_units"] / e["units"] / risk) if risk and risk > 0 else nan, "net_idx": pl["Evidence index (net)"][si], "n_active": pl["Active components"][si]})
     rep["overall"] = agg(rows)
     rep["by_direction"] = {"CE (long)": agg([r for r in rows if r["dir"] > 0]), "PE (short)": agg([r for r in rows if r["dir"] < 0])}
     gcls = {-2: "exceptional down", -1: "gap down", 0: "flat", 1: "gap up", 2: "exceptional up"}
@@ -87,7 +89,8 @@ def main():
     for r in rows: day_entries[r["date"]].append(r)
     for r in rows:
         mod = sess[r["i"]].hour * 60 + sess[r["i"]].minute; smod = sess[r["si"]].hour * 60 + sess[r["si"]].minute
-        if pl["Signal (+1 CE / -1 PE)"][r["si"]] != r["dir"]: viol["entry without a signal on the previous bar"].append(str(sess[r["i"]]))
+        if pl["Signal (+1 CE / -1 PE)"][r["si"]] != r["dir"]: viol["entry without a 5-minute signal in the last 12 chart bars"].append(str(sess[r["i"]]))
+        if pl["Entry decision (+1 CE / -1 PE)"][r["di"]] != r["dir"]: viol["entry without an entry decision on the previous bar"].append(str(sess[r["i"]]))
         if pl["Bar of day"][r["si"]] < 1: viol["signal on the first candle"].append(str(sess[r["i"]]))
         if smod >= 14 * 60 + 45: viol["signal at/after 14:45"].append(str(sess[r["i"]]))
         if abs(r["net_idx"]) < 0.35 - 1e-9 or r["n_active"] < 4: viol["threshold not met at the signal bar"].append(str(sess[r["i"]]))
@@ -104,13 +107,17 @@ def main():
     # ---------------- virtual-signal outcomes (independent of the script's tracker) ----------------
     # ---------------- virtual signals (Pine tracker semantics re-implemented independently) ----------------
     sys.path.insert(0, os.path.join(HERE, "scripts")); import pine_nifty_harness as H
-    cand = H.candles("5"); assert len(cand) == n and cand[0]["time"] == times[0] and cand[-1]["time"] == times[-1], "candle window differs from the run"
+    cand = H.candles(a.tf); assert len(cand) == n and cand[0]["time"] == times[0] and cand[-1]["time"] == times[-1], "candle window differs from the run"
     O = [c["open"] for c in cand]; Hh = [c["high"] for c in cand]; Lw = [c["low"] for c in cand]
     HOR, RR1 = 24, 1.0
-    sig = [(i, int(pl["Signal (+1 CE / -1 PE)"][i])) for i in range(n) if pl["Signal (+1 CE / -1 PE)"][i] in (1.0, -1.0)]
+    refine = a.mode != "Off" and a.tf != "5"
+    sigplot = "Entry decision (+1 CE / -1 PE)" if refine else "Signal (+1 CE / -1 PE)"
+    sig = [(i, int(pl[sigplot][i])) for i in range(n) if pl[sigplot][i] in (1.0, -1.0)]
     vs, cnt = [], {1: [0, 0, 0], -1: [0, 0, 0]}                       # [resolved, wins, timeouts]
     for s0, dr in sig:
-        stop = pl["Planned SL (CE)"][s0] if dr > 0 else pl["Planned SL (PE)"][s0]
+        s5 = s0
+        while refine and s5 > 0 and s0 - s5 <= 12 and pl["Signal (+1 CE / -1 PE)"][s5] != dr: s5 -= 1          # the 5-minute signal that armed this decision
+        stop = pl["Planned SL (CE)"][s5] if dr > 0 else pl["Planned SL (PE)"][s5]
         if math.isnan(stop) or s0 + 1 >= n: continue
         e0 = O[s0 + 1]; r0 = abs(e0 - stop)
         if (dr > 0 and e0 <= stop) or (dr < 0 and e0 >= stop): continue                    # 'badE': removed without counting

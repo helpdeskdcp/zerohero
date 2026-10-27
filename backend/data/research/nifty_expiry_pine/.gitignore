@@ -1,1 +1,5 @@
 run_full_2y.json
+legacy_v1/*.json
+run_full_2y_v2.json
+blk_*.json
+run_3m_*.json

@@ -1,0 +1,626 @@
+// ───────────────────────────── ANALYSIS ENGINE BODY (runs on 5-minute bars; indented into f_eng5() by build_v2.py) ─────────────────────────
+// Everything here reads only the CLOSED 5-minute bar it is executing on. The host (5-minute chart: direct; lower-timeframe chart: request.security with
+// the previous completed 5-minute bar) never sees a partially formed 5-minute bar.
+int  minOfDay   = hour * 60 + minute
+int  sessOpen   = 9 * 60 + 15
+bool tfChgD     = timeframe.change("D")          // evaluated on every bar (history-dependent functions must not sit behind a lazy `or`)
+bool isNewDay   = barstate.isfirst or tfChgD
+
+var float dayO = na
+var float dayH = na
+var float dayL = na
+var float dayC = na
+var float prevO = na
+var float prevH = na
+var float prevL = na
+var float prevC = na
+var float prevVw = na
+var float cumPV = 0.0
+var float cumV = 0.0
+var float cumTP = 0.0
+var int   dayBar = 0
+var int   nDays = 0
+var int   cumN = 0
+var array<float> trArr = array.new<float>()
+
+if isNewDay
+    if not na(dayH)
+        float refC = na(prevC) ? dayO : prevC
+        float trv = math.max(dayH - dayL, math.max(math.abs(dayH - refC), math.abs(dayL - refC)))
+        array.push(trArr, trv)
+        if array.size(trArr) > i_atrDays
+            array.shift(trArr)
+        prevVw := cumV > 0 ? cumPV / cumV : (cumN > 0 ? cumTP / cumN : na)
+        prevO := dayO
+        prevH := dayH
+        prevL := dayL
+        prevC := dayC
+        nDays += 1
+    dayO := open
+    dayH := high
+    dayL := low
+    cumPV := 0.0
+    cumV := 0.0
+    cumTP := 0.0
+    cumN := 0
+    dayBar := 0
+else
+    dayH := math.max(dayH, high)
+    dayL := math.min(dayL, low)
+    dayBar += 1
+dayC := close
+cumTP += hlc3
+cumN  += 1
+cumPV += hlc3 * nz(volume)
+cumV  += nz(volume)
+
+float dailyATR = array.size(trArr) >= math.min(5, i_atrDays) ? array.avg(trArr) : na
+bool  haveGapCtx = not na(prevC) and not na(dailyATR)
+
+var float gapPts = na
+var float gapPct = na
+var float gapAtr = na
+var int   gapCls = 10                 // 0 flat, +-1 gap, +-2 exceptional, 9 unknown (ATR warm-up), 10 n/a
+if isNewDay and not na(prevC)
+    gapPts := open - prevC
+    gapPct := 100.0 * gapPts / prevC
+    gapAtr := na(dailyATR) ? na : gapPts / dailyATR
+    gapCls := na(gapAtr) ? 9 : math.abs(gapAtr) < i_flatThr ? 0 : math.abs(gapAtr) >= i_excThr ? (gapPts > 0 ? 2 : -2) : (gapPts > 0 ? 1 : -1)
+bool gapExceptional = gapCls == 2 or gapCls == -2
+
+// ───────────────────────────────────────── 04 INDICATORS ON THE 5-MINUTE BARS ─────────────────────────────────────
+float atr    = ta.atr(i_atrLen)
+float emaF   = ta.ema(close, i_emaF)
+float emaS   = ta.ema(close, i_emaS)
+float rsi    = ta.rsi(close, i_rsiLen)
+float volSma = ta.sma(nz(volume), i_volBaseN)
+bool  volAvail = i_volMode == "Auto" and volSma > 0 and nz(volume) > 0
+float relVol = volAvail ? nz(volume) / volSma : na
+float vwapLine = cumV > 0 ? cumPV / cumV : cumTP / cumN          // TWAP of hlc3 when the chart has no volume
+bool  vwapReal = cumV > 0
+float rng  = high - low
+float body = math.abs(close - open)
+float bodyRatio = f_ratio(body, rng)
+float closeLoc  = rng > 0 ? (close - low) / rng : 0.5
+float upWick = f_ratio(high - math.max(open, close), rng)
+float loWick = f_ratio(math.min(open, close) - low, rng)
+
+// ───────────────────────────────────────── 06 OPENING RANGE + FIRST CANDLE ────────────────────────────────────────
+var float orH = na
+var float orL = na
+var bool  orDone = false
+bool inOR = minOfDay < sessOpen + i_orMin
+if isNewDay
+    orH := high
+    orL := low
+    orDone := false
+else if inOR
+    orH := math.max(orH, high)
+    orL := math.min(orL, low)
+else if not orDone
+    orDone := true
+
+var float fcH = na
+var float fcL = na
+var float fcC = na
+var float fcBody = na
+var float fcLoc = na
+var float fcFill = na
+var float fcUpW = na
+var float fcLoW = na
+var float fcRngAtr = na
+var float fcRel = na
+var int   fcSign = 0
+if isNewDay
+    fcH := high
+    fcL := low
+    fcC := close
+    fcBody := bodyRatio
+    fcLoc := closeLoc
+    fcSign := close > open and bodyRatio >= i_strongBody and closeLoc >= i_locHi ? 1 : close < open and bodyRatio >= i_strongBody and closeLoc <= i_locLo ? -1 : 0
+    float gapSpan = na(prevC) ? na : prevC - open
+    fcFill := na(gapSpan) or gapSpan == 0 ? na : (close - open) / gapSpan          // >0 = first candle moved TOWARD the previous close
+    fcUpW := upWick
+    fcLoW := loWick
+    fcRngAtr := na(dailyATR) ? na : 100.0 * rng / dailyATR
+    fcRel := relVol
+
+// second candle validates / invalidates the first (decided once, at the close of the 2nd candle, never revised)
+// openSt: 0 pending, 1 validated bull, 2 validated bear, 3 invalidated, 4 unvalidated, 5 no directional first candle
+var int openEv = 0
+var int openSt = 0
+if isNewDay
+    openEv := 0
+    openSt := 0
+else if dayBar == 1
+    if fcSign > 0
+        openEv := close > fcC and low >= fcL ? 1 : 0
+        openSt := openEv == 1 ? 1 : (close < fcL ? 3 : 4)
+    else if fcSign < 0
+        openEv := close < fcC and high <= fcH ? -1 : 0
+        openSt := openEv == -1 ? 2 : (close > fcH ? 3 : 4)
+    else
+        openSt := 5
+
+// opening-range breakout / failure (close-based, first break only; failure = close back inside within the fail window)
+var int   orBrk = 0
+var int   orBrkBar = na
+var float orBrkLvl = na
+var bool  orFail = false
+if isNewDay
+    orBrk := 0
+    orBrkBar := na
+    orBrkLvl := na
+    orFail := false
+if orDone and orBrk == 0 and not na(orH)
+    if close > orH
+        orBrk := 1
+        orBrkBar := bar_index
+        orBrkLvl := orH
+    else if close < orL
+        orBrk := -1
+        orBrkBar := bar_index
+        orBrkLvl := orL
+if orBrk != 0 and not orFail and bar_index > orBrkBar and bar_index - orBrkBar <= i_fbBars
+    if (orBrk == 1 and close < orBrkLvl) or (orBrk == -1 and close > orBrkLvl)
+        orFail := true
+
+// ───────────────────────────────────────── 07 GAP SCENARIO (progressive, never back-dated) ────────────────────────
+// scn: 1 gap-down continuation  2 gap-down reversal  3 gap-up continuation  4 gap-up reversal  5 flat-open breakout  6 no-trade / conflicting
+// scnCode (text): 0 none | 1-4 provisional | 5 flat awaiting | 6 gap-down conflicting | 7 gap-up conflicting | 8 context unavailable
+//                 11-14 validated by the 2nd candle | 15/16 flat breakout up/down | 17 2nd candle did not validate | 18 opening-range breakout failed
+var int  scn = 6
+var int  scnCode = 0
+var int  scnSign = 0
+var bool scnValid = false
+if isNewDay
+    bool gDown = gapCls == -1 or gapCls == -2
+    bool gUp   = gapCls == 1 or gapCls == 2
+    bool filled = not na(fcFill) and fcFill >= i_fillFrac
+    scnValid := false
+    if gDown
+        if fcSign < 0
+            scn := 1
+            scnSign := -1
+            scnCode := 1
+        else if fcSign > 0 and filled
+            scn := 2
+            scnSign := 1
+            scnCode := 2
+        else
+            scn := 6
+            scnSign := 0
+            scnCode := 6
+    else if gUp
+        if fcSign > 0
+            scn := 3
+            scnSign := 1
+            scnCode := 3
+        else if fcSign < 0 and filled
+            scn := 4
+            scnSign := -1
+            scnCode := 4
+        else
+            scn := 6
+            scnSign := 0
+            scnCode := 7
+    else if gapCls == 0
+        scn := 5
+        scnSign := 0
+        scnCode := 5
+    else
+        scn := 6
+        scnSign := 0
+        scnCode := 8
+if not isNewDay and dayBar == 1 and (scn >= 1 and scn <= 4)
+    if openEv == scnSign and openEv != 0                    // the 2nd candle must agree with the (continuation OR reversal) direction of the 1st
+        scnValid := true
+        scnCode := scnCode + 10
+    else
+        scn := 6
+        scnSign := 0
+        scnValid := false
+        scnCode := 17
+if scn == 5 and orBrk != 0 and not orFail and orDone
+    scnSign := orBrk
+    scnValid := true
+    scnCode := orBrk > 0 ? 15 : 16
+if scn == 5 and orFail
+    scn := 6
+    scnSign := 0
+    scnValid := false
+    scnCode := 18
+if gapExceptional and i_blockExc
+    scnValid := false
+int gapEv = scnValid ? scnSign : 0
+
+// ──────────────────────────────── 08 POSITIONING ZONES (manual OI + previous-day price levels) ────────────────────
+// slot 0,1 = OI #1,#2 | 2,3 = extra zones | 4 = previous-day low (support) / high (resistance). Per-session counters reset at the open.
+var array<float>  sLo = array.new<float>(5, na)
+var array<float>  sHi = array.new<float>(5, na)
+var array<float>  sW  = array.new<float>(5, 0.0)
+var array<float>  sK  = array.new<float>(5, na)
+var array<int>    sResp = array.new<int>(5, 0)
+var array<int>    sBrk  = array.new<int>(5, 0)         // 0 intact, 1 closed beyond (broken), 2 reclaimed
+var array<int>    sRejBar = array.new<int>(5, na)
+var array<float>  rLo = array.new<float>(5, na)
+var array<float>  rHi = array.new<float>(5, na)
+var array<float>  rW  = array.new<float>(5, 0.0)
+var array<float>  rK  = array.new<float>(5, na)
+var array<int>    rResp = array.new<int>(5, 0)
+var array<int>    rBrk  = array.new<int>(5, 0)
+var array<int>    rRejBar = array.new<int>(5, na)
+
+if barstate.isfirst and i_oiOn
+    if i_p1K > 0
+        array.set(sK, 0, i_p1K)
+        array.set(sW, 0, i_wRank1)
+    if i_p2K > 0
+        array.set(sK, 1, i_p2K)
+        array.set(sW, 1, i_wRank2)
+    if i_c1K > 0
+        array.set(rK, 0, i_c1K)
+        array.set(rW, 0, i_wRank1)
+    if i_c2K > 0
+        array.set(rK, 1, i_c2K)
+        array.set(rW, 1, i_wRank2)
+    if i_x1K > 0
+        if i_x1Type == "PUT"
+            array.set(sK, 2, i_x1K)
+            array.set(sW, 2, i_wExtra)
+        else
+            array.set(rK, 2, i_x1K)
+            array.set(rW, 2, i_wExtra)
+    if i_x2K > 0
+        if i_x2Type == "PUT"
+            array.set(sK, 3, i_x2K)
+            array.set(sW, 3, i_wExtra)
+        else
+            array.set(rK, 3, i_x2K)
+            array.set(rW, 3, i_wExtra)
+
+if isNewDay
+    for z = 0 to 4
+        array.set(sResp, z, 0)
+        array.set(sBrk, z, 0)
+        array.set(sRejBar, z, na)
+        array.set(rResp, z, 0)
+        array.set(rBrk, z, 0)
+        array.set(rRejBar, z, na)
+    if not na(prevL)
+        array.set(sK, 4, prevL)
+        array.set(sW, 4, i_wPrice)
+        array.set(rK, 4, prevH)
+        array.set(rW, 4, i_wPrice)
+    for z = 0 to 4
+        float ks = array.get(sK, z)
+        float kr = array.get(rK, z)
+        array.set(sLo, z, na(ks) ? na : ks - i_zoneW)
+        array.set(sHi, z, na(ks) ? na : ks + i_zoneW)
+        array.set(rLo, z, na(kr) ? na : kr - i_zoneW)
+        array.set(rHi, z, na(kr) ? na : kr + i_zoneW)
+
+// where did the session OPEN relative to the highest-weight support / resistance zone (set once at the first bar): 0 n/a, 1 above, 2 inside, 3 below
+var int zbSopen = 0
+var int zbRopen = 0
+if isNewDay
+    float wS0 = 0.0
+    float wR0 = 0.0
+    zbSopen := 0
+    zbRopen := 0
+    for z = 0 to 4
+        float slo0 = array.get(sLo, z)
+        if not na(slo0) and array.get(sW, z) > wS0
+            wS0 := array.get(sW, z)
+            zbSopen := open > array.get(sHi, z) ? 1 : open < slo0 ? 3 : 2
+        float rlo0 = array.get(rLo, z)
+        if not na(rlo0) and array.get(rW, z) > wR0
+            wR0 := array.get(rW, z)
+            zbRopen := open > array.get(rHi, z) ? 1 : open < rlo0 ? 3 : 2
+
+// per-bar zone state machine (closed bars only)
+for z = 0 to 4
+    float lo = array.get(sLo, z)
+    float hi = array.get(sHi, z)
+    if not na(lo)
+        if array.get(sBrk, z) == 0
+            if low <= hi and close > hi
+                array.set(sResp, z, array.get(sResp, z) + 1)
+            if close < lo
+                array.set(sBrk, z, 1)
+        else if array.get(sBrk, z) == 1
+            if high >= lo and close < lo
+                array.set(sRejBar, z, bar_index)
+            if close > hi
+                array.set(sBrk, z, 2)
+    float rlo = array.get(rLo, z)
+    float rhi = array.get(rHi, z)
+    if not na(rlo)
+        if array.get(rBrk, z) == 0
+            if high >= rlo and close < rlo
+                array.set(rResp, z, array.get(rResp, z) + 1)
+            if close > rhi
+                array.set(rBrk, z, 1)
+        else if array.get(rBrk, z) == 1
+            if low <= rhi and close > rhi
+                array.set(rRejBar, z, bar_index)
+            if close < rlo
+                array.set(rBrk, z, 2)
+
+// highest-weight zone summaries for the dashboard
+int   zbSslot = -1
+int   zbRslot = -1
+float bestSW = 0.0
+float bestRW = 0.0
+for z = 0 to 4
+    if not na(array.get(sLo, z)) and array.get(sW, z) > bestSW
+        bestSW := array.get(sW, z)
+        zbSslot := z
+    if not na(array.get(rLo, z)) and array.get(rW, z) > bestRW
+        bestRW := array.get(rW, z)
+        zbRslot := z
+float zbSK = zbSslot >= 0 ? array.get(sK, zbSslot) : na
+int   zbSbrk = zbSslot >= 0 ? array.get(sBrk, zbSslot) : 0
+int   zbSresp = zbSslot >= 0 ? array.get(sResp, zbSslot) : 0
+float zbRK = zbRslot >= 0 ? array.get(rK, zbRslot) : na
+int   zbRbrk = zbRslot >= 0 ? array.get(rBrk, zbRslot) : 0
+int   zbRresp = zbRslot >= 0 ? array.get(rResp, zbRslot) : 0
+
+// ───────────────────────────────────────── 09 SMC / LIQUIDITY (closed bars; pivots known only after R bars) ──────────
+float ph = f_pivH(i_pivL, i_pivR)
+float pl = f_pivL(i_pivL, i_pivR)
+var float swH = na
+var float swL = na
+var bool  swHUsed = false
+var bool  swLUsed = false
+var bool  swHSwept = false
+var bool  swLSwept = false
+var int   trendS = 0
+if not na(ph)
+    swH := ph
+    swHUsed := false
+    swHSwept := false
+if not na(pl)
+    swL := pl
+    swLUsed := false
+    swLSwept := false
+
+bool bosUp = false
+bool bosDn = false
+bool chochUp = false
+bool chochDn = false
+bool sweepHi = false      // buy-side liquidity above a confirmed swing high taken, close back below  -> bearish
+bool sweepLo = false      // sell-side liquidity below a confirmed swing low taken, close back above  -> bullish
+bool fbUp = false         // failed breakout (closed above a swing high, then back below within the window) -> bearish
+bool fbDn = false         // failed breakdown -> bullish
+bool retestUp = false
+bool retestDn = false
+
+var float brkUpLvl = na
+var int   brkUpBar = na
+var bool  brkUpDone = false
+var float brkDnLvl = na
+var int   brkDnBar = na
+var bool  brkDnDone = false
+var int   lastBullStruct = na
+var int   lastBearStruct = na
+var int   lastBullSweep = na
+var int   lastBearSweep = na
+var float lastSweepLoPx = na
+var float lastSweepHiPx = na
+var int   lastDispUp = na
+var int   lastDispDn = na
+
+if not na(swH) and not swHUsed and close > swH
+    swHUsed := true
+    brkUpLvl := swH
+    brkUpBar := bar_index
+    brkUpDone := false
+    if trendS == -1
+        chochUp := true
+    else
+        bosUp := true
+    trendS := 1
+if not na(swL) and not swLUsed and close < swL
+    swLUsed := true
+    brkDnLvl := swL
+    brkDnBar := bar_index
+    brkDnDone := false
+    if trendS == 1
+        chochDn := true
+    else
+        bosDn := true
+    trendS := -1
+if not na(swH) and not swHUsed and not swHSwept and high > swH and close < swH
+    sweepHi := true
+    swHSwept := true
+    lastSweepHiPx := high
+if not na(swL) and not swLUsed and not swLSwept and low < swL and close > swL
+    sweepLo := true
+    swLSwept := true
+    lastSweepLoPx := low
+if not na(brkUpBar) and not brkUpDone and bar_index > brkUpBar and bar_index - brkUpBar <= i_fbBars and close < brkUpLvl
+    fbUp := true
+    brkUpDone := true
+if not na(brkDnBar) and not brkDnDone and bar_index > brkDnBar and bar_index - brkDnBar <= i_fbBars and close > brkDnLvl
+    fbDn := true
+    brkDnDone := true
+if not na(brkUpBar) and not brkUpDone and bar_index > brkUpBar and bar_index - brkUpBar <= i_retestBars and low <= brkUpLvl + i_retestTol * atr and close > brkUpLvl
+    retestUp := true
+if not na(brkDnBar) and not brkDnDone and bar_index > brkDnBar and bar_index - brkDnBar <= i_retestBars and high >= brkDnLvl - i_retestTol * atr and close < brkDnLvl
+    retestDn := true
+
+bool dispUp = rng > i_dispAtr * atr and bodyRatio >= i_dispBody and close > open
+bool dispDn = rng > i_dispAtr * atr and bodyRatio >= i_dispBody and close < open
+if bosUp or chochUp
+    lastBullStruct := bar_index
+if bosDn or chochDn
+    lastBearStruct := bar_index
+if sweepLo or fbDn
+    lastBullSweep := bar_index
+if sweepHi or fbUp
+    lastBearSweep := bar_index
+if dispUp
+    lastDispUp := bar_index
+if dispDn
+    lastDispDn := bar_index
+
+// fair value gaps: fully known at the close of the 3rd candle (low[0] vs high[2]); mitigated when a later close trades back through it; at most 8 kept
+bool fvgBull = low > high[2]
+bool fvgBear = high < low[2]
+var array<float> fvgTop = array.new<float>()
+var array<float> fvgBot = array.new<float>()
+var array<int>   fvgDir = array.new<int>()
+if fvgBull and rng > 0
+    array.push(fvgTop, low)
+    array.push(fvgBot, high[2])
+    array.push(fvgDir, 1)
+if fvgBear and rng > 0
+    array.push(fvgTop, low[2])
+    array.push(fvgBot, high)
+    array.push(fvgDir, -1)
+float fvgTopN = fvgBull and rng > 0 ? low : (fvgBear and rng > 0 ? low[2] : na)
+float fvgBotN = fvgBull and rng > 0 ? high[2] : (fvgBear and rng > 0 ? high : na)
+int fi = array.size(fvgTop) - 1
+while fi >= 0
+    float tp = array.get(fvgTop, fi)
+    float bt = array.get(fvgBot, fi)
+    int   dr = array.get(fvgDir, fi)
+    bool mit = (dr == 1 and close < bt) or (dr == -1 and close > tp)
+    if mit
+        array.remove(fvgTop, fi)
+        array.remove(fvgBot, fi)
+        array.remove(fvgDir, fi)
+    fi -= 1
+while array.size(fvgTop) > 8
+    array.remove(fvgTop, 0)
+    array.remove(fvgBot, 0)
+    array.remove(fvgDir, 0)
+int fvgBullOpen = 0
+int fvgBearOpen = 0
+if array.size(fvgDir) > 0                                   // a Pine 'for 0 to -1' counts DOWN (0, -1): always guard empty arrays
+    for k = 0 to array.size(fvgDir) - 1
+        if array.get(fvgDir, k) == 1
+            fvgBullOpen += 1
+        else
+            fvgBearOpen += 1
+
+bool bullStructFresh = not na(lastBullStruct) and bar_index - lastBullStruct <= i_evFresh
+bool bearStructFresh = not na(lastBearStruct) and bar_index - lastBearStruct <= i_evFresh
+bool bullSweepFresh  = not na(lastBullSweep) and bar_index - lastBullSweep <= i_evFresh
+bool bearSweepFresh  = not na(lastBearSweep) and bar_index - lastBearSweep <= i_evFresh
+bool bullDispFresh   = not na(lastDispUp) and bar_index - lastDispUp <= i_evFresh
+bool bearDispFresh   = not na(lastDispDn) and bar_index - lastDispDn <= i_evFresh
+// the more recent event wins; an exact tie is conflicting evidence = 0 (never resolved in favour of one side)
+int structEv = bullStructFresh and (not bearStructFresh or lastBullStruct > lastBearStruct) ? 1 : bearStructFresh and (not bullStructFresh or lastBearStruct > lastBullStruct) ? -1 : 0
+int sweepEv  = bullSweepFresh and (not bearSweepFresh or lastBullSweep > lastBearSweep) ? 1 : bearSweepFresh and (not bullSweepFresh or lastBearSweep > lastBullSweep) ? -1 : 0
+int evBits = (bosUp ? 1 : 0) + (bosDn ? 2 : 0) + (chochUp ? 4 : 0) + (chochDn ? 8 : 0) + (sweepHi ? 16 : 0) + (sweepLo ? 32 : 0) + (fbUp ? 64 : 0) + (fbDn ? 128 : 0) + (retestUp ? 256 : 0) + (retestDn ? 512 : 0)
+int fvgForm = (fvgBull ? 1 : 0) - (fvgBear ? 1 : 0)
+
+// ───────────────────────────────────────── 10 MOMENTUM / VWAP / VOLUME EVIDENCE ───────────────────────────────────
+int momEv  = rsi > 55 ? 1 : rsi < 45 ? -1 : 0
+int vwapEv = close > vwapLine + 0.05 * atr ? 1 : close < vwapLine - 0.05 * atr ? -1 : 0
+int volEv  = volAvail and relVol >= i_rvThr ? (close > open ? 1 : close < open ? -1 : 0) : 0
+
+// ───────────────────────────────────── 11 LEVEL POSITION + ZONE-BASED SELLER STRESS ──────────────────────────────
+// Bearish stress  = a SUPPORT zone (put-OI strike or previous-day low) was broken and price stays below it, with rejection from below.
+// Bullish stress  = a RESISTANCE zone (call-OI strike or previous-day high) was broken and price stays above it, with a holding retest.
+// Symmetrical by construction. Labels: POTENTIAL SELLER STRESS - never "stop-loss hunt confirmed".
+bool  stressBear = false
+bool  stressBull = false
+int   stressBearZone = -1
+int   stressBullZone = -1
+int   lvlBull = 0
+int   lvlBear = 0
+if not na(prevH) and close > prevH
+    lvlBull += 1
+if not na(prevL) and close < prevL
+    lvlBear += 1
+float bestW = 0.0
+float bestWr = 0.0
+for z = 0 to 4
+    float lo = array.get(sLo, z)
+    if not na(lo)
+        bool conf = not i_needResp or array.get(sResp, z) >= i_minRespect
+        bool brokenNow = array.get(sBrk, z) == 1 and close < lo
+        if brokenNow and conf and array.get(sW, z) >= i_minZoneW
+            lvlBear += 1
+            bool rej = not na(array.get(sRejBar, z)) and bar_index - array.get(sRejBar, z) <= i_rejBars
+            bool structOk = bearStructFresh or bearDispFresh
+            bool momOk = rsi < 50 and emaF < emaS
+            if (not i_reqReject or rej) and (not i_reqStruct or structOk) and momOk and array.get(sW, z) > bestW
+                bestW := array.get(sW, z)
+                stressBear := true
+                stressBearZone := z
+    float rlo = array.get(rLo, z)
+    float rhi = array.get(rHi, z)
+    if not na(rlo)
+        bool confr = not i_needResp or array.get(rResp, z) >= i_minRespect
+        bool brokenUp = array.get(rBrk, z) == 1 and close > rhi
+        if brokenUp and confr and array.get(rW, z) >= i_minZoneW
+            lvlBull += 1
+            bool rejr = not na(array.get(rRejBar, z)) and bar_index - array.get(rRejBar, z) <= i_rejBars
+            bool structOkr = bullStructFresh or bullDispFresh
+            bool momOkr = rsi > 50 and emaF > emaS
+            if (not i_reqReject or rejr) and (not i_reqStruct or structOkr) and momOkr and array.get(rW, z) > bestWr
+                bestWr := array.get(rW, z)
+                stressBull := true
+                stressBullZone := z
+int lvlEv = lvlBull > lvlBear ? 1 : lvlBear > lvlBull ? -1 : 0
+
+// ───────────────────────────────────── 12 CANDLE/VOLUME PROXY (original; NOT proof of institutional activity) ──────
+bool atBullLevel = bosUp or chochUp or retestUp or sweepLo or (not na(prevH) and close > prevH and close[1] <= prevH)
+bool atBearLevel = bosDn or chochDn or retestDn or sweepHi or (not na(prevL) and close < prevL and close[1] >= prevL)
+int pxBull = (volAvail and relVol >= i_rvThr ? 1 : 0) + (rng >= i_rngAtr * atr ? 1 : 0) + (bodyRatio >= i_bodyThr and close > open ? 1 : 0) + (closeLoc >= i_locHi ? 1 : 0) + (atBullLevel ? 1 : 0) + (emaF > emaS ? 1 : 0)
+int pxBear = (volAvail and relVol >= i_rvThr ? 1 : 0) + (rng >= i_rngAtr * atr ? 1 : 0) + (bodyRatio >= i_bodyThr and close < open ? 1 : 0) + (closeLoc <= i_locLo ? 1 : 0) + (atBearLevel ? 1 : 0) + (emaF < emaS ? 1 : 0)
+
+// ─────────────────────────────── 15 NEAREST OPPOSING LEVELS + STRUCTURE STOPS (5-minute close as the reference) ────────────
+float nearUp = na
+float nearDn = na
+for z = 0 to 4
+    float rl = array.get(rLo, z)
+    float sh = array.get(sHi, z)
+    if not na(rl) and rl > close
+        nearUp := na(nearUp) ? rl : math.min(nearUp, rl)
+    if not na(sh) and sh < close
+        nearDn := na(nearDn) ? sh : math.max(nearDn, sh)
+if not na(prevH) and prevH > close
+    nearUp := na(nearUp) ? prevH : math.min(nearUp, prevH)
+if not na(prevL) and prevL < close
+    nearDn := na(nearDn) ? prevL : math.max(nearDn, prevL)
+if orDone and not na(orH) and orH > close
+    nearUp := na(nearUp) ? orH : math.min(nearUp, orH)
+if orDone and not na(orL) and orL < close
+    nearDn := na(nearDn) ? orL : math.max(nearDn, orL)
+if not na(swH) and swH > close
+    nearUp := na(nearUp) ? swH : math.min(nearUp, swH)
+if not na(swL) and swL < close
+    nearDn := na(nearDn) ? swL : math.max(nearDn, swL)
+
+// structure-based invalidation (nearest valid structure at least 0.4 ATR away); the host adds the ATR buffer
+float slBullRaw = na
+float slBearRaw = na
+if lastSweepLoPx < close and not na(lastSweepLoPx) and bullSweepFresh and close - lastSweepLoPx >= 0.4 * atr
+    slBullRaw := lastSweepLoPx
+if not na(swL) and swL < close and close - swL >= 0.4 * atr
+    slBullRaw := na(slBullRaw) ? swL : math.max(slBullRaw, swL)
+if stressBullZone >= 0
+    float zl = array.get(rLo, stressBullZone)
+    if not na(zl) and zl < close and close - zl >= 0.4 * atr
+        slBullRaw := na(slBullRaw) ? zl : math.max(slBullRaw, zl)
+if orDone and not na(orL) and orL < close and close - orL >= 0.4 * atr
+    slBullRaw := na(slBullRaw) ? orL : math.max(slBullRaw, orL)
+if lastSweepHiPx > close and not na(lastSweepHiPx) and bearSweepFresh and lastSweepHiPx - close >= 0.4 * atr
+    slBearRaw := lastSweepHiPx
+if not na(swH) and swH > close and swH - close >= 0.4 * atr
+    slBearRaw := na(slBearRaw) ? swH : math.min(slBearRaw, swH)
+if stressBearZone >= 0
+    float zh = array.get(sHi, stressBearZone)
+    if not na(zh) and zh > close and zh - close >= 0.4 * atr
+        slBearRaw := na(slBearRaw) ? zh : math.min(slBearRaw, zh)
+if orDone and not na(orH) and orH > close and orH - close >= 0.4 * atr
+    slBearRaw := na(slBearRaw) ? orH : math.min(slBearRaw, orH)
+
+bool trigBullGap = scnValid and scnSign == 1 and (bullStructFresh or bullDispFresh)
+bool trigBearGap = scnValid and scnSign == -1 and (bearStructFresh or bearDispFresh)
+bool dataOk5 = rng > 0 and not na(atr) and atr > 0 and not na(prevC) and not na(emaS) and not na(rsi)

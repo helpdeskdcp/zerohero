@@ -1,0 +1,50 @@
+{
+ "5-minute chart": {
+  "n": 5,
+  "win_rate": 0.6,
+  "net": 365.9,
+  "profit_factor": 1.658,
+  "expectancy": 73.2,
+  "expectancy_ci95": [
+   -221.7,
+   476.4
+  ],
+  "avg_win": 307.2,
+  "avg_loss": -277.9,
+  "max_dd": 555.7,
+  "gross_before_costs": 714.1
+ },
+ "3-minute chart, refinement Off": {
+  "n": 6,
+  "win_rate": 0.167,
+  "net": -352.1,
+  "profit_factor": 0.635,
+  "expectancy": -58.7,
+  "expectancy_ci95": [
+   -277.9,
+   234.3
+  ],
+  "avg_win": 611.8,
+  "avg_loss": -192.8,
+  "max_dd": 937.9,
+  "gross_before_costs": 63.6
+ },
+ "3-minute chart, Micro-breakout": {
+  "n": 0
+ },
+ "3-minute chart, Pullback then resume": {
+  "n": 1,
+  "win_rate": 1.0,
+  "net": 3.1,
+  "profit_factor": null,
+  "expectancy": 3.1,
+  "expectancy_ci95": [
+   3.1,
+   3.1
+  ],
+  "avg_win": 3.1,
+  "avg_loss": null,
+  "max_dd": 0.0,
+  "gross_before_costs": 71.6
+ }
+}

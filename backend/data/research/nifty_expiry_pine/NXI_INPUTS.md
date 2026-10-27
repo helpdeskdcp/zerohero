@@ -1,6 +1,6 @@
 # NXI input reference (generated from the source - do not edit by hand)
 
-124 inputs in 13 groups. Inputs are grouped exactly as in the TradingView settings dialog.
+127 inputs in 14 groups. Inputs are grouped exactly as in the TradingView settings dialog.
 
 
 ## 01 General / sessions
@@ -169,6 +169,14 @@
 |---|---|---|---|---|
 | Minimum resolved virtual signals per side before any empirical rate is shown (`i_minSamples`) | int | `50` |  |  |
 | Outcome horizon (bars): target 1 before stop within N bars (`i_probHorizon`) | int | `24` |  |  |
+
+## 14 Entry timing - lower-timeframe (e.g. 3-minute) refinement
+
+| input | type | default | options | notes |
+|---|---|---|---|---|
+| Entry refinement mode (`i_refine`) | string | `"Off"` | Off, Micro-breakout, Pullback then resume | Needs a chart BELOW 5 minutes (3-minute recommended). The 5-minute engine still decides the bias (it is read from the last COMPLETED 5-minute bar); the entry then waits for a lower-timeframe trigger. Off = enter at the next bar open after the 5-minute signal. On a 5-minute chart this setting has no effect. |
+| Chart timeframe handling (leave on Auto) (`i_hostMode`) | string | `"Auto"` | Auto, 5-minute chart, Chart below 5 minutes | Auto reads the chart timeframe with timeframe.main_period. If a platform reports it wrongly the timing guard (dashboard: ENGINE TIMING MISMATCH) blocks all entries; then force the correct choice here. |
+| Bars to wait for the trigger (chart bars) (`i_refWin`) | int | `4` |  | Armed setups that are not confirmed within this many chart bars (or break the stop, or are contradicted by the next 5-minute signal) are dropped - never chased. |
 
 ## 13 Dashboard
 

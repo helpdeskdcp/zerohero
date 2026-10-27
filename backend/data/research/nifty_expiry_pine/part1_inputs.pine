@@ -153,6 +153,13 @@ G12 = "12 Probability tracker (running, in-sample, expanding window)"
 i_minSamples = input.int(50, "Minimum resolved virtual signals per side before any empirical rate is shown", minval=10, group=G12)
 i_probHorizon = input.int(24, "Outcome horizon (bars): target 1 before stop within N bars", minval=3, group=G12)
 
+G14 = "14 Entry timing - lower-timeframe (e.g. 3-minute) refinement"
+i_refine  = input.string("Off", "Entry refinement mode", options=["Off", "Micro-breakout", "Pullback then resume"], group=G14,
+     tooltip="Needs a chart BELOW 5 minutes (3-minute recommended). The 5-minute engine still decides the bias (it is read from the last COMPLETED 5-minute bar); the entry then waits for a lower-timeframe trigger. Off = enter at the next bar open after the 5-minute signal. On a 5-minute chart this setting has no effect.")
+i_hostMode = input.string("Auto", "Chart timeframe handling (leave on Auto)", options=["Auto", "5-minute chart", "Chart below 5 minutes"], group=G14,
+     tooltip="Auto reads the chart timeframe with timeframe.main_period. If a platform reports it wrongly the timing guard (dashboard: ENGINE TIMING MISMATCH) blocks all entries; then force the correct choice here.")
+i_refWin  = input.int(4, "Bars to wait for the trigger (chart bars)", minval=1, maxval=20, group=G14, tooltip="Armed setups that are not confirmed within this many chart bars (or break the stop, or are contradicted by the next 5-minute signal) are dropped - never chased.")
+
 G13 = "13 Dashboard"
 i_dashOn   = input.bool(true, "Show dashboard", group=G13)
 i_dashPos  = input.string("Top right", "Position", options=["Top left", "Top center", "Top right", "Middle left", "Middle center", "Middle right", "Bottom left", "Bottom center", "Bottom right"], group=G13)
@@ -207,3 +214,60 @@ f_size(s) =>
         "Small" => size.small
         "Large" => size.large
         => size.normal
+
+// the pivot helpers live here (global scope) so the analysis engine function can use them
+f_pivH(int L, int R) =>
+    float c = high[R]
+    bool ok = not na(c)
+    for k = 1 to L
+        ok := ok and not na(high[R + k]) and c > high[R + k]
+    for k = 0 to R - 1
+        ok := ok and c >= high[k]
+    ok ? c : na
+f_pivL(int L, int R) =>
+    float c = low[R]
+    bool ok = not na(c)
+    for k = 1 to L
+        ok := ok and not na(low[R + k]) and c < low[R + k]
+    for k = 0 to R - 1
+        ok := ok and c <= low[k]
+    ok ? c : na
+// Pine has no bit operators: bit k of a non-negative integer packed as a float
+f_bit(v, int k) => not na(v) and math.floor(v / math.pow(2, k)) % 2 == 1
+f_scnText(int c) =>
+    switch c
+        1 => "GAP-DOWN CONTINUATION (provisional)"
+        2 => "GAP-DOWN REVERSAL (provisional)"
+        3 => "GAP-UP CONTINUATION (provisional)"
+        4 => "GAP-UP REVERSAL (provisional)"
+        5 => "FLAT OPEN (await opening-range breakout)"
+        6 => "NO TRADE (gap-down, conflicting first candle)"
+        7 => "NO TRADE (gap-up, conflicting first candle)"
+        8 => "NO TRADE (gap context unavailable)"
+        11 => "GAP-DOWN CONTINUATION (validated by 2nd candle)"
+        12 => "GAP-DOWN REVERSAL (validated by 2nd candle)"
+        13 => "GAP-UP CONTINUATION (validated by 2nd candle)"
+        14 => "GAP-UP REVERSAL (validated by 2nd candle)"
+        15 => "FLAT-OPEN BREAKOUT UP"
+        16 => "FLAT-OPEN BREAKOUT DOWN"
+        17 => "NO TRADE (2nd candle did not validate the scenario)"
+        18 => "NO TRADE (opening-range breakout failed)"
+        => "NO TRADE (no context yet)"
+f_gapName(int c) =>
+    switch c
+        0 => "FLAT"
+        1 => "GAP UP"
+        -1 => "GAP DOWN"
+        2 => "EXCEPTIONAL UP"
+        -2 => "EXCEPTIONAL DOWN"
+        9 => "UNKNOWN (ATR warm-up)"
+        => "N/A"
+f_openStatus(int c) =>
+    switch c
+        1 => "VALIDATED BULL"
+        2 => "VALIDATED BEAR"
+        3 => "INVALIDATED"
+        4 => "UNVALIDATED"
+        5 => "NO DIRECTIONAL FIRST CANDLE"
+        => "PENDING"
+f_openVs(int c) => c == 1 ? "ABOVE" : c == 2 ? "INSIDE" : c == 3 ? "BELOW" : "n/a"

@@ -4,7 +4,7 @@
 
 ## Install
 1. TradingView -> Pine Editor -> new script -> paste the contents of `nifty_expiry_intelligence.txt` (identical to the `.pine`) -> *Add to chart*.
-2. Chart: **NSE:NIFTY (index), 5-minute**. On any other timeframe the script shows `RUN ON 5-MIN CHART` and takes no trade (its first-candle rules are defined on 5-minute bars).
+2. Chart: **NSE:NIFTY (index), 5-minute** (the reference setup), or a **3-minute chart** for the optional entry refinement (the 5-minute engine is then read from the last completed 5-minute bar; see "3-minute refinement" below). Charts above 5 minutes are rejected (`CHART MUST BE 5-MIN OR LOWER`), 2- and 1-minute charts use the 3-minute path.
 3. Keep the chart on regular session hours (09:15-15:30 IST). The script uses the exchange clock; do not change the chart timezone expectations (exchange time).
 4. If TradingView reports a compile error, paste the exact message back - the known risk list is in `NXI_VALIDATION.md`.
 
@@ -34,3 +34,10 @@ Rows: decision / why-or-blocked / entry-SL / targets / **evidence index (not a p
 
 ## Rollback
 Remove the script from the chart. Nothing else is installed or stored.
+
+## 3-minute refinement (optional)
+1. Put the script on a **3-minute** NSE:NIFTY chart (keep *Chart timeframe handling* on `Auto`).
+2. *Entry timing* group -> *Entry refinement mode*: `Off` (default) = enter at the next 3-minute bar open after the 5-minute signal; `Micro-breakout` or `Pullback then resume` = wait up to *Bars to wait* (default 4) chart bars for a lower-timeframe trigger. Armed setups that do not trigger are dropped, not chased.
+3. Dashboard rows to watch: *Data quality* (must say "5m engine read one completed bar back", not `ENGINE TIMING MISMATCH`), *Entry timing* (armed / confirmed / expired / cancelled counters).
+4. Expect the first 5-minute candle (09:15) to become visible at the 09:21 bar and every later 5-minute decision to arrive up to 3 minutes after that 5-minute bar closed - this lag is the price of never reading a partial 5-minute bar.
+5. Strategy Tester results on a 3-minute chart are not comparable with the 5-minute chart: different fills, different bars per day, stops measured on 3-minute bars. See `NXI_VALIDATION.md` for the measured comparison (refinement did not improve the result).

@@ -74,8 +74,23 @@
 ## 7 Test checklist for you in TradingView (not done)
 1. Paste, compile, add to NSE:NIFTY 5m. 2. Confirm the dashboard shows `vol UNAVAILABLE` and `TWAP (no volume)`. 3. Strategy Tester: compare trade count / net with section 3 (differences are expected, see `NXI_LIMITATIONS.md`; investigate if the trade count differs by more than ~25 %). 4. Bar-replay a gap-down and a gap-up session and read scenario/validation text. 5. Enter OI strikes with a previous-session date and verify `MANUAL OI INPUT (dated)`; set the date wrong and verify `STALE`. 6. Select real CE/PE symbols and verify the premium rows and `Premium plan`. 7. Create the alert and check message text. 8. Switch to a 3-minute chart and verify `RUN ON 5-MIN CHART`. 9. Resize to a phone width and use compact mode.
 
+## 7b v2.0: 3-minute entry refinement (added 2026-10-27)
+**Mechanics (verified):** `tests/test_nifty_expiry_pine_3m.py` (9 tests); the 5m-chart outputs are unchanged by the refactor (72 plots x 38,284 bars and 276 trade rows identical to v1, net -8653.45); on a 3m host the engine steps equal the 5m chart's own outputs (1,800 steps, 18 series, 0 mismatches, `pine_nifty_align3m.py`); steps come only from completed 5m bars; truncation causality holds; the three refinement modes behave as specified.
+
+**Outcome on real data (NOT conclusive):** the planned 2-year / 6-month-block 3m runs could not be completed (3m runs are very slow in PineTS and the VPS was at load ~19-27; a 2-year run reached 3.6 GB RSS and was killed). Only one window was run: 2026-09-01..2026-10-26 (`REPORT_3m_S.json`, `scripts/pine_nifty_compare3m.py` with `BLK=S`):
+
+| setup | entries | net (Rs) | win rate | PF |
+|---|---|---|---|---|
+| 5-minute chart | 5 | +365.9 | 0.60 | 1.66 |
+| 3m chart, refinement Off | 6 | -352.1 | 0.17 | 0.64 |
+| 3m chart, Micro-breakout | 0 | 0 | - | - |
+| 3m chart, Pullback then resume | 1 | +3.1 | 1.0 | - |
+
+With n = 0-6 these numbers carry no information (bootstrap CIs span zero). The refinement is **not shown to help**; Micro-breakout produced no entries in this window. A fair comparison needs the full window on a quieter machine.
+
 ## 8 Remaining issues / not done
-TradingView compile and Strategy-Tester run (pending) - 3-minute refinement (not implemented) - option-symbol `request.security` path (untested) - manual OI mode (live-only, untestable on history) - dashboard visual check (rendered text verified, no screenshot) - probability calibration (not achievable in Pine; offline result: none) - everything touching real option P&L.
+TradingView compile and Strategy-Tester run (pending) - 3-minute refinement (implemented in v2.0, PineTS-tested for mechanics; profitability NOT shown - sample too small) - option-symbol `request.security` path (untested) - manual OI mode (live-only, untestable on history) - dashboard visual check (rendered text verified, no screenshot) - probability calibration (not achievable in Pine; offline result: none) - everything touching real option P&L.
 
 ## 9 Change log
+v2.0.0 (2026-10-27): 5m engine moved into a function read from lower-timeframe charts; 3-minute refinement modes (Off / Micro-breakout / Pullback then resume); fail-closed timing guard; see 7b for validation status.
 v1.0.0 (2026-10-27): first release. Modules: sessions/gap, OI+price zones, first-candle engine, six scenarios, SMC, seller-stress, candle/volume proxy, CE/PE premium, 11-component evidence index, tracker, entry/SL/targets/partial exits, risk controls, configurable dashboard, statistics panel, alerts. Validation fixes: section 5.

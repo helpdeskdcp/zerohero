@@ -110,3 +110,29 @@ def stress_day(respect=True):
     b.append(bar(23928, 23933, 23921, 23924))          # rejection from below  (bar index 46)
     b += walk([23924, 23900], 6, start=23924)
     return pad(b)
+
+
+def rows1m_from_5m(days):
+    """days: [(day_index, [75 five-minute bars (o,h,l,c)])] -> 1-minute rows whose 5-minute aggregation reproduces every 5-minute bar EXACTLY
+    (open = first, close = last, high/low placed on the 2nd/3rd minute)."""
+    rows = []
+    for di, bars in days:
+        d = day_start(di)
+        for k, (o, h, l, c) in enumerate(bars):
+            xs = [o + (c - o) * j / 5 for j in range(6)]
+            for j in range(5):
+                a, b = xs[j], xs[j + 1]; hi, lo = max(a, b), min(a, b)
+                if j == 1: hi = max(hi, h)
+                if j == 2: lo = min(lo, l)
+                rows.append({"time": ts(d, k) + j * 60000, "open": a, "high": hi, "low": lo, "close": b, "volume": 0})
+    return rows
+
+
+def run_host(rows1m, tf="3", inputs=None):
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+    import pine_nifty_harness as H
+    inp = {"Chart timeframe handling (leave on Auto)": "Chart below 5 minutes", **(inputs or {})} if int(tf) < 5 else dict(inputs or {})
+    r = H.run_multi(open(SRC, encoding="utf-8").read(), tf=tf, base_rows=rows1m, inputs=inp)
+    assert r.get("ok"), r.get("diagnostics")
+    return r

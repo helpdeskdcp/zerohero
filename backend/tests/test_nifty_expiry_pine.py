@@ -12,6 +12,13 @@ pytestmark = pytest.mark.skipif(not runner.available()["ok"], reason="PineTS run
 nan = float("nan")
 
 
+@pytest.fixture(autouse=True)
+def _runner_limits(monkeypatch):
+    """the Smart Chart web limits (40 s CPU, 512 MB) are for interactive use; rule tests on real history need more. Test-process only."""
+    from app.smart_chart import config
+    monkeypatch.setattr(config, "NODE_CPU_SEC", 900); monkeypatch.setattr(config, "NODE_HEAP_MB", 2048)
+
+
 def at(p, key, i): return p[key][i]
 
 

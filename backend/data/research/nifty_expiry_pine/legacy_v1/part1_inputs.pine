@@ -1,0 +1,209 @@
+//@version=6
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// NIFTY Expiry Intelligence | Seller-Stress + SMC + Gap  (PAPER / ANALYSIS ONLY - no broker orders, no external data)
+// Build: v1.0.0 (2026-10-27).  Platform: TradingView Pine Script v6.  Chart: NSE:NIFTY (index), 5-minute.
+// STATUS: compiled and executed ONLY in a PineTS-compatible engine (see NXI_VALIDATION.md). NOT yet compiled in TradingView.
+// Every value used for a decision is computed from CLOSED bars (calc_on_every_tick=false). Orders fill on the NEXT bar open.
+// This script does not know option-seller positions. "POTENTIAL SELLER STRESS" is an evidence label for a price-action
+// pattern near a user-supplied positioning zone, never proof of stop-loss hunting or operator intent.
+// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+strategy("NIFTY Expiry Intelligence | Seller-Stress + SMC + Gap", shorttitle="NXI", overlay=true,
+     initial_capital=1000000, default_qty_type=strategy.fixed, default_qty_value=10,
+     commission_type=strategy.commission.percent, commission_value=0.015, slippage=10,
+     pyramiding=0, calc_on_every_tick=false, calc_on_order_fills=false, process_orders_on_close=false,
+     margin_long=100, margin_short=100, max_labels_count=250, max_lines_count=200, max_boxes_count=80)
+
+// ───────────────────────────────────────────────── 01 INPUTS ─────────────────────────────────────────────────────
+G1 = "01 General / sessions"
+i_expDow     = input.string("Tuesday", "Weekly expiry weekday (VERIFY - holidays shift it)", options=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Off"], group=G1,
+     tooltip="NIFTY weekly expiry day is an assumption you must verify. Use the override below on shifted-expiry weeks.")
+i_expForce   = input.bool(false, "Override: today IS the expiry session", group=G1)
+i_atrLen     = input.int(14, "ATR length (chart timeframe)", minval=2, group=G1)
+i_atrDays    = input.int(14, "Daily ATR window (sessions, own tracking)", minval=3, maxval=60, group=G1)
+i_volMode    = input.string("Auto", "Volume handling", options=["Auto", "Ignore volume"], group=G1,
+     tooltip="Auto: volume features switch on only if the chart reports non-zero volume. Index charts usually have NO volume: features are then marked UNAVAILABLE, never estimated.")
+i_volBaseN   = input.int(10, "Relative-volume baseline (bars)", minval=5, maxval=100, group=G1)
+
+G2 = "02 Higher-timeframe context (non-repainting: previous completed HTF bar)"
+i_tf1 = input.timeframe("15", "HTF 1", group=G2)
+i_tf2 = input.timeframe("30", "HTF 2", group=G2)
+i_tf3 = input.timeframe("60", "HTF 3", group=G2)
+i_tf4 = input.timeframe("240", "HTF 4", group=G2)
+i_htfFast = input.int(9, "HTF fast EMA", minval=2, group=G2)
+i_htfSlow = input.int(21, "HTF slow EMA", minval=3, group=G2)
+
+G3 = "03 Previous-session option-chain OI zones - MANUAL INPUT (Pine cannot read option-chain OI)"
+i_oiOn     = input.bool(true, "Use manual OI zones", group=G3)
+i_oiDate   = input.time(timestamp("1 Jan 2000 00:00 +0000"), "OI data date (the session the OI snapshot is from)", group=G3, confirm=false,
+     tooltip="Must be the PREVIOUS trading session. Left at 2000-01-01 = 'not provided'.")
+i_oiExpiry = input.string("", "Option expiry the OI belongs to (text, e.g. 28-Oct-2026)", group=G3)
+i_p1K  = input.float(0, "Put OI #1 strike (highest)",   minval=0, group=G3)
+i_p1OI = input.float(0, "Put OI #1 (contracts)",         minval=0, group=G3)
+i_p2K  = input.float(0, "Put OI #2 strike (2nd)",        minval=0, group=G3)
+i_p2OI = input.float(0, "Put OI #2 (contracts)",         minval=0, group=G3)
+i_c1K  = input.float(0, "Call OI #1 strike (highest)",   minval=0, group=G3)
+i_c1OI = input.float(0, "Call OI #1 (contracts)",        minval=0, group=G3)
+i_c2K  = input.float(0, "Call OI #2 strike (2nd)",       minval=0, group=G3)
+i_c2OI = input.float(0, "Call OI #2 (contracts)",        minval=0, group=G3)
+i_x1K    = input.float(0, "Extra zone #1 strike", minval=0, group=G3)
+i_x1OI   = input.float(0, "Extra zone #1 OI", minval=0, group=G3)
+i_x1Type = input.string("PUT", "Extra zone #1 side", options=["PUT", "CALL"], group=G3)
+i_x2K    = input.float(0, "Extra zone #2 strike", minval=0, group=G3)
+i_x2OI   = input.float(0, "Extra zone #2 OI", minval=0, group=G3)
+i_x2Type = input.string("CALL", "Extra zone #2 side", options=["PUT", "CALL"], group=G3)
+i_zoneW    = input.float(20, "Zone half-width (index points)", minval=1, group=G3)
+i_wRank1   = input.float(1.0, "Weight: highest-OI zone", minval=0, step=0.1, group=G3)
+i_wRank2   = input.float(0.6, "Weight: 2nd-OI zone", minval=0, step=0.1, group=G3)
+i_wExtra   = input.float(0.4, "Weight: extra zones", minval=0, step=0.1, group=G3)
+i_wPrice   = input.float(0.8, "Weight: previous-day high/low price levels", minval=0, step=0.1, group=G3)
+i_needResp = input.bool(true, "Zone must be price-confirmed (respected) before its break counts", group=G3,
+     tooltip="The largest-OI strike is NOT assumed to be the strongest. A zone only counts as 'confirmed' after price has tested it and closed back on the respecting side.")
+i_minRespect = input.int(1, "Minimum respected tests for 'confirmed'", minval=0, maxval=5, group=G3)
+i_minZoneW   = input.float(0.35, "Minimum zone weight to trade a break", minval=0, step=0.05, group=G3)
+
+G4 = "04 Gap intelligence (ATR-normalised, daily ATR tracked from the chart's own sessions)"
+i_flatThr = input.float(0.15, "Flat open if |gap| < x daily ATR", minval=0, step=0.01, group=G4)
+i_excThr  = input.float(1.00, "Exceptional gap if |gap| >= x daily ATR", minval=0.2, step=0.05, group=G4)
+i_fillFrac = input.float(0.35, "Gap-fill fraction that counts as a reversal", minval=0.05, maxval=1, step=0.05, group=G4)
+
+G5 = "05 Opening / first completed candle"
+i_orMin       = input.int(15, "Opening range minutes", minval=5, maxval=60, group=G5)
+i_strongBody  = input.float(0.55, "Strong candle: body / range >=", minval=0.1, maxval=1, step=0.05, group=G5)
+i_locHi       = input.float(0.65, "Close location (0..1) bullish if >=", minval=0.5, maxval=1, step=0.05, group=G5)
+i_locLo       = input.float(0.35, "Close location bearish if <=", minval=0, maxval=0.5, step=0.05, group=G5)
+i_waitBars    = input.int(1, "Bars to wait after the first candle before any entry", minval=1, maxval=6, group=G5,
+     tooltip="1 = the second 5-minute candle must close and validate the first one. The first candle itself never triggers an entry.")
+
+G6 = "06 SMC / liquidity (confirmed pivots only)"
+i_pivL     = input.int(3, "Pivot left bars", minval=1, maxval=10, group=G6)
+i_pivR     = input.int(3, "Pivot right bars (= confirmation delay)", minval=1, maxval=10, group=G6)
+i_evFresh  = input.int(12, "Structure / sweep evidence stays valid for N bars", minval=2, maxval=60, group=G6)
+i_fbBars   = input.int(6, "Failed breakout/breakdown window (bars)", minval=1, maxval=30, group=G6)
+i_retestBars = input.int(8, "Retest window (bars)", minval=1, maxval=40, group=G6)
+i_retestTol  = input.float(0.25, "Retest tolerance (x ATR)", minval=0.05, step=0.05, group=G6)
+i_dispAtr    = input.float(1.2, "Displacement: range >= x ATR", minval=0.5, step=0.1, group=G6)
+i_dispBody   = input.float(0.6, "Displacement: body / range >=", minval=0.3, maxval=1, step=0.05, group=G6)
+i_showFvg    = input.bool(true, "Draw recent unmitigated FVG boxes", group=G6)
+
+G7 = "07 Seller-stress rules (symmetrical)"
+i_reqReject = input.bool(true, "Require failed reclaim / rejection at the broken zone", group=G7)
+i_reqStruct = input.bool(true, "Require BOS/CHoCH or displacement in the break direction", group=G7)
+i_trig      = input.string("Stress or gap scenario", "Entry trigger", options=["Stress only", "Gap scenario only", "Stress or gap scenario"], group=G7,
+     tooltip="Stress: potential seller-stress pattern at a broken zone. Gap scenario: validated gap continuation/reversal/flat-open breakout plus structure in the same direction.")
+i_rejBars   = input.int(8, "Rejection / reclaim window (bars)", minval=1, maxval=40, group=G7)
+i_emaF      = input.int(9, "Momentum EMA fast", minval=2, group=G7)
+i_emaS      = input.int(21, "Momentum EMA slow", minval=3, group=G7)
+i_rsiLen    = input.int(14, "RSI length", minval=2, group=G7)
+
+G8 = "08 Candle/volume proxy (original transparent proxy - NOT a copy of any proprietary indicator)"
+i_rvThr    = input.float(1.5, "Relative volume >=", minval=1, step=0.1, group=G8)
+i_rngAtr   = input.float(1.3, "Range >= x ATR", minval=0.5, step=0.1, group=G8)
+i_bodyThr  = input.float(0.6, "Body / range >=", minval=0.3, maxval=1, step=0.05, group=G8)
+i_proxyMin = input.int(4, "Conditions required (of 6)", minval=1, maxval=6, group=G8)
+
+G9 = "09 CE / PE premium (select the two option charts' symbols manually)"
+i_ceSym  = input.symbol("", "CE contract symbol (e.g. NSE:NIFTY261027C24500)", group=G9, tooltip="Empty = OPTION DATA UNAVAILABLE. Pine cannot scan the chain or pick a contract for you.")
+i_peSym  = input.symbol("", "PE contract symbol", group=G9)
+i_prEmaF = input.int(9, "Premium EMA fast", minval=2, group=G9)
+i_prEmaS = input.int(21, "Premium EMA slow", minval=3, group=G9)
+i_prAtrM = input.float(1.0, "Premium stop distance (x premium ATR)", minval=0.2, step=0.1, group=G9)
+
+G10 = "10 Evidence weights (signed evidence index, NOT a probability)"
+w_htf    = input.float(2.0, "Weight: higher-timeframe agreement", minval=0, step=0.25, group=G10)
+w_gap    = input.float(1.0, "Weight: gap scenario", minval=0, step=0.25, group=G10)
+w_lvl    = input.float(1.5, "Weight: position vs previous-day / OI levels", minval=0, step=0.25, group=G10)
+w_open   = input.float(1.5, "Weight: opening-candle confirmation", minval=0, step=0.25, group=G10)
+w_struct = input.float(1.5, "Weight: BOS / CHoCH", minval=0, step=0.25, group=G10)
+w_sweep  = input.float(1.0, "Weight: liquidity sweep / failed break", minval=0, step=0.25, group=G10)
+w_volume = input.float(1.0, "Weight: volume confirmation (needs volume)", minval=0, step=0.25, group=G10)
+w_mom    = input.float(1.0, "Weight: momentum (RSI)", minval=0, step=0.25, group=G10)
+w_vwap   = input.float(1.0, "Weight: VWAP/TWAP side", minval=0, step=0.25, group=G10)
+w_prem   = input.float(1.5, "Weight: option-premium confirmation (needs CE+PE)", minval=0, step=0.25, group=G10)
+w_oi     = input.float(1.0, "Weight: actual OI/IV evidence (manual selector below)", minval=0, step=0.25, group=G10)
+i_oiEvid = input.string("None", "Actual OI/IV evidence you have verified", options=["None", "Bullish", "Bearish"], group=G10,
+     tooltip="Only set this if you have REAL option-chain OI/IV data pointing one way. 'None' disables the component. Rising OI alone is not treated as direction.")
+i_entryThr = input.float(0.35, "Entry: |evidence index| >=", minval=0.05, maxval=1, step=0.05, group=G10)
+i_minComp  = input.int(4, "Entry: minimum components with non-zero evidence", minval=1, maxval=11, group=G10)
+
+G11 = "11 Entry / stop / targets / risk (index points; one position at a time, no averaging, no martingale)"
+i_slBuf    = input.float(0.30, "Stop buffer beyond structure (x ATR)", minval=0, step=0.05, group=G11)
+i_maxRisk  = input.float(3.0, "Reject setup if risk > x ATR", minval=0.5, step=0.1, group=G11)
+i_rr1      = input.float(1.0, "Target 1 (R)", minval=0.2, step=0.1, group=G11)
+i_rr2      = input.float(2.0, "Target 2 (R)", minval=0.4, step=0.1, group=G11)
+i_rr3      = input.float(3.0, "Target 3 (R)", minval=0.6, step=0.1, group=G11)
+i_q1       = input.float(40, "Exit % at T1", minval=0, maxval=100, group=G11)
+i_q2       = input.float(30, "Exit % at T2", minval=0, maxval=100, group=G11, tooltip="T3 gets the rest. Use a quantity divisible by 10 so partial exits are whole units.")
+i_minRR    = input.float(1.0, "Minimum distance to nearest opposing level (R)", minval=0, step=0.1, group=G11,
+     tooltip="If the nearest opposing level (zone / previous-day extreme) is closer than this many R, the setup is skipped.")
+i_trailBE  = input.bool(true, "After T1 move stop to entry; after T2 to T1", group=G11)
+i_sizeMode = input.string("Fixed quantity", "Position sizing", options=["Fixed quantity", "Risk amount per trade"], group=G11)
+i_qty      = input.float(10, "Fixed quantity (index units; use multiples of 10)", minval=1, group=G11)
+i_riskAmt  = input.float(5000, "Risk amount per trade (account currency; qty = amount / risk points, floored to 10s)", minval=1, group=G11)
+i_flipExit = input.bool(true, "Exit if opposite evidence confirms (opposite CHoCH or opposite index beyond threshold)", group=G11)
+i_maxTrades = input.int(2, "Max trades per session", minval=1, maxval=10, group=G11)
+i_maxLoss   = input.float(1500, "Max session loss (account currency; realised + open P&L; halts and flattens)", minval=1, group=G11)
+i_cooldown  = input.int(6, "Cooldown after a loss (bars)", minval=0, maxval=100, group=G11)
+i_noEarly   = input.bool(true, "No entries before the opening-wait window ends", group=G11)
+i_lateCut   = input.string("1445", "No new entries from (HHMM, exchange time)", group=G11)
+i_squareOff = input.string("1515", "Flatten at (HHMM, exchange time)", group=G11)
+i_spikeAtr  = input.float(3.0, "No-trade if a bar's range > x ATR (abnormal volatility)", minval=1.5, step=0.1, group=G11)
+i_blockExc  = input.bool(true, "No-trade on EXCEPTIONAL gap sessions", group=G11)
+
+G12 = "12 Probability tracker (running, in-sample, expanding window)"
+i_minSamples = input.int(50, "Minimum resolved virtual signals per side before any empirical rate is shown", minval=10, group=G12)
+i_probHorizon = input.int(24, "Outcome horizon (bars): target 1 before stop within N bars", minval=3, group=G12)
+
+G13 = "13 Dashboard"
+i_dashOn   = input.bool(true, "Show dashboard", group=G13)
+i_dashPos  = input.string("Top right", "Position", options=["Top left", "Top center", "Top right", "Middle left", "Middle center", "Middle right", "Bottom left", "Bottom center", "Bottom right"], group=G13)
+i_dashSize = input.string("Small", "Text size", options=["Tiny", "Small", "Normal", "Large"], group=G13)
+i_compact  = input.bool(false, "Compact mode (fewer rows - good for mobile)", group=G13)
+i_cBull    = input.color(#26a69a, "Bullish text", group=G13)
+i_cBear    = input.color(#ef5350, "Bearish text", group=G13)
+i_cNeu     = input.color(#b0b6c2, "Neutral text", group=G13)
+i_cHead    = input.color(#ffffff, "Header text", group=G13)
+i_cGen     = input.color(#d1d4dc, "General text", group=G13)
+i_cBg      = input.color(#131722, "Background", group=G13)
+i_bgTransp = input.int(15, "Background transparency", minval=0, maxval=100, group=G13)
+i_cBorder  = input.color(#434651, "Border", group=G13)
+i_borderW  = input.int(1, "Border width", minval=0, maxval=4, group=G13)
+i_showStats = input.bool(true, "Show backtest statistics panel (bottom left)", group=G13)
+i_showLvls  = input.bool(true, "Plot previous-day levels, opening range and OI zones", group=G13)
+i_showLbl   = input.bool(true, "Chart labels for events", group=G13)
+i_oosDate   = input.time(timestamp("1 Jan 2026 00:00 +0000"), "Out-of-sample split date for the statistics panel", group=G13)
+
+// ───────────────────────────────────────────────── 02 HELPERS ────────────────────────────────────────────────────
+f_ratio(a, b) => b > 0 ? a / b : 0.0
+f_sgn(x) => x > 0 ? 1 : x < 0 ? -1 : 0
+f_hhmm(s) =>
+    float v = str.tonumber(s)
+    float hh = math.floor(v / 100)
+    hh * 60 + (v - hh * 100)
+f_dowNum(s) => s == "Monday" ? dayofweek.monday : s == "Tuesday" ? dayofweek.tuesday : s == "Wednesday" ? dayofweek.wednesday : s == "Thursday" ? dayofweek.thursday : s == "Friday" ? dayofweek.friday : -1
+f_vote(f, s, c) => na(f) or na(s) or na(c) ? 0 : (f > s and c > s ? 1 : f < s and c < s ? -1 : 0)
+f_htf() => [ta.ema(close, i_htfFast)[1], ta.ema(close, i_htfSlow)[1], close[1]]
+// Wilson 95% interval for a proportion
+f_wilson(k, n) =>
+    float p = n > 0 ? k / n : 0.0
+    float z = 1.96
+    float den = 1 + z * z / n
+    float ctr = (p + z * z / (2 * n)) / den
+    float half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    [ctr - half, ctr + half]
+f_pos(s) =>
+    switch s
+        "Top left" => position.top_left
+        "Top center" => position.top_center
+        "Top right" => position.top_right
+        "Middle left" => position.middle_left
+        "Middle center" => position.middle_center
+        "Middle right" => position.middle_right
+        "Bottom left" => position.bottom_left
+        "Bottom center" => position.bottom_center
+        => position.bottom_right
+f_size(s) =>
+    switch s
+        "Tiny" => size.tiny
+        "Small" => size.small
+        "Large" => size.large
+        => size.normal

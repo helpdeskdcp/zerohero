@@ -8,16 +8,45 @@ plot(i_showLvls and orDone ? orL : na, "Opening range low", color=color.new(colo
 plot(i_showLvls ? vwapLine : na, "VWAP / TWAP", color=color.new(color.purple, 20), linewidth=1)
 
 var array<box> zBoxes = array.new<box>()
-if isNewDay and i_showLvls
+if nd5 and new5 and i_showLvls
     while array.size(zBoxes) > 0
         box.delete(array.pop(zBoxes))
+    array<float> sKs = array.from(sK0, sK1, sK2, sK3, sK4)
+    array<float> rKs = array.from(rK0, rK1, rK2, rK3, rK4)
     for z = 0 to 4
-        float lo = array.get(sLo, z)
-        if not na(lo)
-            array.push(zBoxes, box.new(bar_index, array.get(sHi, z), bar_index + 76, lo, border_color=color.new(i_cBull, 40), bgcolor=color.new(i_cBull, 90), text="S:" + array.get(zNames, z), text_size=size.tiny, text_color=color.new(i_cBull, 20)))
-        float rl = array.get(rLo, z)
-        if not na(rl)
-            array.push(zBoxes, box.new(bar_index, array.get(rHi, z), bar_index + 76, rl, border_color=color.new(i_cBear, 40), bgcolor=color.new(i_cBear, 90), text="R:" + array.get(zNames, z), text_size=size.tiny, text_color=color.new(i_cBear, 20)))
+        float ks = array.get(sKs, z)
+        if not na(ks)
+            array.push(zBoxes, box.new(time, ks + i_zoneW, time + 22500000, ks - i_zoneW, xloc=xloc.bar_time, border_color=color.new(i_cBull, 40), bgcolor=color.new(i_cBull, 90), text="S:" + array.get(zNames, z), text_size=size.tiny, text_color=color.new(i_cBull, 20)))
+        float kr = array.get(rKs, z)
+        if not na(kr)
+            array.push(zBoxes, box.new(time, kr + i_zoneW, time + 22500000, kr - i_zoneW, xloc=xloc.bar_time, border_color=color.new(i_cBear, 40), bgcolor=color.new(i_cBear, 90), text="R:" + array.get(zNames, z), text_size=size.tiny, text_color=color.new(i_cBear, 20)))
+
+// recent unmitigated 5-minute fair-value gaps (drawn when the 5-minute step arrives; mitigated by a later chart-bar close through the gap)
+var array<float> fvgBT = array.new<float>()
+var array<float> fvgBB = array.new<float>()
+var array<int>   fvgBD = array.new<int>()
+var array<box>   fvgBX = array.new<box>()
+if i_showFvg and new5 and not na(fvgTopN) and fvgForm != 0
+    array.push(fvgBT, fvgTopN)
+    array.push(fvgBB, fvgBotN)
+    array.push(fvgBD, fvgForm)
+    array.push(fvgBX, box.new(t5 * 1000 - 600000, fvgTopN, t5 * 1000 + 3600000, fvgBotN, xloc=xloc.bar_time, border_color=color.new(fvgForm > 0 ? i_cBull : i_cBear, 70), bgcolor=color.new(fvgForm > 0 ? i_cBull : i_cBear, 88)))
+int fx = array.size(fvgBT) - 1
+while fx >= 0
+    bool mitH = (array.get(fvgBD, fx) == 1 and close < array.get(fvgBB, fx)) or (array.get(fvgBD, fx) == -1 and close > array.get(fvgBT, fx))
+    if mitH
+        box.delete(array.get(fvgBX, fx))
+        array.remove(fvgBT, fx)
+        array.remove(fvgBB, fx)
+        array.remove(fvgBD, fx)
+        array.remove(fvgBX, fx)
+    fx -= 1
+while array.size(fvgBT) > 8
+    box.delete(array.get(fvgBX, 0))
+    array.remove(fvgBT, 0)
+    array.remove(fvgBB, 0)
+    array.remove(fvgBD, 0)
+    array.remove(fvgBX, 0)
 
 plotshape(sigBull, "CE signal", shape.triangleup, location.belowbar, color=i_cBull, size=size.small, text="CE")
 plotshape(sigBear, "PE signal", shape.triangledown, location.abovebar, color=i_cBear, size=size.small, text="PE")
@@ -38,7 +67,7 @@ if i_showLbl
         label.new(bar_index, low, "POTENTIAL SELLER STRESS (call side)", style=label.style_label_up, color=color.new(i_cBull, 30), textcolor=i_cHead, size=size.tiny)
     if stressBear and not nz(stressBear[1])
         label.new(bar_index, high, "POTENTIAL SELLER STRESS (put side)", style=label.style_label_down, color=color.new(i_cBear, 30), textcolor=i_cHead, size=size.tiny)
-    if isNewDay and not na(gapPts)
+    if nd5 and new5 and not na(gapPts)
         label.new(bar_index, high, gapClass + str.format(" {0,number,0.0}pts ({1,number,0.00}%)", gapPts, gapPct), style=label.style_label_down, color=color.new(color.gray, 50), textcolor=i_cHead, size=size.tiny)
 
 // Data-window series (no chart clutter): export/inspect every evidence component bar by bar.  TradingView allows 64 plots per script, so related
@@ -60,7 +89,15 @@ plot(gapPts, "Gap points", display=display.data_window)
 plot(dailyATR, "Daily ATR", display=display.data_window)
 plot(gapClass == "FLAT" ? 0 : gapClass == "GAP UP" ? 1 : gapClass == "GAP DOWN" ? -1 : gapClass == "EXCEPTIONAL UP" ? 2 : gapClass == "EXCEPTIONAL DOWN" ? -2 : na, "Gap class code", display=display.data_window)
 plot((bosUp ? 1 : 0) + (bosDn ? 2 : 0) + (chochUp ? 4 : 0) + (chochDn ? 8 : 0) + (sweepHi ? 16 : 0) + (sweepLo ? 32 : 0) + (fbUp ? 64 : 0) + (fbDn ? 128 : 0) + (retestUp ? 256 : 0) + (retestDn ? 512 : 0), "Event bits", display=display.data_window)
-plot((fvgBull ? 1 : 0) - (fvgBear ? 1 : 0), "FVG formed (+1 bull / -1 bear)", display=display.data_window)
+plot(t5, "Engine 5m bar time", display=display.data_window)
+plot(engineLagOk ? 1 : 0, "Engine timing ok", display=display.data_window)
+plot(c5, "Engine 5m close", display=display.data_window)
+plot(new5 ? 1 : 0, "New 5m step", display=display.data_window)
+plot(eDir, "Entry decision (+1 CE / -1 PE)", display=display.data_window)
+plot(refDir * 10 + refPhase, "Refine state (dir*10+phase)", display=display.data_window)
+plot(refConfirmed, "Refine confirmed", display=display.data_window)
+plot(refExpired + refCancelled, "Refine expired+cancelled", display=display.data_window)
+plot(new5 ? fvgForm : 0, "FVG formed (+1 bull / -1 bear)", display=display.data_window)
 plot(fvgBullOpen, "Open bull FVG", display=display.data_window)
 plot(fvgBearOpen, "Open bear FVG", display=display.data_window)
 plot((stressBull ? 1 : 0) + (stressBear ? 2 : 0), "Stress flags (1 bull, 2 bear)", display=display.data_window)
@@ -109,19 +146,10 @@ float shT2 = shDir != 0 and not na(shRisk) ? shEntry + shDir * i_rr2 * shRisk : 
 float shT3 = shDir != 0 and not na(shRisk) ? shEntry + shDir * i_rr3 * shRisk : na
 string htfTxt = str.format("{0}:{1}  {2}:{3}  {4}:{5}  {6}:{7}", i_tf1, ok1 ? str.tostring(v1) : "x", i_tf2, ok2 ? str.tostring(v2) : "x", i_tf3, ok3 ? str.tostring(v3) : "x", i_tf4, ok4 ? str.tostring(v4) : "x") + "  =>  " + (htfEv > 0 ? "BULL" : htfEv < 0 ? "BEAR" : "MIXED")
 string orTxt = not orDone ? "forming " + f_n(orH, "#.#") + " / " + f_n(orL, "#.#") : "H " + f_n(orH, "#.#") + " / L " + f_n(orL, "#.#") + (orBrk == 0 ? "  inside" : orFail ? "  BREAK FAILED" : orBrk > 0 ? "  BREAKOUT UP" : "  BREAKDOWN")
-string zoneS = "-"
-string zoneR = "-"
-float bestSW = 0.0
-float bestRW = 0.0
-for z = 0 to 4
-    if not na(array.get(sLo, z)) and array.get(sW, z) > bestSW
-        bestSW := array.get(sW, z)
-        int bs = array.get(sBrk, z)
-        zoneS := array.get(zNames, z) + " " + f_n(array.get(sK, z), "#.#") + (bs == 1 ? " BROKEN - may now act as RESISTANCE" : bs == 2 ? " reclaimed" : " intact") + " | tests " + str.tostring(array.get(sResp, z)) + " | price " + f_sg(close - array.get(sK, z)) + " pts from strike | open was " + openVsS
-    if not na(array.get(rLo, z)) and array.get(rW, z) > bestRW
-        bestRW := array.get(rW, z)
-        int br = array.get(rBrk, z)
-        zoneR := array.get(zNames, z) + " " + f_n(array.get(rK, z), "#.#") + (br == 1 ? " BROKEN - may now act as SUPPORT" : br == 2 ? " reclaimed" : " intact") + " | tests " + str.tostring(array.get(rResp, z)) + " | price " + f_sg(close - array.get(rK, z)) + " pts from strike | open was " + openVsR
+string zoneS = na(zbSslot) or zbSslot < 0 ? "-" : array.get(zNames, int(zbSslot)) + " " + f_n(zbSK, "#.#") + (zbSbrk == 1 ? " BROKEN - may now act as RESISTANCE" : zbSbrk == 2 ? " reclaimed" : " intact") + " | tests " + str.tostring(nz(zbSresp)) + " | price " + f_sg(close - zbSK) + " pts from strike | open was " + f_openVs(nz(zbSopen))
+string zoneR = na(zbRslot) or zbRslot < 0 ? "-" : array.get(zNames, int(zbRslot)) + " " + f_n(zbRK, "#.#") + (zbRbrk == 1 ? " BROKEN - may now act as SUPPORT" : zbRbrk == 2 ? " reclaimed" : " intact") + " | tests " + str.tostring(nz(zbRresp)) + " | price " + f_sg(close - zbRK) + " pts from strike | open was " + f_openVs(nz(zbRopen))
+string fcText = (fcSign > 0 ? "BULLISH" : fcSign < 0 ? "BEARISH" : "INDECISIVE") + str.format(" (body {0,number,0.00}, close-loc {1,number,0.00}, wicks up {2,number,0.00} / dn {3,number,0.00}, range {4,number,0}% of daily ATR, rel.vol {5})", nz(fcBody), nz(fcLoc), nz(fcUpW), nz(fcLoW), nz(fcRngAtr), na(fcRel) ? "n/a" : str.tostring(fcRel, "#.##"))
+string refTxt = i_refine == "Off" ? "OFF (enter at the next bar open after the 5-minute signal)" : not hostBelow5 ? "needs a chart BELOW 5 minutes (3-minute recommended) - acting as OFF" : (refDir == 0 ? "idle" : (refDir > 0 ? "ARMED CE" : "ARMED PE") + (refPhase == 1 ? ", waiting for a pullback bar" : ", waiting for the resume bar") + ", " + str.tostring(math.max(i_refWin - (bar_index - refArmBar), 0)) + " bars left") + " | " + i_refine + " | armed " + str.tostring(refArmed) + " confirmed " + str.tostring(refConfirmed) + " expired " + str.tostring(refExpired) + " cancelled " + str.tostring(refCancelled)
 string stressTxt = stressBull ? "POTENTIAL SELLER STRESS - call side (" + array.get(zNames, math.max(stressBullZone, 0)) + " broke up, holding)" : stressBear ? "POTENTIAL SELLER STRESS - put side (" + array.get(zNames, math.max(stressBearZone, 0)) + " broke down, holding)" : "none"
 string structTxt = (trendS > 0 ? "up" : trendS < 0 ? "down" : "undefined") + (structEv > 0 ? " | recent BOS/CHoCH up" : structEv < 0 ? " | recent BOS/CHoCH down" : "") + (sweepEv > 0 ? " | sweep LOW" : sweepEv < 0 ? " | sweep HIGH" : "")
 string premTxt = ceOk and peOk ? "CE " + f_n(ceC, "#.##") + (ceUp ? " up" : ceDn ? " dn" : " flat") + " rsi " + f_n(ceRsi, "#") + (ceC > ceVw ? " >vwap" : " <vwap") + " | PE " + f_n(peC, "#.##") + (peUp ? " up" : peDn ? " dn" : " flat") + " rsi " + f_n(peRsi, "#") + (peC > peVw ? " >vwap" : " <vwap") + " | ev " + str.tostring(premEv) + " | spread: UNAVAILABLE in Pine" : (ceSel or peSel) ? "PARTIAL: select BOTH contracts" : "OPTION DATA UNAVAILABLE - pick CE and PE symbols manually"
@@ -141,7 +169,7 @@ if barstate.islast and i_dashOn
     r += 1
     f_row(r, "Why / blocked", decision != 0 or strategy.position_size != 0 ? lastEntryWhy == "-" ? (decision > 0 ? whyBull : whyBear) : lastEntryWhy : (noTradeWhy != "" ? noTradeWhy : "no trigger + evidence yet"), i_cGen)
     r += 1
-    f_row(r, "Entry / SL", shDir == 0 ? "-" : f_n(shEntry, "#.#") + " / " + f_n(shStop, "#.#") + "  risk " + f_n(shRisk, "#.#") + " pts = " + f_n(shRisk * (strategy.position_size != 0 ? posQty : (shDir > 0 ? qtyBull : qtyBear)), "#") + " acct ccy | trail: " + (i_trailBE ? "BE after T1, T1 after T2" : "off"), i_cGen)
+    f_row(r, "Entry / SL", shDir == 0 ? "-" : f_n(shEntry, "#.#") + " / " + f_n(shStop, "#.#") + "  risk " + f_n(shRisk, "#.#") + " pts = " + f_n(shRisk * (strategy.position_size != 0 ? posQty : (i_sizeMode == "Fixed quantity" or na(shRisk) ? i_qty : math.max(10, math.floor(i_riskAmt / shRisk / 10) * 10))), "#") + " acct ccy | trail: " + (i_trailBE ? "BE after T1, T1 after T2" : "off"), i_cGen)
     r += 1
     f_row(r, "T1 / T2 / T3", shDir == 0 ? "-" : f_n(shT1, "#.#") + " / " + f_n(shT2, "#.#") + " / " + f_n(shT3, "#.#") + "  (" + str.tostring(i_rr1) + "R/" + str.tostring(i_rr2) + "R/" + str.tostring(i_rr3) + "R)", i_cGen)
     r += 1
@@ -183,7 +211,9 @@ if barstate.islast and i_dashOn
     if not i_compact
         f_row(r, "Premium plan", premPlan, i_cGen)
         r += 1
-    f_row(r, "Data quality", "vol " + (volAvail ? "OK" : "UNAVAILABLE (no volume on chart)") + " | " + vwapName + " | tf " + (onFiveMin ? "5m OK" : "NOT 5m") + " | NEWS AI NOT CONNECTED | REAL ORDER BOOK NOT CONNECTED", i_cNeu)
+    f_row(r, "Entry timing", refTxt, refDir != 0 ? (refDir > 0 ? i_cBull : i_cBear) : i_cNeu)
+    r += 1
+    f_row(r, "Data quality", "vol " + (volAvail ? "OK" : "UNAVAILABLE (no volume on chart)") + " | " + vwapName + " | chart " + timeframe.period + (not engineLagOk ? " ENGINE TIMING MISMATCH - blocked" : hostIs5 ? " (5m engine direct)" : hostBelow5 ? " (5m engine read one completed bar back)" : " UNSUPPORTED (> 5m)") + " | NEWS AI NOT CONNECTED | REAL ORDER BOOK NOT CONNECTED", i_cNeu)
     r += 1
     f_row(r, "Risk state", "trades " + str.tostring(tradesToday) + "/" + str.tostring(i_maxTrades) + " | day P&L " + f_n(dayPL, "#.#") + " (acct ccy, limit -" + str.tostring(i_maxLoss, "#") + ")" + (dayHalt ? " | HALTED" : "") + (bar_index < coolUntil ? " | cooldown" : "") + " | last exit " + lastExit, dayHalt ? i_cBear : i_cNeu)
     r += 1

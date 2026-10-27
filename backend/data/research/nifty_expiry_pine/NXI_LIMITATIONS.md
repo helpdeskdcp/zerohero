@@ -9,7 +9,7 @@
 | News / sentiment AI | **NOT CONNECTED** | stated on the dashboard; no component uses it |
 | Index volume | usually **zero** on NSE:NIFTY charts | volume features (relative volume, volume confirmation, VWAP) switch off and the VWAP row becomes `TWAP (no volume)`. They are excluded from the evidence denominator, never estimated |
 | Calibrated probability | **NOT AVAILABLE in-script** | `PROBABILITY NOT CALIBRATED` until 50 resolved virtual signals per side, then a running in-sample hit rate with a Wilson interval (explicitly not a forecast). Brier/reliability exist only in the offline report |
-| 3-minute entry refinement | **NOT IMPLEMENTED** | the 5-minute engine cannot be re-derived on a 3-minute chart without re-building every 5-minute rule on aggregated bars; a lower-timeframe request from a 5-minute chart would not align (3 does not divide 5). Listed as future work, not faked |
+| 3-minute entry refinement | **IMPLEMENTED (v2.0), PineTS-tested only** | run on a chart below 5 minutes; the 5-minute engine is read from the last completed 5-minute bar (`request.security`, lookahead_on, one bar back) and two lower-timeframe triggers are available. Needs TradingView confirmation of `timeframe.main_period` / tuple-valued `request.security` of a stateful function (see the timing guard) |
 | Out-of-sample testing inside the Strategy Tester | **NOT POSSIBLE** | the statistics panel splits entries by a date input (before / from); a real walk-forward needs the offline report |
 | Historical option P&L | **NOT POSSIBLE** | the Strategy Tester trades the index in points. Option P&L depends on strike, expiry, IV and spread and is not simulated |
 
@@ -26,3 +26,10 @@
 
 ## Engine differences (why PineTS results are not TradingView results)
 PineTS is an independent re-implementation of Pine semantics. Differences that can change numbers: higher-timeframe bar construction at session edges, `strategy.exit` intrabar ordering, commission/slippage rounding, partial-exit quantity rounding, `ta.*` warm-up. Treat every number in `NXI_VALIDATION.md` as "PineTS engine, stored NIFTY 1-minute data re-aggregated to 5-minute", to be re-checked in TradingView.
+
+## Added by the 3-minute architecture (v2.0)
+* **Bias lag**: on a 3-minute chart the 5-minute bias is visible only after the 5-minute bar has closed *and* the next chart bar opens (up to ~3 minutes later). Higher-timeframe votes are sampled on the chart bar, so on a 3-minute chart they can include one more completed HTF bar than a 5-minute chart would at the same 5-minute step (never future data).
+* **Engine-specific behaviours found**: PineTS reports the security context's timeframe for `timeframe.main_period` (TradingView documents the chart's); the script therefore has the explicit *Chart timeframe handling* input and a fail-closed timing guard. A raw `time` value returned through a function tuple lost its history in PineTS, so the engine bar time is passed as `time / 1000.0`.
+* **FVG boxes** are drawn when the 5-minute step arrives and mitigated by chart-bar closes; zone boxes are drawn per session with `xloc.bar_time`. Cosmetic only.
+* **Probability tracker** in refinement mode counts confirmed entry decisions; in Off mode it counts the 5-minute signals (as in v1).
+* The research worker (`worker_research.mjs`) used for 3-minute tests is a test-only copy of the Smart Chart worker; it is not used by the web application.

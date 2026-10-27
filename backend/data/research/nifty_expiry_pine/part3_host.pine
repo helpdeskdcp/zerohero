@@ -1,0 +1,95 @@
+
+// ═════════════════════════════════════ HOST SIDE: everything below runs on the chart's own bars ══════════════════════
+// The 5-minute analysis engine above delivers the last COMPLETED 5-minute bar; `new5` marks the host bar on which a new 5-minute step became visible.
+int   hostSecs  = timeframe.in_seconds()
+bool  hostIs5   = hostSecs == 300
+bool  hostBelow5 = hostSecs < 300
+bool  hostOk    = hostSecs <= 300
+// timing guard: below 5 minutes the engine bar must have CLOSED before this chart bar opened; on a 5-minute chart it must be this very bar. Anything else = fail closed.
+bool  engineLagOk = not na(t5) and (hostBelow5 ? t5 * 1000 + 300000 <= time : (hostIs5 ? t5 * 1000 == time : false))   // t5 = engine bar open time in SECONDS (a float output; raw `time` outputs are not portable)
+bool  new5      = not na(t5) and (na(t5[1]) or t5 != t5[1])
+bool  tfChgH    = timeframe.change("D")
+bool  isNewDayH = barstate.isfirst or tfChgH
+int   minOfDay  = hour * 60 + minute
+var int dayStamp = 0
+if isNewDayH
+    dayStamp := time
+bool  isExpiry  = i_expForce or (f_dowNum(i_expDow) != -1 and dayofweek == f_dowNum(i_expDow))
+string gapClass = f_gapName(nz(gapCls, 10))
+int    gapSign  = f_sgn(nz(gapPts, 0))
+string scnText  = f_scnText(nz(scnCode, 0))
+string openStatus = f_openStatus(nz(openSt, 0))
+string vwapName = vwapReal ? "VWAP" : "TWAP (no volume)"
+// SMC events of the 5-minute step (only on the host bar where the step arrives)
+bool bosUp    = new5 and f_bit(evBits, 0)
+bool bosDn    = new5 and f_bit(evBits, 1)
+bool chochUp  = new5 and f_bit(evBits, 2)
+bool chochDn  = new5 and f_bit(evBits, 3)
+bool sweepHi  = new5 and f_bit(evBits, 4)
+bool sweepLo  = new5 and f_bit(evBits, 5)
+bool fbUp     = new5 and f_bit(evBits, 6)
+bool fbDn     = new5 and f_bit(evBits, 7)
+bool retestUp = new5 and f_bit(evBits, 8)
+bool retestDn = new5 and f_bit(evBits, 9)
+int  proxyDir = pxBull >= i_proxyMin and pxBull > pxBear ? 1 : pxBear >= i_proxyMin and pxBear > pxBull ? -1 : 0
+
+// OI data validity (manual): MANUAL OI INPUT / STALE / NOT PROVIDED / ORDER CHECK
+bool oiProvided = i_oiOn and (i_p1K > 0 or i_p2K > 0 or i_c1K > 0 or i_c2K > 0 or i_x1K > 0 or i_x2K > 0)
+bool oiDateGiven = i_oiDate > timestamp("1 Jan 2001 00:00 +0000")
+bool oiDateIsPrev = oiDateGiven and not na(prevC) and (math.abs(i_oiDate - dayStamp) < 6 * 86400000) and (i_oiDate < dayStamp)
+string oiStatus = not i_oiOn ? "OI ZONES OFF" : not oiProvided ? "NOT PROVIDED (price levels only)" : not oiDateGiven ? "MANUAL OI INPUT (no date given)" : oiDateIsPrev ? "MANUAL OI INPUT (dated)" : "MANUAL OI INPUT - DATE NOT PREVIOUS SESSION (stale?)"
+string oiOrderWarn = (i_p1OI > 0 and i_p2OI > i_p1OI) or (i_c1OI > 0 and i_c2OI > i_c1OI) ? " | CHECK: #2 OI > #1 OI" : ""
+var array<string> zNames = array.from("OI#1", "OI#2", "X1", "X2", "PD")
+
+// ───────────────────────────────── 05 HIGHER-TIMEFRAME CONTEXT (previous completed HTF bar, sampled on the host bar) ─────────────────
+// lookahead_on + [1] on every series = the last COMPLETED HTF bar only, so the value never changes after it is shown.
+[hf1, hs1, hc1] = request.security(syminfo.tickerid, i_tf1, f_htf(), lookahead = barmerge.lookahead_on)
+[hf2, hs2, hc2] = request.security(syminfo.tickerid, i_tf2, f_htf(), lookahead = barmerge.lookahead_on)
+[hf3, hs3, hc3] = request.security(syminfo.tickerid, i_tf3, f_htf(), lookahead = barmerge.lookahead_on)
+[hf4, hs4, hc4] = request.security(syminfo.tickerid, i_tf4, f_htf(), lookahead = barmerge.lookahead_on)
+bool ok1 = timeframe.in_seconds(i_tf1) >= timeframe.in_seconds()
+bool ok2 = timeframe.in_seconds(i_tf2) >= timeframe.in_seconds()
+bool ok3 = timeframe.in_seconds(i_tf3) >= timeframe.in_seconds()
+bool ok4 = timeframe.in_seconds(i_tf4) >= timeframe.in_seconds()
+int v1 = ok1 ? f_vote(hf1, hs1, hc1) : 0
+int v2 = ok2 ? f_vote(hf2, hs2, hc2) : 0
+int v3 = ok3 ? f_vote(hf3, hs3, hc3) : 0
+int v4 = ok4 ? f_vote(hf4, hs4, hc4) : 0
+int htfN   = (ok1 and not na(hc1) ? 1 : 0) + (ok2 and not na(hc2) ? 1 : 0) + (ok3 and not na(hc3) ? 1 : 0) + (ok4 and not na(hc4) ? 1 : 0)
+float htfAvg = htfN > 0 ? (v1 + v2 + v3 + v4) / htfN : 0.0
+int   htfEv  = htfN == 0 ? 0 : htfAvg >= 0.5 ? 1 : htfAvg <= -0.5 ? -1 : 0
+
+// ───────────────────────────────────── 13 CE / PE PREMIUM (separately selected contracts) ──────────────────────────
+f_prem() => [close, high, low, ta.ema(close, i_prEmaF), ta.ema(close, i_prEmaS), ta.atr(14), nz(volume), ta.rsi(close, 14), ta.vwap(hlc3)]
+bool ceSel = i_ceSym != ""
+bool peSel = i_peSym != ""
+[ceC, ceH, ceL, ceEf, ceEs, ceAtr, ceVol, ceRsi, ceVw] = request.security(ceSel ? i_ceSym : syminfo.tickerid, timeframe.period, f_prem(), lookahead = barmerge.lookahead_off)
+[peC, peH, peL, peEf, peEs, peAtr, peVol, peRsi, peVw] = request.security(peSel ? i_peSym : syminfo.tickerid, timeframe.period, f_prem(), lookahead = barmerge.lookahead_off)
+bool ceOk = ceSel and not na(ceC) and not na(ceEs) and not na(ceAtr)
+bool peOk = peSel and not na(peC) and not na(peEs) and not na(peAtr)
+bool ceUp = ceOk and ceC > ceEf and ceEf > ceEs
+bool ceDn = ceOk and ceC < ceEf and ceEf < ceEs
+bool peUp = peOk and peC > peEf and peEf > peEs
+bool peDn = peOk and peC < peEf and peEf < peEs
+int premEv = ceOk and peOk ? (ceUp and not peUp ? 1 : peUp and not ceUp ? -1 : 0) : 0
+
+// ───────────────────────────────────────── 14 EVIDENCE SCORE (signed index, NOT a probability) ─────────────────────
+int oiEv = i_oiEvid == "Bullish" ? 1 : i_oiEvid == "Bearish" ? -1 : 0
+bool avHtf = htfN > 0
+bool avGap = haveGapCtx
+bool avLvl = not na(prevH)
+bool avOpen = dayBar >= 1
+bool avVol = volAvail
+bool avPrem = ceOk and peOk
+bool avOi = i_oiEvid != "None"
+float wSumAvail = (avHtf ? w_htf : 0.0) + (avGap ? w_gap : 0.0) + (avLvl ? w_lvl : 0.0) + (avOpen ? w_open : 0.0) + w_struct + w_sweep + (avVol ? w_volume : 0.0) + w_mom + w_vwap + (avPrem ? w_prem : 0.0) + (avOi ? w_oi : 0.0)
+float bullSum = (htfEv > 0 and avHtf ? w_htf : 0.0) + (gapEv > 0 and avGap ? w_gap : 0.0) + (lvlEv > 0 and avLvl ? w_lvl : 0.0) + (openEv > 0 and avOpen ? w_open : 0.0) + (structEv > 0 ? w_struct : 0.0) + (sweepEv > 0 ? w_sweep : 0.0) + (volEv > 0 and avVol ? w_volume : 0.0) + (momEv > 0 ? w_mom : 0.0) + (vwapEv > 0 ? w_vwap : 0.0) + (premEv > 0 and avPrem ? w_prem : 0.0) + (oiEv > 0 and avOi ? w_oi : 0.0)
+float bearSum = (htfEv < 0 and avHtf ? w_htf : 0.0) + (gapEv < 0 and avGap ? w_gap : 0.0) + (lvlEv < 0 and avLvl ? w_lvl : 0.0) + (openEv < 0 and avOpen ? w_open : 0.0) + (structEv < 0 ? w_struct : 0.0) + (sweepEv < 0 ? w_sweep : 0.0) + (volEv < 0 and avVol ? w_volume : 0.0) + (momEv < 0 ? w_mom : 0.0) + (vwapEv < 0 ? w_vwap : 0.0) + (premEv < 0 and avPrem ? w_prem : 0.0) + (oiEv < 0 and avOi ? w_oi : 0.0)
+float bullIdx = wSumAvail > 0 ? bullSum / wSumAvail : 0.0
+float bearIdx = wSumAvail > 0 ? bearSum / wSumAvail : 0.0
+float netIdx  = bullIdx - bearIdx
+int   nActive = (htfEv != 0 and avHtf ? 1 : 0) + (gapEv != 0 and avGap ? 1 : 0) + (lvlEv != 0 and avLvl ? 1 : 0) + (openEv != 0 and avOpen ? 1 : 0) + (structEv != 0 ? 1 : 0) + (sweepEv != 0 ? 1 : 0) + (volEv != 0 and avVol ? 1 : 0) + (momEv != 0 ? 1 : 0) + (vwapEv != 0 ? 1 : 0) + (premEv != 0 and avPrem ? 1 : 0) + (oiEv != 0 and avOi ? 1 : 0)
+int   nAvail = (avHtf ? 1 : 0) + (avGap ? 1 : 0) + (avLvl ? 1 : 0) + (avOpen ? 1 : 0) + 2 + (avVol ? 1 : 0) + 2 + (avPrem ? 1 : 0) + (avOi ? 1 : 0)
+string breakdown = str.format("HTF{0} GAP{1} LVL{2} OPN{3} STR{4} SWP{5} VOL{6} MOM{7} VWP{8} PRM{9} OI{10}",
+     avHtf ? str.tostring(htfEv) : "-", avGap ? str.tostring(gapEv) : "-", avLvl ? str.tostring(lvlEv) : "-", avOpen ? str.tostring(openEv) : "-", str.tostring(structEv), str.tostring(sweepEv),
+     avVol ? str.tostring(volEv) : "-", str.tostring(momEv), str.tostring(vwapEv), avPrem ? str.tostring(premEv) : "-", avOi ? str.tostring(oiEv) : "-")
