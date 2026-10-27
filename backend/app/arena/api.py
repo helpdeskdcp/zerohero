@@ -368,6 +368,57 @@ def equity_quote(request: Request, symbol: str):
     return {"symbol": sym, "name": r["name"], "last": q, "age_s": (round(time.time() - q["t"], 1) if q else None), "max_notional_rs": SU.MAX_EQ_NOTIONAL}
 
 
+@router.get("/equity/search")
+def equity_search(request: Request, q: str, limit: int = 12):
+    """Order ticket autocomplete: NSE cash-equity symbols that start with (then contain) the typed letters; NIFTY 50 names first."""
+    _auth(request)
+    if len(q) > 20: raise HTTPException(422, "query too long")
+    return {"q": q.upper(), "results": EQ.search(q, max(1, min(int(limit), 25)))}
+
+
+@router.get("/equity/ticks")
+def equity_ticks(request: Request, symbols: str):
+    """Polling fallback of the stream: latest price per symbol (websocket push when fresher than the captured quote). At most 8 symbols."""
+    _auth(request); syms = [x for x in dict.fromkeys(y.strip().upper() for y in symbols.split(",")) if SU.EQ_SYMBOL_RE.fullmatch(x)][:8]
+    if not syms: raise HTTPException(422, "symbols")
+    return {"t": time.time(), "ticks": EQ.ticks(syms), "sources": EQ.source_status()}
+
+
+_streams: dict = defaultdict(int)
+STREAM_MAX_SEC = 600                                                                              # a stream ends after this long; the client reconnects (tests shorten it)
+
+
+@router.get("/equity/stream")
+async def equity_stream(request: Request, symbols: str):
+    """Server-sent events: a message whenever a watched symbol's price changes (checked every 250 ms), a keep-alive every 5 s, the stream ends after 10 minutes (the client reconnects). One open stream is ONE request
+    for the rate limiter, instead of a request per refresh. At most 4 symbols and 6 streams per participant."""
+    import asyncio, json
+    from fastapi.responses import StreamingResponse
+    c = _auth(request); who = c["name"]
+    syms = [x for x in dict.fromkeys(y.strip().upper() for y in symbols.split(",")) if SU.EQ_SYMBOL_RE.fullmatch(x)][:4]
+    if not syms: raise HTTPException(422, "symbols")
+    if _streams[who] >= 6: raise HTTPException(429, "too many open price streams")
+    loop = asyncio.get_running_loop()
+    for x in syms:
+        if await loop.run_in_executor(None, EQ.resolve, x) is None: raise HTTPException(404, f"{x} is not an NSE cash-equity symbol")
+
+    async def gen():
+        _streams[who] += 1
+        try:
+            last, sent, end = {}, 0.0, time.time() + STREAM_MAX_SEC
+            yield "retry: 1000\n\n"
+            while time.time() < end:
+                if await request.is_disconnected(): break
+                snap = await loop.run_in_executor(None, EQ.ticks, syms)
+                sig = {k: (v["ltp"], v["bid"], v["ask"]) for k, v in snap.items()}
+                if sig != last or time.time() - sent > 5:
+                    last = sig; sent = time.time(); yield "data: " + json.dumps({"t": sent, "ticks": snap}) + "\n\n"
+                await asyncio.sleep(0.25)
+        finally:
+            _streams[who] = max(0, _streams[who] - 1)
+    return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @router.get("/chart/underlying")
 def chart_underlying(request: Request, underlying: str, tf: int = 15):
     """Terminal tab: the underlying's candles with the Winners Scalper (Pine) indicator (trailing stop, BUY/SELL markers) and the live spot."""

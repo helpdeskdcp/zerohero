@@ -52,3 +52,97 @@ def check(symbol: str, side: str, entry: float, mode: str, *, sl: float | None =
         if spread / q["ltp"] > 0.01: out["warnings"].append(f"wide bid/ask spread ({spread:.2f} = {100 * spread / q['ltp']:.1f}% of the price): fills will cost that much")
         if sl and 0 < abs(entry - sl) <= 1.5 * spread: out["warnings"].append(f"stop-loss {sl:g} is within 1.5x the bid/ask spread of the entry: it is likely to be hit immediately")
     return out
+
+
+# ----------------------------------------------------------------------------- symbol search
+import csv
+import os
+import threading
+
+_idx_lock = threading.Lock(); _idx: list | None = None
+_NIFTY50_CSV = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "nifty_direction", "constituents.csv")
+
+
+def _index(sdk=None) -> list:
+    """Every NSE cash-equity symbol of the broker instrument master [{symbol, token, company, n50}], built once (about 2,700 rows). NIFTY 50 names carry their company name and rank first."""
+    global _idx
+    if _idx is not None: return _idx
+    with _idx_lock:
+        if _idx is not None: return _idx
+        if sdk is None:
+            from ..histcap.worker import CaptureWorker
+            sdk = CaptureWorker._default_sdk()
+        n50 = {}
+        try:
+            with open(_NIFTY50_CSV, encoding="utf-8") as f:
+                for r in csv.DictReader(f): n50[(r.get("Symbol") or "").strip().upper()] = (r.get("Company Name") or "").strip()
+        except Exception:
+            pass
+        rows = []
+        for r in sdk.load_instrument_master():
+            sy = str(r.get("symbol", ""))
+            if r.get("exch_seg") == "NSE" and sy.endswith("-EQ"):
+                nm = str(r.get("name") or sy[:-3]).upper(); rows.append({"symbol": nm, "token": str(r["token"]), "company": n50.get(nm, ""), "n50": nm in n50})
+        rows.sort(key=lambda x: x["symbol"]); _idx = rows
+    return _idx
+
+
+def search(q: str, limit: int = 12, sdk=None) -> list[dict]:
+    """Prefix matches first (NIFTY 50 before the rest, then A-Z), then names that merely contain the text. 'r' -> RELIANCE, RAILTEL ...; 'rel' -> RELIANCE, RELAXO ..."""
+    s = (q or "").strip().upper()
+    if not s: return []
+    rows = _index(sdk); pre = [r for r in rows if r["symbol"].startswith(s)]; pre.sort(key=lambda r: (not r["n50"], r["symbol"]))
+    out = pre[:limit]
+    if len(out) < limit:
+        sub = [r for r in rows if s in r["symbol"] and not r["symbol"].startswith(s)]; sub.sort(key=lambda r: (not r["n50"], r["symbol"])); out += sub[: limit - len(out)]
+    return [{"symbol": r["symbol"], "company": r["company"], "token": r["token"]} for r in out]
+
+
+# ----------------------------------------------------------------------------- live ticks (quote router)
+_want: dict = {}                       # symbol -> last time a screen asked for it (epoch); idle symbols are dropped from the websocket after IDLE_SEC
+IDLE_SEC, MAX_WATCH = 120.0, 40
+_src_stats = {"ws": {"hits": 0, "errors": 0}, "db": {"hits": 0, "errors": 0}}
+EQ_OWNER = "arena_equity"
+
+
+def _ws_feed():
+    try:
+        from ..feed_registry import get_feed
+        return get_feed()
+    except Exception:
+        return None
+
+
+def _sync_subscriptions(now: float, sdk=None) -> None:
+    for s in [k for k, t in _want.items() if now - t > IDLE_SEC]: _want.pop(s, None)
+    feed = _ws_feed()
+    if feed is None: return
+    want = []
+    for s in sorted(_want, key=_want.get, reverse=True)[:MAX_WATCH]:
+        r = resolve(s, sdk)
+        if r: want.append({"token": r["token"], "exchange_type": 1})          # 1 = NSE cash
+    try: feed.subscribe(want, owner=EQ_OWNER)                                  # idempotent: the feed only reconciles when the union changes
+    except Exception: _src_stats["ws"]["errors"] += 1
+
+
+def ticks(symbols: list[str], *, path: str | None = None, sdk=None, now: float | None = None) -> dict:
+    """Latest price of each symbol from the FASTEST fresh source. 'ws' = Angel One websocket push (tick speed, LTP only), 'db' = the 3-second captured quote (LTP + bid / ask, what settlement uses).
+    The websocket LTP wins when it is newer than the captured quote; bid / ask always come from the captured quote. A source that is down or stale is simply skipped."""
+    now = now or time.time(); out = {}
+    for s in symbols: _want[s] = now
+    _sync_subscriptions(now, sdk); feed = _ws_feed()
+    for s in symbols:
+        r = resolve(s, sdk); rec = {"ltp": None, "bid": None, "ask": None, "t": None, "src": None}
+        q = latest_quote(s, path)
+        if q: rec.update(ltp=q["ltp"], bid=q["bid"], ask=q["ask"], t=q["t"], src="db"); _src_stats["db"]["hits"] += 1
+        w = feed.ltp.get(r["token"]) if (feed is not None and r) else None
+        if w and now - w["recv"] <= 5.0 and (rec["t"] is None or w["recv"] >= rec["t"]):
+            rec.update(ltp=w["ltp"], t=w["recv"], src="ws"); _src_stats["ws"]["hits"] += 1
+        if rec["t"] is not None: rec["age_s"] = round(now - rec["t"], 2)
+        out[s] = rec
+    return out
+
+
+def source_status() -> dict:
+    f = _ws_feed()
+    return {"ws_connected": bool(f is not None and getattr(f, "connected", False)), "watching": len(_want), "stats": _src_stats}

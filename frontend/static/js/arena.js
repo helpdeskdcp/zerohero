@@ -125,7 +125,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     catch (e) { document.querySelectorAll(".livePanel .liveBody").forEach((x) => { x.textContent = "live data unavailable (" + String(e.message || e) + ")"; }); }
     finally { liveBusy = false; }
   }
-  const startLive = () => { stopLive(); liveTick(); liveTimer = setInterval(liveTick, 3000); }, stopLive = () => { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } };
+  const startLive = () => { stopLive(); liveTick(); liveTimer = setInterval(liveTick, 1500); }, stopLive = () => { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } };
 
   const show = (tab) => { document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== tab)); document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); if (tab === "mine") loadMine(); if (tab === "standings") loadStandings(); if (tab === "mine" || tab === "standings") startLive(); else stopLive(); };
   async function loadState() {

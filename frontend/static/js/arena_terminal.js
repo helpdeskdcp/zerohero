@@ -95,7 +95,7 @@ if (typeof module !== "undefined") module.exports = { tmChartPath, tmBucket, tmS
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
   if (!pane) return;
-  const POLL_MS = 1500; let token = "", rows = [], sel = null, bucketTab = "orders", chart = null, series = {}, view = "option", tf = 1, utf = 15, timers = {}, lastLtp = {}, htmlCache = {}, lastBar = null, forming = null, userZoomed = false, lines = [], mk = null, gen = 0, lastUnderlying = null;
+  const POLL_MS = 1000; let token = "", rows = [], sel = null, bucketTab = "orders", chart = null, series = {}, view = "option", tf = 1, utf = 15, timers = {}, lastLtp = {}, htmlCache = {}, lastBar = null, forming = null, userZoomed = false, lines = [], mk = null, gen = 0, lastUnderlying = null;
   const readToken = () => { try { token = sessionStorage.getItem("arena_token") || ""; } catch (e) { token = ""; } return token; };
   async function api(path) {
     const r = await fetch("/api/arena/public" + path, { headers: { "X-Arena-Token": readToken() }, cache: "no-store" });

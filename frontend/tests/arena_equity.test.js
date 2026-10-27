@@ -21,3 +21,11 @@ x = T.tmEditEvents(S, { targets: "1010" }); assert.ok(x.warn.some((w) => /short'
 const W = { id: "H8", state: "WAITING", instrument: "EQUITY", side: "BUY", entry_mode: "LIMIT", entry: 995, sl: 990, targets: [1010], lots: 10, label: "RELIANCE BUY 10 sh" };
 assert.ok(T.tmEditHtml(W).includes("Qty (shares)") && T.tmEditHtml(W).includes('data-f="entry"')); assert.ok(T.tmRowHtml({ ...W, ltp: 1000, bid: 999.9, ask: 1000.1 }, null, null).includes("10 sh"));
 console.log("arena_equity: ok");
+
+// stream + ticket plumbing
+const P = Q.eqParseSse('data: {"t":1,"ticks":{"A":{"ltp":1}}}\n\n: keep\n\ndata: {"t":2}\n\ndata: {"t":3');
+assert.strictEqual(P.events.length, 2); assert.strictEqual(P.events[0].ticks.A.ltp, 1); assert.strictEqual(P.rest, 'data: {"t":3');                   // the unfinished event stays in the buffer
+assert.strictEqual(Q.eqParseSse("retry: 1000\n\n").events.length, 0); assert.strictEqual(Q.eqParseSse('data: {bad\n\n').events.length, 0);
+assert.strictEqual(Q.eqTickPrice({ ltp: 101.5 }), 101.5); assert.strictEqual(Q.eqTickPrice({ ltp: null }), null); assert.strictEqual(Q.eqTickPrice(null), null);
+assert.strictEqual(Q.eqSrcLabel({ src: "ws" }), "live push"); assert.strictEqual(Q.eqSrcLabel({ src: "db", age_s: 2.1 }), "3 s tape · 2.1s old"); assert.strictEqual(Q.eqSrcLabel(null), "no quote");
+console.log("arena_equity stream helpers: ok");
