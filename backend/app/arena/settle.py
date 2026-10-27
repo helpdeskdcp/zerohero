@@ -138,6 +138,9 @@ def _apply(ev: dict, st: dict) -> None:
     elif a == "TRAIL_SL": st["trail_points"] = ev.get("trail_points"); st["trail_pct"] = ev.get("trail_pct")
     elif a == "AMEND_LOTS":
         if not st.get("filled"): st["lots"] = max(1, int(ev["lots"]))                                              # once the trade is active the quantity is frozen: the event is ignored
+    elif a == "AMEND_ENTRY":
+        if not st.get("filled"):                                                                                   # only while the order is still waiting (ABOVE / LIMIT); ignored once active
+            st["entry"] = float(ev["entry"]); st["entry_hi"] = float(ev["entry_hi"]) if ev.get("entry_hi") else None
     elif a == "CANCEL" or a == "EXIT_NOW": st[a] = True
 
 
@@ -159,7 +162,7 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     _xf = rule_from("exit_now_latency_from_ts")                                                                                 # EXIT_NOW posted after deployment: short execution delay (same for every participant, both sides); earlier events keep 20 s
     evs = sorted(({**e, "t_eff": e["t"] + (min(latency_at(e["t"], latency), EXIT_NOW_LATENCY_SEC) if (e.get("action") == "EXIT_NOW" and _xf is not None and e["t"] >= _xf) else latency_at(e["t"], latency))}
                   for e in (sig.get("events") or []) if e.get("t", 0) >= sig["t"]), key=lambda e: e["t_eff"]); ei = 0
-    st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None, "lots": max(1, int(sig.get("lots") or 1)), "filled": False}
+    st = {"sl": sig["sl"], "targets": list(sig["targets"]), "trail_points": None, "trail_pct": None, "lots": max(1, int(sig.get("lots") or 1)), "filled": False, "entry": sig["entry"], "entry_hi": sig.get("entry_hi")}
     applied = 0
 
     def drain(upto: float):
@@ -176,14 +179,14 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
         mode = sig["entry_mode"]; p, real = buy_px(s, half_spread)
         gap = s["t"] - (live[i - 1]["t"] if i > 0 else prev_t)                                   # silence in the capture just before this quote
         if mode == "ABOVE":
-            if s["ltp"] >= sig["entry"]:
-                top = sig.get("entry_hi")                                                              # an entry ZONE (above 570 - 575): no chasing above its upper end, wait until the ask is back inside
-                if top and top > sig["entry"] and p > top: continue
+            if s["ltp"] >= st["entry"]:
+                top = st["entry_hi"]                                                              # an entry ZONE (above 570 - 575): no chasing above its upper end, wait until the ask is back inside
+                if top and top > st["entry"] and p > top: continue
                 if new_rules and gap > MAX_FILL_GAP_SEC: return {**base, "status": "DATA_GAP", "gap_sec": round(gap, 1)}
-                if new_rules and not (top and top > sig["entry"]) and p > sig["entry"] * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}      # ABOVE x already far past x when it fills: same no-chase limit as NEAR
-                fill, real_fill, j = max(p, sig["entry"]), real, i; break
+                if new_rules and not (top and top > st["entry"]) and p > st["entry"] * (1 + RUNAWAY): return {**base, "status": "MISSED", "ask_at_entry": p}      # ABOVE x already far past x when it fills: same no-chase limit as NEAR
+                fill, real_fill, j = max(p, st["entry"]), real, i; break
         elif mode == "LIMIT":
-            if p <= sig["entry"]:
+            if p <= st["entry"]:
                 if new_rules and gap > MAX_FILL_GAP_SEC: return {**base, "status": "DATA_GAP", "gap_sec": round(gap, 1)}
                 fill, real_fill, j = p, real, i; break
         else:                                                    # NEAR / MARKET: first snapshot only
@@ -193,7 +196,7 @@ def settle(sig: dict, snaps: list[dict], *, half_spread: float, policy: str = "T
     if fill is not None: st["filled"] = True                                                              # from here the quantity cannot change
     if fill is None:
         vu = (sig["t"] + sig["valid_sec"]) if sig.get("valid_sec") else None                                  # a limit / above entry may still be waiting until this instant (None = until the session end)
-        return {**base, "status": "NOT_TRIGGERED", "events_applied": applied, "valid_until": vu}
+        return {**base, "status": "NOT_TRIGGERED", "events_applied": applied, "valid_until": vu, "entry_now": st["entry"], "sl_now": st["sl"], "targets_now": list(st["targets"]), "lots": st["lots"]}
     if new_rules and st["targets"]:                                                                       # levels set from a stale entry: the target is already behind the fill price -> a "TARGET" exit would be a loss
         drain(live[j]["t"]); tg0 = (st["targets"][0] if policy == "T1" else st["targets"][-1]) if st["targets"] else None
         if tg0 is not None and tg0 <= fill: return {**base, "status": "INVALID_LEVELS", "fill": fill, "target": tg0, "events_applied": applied}

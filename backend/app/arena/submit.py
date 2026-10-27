@@ -11,7 +11,7 @@ from ..forward_test import ledger as L
 
 ALLOWED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM")
 MODES = ("ABOVE", "NEAR", "MARKET", "LIMIT")
-ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL", "AMEND_LOTS")
+ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL", "AMEND_LOTS", "AMEND_ENTRY")
 MAX_LOTS = 10
 MAX_EVENTS_PER_SIGNAL = 20
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "human_signals.jsonl")
@@ -72,6 +72,9 @@ def validate_event(d: dict) -> dict:
     a = str(d.get("action", "")).upper(); need(a in ACTIONS, f"action must be one of {ACTIONS}")
     out = {"signal_id": str(d.get("signal_id", "")).strip(), "action": a}; need(out["signal_id"], "signal_id required")
     if a == "AMEND_SL": sl = float(d.get("sl") or 0); need(sl > 0, "sl > 0"); out["sl"] = sl
+    elif a == "AMEND_ENTRY":                                                                                  # a WAITING ABOVE / LIMIT order only: the trigger price moves, never retroactively
+        en = float(d.get("entry") or 0); need(en > 0, "entry > 0"); out["entry"] = en
+        if d.get("entry_hi") not in (None, ""): hi = float(d["entry_hi"]); need(hi >= en, "entry_hi must be >= entry"); out["entry_hi"] = hi
     elif a == "AMEND_LOTS":
         try: lots = int(d.get("lots"))
         except (TypeError, ValueError): lots = 0

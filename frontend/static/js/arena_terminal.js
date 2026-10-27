@@ -33,13 +33,51 @@ function tmRowHtml(r, prev, ex) {
   const nums = [];
   if (live) nums.push(`<span class="${dir}">LTP <b>${tmNum(r.ltp)}</b></span>`, `<span>${tmNum(r.bid)} / ${tmNum(r.ask)}</span>`);
   if (r.state === "ACTIVE") nums.push(`<span>fill <b>${tmNum(r.fill)}</b></span>`, `<span>SL <b>${tmNum(r.sl)}</b></span>`, `<span>T1 <b>${tmNum((r.targets || [])[0])}</b></span>`);
-  if (r.state === "WAITING") nums.push(`<span>${tmEsc(r.entry_mode || "")} <b>${tmNum(r.entry)}</b></span>`, `<span>SL <b>${tmNum(r.sl)}</b></span>`);
+  if (r.state === "WAITING") nums.push(`<span>${tmEsc(r.entry_mode || "")} <b>${tmNum(r.entry)}</b></span>`, `<span>SL <b>${tmNum(r.sl)}</b></span>`, `<span>T1 <b>${tmNum((r.targets || [])[0])}</b></span>`);
   if (r.state === "CLOSED") nums.push(`<span>fill <b>${tmNum(r.fill)}</b></span>`, `<span>exit <b>${tmNum(r.exit)}</b></span>`, `<span class="mut">${tmEsc(r.why || "")}</span>`);
   if (!["ACTIVE", "WAITING", "CLOSED"].includes(r.state)) nums.push(`<span class="mut">${tmEsc(r.why || r.waiting_note || "")}</span>`);
   const btn = r.state === "ACTIVE" ? (() => { const u = tmExitUi(ex); return `<div class="tm-l4"><button class="tm-exit ${u.cls}" data-exit="${tmEsc(r.id)}">${tmEsc(u.text)}</button></div>`; })() : "";
   return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} lot · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>${btn}`;
 }
-if (typeof module !== "undefined") module.exports = { tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi };
+
+/* ---- order editor (broker-style modify): which fields an order allows, and the /amend events a form produces ---- */
+function tmEditable(r) {
+  if (!r) return null;
+  if (r.state === "WAITING") return { entry: r.entry_mode === "ABOVE" || r.entry_mode === "LIMIT", sl: true, targets: true, lots: true, trail: false, cancel: true };
+  if (r.state === "ACTIVE") return { entry: false, sl: true, targets: true, lots: false, trail: true, cancel: false };
+  return null;
+}
+const tmParseList = (v) => String(v == null ? "" : v).split(",").map((x) => x.trim()).filter(Boolean).map(Number);
+/* form values -> [{action, ...}] (only what changed against the row); also returns human warnings (never blocking) and errors (blocking) */
+function tmEditEvents(r, f) {
+  const ed = tmEditable(r), ev = [], warn = [], err = [];
+  if (!ed) return { ev, warn, err: ["This order can no longer be modified."] };
+  const num = (v) => (v === "" || v == null ? null : Number(v));
+  const same = (a, b) => a != null && b != null && Math.abs(a - b) < 1e-9;
+  if (ed.entry) { const e = num(f.entry); if (e !== null) { if (!(e > 0)) err.push("Entry must be > 0"); else if (!same(e, r.entry)) ev.push({ action: "AMEND_ENTRY", entry: e }); } }
+  const sl = num(f.sl); if (sl !== null) { if (!(sl > 0)) err.push("Stop-loss must be > 0"); else if (!same(sl, r.sl)) ev.push({ action: "AMEND_SL", sl }); }
+  const raw = String(f.targets == null ? "" : f.targets).trim();
+  if (raw) { const t = tmParseList(raw); if (!t.length || t.some((x) => !(x > 0))) err.push("Targets: comma separated numbers > 0"); else { const cur = (r.targets || []).slice().sort((a, b) => a - b), nw = [...new Set(t)].sort((a, b) => a - b); if (JSON.stringify(cur) !== JSON.stringify(nw)) ev.push({ action: "AMEND_TARGETS", targets: nw }); } }
+  if (ed.lots) { const q = num(f.lots); if (q !== null) { if (!(Number.isInteger(q) && q >= 1)) err.push("Lots: whole number >= 1"); else if (q !== (r.lots || 1)) ev.push({ action: "AMEND_LOTS", lots: q }); } }
+  if (ed.trail) { const tp = num(f.trail_points), tc = num(f.trail_pct); if (tp !== null && tc !== null) err.push("Trail: give points OR percent, not both"); else if (tp !== null) { if (!(tp > 0)) err.push("Trail points must be > 0"); else ev.push({ action: "TRAIL_SL", trail_points: tp }); } else if (tc !== null) { if (!(tc > 0 && tc < 100)) err.push("Trail % must be between 0 and 100"); else ev.push({ action: "TRAIL_SL", trail_pct: tc }); } }
+  const eSl = ev.find((e) => e.action === "AMEND_SL"), eTg = ev.find((e) => e.action === "AMEND_TARGETS"), eEn = ev.find((e) => e.action === "AMEND_ENTRY");
+  const ref = r.state === "ACTIVE" ? r.fill : (eEn ? eEn.entry : r.entry), slN = eSl ? eSl.sl : r.sl, tgN = eTg ? eTg.targets : (r.targets || []);
+  if (ref != null && slN != null && slN >= ref) warn.push("Stop-loss is at/above the entry price: it will trigger at once.");
+  if (ref != null && tgN.length && tgN[0] <= ref) warn.push("First target is at/below the entry price.");
+  if (r.state === "ACTIVE" && r.bid != null && eSl && eSl.sl >= r.bid) warn.push("Stop-loss is at/above the current bid: the position exits immediately.");
+  return { ev, warn, err };
+}
+function tmEditHtml(r) {
+  const ed = tmEditable(r); if (!ed) return "";
+  const v = (x) => (x == null ? "" : tmEsc(x)), inp = (n, label, val, extra = "") => `<label class="tm-f"><span>${label}</span><input data-f="${n}" inputmode="decimal" value="${v(val)}" ${extra}></label>`;
+  const cur = r.state === "ACTIVE" ? `fill <b>${tmNum(r.fill)}</b> · SL <b>${tmNum(r.sl)}</b> · T <b>${tmEsc((r.targets || []).map((x) => tmNum(x)).join(", ") || "–")}</b>` : `${tmEsc(r.entry_mode || "")} <b>${tmNum(r.entry)}</b> · SL <b>${tmNum(r.sl)}</b> · T <b>${tmEsc((r.targets || []).map((x) => tmNum(x)).join(", ") || "–")}</b>`;
+  return `<div class="tm-edit-h"><b>${r.state === "ACTIVE" ? "Modify position" : "Modify order"}</b> <span class="mut">${tmEsc(r.label)} · ${tmEsc(r.id)}</span></div>`
+    + `<div class="tm-edit-cur mut" id="tmEditCur">now: ${cur}</div>`
+    + `<div class="tm-edit-g">${ed.entry ? inp("entry", "Entry", r.entry) : ""}${inp("sl", "Stop-loss", r.sl)}${inp("targets", "Targets (a, b)", (r.targets || []).join(", "))}${ed.lots ? inp("lots", "Lots", r.lots || 1) : ""}${ed.trail ? inp("trail_points", "Trail pts", "") + inp("trail_pct", "Trail %", "") : ""}</div>`
+    + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
+    + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
+}
+if (typeof module !== "undefined") module.exports = { tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -163,11 +201,45 @@ if (typeof document !== "undefined") (function () {
 
   /* ---------------------------------------------------------------- right panel */
   function renderHeader() {
-    const r = sel; if (!r) { renderExitBtn(); $("tmTitle").textContent = "Select an order or a position →"; $("tmState").textContent = ""; $("tmLtp").textContent = ""; $("tmPnl").textContent = ""; return; }
-    renderExitBtn();
+    const r = sel; if (!r) { renderExitBtn(); renderEditor(); $("tmTitle").textContent = "Select an order or a position →"; $("tmState").textContent = ""; $("tmLtp").textContent = ""; $("tmPnl").textContent = ""; return; }
+    renderExitBtn(); renderEditor();
     $("tmTitle").textContent = r.label; $("tmState").className = "chip " + r.state; $("tmState").textContent = r.state;
     $("tmLtp").textContent = r.ltp != null ? `LTP ${tmNum(r.ltp)}  (${tmNum(r.bid)} / ${tmNum(r.ask)})` : ""; const p = r.pnl_rs; $("tmPnl").textContent = p != null ? tmRs(p) : ""; $("tmPnl").className = p > 0 ? "pnlpos" : p < 0 ? "pnlneg" : "";
   }
+
+  /* ---------------------------------------------------------------- order editor (click an order / position to modify it) */
+  let editKey = "";
+  function renderEditor() {
+    const box = $("tmEdit"); if (!box) return;
+    const r = sel, ed = tmEditable(r);
+    if (!ed) { box.hidden = true; box.innerHTML = ""; editKey = ""; return; }
+    const key = r.id + "|" + r.state;
+    if (key !== editKey) { box.innerHTML = tmEditHtml(r); editKey = key; box.hidden = false; }
+    else { const c = $("tmEditCur"); if (c) { const t = document.createElement("div"); t.innerHTML = tmEditHtml(r); const nc = t.querySelector("#tmEditCur"); if (nc && c.innerHTML !== nc.innerHTML) c.innerHTML = nc.innerHTML; } }   // levels refresh, the typed values stay
+  }
+  const editVals = () => { const f = {}; document.querySelectorAll("#tmEdit [data-f]").forEach((i) => (f[i.dataset.f] = i.value)); return f; };
+  const editMsg = (t, bad) => { const m = $("tmEditMsg"); if (m) { m.textContent = t; m.style.color = bad ? "#fca5a5" : "#86efac"; } };
+  async function sendEvents(r, evs) {
+    const done = [];
+    for (const e of evs) { await apiPost("/amend", { signal_id: r.id, ...e }); done.push(e.action.replace("AMEND_", "").toLowerCase()); }
+    return done;
+  }
+  async function editAct(act) {
+    const r = sel; if (!r || !tmEditable(r)) return;
+    try {
+      if (act === "cancel") { if (!confirm("Cancel this waiting order?")) return; editMsg("Sending…"); await sendEvents(r, [{ action: "CANCEL" }]); editMsg("Cancel sent ✓"); }
+      else if (act === "sl2cost") { if (r.fill == null) return; editMsg("Sending…"); await sendEvents(r, [{ action: "AMEND_SL", sl: r.fill }]); editMsg("SL → cost sent ✓"); }
+      else {
+        const x = tmEditEvents(r, editVals()); if (x.err.length) { editMsg(x.err.join(" · "), true); return; }
+        if (!x.ev.length) { editMsg("Nothing changed."); return; }
+        if (x.warn.length && !confirm(x.warn.join("\n") + "\n\nSend anyway?")) return;
+        editMsg("Sending…"); const done = await sendEvents(r, x.ev); editMsg("Sent: " + done.join(", ") + " ✓ (effective after the execution delay)");
+      }
+      editKey = ""; liveTick();
+    } catch (e) { editMsg(e.message || String(e), true); }
+  }
+  if ($("tmEdit")) $("tmEdit").addEventListener("click", (ev) => { const b = ev.target && ev.target.closest ? ev.target.closest("[data-act]") : null; if (b) editAct(b.dataset.act); });
+  if ($("tmEdit")) $("tmEdit").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target && ev.target.matches && ev.target.matches("[data-f]")) editAct("save"); });
   function highlight() { document.querySelectorAll("#tmList .tm-row").forEach((e) => e.classList.toggle("sel", sel && e.dataset.id === sel.id)); }
   function renderList() {
     const by = { orders: [], positions: [], closed: [] }; rows.forEach((r) => by[tmBucket(r)].push(r));

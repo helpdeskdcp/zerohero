@@ -216,7 +216,7 @@ async def submit(request: Request):
 
 @router.post("/amend")
 async def amend(request: Request):
-    """Management event for an already submitted signal: AMEND_SL | AMEND_TARGETS | TRAIL_SL | EXIT_NOW | CANCEL. Effective from the server timestamp + execution delay, never retroactive."""
+    """Management event for an already submitted signal: AMEND_ENTRY (waiting ABOVE/LIMIT only) | AMEND_SL | AMEND_TARGETS | TRAIL_SL | AMEND_LOTS | EXIT_NOW | CANCEL. Effective from the server timestamp + execution delay, never retroactive."""
     c = _auth(request)
     if int(request.headers.get("content-length") or 0) > MAX_BODY: raise HTTPException(413, "body too large")
     try: body = await request.json()
@@ -231,12 +231,13 @@ async def amend(request: Request):
             if sig and sig["underlying"] in EXCH and not mc.is_trading(EXCH[sig["underlying"]]): raise HTTPException(409, f"{EXCH[sig['underlying']]} is not open")
         except HTTPException: raise
         except Exception: pass
-    if str(body.get("action", "")).upper() == "AMEND_LOTS":                                                # the quantity can change only while the trade is NOT active
+    if str(body.get("action", "")).upper() in ("AMEND_LOTS", "AMEND_ENTRY"):                              # the quantity / the entry can change only while the trade is NOT active
         sid = str(body.get("signal_id", ""))
         sg = [x for x in R.human_signals(include_practice=True) if x["id"] == sid and x["participant"] == c["name"]]
         if sg:
             rr = R.run(sg, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE).get(c["name"], {"results": []})["results"]
-            if rr and (rr[0].get("fill") is not None or rr[0].get("status") in ("SETTLED", "CANCELLED")): raise HTTPException(409, "the trade is already active (or closed): the quantity cannot be changed any more")
+            if rr and (rr[0].get("fill") is not None or rr[0].get("status") in ("SETTLED", "CANCELLED")): raise HTTPException(409, "the trade is already active (or closed): the quantity / entry cannot be changed any more")
+            if str(body.get("action", "")).upper() == "AMEND_ENTRY" and sg[0].get("entry_mode") not in ("ABOVE", "LIMIT"): raise HTTPException(409, "only a waiting ABOVE / LIMIT order has an entry price to change")
     try: rec = SU.submit_event(body, c["name"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
@@ -354,6 +355,8 @@ def live(request: Request):
         st = str(r.get("status", "")); label = f"{s['underlying']} {s['strike']:g} {s['option_type']} ({s['expiry'][8:10]}/{s['expiry'][5:7]})"
         row = {"id": s["id"], "underlying": s["underlying"], "expiry": s["expiry"], "strike": s["strike"], "option_type": s["option_type"], "posted_ts": s["t"], "lots": r.get("lots") or s.get("lots") or 1, "label": label, "entry_mode": s["entry_mode"], "entry": s["entry"], "sl": s["sl"], "targets": s["targets"], "ltp": q["ltp"] if q else None, "bid": q["bid"] if q else None, "ask": q["ask"] if q else None,
                "quote_age_s": (round(min(now - q["t"], chk) if chk is not None else now - q["t"], 1) if q else None), "posted_ist": datetime.fromtimestamp(s["t"], tz=IST).strftime("%H:%M:%S")}
+        if st == "NOT_TRIGGERED":                                                                     # a waiting order shows its levels AFTER the amendments already in force
+            row.update(entry=r.get("entry_now", row["entry"]), sl=r.get("sl_now", row["sl"]), targets=r.get("targets_now", row["targets"]), lots=r.get("lots", row["lots"]))
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
         elif st == "CANCELLED": row.update(state="CANCELLED")
