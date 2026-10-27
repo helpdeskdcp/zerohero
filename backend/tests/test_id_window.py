@@ -10,7 +10,6 @@ from app.histcap import id_window as W
 T0 = datetime(2026, 10, 26, 3, 45, tzinfo=timezone.utc)
 OLD = ("SELECT received_ts FROM quote_snapshots WHERE symbol=? AND kind='OPTION' AND source='DHAN_CHAIN' AND julianday(received_ts)<=julianday(?) ORDER BY julianday(received_ts) DESC, id DESC LIMIT 1")
 WHERE = "symbol=? AND kind='OPTION' AND source='DHAN_CHAIN' AND julianday(received_ts)<=julianday(?)"
-EXISTS = ("SELECT 1 FROM quote_snapshots INDEXED BY sqlite_autoindex_quote_snapshots_1 WHERE source='DHAN_CHAIN' AND symbol=? AND kind='OPTION' LIMIT 1")
 
 
 @pytest.fixture(scope="module")
@@ -36,17 +35,17 @@ def cuts(t_end):
 @pytest.mark.parametrize("sym", ["NIFTY", "SENSEX", "BANKNIFTY"])
 def test_same_answer_as_the_unbounded_query(db, sym, monkeypatch):
     db, t_end = db
-    monkeypatch.setattr(W, "WINDOWS", (5_000, 30_000, 90_000))                                       # small windows so the widening path is exercised on 180 k rows
+    monkeypatch.setattr(W, "WINDOWS", (5_000, 30_000, 90_000, 400_000))                               # small first windows so the widening path is exercised on 180 k rows
     for cut in cuts(t_end):
         want = db.execute(OLD, (sym, cut)).fetchone()
-        got = W.newest_matching(db, "received_ts", WHERE, (sym, cut), cut, order="julianday(received_ts) DESC, id DESC", exists=(EXISTS, (sym,)))
+        got = W.newest_matching(db, "received_ts", WHERE, (sym, cut), cut, order="julianday(received_ts) DESC, id DESC")
         assert (got[0] if got else None) == (want[0] if want else None), (sym, cut)
 
 
-def test_missing_symbol_returns_none_without_scanning(db):
-    db, _ = db
-    assert W.newest_matching(db, "id", WHERE, ("NOSUCH", "2030-01-01T00:00:00+00:00"), "2030-01-01T00:00:00+00:00", order="id DESC", exists=(EXISTS, ("NOSUCH",))) is None
-    assert W.newest_matching(db, "id", WHERE, ("BANKNIFTY", "2030-01-01T00:00:00+00:00"), "2030-01-01T00:00:00+00:00", order="id DESC", exists=(EXISTS, ("BANKNIFTY",))) is None   # symbol exists but never from DHAN
+def test_missing_symbol_returns_none_within_the_capped_window(db, monkeypatch):
+    db, _ = db; monkeypatch.setattr(W, "WINDOWS", (5_000, 30_000, 90_000, 400_000))
+    assert W.newest_matching(db, "id", WHERE, ("NOSUCH", "2030-01-01T00:00:00+00:00"), "2030-01-01T00:00:00+00:00", order="id DESC") is None
+    assert W.newest_matching(db, "id", WHERE, ("BANKNIFTY", "2030-01-01T00:00:00+00:00"), "2030-01-01T00:00:00+00:00", order="id DESC") is None   # symbol exists but never from DHAN
 
 
 def test_id_at_or_before_is_a_binary_search_on_the_primary_key(db):

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-WINDOWS = (50_000, 400_000, 3_000_000)               # ids below the cutoff position, then everything below it
+WINDOWS = (50_000, 400_000, 3_000_000, 6_000_000)   # ids below the cutoff position, widening; nothing newer than ~6 M ids (about two weeks of capture) -> None (a chain that old is not a live chain)
 
 
 def _julian_str(ts: str) -> str:
@@ -32,17 +32,13 @@ def id_at_or_before(conn, cutoff_iso: str, table: str = "quote_snapshots", colum
     return best
 
 
-def newest_matching(conn, select: str, where: str, params: tuple, cutoff_iso: str, *, table: str = "quote_snapshots", order: str, exists: tuple | None = None):
-    """First row of `SELECT {select} FROM {table} NOT INDEXED WHERE id>? AND id<=? AND {where} ORDER BY {order} LIMIT 1` over widening id windows ending at the cutoff position; None if nothing qualifies anywhere.
-    `where` must already contain the exact time predicate (julianday ...), so the result is what the unbounded query would return. `exists` = (sql, params) of a cheap indexed 'is there any such row at all' probe:
-    when it finds nothing the answer is None at once (otherwise a symbol with no rows would be scanned across the whole table)."""
-    if exists is not None:
-        try: found = conn.execute(exists[0], exists[1]).fetchone()
-        except Exception: found = True                                         # probe unusable on this database: skip it
-        if not found: return None
+def newest_matching(conn, select: str, where: str, params: tuple, cutoff_iso: str, *, table: str = "quote_snapshots", order: str):
+    """First row of `SELECT {select} FROM {table} NOT INDEXED WHERE id>? AND id<=? AND {where} ORDER BY {order} LIMIT 1` over widening id windows ending at the cutoff position; None if nothing qualifies within
+    the widest window (WINDOWS[-1] ids below the cutoff). `where` must already contain the exact time predicate (julianday ...), so inside that range the result is what the unbounded query would return.
+    There is deliberately NO 'does any such row exist' probe: on 2026-10-27 a probe on the source index took 285 s for a symbol without rows (it walks every row of that source)."""
     top = id_at_or_before(conn, cutoff_iso, table) + 200                    # headroom: rows stamped a hair after their neighbours' ids are still filtered exactly by `where`
-    for w in (*WINDOWS, None):
-        lo = 0 if w is None else max(0, top - w)
-        r = conn.execute(f"SELECT {select} FROM {table} NOT INDEXED WHERE id>? AND id<=? AND {where} ORDER BY {order} LIMIT 1", (lo, top, *params)).fetchone()
-        if r is not None or lo == 0: return r
+    for w in WINDOWS:
+        r = conn.execute(f"SELECT {select} FROM {table} NOT INDEXED WHERE id>? AND id<=? AND {where} ORDER BY {order} LIMIT 1", (max(0, top - w), top, *params)).fetchone()
+        if r is not None: return r
+        if top - w <= 0: return None                                         # the window already reaches the first row
     return None
