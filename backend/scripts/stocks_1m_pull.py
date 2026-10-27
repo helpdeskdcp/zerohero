@@ -1,4 +1,5 @@
 """Pull 1-minute Upstox v3 candles for the 53 large caps + NIFTY 50 index, month by month, resumable. Data -> data/historical/stocks_1m/stocks_1m.db (research only).
+Extend: `stocks_1m_pull.py --extend-to YYYY-MM-DD` appends sessions after each stored symbol's last one.
 Optional args: symbols to pull instead of the default universe, e.g. `stocks_1m_pull.py BSE TMPV` (resolved from the NSE master, NSE_EQ/EQ only)."""
 import os, sqlite3, sys, time
 from datetime import date, timedelta
@@ -15,7 +16,32 @@ def months():
         nxt = (d.replace(day=28) + timedelta(days=4)).replace(day=1); yield d, min(nxt - timedelta(days=1), END); d = nxt
 
 
+def extend(to_iso: str):
+    """Append sessions after the stored data: for every symbol already in the store, re-fetch from its last stored session (inclusive, INSERT OR REPLACE) to `to_iso`."""
+    from datetime import datetime
+    c = sqlite3.connect(DB); c.execute("PRAGMA journal_mode=WAL"); end = date.fromisoformat(to_iso)
+    eq = {r["trading_symbol"]: r["instrument_key"] for r in S._master() if r.get("segment") == "NSE_EQ" and r.get("instrument_type") == "EQ"}; eq["NIFTY"] = "NSE_INDEX|Nifty 50"
+    syms = [r[0] for r in c.execute("SELECT sym FROM done GROUP BY sym ORDER BY sym")]
+    for sym in syms:
+        ik = eq.get(sym)
+        if not ik: print("SKIP (not in master)", sym, flush=True); continue
+        last = c.execute("SELECT MAX(ts) FROM bars WHERE sym=? AND ts>?", (sym, int(datetime(end.year - 3, 1, 1).timestamp()))).fetchone()[0]
+        a = datetime.fromtimestamp(last).date() if last else date(2024, 10, 1)
+        if a > end: print("up to date", sym, flush=True); continue
+        for attempt in range(4):
+            try:
+                r = U._authed_get(f"/v3/historical-candle/{quote(ik, safe='')}/minutes/1/{end.isoformat()}/{a.isoformat()}")
+                if r.status_code == 200: break
+                time.sleep(2 * (attempt + 1))
+            except Exception: time.sleep(2 * (attempt + 1))
+        else: print("FAIL", sym, flush=True); continue
+        cs = (r.json().get("data") or {}).get("candles", [])
+        c.executemany("INSERT OR REPLACE INTO bars VALUES (?,?,?,?,?,?,?)", [(sym, int(datetime.fromisoformat(k[0]).timestamp()), k[1], k[2], k[3], k[4], k[5] or 0) for k in cs]); c.commit()
+        print("extended", sym, a.isoformat(), "->", end.isoformat(), len(cs), "bars", flush=True); time.sleep(0.25)
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--extend-to": return extend(sys.argv[2])
     c = sqlite3.connect(DB); c.execute("PRAGMA journal_mode=WAL")
     c.execute("CREATE TABLE IF NOT EXISTS bars (sym TEXT, ts INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL, PRIMARY KEY (sym, ts)) WITHOUT ROWID"); c.execute("CREATE TABLE IF NOT EXISTS done (sym TEXT, ym TEXT, n INTEGER, PRIMARY KEY (sym, ym))")
     keys = dict(S.keys()); keys["NIFTY"] = "NSE_INDEX|Nifty 50"; from datetime import datetime
