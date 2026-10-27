@@ -347,6 +347,19 @@ class CaptureWorker:
                 fut_meta = {"instrument_key": f'MCX:{fut["token"]}', "symbol": sym, "kind": "FUTURE",
                             "exchange": "MCX", "token": str(fut["token"]), "expiry": fut.get("expiry")}
                 tokens_meta.append(fut_meta)
+                # Also record the NEXT-month future: options expiring after the front future (NG 20-Nov options sit on the 24-Nov future) need it as their ATM anchor, and on the front future's expiry day it is the only live anchor left.
+                try:
+                    from datetime import datetime as _dt
+                    _d = lambda e: _dt.strptime(str(e).upper(), "%d%b%Y")
+                    exps = sorted({r.get("expiry") for r in sdk.search_instruments(symbol=sym, exchange="MCX")
+                                   if r.get("instrumenttype") == "FUTCOM" and r.get("expiry")}, key=_d)
+                    nxt = next((e for e in exps if _d(e) > _d(fut.get("expiry"))), None)
+                    f2 = sdk.resolve_future_contract(sym, nxt) if nxt else {}
+                    if f2.get("status") == "OK":
+                        tokens_meta.append({"instrument_key": f'MCX:{f2["token"]}', "symbol": sym, "kind": "FUTURE",
+                                            "exchange": "MCX", "token": str(f2["token"]), "expiry": f2.get("expiry")})
+                except Exception:
+                    pass
         else:
             r = instruments.resolve(sym) or {}
             if r.get("symboltoken"):
