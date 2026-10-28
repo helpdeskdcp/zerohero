@@ -250,6 +250,10 @@ env_flags:
   - {name: ARENA_EQUITY, category: FEATURE_FLAG, note: "NSE cash-equity BUY/SELL paper signals in the arena (default on; 0 = off)"}
   - {name: ARENA_EQUITY_FAILOVER, category: FEATURE_FLAG, note: "display-only Upstox last-price backup for the equity order ticket when Angel has nothing fresh (default on; never used by settlement)"}
   - {name: HISTCAP_MAX_LAG_SEC, category: TUNING, note: "upper bound (s) of how far a capture batch's received_ts trails the row write order; sizes the safe id windows of time-window queries (measured max 6,891 s; default 10800)"}
+  - {name: TG_JOURNAL, category: FEATURE_FLAG, note: "Telegram reader: durable capture journal + worker + reconciler (default on; 0 = the old direct path inside the Telegram callback)"}
+  - {name: TG_RECONCILE_SEC, category: TUNING, note: "Telegram reader: seconds between reconciliation rounds (source history vs capture journal)"}
+  - {name: TG_FETCH_CAP, category: TUNING, note: "Telegram reader: max posts fetched per channel per poll, oldest first (a bigger backlog drains over consecutive polls)"}
+  - {name: TG_STATE_FSYNC, category: TUNING, note: "Telegram reader: 1 = fsync the dedupe/pointer state files before the atomic rename"}
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: PRIORITY_CAPTURE, category: FEATURE_FLAG, note: "~3 s quote capture for contracts with a registered signal (read-only; kill switch)"}
