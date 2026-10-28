@@ -1,4 +1,5 @@
 """Angel One SmartAPI market-data client; deliberately no order methods."""
+import concurrent.futures as _cf
 import hashlib, json, os, threading, time
 from datetime import datetime, timezone
 import requests, pyotp
@@ -48,6 +49,51 @@ def _segment_open(underlying: str, now=None) -> bool:
     seg = _SEGMENT_OF.get(str(underlying).upper(), "NSE"); m = t.hour * 60 + t.minute
     lo, hi = (9 * 60, 23 * 60 + 30) if seg == "MCX" else (9 * 60 + 15, 15 * 60 + 30)
     return lo <= m <= hi
+
+_QPOOL = _cf.ThreadPoolExecutor(max_workers=12, thread_name_prefix="angel-quote")
+HEDGE_SEC_DEFAULT = 2.0
+
+
+def _hedge_sec() -> float:
+    try: return max(0.0, float(os.getenv("ANGEL_QUOTE_HEDGE_SEC", str(HEDGE_SEC_DEFAULT))))
+    except ValueError: return HEDGE_SEC_DEFAULT
+
+
+def _post_quote(exch, chunk, mode, headers, timeout):
+    """ONE quote POST on this pool thread's keep-alive session (pool threads persist, so connections are reused). A failure drops the session so a broken connection is never reused."""
+    try:
+        return _quote_session().post(QUOTE, json={"mode": mode, "exchangeTokens": {exch: chunk}}, headers=headers, timeout=timeout).json()
+    except Exception:
+        _drop_quote_session(); raise
+
+
+def _fetch_quote_jobs(jobs, mode, headers, timeout, hedge):
+    """Run every (exchange, tokens) job CONCURRENTLY and return one result per job: the parsed JSON, or the Exception if every attempt failed or `timeout` ran out.
+    Hedging: Angel's gateway has a heavy latency tail (measured 2026-10-28 with tiny requests: p50 0.40 s, p99 8.0 s, max 10 s, while Upstox / Dhan stay under 0.25 s), and a stalled request used to hold the 3-second
+    tape for 10-24 s, which voided a participant's order through the 60 s data-gap rule. So a job that has not answered after `hedge` seconds (or whose first attempt failed fast) gets ONE more attempt on a fresh
+    connection and the first SUCCESS wins. The request is a read-only idempotent quote, at most one extra request per job. hedge = 0 disables it."""
+    t0 = time.monotonic(); deadline = t0 + timeout
+    st = [{"futs": [_QPOOL.submit(_post_quote, e, c, mode, headers, timeout)], "hedged": False, "res": None, "done": False} for e, c in jobs]
+    while not all(x["done"] for x in st):
+        now = time.monotonic()
+        if now >= deadline:
+            for x in st:
+                if not x["done"]: x["res"] = TimeoutError("quote request timed out"); x["done"] = True
+            break
+        pending = []
+        for k, x in enumerate(st):
+            if x["done"]: continue
+            ok = next((f for f in x["futs"] if f.done() and f.exception() is None), None)
+            if ok is not None: x["res"] = ok.result(); x["done"] = True; continue
+            failed = [f for f in x["futs"] if f.done()]
+            if hedge and not x["hedged"] and (failed or now - t0 >= hedge):      # slow, or the first attempt already failed: one more attempt right away
+                e, c = jobs[k]; x["futs"].append(_QPOOL.submit(_post_quote, e, c, mode, headers, max(0.5, deadline - now))); x["hedged"] = True
+            if len(failed) == len(x["futs"]) and (x["hedged"] or not hedge):
+                x["res"] = failed[-1].exception(); x["done"] = True; continue
+            pending += [f for f in x["futs"] if not f.done()]
+        if pending: _cf.wait(pending, timeout=0.05, return_when=_cf.FIRST_COMPLETED)
+    return [x["res"] for x in st]
+
 
 class AngelOneClient:
     def __init__(self, *, cache_path=None, timeout=15):
@@ -504,35 +550,32 @@ class AngelOneClient:
         if not self.authenticate():
             return {str(t): {"status": "AUTH_FAILED", "data_status": "AUTH_FAILED"}
                     for toks in (tokens_by_exchange or {}).values() for t in toks}
-        h = self._auth_headers()
+        h = self._auth_headers(); jobs = []
         for exch, toks in (tokens_by_exchange or {}).items():
             toks = [str(t) for t in toks if t]
-            for i in range(0, len(toks), 50):
-                chunk = toks[i:i + 50]
-                try:
-                    d = _quote_session().post(QUOTE, json={"mode": mode, "exchangeTokens": {exch: chunk}},
-                                              headers=h, timeout=timeout or self.timeout).json()
-                except Exception:
-                    _drop_quote_session()
-                    for t in chunk:
-                        out[t] = {"status": "API_ERROR", "data_status": "API_ERROR"}
-                    continue
-                data = (d.get("data") or {}) if isinstance(d, dict) else {}
-                fetched = data.get("fetched") or []
-                unfetched = {str((u or {}).get("symbolToken") or (u or {}).get("symboltoken"))
-                             for u in (data.get("unfetched") or [])}
-                by_tok = {str(r.get("symbolToken") or r.get("symboltoken")): r
-                          for r in fetched if isinstance(r, dict)}
-                srv = datetime.now(timezone.utc).isoformat()
+            for i in range(0, len(toks), 50): jobs.append((exch, toks[i:i + 50]))
+        results = _fetch_quote_jobs(jobs, mode, h, timeout or self.timeout, _hedge_sec())
+        for (exch, chunk), d in zip(jobs, results):
+            if isinstance(d, Exception):
                 for t in chunk:
-                    row = by_tok.get(t)
-                    if row is not None:
-                        out[t] = {**row, "status": "OK", "data_status": "OK",
-                                  "exchange": exch, "symboltoken": t, "server_timestamp": srv}
-                    else:
-                        out[t] = {"status": "DATA_UNAVAILABLE", "data_status": "DATA_UNAVAILABLE",
-                                  "exchange": exch, "symboltoken": t,
-                                  "reason": "unfetched" if t in unfetched else "not in response"}
+                    out[t] = {"status": "API_ERROR", "data_status": "API_ERROR"}
+                continue
+            data = (d.get("data") or {}) if isinstance(d, dict) else {}
+            fetched = data.get("fetched") or []
+            unfetched = {str((u or {}).get("symbolToken") or (u or {}).get("symboltoken"))
+                         for u in (data.get("unfetched") or [])}
+            by_tok = {str(r.get("symbolToken") or r.get("symboltoken")): r
+                      for r in fetched if isinstance(r, dict)}
+            srv = datetime.now(timezone.utc).isoformat()
+            for t in chunk:
+                row = by_tok.get(t)
+                if row is not None:
+                    out[t] = {**row, "status": "OK", "data_status": "OK",
+                              "exchange": exch, "symboltoken": t, "server_timestamp": srv}
+                else:
+                    out[t] = {"status": "DATA_UNAVAILABLE", "data_status": "DATA_UNAVAILABLE",
+                              "exchange": exch, "symboltoken": t,
+                              "reason": "unfetched" if t in unfetched else "not in response"}
         return out
 
     def get_candles(self, exchange, token, interval="ONE_MINUTE", from_date=None, to_date=None):
