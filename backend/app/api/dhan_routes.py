@@ -69,7 +69,8 @@ async def api_dhan_postback(secret: str, request: Request):
         payload = {"_raw_body_unparseable": True}
     if not isinstance(payload, dict):
         payload = {"_raw_body": payload}
-    row_id = db.insert_dhan_postback(payload)
+    from starlette.concurrency import run_in_threadpool                            # DB write off the event loop
+    row_id = await run_in_threadpool(db.insert_dhan_postback, payload)
     return {"received": True, "id": row_id}
 
 

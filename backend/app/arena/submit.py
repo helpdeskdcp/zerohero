@@ -2,8 +2,13 @@
 (corrections are new entries that reference the old id). Allowed: BUY of an option on NIFTY, BANKNIFTY, SENSEX, NATURALGAS, CRUDEOIL (one lot per signal in settlement)."""
 from __future__ import annotations
 
+import contextlib
+import fcntl
+import functools
+import inspect
 import os
 import re
+import threading
 import time
 from datetime import datetime, timezone
 
@@ -21,6 +26,45 @@ PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.absp
 
 
 class SubmissionError(ValueError): pass
+
+
+# ---------------------------------------------------------------- ledger write lock
+# Every writer reads the chain (record count -> next id, last hash) and then appends. Without a lock two writers get the same id and fork the hash chain: measured 2026-10-28, 24 concurrent submits
+# produced 6 distinct ids. Writers live in several threads of the service (API workers, Telegram reader, Pine consumer) AND in other processes (the per-minute channel ingest cron), so the lock is
+# an in-process RLock plus an flock on <ledger>.lock. Re-entrant per thread (a nested call must not wait for itself).
+_TLOCK = threading.RLock(); _held = threading.local()
+
+
+@contextlib.contextmanager
+def ledger_lock(path: str):
+    with _TLOCK:
+        depth = getattr(_held, "depth", 0)
+        if depth:                                                    # this thread already holds the file lock
+            _held.depth = depth + 1
+            try: yield
+            finally: _held.depth -= 1
+            return
+        os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
+        fd = os.open(path + ".lock", os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX); _held.depth = 1
+            try: yield
+            finally: _held.depth = 0
+        finally:
+            try: fcntl.flock(fd, fcntl.LOCK_UN)
+            finally: os.close(fd)
+
+
+def _locked(fn):
+    """Run a ledger writer under ledger_lock(<the path it writes to>); the path is resolved at call time (tests and tools override `path` / PATH)."""
+    sig = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        try: path = sig.bind_partial(*a, **k).arguments.get("path")
+        except TypeError: path = None
+        with ledger_lock(path or PATH): return fn(*a, **k)
+    return wrapper
 
 
 def norm_expiry(s: str) -> str:
@@ -81,6 +125,7 @@ def validate(d: dict) -> dict:
     return out
 
 
+@_locked
 def submit(d: dict, path: str | None = None, now: float | None = None, practice: bool = False) -> dict:
     p = path or PATH; rec = validate(d)
     n = sum(1 for r in load(p) if r.get("type") == "HUMAN_SIGNAL")
@@ -118,6 +163,7 @@ def validate_event(d: dict, equity: bool = False, side: str = "BUY") -> dict:
     return out
 
 
+@_locked
 def submit_event(d: dict, participant: str, path: str | None = None, now: float | None = None) -> dict:
     p = path or PATH; recs = load(p); pm = participant_map(recs); sid0 = str(d.get("signal_id", "")).strip()
     sig = next((r for r in recs if r.get("type") == "HUMAN_SIGNAL" and r["id"] == sid0 and pm.get(r["id"]) == participant), None)
@@ -131,6 +177,7 @@ def submit_event(d: dict, participant: str, path: str | None = None, now: float 
     return L.append(p, ev)
 
 
+@_locked
 def submit_ts_correction(signal_id: str, effective_ts: float, reason: str, path: str | None = None) -> dict:
     """Corrects the effective instant of a CHANNEL-INGESTED signal to the Telegram post time. EARLIER only (an infrastructure-latency fix: a late reader must not penalise the poster); it can never move a signal later."""
     p = path or PATH; recs = load(p)
@@ -150,6 +197,7 @@ def participant_map(recs: list[dict]) -> dict:
     return m
 
 
+@_locked
 def submit_participant_correction(signal_id: str, participant: str, reason: str, path: str | None = None) -> dict:
     """Re-attributes a manually submitted signal to the participant who really made it (the ledger row itself stays immutable). Channel-ingested signals cannot be re-attributed."""
     p = path or PATH; recs = load(p)
@@ -161,6 +209,7 @@ def submit_participant_correction(signal_id: str, participant: str, reason: str,
     return L.append(p, {"type": "HUMAN_PARTICIPANT_CORRECTION", "id": f"P{n + 1:05d}", "signal_id": signal_id, "participant": str(participant).strip().upper(), "reason": reason[:300], "server_ts": time.time()})
 
 
+@_locked
 def submit_validity_correction(signal_id: str, valid_sec: int, reason: str, path: str | None = None) -> dict:
     """Applies the fill window (valid_sec) to a CHANNEL-INGESTED signal that was ingested before the window existed (pre-competition rehearsal). Channel signals only; never overrides a validity the row already has."""
     p = path or PATH; recs = load(p)
@@ -173,6 +222,7 @@ def submit_validity_correction(signal_id: str, valid_sec: int, reason: str, path
     return L.append(p, {"type": "HUMAN_VALIDITY_CORRECTION", "id": f"V{n + 1:05d}", "signal_id": signal_id, "valid_sec": int(valid_sec), "reason": reason[:300], "server_ts": time.time()})
 
 
+@_locked
 def submit_status_correction(signal_id: str, status: str, reason: str, path: str | None = None) -> dict:
     """Voids a signal after the fact (the original row is never touched): status DATA_GAP (no quote around the execution instant) or INVALID_LEVELS (levels built from a stale entry)."""
     p = path or PATH; recs = load(p)

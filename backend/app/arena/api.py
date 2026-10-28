@@ -2,6 +2,8 @@
 a rate limit, a body-size limit, server-side participant naming and an append-only ledger. Reads market data read-only; no order path. Kill switch: ARENA_PUBLIC=0."""
 from __future__ import annotations
 
+import asyncio
+import functools
 import hashlib
 import hmac
 import json
@@ -168,6 +170,11 @@ def quote(request: Request, underlying: str, expiry: str, strike: float, option_
     return {"expiry": e, "last": CT.last_quote(u, e, float(strike), option_type.upper())}
 
 
+async def _off(fn, *a, **k):
+    """Run a blocking call (SQLite, ledger file, broker master) in a worker thread so the event loop keeps serving every other request while a slow disk or lock holds this one. Exceptions propagate unchanged."""
+    return await asyncio.get_running_loop().run_in_executor(None, functools.partial(fn, *a, **k))
+
+
 async def _submit_equity(c, body: dict, m: str):
     """NSE cash equity, intraday paper: BUY or SELL (short) of N shares. Same ledger, same rules (server timestamp, execution delay, ask-in / bid-out, session end 15:15), equity charges."""
     import asyncio
@@ -184,10 +191,10 @@ async def _submit_equity(c, body: dict, m: str):
     try: chk = await asyncio.get_running_loop().run_in_executor(None, lambda: EQ.check(v["underlying"], v["side"], v["entry"], v["entry_mode"], sl=v["sl"]))
     except Exception: chk = None                                                                  # data unavailable: do not block, report nothing
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable: " + "; ".join(chk["problems"]))
-    try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
+    try: rec = await _off(SU.submit, {**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _stale_all()
-    try: EQ.watch(rec["underlying"])                                                              # dense quotes for this symbol until the close
+    try: await _off(EQ.watch, rec["underlying"])                                                              # dense quotes for this symbol until the close
     except Exception: pass
     out = {k: rec.get(k) for k in ("id", "server_iso", "practice", "instrument", "side", "underlying", "entry_mode", "entry", "sl", "targets", "qty", "hash")}
     if chk: out["warnings"] = chk["problems"] + chk["warnings"]; out["last_quote"] = chk["last"]
@@ -208,7 +215,7 @@ async def submit(request: Request):
         try:
             from .. import sl_detector
             e_iso = SU.norm_expiry(str(body.get("expiry", ""))); entry = float(body.get("entry"))
-            pl = sl_detector.plan_for(str(body.get("underlying", "")).upper(), e_iso, float(body.get("strike")), str(body.get("option_type", "")).upper(), entry, time.time())
+            pl = await _off(sl_detector.plan_for, str(body.get("underlying", "")).upper(), e_iso, float(body.get("strike")), str(body.get("option_type", "")).upper(), entry, time.time())
             if not body.get("sl"): body["sl"] = pl["sl"]
             if not body.get("targets"): body["targets"] = [round(round((entry + k * (entry - float(body["sl"]))) / 0.05) * 0.05, 2) for k in (1, 2, 3)]
             body["note"] = (str(body.get("note", "")) + " | stop/targets set by the ZeroHero risk module (1R/2R/3R)").strip(" |")[:300]; body.setdefault("valid_sec", 900)
@@ -225,16 +232,16 @@ async def submit(request: Request):
     chk = None
     try:
         v = SU.validate({**body, "participant": c["name"]})
-        chk = CT.check(v["underlying"], v["expiry"], v["strike"], v["option_type"], v["entry"], v["entry_mode"], sl=v["sl"])
+        chk = await _off(CT.check, v["underlying"], v["expiry"], v["strike"], v["option_type"], v["entry"], v["entry_mode"], sl=v["sl"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     except Exception: chk = None                                                       # data unavailable: do not block, report nothing
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))
-    try: rec = SU.submit({**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
+    try: rec = await _off(SU.submit, {**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
     try:
         from ..histcap import priority
-        priority.request_watch(rec["underlying"], rec["expiry"], rec["strike"], rec["option_type"])         # dense quotes for this contract until the exchange closes
+        await _off(priority.request_watch, rec["underlying"], rec["expiry"], rec["strike"], rec["option_type"])         # dense quotes for this contract until the exchange closes
     except Exception:
         pass
     out = {k: rec[k] for k in ("id", "server_iso", "practice", "underlying", "expiry", "strike", "option_type", "entry_mode", "entry", "sl", "targets", "lots", "hash")}
@@ -253,7 +260,7 @@ async def amend(request: Request):
     m = mode(c)
     if m == "ENDED": raise HTTPException(409, "arena has ended")
     if m == "ARENA_LIVE":
-        sig = next((r for r in SU.load() if r.get("type") == "HUMAN_SIGNAL" and r["id"] == str(body.get("signal_id", ""))), None)
+        sig = await _off(lambda: next((r for r in SU.load() if r.get("type") == "HUMAN_SIGNAL" and r["id"] == str(body.get("signal_id", ""))), None))
         try:
             from .. import market_calendar as mc
             if sig and sig["underlying"] in EXCH and not mc.is_trading(EXCH[sig["underlying"]]): raise HTTPException(409, f"{EXCH[sig['underlying']]} is not open")
@@ -262,12 +269,14 @@ async def amend(request: Request):
         except Exception: pass
     if str(body.get("action", "")).upper() in ("AMEND_LOTS", "AMEND_ENTRY"):                              # the quantity / the entry can change only while the trade is NOT active
         sid = str(body.get("signal_id", ""))
-        sg = [x for x in R.human_signals(include_practice=True) if x["id"] == sid and x["participant"] == c["name"]]
+        def _state():                                                                                   # ledger read + settlement of this one signal: blocking, so off the event loop
+            sg_ = [x for x in R.human_signals(include_practice=True) if x["id"] == sid and x["participant"] == c["name"]]
+            return sg_, (R.run(sg_, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE).get(c["name"], {"results": []})["results"] if sg_ else None)
+        sg, rr = await _off(_state)
         if sg:
-            rr = R.run(sg, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE).get(c["name"], {"results": []})["results"]
             if rr and (rr[0].get("fill") is not None or rr[0].get("status") in ("SETTLED", "CANCELLED")): raise HTTPException(409, "the trade is already active (or closed): the quantity / entry cannot be changed any more")
             if str(body.get("action", "")).upper() == "AMEND_ENTRY" and sg[0].get("entry_mode") not in ("ABOVE", "LIMIT"): raise HTTPException(409, "only a waiting ABOVE / LIMIT order has an entry price to change")
-    try: rec = SU.submit_event(body, c["name"])
+    try: rec = await _off(SU.submit_event, body, c["name"])
     except SU.SubmissionError as e: raise HTTPException(422, str(e))
     _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
     return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "lots", "server_iso", "practice", "hash")}

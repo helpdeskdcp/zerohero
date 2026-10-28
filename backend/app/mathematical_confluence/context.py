@@ -108,9 +108,11 @@ def _prevday_from_histcap(symbol: str, before_date: str, *, provider=None) -> di
         with sqlite3.connect(f"file:{_HDB}?mode=ro", uri=True, timeout=5) as c:
             c.row_factory = sqlite3.Row
             for p in rc.providers(provider):
-                days = c.execute("SELECT DISTINCT session_date_ist FROM market_candles "
-                    "WHERE symbol=? AND source=? AND tf='5m' AND session_date_ist<? "
-                    "ORDER BY session_date_ist DESC", (symbol.upper(), rc.SOURCES[p]["candles"], before_date)).fetchall()
+                # Only the newest earlier session is used, so ask for exactly that: the old DISTINCT-and-sort of every session ever captured took 1.3-1.95 s per symbol (measured 2026-10-28)
+                # and is what 7 symbols x market-map paid on every cache miss. The index on (session_date_ist, symbol) is walked newest-first and stops at the first hit; the 30-day floor bounds the walk.
+                days = c.execute("SELECT session_date_ist FROM market_candles "
+                    "WHERE session_date_ist<? AND session_date_ist>=date(?, '-30 day') AND symbol=? AND source=? AND tf='5m' "
+                    "ORDER BY session_date_ist DESC LIMIT 1", (before_date, before_date, symbol.upper(), rc.SOURCES[p]["candles"])).fetchall()
                 if not days:
                     continue
                 data = rc.bars(c, symbol, days[0][0], tf="5m", provider=p, expiry=None,

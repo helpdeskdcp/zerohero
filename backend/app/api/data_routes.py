@@ -45,7 +45,8 @@ async def api_mark_price(req: MarkPriceRequest):
 
 @router.post("/api/trades/close")
 async def api_close_trade(req: CloseTradeRequest):
-    updated = close_trade(req.trade_id, req.exit_price)
+    from starlette.concurrency import run_in_threadpool                            # DB write off the event loop
+    updated = await run_in_threadpool(close_trade, req.trade_id, req.exit_price)
     if not updated:
         raise HTTPException(404, "trade not found")
     await runtime.manager.broadcast({"type": "trade_closed", "data": updated})

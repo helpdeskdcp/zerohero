@@ -2,8 +2,12 @@
 
 Why: `... WHERE symbol=? AND kind='OPTION' AND julianday(received_ts)<=julianday(?) ORDER BY julianday(received_ts) DESC LIMIT 1` cannot use any index on the time column, so SQLite reads EVERY row of the symbol and
 sorts them (260 s on 2026-10-27, run every 5 minutes by cron scans). Rows are only ever appended, so the integer primary key grows with time: a binary search on the PK finds the id where the cutoff falls
-(25 point lookups), and the query then scans only a bounded id window below it, widening it only if nothing qualifies. The qualifying predicate is unchanged, so the answer is the same row (ids may be a few
-microseconds out of time order between writer threads; that cannot move the chosen instant by more than that)."""
+(25 point lookups), and the query then scans only a bounded id window below it, widening it only if nothing qualifies. The qualifying predicate is unchanged.
+
+Ids are WRITE order and received_ts is when a capture cycle STARTED, so the two disagree by up to a cycle length: measured 2026-10-28 on 371k recent rows, received_ts trails id order by p99 525 s and max 6,891 s
+(slow afternoon cycles). Two helpers are therefore provably safe supersets (floor_id / ceil_id, margin MAX_LAG_SEC) and are what time-WINDOW queries use. newest_matching (newest row <= cutoff) searches id windows
+that end at the cutoff position: for a live cutoff that is the table end and the answer is exact; for a historical cutoff a row stamped just before the cutoff but written much later is not visible, which also
+matches what could have been known at that instant."""
 from __future__ import annotations
 
 import hashlib
@@ -13,6 +17,7 @@ import threading
 from datetime import datetime, timezone
 
 WINDOWS = (50_000, 400_000, 3_000_000)               # ids below the cutoff position, widening; nothing within ~3 M ids (about six days of capture) -> None (a chain that old is not a live chain)
+MAX_LAG_SEC = float(os.environ.get("HISTCAP_MAX_LAG_SEC", "10800"))   # a batch is stamped when its cycle STARTED and written when it ended: measured 2026-10-28 on 371k recent rows, received_ts trails id order by p99 525 s, max 6,891 s
 NEG_STATE = None                                       # path of the 'nothing found' watermark file (set lazily); tests override it
 
 
@@ -80,3 +85,44 @@ def newest_matching(conn, select: str, where: str, params: tuple, cutoff_iso: st
         if lo <= floor: break                                                # the window already reaches the known-empty part (or the first row)
     _neg_put(key, max(0, top - cap), base)                                   # nothing in (top - cap, base]: remember it (base = the highest id that existed, not the headroom)
     return None
+
+
+def floor_id(conn, start_epoch: float, *, cache: dict | None = None, key=None, table: str = "quote_snapshots") -> int:
+    """An id F such that EVERY row with received_ts >= start has an id greater than F (0 = no information), so `AND id > F` can be added to a time-window query without dropping a wanted row.
+    Why it holds: a row's id follows its WRITE order and received_ts <= write time <= received_ts + MAX_LAG_SEC. A row with received_ts <= start - MAX_LAG_SEC was therefore written before `start`, and every
+    wanted row (received_ts >= start) was written after `start`, so it has a larger id. Any such row will do, so the binary search on a not-quite-monotone column is safe (it only needs to return one).
+    The answer is cached per 5-minute bucket of `start` (conservative: the bucket start) so a polling screen pays for the search once per bucket. Relies on MAX_LAG_SEC bounding the real lag."""
+    bucket = int(start_epoch // 300) * 300; ck = (key, table, bucket)
+    if cache is not None and ck in cache: return cache[ck]
+    f = id_at_or_before(conn, datetime.fromtimestamp(bucket - MAX_LAG_SEC, tz=timezone.utc).isoformat(), table)
+    if cache is not None:
+        if len(cache) > 256: cache.clear()
+        cache[ck] = f
+    return f
+
+
+def ceil_id(conn, end_epoch: float, *, cache: dict | None = None, key=None, table: str = "quote_snapshots", column: str = "received_ts"):
+    """An id C such that EVERY row with received_ts <= end has an id <= C, or None when no row is stamped later than end + MAX_LAG_SEC (then no upper bound is needed: live queries).
+    Why it holds: a wanted row (received_ts <= end) was written no later than end + MAX_LAG_SEC; a row stamped AFTER end + MAX_LAG_SEC was written after that, so its id is larger. Any such row will do;
+    the binary search keeps the smallest one it probed. Cached per 5-minute bucket (rounded UP, conservative)."""
+    bucket = (int(end_epoch // 300) + 1) * 300; ck = (key, table, "ceil", bucket)
+    if cache is not None and ck in cache: return cache[ck]
+    keyts = _julian_str(datetime.fromtimestamp(bucket + MAX_LAG_SEC, tz=timezone.utc).isoformat())
+    mx = conn.execute(f"SELECT MAX(id) FROM {table}").fetchone()[0] or 0; lo, hi, best = 0, mx, None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        r = conn.execute(f"SELECT id, {column} FROM {table} WHERE id>=? ORDER BY id LIMIT 1", (mid,)).fetchone()
+        if r is None: hi = mid - 1; continue
+        rid, ts = r
+        if ts is not None and str(ts) > keyts: best = rid if best is None else min(best, rid); hi = mid - 1
+        else: lo = rid + 1
+    if cache is not None:
+        if len(cache) > 256: cache.clear()
+        cache[ck] = best
+    return best
+
+
+def db_key(conn) -> str:
+    """Cache key for a connection: the database file (connections are short-lived, the file is not)."""
+    try: return next((r[2] for r in conn.execute("PRAGMA database_list") if r[1] == "main"), "") or ""
+    except Exception: return ""

@@ -8,10 +8,20 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 from . import contracts as CT
+from ..histcap import id_window as ID
 from .settle import snap_expiry
 
 IST = timezone(timedelta(hours=5, minutes=30)); IST_S = 19800
 MCX = ("NATURALGAS", "CRUDEOIL", "GOLDM")
+
+
+_FLOORS: dict = {}
+
+
+def _floor(c, lo: float, path) -> int:
+    """Id floor for a chart poll: rows older than the first candle needed are never read (they are skipped in _candles anyway); see id_window.floor_id for why no wanted row can be lost."""
+    try: return ID.floor_id(c, lo, cache=_FLOORS, key=path or CT.DB)
+    except Exception: return 0                                                      # no information -> no extra filter (the old behaviour)
 
 
 def _iso(ts: float) -> str: return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -41,7 +51,7 @@ def premium_equity(symbol: str, tf: int = 1, since: float | None = None, now: fl
     lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
     c = CT._ro(path)
     try:
-        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND kind='EQUITY' AND ltp IS NOT NULL AND exch_ts>=?" + CT.NOT_FUTURE + " ORDER BY exch_ts", (symbol, _iso(day0 - 2 * 86400))).fetchall()
+        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND kind='EQUITY' AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts", (symbol, _iso(day0 - 2 * 86400), _floor(c, lo, path))).fetchall()
     finally: c.close()
     out["candles"] = _candles(rows, tf, lo)
     from . import equity as EQ
@@ -55,8 +65,8 @@ def premium(underlying: str, expiry_iso: str, strike: float, ot: str, tf: int = 
     lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
     c = CT._ro(path)
     try:
-        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL AND exch_ts>=?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
-                         (underlying, snap_expiry(expiry_iso), float(strike), ot, _iso(day0 - 2 * 86400))).fetchall()                       # the contract's (symbol, expiry, strike, type, exch_ts) index: a few thousand rows, never a table scan (heartbeat rows keep an OLD exch_ts, hence the 2-day lower bound)
+        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
+                         (underlying, snap_expiry(expiry_iso), float(strike), ot, _iso(day0 - 2 * 86400), _floor(c, lo, path))).fetchall()                       # the contract's (symbol, expiry, strike, type, exch_ts) index: a few thousand rows, never a table scan (heartbeat rows keep an OLD exch_ts, hence the 2-day lower bound)
     finally: c.close()
     # time axis = when OUR capture stored the price (heartbeat rows included): an illiquid contract whose exchange timestamp does not change still stands at that price, so its chart is continuous instead of 6 candles in 5 hours
     out["candles"] = _candles(rows, tf, lo)

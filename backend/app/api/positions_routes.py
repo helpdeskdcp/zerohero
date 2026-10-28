@@ -19,6 +19,8 @@ from .schemas import (
     TrackPositionRequest,
 )
 
+from starlette.concurrency import run_in_threadpool   # blocking DB / broker-helper calls inside async handlers run in a worker thread (a held db lock must not freeze the event loop)
+
 router = APIRouter()
 
 
@@ -74,7 +76,7 @@ async def api_track_position(req: TrackPositionRequest):
     tok = req.symboltoken
     exch = req.exchange
     if not tok:
-        meta = instruments.resolve(req.symbol)
+        meta = await run_in_threadpool(instruments.resolve, req.symbol)
         if meta:
             tok, exch = meta.get("symboltoken"), exch or meta.get("exchange")
     if not tok:
@@ -82,16 +84,16 @@ async def api_track_position(req: TrackPositionRequest):
 
     # de-dup: if a mirror for this contract already exists (manual or auto-synced),
     # update its levels instead of creating a second OPEN row.
-    existing = db.find_open_by_token(str(tok), strategy="MANUAL")
+    existing = await run_in_threadpool(db.find_open_by_token, str(tok), strategy="MANUAL")
     if existing:
-        db.update_trade(existing["trade_id"], {
+        await run_in_threadpool(db.update_trade, existing["trade_id"], {
             "target_1": target, "stop_loss": stop,
             "trailing_stop": trailing_stop or 0})
-        row = db.get_trade(existing["trade_id"])
+        row = await run_in_threadpool(db.get_trade, existing["trade_id"])
         await runtime.manager.broadcast({"type": "position_update", "data": row})
         return row
 
-    row = open_trade({
+    row = await run_in_threadpool(open_trade, {
         "signal_id": None,
         "market": exch or "", "underlying": req.symbol.upper(),
         "instrument": "OPTION" if req.option_type else "FUT",
@@ -129,7 +131,7 @@ def api_broker_positions():
 @router.post("/api/positions/levels")
 async def api_position_levels(req: LevelsRequest):
     """Set / update target, stop, trailing on a tracked (or auto-synced) position."""
-    t = db.get_trade(req.trade_id)
+    t = await run_in_threadpool(db.get_trade, req.trade_id)
     if not t or t.get("status") != "OPEN":
         raise HTTPException(404, "open position not found")
     direction, _entry, target, stop = _validate_monitor_levels(
@@ -146,8 +148,8 @@ async def api_position_levels(req: LevelsRequest):
         fields["trailing_stop"] = _nonnegative_finite(req.trailing_stop, "trailing_stop")
     if not fields:
         raise HTTPException(400, "nothing to set")
-    db.update_trade(req.trade_id, fields)
-    updated = db.get_trade(req.trade_id)
+    await run_in_threadpool(db.update_trade, req.trade_id, fields)
+    updated = await run_in_threadpool(db.get_trade, req.trade_id)
     await runtime.manager.broadcast({"type": "position_update", "data": updated})
     return updated
 
@@ -180,7 +182,7 @@ def api_combo_levels(req: ComboLevelsRequest):
 
 @router.post("/api/positions/untrack")
 async def api_untrack_position(req: CloseTradeRequest):
-    updated = close_trade(req.trade_id, req.exit_price, exit_reason="UNTRACKED")
+    updated = await run_in_threadpool(close_trade, req.trade_id, req.exit_price, exit_reason="UNTRACKED")
     if not updated:
         raise HTTPException(404, "position not found")
     await runtime.manager.broadcast({"type": "position_exit", "data": updated})

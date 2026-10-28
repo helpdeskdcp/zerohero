@@ -133,18 +133,37 @@ def bars(conn, symbol, session, *, tf, provider, expiry, as_of, kinds=("FUTURE",
     return out
 
 
+
+_ID_CACHE: dict = {}
+_SPOT_SQL = ("SELECT * FROM quote_snapshots WHERE {rng}symbol=? AND source=? AND kind=? "
+             "AND julianday(received_ts)<=julianday(?) "
+             "AND julianday(received_ts)>=julianday(?)-?/86400.0 "
+             "AND (exch_ts IS NULL OR julianday(exch_ts)<=julianday(?)) "
+             "ORDER BY julianday(received_ts) DESC, id DESC")
+
+
+def _spot_rows(conn, symbol, source, kind, as_of, max_age_sec, cutoff):
+    """The as-of quote window of one symbol. The exact time predicates are unchanged; an id range (see histcap.id_window: provably contains every wanted row) is added so SQLite filters on the row id
+    inside the index and never reads the wide table rows of the symbol's whole history (measured 2026-10-28: 9.6 / 3.1 / 15.1 s for NIFTY / SENSEX / NATURALGAS on a cold cache, ~0.00 s with the range).
+    Any problem computing the range (a connection that cannot answer, a view) falls back to the original unbounded query."""
+    args = (symbol.upper(), source, kind, as_of, as_of, max_age_sec, as_of)
+    try:
+        from . import id_window as ID
+        key = ID.db_key(conn); end = cutoff.timestamp()
+        lo = ID.floor_id(conn, end - float(max_age_sec), cache=_ID_CACHE, key=key); hi = ID.ceil_id(conn, end, cache=_ID_CACHE, key=key)
+        rng = "id>%d AND " % lo + ("id<=%d AND " % hi if hi is not None else "")
+        return conn.execute(_SPOT_SQL.format(rng=rng), args).fetchall()
+    except Exception:
+        return conn.execute(_SPOT_SQL.format(rng=""), args).fetchall()
+
+
 def spot(conn, symbol, *, provider, as_of, max_age_sec):
     out = result(symbol, provider, as_of)
     cutoff = instant(as_of)
     for p in providers(provider):
         source = SOURCES[p]["quotes"]
         for kind in ("INDEX", "FUTURE"):
-            rows = conn.execute("SELECT * FROM quote_snapshots WHERE symbol=? AND source=? AND kind=? "
-                "AND julianday(received_ts)<=julianday(?) "
-                "AND julianday(received_ts)>=julianday(?)-?/86400.0 "
-                "AND (exch_ts IS NULL OR julianday(exch_ts)<=julianday(?)) "
-                "ORDER BY julianday(received_ts) DESC, id DESC",
-                (symbol.upper(), source, kind, as_of, as_of, max_age_sec, as_of)).fetchall()
+            rows = _spot_rows(conn, symbol, source, kind, as_of, max_age_sec, cutoff)
             valid = []
             for r in rows:
                 if not finite(r["ltp"], positive=True):
