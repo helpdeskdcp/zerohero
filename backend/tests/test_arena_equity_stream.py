@@ -24,6 +24,7 @@ def fresh(monkeypatch):
     monkeypatch.setattr(EQ, "_idx", None); EQ._tok_cache.clear() if hasattr(EQ, "_tok_cache") else None
     from app.histcap import equity_master as EM; EM._tok_cache.clear(); EQ._want.clear(); EQ._lq_cache.clear()
     monkeypatch.setattr(EQ, "_NIFTY50_CSV", "/nonexistent.csv")
+    monkeypatch.setattr(EQ, "_nse_open", lambda: False)                                                  # never depend on the wall clock or the network: the failover tests switch it on explicitly
 
 
 def test_search_prefix_first_then_contains_and_only_cash_equity():

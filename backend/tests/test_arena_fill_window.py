@@ -68,13 +68,13 @@ def test_captured_is_stale_while_revalidate(monkeypatch, tmp_path):
     monkeypatch.setattr(CT, "_CACHE_FILE", str(tmp_path / "c.json")); monkeypatch.setattr(CT, "_file_loaded", [True]); CT._cache.clear(); CT._refreshing.clear()
     n = []; gate = threading.Event()
     def comp(u, day=None, path=None):
-        n.append(1); gate.wait(2); out = {"day": "d", "expiries": {"2026-10-27": {"strikes": [float(len(n))], "raw": "27OCT2026"}}}; CT._cache[(u, day, path)] = (time.time(), out); return out
+        n.append(1); gate.wait(2); out = {"day": "d", "expiries": {"2099-10-27": {"strikes": [float(len(n))], "raw": "27OCT2026"}}}; CT._cache[(u, day, path)] = (time.time(), out); return out
     monkeypatch.setattr(CT, "_compute_captured", comp)
-    gate.set(); first = CT.captured("NIFTY"); assert first["expiries"]["2026-10-27"]["strikes"] == [1.0]                                     # very first call computes inline
+    gate.set(); first = CT.captured("NIFTY"); assert first["expiries"]["2099-10-27"]["strikes"] == [1.0]                                     # very first call computes inline
     CT._cache[("NIFTY", None, None)] = (time.time() - 500, first); gate.clear(); t = time.time()
-    stale = CT.captured("NIFTY"); assert stale is first and time.time() - t < 0.5                                                          # stale answer returned at once
-    stale2 = CT.captured("NIFTY"); assert stale2 is first and len(n) == 2                                                                  # one background refresher only
-    gate.set(); time.sleep(0.3); assert CT.captured("NIFTY")["expiries"]["2026-10-27"]["strikes"] == [2.0]                                  # refreshed value arrives
+    stale = CT.captured("NIFTY"); assert stale == first and time.time() - t < 0.5                                                          # stale answer returned at once
+    stale2 = CT.captured("NIFTY"); assert stale2 == first and len(n) == 2                                                                  # one background refresher only
+    gate.set(); time.sleep(0.3); assert CT.captured("NIFTY")["expiries"]["2099-10-27"]["strikes"] == [2.0]                                  # refreshed value arrives
 
 
 def test_cutover_moves_the_window_only_on_or_after_the_official_start(tmp_path):

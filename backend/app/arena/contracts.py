@@ -7,6 +7,7 @@ import os
 import sqlite3
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 
 from .settle import FUTURE_STAMP_SEC
 from .submit import norm_expiry
@@ -64,6 +65,17 @@ _CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.pa
 _refreshing: set = set(); _rlock = threading.Lock(); _file_loaded = [False]
 
 
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def live_expiries(cap: dict, today: str | None = None) -> dict:
+    """Only expiries that can still be traded: on or after TODAY's IST date. The captured list is built from the newest quote rows, which after a night / weekend / expiry still belong to the previous
+    session, so yesterday's expiry (2026-10-27 on 2026-10-28) used to be listed first and became the default. An expiry dated today stays (it trades until the close). Sorted ascending, so the
+    first entry is always the current expiry."""
+    t = today or datetime.now(_IST).strftime("%Y-%m-%d")
+    return {**cap, "expiries": {e: v for e, v in sorted(cap.get("expiries", {}).items()) if e >= t}}
+
+
 def _load_file() -> None:
     """Cold start: the previous answer (a few minutes old at worst) is served at once while a fresh one is computed in the background."""
     if _file_loaded[0]: return
@@ -105,10 +117,10 @@ def captured(underlying: str, day: str | None = None, path: str | None = None) -
                 start = key not in _refreshing
                 if start: _refreshing.add(key)
             if start: threading.Thread(target=_refresh, args=(key,), daemon=True).start()
-        return hit[1]
+        return live_expiries(hit[1]) if day is None else hit[1]
     out = _compute_captured(underlying, day, path)
     if path is None and day is None: _persist()
-    return out
+    return live_expiries(out) if day is None else out
 
 
 def captured_fresh(underlying: str, day: str | None = None, path: str | None = None, max_age: float = 30.0) -> dict:
@@ -117,10 +129,10 @@ def captured_fresh(underlying: str, day: str | None = None, path: str | None = N
     key = (underlying, day, path)
     if path is None: _load_file()
     hit = _cache.get(key)
-    if hit and time.time() - hit[0] < max_age: return hit[1]
+    if hit and time.time() - hit[0] < max_age: return live_expiries(hit[1]) if day is None else hit[1]
     out = _compute_captured(underlying, day, path)
     if path is None and day is None: _persist()
-    return out
+    return live_expiries(out) if day is None else out
 
 
 def last_quote(underlying: str, expiry_iso: str, strike: float, ot: str, day: str | None = None, path: str | None = None) -> dict | None:

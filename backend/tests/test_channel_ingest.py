@@ -93,11 +93,11 @@ def test_channel_signals_carry_the_profile_default_quantity(env, monkeypatch, tm
 
 
 def test_captured_fresh_bypasses_a_stale_cache_after_an_expiry_roll(monkeypatch):
-    """2026-10-23: the first Mohit post after the SENSEX expiry roll read yesterday's cached expiry list and was dropped as NO_CAPTURED_EXPIRY."""
+    """2099-10-23: the first Mohit post after the SENSEX expiry roll read yesterday's cached expiry list and was dropped as NO_CAPTURED_EXPIRY."""
     import time
     from app.arena import contracts as CT_
-    stale = {"day": "2026-10-22", "expiries": {"2026-10-22": {"strikes": [73600.0], "raw": "22OCT2026"}}}
-    new = {"day": "2026-10-23", "expiries": {"2026-10-29": {"strikes": [73600.0], "raw": "29OCT2026"}}}
+    stale = {"day": "2099-10-22", "expiries": {"2099-10-22": {"strikes": [73600.0], "raw": "22OCT2026"}}}
+    new = {"day": "2099-10-23", "expiries": {"2099-10-29": {"strikes": [73600.0], "raw": "29OCT2026"}}}
     key = ("ZZTEST", None, "/nonexistent-test-path"); calls = []
 
     def fake_compute(u, d=None, p=None):
