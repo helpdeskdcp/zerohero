@@ -23,6 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db, runtime
+from .ws_auth import query_token_ok as _ws_query_token_ok   # constant-time token comparison (HTTP gate and both WebSockets)
 
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = APP_ROOT / "frontend"
@@ -134,7 +135,7 @@ class _AuthGateMiddleware:
         from .api.dhan_routes import is_auth_exempt_path  # local: avoids reordering the file's route-module imports
         if path != "/api/health" and not is_auth_exempt_path(path):
             basic = request.headers.get("authorization", "")
-            token_ok = API_TOKEN and _token_from(request) == API_TOKEN
+            token_ok = _ws_query_token_ok(_token_from(request), API_TOKEN)      # constant-time comparison (was a plain ==)
             if not token_ok and not (basic.lower().startswith("basic ") and _basic_ok(basic)):
                 response = JSONResponse({"detail": "unauthorized"}, status_code=401,
                                         headers={"WWW-Authenticate": 'Basic realm="Chanakya AI"'})
@@ -634,7 +635,7 @@ app.router.lifespan_context = _lifespan
 @app.websocket("/ws/platform")
 async def ws_platform(websocket: WebSocket):
     auth = websocket.headers.get("authorization", "")
-    if not ((API_TOKEN and websocket.query_params.get("token") == API_TOKEN)
+    if not (_ws_query_token_ok(websocket.query_params.get("token"), API_TOKEN)
             or (auth.lower().startswith("basic ") and _basic_ok(auth))):
         await websocket.close(code=1008)
         return
@@ -651,7 +652,7 @@ async def ws_platform(websocket: WebSocket):
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
     auth = websocket.headers.get("authorization", "")
-    if not ((API_TOKEN and websocket.query_params.get("token") == API_TOKEN)
+    if not (_ws_query_token_ok(websocket.query_params.get("token"), API_TOKEN)
             or (auth.lower().startswith("basic ") and _basic_ok(auth))):
         await websocket.close(code=1008)
         return
