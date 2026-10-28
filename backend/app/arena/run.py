@@ -41,7 +41,7 @@ def human_signals(path: str | None = None, start: str | None = None, end: str | 
     scorr = {r["signal_id"]: r for r in allrecs if r.get("type") == "HUMAN_STATUS_CORRECTION"}                    # voided after the fact (DATA_GAP / INVALID_LEVELS), reason on the ledger
     corr = {r["signal_id"]: r["effective_ts"] for r in allrecs if r.get("type") == "HUMAN_TS_CORRECTION"}         # earlier-only latency corrections for channel-ingested signals
     for r in allrecs:
-        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct", "lots") if k in r} | {"t": r["server_ts"]})
+        if r.get("type") == "HUMAN_EVENT": evs.setdefault(r["signal_id"], []).append({k: r[k] for k in ("action", "sl", "targets", "trail_points", "trail_pct", "lots", "entry", "entry_hi") if k in r} | {"t": r["server_ts"]})
     rows = [r for r in allrecs if r.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and (include_practice or (start is not None or end is not None) or not r.get("practice")) and r["id"] not in (exclude_ids or set()) and (not start or day(r) >= start) and (not end or day(r) <= end)]
     return [{"id": r["id"], "participant": pmap.get(r["id"], r["participant"]), "underlying": r["underlying"], "expiry": r["expiry"], "strike": r["strike"], "option_type": r["option_type"], "entry_mode": r["entry_mode"],
              "entry": r["entry"], "entry_hi": r.get("entry_hi") or r["entry"], "sl": r["sl"], "targets": r["targets"], "t": min(r["server_ts"], corr.get(r["id"], r["server_ts"])), "events": evs.get(r["id"], []), **({"valid_sec": r.get("valid_sec") or vcorr[r["id"]]} if (r.get("valid_sec") or r["id"] in vcorr) else {}), "lots": int(r.get("lots") or 1)} | ({"instrument": "EQUITY", "side": r.get("side", "BUY")} if r.get("instrument") == "EQUITY" else {}) | ({"void_status": scorr[r["id"]]["status"], "void_reason": scorr[r["id"]]["reason"]} if r["id"] in scorr else {}) for r in rows]
@@ -73,7 +73,10 @@ def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", c
                 if cache is not None: cache[hk] = (time.time(), hs)
             spread_cache[s["underlying"]] = hs
         snaps = S.load_snaps(s["underlying"], s["expiry"], s["strike"], s["option_type"], day, market_db, since=s["t"] - 60, instrument=s.get("instrument", "OPTION"))
-        r = S.settle(s, snaps, half_spread=hs["half_spread"], policy=policy); r["spread_source"] = hs["source"]
+        try: r = S.settle(s, snaps, half_spread=hs["half_spread"], policy=policy)
+        except Exception as ex:                                                                         # one malformed signal / event must never take every participant's results down with it
+            r = {"id": s.get("id"), "participant": s.get("participant"), "underlying": s.get("underlying"), "strike": s.get("strike"), "type": s.get("option_type"), "t": s.get("t"), "entry_mode": s.get("entry_mode"), "status": "NO_DATA:settlement_error:" + type(ex).__name__}
+        r["spread_source"] = hs["source"]
         if key is not None and _is_final(r, day): cache[key] = r
         by_part.setdefault(s["participant"], []).append(r)
     return {p: {"summary": S.summarize(rs, capital), "results": rs} for p, rs in by_part.items()} | {"_spread_models": spread_cache}

@@ -142,7 +142,7 @@ def _apply(ev: dict, st: dict) -> None:
     elif a == "AMEND_LOTS":
         if not st.get("filled"): st["lots"] = max(1, int(ev["lots"]))                                              # once the trade is active the quantity is frozen: the event is ignored
     elif a == "AMEND_ENTRY":
-        if not st.get("filled"):                                                                                   # only while the order is still waiting (ABOVE / LIMIT); ignored once active
+        if not st.get("filled") and ev.get("entry") is not None:                                           # a malformed event (no price) is ignored, never a crash                                                                                   # only while the order is still waiting (ABOVE / LIMIT); ignored once active
             st["entry"] = float(ev["entry"]); st["entry_hi"] = float(ev["entry_hi"]) if ev.get("entry_hi") else None
     elif a == "CANCEL" or a == "EXIT_NOW": st[a] = True
 
