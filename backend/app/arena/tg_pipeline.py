@@ -32,6 +32,7 @@ def capture(journal, chat_id, message, *, source: str, edited: bool = False, sen
 def row_to_post(row: dict) -> dict:
     p = {"chat": {"id": row["chat_id"], "type": "channel"}, "message_id": row["message_id"], "date": int(row["source_ts"] or row["received_at"]), "text": row["text"] or ""}
     if row.get("reply_to"): p["reply_to_message"] = {"message_id": row["reply_to"]}
+    if row.get("edit_version"): p["edit_date"] = int(row["edit_version"])                    # an edit row's edit_version IS the edit time (see capture)
     return p
 
 
@@ -51,6 +52,31 @@ def process_pending(journal, state: dict, *, process_fn, participant_for, defaul
                 except Exception: pass
         done += 1
     return done
+
+
+def process_deletes(journal, state: dict, *, delete_fn, participant_for, default_participant: str, save_state, alert=None, batch: int = 50, now: float | None = None) -> int:
+    """Deleted channel posts waiting for the worker -> channel_ingest.handle_delete (cancel an unfilled order / drop a post still waiting for data). Retried, parked as FAILED after MAX_ATTEMPTS."""
+    done = 0
+    for row in journal.pending_deletes(batch):
+        try:
+            out = delete_fn(row["chat_id"], row["message_id"], state, participant=participant_for(row["chat_id"], default_participant), now=row["detected_at"], alert=alert)
+            save_state(); journal.mark_delete_done(row["id"], str((out or {}).get("outcome", "?")), (out or {}).get("signal_id"))
+        except Exception as e:
+            if journal.mark_delete_error(row["id"], f"{type(e).__name__}: {e}") == "FAILED" and alert:
+                try: alert(f"deletion of post {row['chat_id']}:{row['message_id']} could not be processed ({type(e).__name__}); parked as FAILED in the capture journal.")
+                except Exception: pass
+        done += 1
+    return done
+
+
+async def detect_deletions(client, journal, cid, *, fetch_ids, now: float | None = None, window: float = 6 * 3600.0) -> int:
+    """Safety net for a missed deletion event: ask the source whether the posts that became signals in the last `window` seconds still exist; one that is gone is journaled as a deletion (source=reconcile)."""
+    t = now or time.time(); rows = journal.recent_signal_rows(cid, t - window, 100); found = 0
+    if not rows: return 0
+    alive = await fetch_ids(client, cid, [r["message_id"] for r in rows])                     # -> the set of message ids that still exist
+    for r in rows:
+        if r["message_id"] not in alive and journal.record_delete(str(cid), r["message_id"], "reconcile", now=t): found += 1
+    return found
 
 
 def _gap_for(journal, chat_id, kind):
@@ -126,4 +152,5 @@ def health(summary: dict, status: dict, now: float | None = None, *, poll_stale_
     if started and t - float(started) > reconcile_stale_s and (not lr or t - lr > reconcile_stale_s): deg.append("reconciliation has not run for over 5 min")
     if summary.get("unrecoverable_gaps"): req.append(f"{summary['unrecoverable_gaps']} unrecoverable gap(s) not yet acknowledged")
     if summary.get("dead_letter"): req.append(f"{summary['dead_letter']} dead-letter post(s) (could not be processed)")
+    if summary.get("deletes_failed"): req.append(f"{summary['deletes_failed']} deletion(s) could not be processed")
     return {"state": "RECOVERY_REQUIRED" if req else "DEGRADED" if deg else "LIVE", "reasons": req + deg}

@@ -57,6 +57,12 @@ CLAIM_LIKE = re.compile(r"\b(GAINING|PROFIT|TARGET\s*HIT|ALL\s*TARGET|FULL\s*HIT
 _counts: dict = {}
 
 
+async def fetch_ids(client, cid, ids: list) -> set:
+    """Which of these message ids still exist in the channel (a missing id comes back as None / MessageEmpty). An error raises: it must never be mistaken for a deletion."""
+    got = await client.get_messages(cid, ids=list(ids))
+    return {m.id for m in (got or []) if m is not None and m.__class__.__name__ != "MessageEmpty" and getattr(m, "id", None)}
+
+
 def source_ids() -> set[str]:
     return {x.strip() for x in (os.environ.get("TG_SOURCE_CHANNEL_IDS") or "").split(",") if x.strip()}
 
@@ -83,6 +89,15 @@ def sender_allowed(chat_id, sender_id) -> bool:
 def journaling_enabled() -> bool:
     """TG_JOURNAL=0 switches back to the old direct path (parse + submit inside the Telegram callback) without a code change."""
     return (os.environ.get("TG_JOURNAL") or "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def edits_enabled() -> bool:
+    """TG_EDITS=0 restores the old behaviour (an edit is journaled and logged, never applied)."""
+    return os.environ.get("TG_EDITS", "1") != "0"
+
+
+def deletes_enabled() -> bool:
+    return os.environ.get("TG_DELETES", "1") != "0"
 
 
 def submit_enabled() -> bool:
@@ -116,12 +131,17 @@ def to_post(chat_id, message) -> dict:
     p = {"chat": {"id": chat_id, "type": "channel"}, "message_id": message.id, "date": int(message.date.timestamp()), "text": message.message or ""}
     rt = getattr(message, "reply_to", None)
     if rt is not None and getattr(rt, "reply_to_msg_id", None): p["reply_to_message"] = {"message_id": rt.reply_to_msg_id}
+    ed = getattr(message, "edit_date", None)
+    if ed is not None: p["edit_date"] = int(ed.timestamp())
     return p
 
 
 def process(post: dict, state: dict, *, edited: bool = False, participant: str, mode_fn, now: float | None = None, alert=None, **kw) -> dict:
     """Pure-ish core (testable without Telegram). Returns the outcome dict."""
     text = post.get("text") or ""
+    if edited and edits_enabled():
+        out = CI.handle_edit(post, state, participant=participant, mode_fn=mode_fn, now=now, dry_run=not submit_enabled(), alert=alert if alert is not None else send_alert, **kw)
+        _bump(out["outcome"].lower()); return out
     if edited:
         rec = {"outcome": "EDIT_IGNORED", "chat_id": str(post["chat"]["id"]), "message_id": post.get("message_id"), "text": text[:1500]}
         CI._log(rec, kw.get("log", CI.LOG)); _quarantine({**rec, "why": "edited post, never re-submitted"}); _bump("edit_ignored"); return rec
@@ -219,6 +239,9 @@ async def run() -> None:                                                       #
             try:
                 n = await loop.run_in_executor(None, lambda: TP.process_pending(journal, state, process_fn=process_logged, participant_for=participant_for, default_participant=c["name"], mode_fn=mode_fn,
                                                                                     save_state=lambda: CI.save_json(CI.STATE, state), alert=send_alert))
+                if deletes_enabled():
+                    n += await loop.run_in_executor(None, lambda: TP.process_deletes(journal, state, delete_fn=CI.handle_delete, participant_for=participant_for, default_participant=c["name"],
+                                                                                      save_state=lambda: CI.save_json(CI.STATE, state), alert=send_alert))
                 if state.get("pending"):
                     await loop.run_in_executor(None, lambda: (retry_pending(state, mode_fn=mode_fn, default_participant=c["name"]), CI.save_json(CI.STATE, state)))
             except Exception as e:
@@ -264,7 +287,9 @@ async def run() -> None:                                                       #
         await TP.run_catch_up(client, journal, ctx=ctx)
         while True:
             try:
-                for cid in chats: await TP.reconcile_channel(client, journal, cid, fetch=fetch_new)
+                for cid in chats:
+                    await TP.reconcile_channel(client, journal, cid, fetch=fetch_new)
+                    if deletes_enabled() and await TP.detect_deletions(client, journal, cid, fetch_ids=fetch_ids): wake.set()
                 journal.kv_set("last_reconcile_at", time.time())
             except FloodWaitError as e:
                 _bump("flood_wait"); await asyncio.sleep(min(int(e.seconds) + 5, 3600))
@@ -286,8 +311,23 @@ async def run() -> None:                                                       #
 
     async def on_new(ev): handle(ev, False)                                              # Telethon awaits the callback: a plain lambda returned None -> "TypeError: NoneType can't be used in 'await'" on every pushed event
     async def on_edit(ev): handle(ev, True)
+
+    async def on_delete(ev):
+        """Telegram says these message ids were deleted: one cheap journal insert per id, the worker does the rest. A deletion event of a channel carries the channel id; if it does not, the id is matched against every watched channel's journal."""
+        if journal is None or not deletes_enabled(): return
+        try:
+            cids = [str(ev.chat_id)] if getattr(ev, "chat_id", None) is not None else [str(x) for x in ids]
+            for cid in cids:
+                if cid not in {str(x) for x in ids}: continue
+                for mid in (ev.deleted_ids or []):
+                    if getattr(ev, "chat_id", None) is None and not journal.has(cid, mid, 0): continue
+                    if journal.record_delete(cid, mid, "event"): wake.set()
+            write_status(connected=True, last_event=time.time())
+        except Exception as e:
+            _bump("journal_errors"); log.exception("delete journal write failed (%s)", type(e).__name__)
     client.add_event_handler(on_new, events.NewMessage(chats=chats))
     client.add_event_handler(on_edit, events.MessageEdited(chats=chats))
+    client.add_event_handler(on_delete, events.MessageDeleted())                           # deletions carry no sender / chat filter reliably: on_delete filters by the journal itself
     worker = asyncio.ensure_future(process_loop()) if journal is not None else None            # runs for the life of the process: captured posts are processed even while Telegram is down
     backoff = 5; tasks: list = []
     while True:

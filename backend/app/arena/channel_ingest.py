@@ -89,7 +89,7 @@ def handle_post(post: dict, state: dict, *, participant: str, mode_fn, ledger: s
     a post read more than STALE_SEC after it was posted is logged and NOT submitted.
     A RETRYABLE outcome (the contract data is not captured yet) is not final: the post waits in state['pending'] and is retried (retry=True) until it is STALE_SEC old; only the first attempt and the
     final outcome are logged. `alert(text)` is called when a signal-like post ends up dropped, and once when a retried post is finally submitted."""
-    chat = str(post["chat"]["id"]); mid = post.get("message_id"); key = f"{chat}:{mid}"
+    chat = str(post["chat"]["id"]); mid = post.get("message_id"); key = post.get("_key") or f"{chat}:{mid}"                  # _key: a post that first became a signal through an EDIT is keyed per edit version
     t_recv = now or time.time(); text = post.get("text") or post.get("caption") or ""
     t = min(float(post["date"]), t_recv) if (use_post_time and post.get("date")) else t_recv
     stale = bool(use_post_time and t_recv - t > STALE_SEC)
@@ -166,6 +166,7 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
                         path=ledger, now=t, practice=not scored)
     except SU.SubmissionError as e: return {"outcome": "REJECTED", "reason": str(e), "parsed": s}
     state["by_msg"][base["key"]] = rec["id"]; state["last_by_chat"][base["chat_id"]] = rec["id"]
+    if post.get("_alias"): state["by_msg"][post["_alias"]] = rec["id"]                      # later edits / a deletion of the ORIGINAL post id find this signal
     try:                                                                                      # dense (~3 s) quotes for this contract until the exchange closes, so its fill/exit can be resolved precisely
         from ..histcap import priority
         priority.request_watch(und, exp, s["strike"], s["option_type"])
@@ -178,6 +179,100 @@ def _decide(post, state, base, text, t, participant, mode_fn, ledger, db_path, d
         except Exception:
             pass
     return {"outcome": "SUBMITTED", "signal_id": rec["id"], "expiry": exp, "practice": not scored, "warnings": chk["warnings"]}
+
+
+EDITS_KEEP = 5000
+
+
+def _levels(recs: list, sig: dict) -> dict:
+    """The entry / stop / targets in force for a signal: the submitted values with every earlier management event applied in order."""
+    cur = {"entry": sig.get("entry"), "sl": sig.get("sl"), "targets": sorted(sig.get("targets") or [])}
+    for r in recs:
+        if r.get("type") != "HUMAN_EVENT" or r.get("signal_id") != sig["id"]: continue
+        a = r.get("action")
+        if a == "AMEND_SL" and r.get("sl") is not None: cur["sl"] = float(r["sl"])
+        elif a == "AMEND_TARGETS" and r.get("targets"): cur["targets"] = sorted(r["targets"])
+        elif a == "AMEND_ENTRY" and r.get("entry") is not None: cur["entry"] = float(r["entry"])
+    return cur
+
+
+def handle_edit(post: dict, state: dict, *, participant: str, mode_fn, ledger: str | None = None, log: str = LOG, db_path: str | None = None, now: float | None = None, dry_run: bool = False, alert=None) -> dict:
+    """An EDITED channel post (post["edit_date"] = when the edit was made). Rules, all prospective (an edit can never rewrite what the market already did):
+      * the original became a ledger signal and the edit names the SAME contract -> the changed stop / targets / entry become AMEND_SL / AMEND_TARGETS / AMEND_ENTRY events stamped at the EDIT time
+        (settlement applies them after the usual execution delay; an entry change is ignored once the order has filled, exactly like a participant's own amendment);
+      * the edit names a DIFFERENT contract -> nothing is applied (a different trade must be a new post) and the owner is alerted;
+      * the original never became a signal (not a signal, dropped, still waiting for data) and the edit parses as one -> it is a NEW signal stamped at the EDIT time, never backdated to the original post;
+      * an edit read more than STALE_SEC after it was made is logged and not applied."""
+    chat = str(post["chat"]["id"]); mid = post.get("message_id"); key = f"{chat}:{mid}"; t_recv = now or time.time()
+    ed = float(post.get("edit_date") or t_recv); t_edit = min(ed, t_recv); ekey = f"{key}:e{int(ed)}"; text = post.get("text") or ""
+    base = {"key": ekey, "chat_id": chat, "message_id": mid, "edited": True, "edit_iso": datetime.fromtimestamp(t_edit, tz=timezone.utc).isoformat(), "latency_sec": round(t_recv - t_edit, 1), "text": text[:1500]}
+    seen = state.setdefault("edits_seen", {})
+    if ekey in seen: return {"outcome": "DUPLICATE", **base}
+    out = _decide_edit(post, state, base, key, ekey, text, t_edit, t_recv, participant, mode_fn, ledger, db_path, dry_run, alert)
+    if not out.get("retry_scheduled"):
+        seen[ekey] = out["outcome"]
+        while len(seen) > EDITS_KEEP: seen.pop(next(iter(seen)))
+    _log({**base, **out}, log)
+    if alert and not dry_run and out["outcome"] in ("EDIT_CONTRACT_CHANGED", "EDIT_PARTIAL", "EDIT_REJECTED"):
+        try: alert(f"Edited channel post {chat}:{mid} NOT fully applied ({out['outcome']}): {out.get('reason') or out.get('rejected') or ''}. The original signal {out.get('signal_id') or ''} stays as first posted; a different trade needs a new post.")
+        except Exception: pass
+    return {**base, **out}
+
+
+def _decide_edit(post, state, base, key, ekey, text, t_edit, t_recv, participant, mode_fn, ledger, db_path, dry_run, alert) -> dict:
+    r = CP.parse_signal(text)
+    if not r["ok"]: return {"outcome": "EDIT_NOT_A_SIGNAL", "reason": r["reason"]}
+    s = r["signal"]
+    if not s["supported"]: return {"outcome": "UNSUPPORTED_INSTRUMENT", "underlying": s["underlying"]}
+    if t_recv - t_edit > STALE_SEC: return {"outcome": "EDIT_STALE_NOT_APPLIED", "underlying": s["underlying"]}
+    sid = state.setdefault("by_msg", {}).get(key)
+    if not sid:                                                                                # the original is not in the ledger: this edit is a new signal, stamped when the edit was made
+        state.setdefault("pending", {}).pop(key, None)
+        p2 = {**{k: v for k, v in post.items() if k != "edit_date"}, "date": int(t_edit), "_key": ekey, "_alias": key}
+        out = handle_post(p2, state, participant=participant, mode_fn=mode_fn, ledger=ledger, log=os.devnull, db_path=db_path, now=t_recv, dry_run=dry_run, use_post_time=True, alert=alert)
+        return {**{k: v for k, v in out.items() if k not in base}, "from_edit": True}
+    recs = SU.load(ledger); sig = next((x for x in recs if x.get("type", "HUMAN_SIGNAL") == "HUMAN_SIGNAL" and x["id"] == sid), None)
+    if sig is None: return {"outcome": "EDIT_NO_TARGET", "signal_id": sid}
+    hint = s.get("expiry_hint"); exp = str(sig.get("expiry") or "")
+    same = (s["underlying"] == sig.get("underlying") and float(s["strike"]) == float(sig.get("strike")) and s["option_type"] == sig.get("option_type")
+            and not (hint and exp and (int(exp[5:7]) != hint["month"] or (hint.get("day") is not None and int(exp[8:10]) != hint["day"]))))
+    if not same: return {"outcome": "EDIT_CONTRACT_CHANGED", "signal_id": sid, "reason": f"edit names {s['underlying']} {s['strike']:g} {s['option_type']}, the signal is {sig.get('underlying')} {float(sig.get('strike')):g} {sig.get('option_type')}"}
+    cur = _levels(recs, sig); evs = []
+    if s.get("sl") is not None and abs(float(s["sl"]) - float(cur["sl"] or 0)) > 1e-9: evs.append({"action": "AMEND_SL", "sl": s["sl"]})
+    if s.get("targets") and sorted(float(x) for x in s["targets"]) != [float(x) for x in cur["targets"]]: evs.append({"action": "AMEND_TARGETS", "targets": s["targets"]})
+    if abs(float(s["entry"]) - float(cur["entry"] or 0)) > 1e-9:
+        hi = s["entry_range"][1] if (s["entry_mode"] == "ABOVE" and s["entry_range"][1] > s["entry"]) else None
+        evs.append({"action": "AMEND_ENTRY", "entry": s["entry"], **({"entry_hi": hi} if hi else {})})
+    if not evs: return {"outcome": "EDIT_NO_CHANGE", "signal_id": sid}
+    if dry_run: return {"outcome": "WOULD_AMEND", "signal_id": sid, "actions": [e["action"] for e in evs]}
+    t = max(t_edit, float(sig.get("server_ts") or 0)); ok, bad = [], []
+    for e in evs:
+        try: ok.append(SU.submit_event({**e, "signal_id": sid, "note": "channel: post edited"}, participant, path=ledger, now=t)["id"])
+        except SU.SubmissionError as ex: bad.append(f"{e['action']}: {ex}")
+    if bad: return {"outcome": "EDIT_PARTIAL" if ok else "EDIT_REJECTED", "signal_id": sid, "event_ids": ok, "rejected": bad}
+    return {"outcome": "EDIT_APPLIED", "signal_id": sid, "event_ids": ok, "actions": [e["action"] for e in evs]}
+
+
+def handle_delete(chat, message_id, state: dict, *, participant: str, ledger: str | None = None, log: str = LOG, now: float | None = None, dry_run: bool = False, alert=None) -> dict:
+    """A channel post was deleted. A signal still waiting for data is dropped and never submitted. A submitted signal gets a CANCEL event at the detection time: it cancels an order that has not filled yet and has NO effect
+    on a filled trade (settlement only honours CANCEL before the fill), so deleting a losing post can never erase the trade. Idempotent."""
+    key = f"{chat}:{message_id}"; t = now or time.time(); base = {"key": key, "chat_id": str(chat), "message_id": message_id, "deleted": True, "detected_iso": datetime.fromtimestamp(t, tz=timezone.utc).isoformat()}
+    pend = state.setdefault("pending", {})
+    if key in pend:
+        pend.pop(key, None); state.setdefault("seen", {})[key] = "DELETED_BEFORE_SUBMIT"; out = {"outcome": "DELETED_BEFORE_SUBMIT"}
+    else:
+        sid = state.setdefault("by_msg", {}).get(key)
+        if not sid: out = {"outcome": "DELETE_NO_SIGNAL"}
+        elif dry_run: out = {"outcome": "WOULD_CANCEL_ON_DELETE", "signal_id": sid}
+        else:
+            try:
+                ev = SU.submit_event({"signal_id": sid, "action": "CANCEL", "note": "channel: post deleted"}, participant, path=ledger, now=t); out = {"outcome": "DELETE_CANCEL_SUBMITTED", "signal_id": sid, "event_id": ev["id"]}
+            except SU.SubmissionError as e: out = {"outcome": "DELETE_CANCEL_REJECTED", "signal_id": sid, "reason": str(e)}
+            if alert:
+                try: alert(f"Channel post {chat}:{message_id} (signal {sid}) was DELETED; recorded as a cancel. It cancels the order only if it has not filled; a filled trade is unaffected and keeps being scored.")
+                except Exception: pass
+    _log({**base, **out}, log)
+    return {**base, **out}
 
 
 def poll(token: str, *, participant: str, mode_fn, call=None, ledger: str | None = None, log: str = LOG, state_path: str = STATE, db_path: str | None = None) -> list[dict]:

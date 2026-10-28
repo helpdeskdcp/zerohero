@@ -280,6 +280,7 @@ if (typeof document !== "undefined") (function () {
       else if (rows.length) { const first = rows.find((x) => x.state === "ACTIVE") || rows.find((x) => x.state === "WAITING") || rows[0]; bucketTab = tmBucket(first); renderList(); openChart(first); }
     } catch (e) { setNote("live: " + e.message, true); }
   }
+  if (window.ArenaPush) { ArenaPush.subscribe(() => { if (!pane.hidden) liveTick(); }); ArenaPush.start(readToken); }                    // an order changed: refresh the terminal at once instead of waiting for the next 1 s poll
   function start() { stop(); readToken(); if (!token) { setNote("Connect with your arena token first (Guide tab).", true); return; } ensureChart(); liveTick(); timers.live = setInterval(liveTick, POLL_MS); timers.chart = setInterval(chartTick, POLL_MS); }
   function stop() { Object.values(timers).forEach(clearInterval); timers = {}; }
 

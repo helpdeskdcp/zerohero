@@ -45,7 +45,7 @@ def check(symbol: str, side: str, entry: float, mode: str, *, sl: float | None =
         time.sleep(1.0); _lq_cache.pop((symbol, path), None); q = latest_quote(symbol, path)
     out["last"] = q
     if not q or time.time() - q["t"] > 120:
-        out["warnings"].append("no live quote for this symbol yet: it was added to the 3-second capture, so quotes start within seconds; the entry could not be checked against the market"); return out
+        out["warnings"].append("no live quote for this symbol yet: it was added to the 1-second capture, so quotes start within seconds; the entry could not be checked against the market"); return out
     r = entry / q["ltp"]
     if mode != "LIMIT" and abs(r - 1.0) > 0.10: out["problems"].append(f"entry {entry:g} is {abs(r - 1) * 100:.0f}% away from the last price {q['ltp']:g}: a {mode} entry must be near the market (typo?)")
     if mode == "LIMIT" and abs(r - 1.0) > 0.20: out["warnings"].append(f"limit {entry:g} is {abs(r - 1) * 100:.0f}% away from the last price {q['ltp']:g}")

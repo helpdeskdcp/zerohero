@@ -33,7 +33,7 @@ function eqAutoLevels(side, entry, riskPct = 0.5, rr = [1, 2]) {
   return { sl: f(e - sgn * r), targets: rr.map((k) => f(e + sgn * k * r)) };
 }
 function eqQuoteLine(q) {
-  if (!q || !q.last) return "No live quote yet: the symbol is now under the 3-second capture, quotes start within seconds.";
+  if (!q || !q.last) return "No live quote yet: the symbol is now under the 1-second capture, quotes start within seconds.";
   const l = q.last, age = q.age_s != null ? ` · ${Math.round(q.age_s)}s old` : "";
   return `${q.symbol} (${q.name}) · LTP ${eqFmt(l.ltp)} · bid ${eqFmt(l.bid)} / ask ${eqFmt(l.ask)}${age}`;
 }
@@ -49,7 +49,7 @@ function eqParseSse(buf) {
 }
 /* price of a symbol's tick for the entry field: the live last-traded price */
 function eqTickPrice(t) { return t && t.ltp != null && t.ltp > 0 ? Number(t.ltp) : null; }
-function eqSrcLabel(t) { return !t || t.src == null ? "no quote" : t.src === "ws" ? "live push" : t.src === "upstox" ? "backup feed (Upstox)" : "3 s tape" + (t.age_s != null ? ` · ${t.age_s}s old` : ""); }
+function eqSrcLabel(t) { return !t || t.src == null ? "no quote" : t.src === "ws" ? "live push" : t.src === "upstox" ? "backup feed (Upstox)" : "1 s tape" + (t.age_s != null ? ` · ${t.age_s}s old` : ""); }
 if (typeof module !== "undefined") module.exports = { eqValidate, eqAutoLevels, eqQuoteLine, eqParseSse, eqTickPrice, eqSrcLabel, EQ_MODES };
 
 

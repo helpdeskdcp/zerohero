@@ -8,7 +8,7 @@ for (const bad of [{ sl: "1010" }, { targets: "990" }, { qty: "0" }, { qty: "1.5
 assert.ok(!Q.eqValidate({ ...base, side: "SELL", sl: "990" }).ok); assert.ok(!Q.eqValidate({ ...base, side: "SELL", targets: "1010" }).ok);
 assert.ok(Q.eqValidate({ ...base, sl: "" }).ok && !("sl" in Q.eqValidate({ ...base, sl: "" }).payload));                // stop-loss is optional
 assert.deepStrictEqual(Q.eqAutoLevels("BUY", 1000), { sl: 995, targets: [1005, 1010] }); assert.deepStrictEqual(Q.eqAutoLevels("SELL", 1000), { sl: 1005, targets: [995, 990] });
-assert.ok(Q.eqQuoteLine({ symbol: "RELIANCE", name: "RELIANCE", last: { ltp: 1000, bid: 999.9, ask: 1000.1 }, age_s: 2 }).includes("bid 999.9 / ask 1,000.1")); assert.ok(Q.eqQuoteLine(null).includes("3-second"));
+assert.ok(Q.eqQuoteLine({ symbol: "RELIANCE", name: "RELIANCE", last: { ltp: 1000, bid: 999.9, ask: 1000.1 }, age_s: 2 }).includes("bid 999.9 / ask 1,000.1")); assert.ok(Q.eqQuoteLine(null).includes("1-second"));
 
 // Terminal: chart path, editor, row text
 assert.ok(T.tmChartPath({ instrument: "EQUITY", underlying: "INFY" }, 5, 100).startsWith("/chart/equity?symbol=INFY&tf=5&since=100"));
@@ -27,6 +27,6 @@ const P = Q.eqParseSse('data: {"t":1,"ticks":{"A":{"ltp":1}}}\n\n: keep\n\ndata:
 assert.strictEqual(P.events.length, 2); assert.strictEqual(P.events[0].ticks.A.ltp, 1); assert.strictEqual(P.rest, 'data: {"t":3');                   // the unfinished event stays in the buffer
 assert.strictEqual(Q.eqParseSse("retry: 1000\n\n").events.length, 0); assert.strictEqual(Q.eqParseSse('data: {bad\n\n').events.length, 0);
 assert.strictEqual(Q.eqTickPrice({ ltp: 101.5 }), 101.5); assert.strictEqual(Q.eqTickPrice({ ltp: null }), null); assert.strictEqual(Q.eqTickPrice(null), null);
-assert.strictEqual(Q.eqSrcLabel({ src: "ws" }), "live push"); assert.strictEqual(Q.eqSrcLabel({ src: "db", age_s: 2.1 }), "3 s tape · 2.1s old"); assert.strictEqual(Q.eqSrcLabel(null), "no quote");
+assert.strictEqual(Q.eqSrcLabel({ src: "ws" }), "live push"); assert.strictEqual(Q.eqSrcLabel({ src: "db", age_s: 2.1 }), "1 s tape · 2.1s old"); assert.strictEqual(Q.eqSrcLabel(null), "no quote");
 console.log("arena_equity stream helpers: ok");
 assert.strictEqual(Q.eqSrcLabel({ src: "upstox" }), "backup feed (Upstox)"); console.log("failover label: ok");

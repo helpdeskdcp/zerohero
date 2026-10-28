@@ -393,6 +393,62 @@ def equity_ticks(request: Request, symbols: str):
     return {"t": time.time(), "ticks": EQ.ticks(syms), "sources": EQ.source_status()}
 
 
+LEDGER_STREAM_TICK = 0.25                                                                         # how often the ledger file size is checked (a stat() call)
+_STREAM_KINDS = ("HUMAN_SIGNAL", "HUMAN_EVENT", "HUMAN_STATUS_CORRECTION", "HUMAN_TS_CORRECTION", "HUMAN_PARTICIPANT_CORRECTION", "HUMAN_VALIDITY_CORRECTION")
+
+
+def ledger_tail(path: str, offset: int) -> tuple[list[dict], int]:
+    """New COMPLETE ledger lines after byte `offset` -> (records, new offset). A half-written last line is left for the next call; a truncated / replaced file restarts from its end."""
+    import json
+    try: size = os.path.getsize(path)
+    except OSError: return [], offset
+    if size < offset: return [], size
+    if size == offset: return [], offset
+    with open(path, "rb") as f:
+        f.seek(offset); chunk = f.read(size - offset)
+    cut = chunk.rfind(b"\n")
+    if cut < 0: return [], offset
+    out = []
+    for ln in chunk[:cut].split(b"\n"):
+        try: out.append(json.loads(ln))
+        except ValueError: pass
+    return out, offset + cut + 1
+
+
+def stream_notice(rec: dict, who: str) -> dict | None:
+    """What a client may learn from a ledger record: only that THIS participant's signal / event changed (ids, type, action), never another participant's rows and never any prices."""
+    if rec.get("type", "HUMAN_SIGNAL") not in _STREAM_KINDS: return None
+    if rec.get("participant") != who: return None                                  # a record without a participant (an operator correction) is not announced: the page's own refresh picks it up
+    return {"type": rec.get("type", "HUMAN_SIGNAL"), "id": rec.get("id"), "signal_id": rec.get("signal_id") or rec.get("id"), "action": rec.get("action"), "t": rec.get("server_ts")}
+
+
+@router.get("/signals/stream")
+async def signals_stream(request: Request):
+    """Server-sent events for the participant's own orders: a message the moment a signal / management event of theirs reaches the ledger (including one the Telegram reader wrote from another process: the ledger
+    file is tailed), a keep-alive every 5 s, ends after 10 minutes (the client reconnects). The message only says WHAT changed; the page then reloads its list. At most 4 streams per participant."""
+    import asyncio, json
+    from fastapi.responses import StreamingResponse
+    c = _auth(request); who = c["name"]
+    if _streams[("sig", who)] >= 4: raise HTTPException(429, "too many open order streams")
+
+    async def gen():
+        _streams[("sig", who)] += 1
+        try:
+            end = time.time() + STREAM_MAX_SEC; sent = 0.0; off = os.path.getsize(SU.PATH) if os.path.exists(SU.PATH) else 0
+            yield "retry: 1000\n\n"; yield "data: " + json.dumps({"hello": True, "t": time.time()}) + "\n\n"
+            while time.time() < end:
+                if await request.is_disconnected(): break
+                recs, off = await asyncio.get_running_loop().run_in_executor(None, ledger_tail, SU.PATH, off)
+                for r in recs:
+                    n = stream_notice(r, who)
+                    if n: sent = time.time(); yield "data: " + json.dumps(n) + "\n\n"
+                if time.time() - sent > 5: sent = time.time(); yield ": keep-alive\n\n"
+                await asyncio.sleep(LEDGER_STREAM_TICK)
+        finally:
+            _streams[("sig", who)] = max(0, _streams[("sig", who)] - 1)
+    return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 _streams: dict = defaultdict(int)
 STREAM_MAX_SEC = 600                                                                              # a stream ends after this long; the client reconnects (tests shorten it)
 

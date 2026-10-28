@@ -1,4 +1,4 @@
-"""Priority quote capture: while a contract is on the watch list (a signal was registered for it) its full quote is fetched every PRIORITY_POLL_SEC (default 3 s) in ONE batched request together with all other watched
+"""Priority quote capture: while a contract is on the watch list (a signal was registered for it) its full quote is fetched every PRIORITY_POLL_SEC (default 3 s; production .env sets 1) in ONE batched request together with all other watched
 contracts, and written to the same append-only `quote_snapshots` table the normal capture uses (same schema, same integrity checks). Everything that settles trades from captured quotes therefore gets ~3 s resolution
 instead of the normal 1-3 minutes, for exactly the contracts that matter, and only until that exchange's close. Read-only broker calls through the shared market SDK (no second login, no websocket, no orders).
 Kill switch: PRIORITY_CAPTURE=0. Watch list: data/priority_watch.json."""
@@ -183,7 +183,7 @@ class PriorityCapture:
             except Exception as e:
                 self.last_error = f"{type(e).__name__}: {str(e)[:120]}"
                 if time.time() - last_log > 60: print(f"[priority-capture] error {self.last_error}", flush=True); last_log = time.time()
-                time.sleep(1.0 if "locked" in str(e).lower() else max(self.interval * 5, 15))      # a busy database is retried at once; any broker error (rate limit etc.) backs off
+                time.sleep(1.0 if "locked" in str(e).lower() else max(self.interval * 5, 5))      # a busy database is retried at once; any broker error (rate limit etc.) backs off
 
     def status(self) -> dict:
         return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_cycle_age_s": (round(time.time() - self.last_cycle, 1) if self.last_cycle else None), "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval, "last_timing": getattr(self, "last_timing", None), "step_s": _pcts(self._step_s),

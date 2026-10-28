@@ -33,7 +33,7 @@ def test_submit_flag_enables_ledger_write(env, monkeypatch):
 
 
 def test_edits_never_resubmit_and_ambiguous_is_quarantined(env, monkeypatch):
-    monkeypatch.setenv("TG_INGEST_SUBMIT", "1")
+    monkeypatch.setenv("TG_INGEST_SUBMIT", "1"); monkeypatch.setenv("TG_EDITS", "0")                  # the pre-phase-4 behaviour (phase 4 applies edits: tests/test_tg_edits_deletes.py)
     assert TR.process(P(2, HERO), env["st"], edited=True, **env["kw"])["outcome"] == "EDIT_IGNORED" and SU.load(env["kw"]["ledger"]) == []
     assert TR.process(P(3, "NIFTY 22400 CE buy somewhere around 75 target 120"), env["st"], **env["kw"])["outcome"] == "IGNORED_NOT_A_SIGNAL"
     q = [json.loads(x) for x in open(TR.QUARANTINE)]; assert len(q) == 2 and "edited" in q[0]["why"] and "did not parse" in q[1]["why"]

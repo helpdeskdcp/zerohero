@@ -166,4 +166,5 @@ if (typeof window !== "undefined" && typeof document !== "undefined") (function 
     try { const j = await api("/amend", { method: "POST", body: JSON.stringify(r.payload) }); msg("mgmsg", `Recorded ${j.id} (${j.action}) at ${fmtIsoIST(j.server_iso, true)} IST${j.practice ? " (PRACTICE)" : ""} — takes effect after the contest execution delay, never retroactively.`, false); mg.reset(); showMg(); loadMine(); }
     catch (e) { msg("mgmsg", e.message, true); } finally { $("mgGo").disabled = false; } };
   $("tokenIn").value = token; if (token) loadState().then((s) => { if (s) { loadGuide(); show("guide"); refreshContracts(); } });
+  if (window.ArenaPush) { ArenaPush.subscribe(() => { if (token) loadMine(); }); ArenaPush.start(() => token); }          // an order changed in the ledger (channel post / edit / cancel): reload "My signals" at once
 })();

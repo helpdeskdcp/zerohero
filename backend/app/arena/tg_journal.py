@@ -61,6 +61,19 @@ CREATE TABLE IF NOT EXISTS tg_gap (
 );
 CREATE INDEX IF NOT EXISTS ix_tgg_status ON tg_gap(status);
 CREATE TABLE IF NOT EXISTS tg_kv (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS tg_delete (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id      TEXT    NOT NULL,
+    message_id   INTEGER NOT NULL,
+    detected_at  REAL    NOT NULL,
+    source       TEXT    NOT NULL,
+    status       TEXT    NOT NULL DEFAULT 'PENDING',
+    outcome      TEXT,
+    signal_id    TEXT,
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    last_error   TEXT,
+    UNIQUE(chat_id, message_id)
+);
 """
 
 
@@ -122,6 +135,30 @@ class Journal:
     def requeue_failed(self, row_id: int) -> None:
         self._c().execute("UPDATE tg_capture SET ingestion_status='CAPTURED', attempts=0 WHERE id=? AND ingestion_status='FAILED'", (int(row_id),))
 
+    # ------------------------------------------------------------------ deletions
+    def record_delete(self, chat_id, message_id: int, source: str = "event", now: float | None = None) -> bool:
+        """A message that disappeared from the channel. -> True when new (the same deletion seen by the event AND by the reconciler is stored once)."""
+        cur = self._c().execute("INSERT OR IGNORE INTO tg_delete(chat_id,message_id,detected_at,source) VALUES (?,?,?,?)", (str(chat_id), int(message_id), now or time.time(), source))
+        return cur.rowcount == 1
+
+    def pending_deletes(self, limit: int = 50) -> list[dict]:
+        return [dict(r) for r in self._c().execute("SELECT * FROM tg_delete WHERE status='PENDING' ORDER BY id LIMIT ?", (int(limit),)).fetchall()]
+
+    def mark_delete_done(self, row_id: int, outcome: str, signal_id: str | None = None) -> None:
+        self._c().execute("UPDATE tg_delete SET status='DONE', outcome=?, signal_id=? WHERE id=?", (outcome, signal_id, int(row_id)))
+
+    def mark_delete_error(self, row_id: int, err: str) -> str:
+        c = self._c(); c.execute("UPDATE tg_delete SET attempts=attempts+1, last_error=? WHERE id=?", (str(err)[:300], int(row_id)))
+        n = c.execute("SELECT attempts FROM tg_delete WHERE id=?", (int(row_id),)).fetchone()[0]
+        if n >= MAX_ATTEMPTS: c.execute("UPDATE tg_delete SET status='FAILED' WHERE id=?", (int(row_id),)); return "FAILED"
+        return "PENDING"
+
+    def recent_signal_rows(self, chat_id, since: float, limit: int = 100) -> list[dict]:
+        """Original posts (edit_version 0) that became a ledger signal, newer than `since` and not already known deleted: the ones whose disappearance matters."""
+        return [dict(r) for r in self._c().execute(
+            "SELECT message_id, signal_id FROM tg_capture c WHERE chat_id=? AND edit_version=0 AND signal_id IS NOT NULL AND received_at>=? "
+            "AND NOT EXISTS (SELECT 1 FROM tg_delete d WHERE d.chat_id=c.chat_id AND d.message_id=c.message_id) ORDER BY message_id DESC LIMIT ?", (str(chat_id), since, int(limit))).fetchall()]
+
     # ------------------------------------------------------------------ gaps
     def open_gap(self, *, chat_id, from_id, to_id, kind: str, note: str = "", status: str = "OPEN") -> int:
         return self._c().execute("INSERT INTO tg_gap(chat_id,from_id,to_id,kind,detected_at,status,note) VALUES (?,?,?,?,?,?,?)", (None if chat_id is None else str(chat_id), from_id, to_id, kind, time.time(), status, note[:300])).lastrowid
@@ -156,6 +193,7 @@ class Journal:
         oldest = c.execute("SELECT MIN(received_at) FROM tg_capture WHERE ingestion_status='CAPTURED'").fetchone()[0]
         gaps = {r[0]: r[1] for r in c.execute("SELECT status, COUNT(*) FROM tg_gap GROUP BY status")}
         return {"rows": sum(by.values()), "by_status": by, "pending": by.get("CAPTURED", 0), "oldest_pending_age_s": (round(now - oldest, 1) if oldest else None), "dead_letter": by.get("FAILED", 0),
+                "deletes_pending": c.execute("SELECT COUNT(*) FROM tg_delete WHERE status='PENDING'").fetchone()[0], "deletes_failed": c.execute("SELECT COUNT(*) FROM tg_delete WHERE status='FAILED'").fetchone()[0],
                 "gaps": gaps, "open_gaps": gaps.get("OPEN", 0), "unrecoverable_gaps": gaps.get("UNRECOVERABLE", 0),
                 "last_reconcile_at": float(self.kv_get("last_reconcile_at", 0) or 0) or None, "last_catch_up_at": float(self.kv_get("last_catch_up_at", 0) or 0) or None,
                 "last_catch_up_ok": self.kv_get("last_catch_up_ok")}
