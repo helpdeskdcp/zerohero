@@ -258,6 +258,7 @@ env_flags:
   - {name: ARENA_HUMAN_NAME, category: TUNING}
   - {name: PRIORITY_CAPTURE, category: FEATURE_FLAG, note: "~3 s quote capture for contracts with a registered signal (read-only; kill switch)"}
   - {name: PRIORITY_POLL_SEC, category: TUNING}
+  - {name: PRIORITY_FETCH_TIMEOUT_SEC, category: TUNING, note: "3-second priority capture: timeout of one batched quote request (default 6 s) so a stalled request is abandoned and retried at once"}
   - {name: TG_ANON_ONLY_CHATS, category: TUNING, note: "groups whose admin posts are anonymous: only messages without a user sender count (members ignored)"}
   - {name: TG_CHANNEL_PARTICIPANTS, category: TUNING, note: "channel id -> arena participant mapping for the read-only reader"}
   - {name: ARENA_EXTRA_PARTICIPANTS, category: TUNING, note: "comma list of additional arena participants, each with its own token"}

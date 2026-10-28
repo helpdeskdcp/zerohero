@@ -101,6 +101,62 @@ def _cfg() -> dict:
     }
 
 
+
+class OiBaseline:
+    """Previous-session closing open interest per contract, looked up LAZILY and only for the contracts actually being written.
+
+    The old code materialised the whole baseline with one aggregation over every earlier session of the symbol (GROUP BY ... MAX(received_ts) joined back on received_ts, which has no index): on a cold
+    cache that single statement made the first capture cycle of 2026-10-28 take 737 s (quotes stage 549 s, measured by the new per-stage timings) and it re-ran every 30 minutes per symbol.
+    Now each contract costs ONE descending read on the (symbol, expiry, strike, option_type, exch_ts) index: the newest row of an earlier session with oi > 0. Same value (a contract's OI does not move after the
+    close, so the newest-by-exchange-time row equals the newest-by-receive-time row), memoised, and read OUTSIDE the write lock via prefetch(). get() never touches the database.
+    Key: (expiry or "", strike, option_type); FUTURE rows have strike / option_type None."""
+
+    def __init__(self, open_conn, sym: str, today: str | None = None):
+        """today = the IST calendar date of the session being written (default: now). The old code asked the table for MAX(session_date_ist) of the symbol, which the planner answers with a scan of every row of the
+        symbol plus a sort, and which could still say 'yesterday' at the first cycle of the day (then the baseline came from two sessions back)."""
+        from datetime import datetime, timedelta, timezone
+        self._open = open_conn; self.sym = sym; self._memo: dict = {}; self._lock = threading.Lock()
+        self.today = today or datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
+
+    def prefetch(self, keys) -> None:
+        with self._lock:
+            todo = [k for k in dict.fromkeys(keys) if k not in self._memo]
+            if not todo: return
+            conn = self._open()
+            try:
+                bound = self._day_start_utc()                                  # exchange stamps before today 00:00 IST: the index range then starts right below today's rows (a priority-watched contract has thousands of them today)
+                for e, st, ot in todo:
+                    a = (self.sym, e or None, st, ot, self.today)
+                    r = conn.execute("SELECT oi FROM quote_snapshots WHERE symbol=? AND expiry IS ? AND strike IS ? AND option_type IS ? AND kind IN ('OPTION','FUTURE') AND session_date_ist<? "
+                                     "AND exch_ts<? AND oi IS NOT NULL AND oi>0 ORDER BY exch_ts DESC, id DESC LIMIT 1", a + (bound,)).fetchone()
+                    if r is None:                                                # rows without an exchange stamp sort first in the index: look only when nothing stamped was found
+                        r = conn.execute("SELECT oi FROM quote_snapshots WHERE symbol=? AND expiry IS ? AND strike IS ? AND option_type IS ? AND kind IN ('OPTION','FUTURE') AND session_date_ist<? "
+                                         "AND exch_ts IS NULL AND oi IS NOT NULL AND oi>0 ORDER BY id DESC LIMIT 1", a).fetchone()
+                    self._memo[(e, st, ot)] = r[0] if r else None
+            finally:
+                conn.close()
+
+    def set_today(self, day: str | None) -> None:
+        """The session date of the rows being written (from their exchange timestamps): on a weekend or holiday the quotes still belong to the last trading day, and the baseline must be the session BEFORE that one."""
+        with self._lock:
+            if day and day != self.today: self.today = day; self._memo.clear()
+
+    def _day_start_utc(self) -> str:
+        """'YYYY-MM-DDTHH:MM' of today 00:00 IST in UTC (= previous calendar day 18:30 UTC); exch_ts strings start with the UTC date-time, so a string comparison is a time comparison."""
+        from datetime import date, timedelta
+        d = date.fromisoformat(self.today) - timedelta(days=1)
+        return f"{d.isoformat()}T18:30"
+
+    def get(self, key, default=None):
+        v = self._memo.get(key); return default if v is None else v
+
+    def __bool__(self) -> bool:
+        return any(v is not None for v in self._memo.values())
+
+    def __len__(self) -> int:
+        return sum(1 for v in self._memo.values() if v is not None)
+
+
 class CaptureWorker:
     def __init__(self, sdk_provider=None, store: HistStore | None = None, dhan_auth_checker=None):
         # sdk_provider() -> a broker.angelone.AngelOneClient (or None). Default:
@@ -128,6 +184,7 @@ class CaptureWorker:
         self.is_leader = False
         # greeks_engine CYCLE pass: runs OFF the capture thread, single-flight, rate-limited (see _kick_greeks_engine)
         self._ge_lock = threading.Lock()
+        self._cd_lock = threading.Lock(); self._cd_running = False; self._cd_skipped = 0; self.last_candle_run = None
         self._ge_running = False
         self._ge_last_start = 0.0
         self._ge_skipped = 0
@@ -199,7 +256,11 @@ class CaptureWorker:
                 open_now = any(v == "OPEN" for v in (state.get("segments") or {}).values())
                 if open_now:
                     do_candles = (time.time() - last_candle) >= self.cfg["candle_sec"]
-                    await asyncio.to_thread(self.run_once, "POLL", do_candles)
+                    if _env("CHANAKYA_HIST_CANDLES_SEPARATE", "1") in ("0", "false", "no", "off"):
+                        await asyncio.to_thread(self.run_once, "POLL", do_candles)                 # rollback: the old inline candles inside the quote cycle
+                    else:
+                        await asyncio.to_thread(self.run_once, "POLL", False)                      # quotes + greeks + dhan only: the cycle never waits for the rate-limited candle calls
+                        if do_candles: self._kick_candles()
                     if do_candles:
                         last_candle = time.time()
                     await self._sleep(self.cfg["quote_sec"])
@@ -313,6 +374,39 @@ class CaptureWorker:
             self._kick_greeks_engine(nifty_expiry)
         return self.last_run
 
+    # ---------------------------------------------------------------- candles (off the quote cycle)
+    def _kick_candles(self) -> bool:
+        """Start ONE background candle pass (single-flight). The historical-candle endpoint is rate limited, so every call is spaced by candle_delay_sec: for ~100 calls that is 100-250 s. Inline, that wait sat inside
+        the per-symbol loop and delayed the QUOTES of every later symbol (measured 2026-10-28: candles stage up to 251 s of a 393 s cycle). A pass still running when the next is due is skipped, not stacked."""
+        with self._cd_lock:
+            if self._cd_running: self._cd_skipped += 1; return False
+            self._cd_running = True
+        threading.Thread(target=self._run_candles, daemon=True, name="histcap-candles").start()
+        return True
+
+    def _run_candles(self) -> None:
+        t0 = time.time(); counts = {"candles": 0, "quotes": 0, "greeks": 0, "raw": 0}; integ: dict = {"issues": [], "rejected": [], "flagged": 0}; errors: list = []; rid = None
+        try:
+            sdk = self._sdk_provider()
+            if not (sdk and self._auth_ok()): return
+            rid = self.store.start_run("CANDLES", market_calendar.status_all().get("segments", {}), True); recv = N.now_utc_iso(); n_sym = 0
+            for sym in self.cfg["symbols"]:
+                try:
+                    refs = self._refs(sdk, sym)
+                    if refs: self._capture_candles(None, sdk, sym, refs, recv, rid, counts, integ, errors); n_sym += 1
+                except Exception as e:
+                    errors.append({"symbol": sym, "stage": "candles", "status": type(e).__name__, "message": str(e)[:160]})
+            dt = round(time.time() - t0, 1)
+            self.store.finish_run(rid, instruments_n=n_sym, counts=counts, integrity=integ, errors=errors, notes="candles pass | " + json.dumps({"cycle_s": dt, "symbols": n_sym}))
+            self.last_candle_run = {"run_id": rid, "sec": dt, "candles": counts["candles"], "errors": len(errors)}
+        except Exception as e:
+            self.last_error = f"candles: {type(e).__name__}: {e}"
+            if rid is not None:
+                try: self.store.finish_run(rid, instruments_n=0, counts=counts, integrity=integ, errors=[{"stage": "candles", "status": type(e).__name__}], notes="candles pass failed")
+                except Exception: pass
+        finally:
+            with self._cd_lock: self._cd_running = False
+
     # ---------------------------------------------------------------- greeks engine (off the capture thread)
     def _kick_greeks_engine(self, expiry: str) -> bool:
         """Start ONE background greeks_engine pass for today's session and the expiry this cycle just captured. Never blocks the capture loop, never runs two at once,
@@ -417,44 +511,15 @@ class CaptureWorker:
         self._ref_cache[sym] = (time.time() + 3600, refs)
         return refs
 
-    def _oi_baseline_for(self, conn, sym: str) -> dict:
-        """{(expiry, strike, option_type): oi} = each contract's last OI from any
-        session strictly before the current one (oi > 0). AngelOne's quote feed
-        sends no change-in-OI, so we materialise the standard 'Chng in OI' as
-        current_oi - this baseline at write time. Cached ~30 min (a prior-session
-        close does not move intraday)."""
+    def _oi_baseline_for(self, conn, sym: str):
+        """Previous-session closing OI per contract ('Chng in OI' = current_oi - this baseline, materialised at write time because AngelOne's quote feed sends no change-in-OI). A lazy OiBaseline,
+        kept for the session day; the caller prefetch()es the contracts it is about to write (outside the write lock)."""
         hit = self._oi_base_cache.get(sym)
         if hit and time.time() < hit[0]:
             return hit[1]
-        out: dict = {}
-        own = conn is None
-        if own:                                     # a private READ connection: this aggregation scans every earlier session and can take minutes, so it must never run inside the shared write lock
-            conn = self.store._conn()
-        try:
-            today = conn.execute(
-                "SELECT MAX(session_date_ist) FROM quote_snapshots "
-                "WHERE symbol=? AND kind IN ('OPTION','FUTURE')", (sym,)).fetchone()
-            today = today[0] if today else None
-            if today:
-                for r in conn.execute(
-                    "SELECT q.expiry, q.strike, q.option_type, q.oi FROM quote_snapshots q JOIN ("
-                    "  SELECT COALESCE(expiry,'') e, COALESCE(strike,-1) s, COALESCE(option_type,'') o, "
-                    "         MAX(received_ts) mts FROM quote_snapshots "
-                    "  WHERE symbol=? AND kind IN ('OPTION','FUTURE') AND session_date_ist<? "
-                    "    AND oi IS NOT NULL AND oi>0 "
-                    "  GROUP BY COALESCE(expiry,''), COALESCE(strike,-1), COALESCE(option_type,'')"
-                    ") m ON COALESCE(q.expiry,'')=m.e AND COALESCE(q.strike,-1)=m.s "
-                    "     AND COALESCE(q.option_type,'')=m.o AND q.received_ts=m.mts "
-                    "WHERE q.symbol=? AND q.kind IN ('OPTION','FUTURE')",
-                    (sym, today, sym)):
-                    out[(r[0] or "", r[1], r[2])] = r[3]
-        except Exception:
-            out = {}
-        finally:
-            if own:
-                conn.close()
-        self._oi_base_cache[sym] = (time.time() + 1800, out)
-        return out
+        ob = OiBaseline(self.store._conn, sym)
+        self._oi_base_cache[sym] = (time.time() + 86400, ob)          # the previous session's close does not move intraday; the object resets itself when the session date changes (set_today)
+        return ob
 
     def _wtxn(self, conn):
         """A write transaction: reuse `conn` if the caller already holds one, else open a SHORT one (rows only; never across a broker call)."""
@@ -471,7 +536,13 @@ class CaptureWorker:
             errors.append({"symbol": sym, "stage": "quotes", "status": type(e).__name__, "message": str(e)[:160]})
             return
 
-        base = self._oi_baseline_for(None, sym)          # heavy query: OUTSIDE the write lock (cached ~30 min)
+        base = self._oi_baseline_for(None, sym)          # lazy: one indexed read per contract, done HERE (outside the write lock) for exactly the contracts about to be written
+        try:
+            sess = [N.norm_quote(q, m, recv).get("session_date_ist") for m in refs["tokens_meta"] for q in [quotes.get(m["token"])] if isinstance(q, dict) and m.get("kind") in ("OPTION", "FUTURE")]
+            base.set_today(max((x for x in sess if x), default=None))
+        except Exception: pass
+        try: base.prefetch([(m.get("expiry") or "", m.get("strike"), m.get("option_type")) for m in refs["tokens_meta"] if m.get("kind") in ("OPTION", "FUTURE")])
+        except Exception as e: errors.append({"symbol": sym, "stage": "oi_baseline", "status": type(e).__name__, "message": str(e)[:120]})          # never blocks the capture: oi_change just stays empty
         with self._wtxn(conn) as c:
             raw_id = self.store.put_raw(c, endpoint="market/v1/quote",
                                         request={"exchangeTokens": {k: v for k, v in by_ex.items()}, "mode": "FULL"},
@@ -681,6 +752,7 @@ class CaptureWorker:
                                                 "option_candles", "dhan_capture", "raw_retention_days")},
             "last_run": self.last_run, "store": self.store.summary(),
             "greeks_engine": {"running": self._ge_running, "skipped": self._ge_skipped, "last": self._ge_last},
+            "candles": {"running": self._cd_running, "skipped": self._cd_skipped, "last": self.last_candle_run},
         }
 
 

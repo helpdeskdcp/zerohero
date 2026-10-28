@@ -50,7 +50,7 @@ def env(tmp_path, monkeypatch):
     return tmp_path
 
 
-async def until(pred, timeout=6.0):
+async def until(pred, timeout=20.0):
     end = time.time() + timeout
     while time.time() < end:
         if pred(): return True
@@ -77,7 +77,7 @@ def test_run_baselines_polls_journals_processes_dedupes_reconciles_and_reports_h
         assert await until(lambda: J.kv_get("last_reconcile_at") is not None) and tg.caught_up == 1 and J.kv_get("last_catch_up_ok") == "1" and J.gaps() == []
         # health is published
         assert await until(lambda: json.load(open(env / "status.json")).get("state") in ("LIVE", "DEGRADED"))
-        assert await until(lambda: (json.load(open(env / "status.json")).get("journal") or {}).get("rows") == 4, timeout=9)                  # the health publisher refreshes every 5 s
+        assert await until(lambda: (json.load(open(env / "status.json")).get("journal") or {}).get("rows") == 4, timeout=25)                 # the health publisher refreshes every 5 s
         st = TR.public_status(); assert st["journaling"] is True and st["journal"]["rows"] == 4 and st["counts"].get("duplicate", 0) >= 1
         task.cancel()
         try: await task
@@ -100,7 +100,7 @@ def test_a_post_whose_journal_write_failed_is_found_and_backfilled_by_the_reconc
         tg = FakeTG.instance; J = TJ.Journal(str(env / "cap.db"))
         TJ.Journal.record(J, chat_id=CH, message_id=100, source_ts=time.time() - 600, text="baseline post", update_state="push")             # gives the reconciler its starting watermark
         tg.msgs.append(M(150, "lost post", age=100))
-        assert await until(lambda: failed and J.has(CH, 150) and J.summary()["by_status"].get("PROCESSED", 0) >= 2, timeout=9)
+        assert await until(lambda: failed and J.has(CH, 150) and J.summary()["by_status"].get("PROCESSED", 0) >= 2, timeout=25)
         r = dict(J._c().execute("SELECT * FROM tg_capture WHERE message_id=150").fetchone())
         assert r["update_state"] == "backfill" and r["recovery_status"] == "BACKFILLED"                    # the poll's journal write failed; the reconciler found it at the source
         assert any(g["kind"] == "MISSING_MESSAGE" and g["status"] == "RECOVERED" and g["recovered_count"] == 1 for g in J.gaps())

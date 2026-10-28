@@ -7,6 +7,27 @@ from .greeks import normalize_greek_row, index_greek_rows, match_greek, merge_le
 
 LOGIN = "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword"
 QUOTE = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/"
+
+_tls = threading.local()
+
+
+def _quote_session():
+    """A keep-alive HTTP session per thread for the quote endpoint. A fresh connection costs ~0.40 s per request (TCP 0.13 + TLS 0.14 + request 0.13, measured 2026-10-28); a reused one 0.13 s. Per thread, so the
+    3-second priority capture, the main capture and the ranking scans never share a connection. Dropped on any error so a broken connection is not reused."""
+    sess = getattr(_tls, "quote_session", None)
+    if sess is None:
+        sess = requests.Session(); ad = requests.adapters.HTTPAdapter(pool_connections=2, pool_maxsize=4, max_retries=0)
+        sess.mount("https://", ad); _tls.quote_session = sess
+    return sess
+
+
+def _drop_quote_session():
+    sess = getattr(_tls, "quote_session", None)
+    _tls.quote_session = None
+    try:
+        if sess is not None: sess.close()
+    except Exception:
+        pass
 # NOTE: the Option-Greek API lives under `marketData/v1`, NOT `market/v1`
 # (ref: SmartAPI forum topic 4254 "Announcing Option Greeks API").
 GREEKS = "https://apiconnect.angelone.in/rest/secure/angelbroking/marketData/v1/optionGreek"
@@ -471,11 +492,13 @@ class AngelOneClient:
     def get_quotes(self, exchange, tokens):
         return {str(token): self.get_quote(exchange, token) for token in tokens}
 
-    def get_quotes_batch(self, tokens_by_exchange: dict, mode: str = "FULL"):
+    def get_quotes_batch(self, tokens_by_exchange: dict, mode: str = "FULL", timeout: float | None = None):
         """Real multi-token `market/v1/quote` — up to 50 tokens per exchange per
         POST (AngelOne limit). `tokens_by_exchange` = {"NFO": ["t1","t2",...],
         "NSE": [...]}. Returns {token: quote-dict} across all exchanges; a token
         AngelOne did not return is {"status":"DATA_UNAVAILABLE"} (never faked).
+        `timeout` (seconds) overrides the client default for this call: the 3-second priority capture passes a short one so a request that stalls (17-31 s seen on 2026-10-28, which voided a
+        participant's order through the 60 s data-gap rule) is abandoned and retried at once.
         Read-only; never calls an order endpoint."""
         out: dict[str, dict] = {}
         if not self.authenticate():
@@ -487,9 +510,10 @@ class AngelOneClient:
             for i in range(0, len(toks), 50):
                 chunk = toks[i:i + 50]
                 try:
-                    d = requests.post(QUOTE, json={"mode": mode, "exchangeTokens": {exch: chunk}},
-                                      headers=h, timeout=self.timeout).json()
+                    d = _quote_session().post(QUOTE, json={"mode": mode, "exchangeTokens": {exch: chunk}},
+                                              headers=h, timeout=timeout or self.timeout).json()
                 except Exception:
+                    _drop_quote_session()
                     for t in chunk:
                         out[t] = {"status": "API_ERROR", "data_status": "API_ERROR"}
                     continue

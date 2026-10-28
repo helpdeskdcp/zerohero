@@ -279,7 +279,7 @@ def test_oi_change_is_materialised_from_prev_session_close(store, monkeypatch):
     # seed a prior session (strike 278 CE closed at OI 41000) + a token 'today' row
     with store.transaction() as conn:
         for sd, rts, oi in (("2000-01-01", "2000-01-01T10:00:00Z", 41000.0),
-                            ("2000-01-02", "2000-01-02T04:00:00Z", 999.0)):
+                            ("2026-09-02", "2026-09-02T04:00:00Z", 999.0)):             # a row of the SAME session the cycle writes (2026-09-02): never a baseline for itself
             conn.execute(
                 "INSERT INTO quote_snapshots(received_ts,snap_key,instrument_key,symbol,kind,"
                 "exchange,token,expiry,strike,option_type,session_date_ist,ltp,oi,source) "
@@ -291,13 +291,13 @@ def test_oi_change_is_materialised_from_prev_session_close(store, monkeypatch):
     assert r["quotes"] >= 10
     q = next(x for x in store.get_quotes("NATURALGAS", kind="OPTION")
              if x["strike"] == 278.0 and x["option_type"] == "CE"
-             and x["session_date_ist"] >= "2026-01-01")
+             and x["session_date_ist"] >= "2026-01-01" and x["source"] != "seed")
     assert q["oi"] == 50000.0
     assert q["oi_change"] == pytest.approx(50000.0 - 41000.0)   # current - prev-session close
     assert "doi_derived" in (q["flags"] or "")
     # a strike with no prior-session sample -> oi_change stays NULL, no fake 0
     q2 = next(x for x in store.get_quotes("NATURALGAS", kind="OPTION")
-              if x["strike"] == 285.0 and x["session_date_ist"] >= "2026-01-01")
+              if x["strike"] == 285.0 and x["session_date_ist"] >= "2026-01-01" and x["source"] != "seed")
     assert q2["oi_change"] is None
 
 
@@ -692,5 +692,5 @@ def test_run_records_stage_timings_and_flags_a_slow_cycle(store, monkeypatch, ca
     assert set(r["stage_s"]) >= {"quotes", "greeks", "candles", "dhan"} and r["cycle_s"] >= sum(r["stage_s"].values()) - 0.01 and r["slow"] is False
     with store._conn() as c: notes = c.execute("SELECT notes FROM capture_runs WHERE id=?", (r["run_id"],)).fetchone()[0]
     t = _json.loads(notes.split(" | ", 1)[1]); assert t["stage_s"].keys() == r["stage_s"].keys() and "greeks_unavailable" in t and t["cycle_s"] == r["cycle_s"]
-    monkeypatch.setenv("CHANAKYA_HIST_SLOW_CYCLE_SEC", "0")                                                    # any cycle is now 'slow'
+    monkeypatch.setenv("CHANAKYA_HIST_SLOW_CYCLE_SEC", "-1")                                                   # any cycle is now 'slow'
     r2 = w.run_once("POLL_ONCE", do_candles=False); assert r2["slow"] is True and "[histcap] SLOW cycle" in capsys.readouterr().out and w.slow_cycles == 1

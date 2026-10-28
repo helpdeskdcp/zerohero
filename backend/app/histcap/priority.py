@@ -8,6 +8,7 @@ import json
 import os
 import threading
 import time
+from collections import deque
 from datetime import date, datetime, timedelta, timezone
 
 from . import normalize as N
@@ -71,11 +72,35 @@ def request_watch_equity(symbol: str, *, now: float | None = None, path: str | N
     return e
 
 
+FETCH_TIMEOUT_SEC = float(os.environ.get("PRIORITY_FETCH_TIMEOUT_SEC", "6"))
+
+
+def _fetch(sdk, by_ex: dict):
+    """One batched quote request with a SHORT timeout: a stalled request is abandoned after ~6 s (the next step retries at once) instead of holding the 3-second tape for 17-31 s. Clients without the
+    `timeout` argument (test fakes) are called the old way."""
+    try: return sdk.get_quotes_batch(by_ex, mode="FULL", timeout=FETCH_TIMEOUT_SEC)
+    except TypeError as e:
+        if "timeout" not in str(e): raise                                          # a real TypeError from inside the call is not retried blindly
+        return sdk.get_quotes_batch(by_ex, mode="FULL")
+
+
+def next_sleep(step_s: float, interval: float, floor: float = 0.25) -> float:
+    """Sleep so that STEPS START every `interval` seconds, not `interval` seconds after each step ends (the old fixed sleep made a 3 s capture run every 3 s + the 1.5-2.5 s broker fetch = 5.4 s median,
+    measured 2026-10-28). A step slower than the interval is followed by a short pause only (floor), never by a further full interval."""
+    return max(floor, interval - step_s)
+
+
+def _pcts(v) -> dict:
+    v = sorted(v)
+    if not v: return {}
+    return {"p50": round(v[len(v) // 2], 2), "p95": round(v[min(len(v) - 1, int(0.95 * (len(v) - 1) + 0.5))], 2), "max": round(v[-1], 2), "n": len(v)}
+
+
 class PriorityCapture:
     def __init__(self, store=None, sdk_provider=None, meta_fn=None, interval: float | None = None, path: str | None = None):
         self.store = store; self._sdk_provider = sdk_provider; self._meta_fn = meta_fn or self._meta_from_db
         self.interval = float(interval if interval is not None else os.environ.get("PRIORITY_POLL_SEC", "3")); self.path = path or WATCH
-        self._meta_cache: dict = {}; self._run_id = None; self._run_day = None; self.last_error = None; self.last_note = None; self._auth_ts = 0.0; self.written = 0; self.cycles = 0; self._seen: dict = {}; self.last_cycle = None
+        self._step_s = deque(maxlen=300); self._starts = deque(maxlen=300); self._meta_cache: dict = {}; self._run_id = None; self._run_day = None; self.last_error = None; self.last_note = None; self._auth_ts = 0.0; self.written = 0; self.cycles = 0; self._seen: dict = {}; self.last_cycle = None
 
     def _store(self):
         if self.store is None:
@@ -124,7 +149,7 @@ class PriorityCapture:
             if not ok: self.last_note = "broker session not authenticated"; return 0
         by_ex: dict[str, list] = {}
         for m in metas: by_ex.setdefault(m["exchange"], []).append(m["token"])
-        t_f0 = time.time(); quotes = sdk.get_quotes_batch(by_ex, mode="FULL"); t_fetch = time.time() - t_f0; recv = N.now_utc_iso(); rows = []
+        t_f0 = time.time(); quotes = _fetch(sdk, by_ex); t_fetch = time.time() - t_f0; recv = N.now_utc_iso(); rows = []
         hb_of: dict = {}
         for m in metas:
             q = quotes.get(m["token"]) if isinstance(quotes, dict) else None
@@ -152,16 +177,17 @@ class PriorityCapture:
         last_log = 0.0
         while True:
             try:
-                t0 = time.time(); self.step(); dt = time.time() - t0
+                t0 = time.time(); self.step(); dt = time.time() - t0; self._step_s.append(dt); self._starts.append(t0)
                 if dt > 10 and t0 - last_log > 60: print(f"[priority-capture] slow step {dt:.1f}s ({self.last_note}; {getattr(self, 'last_timing', None)})", flush=True); last_log = t0           # a step is normally well under a second: anything slow is visible in the journal
-                self.last_error = None; time.sleep(self.interval)
+                self.last_error = None; time.sleep(next_sleep(dt, self.interval))
             except Exception as e:
                 self.last_error = f"{type(e).__name__}: {str(e)[:120]}"
                 if time.time() - last_log > 60: print(f"[priority-capture] error {self.last_error}", flush=True); last_log = time.time()
                 time.sleep(1.0 if "locked" in str(e).lower() else max(self.interval * 5, 15))      # a busy database is retried at once; any broker error (rate limit etc.) backs off
 
     def status(self) -> dict:
-        return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_cycle_age_s": (round(time.time() - self.last_cycle, 1) if self.last_cycle else None), "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval}
+        return {"enabled": enabled(), "watching": len([e for e in _load(self.path) if e.get("until", 0) > time.time()]), "cycles": self.cycles, "rows_written": self.written, "last_cycle_age_s": (round(time.time() - self.last_cycle, 1) if self.last_cycle else None), "last_error": self.last_error, "last_note": self.last_note, "interval_sec": self.interval, "last_timing": getattr(self, "last_timing", None), "step_s": _pcts(self._step_s),
+            "cadence_s": _pcts([b - a for a, b in zip(self._starts, list(self._starts)[1:])])}
 
 
 _instance: PriorityCapture | None = None
