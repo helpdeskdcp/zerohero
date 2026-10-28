@@ -21,7 +21,27 @@ STATUS = os.path.join(DIR, "status.json")
 QUARANTINE = os.path.join(CI.DIR, "channel_quarantine.jsonl")
 LAST_IDS = os.path.join(DIR, "last_ids.json")
 POLL_SEC = float(os.environ.get("TG_POLL_SEC", "2.5"))   # was 15 s (median post->reader lag 9 s on 2026-10-26, p90 15 s); Telegram does not push these channel posts in real time to this session, so the loop is the only fast path
+FETCH_CAP = int(os.environ.get("TG_FETCH_CAP", "200"))     # posts taken per channel per poll, OLDEST first; a bigger backlog is drained over consecutive polls without a pause
 POLL_MAX_SEC = 15.0                                        # after a FloodWait the interval doubles up to this and decays back by itself
+
+
+async def fetch_new(client, cid, last_id: int, cap: int | None = None) -> list:
+    """Every message of `cid` with id > last_id, OLDEST FIRST, at most `cap` per call. Telethon's reverse iteration starts at min_id + 1 and walks forward, so advancing last_id message by message can never
+    skip one: whatever exceeds `cap` is simply fetched by the next call. (The previous get_messages(limit=20, min_id=...) returned the 20 NEWEST messages above last_id; with more than 20 new posts
+    (a burst, or a restart after an outage) the older ones were never fetched and last_id jumped past them: a silent, permanent gap.)"""
+    out = []
+    async for m in client.iter_messages(cid, min_id=last_id, reverse=True, limit=cap or FETCH_CAP): out.append(m)
+    out.sort(key=lambda x: x.id)
+    return out
+
+
+async def drain_channel(client, cid, last: dict, handle_msg, save) -> int:
+    """One poll step of one channel: fetch everything above last[cid] (oldest first, capped), hand each message to `handle_msg`, advance and persist the high-water mark AFTER each message (so a crash
+    re-reads at most the message being handled; the per-post dedupe makes that harmless). Returns how many messages were handled."""
+    k = str(cid); new = await fetch_new(client, cid, last[k])
+    for m in new:
+        handle_msg(cid, m); last[k] = max(last[k], m.id); save()
+    return len(new)
 
 
 def next_poll(poll: float, flooded: bool, since_flood: float, base: float = POLL_SEC, cap: float = POLL_MAX_SEC, calm_sec: float = 300.0) -> float:
@@ -101,13 +121,19 @@ def process(post: dict, state: dict, *, edited: bool = False, participant: str, 
     return out
 
 
-def send_alert(text: str) -> None:
+def _send_alert_now(text: str) -> None:
     """Private message to the owner's Telegram chat (never a public channel). Failure to alert must never break ingestion."""
     try:
         from ..connectors import telegram
         telegram._send("Arena ingest: " + text, os.environ.get("TELEGRAM_CHAT_ID"))
     except Exception:
         log.warning("alert could not be sent")
+
+
+def send_alert(text: str) -> None:
+    """Fire-and-forget: the HTTP call (timeout 8 s) runs in a daemon thread, so an alert can never stall the event loop that receives and polls the posts."""
+    import threading
+    threading.Thread(target=_send_alert_now, args=(text,), daemon=True, name="arena-ingest-alert").start()
 
 
 def retry_pending(state: dict, *, mode_fn, default_participant: str, now: float | None = None, **kw) -> list:
@@ -139,7 +165,7 @@ async def run() -> None:                                                       #
             if str(post["chat"]["id"]) not in ids: return
             if not sender_allowed(post["chat"]["id"], getattr(ev.message, "sender_id", None)): _bump("member_message_ignored"); return          # group member, not the anonymous admin                        # belt and braces: never touch a non-listed chat
             r = process(post, state, edited=edited, participant=participant_for(post["chat"]["id"], c["name"]), mode_fn=lambda: api.mode(api.cfg()))
-            json.dump(state, open(CI.STATE, "w")); write_status(connected=True, last_event=time.time())
+            CI.save_json(CI.STATE, state); write_status(connected=True, last_event=time.time())
             log.info("channel=%s msg=%s outcome=%s", post["chat"]["id"], post["message_id"], r["outcome"])
         except Exception as e:
             _bump("errors"); write_status(last_error=type(e).__name__); log.exception("handler failed (%s)", type(e).__name__)
@@ -153,23 +179,23 @@ async def run() -> None:                                                       #
         # Read-only; ids are persisted so a restart back-fills only the gap (the per-post dedupe makes overlap with the push events harmless).
         last = CI._load(LAST_IDS, {}); poll = POLL_SEC; last_flood = 0.0
         while True:
+            backlog = False
             try:
                 for cid in chats:
                     k = str(cid)
                     if k not in last:
-                        top = await client.get_messages(cid, limit=1); last[k] = top[0].id if top else 0; json.dump(last, open(LAST_IDS, "w")); continue
-                    new = await client.get_messages(cid, limit=20, min_id=last[k])
-                    for m in sorted(new, key=lambda x: x.id):
-                        handle_msg(cid, m); last[k] = max(last[k], m.id); json.dump(last, open(LAST_IDS, "w"))
+                        top = await client.get_messages(cid, limit=1); last[k] = top[0].id if top else 0; CI.save_json(LAST_IDS, last); continue
+                    if await drain_channel(client, cid, last, handle_msg, lambda: CI.save_json(LAST_IDS, last)) >= FETCH_CAP:
+                        backlog = True; _bump("fetch_capped")                                                   # more may be waiting: poll again at once
                 if state.get("pending"):
-                    retry_pending(state, mode_fn=lambda: api.mode(api.cfg()), default_participant=c["name"]); json.dump(state, open(CI.STATE, "w"))
+                    retry_pending(state, mode_fn=lambda: api.mode(api.cfg()), default_participant=c["name"]); CI.save_json(CI.STATE, state)
                 write_status(connected=True, last_poll=time.time())
             except FloodWaitError as e:
                 _bump("flood_wait"); last_flood = time.time(); poll = next_poll(poll, True, 0.0); await asyncio.sleep(min(int(e.seconds) + 5, 3600))
             except Exception as e:
                 _bump("poll_errors"); write_status(last_error=type(e).__name__)
             poll = next_poll(poll, False, time.time() - last_flood)
-            await asyncio.sleep(poll)
+            await asyncio.sleep(0.2 if backlog else poll)
 
     async def on_new(ev): handle(ev, False)                                              # Telethon awaits the callback: a plain lambda returned None -> "TypeError: NoneType can't be used in 'await'" on every pushed event
     async def on_edit(ev): handle(ev, True)

@@ -7,6 +7,9 @@ from app.arena import channel_ingest as CI
 from app.arena import submit as SU
 from tests.test_channel_parse import HERO
 
+from datetime import datetime, timedelta, timezone
+FIXED_NOW = datetime(2026, 10, 26, 12, 0, tzinfo=timezone(timedelta(hours=5, minutes=30))).timestamp()          # the fixtures name the 27-Oct-2026 expiry: fix 'today' so they do not rot with the calendar
+
 MCX = "#NATURALGAS _290 PE\nBuy Range : 9-10\nTarget : 12/14\nStoploss : 7"
 
 
@@ -62,8 +65,8 @@ def test_poll_only_whitelisted_channels_and_offset(env, monkeypatch):
 def test_expiry_hint_uses_only_the_matching_captured_expiry(env, monkeypatch):
     msg = "NIFTY 27 OCT 25350 PE\nABOVE 150\nTARGET 200/250\nSL 120"
     monkeypatch.setattr(CI.CT, "captured", lambda u, d, p=None: {"expiries": {"2026-10-22": {"strikes": []}, "2026-10-27": {"strikes": [25350.0]}}})
-    r = CI.handle_post(post(21, msg), env["st"], **env["kw"]); assert r["outcome"] == "SUBMITTED" and r["expiry"] == "2026-10-27"
-    r = CI.handle_post(post(22, msg.replace("27 OCT", "17 JULY")), env["st"], **env["kw"]); assert r["outcome"] == "NO_CAPTURED_EXPIRY_FOR_POST"
+    r = CI.handle_post(post(21, msg), env["st"], **{**env["kw"], "now": FIXED_NOW}); assert r["outcome"] == "SUBMITTED" and r["expiry"] == "2026-10-27"
+    r = CI.handle_post(post(22, msg.replace("27 OCT", "17 JULY")), env["st"], **{**env["kw"], "now": FIXED_NOW}); assert r["outcome"] == "NO_CAPTURED_EXPIRY_FOR_POST"
 
 
 def test_entry_only_post_gets_estimator_stop_and_1r_2r_3r_ladder(env, monkeypatch):
@@ -72,12 +75,12 @@ def test_entry_only_post_gets_estimator_stop_and_1r_2r_3r_ladder(env, monkeypatc
     monkeypatch.setattr(D, "prior_ltps", lambda *a, **k: [150.0, 140.0, 130.0])
     monkeypatch.setattr(D, "record_prediction", lambda *a, **k: calls.append(a))
     calls = []
-    r = CI.handle_post(post(31, "NIFTY 27 OCT 25350 PE\nABOVE :- 160"), env["st"], **env["kw"]); assert r["outcome"] == "SUBMITTED"
+    r = CI.handle_post(post(31, "NIFTY 27 OCT 25350 PE\nABOVE :- 160"), env["st"], **{**env["kw"], "now": FIXED_NOW}); assert r["outcome"] == "SUBMITTED"
     rec = SU.load(env["kw"]["ledger"])[-1]
     assert rec["sl"] == 126.1 and rec["targets"] == [193.9, 227.8, 261.7] and "risk module" in rec["note"] and rec["entry"] == 160.0 and len(calls) == 1          # 0.97*130 ; R=33.9
-    r = CI.handle_post(post(32, "NIFTY 27 OCT 25350 PE\nABOVE :- 160\nSL :- 140"), env["st"], **env["kw"])                                           # published stop kept, ladder from it
+    r = CI.handle_post(post(32, "NIFTY 27 OCT 25350 PE\nABOVE :- 160\nSL :- 140"), env["st"], **{**env["kw"], "now": FIXED_NOW})                                           # published stop kept, ladder from it
     rec = SU.load(env["kw"]["ledger"])[-1]; assert rec["sl"] == 140.0 and rec["targets"] == [180.0, 200.0, 220.0] and len(calls) == 1
-    r = CI.handle_post(post(33, "NIFTY 27 OCT 25350 PE\nABOVE :- 160\nTARGET :- 200/250\nSL :- 140"), env["st"], **env["kw"])                  # fully published: untouched
+    r = CI.handle_post(post(33, "NIFTY 27 OCT 25350 PE\nABOVE :- 160\nTARGET :- 200/250\nSL :- 140"), env["st"], **{**env["kw"], "now": FIXED_NOW})                  # fully published: untouched
     rec = SU.load(env["kw"]["ledger"])[-1]; assert rec["sl"] == 140.0 and rec["targets"] == [200.0, 250.0] and "risk module" not in rec["note"]
 
 

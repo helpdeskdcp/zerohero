@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -27,6 +29,27 @@ def channel_ids() -> set[str]:
 def _load(p, default):
     try: return json.load(open(p))
     except Exception: return default
+
+
+_SAVE_LOCK = threading.Lock()
+
+
+def save_json(path: str, obj) -> None:
+    """Atomic JSON write: dump to a temp file in the SAME directory, then os.replace over the target. A crash or kill at any instant leaves either the complete old file or the complete new one, never the
+    truncated file that `open(path, "w")` + dump leaves behind (the dedupe record `seen` lives in this state file: a truncated one would let an already submitted post be submitted again).
+    Set TG_STATE_FSYNC=1 to also fsync before the rename (survives power loss, but an fsync on this shared disk can take 100+ ms inside the event loop, so it is off by default)."""
+    d = os.path.dirname(os.path.abspath(path)); os.makedirs(d, exist_ok=True)
+    with _SAVE_LOCK:
+        fd, tmp = tempfile.mkstemp(dir=d, prefix=os.path.basename(path) + ".", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(obj, f)
+                if os.environ.get("TG_STATE_FSYNC") == "1": f.flush(); os.fsync(f.fileno())
+            os.replace(tmp, path)
+        except BaseException:
+            try: os.unlink(tmp)
+            except OSError: pass
+            raise
 
 
 def _log(rec: dict, log: str):
@@ -169,5 +192,5 @@ def poll(token: str, *, participant: str, mode_fn, call=None, ledger: str | None
         p = u.get("channel_post")
         if p and str(p["chat"]["id"]) in wl and p["chat"].get("type") == "channel": res.append(handle_post(p, st, participant=participant, mode_fn=mode_fn, ledger=ledger, log=log, db_path=db_path))
         elif u.get("edited_channel_post") and str(u["edited_channel_post"]["chat"]["id"]) in wl: _log({"outcome": "EDIT_IGNORED", "chat_id": str(u["edited_channel_post"]["chat"]["id"]), "message_id": u["edited_channel_post"].get("message_id")}, log)
-    os.makedirs(os.path.dirname(state_path), exist_ok=True); json.dump(st, open(state_path, "w"))
+    save_json(state_path, st)
     return res
