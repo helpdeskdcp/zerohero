@@ -47,7 +47,7 @@ def test_terminal_module_is_read_only():
 
 def _mini_db(path, rows):
     import sqlite3
-    c = sqlite3.connect(path); c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, exch_ts TEXT, symbol TEXT, expiry TEXT, strike REAL, option_type TEXT, kind TEXT, source TEXT, ltp REAL, bid REAL, ask REAL)")
+    c = sqlite3.connect(path); c.execute("CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY, received_ts TEXT, exch_ts TEXT, symbol TEXT, expiry TEXT, strike REAL, option_type TEXT, kind TEXT, source TEXT, ltp REAL, bid REAL, ask REAL, volume REAL)")
     c.executemany("INSERT INTO quote_snapshots (received_ts, exch_ts, symbol, expiry, strike, option_type, kind, source, ltp, bid, ask) VALUES (?,?,?,?,?,?,?,?,?,?,?)", [r + (r[-1] - 0.1, r[-1] + 0.1) for r in rows]); c.commit(); c.close()
 
 
@@ -64,3 +64,12 @@ def test_illiquid_contract_chart_is_continuous_heartbeat_rows_included_and_long_
     assert out["candles"][4]["close"] == 51.0 and out["candles"][0]["open"] == 50.0
     inc = TM.premium("NATURALGAS", "2026-11-20", 240.0, "CE", tf=1, since=day.timestamp() + 5 * 60, now=now, path=p)          # incremental refresh also sees heartbeat rows
     assert [round((c["time"] - TM.IST_S - day.timestamp()) / 60) for c in inc["candles"]][:2] == [4, 5]
+
+
+def test_candles_carry_the_running_volume_total_for_the_chart_to_difference():
+    from datetime import datetime
+    from app.arena import terminal as T
+    rows = [("2026-11-03T04:00:10Z", 100.0, 1000.0), ("2026-11-03T04:00:40Z", 101.0, 1200.0), ("2026-11-03T04:01:10Z", 102.0, None), ("2026-11-03T04:02:10Z", 103.0, 1500.0)]
+    lo = datetime.fromisoformat("2026-11-03T04:00:00+00:00").timestamp()
+    c = T._candles(rows, 1, lo)
+    assert [x["cum"] for x in c] == [1200.0, 1200.0, 1500.0]                                        # per bar: the last total; a bar without a print keeps the earlier total

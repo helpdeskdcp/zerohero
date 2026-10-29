@@ -31,8 +31,9 @@ def _iso(ts: float) -> str: return datetime.fromtimestamp(ts, timezone.utc).strf
 def _candles(rows, tf: int, lo: float) -> list[dict]:
     """(received_ts, ltp) rows -> OHLC candles on the capture-time axis, a gap of up to 15 minutes carried flat (shared by the option and the equity chart)."""
     tfs = tf * 60
-    bars, last_b, last_px = {}, None, None
-    for ts, ltp in rows:
+    bars, last_b, last_px, cum = {}, None, None, {}
+    for row in rows:
+        ts, ltp = row[0], row[1]; vol = row[2] if len(row) > 2 else None
         t = _ep(ts)
         if t < lo: continue
         b = int(t // tfs)
@@ -41,7 +42,12 @@ def _candles(rows, tf: int, lo: float) -> list[dict]:
         if b not in bars: bars[b] = [ltp, ltp, ltp, ltp]
         else: x = bars[b]; x[1] = max(x[1], ltp); x[2] = min(x[2], ltp); x[3] = ltp
         last_b, last_px = b, ltp
-    return [dict(time=b * tfs + IST_S, open=v[0], high=v[1], low=v[2], close=v[3]) for b, v in sorted(bars.items())]
+        if vol is not None and vol > 0: cum[b] = max(cum.get(b, 0.0), float(vol))                      # the stored volume is the day's running total: the chart subtracts neighbours: a bar's volume = how much the total grew in it
+    out, prev = [], 0.0
+    for b, v in sorted(bars.items()):
+        prev = cum.get(b, prev)                                                                         # a bar without a volume print keeps the running total of the one before
+        out.append(dict(time=b * tfs + IST_S, open=v[0], high=v[1], low=v[2], close=v[3], cum=prev))
+    return out
 
 
 def _premium(where: str, params: tuple, tf: int, since: float | None, now: float | None, path: str | None, last_fn) -> dict:
@@ -54,7 +60,7 @@ def _premium(where: str, params: tuple, tf: int, since: float | None, now: float
     lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
     c = CT._ro(path)
     try:
-        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE " + where + " AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
+        rows = c.execute("SELECT received_ts, ltp, volume FROM quote_snapshots WHERE " + where + " AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
                          (*params, _iso(day0 - 2 * 86400), _floor(c, lo, path))).fetchall()
     finally: c.close()
     out["candles"] = _candles(rows, tf, lo); out["last"] = last_fn(); return out

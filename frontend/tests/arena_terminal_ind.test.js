@@ -43,3 +43,9 @@ console.log("arena_terminal_ind status ok");
   assert.strictEqual(v.bars[30].color.includes("34,197,94"), true);
   console.log("volume ok");
 }
+{
+  const T = require("../static/js/arena_terminal.js"), assert = require("assert");
+  const v = T.tmCumToVolume([{ time: 1, cum: 1000 }, { time: 2, cum: 1000 }, { time: 3, cum: 1300 }, { time: 4, cum: 0 }, { time: 5, cum: 1350 }]).map((x) => x.volume);
+  assert.deepStrictEqual(v, [0, 0, 300, 0, 50]);                                                       // first bar 0 (not the whole day), unchanged total 0, growth = volume, a missing print is skipped
+  console.log("cum->volume ok");
+}

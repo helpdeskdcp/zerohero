@@ -68,6 +68,10 @@ function tmVolume(candles, n = 20, thr = 2) {
   }
   return { bars, marks, any };
 }
+/* option / equity candles carry the day's running volume total (`cum`); a bar's own volume is how much the total grew in it (the first bar of the day has no earlier total: 0) */
+function tmCumToVolume(candles) {
+  let prev = null; return candles.map((c) => { const cum = Number(c.cum) || 0, v = prev == null || cum <= 0 ? 0 : Math.max(0, cum - prev); if (cum > 0) prev = cum; return { ...c, volume: v }; });
+}
 /* levels drawn as lines on the option chart */
 function tmLevels(r) {
   const L = [];
@@ -150,7 +154,7 @@ function tmEditHtml(r) {
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { tmVolume, tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { tmCumToVolume, tmVolume, tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -207,7 +211,7 @@ if (typeof document !== "undefined") (function () {
   }
   function clearChart() {
     for (const k of Object.keys(series)) { try { chart.removeSeries(series[k]); } catch (e) { /* ok */ } }
-    series = {}; lines = []; uLines = []; mk = null; vmk = null; lastVol = null; lastBar = null; forming = null;
+    series = {}; lines = []; uLines = []; mk = null; vmk = null; lastVol = null; optCandles = []; lastBar = null; forming = null;
   }
   const lineStyle = (s) => ({ solid: 0, dotted: 1, dashed: 2 }[s] ?? 0);
   function addCandles() {
@@ -221,7 +225,7 @@ if (typeof document !== "undefined") (function () {
   function setMarkers(list) { if (mk) mk.setMarkers(list.sort((a, b) => a.time - b.time)); }
   let ind = (() => { try { return tmIndLoad(localStorage.getItem("arena_ind")); } catch (e) { return tmIndLoad(""); } })(), lastTimes = [], lastOrder = null;
   const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
-  let uLines = [], vmk = null, lastVol = null;
+  let uLines = [], vmk = null, lastVol = null, optCandles = [];
   function drawUturnLines() {
     uLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); uLines = [];
     if (series.c && ind.uturn) tmUturnLevels(lastUnderlying).forEach((L) => uLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: L.title })));
@@ -236,13 +240,16 @@ if (typeof document !== "undefined") (function () {
     const q = tmChartPath(r, tf);
     const [c, u] = await Promise.all([api(q), r.instrument === "EQUITY" ? Promise.resolve(null) : api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=15`).catch(() => null)]);
     if (myGen !== gen) return; clearChart(); addCandles(); series.c.setData(c.candles); lastBar = c.candles.length ? c.candles[c.candles.length - 1] : null; drawLevels(r);
+    optCandles = c.candles.slice(); const vol = tmVolume(tmCumToVolume(optCandles)); lastVol = vol; vmk = null;
+    if (vol.any) { const LW = window.LightweightCharts; series.v = chart.addSeries(LW.HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "vol", priceLineVisible: false, lastValueVisible: false }); chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } }); series.v.setData(vol.bars); vmk = LW.createSeriesMarkers(series.v, vol.marks); }
     const times = c.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times); lastUnderlying = u;
     setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); if (!userZoomed) chart.timeScale().fitContent();
     setNote(c.candles.length ? `${c.candles.length} candles · ${tf}m · exchange-stamped quotes` + (r.instrument === "EQUITY" ? ` · ${r.underlying} cash equity` : ` · Pine arrows on ${r.underlying}: ${tmIndNote(ind, u)}`) : "No quotes captured for this contract yet today.");
   }
   async function refreshOption(r) {
     const since = lastBar ? lastBar.time - IST_SHIFT : undefined; const c = await api(tmChartPath(r, tf, since));
-    for (const b of c.candles) { if (!lastBar || b.time >= lastBar.time) { series.c.update(b); lastBar = b; } }
+    for (const b of c.candles) { if (!lastBar || b.time >= lastBar.time) { series.c.update(b); lastBar = b; } const i = optCandles.findIndex((x) => x.time === b.time); if (i >= 0) optCandles[i] = b; else if (!optCandles.length || b.time > optCandles[optCandles.length - 1].time) optCandles.push(b); }
+    if (series.v) { const vv = tmVolume(tmCumToVolume(optCandles)); const lb = vv.bars[vv.bars.length - 1]; if (lb) series.v.update(lb); if (vmk) vmk.setMarkers(vv.marks); lastVol = vv; }
   }
   async function loadUnderlying(r, myGen) {
     const u = await api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=${utf}`); if (myGen !== gen) return; clearChart(); addCandles(); const LW = window.LightweightCharts;
