@@ -251,6 +251,8 @@ env_flags:
   - {name: ARENA_EQUITY_FAILOVER, category: FEATURE_FLAG, note: "display-only Upstox last-price backup for the equity order ticket when Angel has nothing fresh (default on; never used by settlement)"}
   - {name: HISTCAP_MAX_LAG_SEC, category: TUNING, note: "upper bound (s) of how far a capture batch's received_ts trails the row write order; sizes the safe id windows of time-window queries (measured max 6,891 s; default 10800)"}
   - {name: TG_JOURNAL, category: FEATURE_FLAG, note: "Telegram reader: durable capture journal + worker + reconciler (default on; 0 = the old direct path inside the Telegram callback)"}
+  - {name: SAFE_AI_LIVE, category: FEATURE_FLAG, note: "Safe AI runner (risk-first paper participant): 0 stops it entirely (default on)"}
+  - {name: SAFE_AI_SUBMIT, category: FEATURE_FLAG, note: "Safe AI: 0 = decide and log only, no ledger signal (default on)"}
   - {name: TG_EDITS, category: FEATURE_FLAG, note: "Telegram reader: an edited channel post amends the signal it created (same contract only) or becomes a new signal at the edit time (default on; 0 = edits are logged and ignored)"}
   - {name: TG_DELETES, category: FEATURE_FLAG, note: "Telegram reader: a deleted channel post cancels its unfilled order / drops a post still waiting for data; never affects a filled trade (default on; 0 = deletions ignored)"}
   - {name: TG_RECONCILE_SEC, category: TUNING, note: "Telegram reader: seconds between reconciliation rounds (source history vs capture journal)"}

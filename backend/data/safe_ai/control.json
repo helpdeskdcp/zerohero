@@ -1,0 +1,1 @@
+{"submit": false, "reason": "dry-run until the 12-month backtest (data/research/safe_ai) is read; flip to true to let Safe AI write ledger signals"}

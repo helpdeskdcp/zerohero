@@ -265,3 +265,11 @@ def test_one_malformed_participant_entry_does_not_break_the_configuration_for_ev
     monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(pf)); c = A.cfg()
     assert [c["flags"][k]["default_lots"] for k in ("BAD_ONE", "NULL_ONE", "BIG_ONE", "OK_ONE")] == [1, 1, 1, 3] and "NOT_A_DICT" not in c["flags"]
     assert client.get("/api/arena/public/state", headers=H).status_code == 200                                    # the arena still answers
+
+
+def test_leaderboard_lists_every_visible_participant_not_only_ten(client, monkeypatch, tmp_path):
+    import hashlib, json
+    pf = tmp_path / "participants.json"; pf.write_text(json.dumps({f"P_{i:02d}": {"display": f"Person {i:02d}", "token_sha256": hashlib.sha256(f"tok-{i}".encode()).hexdigest()} for i in range(14)} | {"HID": {"display": "Hidden", "hidden": True, "token_sha256": "0" * 64}}))
+    monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(pf)); A._cache.pop("lb", None)
+    r = client.get("/api/arena/public/leaderboard", params={"scope": "all"}, headers=H).json()
+    shown = [x["participant"] for x in r["rows"]]; assert len([n for n in shown if n.startswith("P_")]) == 14 and "HID" not in shown and r["n_participants"] == len(shown)

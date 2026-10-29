@@ -99,3 +99,7 @@ backend/data/smart_chart.db*
 backend/data/upstox_nse_eq_keys.json
 backend/data/.id_window_none.json
 *.jsonl.lock
+
+# Safe AI runtime state (decisions + day state); control.json stays tracked
+backend/data/safe_ai/decisions.jsonl
+backend/data/safe_ai/state.json

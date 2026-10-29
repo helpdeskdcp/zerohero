@@ -1,0 +1,75 @@
+//@version=6
+// ZeroHero Safe U-turn (PAPER research indicator, NO EDGE CLAIMED). Mirror of app/safe_ai/signals.py `detect` for a 1-minute index chart.
+// CONFIRMED U-TURN at the session extreme: down-thrust then recovery -> CALL idea (plot 1), up-thrust then fall-back -> PUT idea (plot -1).
+// Safety rules live in the runner, not in this indicator: 1 lot, stop 25 % of the premium, first target +20 %, <= 2 trades a day, one loss ends the day, 30-minute cool-down, no entry after 14:30 (13:30 on the option's expiry day).
+// Not compiled on TradingView by the author (no access); run in PineTS (parity-checked against the Python rule, see scripts/safe_uturn_parity.py).
+indicator("ZeroHero Safe U-turn (paper, no edge claimed)", shorttitle="ZH-SafeU", overlay=true, max_labels_count=300)
+
+thrustPct = input.float(0.50, "Thrust % (0.35 / 0.50 / 0.70 pre-registered)", minval=0.1, maxval=3.0, step=0.05, group="Rule") / 100.0
+retMin    = input.float(0.35, "Recovery min (fraction of thrust)", minval=0.1, maxval=0.9, step=0.05, group="Rule")
+retMax    = input.float(0.80, "Recovery max (fraction of thrust)", minval=0.2, maxval=1.0, step=0.05, group="Rule")
+minAge    = input.int(8,  "Extreme at least N minutes old", minval=3, maxval=60, group="Rule")
+maxAge    = input.int(90, "Extreme at most N minutes old", minval=10, maxval=240, group="Rule")
+holdMin   = input.int(6,  "No fresh extreme in the last N minutes", minval=2, maxval=30, group="Rule")
+mom1      = input.int(3,  "Momentum look-back 1 (min)", minval=1, maxval=30, group="Rule")
+mom2      = input.int(8,  "Momentum look-back 2 (min)", minval=2, maxval=60, group="Rule")
+useWindow = input.bool(true, "Only inside the trading window", group="Window")
+expiryDay = input.bool(false, "Today is the expiry day of the option I trade (cut at 13:30)", group="Window")
+
+newDay = barstate.isfirst or timeframe.change("D")
+var float sMax = na
+var float sMin = na
+var float lo = na
+var float hi = na
+var float refHi = na       // highest price before the session low
+var float refLo = na       // lowest price before the session high
+var int loBar = na
+var int hiBar = na
+var int dayStart = na
+
+if newDay
+    sMax := close
+    sMin := close
+    lo := close
+    hi := close
+    refHi := close
+    refLo := close
+    loBar := bar_index
+    hiBar := bar_index
+    dayStart := bar_index
+else
+    sMax := math.max(sMax, close)
+    sMin := math.min(sMin, close)
+    if close < lo
+        lo := close
+        loBar := bar_index
+        refHi := sMax
+    if close > hi
+        hi := close
+        hiBar := bar_index
+        refLo := sMin
+
+barsToday = bar_index - dayStart
+ageLo = bar_index - loBar
+ageHi = bar_index - hiBar
+
+thrustDown = (refHi - lo) / refHi
+thrustUp = (hi - refLo) / refLo
+recUp = refHi > lo ? (close - lo) / (refHi - lo) : na
+recDn = hi > refLo ? (hi - close) / (hi - refLo) : na
+
+enoughData = barsToday >= 20 and barsToday >= minAge + holdMin
+callOk = enoughData and ageLo >= minAge and ageLo <= maxAge and thrustDown >= thrustPct and recUp >= retMin and recUp <= retMax and close > close[mom1] and close > close[mom2]
+putOk  = enoughData and ageHi >= minAge and ageHi <= maxAge and thrustUp >= thrustPct and recDn >= retMin and recDn <= retMax and close < close[mom1] and close < close[mom2]
+
+inWin = not useWindow or not na(time(timeframe.period, expiryDay ? "0935-1330" : "0935-1430", "Asia/Kolkata"))
+callSig = callOk and inWin
+putSig = putOk and not callOk and inWin
+
+plotshape(callSig, "CALL idea", shape.triangleup, location.belowbar, color.new(color.green, 0), size = size.small, text = "CE")
+plotshape(putSig, "PUT idea", shape.triangledown, location.abovebar, color.new(color.red, 0), size = size.small, text = "PE")
+plot(callSig ? 1 : putSig ? -1 : 0, "DBG_SIG", display = display.data_window)
+plot(lo, "Session low", color.new(color.green, 60), display = display.none)
+plot(hi, "Session high", color.new(color.red, 60), display = display.none)
+alertcondition(callSig, "Safe U-turn CALL idea", "ZeroHero Safe U-turn: CALL idea (paper, no edge claimed)")
+alertcondition(putSig, "Safe U-turn PUT idea", "ZeroHero Safe U-turn: PUT idea (paper, no edge claimed)")

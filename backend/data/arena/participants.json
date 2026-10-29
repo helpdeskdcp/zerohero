@@ -41,5 +41,13 @@
   "display": "ZeroHero AI - Winners Scalper (Pine) on NG",
   "token_sha256": "8a50bcaa6f884f0110abb0437572fef6d3c82b6dedbfa121655ecafe1af16fdc",
   "risk_module": true
+ },
+ "KIRAN_NIMHAN": {
+  "display": "Kiran Nimhan",
+  "token_sha256": "0978eba9e4fff62fe30f7c396ff6912be1e0a488b5f731b654582457296f6c21"
+ },
+ "ZEROHERO_SAFE_AI": {
+  "display": "ZeroHero Safe AI (risk-first, paper, no edge claimed)",
+  "token_sha256": "54f231e861d687765728ba5d2a1395eb40e41a2efe7f69da857cb8b7435ca792"
  }
 }

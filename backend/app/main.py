@@ -552,6 +552,11 @@ async def _lifespan(_app: FastAPI):
         _wp_sub.Runner().start()
     except Exception as e:
         print(f"[winners_pine] submitter start failed: {type(e).__name__}: {e}")
+    try:
+        from .safe_ai import live as _safe_ai
+        _safe_ai.Runner().start()          # ZEROHERO_SAFE_AI: risk-first paper participant (SAFE_AI_LIVE=0 stops it, SAFE_AI_SUBMIT=0 = log-only)
+    except Exception as e:
+        print(f"[safe_ai] runner start failed: {type(e).__name__}: {e}")
     runtime.scalp_runner.start()
     runtime.autoscalp.start()
     if histcap_worker is not None:

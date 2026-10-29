@@ -1,0 +1,2 @@
+"""ZeroHero Safe AI: a risk-first, rule-based PAPER participant for the arena (index options on NIFTY / SENSEX / BANKNIFTY). It makes NO edge claim: price-only rules were tested to death in this repo and none survived costs.
+What it is: very few trades, one lot, hard stops, daily loss lock, every decision (taken or skipped) logged, and every rule tested on the captured sessions with the arena's own settlement before it may trade."""

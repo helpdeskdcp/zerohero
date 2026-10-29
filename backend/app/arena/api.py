@@ -618,7 +618,7 @@ def leaderboard(request: Request, scope: str = "today"):
                     out = R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db"), cache=RESULT_CACHE)
                     today = datetime.now(IST).strftime("%Y-%m-%d")
                     names = [n for n in dict.fromkeys(["ZEROHERO_AI", "ZEROHERO_AI_EVENT", *c["participants"], *c["hashes"]]) if not c["flags"].get(n, {}).get("hidden")]       # hidden = test profiles
-                    v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL)
+                    v = LB.build({k: v["results"] for k, v in out.items() if not k.startswith("_")}, names, c["display"], scope=scope, today=today, capital=R.CAPITAL, top=50)                       # top=50: every visible participant, not only the first 10 (the default hid the 11th and 12th)
                     v.update(mode=mode(c), generated_at=datetime.now(IST).isoformat(timespec="seconds"), you=None)
                     _cache["lb"][scope] = (time.time(), v)
             finally:
