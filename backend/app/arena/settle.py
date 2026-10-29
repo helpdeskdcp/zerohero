@@ -109,12 +109,17 @@ def rule_from(name: str) -> float | None:
 
 
 def latency_at(t: float, default: float = LATENCY_SEC) -> float:
-    """Execution delay for a signal / management event stamped at `t`: LATENCY_SEC (20 s) unless rule_effective.json holds `latency_from_ts` <= t and `latency_sec` (owner's broker-like fill decision 2026-10-26,
-    same for every participant and both sides, NEVER retroactive: earlier signals and events keep their original delay). The value can only shorten the delay, never lengthen it."""
+    """Execution delay for a signal / management event stamped at `t`: LATENCY_SEC (20 s) unless rule_effective.json says otherwise. `latency_schedule` = [[from_ts, sec], ...] (owner's decisions: 3 s from 2026-10-26 13:13,
+    1 s from 2026-10-29): the LAST step whose from_ts <= t applies, the same for every participant and both sides, NEVER retroactive (an earlier signal or event keeps the delay it was stamped under). Files from before the
+    schedule only have `latency_from_ts` + `latency_sec` (one step). The value can only shorten the delay, never lengthen it."""
     try:
         import json
-        d = json.load(open(RULES_FILE)); f, v = d.get("latency_from_ts"), d.get("latency_sec")
-        if f is not None and v is not None and t >= float(f): return min(float(default), float(v))
+        d = json.load(open(RULES_FILE)); steps = d.get("latency_schedule")
+        if not steps and d.get("latency_from_ts") is not None and d.get("latency_sec") is not None: steps = [[d["latency_from_ts"], d["latency_sec"]]]
+        cur = None
+        for f, v in sorted(([float(a), float(b)] for a, b in (steps or [])), key=lambda x: x[0]):
+            if t >= f: cur = v
+        if cur is not None: return min(float(default), cur)
     except Exception:
         pass
     return float(default)

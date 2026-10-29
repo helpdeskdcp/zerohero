@@ -105,3 +105,9 @@ Infrastructure (no scoring rule): the two capture stalls were already fixed on 2
 - Capture: an equity symbol is put under the 3-second quote capture when a signal is submitted or an order ticket shows it (quote_snapshots kind=EQUITY, same table and integrity checks). Paper only; no order path. Kill switch ARENA_EQUITY=0.
 - Limits: order value <= Rs 25 lakh, quantity <= 100000 shares, symbol must exist in the broker instrument master as an NSE "-EQ" symbol; an entry more than 10 % away from the live price (NEAR / MARKET) is rejected as a probable typo.
 - Not verified live yet: the equity quote capture was tested with fakes and the instrument master only (NSE was closed); first live check is the next NSE session.
+
+## 2026-10-29 07:08:53 IST — Broker-like execution delay: 3 s -> 1 s (owner's decision; same for every participant and both sides)
+- Why (first step, 2026-10-26): participants measured the 20 s wait as the real lag of the system; a fast market moved 12 premium points inside it (an emergency exit pressed at +Rs 435 settled at -Rs 1,251). The delay is now 1 s: BUY fills at the ASK and exits at the BID of the first stored quote at/after signal time + 1 s (dense capture stores a quote about every second).
+- Applies ONLY to signals and management events (amend / trail / exit / cancel) stamped at or after 2026-10-29 07:08:53 IST (a dated step in `latency_schedule` in rule_effective.json); everything earlier keeps the delay it was stamped under. Never retroactive. The delay can only be shortened by a rule, never lengthened.
+- Entry rules (ABOVE / NEAR / LIMIT / MARKET, the 5 % chase limit, DATA_GAP, INVALID_LEVELS) are unchanged.
+- Why (this step, 2026-10-29): the dense capture of every contract with a signal now runs every 1 s (was 3 s) and its 1.0 s cadence was measured (p50 1.0 s, p95 1.3 s), so a 1 s wait is realistic. Signals and events stamped before this instant keep their 3 s (or earlier 20 s) result.
