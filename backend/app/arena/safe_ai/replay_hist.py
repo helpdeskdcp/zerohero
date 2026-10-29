@@ -22,7 +22,7 @@ from ...instrument_profiles import get_instrument_profile
 from . import signals as SG
 
 IST = timezone(timedelta(hours=5, minutes=30))
-DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "historical", "upstox", "upstox_research.db")
+DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "data", "historical", "upstox", "upstox_research.db")
 SL_FRAC, T1_FRAC, MIN_PREMIUM, MAX_TRADES_DAY, COOLDOWN_MIN = 0.25, 0.20, 30.0, 2, 30
 MAX_DTE = 2                      # the Safe AI trades only on the expiry day and the two days before it (memory: ATM +/-4 strikes of the expiry-1 spot are pulled; gamma is highest there; Mohit: 18 of 29 index posts)
 SPLIT = "2026-04-01"            # dev (Sep-2025 .. Mar-2026) / hold-out (Apr-2026 .. Oct-2026)

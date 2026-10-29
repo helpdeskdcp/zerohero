@@ -129,3 +129,12 @@ def test_only_the_expiry_day_and_the_two_days_before_are_traded(tmp_path):
     assert w.e.tick() == [] and not w.submitted and any(x["kind"] == "skip:dte_above_limit" for x in w.log())
     w2 = World(tmp_path / "w2" if False else tmp_path); w2.e.state = {}; w2.e.chain = lambda s: {"day": DAY, "expiries": {"2026-11-05": {"strikes": [99.0, 100.0, 101.0]}}} if s == "NIFTY" else {}     # 2 days away: allowed
     assert len(w2.e.tick()) == 1
+
+
+def test_paths_resolve_to_backend_data_after_the_package_move():
+    """The package moved to app/arena/safe_ai; a base path that is one dirname short wrote the state / decision log into app/data/safe_ai and never read control.json."""
+    import os
+    from app.arena.safe_ai import replay, replay_hist
+    backend = os.path.abspath(os.path.join(os.path.dirname(L.__file__), "..", "..", ".."))
+    assert os.path.abspath(L.DIR) == os.path.join(backend, "data", "safe_ai") and os.path.exists(os.path.join(L.DIR, "control.json"))      # (CONTROL itself is redirected by the autouse fixture)
+    assert os.path.abspath(replay.DB) == os.path.join(backend, "data", "market_history.db") and os.path.abspath(replay_hist.DB).startswith(os.path.join(backend, "data", "historical"))

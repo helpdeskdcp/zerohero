@@ -22,7 +22,7 @@ from . import signals as SG
 
 _log = logging.getLogger("safe_ai")
 IST = timezone(timedelta(hours=5, minutes=30))
-HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))          # backend/ (the package lives in app/arena/safe_ai)
 DIR = os.path.join(HERE, "data", "safe_ai")
 PARTICIPANT = "ZEROHERO_SAFE_AI"
 SYMS = ("NIFTY", "SENSEX", "BANKNIFTY")

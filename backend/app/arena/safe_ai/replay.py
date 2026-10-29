@@ -14,7 +14,7 @@ from .. import settle as S, spread_model as SM
 from . import signals as SG
 
 IST = timezone(timedelta(hours=5, minutes=30))
-DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
+DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "data", "market_history.db")
 SYMS = ("NIFTY", "SENSEX", "BANKNIFTY")
 SL_FRAC, T1_FRAC = 0.25, 0.20          # stop 25 % of the premium, first target +20 % (reward:risk 0.8, like the institution trader's median 0.81)
 MAX_TRADES_DAY, COOLDOWN_MIN, MAX_SPREAD, MIN_PREMIUM = 2, 30, 0.03, 30.0
