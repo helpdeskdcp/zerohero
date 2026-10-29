@@ -53,6 +53,21 @@ function tmChartPath(r, tf, since) {
   return r.instrument === "EQUITY" ? `/chart/equity?symbol=${encodeURIComponent(r.underlying)}${sfx}`
     : `/chart?underlying=${encodeURIComponent(r.underlying)}&expiry=${encodeURIComponent(r.expiry)}&strike=${r.strike}&option_type=${r.option_type}${sfx}`;
 }
+/* volume histogram + relative-volume text: a bar whose volume is >= `thr` x the average of the previous `n` bars gets "2x", "2.5x", "3x" ... (rounded to the nearest 0.5) */
+function tmVolume(candles, n = 20, thr = 2) {
+  const bars = [], marks = []; let any = false;
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i], v = Number(c.volume) || 0; if (v > 0) any = true;
+    bars.push({ time: c.time, value: v, color: c.close >= c.open ? "rgba(34,197,94,.45)" : "rgba(239,68,68,.45)" });
+    if (i < 5) continue;                                                                                // need a few bars before an average means anything
+    const from = Math.max(0, i - n); let sum = 0, k = 0; for (let j = from; j < i; j++) { sum += Number(candles[j].volume) || 0; k++; }
+    const avg = k ? sum / k : 0; if (!(avg > 0) || !(v > 0)) continue;
+    const ratio = v / avg; if (ratio < thr) continue;
+    const r = Math.round(ratio * 2) / 2, hot = r >= 3;
+    marks.push({ time: c.time, position: "aboveBar", color: hot ? "#f97316" : "#facc15", shape: "arrowDown", size: 0.5, text: `${r % 1 ? r.toFixed(1) : r}x` });
+  }
+  return { bars, marks, any };
+}
 /* levels drawn as lines on the option chart */
 function tmLevels(r) {
   const L = [];
@@ -135,7 +150,7 @@ function tmEditHtml(r) {
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { tmVolume, tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -192,7 +207,7 @@ if (typeof document !== "undefined") (function () {
   }
   function clearChart() {
     for (const k of Object.keys(series)) { try { chart.removeSeries(series[k]); } catch (e) { /* ok */ } }
-    series = {}; lines = []; uLines = []; mk = null; lastBar = null; forming = null;
+    series = {}; lines = []; uLines = []; mk = null; vmk = null; lastVol = null; lastBar = null; forming = null;
   }
   const lineStyle = (s) => ({ solid: 0, dotted: 1, dashed: 2 }[s] ?? 0);
   function addCandles() {
@@ -206,7 +221,7 @@ if (typeof document !== "undefined") (function () {
   function setMarkers(list) { if (mk) mk.setMarkers(list.sort((a, b) => a.time - b.time)); }
   let ind = (() => { try { return tmIndLoad(localStorage.getItem("arena_ind")); } catch (e) { return tmIndLoad(""); } })(), lastTimes = [], lastOrder = null;
   const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
-  let uLines = [];
+  let uLines = [], vmk = null, lastVol = null;
   function drawUturnLines() {
     uLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); uLines = [];
     if (series.c && ind.uturn) tmUturnLevels(lastUnderlying).forEach((L) => uLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: L.title })));
@@ -236,9 +251,14 @@ if (typeof document !== "undefined") (function () {
     series.up = chart.addSeries(LW.LineSeries, { color: "#22c55e", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.up.setData(up);
     series.dn = chart.addSeries(LW.LineSeries, { color: "#ef4444", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.dn.setData(dn);
     series.ma = chart.addSeries(LW.LineSeries, { color: "rgba(245,158,11,.55)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.ma.setData(u.ma);
+    const vol = tmVolume(u.candles); lastVol = vol;
+    if (vol.any) {                                                                                 // volume strip along the bottom 20 % of the chart, its own price scale
+      series.v = chart.addSeries(LW.HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "vol", priceLineVisible: false, lastValueVisible: false });
+      chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } }); series.v.setData(vol.bars); vmk = LW.createSeriesMarkers(series.v, vol.marks);
+    } else vmk = null;
     const times = u.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times);
     setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); drawUturnLines(); if (!userZoomed) chart.timeScale().fitContent();
-    setNote(`${r.underlying} ${utf}m · ${u.source} · ${tmIndNote(ind, u)}` + (ind.winners ? " · green/red = Winners trailing stop, orange = MA34" : "") + (u.spot ? ` · spot ${tmNum(u.spot)} (live feed)` : ""));
+    setNote(`${r.underlying} ${utf}m · ${u.source} · ${tmIndNote(ind, u)}` + (ind.winners ? " · green/red = Winners trailing stop, orange = MA34" : "") + (lastVol && lastVol.any ? " · bottom = volume, 2x/3x = vs 20-bar average" : " · no volume stored for this symbol") + (u.spot ? ` · spot ${tmNum(u.spot)} (live feed)` : ""));
   }
   async function refreshUnderlying(r) {
     const u = await api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=${utf}`); if (!u.candles.length || !series.c) return;
@@ -248,6 +268,7 @@ if (typeof document !== "undefined") (function () {
       else if (bucket > last.time && bucket - last.time <= span * 3) { if (!forming || forming.time !== bucket) forming = { time: bucket, open: u.spot, high: u.spot, low: u.spot, close: u.spot }; forming.high = Math.max(forming.high, u.spot); forming.low = Math.min(forming.low, u.spot); forming.close = u.spot; last = { ...forming }; }
     }
     if (!lastBar || last.time >= lastBar.time) { series.c.update(last); lastBar = last; }
+    if (series.v && lastVol && lastVol.any) { const vv = tmVolume(u.candles); const lb = vv.bars[vv.bars.length - 1]; if (lb) series.v.update(lb); if (vmk) vmk.setMarkers(vv.marks); lastVol = vv; }
     if (u.markers.length !== (lastUnderlying ? lastUnderlying.markers.length : -1) || (u.uturn || []).length !== (lastUnderlying ? (lastUnderlying.uturn || []).length : -1)) loadUnderlying(r, gen);      // a new Pine signal (either script): redraw everything once
     lastUnderlying = u;
   }

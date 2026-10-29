@@ -93,7 +93,21 @@ def _bars_from_capture(sym: str, tf: int, now: float, days: int = 10, path: str 
     d = d.drop_duplicates("timestamp").set_index("timestamp")
     g = d.resample(f"{tf}min").agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}); n = d["close"].resample(f"{tf}min").count()
     g = g[n >= 1].dropna(subset=["close"]).reset_index(); end = g["timestamp"] + pd.Timedelta(minutes=tf)
-    return g[end.map(pd.Timestamp.timestamp) <= now - 5].reset_index(drop=True)
+    g = g[end.map(pd.Timestamp.timestamp) <= now - 5].reset_index(drop=True)
+    if kind == "INDEX" and len(g): g["volume"] = _future_volume(sym, tf, since, g["timestamp"], path)                                 # an index has no volume of its own: its front future stands in
+    return g
+
+
+def _future_volume(sym: str, tf: int, since: str, stamps, path: str | None):
+    """Per-bar volume of the index's front future (NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY); 0 where none is stored (SENSEX, BANKEX)."""
+    c = CT._ro(path)
+    try: rows = c.execute("SELECT bar_start, expiry, v FROM market_candles WHERE symbol=? AND kind='FUTURE' AND tf='1m' AND session_date_ist>=? ORDER BY bar_start", (sym, since)).fetchall()
+    finally: c.close()
+    if not rows: return 0.0
+    d = pd.DataFrame(rows, columns=["timestamp", "expiry", "volume"]); d["timestamp"] = pd.to_datetime(d["timestamp"], utc=True).dt.tz_convert(IST)
+    d = d[d["expiry"] == d["expiry"].iloc[-1]].drop_duplicates("timestamp").set_index("timestamp")
+    v = d["volume"].fillna(0).resample(f"{tf}min").sum()
+    return stamps.map(lambda t: float(v.get(t, 0.0)))
 
 
 _UV: dict = {}
@@ -124,7 +138,7 @@ def _underlying_view(sym: str, tf: int = 15, n: int = 260, now: float | None = N
     out = {"underlying": sym, "tf": tf, "source": src, "spot": _spot(sym), "candles": [], "stop": [], "ma": [], "markers": [], "now": now}
     if len(bars) < 40: return out
     s = WS.signals(bars).tail(n).reset_index(drop=True); t = [int(ts.timestamp()) + IST_S for ts in s["timestamp"]]
-    out["candles"] = [dict(time=t[i], open=float(s.open.iat[i]), high=float(s.high.iat[i]), low=float(s.low.iat[i]), close=float(s.close.iat[i])) for i in range(len(s))]
+    out["candles"] = [dict(time=t[i], open=float(s.open.iat[i]), high=float(s.high.iat[i]), low=float(s.low.iat[i]), close=float(s.close.iat[i]), volume=float(s.volume.iat[i]) if "volume" in s and s.volume.iat[i] == s.volume.iat[i] else 0.0) for i in range(len(s))]
     for i in range(len(s)):
         up = int(s["dir"].iat[i]) == 1; v = s["long_stop"].iat[i] if up else s["short_stop"].iat[i]
         if v == v: out["stop"].append(dict(time=t[i], value=float(v), up=up))

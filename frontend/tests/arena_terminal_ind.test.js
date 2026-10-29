@@ -31,3 +31,15 @@ assert.deepStrictEqual(T.tmUturnLevels(u2), [{ price: 74152, color: "#c084fc", t
 assert.deepStrictEqual(T.tmUturnLevels({ uturn_state: { ...u2.uturn_state, is_today: false } }), []);                       // no lines for a past session
 assert.ok(T.tmIndNote({ winners: true, uturn: true }, u2).includes("Safe U-turn: Watching:")); assert.ok(!T.tmIndNote({ winners: true, uturn: false }, u2).includes("Watching"));
 console.log("arena_terminal_ind status ok");
+
+/* volume strip + relative-volume text */
+{
+  const T = require("../static/js/arena_terminal.js"), assert = require("assert");
+  const cs = []; for (let i = 0; i < 30; i++) cs.push({ time: i, open: 100, close: i % 2 ? 101 : 99, volume: 100 });
+  cs.push({ time: 30, open: 100, close: 102, volume: 250 }); cs.push({ time: 31, open: 100, close: 99, volume: 310 }); cs.push({ time: 32, open: 100, close: 99, volume: 120 });
+  const v = T.tmVolume(cs); assert.strictEqual(v.bars.length, 33); assert.ok(v.any);
+  assert.deepStrictEqual(v.marks.map((m) => m.text), ["2.5x", "3x"]);                                  // 250/100 -> 2.5x, ~310/~106 -> 3x; 120 is below 2x
+  assert.strictEqual(T.tmVolume(cs.map((c) => ({ ...c, volume: 0 }))).any, false);                     // an index without a future: no strip, no text
+  assert.strictEqual(v.bars[30].color.includes("34,197,94"), true);
+  console.log("volume ok");
+}
