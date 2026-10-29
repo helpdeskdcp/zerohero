@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request
 
 from . import compare as CMP, contracts as CT, run as R, submit as SU
+from . import positions as PN
 from .jsonio import read_json_cached
 
 router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
@@ -562,18 +563,24 @@ def live(request: Request):
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
         elif st == "CANCELLED": row.update(state="CANCELLED")
-        elif st.startswith("NO_DATA:no_exit_snapshot") and eqs:                                           # open equity position: a long marks at the bid, a short at the ask (what closing would cost)
+        elif st.startswith("NO_DATA:no_exit_snapshot") and eqs:                                           # open equity position: ONE valuation (positions.open_valuation): gross at the LTP, charges once, net; exit-now figure separate
             sd = s.get("side", "BUY"); fill = r["fill"]; qty = r.get("lots") or s.get("lots") or 1; lq = r.get("last") or {}
-            mark = ((q or {}).get("bid") or lq.get("bid")) if sd == "BUY" else ((q or {}).get("ask") or lq.get("ask")); sl_n = r.get("sl_now", s["sl"]); tg_n = r.get("targets_now") or s["targets"]
-            pnl = None if not mark else round(((mark - fill) if sd == "BUY" else (fill - mark)) * qty - _S.equity_cost_rs(sd, fill, mark, qty), 1)
-            sgn = 1 if sd == "BUY" else -1
-            row.update(state="ACTIVE", fill=fill, sl=sl_n, targets=tg_n, pnl_rs=pnl, pnl_pct=(round(100 * sgn * (mark - fill) / fill, 2) if mark else None), lot=1,
-                       to_sl=(round(sgn * (mark - sl_n), 2) if (mark and sl_n is not None) else None), to_t1=(round(sgn * (tg_n[0] - mark), 2) if (mark and tg_n) else None), pnl_note="open P&L = (mark - fill) x qty - estimated charges (a long marks at the bid, a short at the ask)")
+            qq = q or {}; bid, ask, ltp = qq.get("bid") or lq.get("bid"), qq.get("ask") or lq.get("ask"), qq.get("ltp") or lq.get("ltp")
+            v = PN.open_valuation(side=sd, qty=qty, entry=fill, ltp=ltp, bid=bid, ask=ask, age_s=row.get("quote_age_s") if q else None, charges_fn=lambda e, m, n: _S.equity_cost_rs(sd, e, m, n))
+            mark = (bid if sd == "BUY" else ask); sl_n = r.get("sl_now", s["sl"]); tg_n = r.get("targets_now") or s["targets"]                 # distances to the stop / target are measured from the side that triggers them
+            sgn = 1 if sd == "BUY" else -1; mp = v["mark_price"]
+            row.update(state="ACTIVE", fill=fill, sl=sl_n, targets=tg_n, pnl_rs=v["net_pnl_rs"], gross_pnl_rs=v["gross_pnl_rs"], est_charges_rs=v["est_charges_rs"], net_pnl_rs=v["net_pnl_rs"], mark_price=mp, mark_basis=v["mark_basis"],
+                       exit_now_price=v["exit_now_price"], exit_now_net_rs=v["exit_now_net_rs"], stale=v["stale"], pnl_pct=(round(100 * sgn * (mp - fill) / fill, 2) if mp else None), lot=1,
+                       to_sl=(round(sgn * (mark - sl_n), 2) if (mark and sl_n is not None) else None), to_t1=(round(sgn * (tg_n[0] - mark), 2) if (mark and tg_n) else None),
+                       pnl_note="open P&L = gross (mark - fill) x qty minus the estimated round-trip charges, once; the mark is the last traded price (the LTP shown). 'exit now' = what closing at the bid (long) / ask (short) would realise")
         elif st.startswith("NO_DATA:no_exit_snapshot"):
             lot = r.get("lot") or 1; bid = (q or {}).get("bid") or (r.get("last") or {}).get("bid"); fill = r["fill"]
-            lots = r.get("lots") or s.get("lots") or 1; pnl = None if not bid else round((bid - fill) * lot * lots - (_S.cost_total_rs(s["underlying"], fill, bid, lot, lots) or 0), 1)
-            row.update(state="ACTIVE", fill=fill, sl=r.get("sl_now", s["sl"]), targets=r.get("targets_now", s["targets"]), pnl_rs=pnl, pnl_pct=(round(100 * (bid - fill) / fill, 2) if bid else None), lot=lot,
-                       to_sl=(round(bid - r.get("sl_now", s["sl"]), 2) if (bid and r.get("sl_now", s["sl"]) is not None) else None), to_t1=(round((r.get("targets_now") or s["targets"])[0] - bid, 2) if (bid and (r.get("targets_now") or s["targets"])) else None), pnl_note="open P&L = (bid - fill) x lot - estimated costs; the final result follows the contest rules at exit")
+            lots = r.get("lots") or s.get("lots") or 1
+            v = PN.open_valuation(side="BUY", qty=lots, entry=fill, ltp=None, bid=bid, ask=None, age_s=None, charges_fn=lambda e, m, n: _S.cost_total_rs(s["underlying"], e, m, lot, n) or 0.0, unit=lot, basis="bid")
+            row.update(state="ACTIVE", fill=fill, sl=r.get("sl_now", s["sl"]), targets=r.get("targets_now", s["targets"]), pnl_rs=v["net_pnl_rs"], gross_pnl_rs=v["gross_pnl_rs"], est_charges_rs=v["est_charges_rs"], net_pnl_rs=v["net_pnl_rs"],
+                       mark_price=v["mark_price"], mark_basis=v["mark_basis"], stale=v["stale"], pnl_pct=(round(100 * (bid - fill) / fill, 2) if bid else None), lot=lot,
+                       to_sl=(round(bid - r.get("sl_now", s["sl"]), 2) if (bid and r.get("sl_now", s["sl"]) is not None) else None), to_t1=(round((r.get("targets_now") or s["targets"])[0] - bid, 2) if (bid and (r.get("targets_now") or s["targets"])) else None),
+                       pnl_note="open P&L = (bid - fill) x lot size x lots minus the estimated costs, once; the final result follows the contest rules at exit")
         elif st == "NOT_TRIGGERED":
             vu = r.get("valid_until"); still = (now < vu) if vu else True
             try:

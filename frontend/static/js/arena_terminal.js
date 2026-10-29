@@ -31,6 +31,14 @@ function tmExitUi(ex) {
   const p = (ex && ex.phase) || "idle";
   return { phase: p, cls: p, text: p === "counting" ? `Exiting in ${ex.left}s · tap to CANCEL` : p === "sending" ? "Sending…" : p === "sent" ? "EXIT SENT ✓ settling…" : p === "error" ? "Failed · tap to retry" : "EXIT" };
 }
+/* gross / charges / net of an open position, the mark it is valued at, and the exit-now figure; "stale quote" instead of a number when the price is too old (server: positions.open_valuation) */
+function tmBreakdown(r) {
+  if (!r || r.state !== "ACTIVE") return "";
+  if (r.stale) return "quote is stale: no P&L shown until a fresh price arrives";
+  if (r.gross_pnl_rs == null) return "";
+  const money = (x) => (x < 0 ? "−" : "+") + "₹" + Math.abs(Math.round(x)).toLocaleString("en-IN");
+  return `gross ${money(r.gross_pnl_rs)} · est. charges −₹${Math.round(r.est_charges_rs).toLocaleString("en-IN")} · net ${money(r.net_pnl_rs)} · mark ${tmNum(r.mark_price)} (${r.mark_basis})` + (r.exit_now_net_rs != null ? ` · exit now ${money(r.exit_now_net_rs)}` : "");
+}
 function tmRowHtml(r, prev, ex) {
   const live = r.state === "ACTIVE" || r.state === "WAITING", dir = live && r.ltp != null && prev != null && r.ltp !== prev ? (r.ltp > prev ? "tickup" : "tickdn") : "";
   const pn = r.pnl_rs, cls = pn > 0 ? "pnlpos" : pn < 0 ? "pnlneg" : "";
@@ -43,7 +51,7 @@ function tmRowHtml(r, prev, ex) {
   if (r.state === "CLOSED") nums.push(`<span>fill <b>${tmNum(r.fill)}</b></span>`, `<span>exit <b>${tmNum(r.exit)}</b></span>`, `<span class="mut">${tmEsc(r.why || "")}</span>`);
   if (!["ACTIVE", "WAITING", "CLOSED"].includes(r.state)) nums.push(`<span class="mut">${tmEsc(r.why || r.waiting_note || "")}</span>`);
   const btn = r.state === "ACTIVE" ? (() => { const u = tmExitUi(ex); return `<div class="tm-l4"><button class="tm-exit ${u.cls}" data-exit="${tmEsc(r.id)}">${tmEsc(u.text)}</button></div>`; })() : "";
-  return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} ${r.instrument === "EQUITY" ? "sh" : "lot"} · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>${btn}`;
+  return `${l1}<div class="tm-l2 mut">${tmEsc(r.id)} · ${r.lots || 1} ${r.instrument === "EQUITY" ? "sh" : "lot"} · ${tmEsc(r.posted_ist || "")}${r.quote_age_s != null && live ? " · " + Math.round(r.quote_age_s) + "s" : ""}</div><div class="tm-l3">${nums.join("")}</div>${tmBreakdown(r) ? `<div class="tm-l2 mut" data-bd="1">${tmEsc(tmBreakdown(r))}</div>` : ""}${btn}`;
 }
 
 /* ---- order editor (broker-style modify): which fields an order allows, and the /amend events a form produces ---- */
@@ -90,7 +98,7 @@ function tmEditHtml(r) {
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -218,7 +226,7 @@ if (typeof document !== "undefined") (function () {
     const r = sel; if (!r) { renderExitBtn(); renderEditor(); $("tmTitle").textContent = "Select an order or a position →"; $("tmState").textContent = ""; $("tmLtp").textContent = ""; $("tmPnl").textContent = ""; return; }
     renderExitBtn(); renderEditor();
     $("tmTitle").textContent = r.label; $("tmState").className = "chip " + r.state; $("tmState").textContent = r.state;
-    $("tmLtp").textContent = r.ltp != null ? `LTP ${tmNum(r.ltp)}  (${tmNum(r.bid)} / ${tmNum(r.ask)})` : ""; const p = r.pnl_rs; $("tmPnl").textContent = p != null ? tmRs(p) : ""; $("tmPnl").className = p > 0 ? "pnlpos" : p < 0 ? "pnlneg" : "";
+    $("tmLtp").textContent = r.ltp != null ? `LTP ${tmNum(r.ltp)}  (${tmNum(r.bid)} / ${tmNum(r.ask)})` : ""; const p = r.pnl_rs; $("tmPnl").textContent = p != null ? tmRs(p) : (r.stale ? "stale" : ""); $("tmPnl").title = tmBreakdown(r); $("tmPnl").className = p > 0 ? "pnlpos" : p < 0 ? "pnlneg" : "";
   }
 
   /* ---------------------------------------------------------------- order editor (click an order / position to modify it) */

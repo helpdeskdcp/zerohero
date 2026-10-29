@@ -1,7 +1,7 @@
 """Pre-registered Safe AI cells on BANKNIFTY (monthly expiry, days 0-2, ATM tolerance 100, 1 lot). Appends a BANKNIFTY section to data/research/safe_ai/REPLAY_RESULTS.md. python scripts/safe_ai_grid_bn.py"""
 import json, os, sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, HERE)
-from app.safe_ai import replay_hist as RH
+from app.arena.safe_ai import replay_hist as RH
 idx, opt = RH.load(und="BANKNIFTY"); exps = sorted({k[0] for k in opt}); print("BANKNIFTY option expiries:", len(exps), exps[:1], exps[-1:], "| index days", len(idx))
 rows = []
 def f(s):

@@ -2,7 +2,7 @@
 import os, sys
 from collections import defaultdict
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, HERE)
-from app.safe_ai import replay_hist as RH
+from app.arena.safe_ai import replay_hist as RH
 th = float(sys.argv[1]) if len(sys.argv) > 1 else 0.005; oi = bool(int(sys.argv[2])) if len(sys.argv) > 2 else False; fam = sys.argv[3] if len(sys.argv) > 3 else "uturn"
 idx, opt = RH.load(); tr, _ = RH.simulate(idx, opt, th, 0.005, until="2026-03-31", oi_filter=oi, family=fam)
 def row(label, sub):

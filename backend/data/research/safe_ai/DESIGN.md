@@ -1,6 +1,6 @@
 # ZeroHero Safe AI — design, research and honest limits (2026-10-29)
 
-Participant `ZEROHERO_SAFE_AI`, paper only, visible on the leaderboard, labelled "risk-first, paper, no edge claimed". Code: `app/safe_ai/` (`signals.py` rule, `live.py` runner + safety stack, `replay.py` test harness).
+Participant `ZEROHERO_SAFE_AI`, paper only, visible on the leaderboard, labelled "risk-first, paper, no edge claimed". Code: `app/arena/safe_ai/` (`signals.py` rule, `live.py` runner + safety stack, `replay.py` test harness).
 
 ## 1. What this is NOT
 This repository has already tested price-only rules to death (see memory notes `why-nothing-has-edge`, `candle-ai-nogo`, `inside-bar-2m-nogo`, `ssl-hybrid-nogo`, `level-touch-gap-nogo`, ...): index moves of 4–8 bp per 5 minutes against option round-trip costs mean a price-only rule needs ~55–72 % hit rate to break even, and nothing tested reached it out of sample. The Safe AI therefore **claims no edge**. Its job is to be the most *careful* participant: few trades, small size, hard stops, locks, full audit trail — and to produce forward data so the rule can be judged honestly (or switched off).
@@ -34,7 +34,7 @@ kill switches `SAFE_AI_LIVE=0` / `SAFE_AI_SUBMIT=0` (decide + log only) · never
 ## 6. Testing and results
 * Unit tests `tests/test_safe_ai.py` (12): the rule on synthetic turns, window, expiry-day cut, every refusal, loss lock, caps, in-flight guard, dry-run and control file, dte limit, sweep family.
 * Pine mirror `safe_uturn.pine` run in PineTS against the Python rule on 45,000 real 1-minute NIFTY bars: 2 mismatching bars (0.004 %, float ties). `scripts/safe_uturn_parity.py`.
-* Captured-session replay (`python -m app.safe_ai.replay`): only 7 of 41 sessions had enough index ticks (the others were hit by capture stalls / database-lock errors fixed on 29-Oct) -> 20 trades, net -Rs 943: inconclusive.
+* Captured-session replay (`python -m app.arena.safe_ai.replay`): only 7 of 41 sessions had enough index ticks (the others were hit by capture stalls / database-lock errors fixed on 29-Oct) -> 20 trades, net -Rs 943: inconclusive.
 * **12-month NIFTY backtest** (`scripts/safe_ai_grid.py`, results `REPLAY_RESULTS.md`): default rule ~60 % win rate, +Rs 20/trade at a 0.5 % half-spread (95 % interval -321..+338), i.e. break-even, no significant edge. A stop/target geometry grid (15/25/35 % x 15-50 %) gave nothing better (exploratory, on the part of the data available at the time).
 * Not tested: SENSEX (no historical expired-option source), BANKNIFTY was pulled afterwards (monthly expiry, only the 3 sessions before each month-end expiry qualify): default rule n=26, 62 % win, +Rs 40/trade at a 0.5 % half-spread (95 % interval -486..+506), again break-even (section in REPLAY_RESULTS.md), real fills (the live signal gets 1-second option capture; the test used 1-minute bars with the stop assumed first).
 

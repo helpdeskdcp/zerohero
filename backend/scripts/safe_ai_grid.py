@@ -1,7 +1,7 @@
 """Pre-registered grid for the Safe AI on the 12-month NIFTY data: family x variant x spread, DEV (before 2026-04-01) and HOLD-OUT (after). Writes data/research/safe_ai/REPLAY_RESULTS.md. python scripts/safe_ai_grid.py"""
 import json, os, sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, HERE)
-from app.safe_ai import replay_hist as RH
+from app.arena.safe_ai import replay_hist as RH
 idx, opt = RH.load()
 exps = sorted({k[0] for k in opt}); print("option expiries:", len(exps), exps[0], "->", exps[-1], "| index days:", len(idx))
 GRID = [("uturn", 0.0035, False), ("uturn", 0.005, False), ("uturn", 0.007, False), ("uturn", 0.0035, True), ("uturn", 0.005, True), ("uturn", 0.007, True), ("sweep", 0.005, False), ("sweep", 0.005, True)]

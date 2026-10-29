@@ -1,10 +1,10 @@
-"""Run data/research/safe_ai/safe_uturn.pine in the Smart Chart's PineTS on real NIFTY 1-minute bars (Upstox research DB) and compare every bar's CALL/PUT idea with the Python rule app/safe_ai/signals.detect.
+"""Run data/research/safe_ai/safe_uturn.pine in the Smart Chart's PineTS on real NIFTY 1-minute bars (Upstox research DB) and compare every bar's CALL/PUT idea with the Python rule app/arena/safe_ai/signals.detect.
 usage: safe_uturn_parity.py [first_day] [n_days] [thrust]"""
 import json, os, sqlite3, subprocess, sys
 from datetime import datetime, timezone, timedelta
 import numpy as np
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, HERE)
-from app.safe_ai import signals as SG
+from app.arena.safe_ai import signals as SG
 PKG = os.path.join(HERE, "app", "smart_chart"); WORKER = os.path.join(PKG, "pine_runner", "worker.mjs"); DB = os.path.join(HERE, "data", "historical", "upstox", "upstox_research.db")
 IST = timezone(timedelta(hours=5, minutes=30))
 first = sys.argv[1] if len(sys.argv) > 1 else "2026-09-01"; ndays = int(sys.argv[2]) if len(sys.argv) > 2 else 20; th = float(sys.argv[3]) if len(sys.argv) > 3 else 0.005

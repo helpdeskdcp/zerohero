@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.safe_ai import live as L, signals as SG
+from app.arena.safe_ai import live as L, signals as SG
 
 IST = timezone(timedelta(hours=5, minutes=30))
 DAY = "2026-11-03"

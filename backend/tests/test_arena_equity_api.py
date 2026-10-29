@@ -75,9 +75,11 @@ def test_live_rows_for_waiting_open_long_open_short_and_closed(client, monkeypat
     long_, short = rows[ids[1]], rows[ids[2]]
     assert long_["state"] == "ACTIVE" and short["state"] == "ACTIVE" and short["label"] == "RELIANCE SELL 10 sh"
     from app.arena import settle as S
-    assert long_["pnl_rs"] == pytest.approx(round((999.9 - 1000.0) * 10 - S.equity_cost_rs("BUY", 1000.0, 999.9, 10), 1))
-    assert short["pnl_rs"] == pytest.approx(round((1000.0 - 1000.1) * 10 - S.equity_cost_rs("SELL", 1000.0, 1000.1, 10), 1))
-    assert long_["pnl_rs"] < 0 and short["pnl_rs"] < 0                                              # mark at the bid (long) / ask (short) loses the spread plus charges on a flat price
+    assert long_["pnl_rs"] == pytest.approx(round((1000.0 - 1000.0) * 10 - S.equity_cost_rs("BUY", 1000.0, 1000.0, 10), 1), abs=0.06)          # headline = gross at the LTP minus the charges, once
+    assert short["pnl_rs"] == pytest.approx(round((1000.0 - 1000.0) * 10 - S.equity_cost_rs("SELL", 1000.0, 1000.0, 10), 1), abs=0.06)
+    assert long_["exit_now_net_rs"] == pytest.approx(round((999.9 - 1000.0) * 10 - S.equity_cost_rs("BUY", 1000.0, 999.9, 10), 1), abs=0.06)    # closing now (long at the bid) also loses the spread
+    assert short["exit_now_net_rs"] == pytest.approx(round((1000.0 - 1000.1) * 10 - S.equity_cost_rs("SELL", 1000.0, 1000.1, 10), 1), abs=0.06)
+    assert long_["pnl_rs"] < 0 and short["pnl_rs"] < 0 and long_["gross_pnl_rs"] == 0 and long_["est_charges_rs"] > 0                                          # a flat price still pays the charges
     assert long_["to_sl"] == pytest.approx(999.9 - 990.0, abs=1e-6) and short["to_sl"] == pytest.approx(1010.0 - 1000.1, abs=1e-6)
     assert short["to_t1"] == pytest.approx(1000.1 - 990.0, abs=1e-6) and long_["to_t1"] == pytest.approx(1010.0 - 999.9, abs=1e-6)
     assert rows[ids[3]]["state"] == "CLOSED" and rows[ids[3]]["pnl_rs"] == 80.5
@@ -112,3 +114,26 @@ def test_other_readers_survive_an_equity_row(client, monkeypatch):
     sigs = R.human_signals(start="2020-01-01", end="2999-01-01"); assert [x["instrument"] for x in sigs] == ["EQUITY", "EQUITY"] and sigs[1]["side"] == "SELL" and sigs[0]["lots"] == 10
     out = R.run(sigs, market_db=None, cache={}); res = out["INSTITUTION_TRADER"]["results"]; assert len(res) == 2 and all(x["status"].startswith("NO_DATA") for x in res)
     LB.build({"INSTITUTION_TRADER": res}, ["INSTITUTION_TRADER"], {}, scope="all", today="2026-10-27", capital=R.CAPITAL)
+
+
+def test_live_row_carries_gross_charges_net_and_the_mark_for_the_reported_case(client, monkeypatch):
+    """RELIANCE BUY 1000 sh, fill 1175.10, LTP 1175.20: the row must say gross +100, charges ~464, net ~-364, mark 1175.20 (ltp); header total = sum of the nets."""
+    from app.arena import settle as S
+    monkeypatch.setattr(EQ, "latest_quote", lambda sym, path=None: {"ltp": 1175.20, "bid": 1175.15, "ask": 1175.25, "t": time.time()})
+    sid = post(client, {**BUY, "entry": 1175.10, "sl": 1170.0, "targets": [1180.0], "qty": 1000}).json()["id"]
+    res = {sid: {"id": sid, "status": "NO_DATA:no_exit_snapshot", "fill": 1175.10, "lot": 1, "lots": 1000, "sl_now": 1170.0, "targets_now": [1180.0], "last": {"bid": 1175.15, "ask": 1175.25, "ltp": 1175.20}}}
+    j = _live_with(client, monkeypatch, res); row = {x["id"]: x for x in j["rows"]}[sid]
+    assert row["state"] == "ACTIVE" and row["qty"] == 1000 and row["fill"] == 1175.10 and row["ltp"] == 1175.20
+    assert row["gross_pnl_rs"] == pytest.approx(100.0) and row["mark_price"] == 1175.20 and row["mark_basis"] == "ltp" and row["stale"] is False
+    assert row["est_charges_rs"] == pytest.approx(S.equity_cost_rs("BUY", 1175.10, 1175.20, 1000), abs=0.06) and row["net_pnl_rs"] == pytest.approx(-363.7, abs=0.1)
+    assert row["pnl_rs"] == row["net_pnl_rs"] and row["exit_now_net_rs"] < row["net_pnl_rs"] and j["total_open_pnl_rs"] == pytest.approx(row["net_pnl_rs"], abs=0.1)
+    assert row["to_sl"] == pytest.approx(1175.15 - 1170.0, abs=1e-6)                                                 # distances to the stop / target stay measured from the side that would trigger them (bid)
+
+
+def test_live_row_with_a_stale_quote_shows_no_pnl_and_says_stale(client, monkeypatch):
+    monkeypatch.setattr(EQ, "latest_quote", lambda sym, path=None: {"ltp": 1175.20, "bid": 1175.15, "ask": 1175.25, "t": time.time()})
+    sid = post(client, {**BUY, "entry": 1175.10, "sl": 1170.0, "targets": [1180.0], "qty": 1000}).json()["id"]
+    monkeypatch.setattr(EQ, "latest_quote", lambda sym, path=None: {"ltp": 1175.20, "bid": 1175.15, "ask": 1175.25, "t": time.time() - 600})
+    res = {sid: {"id": sid, "status": "NO_DATA:no_exit_snapshot", "fill": 1175.10, "lot": 1, "lots": 1000, "sl_now": 1170.0, "targets_now": [1180.0], "last": {"bid": 1175.15, "ask": 1175.25, "ltp": 1175.20}}}
+    row = {x["id"]: x for x in _live_with(client, monkeypatch, res)["rows"]}[sid]
+    assert row["stale"] is True and row["pnl_rs"] is None and row["net_pnl_rs"] is None and row["gross_pnl_rs"] is None

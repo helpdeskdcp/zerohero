@@ -1,5 +1,5 @@
 """Replay of the Safe AI rule over the CAPTURED sessions (market_history.db): real index ticks, real option bid/ask, settled by the arena's own engine (ask in / bid out, execution delay, session-end exit, full charges).
-Caveat that makes the replay PESSIMISTIC: captured option quotes are ~1 per minute (the live signal gets 1-second capture), so fills and stop/target detection are up to a minute late. Python -m app.safe_ai.replay [thrust]"""
+Caveat that makes the replay PESSIMISTIC: captured option quotes are ~1 per minute (the live signal gets 1-second capture), so fills and stop/target detection are up to a minute late. Python -m app.arena.safe_ai.replay [thrust]"""
 from __future__ import annotations
 
 import json
@@ -10,8 +10,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from .. import arena  # noqa: F401  (package)
-from ..arena import settle as S, spread_model as SM
+from .. import settle as S, spread_model as SM
 from . import signals as SG
 
 IST = timezone(timedelta(hours=5, minutes=30))

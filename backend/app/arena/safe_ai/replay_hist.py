@@ -5,7 +5,7 @@ Assumptions (all written down, all pessimistic where they matter):
   * stop 25 % below / first target +20 % above the fill; they are checked against each minute's LOW and HIGH; if one bar touches both the STOP is assumed first; a bar that opens beyond a level fills at its open (gap)
   * exit at 15:15 if neither is hit; full round-trip charges from the arena's cost model; 1 lot (current NIFTY lot size)
   * same safety stack as live: window 09:35-14:30 (expiry day 13:30), <= 2 trades a day, one loss ends the day, 30-minute cool-down after an exit, ATM within one strike step of the spot, ask >= Rs 30
-python -m app.safe_ai.replay_hist [thrust] [half_spread] [uturn|sweep]"""
+python -m app.arena.safe_ai.replay_hist [thrust] [half_spread] [uturn|sweep]"""
 from __future__ import annotations
 
 import json
@@ -17,8 +17,8 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from ..arena import settle as S
-from ..instrument_profiles import get_instrument_profile
+from .. import settle as S
+from ...instrument_profiles import get_instrument_profile
 from . import signals as SG
 
 IST = timezone(timedelta(hours=5, minutes=30))

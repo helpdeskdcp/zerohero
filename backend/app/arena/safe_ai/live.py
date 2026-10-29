@@ -16,8 +16,8 @@ from collections import defaultdict
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
-from ..arena import jsonio
-from ..arena.markets import EXCH
+from .. import jsonio
+from ..markets import EXCH
 from . import signals as SG
 
 _log = logging.getLogger("safe_ai")
@@ -168,14 +168,14 @@ class Engine:
 
 # ---------------------------------------------------------------- real dependencies
 def _real_engine() -> Engine:
-    from .. import market_calendar as mc
-    from ..arena import api as A, contracts as CT, run as R, submit as SU
-    from ..histcap import priority
+    from ... import market_calendar as mc
+    from .. import api as A, contracts as CT, run as R, submit as SU
+    from ...histcap import priority
 
     def spot(sym):
         try:
-            from ..connectors.angelone import _market_sdk
-            from ..mathematical_confluence import context as ctx
+            from ...connectors.angelone import _market_sdk
+            from ...mathematical_confluence import context as ctx
             v = ctx._feed_spot(sym, _market_sdk(require_auth=True))
             return (float(v), time.time()) if v else None
         except Exception: return None
