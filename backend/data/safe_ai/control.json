@@ -1,5 +1,5 @@
 {
  "submit": true,
- "thrust": 0.005,
- "reason": "12-month NIFTY back-test (REPLAY_RESULTS.md): break-even, no significant loss -> live-paper with the safety stack, disclosure on the leaderboard label"
+ "thrust": 0.006,
+ "reason": "v2: thrust 0.60 % (calibrated on the 12-month NIFTY back-test, post-hoc: forward-test it); submit stays on"
 }

@@ -1,0 +1,177 @@
+{
+ "basis": "NIFTY 12 months, dte 0-2, thrust >= 0.60 % (v2), half-spread 0.5 %, stop 25 % / target +20 %, 1 lot",
+ "overall": {
+  "label": "all",
+  "n": 45,
+  "target_hit": 0.644,
+  "target_hit_ci95": [
+   0.498,
+   0.768
+  ],
+  "net_positive": 0.689,
+  "net_per_trade": 156.9
+ },
+ "dev": {
+  "label": "dev (before 2026-04-01)",
+  "n": 24,
+  "target_hit": 0.708,
+  "target_hit_ci95": [
+   0.508,
+   0.851
+  ],
+  "net_positive": 0.708,
+  "net_per_trade": 220.3
+ },
+ "hold_out": {
+  "label": "hold-out (from 2026-04-01)",
+  "n": 21,
+  "target_hit": 0.571,
+  "target_hit_ci95": [
+   0.365,
+   0.755
+  ],
+  "net_positive": 0.667,
+  "net_per_trade": 84.4
+ },
+ "by_thrust": [
+  {
+   "label": "0.60-0.80%",
+   "n": 27,
+   "target_hit": 0.667,
+   "target_hit_ci95": [
+    0.478,
+    0.814
+   ],
+   "net_positive": 0.667,
+   "net_per_trade": 122.5
+  },
+  {
+   "label": "0.80-1.00%",
+   "n": 10,
+   "target_hit": 0.7,
+   "target_hit_ci95": [
+    0.397,
+    0.892
+   ],
+   "net_positive": 0.8,
+   "net_per_trade": 399.9
+  },
+  {
+   "label": ">= 1.00%",
+   "n": 8,
+   "target_hit": 0.5,
+   "target_hit_ci95": [
+    0.215,
+    0.785
+   ],
+   "net_positive": 0.625,
+   "net_per_trade": -31.0
+  }
+ ],
+ "excluded_band_0.50_0.60": {
+  "label": "0.50-0.60% (v1 only, now excluded)",
+  "n": 27,
+  "target_hit": 0.407,
+  "target_hit_ci95": [
+   0.245,
+   0.593
+  ],
+  "net_positive": 0.407,
+  "net_per_trade": -309.3
+ },
+ "by_time": [
+  {
+   "label": "09:35-10:30",
+   "n": 11,
+   "target_hit": 0.818,
+   "target_hit_ci95": [
+    0.523,
+    0.949
+   ],
+   "net_positive": 0.818,
+   "net_per_trade": 941.4
+  },
+  {
+   "label": "10:30-12:30",
+   "n": 21,
+   "target_hit": 0.667,
+   "target_hit_ci95": [
+    0.454,
+    0.828
+   ],
+   "net_positive": 0.667,
+   "net_per_trade": -41.2
+  },
+  {
+   "label": "12:30-14:30",
+   "n": 13,
+   "target_hit": 0.462,
+   "target_hit_ci95": [
+    0.232,
+    0.709
+   ],
+   "net_positive": 0.615,
+   "net_per_trade": -187.0
+  }
+ ],
+ "by_dte": [
+  {
+   "label": "dte 0",
+   "n": 26,
+   "target_hit": 0.731,
+   "target_hit_ci95": [
+    0.539,
+    0.863
+   ],
+   "net_positive": 0.731,
+   "net_per_trade": 313.3
+  },
+  {
+   "label": "dte 1",
+   "n": 18,
+   "target_hit": 0.556,
+   "target_hit_ci95": [
+    0.337,
+    0.754
+   ],
+   "net_positive": 0.667,
+   "net_per_trade": 106.8
+  },
+  {
+   "label": "dte 2",
+   "n": 1,
+   "target_hit": 0.0,
+   "target_hit_ci95": [
+    0.0,
+    0.793
+   ],
+   "net_positive": 0.0,
+   "net_per_trade": -3009.7
+  }
+ ],
+ "by_side": [
+  {
+   "label": "CE",
+   "n": 20,
+   "target_hit": 0.7,
+   "target_hit_ci95": [
+    0.481,
+    0.855
+   ],
+   "net_positive": 0.75,
+   "net_per_trade": 248.5
+  },
+  {
+   "label": "PE",
+   "n": 25,
+   "target_hit": 0.6,
+   "target_hit_ci95": [
+    0.407,
+    0.766
+   ],
+   "net_positive": 0.64,
+   "net_per_trade": 83.6
+  }
+ ],
+ "note": "Base rate of reaching the first target before the stop. Not a probability forecast; net result is break-even and no cell is statistically different from it."
+}

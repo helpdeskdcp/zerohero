@@ -19,7 +19,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 @dataclass(frozen=True)
 class Params:
-    thrust: float = 0.0050        # minimum thrust (0.50 % of the index)
+    thrust: float = 0.0060        # minimum thrust (0.60 % of the index). v1 used 0.50 %; the 12-month calibration (CALIBRATION.md) found the 0.50-0.60 % band weak in the development half, so v2 starts at 0.60 % (a post-hoc choice: forward-test it)
     retrace_min: float = 0.35
     retrace_max: float = 0.80
     min_age_min: float = 8.0      # the extreme must be at least this old (a turn needs time to prove itself)

@@ -138,3 +138,9 @@ def test_paths_resolve_to_backend_data_after_the_package_move():
     backend = os.path.abspath(os.path.join(os.path.dirname(L.__file__), "..", "..", ".."))
     assert os.path.abspath(L.DIR) == os.path.join(backend, "data", "safe_ai") and os.path.exists(os.path.join(L.DIR, "control.json"))      # (CONTROL itself is redirected by the autouse fixture)
     assert os.path.abspath(replay.DB) == os.path.join(backend, "data", "market_history.db") and os.path.abspath(replay_hist.DB).startswith(os.path.join(backend, "data", "historical"))
+
+
+def test_v2_default_thrust_is_0_60_percent_and_a_0_55_percent_turn_is_ignored():
+    assert SG.Params().thrust == 0.006
+    ticks = [(T0 + m * 60, 100 - 0.55 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.45 + 0.275 * (m - 40) / 10) for m in range(41, 51)]            # 0.55 % thrust, recovers half
+    assert SG.detect(ticks, ticks[-1][0]) is None and SG.detect(ticks, ticks[-1][0], SG.Params(thrust=0.005)) is not None                                      # v2 refuses it, v1 would have taken it

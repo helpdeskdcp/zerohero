@@ -10,6 +10,34 @@ const IST_SHIFT = 19800;
 function tmBucket(r) { return r.state === "WAITING" || r.state === "NO DATA" ? "orders" : r.state === "ACTIVE" ? "positions" : "closed"; }
 /* nearest candle time at or before t (t and candle times are both already IST-shifted seconds) */
 function tmSnap(times, t) { let lo = 0, hi = times.length - 1, ans = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (times[m] <= t) { ans = times[m]; lo = m + 1; } else hi = m - 1; } return ans; }
+/* ---- Pine indicators on the underlying chart: two scripts, each switched on / off like an indicator or strategy (the choice is remembered in the browser) */
+const TM_INDICATORS = [{ key: "winners", label: "Winners Scalper", title: "Winners Scalper (Pine): trailing-stop lines, BUY / SELL arrows, MA34" }, { key: "uturn", label: "Safe U-turn", title: "Safe U-turn (Pine): CALL / PUT idea after a confirmed turn at the session high or low, with its historical base rate" }];
+function tmIndLoad(raw) {
+  const on = Object.fromEntries(TM_INDICATORS.map((x) => [x.key, true]));
+  try { const o = JSON.parse(raw || "{}"); for (const x of TM_INDICATORS) if (typeof o[x.key] === "boolean") on[x.key] = o[x.key]; } catch (e) { /* unreadable setting: all on */ }
+  return on;
+}
+function tmPineMarkers(times, ms) {
+  return (ms || []).map((m) => ({ t: tmSnap(times, m.time), m })).filter((x) => x.t != null).map(({ t, m }) => (m.side === "BUY"
+    ? { time: t, position: "belowBar", color: m.strong ? "#22c55e" : "#86efac", shape: "arrowUp", text: m.strong ? "BUY" : "buy" }
+    : { time: t, position: "aboveBar", color: m.strong ? "#ef4444" : "#fca5a5", shape: "arrowDown", text: m.strong ? "SELL" : "sell" }));
+}
+function tmUturnText(m) {
+  const br = m.base_rate; return `U-turn ${m.side}` + (br && br.target_hit != null ? ` · ${Math.round(br.target_hit * 100)}% (n=${br.n})` : "");
+}
+function tmUturnMarkers(times, list) {
+  return (list || []).map((m) => ({ t: tmSnap(times, m.time), m })).filter((x) => x.t != null).map(({ t, m }) => (m.side === "CE"
+    ? { time: t, position: "belowBar", color: "#38bdf8", shape: "arrowUp", text: tmUturnText(m) }
+    : { time: t, position: "aboveBar", color: "#c084fc", shape: "arrowDown", text: tmUturnText(m) }));
+}
+function tmBuildMarkers(times, u, ind, orderMarker) {
+  const out = []; if (u && ind.winners) out.push(...tmPineMarkers(times, u.markers)); if (u && ind.uturn) out.push(...tmUturnMarkers(times, u.uturn)); if (orderMarker) out.push(orderMarker);
+  return out.sort((a, b) => a.time - b.time);
+}
+function tmIndNote(ind, u) {
+  const names = TM_INDICATORS.filter((x) => ind[x.key]).map((x) => x.label); const cal = u && u.uturn_calibration && u.uturn_calibration.overall;
+  return names.length ? `Indicators: ${names.join(" + ")}` + (ind.uturn && cal && cal.n ? ` · U-turn history: first target before stop ${Math.round(cal.target_hit * 100)}% of ${cal.n} (break-even, no proven edge)` : "") : "Indicators: none (switch them on above the chart)";
+}
 /* chart request of a /live row: an option contract, or an NSE cash-equity symbol */
 function tmChartPath(r, tf, since) {
   const sfx = `&tf=${tf}` + (since ? `&since=${since}` : "");
@@ -98,7 +126,7 @@ function tmEditHtml(r) {
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -167,20 +195,21 @@ if (typeof document !== "undefined") (function () {
     tmLevels(r).forEach((L) => lines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: lineStyle(L.style), axisLabelVisible: true, title: L.title })));
   }
   function setMarkers(list) { if (mk) mk.setMarkers(list.sort((a, b) => a.time - b.time)); }
-  function pineMarkers(times, ms) {
-    return (ms || []).map((m) => ({ t: tmSnap(times, m.time), m })).filter((x) => x.t != null).map(({ t, m }) => (m.side === "BUY"
-      ? { time: t, position: "belowBar", color: m.strong ? "#22c55e" : "#86efac", shape: "arrowUp", text: m.strong ? "BUY" : "buy" }
-      : { time: t, position: "aboveBar", color: m.strong ? "#ef4444" : "#fca5a5", shape: "arrowDown", text: m.strong ? "SELL" : "sell" }));
+  let ind = (() => { try { return tmIndLoad(localStorage.getItem("arena_ind")); } catch (e) { return tmIndLoad(""); } })(), lastTimes = [], lastOrder = null;
+  const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
+  function applyInd() {                                                                          // a switch was flipped: lines, markers and the note follow at once, no reload
+    for (const k of ["up", "dn", "ma"]) if (series[k]) series[k].applyOptions({ visible: !!ind.winners });
+    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder));
+    if (lastUnderlying) setNote(tmIndNote(ind, lastUnderlying));
   }
 
   async function loadOption(r, myGen) {
     const q = tmChartPath(r, tf);
     const [c, u] = await Promise.all([api(q), r.instrument === "EQUITY" ? Promise.resolve(null) : api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=15`).catch(() => null)]);
     if (myGen !== gen) return; clearChart(); addCandles(); series.c.setData(c.candles); lastBar = c.candles.length ? c.candles[c.candles.length - 1] : null; drawLevels(r);
-    const times = c.candles.map((x) => x.time), mks = u ? pineMarkers(times, u.markers) : [];
-    if (r.posted_ts) { const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); if (t != null) mks.push({ time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" }); }
-    setMarkers(mks); lastUnderlying = u; if (!userZoomed) chart.timeScale().fitContent();
-    setNote(c.candles.length ? `${c.candles.length} candles · ${tf}m · exchange-stamped quotes` + (r.instrument === "EQUITY" ? ` · ${r.underlying} cash equity` : ` · Pine arrows = Winners Scalper signals on ${r.underlying}`) : "No quotes captured for this contract yet today.");
+    const times = c.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times); lastUnderlying = u;
+    setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); if (!userZoomed) chart.timeScale().fitContent();
+    setNote(c.candles.length ? `${c.candles.length} candles · ${tf}m · exchange-stamped quotes` + (r.instrument === "EQUITY" ? ` · ${r.underlying} cash equity` : ` · Pine arrows on ${r.underlying}: ${tmIndNote(ind, u)}`) : "No quotes captured for this contract yet today.");
   }
   async function refreshOption(r) {
     const since = lastBar ? lastBar.time - IST_SHIFT : undefined; const c = await api(tmChartPath(r, tf, since));
@@ -190,13 +219,12 @@ if (typeof document !== "undefined") (function () {
     const u = await api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=${utf}`); if (myGen !== gen) return; clearChart(); addCandles(); const LW = window.LightweightCharts;
     series.c.setData(u.candles); lastBar = u.candles.length ? u.candles[u.candles.length - 1] : null; lastUnderlying = u;
     const up = [], dn = []; u.stop.forEach((p, i) => { up.push(p.up ? { time: p.time, value: p.value } : { time: p.time }); dn.push(p.up ? { time: p.time } : { time: p.time, value: p.value }); });
-    series.up = chart.addSeries(LW.LineSeries, { color: "#22c55e", lineWidth: 2, priceLineVisible: false, lastValueVisible: false }); series.up.setData(up);
-    series.dn = chart.addSeries(LW.LineSeries, { color: "#ef4444", lineWidth: 2, priceLineVisible: false, lastValueVisible: false }); series.dn.setData(dn);
-    series.ma = chart.addSeries(LW.LineSeries, { color: "rgba(245,158,11,.55)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }); series.ma.setData(u.ma);
-    const times = u.candles.map((x) => x.time), mks = pineMarkers(times, u.markers);
-    if (r.posted_ts) { const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); if (t != null) mks.push({ time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" }); }
-    setMarkers(mks); if (!userZoomed) chart.timeScale().fitContent();
-    setNote(`${r.underlying} ${utf}m · ${u.source} · Winners Scalper (Pine): green/red = trailing stop, arrows = signals, orange = MA34` + (u.spot ? ` · spot ${tmNum(u.spot)} (live feed)` : ""));
+    series.up = chart.addSeries(LW.LineSeries, { color: "#22c55e", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.up.setData(up);
+    series.dn = chart.addSeries(LW.LineSeries, { color: "#ef4444", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.dn.setData(dn);
+    series.ma = chart.addSeries(LW.LineSeries, { color: "rgba(245,158,11,.55)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.ma.setData(u.ma);
+    const times = u.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times);
+    setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); if (!userZoomed) chart.timeScale().fitContent();
+    setNote(`${r.underlying} ${utf}m · ${u.source} · ${tmIndNote(ind, u)}` + (ind.winners ? " · green/red = Winners trailing stop, orange = MA34" : "") + (u.spot ? ` · spot ${tmNum(u.spot)} (live feed)` : ""));
   }
   async function refreshUnderlying(r) {
     const u = await api(`/chart/underlying?underlying=${encodeURIComponent(r.underlying)}&tf=${utf}`); if (!u.candles.length || !series.c) return;
@@ -206,7 +234,7 @@ if (typeof document !== "undefined") (function () {
       else if (bucket > last.time && bucket - last.time <= span * 3) { if (!forming || forming.time !== bucket) forming = { time: bucket, open: u.spot, high: u.spot, low: u.spot, close: u.spot }; forming.high = Math.max(forming.high, u.spot); forming.low = Math.min(forming.low, u.spot); forming.close = u.spot; last = { ...forming }; }
     }
     if (!lastBar || last.time >= lastBar.time) { series.c.update(last); lastBar = last; }
-    if (u.markers.length !== (lastUnderlying ? lastUnderlying.markers.length : -1)) loadUnderlying(r, gen);                                  // a new Pine signal: redraw everything once
+    if (u.markers.length !== (lastUnderlying ? lastUnderlying.markers.length : -1) || (u.uturn || []).length !== (lastUnderlying ? (lastUnderlying.uturn || []).length : -1)) loadUnderlying(r, gen);      // a new Pine signal (either script): redraw everything once
     lastUnderlying = u;
   }
   async function openChart(r) {
@@ -297,6 +325,10 @@ if (typeof document !== "undefined") (function () {
   document.querySelectorAll("[data-tmview]").forEach((b) => (b.onclick = () => { view = b.dataset.tmview; document.querySelectorAll("[data-tmview]").forEach((x) => x.classList.toggle("on", x === b)); $("tmTfOpt").hidden = view !== "option"; $("tmTfUnd").hidden = view === "option"; if (sel) openChart(sel); }));
   document.querySelectorAll("[data-tmtf]").forEach((b) => (b.onclick = () => { tf = Number(b.dataset.tmtf); document.querySelectorAll("[data-tmtf]").forEach((x) => x.classList.toggle("on", x === b)); if (sel && view === "option") openChart(sel); }));
   document.querySelectorAll("[data-tmutf]").forEach((b) => (b.onclick = () => { utf = Number(b.dataset.tmutf); document.querySelectorAll("[data-tmutf]").forEach((x) => x.classList.toggle("on", x === b)); if (sel && view !== "option") openChart(sel); }));
+  document.querySelectorAll("[data-ind]").forEach((b) => {
+    b.checked = !!ind[b.dataset.ind];
+    b.onchange = () => { ind[b.dataset.ind] = b.checked; try { localStorage.setItem("arena_ind", JSON.stringify(ind)); } catch (e) { /* storage blocked: the switch still works for this visit */ } applyInd(); };
+  });
   if ($("tmExit")) $("tmExit").onclick = () => { if (sel && sel.state === "ACTIVE") exitClick(sel.id); };
   const zoom = (f) => { if (!chart) return; userZoomed = true; const ts = chart.timeScale(), o = ts.options(); ts.applyOptions({ barSpacing: Math.max(1, Math.min(60, (o.barSpacing || 6) * f)) }); };
   $("tmZoomIn").onclick = () => zoom(1.35); $("tmZoomOut").onclick = () => zoom(1 / 1.35); $("tmFit").onclick = () => { userZoomed = false; if (chart) { chart.timeScale().fitContent(); chart.priceScale("right").applyOptions({ autoScale: true }); } };

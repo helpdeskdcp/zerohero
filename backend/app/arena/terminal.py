@@ -103,7 +103,7 @@ def underlying_view(sym: str, tf: int = 15, n: int = 260, now: float | None = No
     hit = _UV.get((sym, tf, path))
     if hit and time.time() - hit[0] < 4.0 and now is None:
         return {**hit[1], "spot": _spot(sym)}                                                                                      # candles/indicator cached 4 s; the spot is always fresh
-    out = _underlying_view(sym, tf, n, now, path)
+    out = _with_uturn(_underlying_view(sym, tf, n, now, path), sym, now, path)
     if now is None: _UV[(sym, tf, path)] = (time.time(), out)
     return out
 
@@ -130,4 +130,15 @@ def _underlying_view(sym: str, tf: int = 15, n: int = 260, now: float | None = N
         if v == v: out["stop"].append(dict(time=t[i], value=float(v), up=up))
         if s["ma"].iat[i] == s["ma"].iat[i]: out["ma"].append(dict(time=t[i], value=float(s["ma"].iat[i])))
         if s["buy"].iat[i] or s["sell"].iat[i]: out["markers"].append(dict(time=t[i], side="BUY" if s["buy"].iat[i] else "SELL", strong=bool(s["strong"].iat[i])))
+    return out
+
+
+def _with_uturn(out: dict, sym: str, now: float | None, path: str | None) -> dict:
+    """Second Pine script on the same chart: the Safe U-turn markers (their time on the chart axis = epoch + IST shift, like the candles). A failure here never takes the Winners chart down."""
+    try:
+        from .safe_ai import chart as UC
+        ov = UC.overlay(sym, now, path, spot=None)
+        out["uturn"] = [{**m, "time": m["time"] + IST_S} for m in ov["markers"]]; out["uturn_calibration"] = ov["calibration"]
+    except Exception as e:
+        out["uturn"] = []; out["uturn_calibration"] = {"error": type(e).__name__}
     return out

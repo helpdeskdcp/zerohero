@@ -14,7 +14,7 @@ rows = c.execute("SELECT timestamp, open, high, low, close FROM normalized_bars 
 ts = [datetime.fromisoformat(r[0]).timestamp() for r in rows]
 candles = [dict(time=int(t * 1000), open=r[1], high=r[2], low=r[3], close=r[4], volume=0.0) for t, r in zip(ts, rows)]
 src = open(os.path.join(HERE, "data", "research", "safe_ai", "safe_uturn.pine"), encoding="utf-8").read()
-req = dict(op="run", source=src, candles=candles, tf="1", symbol="NIFTY", inputs={"Thrust % (0.35 / 0.50 / 0.70 pre-registered)": th * 100, "Only inside the trading window": False}, props={})
+req = dict(op="run", source=src, candles=candles, tf="1", symbol="NIFTY", inputs={"Thrust % (v2 calibrated 0.60; 0.35 / 0.50 / 0.70 were pre-registered)": th * 100, "Only inside the trading window": False}, props={})
 p = subprocess.run(["node", "--permission", f"--allow-fs-read={PKG}", "--max-old-space-size=1024", WORKER], input=json.dumps(req).encode(), capture_output=True, cwd=PKG, env={}, timeout=600)
 out = json.loads(p.stdout.decode().strip().splitlines()[-1])
 if not out.get("ok"): print("PINE RUN FAILED:", json.dumps(out.get("diagnostics"))[:1500]); sys.exit(1)

@@ -2,10 +2,11 @@
 // ZeroHero Safe U-turn (PAPER research indicator, NO EDGE CLAIMED). Mirror of app/safe_ai/signals.py `detect` for a 1-minute index chart.
 // CONFIRMED U-TURN at the session extreme: down-thrust then recovery -> CALL idea (plot 1), up-thrust then fall-back -> PUT idea (plot -1).
 // Safety rules live in the runner, not in this indicator: 1 lot, stop 25 % of the premium, first target +20 %, <= 2 trades a day, one loss ends the day, 30-minute cool-down, no entry after 14:30 (13:30 on the option's expiry day).
-// Not compiled on TradingView by the author (no access); run in PineTS (parity-checked against the Python rule, see scripts/safe_uturn_parity.py).
-indicator("ZeroHero Safe U-turn (paper, no edge claimed)", shorttitle="ZH-SafeU", overlay=true, max_labels_count=300)
+// Not compiled on TradingView by the author (no access); run in PineTS (parity-checked against the Python rule on 45,000 real 1-minute bars: 2 mismatches, scripts/safe_uturn_parity.py).
+// Calibration (12-month NIFTY back-test, days 0-2 to expiry): the idea reached its first target (+20 %) before the stop (-25 %) in about 60 % of cases, net result break-even, no statistically significant edge: data/research/safe_ai/CALIBRATION.md.
+indicator("ZeroHero Safe U-turn (paper, no edge claimed)", shorttitle="ZH-SafeU", overlay=true)
 
-thrustPct = input.float(0.50, "Thrust % (0.35 / 0.50 / 0.70 pre-registered)", minval=0.1, maxval=3.0, step=0.05, group="Rule") / 100.0
+thrustPct = input.float(0.60, "Thrust % (v2 calibrated 0.60; 0.35 / 0.50 / 0.70 were pre-registered)", minval=0.1, maxval=3.0, step=0.05, group="Rule") / 100.0
 retMin    = input.float(0.35, "Recovery min (fraction of thrust)", minval=0.1, maxval=0.9, step=0.05, group="Rule")
 retMax    = input.float(0.80, "Recovery max (fraction of thrust)", minval=0.2, maxval=1.0, step=0.05, group="Rule")
 minAge    = input.int(8,  "Extreme at least N minutes old", minval=3, maxval=60, group="Rule")
@@ -16,6 +17,8 @@ mom2      = input.int(8,  "Momentum look-back 2 (min)", minval=2, maxval=60, gro
 useWindow = input.bool(true, "Only inside the trading window", group="Window")
 expiryDay = input.bool(false, "Today is the expiry day of the option I trade (cut at 13:30)", group="Window")
 
+// The rule counts MINUTES as bars (extreme age, hold window, momentum look-back): it is only correct on a 1-minute chart. On any other timeframe nothing is signalled and the data window says why.
+tfOk = timeframe.isintraday and timeframe.multiplier == 1
 newDay = barstate.isfirst or timeframe.change("D")
 var float sMax = na
 var float sMin = na
@@ -63,13 +66,14 @@ callOk = enoughData and ageLo >= minAge and ageLo <= maxAge and thrustDown >= th
 putOk  = enoughData and ageHi >= minAge and ageHi <= maxAge and thrustUp >= thrustPct and recDn >= retMin and recDn <= retMax and close < close[mom1] and close < close[mom2]
 
 inWin = not useWindow or not na(time(timeframe.period, expiryDay ? "0935-1330" : "0935-1430", "Asia/Kolkata"))
-callSig = callOk and inWin
-putSig = putOk and not callOk and inWin
+callSig = tfOk and callOk and inWin
+putSig = tfOk and putOk and not callOk and inWin
 
 plotshape(callSig, "CALL idea", shape.triangleup, location.belowbar, color.new(color.green, 0), size = size.small, text = "CE")
 plotshape(putSig, "PUT idea", shape.triangledown, location.abovebar, color.new(color.red, 0), size = size.small, text = "PE")
 plot(callSig ? 1 : putSig ? -1 : 0, "DBG_SIG", display = display.data_window)
+plot(tfOk ? 1 : 0, "1-minute chart (needed)", display = display.data_window)
 plot(lo, "Session low", color.new(color.green, 60), display = display.none)
 plot(hi, "Session high", color.new(color.red, 60), display = display.none)
-alertcondition(callSig, "Safe U-turn CALL idea", "ZeroHero Safe U-turn: CALL idea (paper, no edge claimed)")
-alertcondition(putSig, "Safe U-turn PUT idea", "ZeroHero Safe U-turn: PUT idea (paper, no edge claimed)")
+alertcondition(callSig, "Safe U-turn CALL idea", "ZeroHero Safe U-turn: CALL idea {{ticker}} {{close}} (paper, no edge claimed)")
+alertcondition(putSig, "Safe U-turn PUT idea", "ZeroHero Safe U-turn: PUT idea {{ticker}} {{close}} (paper, no edge claimed)")
