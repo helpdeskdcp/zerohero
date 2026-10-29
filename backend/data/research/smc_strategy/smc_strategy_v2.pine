@@ -1,0 +1,630 @@
+//@version=6
+// ═══════════════════════════════════════════════════════════════════════════
+//  SMC STRATEGY v2 (NSE / BSE / MCX)  — fixes over v1:
+//   1. Labels/lines are BOUNDED (500-object limit): structure objects are trimmed first, so
+//      BUY/SELL and ENTRY / SL / T1 / T2 / T3 labels of the last trades are never pushed off.
+//   2. Works on every timeframe: HTF <= chart TF falls back to the chart's own structure,
+//      kill-zone filter is skipped on charts above 60 minutes (session windows are meaningless there).
+//   3. Absolute leg quantities (T1 + T2 + T3 = whole position, T3 = remainder, never <= 0).
+//   4. Exit orders are re-issued only for legs not yet filled; break-even moves AFTER T1 really filled.
+//   5. OB = last opposite-colour candle near the extreme (not just the extreme candle).
+//   6. Hit markers "T1 hit / T2 hit / T3 hit / SL / BE" are drawn.
+//  NOT a claim of accuracy: no price-only rule tested in this repo has shown a net edge.
+// ═══════════════════════════════════════════════════════════════════════════
+strategy("SMC Strategy v2 | NSE BSE MCX | Zone + Power Targets", shorttitle="SMC Pro v2", overlay=true,
+     max_boxes_count=500, max_lines_count=500, max_labels_count=500, max_bars_back=500,
+     initial_capital=1000000, default_qty_type=strategy.fixed, default_qty_value=1,
+     commission_type=strategy.commission.percent, commission_value=0.03, slippage=1,
+     process_orders_on_close=true, pyramiding=0)
+
+string G_MK  = "0. Market / Exchange"
+string G_MS  = "1. Market Structure"
+string G_HTF = "2. HTF Bias"
+string G_ZN  = "3. Order Blocks & FVG"
+string G_LQ  = "4. Liquidity Sweeps"
+string G_SS  = "5. Sessions (Custom only)"
+string G_PW  = "6. Market Power"
+string G_TR  = "7. Entry / Risk / Targets"
+string G_VI  = "8. Visuals"
+
+mktIn       = input.string("Auto", "Market", options=["Auto", "NSE / BSE", "MCX", "Custom"], group=G_MK, tooltip="Auto detects NSE / BSE / MCX from the symbol and applies that exchange's kill zones. Choose Custom to use your own sessions from section 5.")
+
+swingLen    = input.int(5, "Swing Length (pivot)", minval=2, maxval=30, group=G_MS)
+showSwings  = input.bool(true, "Show HH / HL / LH / LL", group=G_MS)
+showBosCh   = input.bool(true, "Show BOS / CHoCH", group=G_MS)
+
+useHTF      = input.bool(true, "Use HTF bias filter", group=G_HTF)
+htfTf       = input.timeframe("60", "HTF Timeframe", group=G_HTF, tooltip="If it is not higher than the chart timeframe the filter is ignored (dashboard shows n/a).")
+htfSwing    = input.int(3, "HTF Swing Length", minval=1, maxval=20, group=G_HTF)
+
+showOB      = input.bool(true, "Order Blocks", group=G_ZN)
+showFVG     = input.bool(true, "Fair Value Gaps", group=G_ZN)
+maxZones    = input.int(8, "Max active zones per type", minval=2, maxval=30, group=G_ZN)
+fvgMinAtr   = input.float(0.15, "Min FVG size (x ATR)", minval=0.0, step=0.05, group=G_ZN)
+
+showSweeps  = input.bool(true, "Show Liquidity Sweeps", group=G_LQ)
+sweepWindow = input.int(10, "Sweep valid for N bars", minval=1, maxval=50, group=G_LQ)
+
+useSession  = input.bool(true, "Trade only inside Kill Zones", group=G_SS, tooltip="Applies on intraday charts up to 60 minutes. On higher timeframes the filter is skipped.")
+sess1       = input.session("0915-1130", "Custom Kill Zone 1", group=G_SS)
+sess2       = input.session("1330-1500", "Custom Kill Zone 2", group=G_SS)
+eodSess     = input.session("1515-1530", "Custom EOD window", group=G_SS)
+showKZ      = input.bool(true, "Shade Kill Zones", group=G_SS)
+useEOD      = input.bool(false, "Square-off at end of day", group=G_SS, tooltip="Auto window: NSE/BSE 15:15-15:30, MCX 23:20-23:30. Needs an intraday chart (<= 60 min).")
+
+minPower      = input.int(25, "Min market power % to enter", minval=0, maxval=100, group=G_PW, tooltip="Power = ADX>20, DI direction, candle body vs ATR, volume vs average (volume skipped on symbols without volume). 75+ = STRONG, 50+ = MEDIUM, below = WEAK.")
+useAdaptive   = input.bool(true, "Adapt targets / qty split to power", group=G_PW)
+pwrMulStrong  = input.float(1.5, "Target stretch when STRONG", minval=1.0, step=0.1, group=G_PW)
+pwrMulWeak    = input.float(0.7, "Target squeeze when WEAK", minval=0.3, maxval=1.0, step=0.1, group=G_PW)
+
+allowLong   = input.bool(true, "Allow Longs", group=G_TR)
+allowShort  = input.bool(true, "Allow Shorts", group=G_TR)
+minScore    = input.int(2, "Min confluence score (1-3)", minval=1, maxval=3, group=G_TR, tooltip="Score = OB tap + FVG tap + recent liquidity sweep. At least one zone tap (OB or FVG) is always required.")
+slBuf       = input.float(0.2, "SL buffer (x ATR)", minval=0.0, step=0.05, group=G_TR)
+maxRiskAtr  = input.float(5.0, "Skip trade if risk > N x ATR", minval=0.5, step=0.5, group=G_TR)
+useZoneTgt  = input.bool(true, "Targets from opposing zones / swing liquidity", group=G_TR)
+minRR1      = input.float(0.8, "Min distance for T1 (R)", minval=0.2, step=0.1, group=G_TR)
+tgtSpacing  = input.float(0.5, "Min spacing between targets (R)", minval=0.1, step=0.1, group=G_TR)
+rr1         = input.float(1.0, "Fallback T1 (R multiple)", minval=0.2, step=0.1, group=G_TR)
+rr2         = input.float(2.0, "Fallback T2 (R multiple)", minval=0.2, step=0.1, group=G_TR)
+rr3         = input.float(3.0, "Fallback T3 (R multiple)", minval=0.2, step=0.1, group=G_TR)
+q1          = input.int(40, "Qty % at T1 (MEDIUM power)", minval=1, maxval=90, group=G_TR, tooltip="STRONG uses 30/30/40, WEAK uses 60/25/15 when adaptive is on.")
+q2          = input.int(30, "Qty % at T2 (MEDIUM power)", minval=1, maxval=90, group=G_TR, tooltip="T3 gets the remainder; if T1 + T2 >= 100 they are scaled down so T3 keeps at least 10 %.")
+fixedQty    = input.int(0, "Fixed quantity (0 = use % of equity)", minval=0, group=G_TR, tooltip="Futures/options: enter the lot size here (units). 0 = size from the % below.")
+eqPct       = input.float(10.0, "Position size, % of equity", minval=0.1, maxval=100.0, step=0.5, group=G_TR)
+useBE       = input.bool(true, "Move SL to entry after T1 is filled", group=G_TR)
+exitOnCh    = input.bool(true, "Exit on opposite CHoCH", group=G_TR)
+
+showLevels  = input.bool(true, "Draw Entry / SL / T1-T3 lines + labels", group=G_VI)
+extBars     = input.int(20, "Level line length (bars)", minval=3, maxval=100, group=G_VI)
+keepTrades  = input.int(25, "Keep levels of last N trades", minval=1, maxval=40, group=G_VI)
+showDash    = input.bool(true, "Show dashboard", group=G_VI)
+
+color bullCol  = #089981
+color bearCol  = #f23645
+color chochCol = #ff9800
+color fvgBullC = #2196f3
+color fvgBearC = #9c27b0
+color sweepCol = #e91e63
+
+// ─────────────────────── EXCHANGE / SESSION RESOLUTION ─────────────────────
+string mkt = mktIn != "Auto" ? mktIn : (syminfo.prefix == "MCX" ? "MCX" : ((syminfo.prefix == "NSE" or syminfo.prefix == "BSE") ? "NSE / BSE" : "Custom"))
+string kz1  = mkt == "MCX" ? "0900-1200" : (mkt == "NSE / BSE" ? "0915-1130" : sess1)
+string kz2  = mkt == "MCX" ? "1700-2300" : (mkt == "NSE / BSE" ? "1330-1500" : sess2)
+string eodS = mkt == "MCX" ? "2320-2330" : (mkt == "NSE / BSE" ? "1515-1530" : eodSess)
+
+int  tfSec    = timeframe.in_seconds(timeframe.period)
+int  htfSec   = timeframe.in_seconds(htfTf)
+bool htfUsable = htfSec > tfSec
+bool sessUsable = timeframe.isintraday and tfSec <= 3600
+
+// ─────────────────────────────── TYPES ─────────────────────────────────────
+type Zone
+    float top
+    float bot
+    bool  bull
+    int   born
+    box   bx
+
+var array<Zone>  obs  = array.new<Zone>()
+var array<Zone>  fvgs = array.new<Zone>()
+var array<float> swH  = array.new<float>()
+var array<float> swL  = array.new<float>()
+// structure drawings are kept in their own bounded arrays so trade labels are never evicted
+var array<label> stLbl = array.new<label>()
+var array<line>  stLin = array.new<line>()
+// trade drawings (bounded to the last N trades below)
+var array<label> trLbl = array.new<label>()
+var array<line>  trLin = array.new<line>()
+
+// ───────────────────────────── FUNCTIONS ───────────────────────────────────
+f_trend(int len) =>
+    float hi = ta.pivothigh(high, len, len)
+    float lo = ta.pivotlow(low, len, len)
+    var float h = na
+    var float l = na
+    var int t = 0
+    if not na(hi)
+        h := hi
+    if not na(lo)
+        l := lo
+    if not na(h) and close > h
+        t := 1
+        h := na
+    if not na(l) and close < l
+        t := -1
+        l := na
+    t
+
+f_trimLbl(array<label> a, int maxN) =>
+    while a.size() > maxN
+        label.delete(a.shift())
+
+f_trimLin(array<line> a, int maxN) =>
+    while a.size() > maxN
+        line.delete(a.shift())
+
+f_addZone(array<Zone> arr, float top, float bot, bool bull, int leftBar, color c, int maxN) =>
+    box bx = box.new(leftBar, top, bar_index + 1, bot, border_color=color.new(c, 40), bgcolor=color.new(c, 85))
+    arr.push(Zone.new(top, bot, bull, bar_index, bx))
+    if arr.size() > maxN
+        Zone old = arr.shift()
+        box.delete(old.bx)
+
+f_scan(array<Zone> arr) =>
+    bool tb = false
+    float bb = na
+    bool ts = false
+    float tt = na
+    if arr.size() > 0
+        for i = arr.size() - 1 to 0
+            Zone z = arr.get(i)
+            bool mit = z.bull ? close < z.bot : close > z.top
+            if mit
+                box.delete(z.bx)
+                arr.remove(i)
+            else
+                box.set_right(z.bx, bar_index + 1)
+                if bar_index > z.born
+                    if z.bull and low <= z.top and close > z.bot
+                        tb := true
+                        bb := na(bb) ? z.bot : math.min(bb, z.bot)
+                    if not z.bull and high >= z.bot and close < z.top
+                        ts := true
+                        tt := na(tt) ? z.top : math.max(tt, z.top)
+    [tb, bb, ts, tt]
+
+f_targets(bool isLong, float e, float risk, float pwrMul, string pCls, array<Zone> a1, array<Zone> a2, array<float> sw, bool useZ, float minRR, float spacing) =>
+    float s = (isLong ? 1.0 : -1.0) * risk
+    float maxReach = risk * rr3 * pwrMul * 2.0
+    array<float> c = array.new<float>()
+    if useZ
+        if a1.size() > 0
+            for i = 0 to a1.size() - 1
+                Zone z = a1.get(i)
+                if isLong and not z.bull and z.bot > e and z.bot - e <= maxReach
+                    c.push(z.bot)
+                if not isLong and z.bull and z.top < e and e - z.top <= maxReach
+                    c.push(z.top)
+        if a2.size() > 0
+            for i = 0 to a2.size() - 1
+                Zone z = a2.get(i)
+                if isLong and not z.bull and z.bot > e and z.bot - e <= maxReach
+                    c.push(z.bot)
+                if not isLong and z.bull and z.top < e and e - z.top <= maxReach
+                    c.push(z.top)
+        if sw.size() > 0
+            for i = 0 to sw.size() - 1
+                float p = sw.get(i)
+                if isLong and p > e and p - e <= maxReach
+                    c.push(p)
+                if not isLong and p < e and e - p <= maxReach
+                    c.push(p)
+    if isLong
+        c.sort(order.ascending)
+    else
+        c.sort(order.descending)
+
+    float t1 = na
+    float t2 = na
+    float t3 = na
+    if c.size() > 0
+        for i = 0 to c.size() - 1
+            float p = c.get(i)
+            float d = math.abs(p - e)
+            if na(t1)
+                if d >= risk * minRR and d <= risk * rr2 * pwrMul
+                    t1 := p
+            else if na(t2)
+                if math.abs(p - t1) >= risk * spacing
+                    t2 := p
+            else if na(t3)
+                if math.abs(p - t2) >= risk * spacing
+                    t3 := p
+
+    bool z1 = not na(t1)
+    bool z2 = not na(t2)
+    bool z3 = not na(t3)
+
+    if na(t1)
+        t1 := e + s * rr1 * pwrMul
+    if na(t2)
+        float f2 = e + s * rr2 * pwrMul
+        t2 := isLong ? math.max(f2, t1 + s * spacing) : math.min(f2, t1 + s * spacing)
+    if na(t3)
+        float f3 = e + s * rr3 * pwrMul
+        t3 := isLong ? math.max(f3, t2 + s * spacing) : math.min(f3, t2 + s * spacing)
+
+    float t3Cap = e + s * rr3 * pwrMul
+    if pCls == "STRONG"
+        t3 := isLong ? math.max(t3, t3Cap) : math.min(t3, t3Cap)
+    else if pCls == "WEAK"
+        float capped = isLong ? math.min(t3, t3Cap) : math.max(t3, t3Cap)
+        t3 := isLong ? math.max(capped, t2 + s * spacing) : math.min(capped, t2 + s * spacing)
+
+    [t1, t2, t3, z1, z2, z3]
+
+// one level = a line + a label; both go to the trade arrays (bounded by whole trades, not by count)
+f_lvl(float price, string txt, color c, int ext, array<line> la, array<label> lb) =>
+    la.push(line.new(bar_index, price, bar_index + ext, price, color=c, style=line.style_dashed, width=1))
+    lb.push(label.new(bar_index + ext, price, txt + "  " + str.tostring(price, format.mintick), style=label.style_label_left, color=color.new(c, 80), textcolor=c, size=size.small))
+
+f_hit(string txt, float price, color c, array<label> lb) =>
+    lb.push(label.new(bar_index, price, txt, style=label.style_label_center, color=color.new(c, 75), textcolor=c, size=size.tiny))
+
+// ─────────────────────────── CORE CALCULATIONS ─────────────────────────────
+float atrV = ta.atr(14)
+float ph = ta.pivothigh(high, swingLen, swingLen)
+float pl = ta.pivotlow(low, swingLen, swingLen)
+[diPlus, diMinus, adxV] = ta.dmi(14, 14)
+
+float volMa   = ta.sma(volume, 20)
+bool  hasVol  = nz(volMa) > 0
+float volRatio = hasVol ? volume / volMa : 1.0
+float bodyAtr  = math.abs(close - open) / atrV
+
+var float sh = na
+var float sl = na
+var float prevSh = na
+var float prevSl = na
+var int shBar = na
+var int slBar = na
+var bool shBroken = true
+var bool slBroken = true
+var bool shSwept = true
+var bool slSwept = true
+var int trend = 0
+
+var int lastSweepLowBar = na
+var int lastSweepHighBar = na
+var float sweepLowPx = na
+var float sweepHighPx = na
+
+if not na(ph)
+    prevSh := sh
+    sh := ph
+    shBar := bar_index - swingLen
+    shBroken := false
+    shSwept := false
+    swH.push(ph)
+    if swH.size() > 40
+        swH.shift()
+    if showSwings
+        string txt = na(prevSh) ? "H" : (ph > prevSh ? "HH" : "LH")
+        color  tc  = na(prevSh) ? color.gray : (ph > prevSh ? bullCol : bearCol)
+        stLbl.push(label.new(shBar, ph, txt, style=label.style_label_down, color=color.new(tc, 100), textcolor=tc, size=size.small))
+
+if not na(pl)
+    prevSl := sl
+    sl := pl
+    slBar := bar_index - swingLen
+    slBroken := false
+    slSwept := false
+    swL.push(pl)
+    if swL.size() > 40
+        swL.shift()
+    if showSwings
+        string txt = na(prevSl) ? "L" : (pl > prevSl ? "HL" : "LL")
+        color  tc  = na(prevSl) ? color.gray : (pl > prevSl ? bullCol : bearCol)
+        stLbl.push(label.new(slBar, pl, txt, style=label.style_label_up, color=color.new(tc, 100), textcolor=tc, size=size.small))
+
+bool bullBreak = false
+bool bearBreak = false
+bool chochBull = false
+bool chochBear = false
+
+if not na(sh) and not shBroken and close > sh
+    bullBreak := true
+    chochBull := trend == -1
+    shBroken := true
+    if showBosCh
+        color cc = chochBull ? chochCol : bullCol
+        stLin.push(line.new(shBar, sh, bar_index, sh, color=cc, style=line.style_dashed))
+        stLbl.push(label.new(math.round((shBar + bar_index) / 2), sh, chochBull ? "CHoCH" : "BOS", style=label.style_label_down, color=color.new(cc, 100), textcolor=cc, size=size.small))
+    if showOB
+        float minL = low
+        int idx = 0
+        for i = 0 to math.min(bar_index - shBar, 200)
+            if low[i] < minL
+                minL := low[i]
+                idx := i
+        int pick = idx
+        for k = 0 to 3
+            if close[idx + k] < open[idx + k]
+                pick := idx + k
+                break
+        f_addZone(obs, high[pick], low[pick], true, bar_index - pick, bullCol, maxZones)
+    trend := 1
+
+if not na(sl) and not slBroken and close < sl
+    bearBreak := true
+    chochBear := trend == 1
+    slBroken := true
+    if showBosCh
+        color cc = chochBear ? chochCol : bearCol
+        stLin.push(line.new(slBar, sl, bar_index, sl, color=cc, style=line.style_dashed))
+        stLbl.push(label.new(math.round((slBar + bar_index) / 2), sl, chochBear ? "CHoCH" : "BOS", style=label.style_label_up, color=color.new(cc, 100), textcolor=cc, size=size.small))
+    if showOB
+        float maxH = high
+        int idx = 0
+        for i = 0 to math.min(bar_index - slBar, 200)
+            if high[i] > maxH
+                maxH := high[i]
+                idx := i
+        int pick = idx
+        for k = 0 to 3
+            if close[idx + k] > open[idx + k]
+                pick := idx + k
+                break
+        f_addZone(obs, high[pick], low[pick], false, bar_index - pick, bearCol, maxZones)
+    trend := -1
+
+if showFVG and bar_index >= 2
+    if low > high[2] and close[1] > open[1] and (low - high[2]) > atrV * fvgMinAtr
+        f_addZone(fvgs, low, high[2], true, bar_index - 2, fvgBullC, maxZones)
+    if high < low[2] and close[1] < open[1] and (low[2] - high) > atrV * fvgMinAtr
+        f_addZone(fvgs, low[2], high, false, bar_index - 2, fvgBearC, maxZones)
+
+bool sweepHigh = false
+bool sweepLow  = false
+
+if not na(sh) and not shBroken and not shSwept and high > sh and close < sh
+    sweepHigh := true
+    shSwept := true
+    lastSweepHighBar := bar_index
+    sweepHighPx := high
+    if showSweeps
+        stLin.push(line.new(shBar, sh, bar_index, sh, color=sweepCol, style=line.style_dotted))
+        stLbl.push(label.new(bar_index, high, "BSL Sweep", style=label.style_label_down, color=color.new(sweepCol, 100), textcolor=sweepCol, size=size.small))
+
+if not na(sl) and not slBroken and not slSwept and low < sl and close > sl
+    sweepLow := true
+    slSwept := true
+    lastSweepLowBar := bar_index
+    sweepLowPx := low
+    if showSweeps
+        stLin.push(line.new(slBar, sl, bar_index, sl, color=sweepCol, style=line.style_dotted))
+        stLbl.push(label.new(bar_index, low, "SSL Sweep", style=label.style_label_up, color=color.new(sweepCol, 100), textcolor=sweepCol, size=size.small))
+
+// bounded: structure objects never take the room of trade levels (labels: 150 + 25 trades x 7 < 500, lines: 120 + 25 x 5 < 500)
+f_trimLbl(stLbl, 150)
+f_trimLin(stLin, 120)
+
+bool recSweepLow  = not na(lastSweepLowBar)  and bar_index - lastSweepLowBar  <= sweepWindow
+bool recSweepHigh = not na(lastSweepHighBar) and bar_index - lastSweepHighBar <= sweepWindow
+
+[obBull,  obBullBot,  obBear,  obBearTop]  = f_scan(obs)
+[fvgBull, fvgBullBot, fvgBear, fvgBearTop] = f_scan(fvgs)
+
+// ── HTF bias (non-repainting: last COMPLETED HTF bar). Ignored when HTF is not above the chart timeframe.
+int htfRaw = request.security(syminfo.tickerid, htfTf, f_trend(htfSwing)[1], lookahead=barmerge.lookahead_on)
+int htfT   = htfUsable ? nz(htfRaw) : trend
+
+// ── Sessions
+bool inS1   = not na(time(timeframe.period, kz1, syminfo.timezone))
+bool inS2   = not na(time(timeframe.period, kz2, syminfo.timezone))
+bool sessOk = not useSession or not sessUsable or inS1 or inS2
+bool eodNow = useEOD and sessUsable and not na(time(timeframe.period, eodS, syminfo.timezone))
+bgcolor(showKZ and useSession and sessUsable and (inS1 or inS2) ? color.new(color.blue, 94) : na, title="Kill Zone")
+
+// ── Market power score (0-100)
+int   maxPts  = hasVol ? 4 : 3
+int   bullPts = (adxV > 20 ? 1 : 0) + (diPlus > diMinus ? 1 : 0) + (bodyAtr > 0.6 ? 1 : 0) + ((hasVol and volRatio >= 1.2) ? 1 : 0)
+int   bearPts = (adxV > 20 ? 1 : 0) + (diMinus > diPlus ? 1 : 0) + (bodyAtr > 0.6 ? 1 : 0) + ((hasVol and volRatio >= 1.2) ? 1 : 0)
+float bullPwr = bullPts * 100.0 / maxPts
+float bearPwr = bearPts * 100.0 / maxPts
+
+// ─────────────────────────── TRADE STATE ───────────────────────────────────
+var int   dir    = 0
+var float eP     = na
+var float curSL  = na
+var float t1P    = na
+var float t2P    = na
+var float t3P    = na
+var bool  t1Done = false
+var bool  t2Done = false
+var int   entQty = 0
+var int   legA   = 0
+var int   legB   = 0
+var int   legC   = 0
+
+if dir != 0 and strategy.position_size == 0
+    dir := 0
+
+bool justEntered = false
+
+bool bullBias = trend == 1  and (not useHTF or htfT == 1)
+bool bearBias = trend == -1 and (not useHTF or htfT == -1)
+
+int bullScore = (obBull ? 1 : 0) + (fvgBull ? 1 : 0) + (recSweepLow ? 1 : 0)
+int bearScore = (obBear ? 1 : 0) + (fvgBear ? 1 : 0) + (recSweepHigh ? 1 : 0)
+
+bool longSig  = allowLong  and dir == 0 and bullBias and sessOk and (obBull or fvgBull) and bullScore >= minScore and bullPwr >= minPower and close > open
+bool shortSig = allowShort and dir == 0 and bearBias and sessOk and (obBear or fvgBear) and bearScore >= minScore and bearPwr >= minPower and close < open
+
+// split a position into 3 whole-number legs; T3 is the remainder and always keeps >= 10 % (scaled if T1 + T2 are too large)
+f_split(int qty, int a, int b) =>
+    float sa = a
+    float sb = b
+    if a + b > 90
+        sa := a * 90.0 / (a + b)
+        sb := b * 90.0 / (a + b)
+    int la = int(math.floor(qty * sa / 100.0))
+    int lb = int(math.floor(qty * sb / 100.0))
+    int lc = qty - la - lb
+    [la, lb, lc]
+
+f_qty(float e) =>
+    int q = fixedQty > 0 ? fixedQty : int(math.max(1, math.floor(strategy.equity * eqPct / 100.0 / e)))
+    q
+
+if longSig
+    float e  = close
+    float zb = obBull ? obBullBot : (fvgBull ? fvgBullBot : low)
+    float ref = math.min(low, zb)
+    if recSweepLow
+        ref := math.min(ref, sweepLowPx)
+    float slP  = ref - atrV * slBuf
+    float risk = e - slP
+    if risk > 0 and risk <= atrV * maxRiskAtr
+        string pc = bullPwr >= 75 ? "STRONG" : (bullPwr >= 50 ? "MEDIUM" : "WEAK")
+        float  pm = useAdaptive ? (pc == "STRONG" ? pwrMulStrong : (pc == "WEAK" ? pwrMulWeak : 1.0)) : 1.0
+        [g1, g2, g3, zs1, zs2, zs3] = f_targets(true, e, risk, pm, pc, obs, fvgs, swH, useZoneTgt, minRR1, tgtSpacing)
+        int qa = q1
+        int qb = q2
+        if useAdaptive and pc == "STRONG"
+            qa := 30
+            qb := 30
+        if useAdaptive and pc == "WEAK"
+            qa := 60
+            qb := 25
+        int totQty = f_qty(e)
+        [la, lb, lc] = f_split(totQty, qa, qb)
+        strategy.entry("Long", strategy.long, qty=totQty, comment="BUY")
+        dir    := 1
+        eP     := e
+        curSL  := slP
+        t1P    := g1
+        t2P    := g2
+        t3P    := g3
+        entQty := totQty
+        legA   := la
+        legB   := lb
+        legC   := lc
+        t1Done := false
+        t2Done := false
+        justEntered := true
+        trLbl.push(label.new(bar_index, low, "BUY\n" + pc + " " + str.tostring(math.round(bullPwr)) + "%", style=label.style_label_up, color=bullCol, textcolor=color.white, size=size.normal))
+        if showLevels
+            f_lvl(e,   "ENTRY", color.gray, extBars, trLin, trLbl)
+            f_lvl(slP, "SL",    bearCol, extBars, trLin, trLbl)
+            f_lvl(g1,  "T1 " + (zs1 ? "Zone " : "RR ") + str.tostring((g1 - e) / risk, "#.#") + "R", bullCol, extBars, trLin, trLbl)
+            f_lvl(g2,  "T2 " + (zs2 ? "Zone " : "RR ") + str.tostring((g2 - e) / risk, "#.#") + "R", bullCol, extBars, trLin, trLbl)
+            f_lvl(g3,  "T3 " + (zs3 ? "Zone " : "RR ") + str.tostring((g3 - e) / risk, "#.#") + "R", bullCol, extBars, trLin, trLbl)
+        alert("SMC BUY (" + pc + ") | Entry " + str.tostring(e, format.mintick) + " | SL " + str.tostring(slP, format.mintick) + " | T1 " + str.tostring(g1, format.mintick) + " | T2 " + str.tostring(g2, format.mintick) + " | T3 " + str.tostring(g3, format.mintick), alert.freq_once_per_bar_close)
+
+if shortSig
+    float e  = close
+    float zt = obBear ? obBearTop : (fvgBear ? fvgBearTop : high)
+    float ref = math.max(high, zt)
+    if recSweepHigh
+        ref := math.max(ref, sweepHighPx)
+    float slP  = ref + atrV * slBuf
+    float risk = slP - e
+    if risk > 0 and risk <= atrV * maxRiskAtr
+        string pc = bearPwr >= 75 ? "STRONG" : (bearPwr >= 50 ? "MEDIUM" : "WEAK")
+        float  pm = useAdaptive ? (pc == "STRONG" ? pwrMulStrong : (pc == "WEAK" ? pwrMulWeak : 1.0)) : 1.0
+        [g1, g2, g3, zs1, zs2, zs3] = f_targets(false, e, risk, pm, pc, obs, fvgs, swL, useZoneTgt, minRR1, tgtSpacing)
+        int qa = q1
+        int qb = q2
+        if useAdaptive and pc == "STRONG"
+            qa := 30
+            qb := 30
+        if useAdaptive and pc == "WEAK"
+            qa := 60
+            qb := 25
+        int totQty = f_qty(e)
+        [la, lb, lc] = f_split(totQty, qa, qb)
+        strategy.entry("Short", strategy.short, qty=totQty, comment="SELL")
+        dir    := -1
+        eP     := e
+        curSL  := slP
+        t1P    := g1
+        t2P    := g2
+        t3P    := g3
+        entQty := totQty
+        legA   := la
+        legB   := lb
+        legC   := lc
+        t1Done := false
+        t2Done := false
+        justEntered := true
+        trLbl.push(label.new(bar_index, high, "SELL\n" + pc + " " + str.tostring(math.round(bearPwr)) + "%", style=label.style_label_down, color=bearCol, textcolor=color.white, size=size.normal))
+        if showLevels
+            f_lvl(e,   "ENTRY", color.gray, extBars, trLin, trLbl)
+            f_lvl(slP, "SL",    bearCol, extBars, trLin, trLbl)
+            f_lvl(g1,  "T1 " + (zs1 ? "Zone " : "RR ") + str.tostring((e - g1) / risk, "#.#") + "R", bullCol, extBars, trLin, trLbl)
+            f_lvl(g2,  "T2 " + (zs2 ? "Zone " : "RR ") + str.tostring((e - g2) / risk, "#.#") + "R", bullCol, extBars, trLin, trLbl)
+            f_lvl(g3,  "T3 " + (zs3 ? "Zone " : "RR ") + str.tostring((e - g3) / risk, "#.#") + "R", bullCol, extBars, trLin, trLbl)
+        alert("SMC SELL (" + pc + ") | Entry " + str.tostring(e, format.mintick) + " | SL " + str.tostring(slP, format.mintick) + " | T1 " + str.tostring(g1, format.mintick) + " | T2 " + str.tostring(g2, format.mintick) + " | T3 " + str.tostring(g3, format.mintick), alert.freq_once_per_bar_close)
+
+// trade drawings: keep only the last N trades (counted in labels; a trade = 1 entry label + 5 level labels)
+int perTrade = showLevels ? 6 : 1
+while trLbl.size() > keepTrades * perTrade
+    label.delete(trLbl.shift())
+while trLin.size() > keepTrades * 5
+    line.delete(trLin.shift())
+
+// ─────────────────────────── TRADE MANAGEMENT ──────────────────────────────
+float posAbs = math.abs(strategy.position_size)
+// quantity still open as the strategy sees it (on the entry bar the fill is booked at the close)
+float openQty = justEntered ? entQty : posAbs
+
+bool forceExit = false
+if dir == 1 and not justEntered and ((exitOnCh and chochBear) or eodNow)
+    forceExit := true
+    strategy.close_all(comment=eodNow ? "EOD" : "CHoCH exit")
+if dir == -1 and not justEntered and ((exitOnCh and chochBull) or eodNow)
+    forceExit := true
+    strategy.close_all(comment=eodNow ? "EOD" : "CHoCH exit")
+
+// legs are "done" once the open quantity has dropped below what is left for the later legs
+bool newT1 = false
+bool newT2 = false
+if dir != 0 and not justEntered and not forceExit
+    if not t1Done and legA > 0 and openQty <= entQty - legA
+        t1Done := true
+        newT1 := true
+    if t1Done and not t2Done and legB > 0 and openQty <= legC
+        t2Done := true
+        newT2 := true
+    if legA == 0 and not t1Done
+        t1Done := true
+    if legB == 0 and not t2Done
+        t2Done := true
+    if newT1 and useBE
+        curSL := eP
+    if newT1
+        f_hit(useBE ? "T1 hit · SL→BE" : "T1 hit", dir == 1 ? high : low, bullCol, trLbl)
+    if newT2
+        f_hit("T2 hit", dir == 1 ? high : low, bullCol, trLbl)
+
+if dir == 1 and not forceExit
+    if not t1Done
+        strategy.exit("L-T1", "Long", qty=legA, limit=t1P, stop=curSL)
+    if not t2Done and legB > 0
+        strategy.exit("L-T2", "Long", qty=legB, limit=t2P, stop=curSL)
+    strategy.exit("L-T3", "Long", qty=legC, limit=t3P, stop=curSL)
+
+if dir == -1 and not forceExit
+    if not t1Done
+        strategy.exit("S-T1", "Short", qty=legA, limit=t1P, stop=curSL)
+    if not t2Done and legB > 0
+        strategy.exit("S-T2", "Short", qty=legB, limit=t2P, stop=curSL)
+    strategy.exit("S-T3", "Short", qty=legC, limit=t3P, stop=curSL)
+
+// trade closed on this bar: mark why (T3 / SL / BE) at the exit price
+if dir != 0 and not justEntered and strategy.position_size == 0 and not forceExit
+    bool hitT3 = (dir == 1 and high >= t3P) or (dir == -1 and low <= t3P)
+    f_hit(hitT3 ? "T3 hit" : (t1Done and useBE ? "BE stop" : "SL hit"), dir == 1 ? low : high, hitT3 ? bullCol : bearCol, trLbl)
+
+// ─────────────────────────────── DASHBOARD ─────────────────────────────────
+float curPwr = trend == 1 ? bullPwr : (trend == -1 ? bearPwr : 0.0)
+string curCls = curPwr >= 75 ? "STRONG" : (curPwr >= 50 ? "MEDIUM" : "WEAK")
+
+var table tbl = table.new(position.top_right, 2, 7, bgcolor=color.new(#131722, 10), border_color=color.new(color.gray, 60), border_width=1)
+if showDash and barstate.islast
+    table.cell(tbl, 0, 0, "Market", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 0, mkt, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 0, 1, "LTF Structure", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 1, trend == 1 ? "BULLISH" : (trend == -1 ? "BEARISH" : "—"), text_color=trend == 1 ? bullCol : (trend == -1 ? bearCol : color.gray), text_size=size.small)
+    table.cell(tbl, 0, 2, "HTF Bias (" + htfTf + ")", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 2, not useHTF ? "OFF" : (not htfUsable ? "n/a (HTF<=chart)" : (htfT == 1 ? "BULLISH" : (htfT == -1 ? "BEARISH" : "—"))), text_color=(not useHTF or not htfUsable) ? color.gray : (htfT == 1 ? bullCol : (htfT == -1 ? bearCol : color.gray)), text_size=size.small)
+    table.cell(tbl, 0, 3, "Kill Zone", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 3, (not useSession or not sessUsable) ? "OFF" : ((inS1 or inS2) ? "ACTIVE" : "CLOSED"), text_color=(not useSession or not sessUsable or inS1 or inS2) ? bullCol : bearCol, text_size=size.small)
+    table.cell(tbl, 0, 4, "Market Power", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 4, trend == 0 ? "—" : curCls + " " + str.tostring(math.round(curPwr)) + "%", text_color=curPwr >= 75 ? bullCol : (curPwr >= 50 ? color.orange : bearCol), text_size=size.small)
+    table.cell(tbl, 0, 5, "Position", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 5, dir == 1 ? "LONG" : (dir == -1 ? "SHORT" : "FLAT"), text_color=dir == 1 ? bullCol : (dir == -1 ? bearCol : color.gray), text_size=size.small)
+    table.cell(tbl, 0, 6, "Min Confluence", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 1, 6, str.tostring(minScore) + " / 3", text_color=color.white, text_size=size.small)
