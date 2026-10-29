@@ -16,6 +16,7 @@ import time
 import traceback
 import os
 import sqlite3
+import sys
 import threading
 from datetime import datetime, timedelta, timezone
 
@@ -38,6 +39,28 @@ _QUOTE_COLS = ("received_ts", "server_ts", "exch_ts", "snap_key", "instrument_ke
 _GREEK_COLS = ("received_ts", "server_ts", "snap_key", "underlying", "expiry", "strike",
                "option_type", "session_date_ist", "delta", "gamma", "theta", "vega", "iv",
                "iv_pct", "trade_volume", "broker_status", "source", "raw_id", "flags", "run_id")
+
+
+_LAST_DUMP = [0.0]
+
+
+def _is_locked(exc) -> bool:
+    return isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower()
+
+
+def dump_threads(tag: str, min_gap: float = 20.0) -> bool:
+    """Called when a write fails with 'database is locked': names every OTHER thread that is inside application code and the line it is on, so the holder of the write lock can be identified from the journal
+    (one dump per `min_gap` seconds). The holder is still holding at that instant when it holds for longer than the 15 s busy timeout."""
+    now = time.time()
+    if now - _LAST_DUMP[0] < min_gap: return False
+    _LAST_DUMP[0] = now; me = threading.get_ident(); names = {t.ident: t.name for t in threading.enumerate()}; out = []
+    for tid, fr in list(sys._current_frames().items()):
+        if tid == me: continue
+        st = [f for f in traceback.extract_stack(fr) if "/backend/app/" in f.filename or "/zerohero/broker/" in f.filename]
+        if not st: continue
+        out.append(f"  {names.get(tid, tid)}: " + " > ".join(f"{os.path.basename(f.filename)}:{f.lineno}:{f.name}" for f in st[-4:]) + f"  | {(st[-1].line or '').strip()[:90]}")
+    print(f"[histcap] DB LOCKED ({tag}); other threads in application code:\n" + "\n".join(out[:30]), flush=True)
+    return True
 
 
 class HistStore:
@@ -162,7 +185,10 @@ class HistStore:
             conn.execute("BEGIN IMMEDIATE")
             yield conn
             conn.commit()
-        except BaseException:
+        except BaseException as e:
+            if _is_locked(e):
+                try: dump_threads("priority/independent transaction")
+                except Exception: pass
             try:
                 conn.rollback()
             except Exception:
@@ -306,12 +332,26 @@ class _Txn:
 
     def __enter__(self):
         self.store._lock.acquire()
-        self._t0 = time.time(); self._who = [f"{f.name}:{f.lineno}" for f in traceback.extract_stack(limit=4)[:-1]][-2:]
-        self.conn = self.store._conn()
-        self.conn.execute("BEGIN")
+        self._t0 = time.time(); self._who = [f"{f.name}:{f.lineno}" for f in traceback.extract_stack(limit=4)[:-1]][-2:]; self.conn = None
+        try:
+            self.conn = self.store._conn()
+            # The write lock up front (waits for the busy timeout). A deferred BEGIN + a read (put_raw's SELECT sha256) + a later INSERT failed AT ONCE with 'database is locked' whenever another
+            # connection (the 1 s priority capture, the candles thread) committed in between: ~6-14 lost capture cycles per hour.
+            self.conn.execute("BEGIN IMMEDIATE")
+        except BaseException as e:                                       # __exit__ is not called when __enter__ raises: give the python lock and the connection back here
+            if _is_locked(e):
+                try: dump_threads(f"txn by {self._who} (waiting for the write lock)")
+                except Exception: pass
+            try:
+                if self.conn is not None: self.conn.close()
+            finally: self.store._lock.release()
+            raise
         return self.conn
 
     def __exit__(self, exc_type, exc, tb):
+        if exc is not None and _is_locked(exc):
+            try: dump_threads(f"txn by {self._who}")
+            except Exception: pass
         held = time.time() - getattr(self, "_t0", time.time())
         if held > 5:                                                    # a write transaction should take milliseconds: anything long starves the priority capture, so it is named in the journal
             print(f"[histcap] store lock held {held:.1f}s by {self._who}", flush=True)
