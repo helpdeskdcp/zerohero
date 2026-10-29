@@ -80,3 +80,11 @@ def test_mcx_underlying_uses_the_front_future_with_the_mcx_window_and_no_nifty_b
     ov = UC.overlay("CRUDEOIL", now=m0 + 30 * 100 + 5, path=str(tmp_path / "m.db"))
     assert [m["side"] for m in ov["markers"]] == ["CE"] and ov["markers"][0]["base_rate"] is None
     assert "MCX shown for reference" in ov["state"]["status"]
+
+
+def test_one_turn_is_one_marker_even_though_the_rule_keeps_firing_for_up_to_90_minutes(tmp_path):
+    base = uturn_prices(); tail = [(base[-1][0] + 30 * k, base[-1][1] + 5 * k * 0.1) for k in range(1, 121)]       # 60 more minutes of a slow climb after the turn: same extreme, rule still true
+    path = seed(tmp_path, base + tail); ov = UC.overlay("SENSEX", now=base[-1][0] + 3700, path=path)
+    assert [m["side"] for m in ov["markers"]] == ["CE"]                                              # was: one more marker every 30 minutes (cooldown only)
+    raw = [i for i in range(20, len(base + tail)) if UC.SG.detect((base + tail)[:i + 1], (base + tail)[i][0], UC.params_for("SENSEX"))]
+    assert len(raw) > 1                                                                              # the rule really did fire repeatedly on the same extreme

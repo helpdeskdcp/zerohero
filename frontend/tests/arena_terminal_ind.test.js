@@ -7,7 +7,7 @@ assert.deepStrictEqual(T.tmIndLoad('{"winners":false}'), { winners: false, uturn
 assert.deepStrictEqual(T.tmIndLoad('{"winners":"no","uturn":0,"x":1}'), { winners: true, uturn: true });      // wrong types ignored
 assert.deepStrictEqual(T.tmIndLoad("{not json"), { winners: true, uturn: true });                              // unreadable: all on
 const times = [100, 200, 300, 400];
-const u = { markers: [{ time: 210, side: "BUY", strong: true }, { time: 390, side: "SELL", strong: false }], uturn: [{ time: 305, side: "CE", thrust_pct: 0.62, base_rate: { n: 20, target_hit: 0.65 } }, { time: 150, side: "PE", base_rate: null }],
+const u = { underlying: "NIFTY", markers: [{ time: 210, side: "BUY", strong: true }, { time: 390, side: "SELL", strong: false }], uturn: [{ time: 305, side: "CE", thrust_pct: 0.62, base_rate: { n: 20, target_hit: 0.65 } }, { time: 150, side: "PE", base_rate: null }],
   uturn_calibration: { overall: { n: 67, target_hit: 0.6 } } };
 const order = { time: 300, position: "belowBar", shape: "circle", text: "ORDER" };
 const both = T.tmBuildMarkers(times, u, { winners: true, uturn: true }, order);
@@ -48,4 +48,22 @@ console.log("arena_terminal_ind status ok");
   const v = T.tmCumToVolume([{ time: 1, cum: 1000 }, { time: 2, cum: 1000 }, { time: 3, cum: 1300 }, { time: 4, cum: 0 }, { time: 5, cum: 1350 }]).map((x) => x.volume);
   assert.deepStrictEqual(v, [0, 0, 300, 0, 50]);                                                       // first bar 0 (not the whole day), unchanged total 0, growth = volume, a missing print is skipped
   console.log("cum->volume ok");
+}
+
+/* U-turn fixes: snap limit, underlying label, NIFTY-only history */
+{
+  const T = require("../static/js/arena_terminal.js"), assert = require("assert");
+  const times = [0, 60, 120, 600];                                                                     // a quiet contract: nothing between 120 and 600
+  assert.strictEqual(T.tmSnapWithin(times, 90), 60); assert.strictEqual(T.tmSnapWithin(times, 400), null); assert.strictEqual(T.tmSnapWithin(times, 610), 600); assert.strictEqual(T.tmSnapWithin(times, -5), null);
+  const m = T.tmUturnMarkers(times, [{ time: 90, side: "CE" }, { time: 400, side: "PE" }], true);
+  assert.strictEqual(m.length, 1); assert.strictEqual(m[0].text, "U-turn CE (underlying)"); assert.strictEqual(T.tmUturnMarkers(times, [{ time: 90, side: "CE" }])[0].text, "U-turn CE");
+  const cal = { overall: { n: 45, target_hit: 0.64 } };
+  assert.ok(T.tmIndNote({ winners: false, uturn: true }, { underlying: "NIFTY", uturn_calibration: cal }).includes("64% of 45"));
+  const n2 = T.tmIndNote({ winners: false, uturn: true }, { underlying: "CRUDEOIL", uturn_calibration: cal }); assert.ok(!n2.includes("64%") && n2.includes("NIFTY options only"));
+  console.log("uturn fixes ok");
+}
+{
+  const T = require("../static/js/arena_terminal.js"), assert = require("assert");
+  assert.deepStrictEqual(T.tmDayRange([{ high: 5, low: 3 }, { high: 9, low: 4 }, { high: 7, low: 1 }]), { hi: 9, lo: 1 }); assert.strictEqual(T.tmDayRange([]), null);
+  console.log("day range ok");
 }

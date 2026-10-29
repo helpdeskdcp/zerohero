@@ -86,13 +86,15 @@ def _rate_for(thrust_pct: float, cal: dict) -> dict | None:
 def _markers_for_day(ticks: list, cal: dict, sym: str = "") -> list:
     out = []
     if len(ticks) < 20: return out
-    p = params_for(sym); last = {}; mcx = sym in MCX_UNDERLYINGS
+    p = params_for(sym); seen = set(); mcx = sym in MCX_UNDERLYINGS
     for i in range(20, len(ticks)):
         t = ticks[i][0]
         if not SG.in_window(t, p): continue
         s = SG.detect(ticks[:i + 1], t, p)
-        if not s or t - last.get(s["side"], -1e18) < COOLDOWN_S: continue
-        last[s["side"]] = t; f = s["features"]
+        if not s: continue
+        f = s["features"]; event = (s["side"], round((t - f["extreme_age_min"] * 60) / 60.0))           # one turn = one session extreme: the rule keeps firing for up to 90 minutes after it, only the first fire is a signal
+        if event in seen: continue
+        seen.add(event)
         out.append({"time": int(t), "side": s["side"], "thrust_pct": f["thrust_pct"], "recovery": f.get("recovery"), "reason": s["reason"], "base_rate": None if mcx else _rate_for(f["thrust_pct"], cal)})
     return out
 
