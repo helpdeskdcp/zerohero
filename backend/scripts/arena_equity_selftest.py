@@ -27,7 +27,7 @@ def token() -> str:
     m = re.search(r"Token[^:]*:\s*(\S+)", t); assert m, "no token line in the access file"; return m.group(1)
 
 
-S = requests.Session(); S.headers["X-Arena-Token"] = ""
+S = requests.Session(); S.headers["X-Arena-Token"] = ""; S.headers["Connection"] = "close"          # a fresh connection per call: the server closes idle keep-alive sockets after 5 s and a reused one raised "Connection reset by peer"
 
 
 def call(method: str, path: str, **kw):
@@ -170,7 +170,8 @@ def report() -> str:
             out.append(f"  fill delay {d if d is None else round(d, 2)} s (rule {want:g} s)"); verdict.append(("fill_delay_ok", d is not None and want <= d <= want + 4)); verdict.append(("settled", r.get("status") == "SETTLED"))
             if r.get("status") == "SETTLED": verdict.append(("cost_positive", (r.get("cost_rs") or 0) > 0))
         if case == "limit_waiting": verdict.append(("limit_cancelled_or_unfilled", r.get("status") in ("CANCELLED", "NOT_TRIGGERED")))
-    bad = [x for x in lines if x["kind"] == "order" and str(x.get("case", "")).startswith("bad_")]
+    last_run = max((i for i, x in enumerate(lines) if x["kind"] == "order" and x.get("case") == "buy_market"), default=0)           # only the latest trade run (earlier runs of the day would be counted twice)
+    bad = [x for x in lines[last_run:] if x["kind"] == "order" and str(x.get("case", "")).startswith("bad_")]
     verdict.append(("bad_input_all_422", all(x.get("ok") for x in bad) and len(bad) == 4))
     verdict.append(("probes_ok", all(x.get("ok") for x in pr if x["nse_open"])))
     out += ["", "## Verdict"] + [f"- {'PASS' if ok else 'FAIL'}  {name}" for name, ok in verdict] + [f"", f"**{'ALL PASS' if all(ok for _, ok in verdict) else 'SOME FAILED'}** ({sum(1 for _, ok in verdict if ok)}/{len(verdict)})"]

@@ -129,6 +129,7 @@ def ticks(symbols: list[str], *, path: str | None = None, sdk=None, now: float |
         if q: rec.update(ltp=q["ltp"], bid=q["bid"], ask=q["ask"], t=q["t"], src="db"); _src_stats["db"]["hits"] += 1
         w = feed.ltp.get(r["token"]) if (feed is not None and r) else None
         if w and now - w["recv"] <= 5.0 and (rec["t"] is None or w["recv"] >= rec["t"]):
+            if rec["t"] is not None and now - rec["t"] > BIDASK_MAX_AGE_SEC: rec.update(bid=None, ask=None)               # the websocket price is live but the stored bid / ask is old: show none, never a stale pair next to a fresh LTP
             rec.update(ltp=w["ltp"], t=w["recv"], src="ws"); _src_stats["ws"]["hits"] += 1
         out[s] = rec
     stale = [s for s, r in out.items() if r["t"] is None or now - r["t"] > FAILOVER_AGE_SEC]
@@ -152,6 +153,7 @@ def source_status() -> dict:
 # Used ONLY when neither the Angel websocket nor the 3-second tape has a price newer than FAILOVER_AGE_SEC while NSE is open. It feeds the order ticket's number and nothing else:
 # settlement keeps reading the captured Angel tape, so a second broker's prices never enter a contest result. Kill switch ARENA_EQUITY_FAILOVER=0.
 FAILOVER_AGE_SEC = 10.0
+BIDASK_MAX_AGE_SEC = 5.0
 _UP_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "upstox_nse_eq_keys.json")
 _UP_URL = "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz"
 _up_keys: dict | None = None; _up_cache: dict = {}; _up_lock = threading.Lock()

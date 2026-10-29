@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import os
+import queue
 import random
 import time
 from collections import Counter
@@ -115,8 +116,27 @@ def _any_market_trading() -> bool:
         return True  # fail open -- capture is harmless; the socket just idles
 
 
+# ---- shared socket (arena tick tape): Angel allows ~2-3 WebSocket connections per client and the app already uses them, so the arena's quote tape rides THIS connection instead of opening another.
+# Frame hooks see every binary frame (called on the event-loop thread: they must be fast and never raise); extra subscribe / unsubscribe messages are queued and sent on the live socket. The worker's own
+# research store still receives only its own tokens.
+_FRAME_HOOKS: list = []
+_SHARED = None
+
+
+def register_frame_hook(fn) -> None:
+    if fn not in _FRAME_HOOKS: _FRAME_HOOKS.append(fn)
+
+
+def shared_worker():
+    return _SHARED
+
+
 class L2CaptureWorker:
     def __init__(self):
+        global _SHARED
+        _SHARED = self
+        self._ext_q: queue.Queue = queue.Queue(maxsize=1000)       # extra messages for the live socket (arena tick tape subscriptions)
+        self.session_no = 0                                        # +1 for every new connection: whoever subscribed extra tokens must do it again
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._owner = f"{os.getpid()}-{random.randint(1000, 9999)}"
@@ -136,6 +156,13 @@ class L2CaptureWorker:
         self._reject_reasons: Counter = Counter()
         self._store_raw = _env("L2_CAPTURE_STORE_RAW", "1").lower() not in ("0", "false", "no")
         self._flush_sec = float(_env("L2_CAPTURE_FLUSH_SEC", "2.0"))
+
+    def own_tokens(self) -> set:
+        return {str(t["token"]) for t in self._tokens}
+
+    def request_send(self, text: str) -> bool:
+        try: self._ext_q.put_nowait(text); return True
+        except queue.Full: return False
 
     # ---------------- lifecycle ----------------
     def start(self):
@@ -282,6 +309,7 @@ class L2CaptureWorker:
                   getattr(websockets, "__version__", "?"), _hdr_kw)
         async with ws_cm as ws:
             self.connected = True
+            self.session_no += 1
             self.last_error = None
             _log.info("l2capture: connected; run_id=%s", self._run_id)
             if self._run_id is None:
@@ -313,6 +341,13 @@ class L2CaptureWorker:
                         _log.warning("l2capture: heartbeat send failed (%s) -> reconnect", e)
                         return
                     last_hb = now
+                while True:                                           # extra subscriptions requested by other consumers of this socket
+                    try: ext = self._ext_q.get_nowait()
+                    except queue.Empty: break
+                    try: await ws.send(ext)
+                    except Exception as e:
+                        _log.warning("l2capture: extra message not sent (%s) -> reconnect", e)
+                        return
                 try:
                     raw = await asyncio.wait_for(ws.recv(), timeout=2)
                 except asyncio.TimeoutError:
@@ -324,6 +359,9 @@ class L2CaptureWorker:
                 if isinstance(raw, (bytes, bytearray)):
                     buf.append(bytes(raw))
                     self.last_msg_ts = last_data = time.time()
+                    for _h in _FRAME_HOOKS:
+                        try: _h(bytes(raw))
+                        except Exception: pass                         # a consumer's bug must never hurt the research capture
                 elif raw is not None:
                     # Angel sends TEXT frames for pings/acks/errors -- log, never silent
                     txt = str(raw)[:300]
@@ -347,8 +385,9 @@ class L2CaptureWorker:
         """Sync -- runs in a thread. Preserve each raw frame, VALIDATE, append.
         Invalid/stale packets are counted + logged, never written as live data."""
         now_ms = int(time.time() * 1000)
+        own = {str(t["token"]) for t in self._tokens}
         for fr in frames:
-            recs = parse_snapquote(fr)
+            recs = [r for r in parse_snapquote(fr) if str(r.get("token")) in own]           # packets of tokens other consumers subscribed on this socket are not research data
             self._n_frames += 1
             if not recs:
                 continue

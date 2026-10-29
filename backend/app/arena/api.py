@@ -31,6 +31,7 @@ IP_RATE_PER_MIN = 6000                                               # flood gua
 BAD_TOKEN_PER_MIN = 30                                               # failed / missing tokens per IP and minute; beyond it the address is refused until the minute passes (guessing protection)
 _sf: dict = defaultdict(threading.Lock)                                  # single-flight: only ONE request recomputes a stale entry, the others get the previous value (or wait if there is none)
 RESULT_CACHE: dict = {}                                                  # final settlement results, reused across refreshes (see run.run)
+LIVE_TTL_SEC = 2                                                         # the settlement part of /live is recomputed at most every 2 s (was 5): a new fill or exit shows up one poll later, not several
 TTL_SEC = 20                                                             # standings / leaderboard are recomputed at most every 20 s (only OPEN signals are re-settled)
 
 
@@ -325,6 +326,11 @@ def ingest_status(request: Request):
         out["priority_capture"] = priority._instance.status() if priority._instance else {"enabled": priority.enabled(), "running": False}
     except Exception:
         out["priority_capture"] = {"running": False}
+    try:
+        from . import tick_tape
+        out["tick_tape"] = tick_tape._instance.status() if tick_tape._instance else {"enabled": tick_tape.enabled(), "running": False}
+    except Exception:
+        out["tick_tape"] = {"running": False}
     return out
 
 
@@ -530,7 +536,7 @@ def live(request: Request):
     """Broker-style watch of the caller's signals of TODAY: WAITING (not filled yet) / ACTIVE (live ltp, bid/ask, open P&L) / CLOSED (final) / EXPIRED / CANCELLED. The settlement part is cached 5 s, the quote overlay is ~1 s fresh."""
     c = _auth(request); name = c["name"]; today = datetime.now(IST).strftime("%Y-%m-%d"); now = time.time()
     ent = _cache.setdefault("live", {}).get(name)
-    if ent is None or now - ent[0] > 5:
+    if ent is None or now - ent[0] > LIVE_TTL_SEC:
         lk = _sf[("live", name)]
         if lk.acquire(blocking=False):
             try:

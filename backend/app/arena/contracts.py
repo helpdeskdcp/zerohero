@@ -263,5 +263,5 @@ def latest_by(where: str, params: tuple, path: str | None, cache: dict, key) -> 
 def latest_quote(underlying: str, expiry_iso: str, strike: float, ot: str, path: str | None = None) -> dict | None:
     """Newest captured quote of ONE contract: {"ltp","bid","ask","t"} or None."""
     from .settle import snap_expiry
-    return latest_by("symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL'", (underlying, snap_expiry(expiry_iso), float(strike), ot), path, _lq_cache,
+    return latest_by("symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source IN ('ANGELONE_QUOTE_FULL','ANGELONE_WS_SNAP')", (underlying, snap_expiry(expiry_iso), float(strike), ot), path, _lq_cache,
                      (underlying, expiry_iso, float(strike), ot, path))

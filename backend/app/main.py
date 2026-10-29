@@ -567,6 +567,8 @@ async def _lifespan(_app: FastAPI):
     try:
         from .histcap import priority as _priority          # ~3 s quotes for contracts that have a registered signal (no-op while the watch list is empty; PRIORITY_CAPTURE=0 disables)
         _priority.start_background()
+        from .arena import tick_tape as _tick_tape          # broker-speed (WebSocket) quotes for the same watch list; ARENA_TICK_TAPE=0 stops it
+        _tick_tape.start_background()
         import threading as _th; from .arena import api as _arena_api; _th.Thread(target=_arena_api.prewarm, name='arena-prewarm', daemon=True).start()
     except Exception as e:
         print(f"[priority-capture] start failed: {type(e).__name__}: {e}")

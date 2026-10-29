@@ -68,7 +68,7 @@ def premium_equity(symbol: str, tf: int = 1, since: float | None = None, now: fl
 
 def premium(underlying: str, expiry_iso: str, strike: float, ot: str, tf: int = 1, since: float | None = None, now: float | None = None, path: str | None = None) -> dict:
     """OHLC candles (tf minutes) of the contract's last-traded price for today's session, from the exchange-stamped quotes (one per exchange second). `since` (UTC epoch of the last candle the client has) returns only that candle onwards."""
-    return _premium("symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL'", (underlying, snap_expiry(expiry_iso), float(strike), ot), tf, since, now, path,
+    return _premium("symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source IN ('ANGELONE_QUOTE_FULL','ANGELONE_WS_SNAP')", (underlying, snap_expiry(expiry_iso), float(strike), ot), tf, since, now, path,
                     lambda: CT.latest_quote(underlying, expiry_iso, float(strike), ot, path))
 
 
