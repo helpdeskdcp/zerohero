@@ -144,3 +144,19 @@ def test_v2_default_thrust_is_0_60_percent_and_a_0_55_percent_turn_is_ignored():
     assert SG.Params().thrust == 0.006
     ticks = [(T0 + m * 60, 100 - 0.55 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.45 + 0.275 * (m - 40) / 10) for m in range(41, 51)]            # 0.55 % thrust, recovers half
     assert SG.detect(ticks, ticks[-1][0]) is None and SG.detect(ticks, ticks[-1][0], SG.Params(thrust=0.005)) is not None                                      # v2 refuses it, v1 would have taken it
+
+
+def test_explain_says_where_the_rule_stands():
+    assert "Not enough" in SG.explain([], T0)["status"]
+    small = [(T0 + m * 60, 100 - 0.30 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.70 + 0.05 * (m - 40) / 10) for m in range(41, 51)]
+    e = SG.explain(small, small[-1][0]); assert e["side"] == "CE" and e["thrust_pct"] == pytest.approx(0.30, abs=0.01) and "needs 0.60%" in e["status"] and e["active"] is False and e["session_low"] == pytest.approx(99.70)
+    young = [(T0 + m * 60, 100 - 0.7 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.3 + 0.05 * (m - 40)) for m in range(41, 44)]
+    assert "only 3 min old" in SG.explain(young, young[-1][0])["status"]
+    nothing_back = [(T0 + m * 60, 100 - 0.7 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.3 + 0.002 * (m - 40)) for m in range(41, 51)]
+    assert "waiting for the turn: recovered" in SG.explain(nothing_back, nothing_back[-1][0])["status"]
+    full = uturn_down(); a = SG.explain(full, full[-1][0]); assert a["active"] is True and a["status"].startswith("CALL idea ACTIVE") and a["side"] == "CE"
+    done = [(T0 + m * 60, 100 - 0.7 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.3 + 0.7 * (m - 40) / 10) for m in range(41, 51)]
+    assert "already recovered" in SG.explain(done, done[-1][0])["status"]
+    old = [(T0 + m * 60, 100 - 0.7 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 99.3 + 0.35 * min(m - 40, 10) / 10) for m in range(41, 160)]
+    assert "too old" in SG.explain(old, old[-1][0])["status"]
+    up = [(T0 + m * 60, 100 + 0.7 * m / 40) for m in range(0, 41)] + [(T0 + m * 60, 100.7 - 0.35 * (m - 40) / 10) for m in range(41, 51)]; assert SG.explain(up, up[-1][0])["status"].startswith("PUT idea ACTIVE")

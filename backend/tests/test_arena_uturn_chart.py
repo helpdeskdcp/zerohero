@@ -39,12 +39,13 @@ def test_a_confirmed_uturn_today_becomes_one_marker_with_its_base_rate(tmp_path)
     ov = UC.overlay("SENSEX", now=now, path=path)
     assert len(ov["markers"]) == 1 and ov["markers"][0]["side"] == "CE" and 0.65 <= ov["markers"][0]["thrust_pct"] <= 0.72
     br = ov["markers"][0]["base_rate"]; assert br["n"] == 20 and br["target_hit"] == 0.65                               # the 0.60-0.80 % bucket
-    assert ov["calibration"]["overall"]["n"] == 67 and ov["ticks"] >= 90
+    assert ov["calibration"]["overall"]["n"] == 67 and ov["state"]["is_today"] is True and ov["state"]["active"] is True and ov["days"][0] == DAY
 
 
 def test_no_markers_on_a_flat_day_and_the_result_is_cached(tmp_path):
     path = seed(tmp_path, [(T0 + 30 * k, 100000 + (k % 3)) for k in range(120)]); now = T0 + 30 * 120
-    a = UC.overlay("SENSEX", now=now, path=path); assert a["markers"] == [] and UC.overlay("SENSEX", now=now + 1, path=path) is a
+    a = UC.overlay("SENSEX", now=now, path=path); assert a["markers"] == [] and UC.overlay("SENSEX", now=now + 1, path=path)["markers"] == []
+    assert a["state"]["active"] is False and a["state"]["status"].startswith("Watching") and a["state"]["session_high"] is not None          # an indicator that says nothing looks broken: it states where the rule stands
 
 
 def test_terminal_payload_carries_the_overlay_and_survives_its_failure(tmp_path, monkeypatch):
@@ -53,3 +54,29 @@ def test_terminal_payload_carries_the_overlay_and_survives_its_failure(tmp_path,
     out = TM._with_uturn({"candles": []}, "SENSEX", None, None); assert out["uturn"][0]["time"] == 1000 + TM.IST_S and out["uturn_calibration"] == {"basis": "b"}
     monkeypatch.setattr(UC, "overlay", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("db down")))
     out = TM._with_uturn({"candles": [1]}, "SENSEX", None, None); assert out["uturn"] == [] and out["uturn_calibration"] == {"error": "RuntimeError"} and out["candles"] == [1]
+
+
+def test_markers_of_the_previous_sessions_are_shown_too_and_the_state_describes_the_newest(tmp_path):
+    prev = (datetime.fromisoformat(DAY) - timedelta(days=1)).date().isoformat()                  # Monday 2-Nov before Tuesday 3-Nov
+    shift = -86400.0
+    st = HistStore(str(tmp_path / "m.db")); rid = st.start_run("T", {}, True); rows = []
+    for day, base in ((prev, shift), (DAY, 0.0)):
+        for k, (t, px) in enumerate(uturn_prices() if day == prev else [(T0 + 30 * k, 100000 + (k % 3)) for k in range(120)]):
+            rec = datetime.fromtimestamp(t + base, timezone.utc).isoformat().replace("+00:00", "Z")
+            rows.append({"received_ts": rec, "exch_ts": None, "snap_key": f"{day}{k}", "instrument_key": "BSE:99919000", "symbol": "SENSEX", "kind": "INDEX", "exchange": "BSE", "token": "99919000", "session_date_ist": day, "ltp": px, "source": "ANGELONE_QUOTE_FULL", "quote_status": "OK"})
+    with st.independent_transaction() as c: st.write_quotes(c, rows, rid, {"issues": [], "rejected": [], "flagged": 0})
+    ov = UC.overlay("SENSEX", now=T0 + 30 * 125, path=str(tmp_path / "m.db"))
+    assert [m["side"] for m in ov["markers"]] == ["CE"] and ov["markers"][0]["time"] < T0 and ov["days"][:2] == [DAY, prev]            # yesterday's turn is on the chart
+    assert ov["state"]["is_today"] and ov["state"]["day"] == DAY and ov["state"]["active"] is False                                      # while the state line is about today (a flat day: watching)
+
+
+def test_mcx_underlying_uses_the_front_future_with_the_mcx_window_and_no_nifty_base_rate(tmp_path):
+    st = HistStore(str(tmp_path / "m.db")); rid = st.start_run("T", {}, True); rows = []
+    m0 = T0 - 15 * 60 + 6 * 3600                                                                   # 15:00 IST, outside the NSE window
+    for k, (t, px) in enumerate(uturn_prices()):
+        t = t - T0 + m0; rec = datetime.fromtimestamp(t, timezone.utc).isoformat().replace("+00:00", "Z")
+        rows.append({"received_ts": rec, "exch_ts": datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "snap_key": f"f{k}", "instrument_key": "MCX:1", "symbol": "CRUDEOIL", "kind": "FUTURE", "exchange": "MCX", "token": "1", "expiry": "18DEC2026", "session_date_ist": DAY, "ltp": px / 10, "source": "ANGELONE_QUOTE_FULL", "quote_status": "OK"})
+    with st.independent_transaction() as c: st.write_quotes(c, rows, rid, {"issues": [], "rejected": [], "flagged": 0})
+    ov = UC.overlay("CRUDEOIL", now=m0 + 30 * 100 + 5, path=str(tmp_path / "m.db"))
+    assert [m["side"] for m in ov["markers"]] == ["CE"] and ov["markers"][0]["base_rate"] is None
+    assert "MCX shown for reference" in ov["state"]["status"]

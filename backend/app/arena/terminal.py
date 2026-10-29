@@ -138,7 +138,7 @@ def _with_uturn(out: dict, sym: str, now: float | None, path: str | None) -> dic
     try:
         from .safe_ai import chart as UC
         ov = UC.overlay(sym, now, path, spot=None)
-        out["uturn"] = [{**m, "time": m["time"] + IST_S} for m in ov["markers"]]; out["uturn_calibration"] = ov["calibration"]
+        out["uturn"] = [{**m, "time": m["time"] + IST_S} for m in ov["markers"]]; out["uturn_calibration"] = ov["calibration"]; out["uturn_state"] = ov.get("state"); out["uturn_days"] = ov.get("days")
     except Exception as e:
-        out["uturn"] = []; out["uturn_calibration"] = {"error": type(e).__name__}
+        out["uturn"] = []; out["uturn_calibration"] = {"error": type(e).__name__}; out["uturn_state"] = None
     return out

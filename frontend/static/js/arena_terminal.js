@@ -34,9 +34,18 @@ function tmBuildMarkers(times, u, ind, orderMarker) {
   const out = []; if (u && ind.winners) out.push(...tmPineMarkers(times, u.markers)); if (u && ind.uturn) out.push(...tmUturnMarkers(times, u.uturn)); if (orderMarker) out.push(orderMarker);
   return out.sort((a, b) => a.time - b.time);
 }
+/* where the Safe U-turn rule stands right now, in words (an indicator that says nothing looks broken) + the session high / low it is working from */
+function tmUturnStatus(u) {
+  const st = u && u.uturn_state; if (!st || !st.status) return "";
+  return `Safe U-turn: ${st.status}` + (st.is_today === false ? ` (last session ${st.day})` : "");
+}
+function tmUturnLevels(u) {
+  const st = u && u.uturn_state; if (!st || st.is_today === false) return [];
+  return [st.session_high != null ? { price: st.session_high, color: "#c084fc", title: "session high" } : null, st.session_low != null ? { price: st.session_low, color: "#38bdf8", title: "session low" } : null].filter(Boolean);
+}
 function tmIndNote(ind, u) {
   const names = TM_INDICATORS.filter((x) => ind[x.key]).map((x) => x.label); const cal = u && u.uturn_calibration && u.uturn_calibration.overall;
-  return names.length ? `Indicators: ${names.join(" + ")}` + (ind.uturn && cal && cal.n ? ` · U-turn history: first target before stop ${Math.round(cal.target_hit * 100)}% of ${cal.n} (break-even, no proven edge)` : "") : "Indicators: none (switch them on above the chart)";
+  return names.length ? `Indicators: ${names.join(" + ")}` + (ind.uturn && cal && cal.n ? ` · U-turn history: first target before stop ${Math.round(cal.target_hit * 100)}% of ${cal.n} (break-even, no proven edge)` : "") + (ind.uturn && tmUturnStatus(u) ? ` · ${tmUturnStatus(u)}` : "") : "Indicators: none (switch them on above the chart)";
 }
 /* chart request of a /live row: an option contract, or an NSE cash-equity symbol */
 function tmChartPath(r, tf, since) {
@@ -126,7 +135,7 @@ function tmEditHtml(r) {
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -183,7 +192,7 @@ if (typeof document !== "undefined") (function () {
   }
   function clearChart() {
     for (const k of Object.keys(series)) { try { chart.removeSeries(series[k]); } catch (e) { /* ok */ } }
-    series = {}; lines = []; mk = null; lastBar = null; forming = null;
+    series = {}; lines = []; uLines = []; mk = null; lastBar = null; forming = null;
   }
   const lineStyle = (s) => ({ solid: 0, dotted: 1, dashed: 2 }[s] ?? 0);
   function addCandles() {
@@ -197,9 +206,14 @@ if (typeof document !== "undefined") (function () {
   function setMarkers(list) { if (mk) mk.setMarkers(list.sort((a, b) => a.time - b.time)); }
   let ind = (() => { try { return tmIndLoad(localStorage.getItem("arena_ind")); } catch (e) { return tmIndLoad(""); } })(), lastTimes = [], lastOrder = null;
   const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
+  let uLines = [];
+  function drawUturnLines() {
+    uLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); uLines = [];
+    if (series.c && ind.uturn) tmUturnLevels(lastUnderlying).forEach((L) => uLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: L.title })));
+  }
   function applyInd() {                                                                          // a switch was flipped: lines, markers and the note follow at once, no reload
     for (const k of ["up", "dn", "ma"]) if (series[k]) series[k].applyOptions({ visible: !!ind.winners });
-    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder));
+    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder)); drawUturnLines();
     if (lastUnderlying) setNote(tmIndNote(ind, lastUnderlying));
   }
 
@@ -223,7 +237,7 @@ if (typeof document !== "undefined") (function () {
     series.dn = chart.addSeries(LW.LineSeries, { color: "#ef4444", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.dn.setData(dn);
     series.ma = chart.addSeries(LW.LineSeries, { color: "rgba(245,158,11,.55)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: !!ind.winners }); series.ma.setData(u.ma);
     const times = u.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times);
-    setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); if (!userZoomed) chart.timeScale().fitContent();
+    setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); drawUturnLines(); if (!userZoomed) chart.timeScale().fitContent();
     setNote(`${r.underlying} ${utf}m · ${u.source} · ${tmIndNote(ind, u)}` + (ind.winners ? " · green/red = Winners trailing stop, orange = MA34" : "") + (u.spot ? ` · spot ${tmNum(u.spot)} (live feed)` : ""));
   }
   async function refreshUnderlying(r) {

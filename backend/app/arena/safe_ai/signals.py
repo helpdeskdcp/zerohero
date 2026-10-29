@@ -116,3 +116,27 @@ def detect_sweep(ticks: list, now_ts: float, pdh: float, pdl: float, p: SweepPar
         return {"side": side, "reason": f"{'high' if sign > 0 else 'low'} of the previous day ({level:g}) swept to {ex_px:g} ({age:.0f} min ago) and rejected, back inside, momentum confirms",
                 "features": {"level": level, "extreme": ex_px, "extreme_age_min": round(age, 1), "overshoot_pct": round(abs(ex_px - level) / level * 100, 3), "spot": px}}
     return None
+
+
+def explain(ticks: list, now_ts: float, p: Params = Params(), expiry_day: bool = False) -> dict:
+    """Where the rule stands RIGHT NOW, in words (for the chart: an indicator that says nothing looks broken). The larger of the two thrusts of the session is described; the reason is the first condition that is not met yet."""
+    out = {"status": "Not enough index prices yet today (about 10 minutes needed)", "side": None, "thrust_pct": None, "recovery": None, "extreme": None, "extreme_age_min": None, "session_high": None, "session_low": None,
+           "need_pct": round(p.thrust * 100, 2), "in_window": in_window(now_ts, p, expiry_day), "active": False}
+    if len(ticks) < 20: return out
+    hi_i = max(range(len(ticks)), key=lambda i: ticks[i][1]); lo_i = min(range(len(ticks)), key=lambda i: ticks[i][1]); px = ticks[-1][1]
+    out["session_high"], out["session_low"] = ticks[hi_i][1], ticks[lo_i][1]
+    ref_d = max(x[1] for x in ticks[:lo_i + 1]); thr_d = (ref_d - ticks[lo_i][1]) / ref_d; ref_u = min(x[1] for x in ticks[:hi_i + 1]); thr_u = (ticks[hi_i][1] - ref_u) / ref_u
+    down = thr_d >= thr_u; ex_i, ref, thr = (lo_i, ref_d, thr_d) if down else (hi_i, ref_u, thr_u); ex_px = ticks[ex_i][1]; age = (now_ts - ticks[ex_i][0]) / 60.0
+    move = abs(ref - ex_px); rec = ((px - ex_px) / move) if down else ((ex_px - px) / move) if move else 0.0
+    side_txt = "down" if down else "up"; idea = "CALL" if down else "PUT"
+    out.update(side="CE" if down else "PE", thrust_pct=round(thr * 100, 3), recovery=round(rec, 3), extreme=ex_px, extreme_age_min=round(age, 1))
+    sig = detect(ticks, now_ts, p)
+    if sig: out.update(status=f"{idea} idea ACTIVE: {sig['reason']}", active=True)
+    elif thr < p.thrust: out["status"] = f"Watching: the biggest move today is a {side_txt}-thrust of {thr * 100:.2f}% (needs {p.thrust * 100:.2f}% before a {idea} idea can form)"
+    elif age < p.min_age_min: out["status"] = f"{side_txt.capitalize()}-thrust {thr * 100:.2f}% is big enough, but its extreme is only {age:.0f} min old (needs {p.min_age_min:g}); waiting for the turn"
+    elif age > p.max_age_min: out["status"] = f"{side_txt.capitalize()}-thrust {thr * 100:.2f}% happened {age:.0f} min ago (more than {p.max_age_min:g}): too old to trade"
+    elif rec < p.retrace_min: out["status"] = f"{side_txt.capitalize()}-thrust {thr * 100:.2f}% is big enough; waiting for the turn: recovered {rec * 100:.0f}% of the move (needs {p.retrace_min * 100:.0f}-{p.retrace_max * 100:.0f}%)"
+    elif rec > p.retrace_max: out["status"] = f"{side_txt.capitalize()}-thrust {thr * 100:.2f}%: already recovered {rec * 100:.0f}% (more than {p.retrace_max * 100:.0f}%), the turn is done"
+    else: out["status"] = f"{side_txt.capitalize()}-thrust {thr * 100:.2f}% and recovery {rec * 100:.0f}%: waiting for the last confirmations (no fresh extreme for {p.hold_min:g} min, momentum)"
+    if not out["in_window"] and not sig: out["status"] += f" · outside the trading window {p.t_from[0]:02d}:{p.t_from[1]:02d}-{p.t_to[0]:02d}:{p.t_to[1]:02d}"
+    return out

@@ -21,3 +21,13 @@ assert.deepStrictEqual(T.tmBuildMarkers(times, null, { winners: true, uturn: tru
 assert.ok(T.tmIndNote({ winners: true, uturn: true }, u).includes("Winners Scalper + Safe U-turn") && T.tmIndNote({ winners: true, uturn: true }, u).includes("60% of 67") && T.tmIndNote({ winners: true, uturn: true }, u).includes("no proven edge"));
 assert.ok(!T.tmIndNote({ winners: true, uturn: false }, u).includes("U-turn history")); assert.ok(T.tmIndNote({ winners: false, uturn: false }, u).startsWith("Indicators: none"));
 console.log("arena_terminal_ind ok");
+
+/* the state line + session levels (an indicator with no signal must still say where it stands) */
+const u2 = { ...u, uturn_state: { status: "Watching: the biggest move today is a down-thrust of 0.31% (needs 0.60% before a CALL idea can form)", is_today: true, day: "2026-10-29", session_high: 74152, session_low: 73249 } };
+assert.strictEqual(T.tmUturnStatus(u2), "Safe U-turn: Watching: the biggest move today is a down-thrust of 0.31% (needs 0.60% before a CALL idea can form)");
+assert.ok(T.tmUturnStatus({ uturn_state: { ...u2.uturn_state, is_today: false } }).endsWith("(last session 2026-10-29)"));
+assert.strictEqual(T.tmUturnStatus({}), ""); assert.strictEqual(T.tmUturnStatus(null), "");
+assert.deepStrictEqual(T.tmUturnLevels(u2), [{ price: 74152, color: "#c084fc", title: "session high" }, { price: 73249, color: "#38bdf8", title: "session low" }]);
+assert.deepStrictEqual(T.tmUturnLevels({ uturn_state: { ...u2.uturn_state, is_today: false } }), []);                       // no lines for a past session
+assert.ok(T.tmIndNote({ winners: true, uturn: true }, u2).includes("Safe U-turn: Watching:")); assert.ok(!T.tmIndNote({ winners: true, uturn: false }, u2).includes("Watching"));
+console.log("arena_terminal_ind status ok");
