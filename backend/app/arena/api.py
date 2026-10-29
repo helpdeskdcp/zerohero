@@ -11,20 +11,23 @@ import os
 import threading
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 
 from . import compare as CMP, contracts as CT, run as R, submit as SU
+from .jsonio import read_json_cached
 
 router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-IST = timezone(timedelta(hours=5, minutes=30))
+from .markets import EXCH, IST  # noqa: E402,F401
 from . import equity as EQ  # noqa: E402
-EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
 PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
-MAX_BODY, RATE_PER_MIN = 4096, 900                                   # per IP; many participants may share one office address
+MAX_BODY = 4096
+RATE_PER_MIN = 900                                                   # per PARTICIPANT (a terminal open polls 2-3 times a second); many participants share one office address, so this is not per IP
+IP_RATE_PER_MIN = 6000                                               # flood guard per IP (all participants behind one address together)
+BAD_TOKEN_PER_MIN = 30                                               # failed / missing tokens per IP and minute; beyond it the address is refused until the minute passes (guessing protection)
 _sf: dict = defaultdict(threading.Lock)                                  # single-flight: only ONE request recomputes a stale entry, the others get the previous value (or wait if there is none)
 RESULT_CACHE: dict = {}                                                  # final settlement results, reused across refreshes (see run.run)
 TTL_SEC = 20                                                             # standings / leaderboard are recomputed at most every 20 s (only OPEN signals are re-settled)
@@ -53,13 +56,18 @@ CONTEST_FILE = os.path.join(BASE, "data", "arena", "contest.json")              
 
 
 def _participants_file() -> dict:
-    try: return json.load(open(PARTICIPANTS_FILE, encoding="utf-8"))
-    except Exception: return {}
+    d = read_json_cached(PARTICIPANTS_FILE, {}); return d if isinstance(d, dict) else {}
 
 
 def _contest_file() -> dict:
-    try: return json.load(open(CONTEST_FILE, encoding="utf-8"))
-    except Exception: return {}
+    d = read_json_cached(CONTEST_FILE, {}); return d if isinstance(d, dict) else {}
+
+
+def _lots_of(v: dict) -> int:
+    """A profile's default quantity; anything unusable (text, null, out of range) means 1 lot. One bad entry in participants.json must never make the configuration fail for EVERYONE."""
+    try: n = int(v.get("default_lots", 1))
+    except (TypeError, ValueError): return 1
+    return n if 1 <= n <= SU.MAX_LOTS else 1
 
 
 def cfg() -> dict:
@@ -70,11 +78,26 @@ def cfg() -> dict:
         if x and x != name: parts[x] = (os.environ.get("ARENA_TOKEN_" + x) or "").strip()
     pf = _participants_file(); hashes = {k.upper(): v["token_sha256"] for k, v in pf.items() if isinstance(v, dict) and v.get("token_sha256") and k.upper() not in parts}
     display = {k.upper(): (v.get("display") or k) for k, v in pf.items() if isinstance(v, dict)}
-    flags = {k.upper(): {"risk_module": bool(v.get("risk_module")), "hidden": bool(v.get("hidden")), "default_lots": (int(v.get("default_lots", 1)) if 1 <= int(v.get("default_lots", 1)) <= SU.MAX_LOTS else 1)} for k, v in pf.items() if isinstance(v, dict)}
+    flags = {k.upper(): {"risk_module": bool(v.get("risk_module")), "hidden": bool(v.get("hidden")), "default_lots": _lots_of(v)} for k, v in pf.items() if isinstance(v, dict)}
     return {"participants": parts, "hashes": hashes, "display": display, "flags": flags, "token": tok, "name": name,
             "start": _contest_file().get("start") or os.environ.get("ARENA_START", "2026-10-26"), "end": _contest_file().get("end") or os.environ.get("ARENA_END", "2026-11-25"),
             "official_start": _contest_file().get("official_start"),
             "exclude": {x.strip() for x in (os.environ.get("ARENA_EXCLUDE_IDS") or "").split(",") if x.strip()}}
+
+
+def _hit(bucket: str, key: str, cap: int, now: float, count: bool = True) -> bool:
+    """Sliding 60 s window counter (call with _lock held). False = the window is full (nothing is added)."""
+    q = _hits[(bucket, key)]
+    while q and now - q[0] > 60: q.popleft()
+    if len(q) >= cap: return False
+    if count: q.append(now)
+    return True
+
+
+def _gc_hits(now: float) -> None:
+    """Forget counters that have been idle for a minute (an address that tried once would otherwise stay in memory forever). Call with _lock held."""
+    if len(_hits) < 2000: return
+    for k in [k for k, q in _hits.items() if not q or now - q[-1] > 60]: del _hits[k]
 
 
 def _auth(request: Request) -> dict:
@@ -83,10 +106,8 @@ def _auth(request: Request) -> dict:
     if not any(c["participants"].values()) and not c["hashes"]: raise HTTPException(503, "arena not configured")
     ip = request.client.host if request.client else "?"; now = time.time()
     with _lock:
-        q = _hits[ip]
-        while q and now - q[0] > 60: q.popleft()
-        if len(q) >= RATE_PER_MIN: raise HTTPException(429, "rate limit")
-        q.append(now)
+        _gc_hits(now)
+        if not _hit("bad", ip, BAD_TOKEN_PER_MIN, now, count=False) or not _hit("ip", ip, IP_RATE_PER_MIN, now): raise HTTPException(429, "rate limit")
     given = request.headers.get("x-arena-token", "").encode(); who = None
     for nm, tk in c["participants"].items():
         if tk and hmac.compare_digest(given, tk.encode()): who = nm
@@ -94,8 +115,28 @@ def _auth(request: Request) -> dict:
         h = hashlib.sha256(given).hexdigest()
         for nm, hv in c["hashes"].items():
             if hmac.compare_digest(h.encode(), hv.encode()): who = nm
+    with _lock:
+        if who is None: _hit("bad", ip, BAD_TOKEN_PER_MIN, now)                       # a failed attempt counts against the address
+        elif not _hit("who", who, RATE_PER_MIN, now): raise HTTPException(429, "rate limit")
     if who is None: raise HTTPException(401, "bad arena token")
     return {**c, "name": who}
+
+
+async def _json_body(request: Request) -> dict:
+    """The request body as a JSON object, at most MAX_BODY bytes: checked against Content-Length when sent AND while streaming (a chunked body without a length is capped too); a non-numeric length is a 400, not a 500."""
+    cl = request.headers.get("content-length")
+    if cl is not None:
+        try: n = int(cl)
+        except ValueError: raise HTTPException(400, "bad content-length") from None
+        if n > MAX_BODY: raise HTTPException(413, "body too large")
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf += chunk
+        if len(buf) > MAX_BODY: raise HTTPException(413, "body too large")
+    try: body = json.loads(bytes(buf))
+    except ValueError: raise HTTPException(400, "invalid JSON") from None
+    if not isinstance(body, dict): raise HTTPException(400, "object expected")
+    return body
 
 
 def mode(c: dict, now: datetime | None = None) -> str:
@@ -131,7 +172,7 @@ def chain(request: Request, underlying: str, option_type: str = "CE", expiry: st
     cap = CT.captured(u); exps = list(cap["expiries"])
     if not exps: return {"underlying": u, "expiries": [], "problems": [f"no captured quotes for {u} in the latest session"]}
     try: e = SU.norm_expiry(expiry) if expiry else exps[0]
-    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex)) from None
     out = CT.chain(u, e, ot, max(1, min(int(n), 15)))
     try:                                                                                          # someone is looking at this ladder: keep the near-the-money prices ~3-8 s fresh while it is on screen (5 min after the last view)
         from ..histcap import priority
@@ -152,7 +193,7 @@ def risk_preview(request: Request, underlying: str, option_type: str, strike: fl
     except Exception: cap = {}                                                                 # quote store unavailable: still answer for an explicit expiry (stop falls back to the no-quote rule)
     exps = list(cap)
     try: e = SU.norm_expiry(expiry) if expiry else (exps[0] if exps else None)
-    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex)) from None
     if e is None: raise HTTPException(404, "no captured expiry for this underlying")
     from .. import sl_detector
     out = sl_detector.plan_for(u, e, strike, ot, entry, time.time())
@@ -166,8 +207,18 @@ def quote(request: Request, underlying: str, expiry: str, strike: float, option_
     _auth(request); u = underlying.upper()
     if u not in SU.ALLOWED: raise HTTPException(422, "unsupported underlying")
     try: e = SU.norm_expiry(expiry)
-    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex)) from None
     return {"expiry": e, "last": CT.last_quote(u, e, float(strike), option_type.upper())}
+
+
+def _market_gate(exchange: str, msg: str | None = None) -> None:
+    """409 while `exchange` is closed (scored signals / amendments only while the market trades). Fail-open: a broken calendar must never block the contest."""
+    try:
+        from .. import market_calendar as mc
+        closed = not mc.is_trading(exchange)
+    except Exception:
+        return
+    if closed: raise HTTPException(409, msg or f"{exchange} is not open: scored signals can only be submitted while the market is trading")
 
 
 async def _off(fn, *a, **k):
@@ -180,19 +231,14 @@ async def _submit_equity(c, body: dict, m: str):
     import asyncio
     if os.environ.get("ARENA_EQUITY", "1").strip().lower() in ("0", "false", "off", "no"): raise HTTPException(409, "equity trading is switched off in this arena")
     body = {**body, "instrument": "EQUITY"}
-    if m == "ARENA_LIVE":
-        try:
-            from .. import market_calendar as mc
-            if not mc.is_trading("NSE"): raise HTTPException(409, "NSE is not open: scored signals can only be submitted while the market is trading")
-        except HTTPException: raise
-        except Exception: pass
+    if m == "ARENA_LIVE": _market_gate("NSE")
     try: v = SU.validate({**body, "participant": c["name"]})
-    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e)) from None
     try: chk = await asyncio.get_running_loop().run_in_executor(None, lambda: EQ.check(v["underlying"], v["side"], v["entry"], v["entry_mode"], sl=v["sl"]))
     except Exception: chk = None                                                                  # data unavailable: do not block, report nothing
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable: " + "; ".join(chk["problems"]))
     try: rec = await _off(SU.submit, {**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
-    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e)) from None
     _stale_all()
     try: await _off(EQ.watch, rec["underlying"])                                                              # dense quotes for this symbol until the close
     except Exception: pass
@@ -204,10 +250,7 @@ async def _submit_equity(c, body: dict, m: str):
 @router.post("/submit")
 async def submit(request: Request):
     c = _auth(request)
-    if int(request.headers.get("content-length") or 0) > MAX_BODY: raise HTTPException(413, "body too large")
-    try: body = await request.json()
-    except Exception: raise HTTPException(400, "invalid JSON")
-    if not isinstance(body, dict): raise HTTPException(400, "object expected")
+    body = await _json_body(request)
     m = mode(c)
     if m == "ENDED": raise HTTPException(409, "arena has ended")
     if str(body.get("instrument", "")).upper() == "EQUITY": return await _submit_equity(c, body, m)
@@ -220,24 +263,19 @@ async def submit(request: Request):
             if not body.get("targets"): body["targets"] = [round(round((entry + k * (entry - float(body["sl"]))) / 0.05) * 0.05, 2) for k in (1, 2, 3)]
             body["note"] = (str(body.get("note", "")) + " | stop/targets set by the ZeroHero risk module (1R/2R/3R)").strip(" |")[:300]; body.setdefault("valid_sec", 900)
         except Exception as ex:
-            raise HTTPException(422, f"risk module could not set the stop/targets: {ex}")
+            raise HTTPException(422, f"risk module could not set the stop/targets: {ex}") from None
     if body.get("lots") in (None, ""): body["lots"] = c["flags"].get(c["name"], {}).get("default_lots", 1)             # the profile's default quantity (1 lot unless the profile says otherwise)
     u = str(body.get("underlying", "")).upper()
-    if m == "ARENA_LIVE":
-        try:
-            from .. import market_calendar as mc
-            if u in EXCH and not mc.is_trading(EXCH[u]): raise HTTPException(409, f"{EXCH[u]} is not open: scored signals can only be submitted while the market is trading")
-        except HTTPException: raise
-        except Exception: pass
+    if m == "ARENA_LIVE" and u in EXCH: _market_gate(EXCH[u])
     chk = None
     try:
         v = SU.validate({**body, "participant": c["name"]})
         chk = await _off(CT.check, v["underlying"], v["expiry"], v["strike"], v["option_type"], v["entry"], v["entry_mode"], sl=v["sl"])
-    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e)) from None
     except Exception: chk = None                                                       # data unavailable: do not block, report nothing
     if chk and chk["problems"] and m == "ARENA_LIVE": raise HTTPException(422, "unscorable contract: " + "; ".join(chk["problems"]))
     try: rec = await _off(SU.submit, {**body, "participant": c["name"]}, practice=(m == "PRACTICE"))
-    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e)) from None
     _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
     try:
         from ..histcap import priority
@@ -253,20 +291,13 @@ async def submit(request: Request):
 async def amend(request: Request):
     """Management event for an already submitted signal: AMEND_ENTRY (waiting ABOVE/LIMIT only) | AMEND_SL | AMEND_TARGETS | TRAIL_SL | AMEND_LOTS | EXIT_NOW | CANCEL. Effective from the server timestamp + execution delay, never retroactive."""
     c = _auth(request)
-    if int(request.headers.get("content-length") or 0) > MAX_BODY: raise HTTPException(413, "body too large")
-    try: body = await request.json()
-    except Exception: raise HTTPException(400, "invalid JSON")
-    if not isinstance(body, dict): raise HTTPException(400, "object expected")
+    body = await _json_body(request)
     m = mode(c)
     if m == "ENDED": raise HTTPException(409, "arena has ended")
     if m == "ARENA_LIVE":
         sig = await _off(lambda: next((r for r in SU.load() if r.get("type") == "HUMAN_SIGNAL" and r["id"] == str(body.get("signal_id", ""))), None))
-        try:
-            from .. import market_calendar as mc
-            if sig and sig["underlying"] in EXCH and not mc.is_trading(EXCH[sig["underlying"]]): raise HTTPException(409, f"{EXCH[sig['underlying']]} is not open")
-            if sig and sig.get("instrument") == "EQUITY" and not mc.is_trading("NSE"): raise HTTPException(409, "NSE is not open")
-        except HTTPException: raise
-        except Exception: pass
+        if sig and sig["underlying"] in EXCH: _market_gate(EXCH[sig["underlying"]], f"{EXCH[sig['underlying']]} is not open")
+        if sig and sig.get("instrument") == "EQUITY": _market_gate("NSE", "NSE is not open")
     if str(body.get("action", "")).upper() in ("AMEND_LOTS", "AMEND_ENTRY"):                              # the quantity / the entry can change only while the trade is NOT active
         sid = str(body.get("signal_id", ""))
         def _state():                                                                                   # ledger read + settlement of this one signal: blocking, so off the event loop
@@ -277,7 +308,7 @@ async def amend(request: Request):
             if rr and (rr[0].get("fill") is not None or rr[0].get("status") in ("SETTLED", "CANCELLED")): raise HTTPException(409, "the trade is already active (or closed): the quantity / entry cannot be changed any more")
             if str(body.get("action", "")).upper() == "AMEND_ENTRY" and sg[0].get("entry_mode") not in ("ABOVE", "LIMIT"): raise HTTPException(409, "only a waiting ABOVE / LIMIT order has an entry price to change")
     try: rec = await _off(SU.submit_event, body, c["name"])
-    except SU.SubmissionError as e: raise HTTPException(422, str(e))
+    except SU.SubmissionError as e: raise HTTPException(422, str(e)) from None
     _stale_all()                                                                              # a new signal/event: refresh on the next request, but keep serving the previous value meanwhile
     return {k: rec.get(k) for k in ("id", "signal_id", "action", "sl", "targets", "trail_points", "trail_pct", "lots", "server_iso", "practice", "hash")}
 
@@ -343,7 +374,7 @@ def chart(request: Request, underlying: str, expiry: str, strike: float, option_
     _auth(request); u = underlying.upper(); ot = option_type.upper()
     if u not in SU.ALLOWED or ot not in ("CE", "PE") or tf not in (1, 3, 5, 15): raise HTTPException(422, "bad underlying / option_type / tf")
     try: e = SU.norm_expiry(expiry)
-    except SU.SubmissionError as ex: raise HTTPException(422, str(ex))
+    except SU.SubmissionError as ex: raise HTTPException(422, str(ex)) from None
     from . import terminal as TM
     try:                                                                                          # the contract is on someone's screen: keep its quotes ~3 s fresh (same mechanism as the chain ladder), 5 min after the last look
         from ..histcap import priority
@@ -601,7 +632,9 @@ def leaderboard(request: Request, scope: str = "today"):
 def guide(request: Request):
     _auth(request)
     p = os.path.join(BASE, "INSTITUTION_ARENA_GUIDE.md")
-    return {"markdown": open(p, encoding="utf-8").read() if os.path.exists(p) else "guide missing"}
+    try:
+        with open(p, encoding="utf-8") as f: return {"markdown": f.read()}
+    except OSError: return {"markdown": "guide missing"}
 
 
 def prewarm(delay: float = 15.0) -> None:

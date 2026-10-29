@@ -14,6 +14,7 @@ import time
 from . import channel_ingest as CI
 from . import tg_journal as TJ
 from . import tg_pipeline as TP
+from .jsonio import read_json, write_json
 
 log = logging.getLogger("arena.tg_reader")
 HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -91,6 +92,9 @@ def journaling_enabled() -> bool:
     return (os.environ.get("TG_JOURNAL") or "1").strip().lower() not in ("0", "false", "off", "no")
 
 
+_BG: set = set()                                                                               # background tasks that must not be garbage-collected
+
+
 def edits_enabled() -> bool:
     """TG_EDITS=0 restores the old behaviour (an edit is journaled and logged, never applied)."""
     return os.environ.get("TG_EDITS", "1") != "0"
@@ -106,12 +110,11 @@ def submit_enabled() -> bool:
 
 def write_status(**kw) -> None:
     st = _load_status(); st.update(kw, updated=time.time(), counts=_counts)
-    os.makedirs(DIR, exist_ok=True); tmp = STATUS + ".tmp"; json.dump(st, open(tmp, "w")); os.replace(tmp, STATUS)
+    write_json(STATUS, st)
 
 
 def _load_status() -> dict:
-    try: return json.load(open(STATUS))
-    except Exception: return {}
+    d = read_json(STATUS, {}); return d if isinstance(d, dict) else {}
 
 
 def public_status() -> dict:
@@ -328,7 +331,7 @@ async def run() -> None:                                                       #
     client.add_event_handler(on_new, events.NewMessage(chats=chats))
     client.add_event_handler(on_edit, events.MessageEdited(chats=chats))
     client.add_event_handler(on_delete, events.MessageDeleted())                           # deletions carry no sender / chat filter reliably: on_delete filters by the journal itself
-    worker = asyncio.ensure_future(process_loop()) if journal is not None else None            # runs for the life of the process: captured posts are processed even while Telegram is down
+    if journal is not None: _BG.add(asyncio.ensure_future(process_loop()))                   # runs for the life of the process (captured posts are processed even while Telegram is down); the set keeps a strong reference, a bare task can be garbage-collected mid-run
     backoff = 5; tasks: list = []
     while True:
         for t in tasks: t.cancel()                                                       # whatever a previous connection left running (poller / reconciler) must not run twice

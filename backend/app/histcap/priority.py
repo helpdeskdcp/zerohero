@@ -4,8 +4,10 @@ instead of the normal 1-3 minutes, for exactly the contracts that matter, and on
 Kill switch: PRIORITY_CAPTURE=0. Watch list: data/priority_watch.json."""
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import tempfile
 import threading
 import time
 from collections import deque
@@ -30,8 +32,37 @@ def enabled() -> bool:
 
 
 def _load(path: str | None = None) -> list[dict]:
-    try: return json.load(open(path or WATCH, encoding="utf-8"))
+    try:
+        with open(path or WATCH, encoding="utf-8") as f: return json.load(f)
     except Exception: return []
+
+
+_key = lambda x: (x["symbol"], x["expiry"], x["strike"], x["option_type"])
+
+
+def _register(path: str, e: dict, t: float, until: float) -> dict:
+    """Add / extend one watch entry. The dashboard (form submits, chain views) and the Telegram reader (channel signals) are DIFFERENT PROCESSES writing this one file: the read-modify-write is therefore done under an
+    flock on <file>.lock (a lost update here means a signal's contract silently loses its dense capture), and the new file is written under a unique temporary name, then renamed over the old one.
+    An existing longer registration is never shortened; Idempotent. Never raises into the caller's flow if the file cannot be written (returns the entry anyway)."""
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with _lock, open(path + ".lock", "a") as lk:
+            fcntl.flock(lk, fcntl.LOCK_EX)
+            items = [x for x in _load(path) if x.get("until", 0) > t]; old = next((x for x in items if _key(x) == _key(e)), None)
+            if old is not None and old["until"] >= until - 30 and (old.get("kind") == "signal" or e["kind"] == "view"): return old        # already covered: no file write (many viewers, one entry)
+            if old is not None: e["until"] = max(until, old["until"]); e["kind"] = "signal" if "signal" in (old.get("kind"), e["kind"]) else "view"
+            items = [x for x in items if _key(x) != _key(e)] + [e]
+            fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".", prefix=os.path.basename(path) + ".", suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w") as f: json.dump(items, f)
+                os.replace(tmp, path)
+            except BaseException:
+                try: os.unlink(tmp)
+                except OSError: pass
+                raise
+    except Exception:
+        pass
+    return e
 
 
 def request_watch(symbol: str, expiry_iso: str, strike: float, option_type: str, *, now: float | None = None, path: str | None = None, ttl_sec: float | None = None) -> dict:
@@ -42,34 +73,16 @@ def request_watch(symbol: str, expiry_iso: str, strike: float, option_type: str,
     close = datetime(day.year, day.month, day.day, h, m, tzinfo=IST).timestamp()
     until = close if ttl_sec is None else min(close, t + float(ttl_sec))
     e = {"symbol": symbol.upper(), "expiry": raw, "strike": float(strike), "option_type": option_type.upper(), "until": until, "added": t, "kind": "signal" if ttl_sec is None else "view"}
-    key = lambda x: (x["symbol"], x["expiry"], x["strike"], x["option_type"])
-    try:
-        with _lock:
-            items = [x for x in _load(path) if x.get("until", 0) > t]; old = next((x for x in items if key(x) == key(e)), None)
-            if old is not None and old["until"] >= until - 30 and (old.get("kind") == "signal" or e["kind"] == "view"): return old        # already covered: no file write (many viewers, one entry)
-            if old is not None: e["until"] = max(until, old["until"]); e["kind"] = "signal" if "signal" in (old.get("kind"), e["kind"]) else "view"
-            items = [x for x in items if key(x) != key(e)] + [e]; os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path + ".tmp"; json.dump(items, open(tmp, "w")); os.replace(tmp, path)
-    except Exception:
-        pass
-    return e
+    return _register(path, e, t, until)
 
 
 def request_watch_equity(symbol: str, *, now: float | None = None, path: str | None = None, ttl_sec: float | None = None) -> dict:
-    """Register an NSE cash-equity symbol for the 3-second quote capture (same file, same expiry-at-close rule as request_watch; no expiry / strike / option type)."""
+    """Register an NSE cash-equity symbol for the dense quote capture (same file, same expiry-at-close rule as request_watch; no expiry / strike / option type)."""
     path = path or WATCH; t = now or time.time(); day = datetime.fromtimestamp(t, tz=IST)
     close = datetime(day.year, day.month, day.day, CLOSE["NSE"][0], CLOSE["NSE"][1], tzinfo=IST).timestamp()
     until = close if ttl_sec is None else min(close, t + float(ttl_sec))
     e = {"symbol": symbol.upper(), "expiry": "", "strike": 0.0, "option_type": "EQ", "until": until, "added": t, "kind": "signal" if ttl_sec is None else "view", "inst": "EQUITY"}
-    key = lambda x: (x["symbol"], x["expiry"], x["strike"], x["option_type"])
-    try:
-        with _lock:
-            items = [x for x in _load(path) if x.get("until", 0) > t]; old = next((x for x in items if key(x) == key(e)), None)
-            if old is not None and old["until"] >= until - 30 and (old.get("kind") == "signal" or e["kind"] == "view"): return old
-            if old is not None: e["until"] = max(until, old["until"]); e["kind"] = "signal" if "signal" in (old.get("kind"), e["kind"]) else "view"
-            items = [x for x in items if key(x) != key(e)] + [e]; os.makedirs(os.path.dirname(path), exist_ok=True); tmp = path + ".tmp"; json.dump(items, open(tmp, "w")); os.replace(tmp, path)
-    except Exception:
-        pass
-    return e
+    return _register(path, e, t, until)
 
 
 FETCH_TIMEOUT_SEC = float(os.environ.get("PRIORITY_FETCH_TIMEOUT_SEC", "6"))

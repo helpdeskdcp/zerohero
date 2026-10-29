@@ -4,27 +4,17 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 import time
-from datetime import datetime, timezone
 
-from .contracts import DB, NOT_FUTURE, _ro
+from .contracts import latest_by
 
 _lq_cache: dict = {}
 from ..histcap.equity_master import resolve  # noqa: E402,F401  (re-export)
 
 
 def latest_quote(symbol: str, path: str | None = None) -> dict | None:
-    """Newest captured quote of an equity via the (symbol, kind, exch_ts) index: {"ltp","bid","ask","t"} or None. Cached for 1 s."""
-    key = (symbol, path); hit = _lq_cache.get(key)
-    if hit and time.time() - hit[0] < 1.0: return hit[1]
-    c = _ro(path)
-    try:
-        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE symbol=? AND kind='EQUITY' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY exch_ts DESC LIMIT 1", (symbol,)).fetchone()
-    finally:
-        c.close()
-    out = {"ltp": r[0], "bid": r[1], "ask": r[2], "t": datetime.fromisoformat(r[3].replace("Z", "+00:00")).timestamp()} if r else None
-    _lq_cache[key] = (time.time(), out); return out
+    """Newest captured quote of an equity: {"ltp","bid","ask","t"} or None. Cached for 1 s."""
+    return latest_by("symbol=? AND kind='EQUITY'", (symbol,), path, _lq_cache, (symbol, path))
 
 
 def watch(symbol: str, *, ttl_sec: float | None = None) -> dict:
@@ -58,8 +48,8 @@ def check(symbol: str, side: str, entry: float, mode: str, *, sl: float | None =
 
 # ----------------------------------------------------------------------------- symbol search
 import csv
-import os
 import threading
+from .jsonio import read_json, write_json
 
 _idx_lock = threading.Lock(); _idx: list | None = None
 _NIFTY50_CSV = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "nifty_direction", "constituents.csv")
@@ -175,20 +165,22 @@ def _upstox_keys() -> dict:
         if _up_keys is not None: return _up_keys
         try:
             if os.path.exists(_UP_FILE) and time.time() - os.path.getmtime(_UP_FILE) < 7 * 86400:
-                _up_keys = json.load(open(_UP_FILE)); return _up_keys
+                _up_keys = read_json(_UP_FILE); 
+                if isinstance(_up_keys, dict) and _up_keys: return _up_keys
+                _up_keys = None
         except Exception:
             pass
         import gzip, requests
         r = requests.get(_UP_URL, timeout=30); r.raise_for_status()
         rows = json.loads(gzip.decompress(r.content))
         keys = {x["trading_symbol"].upper(): x["instrument_key"] for x in rows if x.get("segment") == "NSE_EQ" and x.get("instrument_type") == "EQ" and x.get("instrument_key") and x.get("trading_symbol")}
-        os.makedirs(os.path.dirname(_UP_FILE), exist_ok=True); tmp = _UP_FILE + ".tmp"; json.dump(keys, open(tmp, "w")); os.replace(tmp, _UP_FILE); _up_keys = keys
+        write_json(_UP_FILE, keys); _up_keys = keys
     return _up_keys
 
 
 def _upstox_ltp(symbols: list[str]) -> dict:
     """{symbol: last_price} from Upstox (one request for all symbols; each answer cached 2 s). Raises on any failure; the caller treats that as 'no failover price'."""
-    now = time.time(); out = {}; need = [s for s in symbols if not (_up_cache.get(s) and now - _up_cache[s][0] < 2.0)]
+    now = time.time(); need = [s for s in symbols if not (_up_cache.get(s) and now - _up_cache[s][0] < 2.0)]
     if need:
         keys = _upstox_keys(); ik = {s: keys[s] for s in need if s in keys}
         if ik:

@@ -9,12 +9,13 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pandas as pd
 
 from . import contracts as CT, submit as SU
 from ..winners_scalper import live as WL
+from .jsonio import read_json, read_json_cached
 
 _log = logging.getLogger("arena.pine_submitter")
 ROOT = WL.ROOT
@@ -48,7 +49,8 @@ def listed_option_expiries(sym: str, path: str | None = None) -> set[str] | None
     p = path or MASTER; key = (sym, p, int(os.path.getmtime(p)) if os.path.exists(p) else 0)
     if key in _LISTED: return _LISTED[key]
     try:
-        m = json.load(open(p, encoding="utf-8")); rows = m if isinstance(m, list) else m.get("data", [])
+        m = read_json(p); rows = m if isinstance(m, list) else m.get("data", [])
+        if m is None: raise OSError(p)
         out = {WL._norm_expiry(r["expiry"]) for r in rows if str(r.get("name", "")).upper() == sym and r.get("exch_seg") == "MCX" and r.get("instrumenttype") == "OPTFUT" and r.get("expiry")}
     except Exception as e:
         _log.warning("instrument master unreadable: %r", e); return None
@@ -57,8 +59,7 @@ def listed_option_expiries(sym: str, path: str | None = None) -> set[str] | None
 
 # ---------------------------------------------------------------- arena submission
 def _contest():
-    try: return json.load(open(os.path.join(ROOT, "data", "arena", "contest.json")))
-    except Exception: return {}
+    d = read_json_cached(os.path.join(ROOT, "data", "arena", "contest.json"), {}); return d if isinstance(d, dict) else {}
 
 
 def parity_atm(sym: str, expiry: str, ot: str, now: float, path: str | None = None):

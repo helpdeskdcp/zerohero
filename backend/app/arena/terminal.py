@@ -9,10 +9,11 @@ import pandas as pd
 
 from . import contracts as CT
 from ..histcap import id_window as ID
-from .settle import snap_expiry
+from .settle import iso_epoch as _ep, snap_expiry
 
-IST = timezone(timedelta(hours=5, minutes=30)); IST_S = 19800
-MCX = ("NATURALGAS", "CRUDEOIL", "GOLDM")
+from .markets import IST, MCX_UNDERLYINGS as MCX  # noqa: E402
+
+IST_S = 19800
 
 
 _FLOORS: dict = {}
@@ -25,7 +26,6 @@ def _floor(c, lo: float, path) -> int:
 
 
 def _iso(ts: float) -> str: return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-def _ep(s: str) -> float: return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
 
 
 def _candles(rows, tf: int, lo: float) -> list[dict]:
@@ -44,33 +44,32 @@ def _candles(rows, tf: int, lo: float) -> list[dict]:
     return [dict(time=b * tfs + IST_S, open=v[0], high=v[1], low=v[2], close=v[3]) for b, v in sorted(bars.items())]
 
 
-def premium_equity(symbol: str, tf: int = 1, since: float | None = None, now: float | None = None, path: str | None = None) -> dict:
-    """OHLC candles (tf minutes) of an NSE cash-equity symbol's last-traded price for today's session, from the captured quotes (same shape as premium())."""
+def _premium(where: str, params: tuple, tf: int, since: float | None, now: float | None, path: str | None, last_fn) -> dict:
+    """Candles (tf minutes) of one instrument's last-traded price for today's session from the captured quotes; `where` selects the instrument (parameters in `params`). Shared by the option and the equity chart.
+    The time axis is when OUR capture stored the price (heartbeat rows included): an illiquid contract whose exchange timestamp does not change still stands at that price, so its chart is continuous instead of
+    6 candles in 5 hours. Rows are ordered by (exch_ts, id): two quotes with the same exchange second keep their capture order, so the candle close is deterministic. Heartbeat rows keep an OLD exch_ts, hence the 2-day lower bound;
+    the (symbol, expiry, strike, type, exch_ts) index makes it a few thousand rows, never a table scan."""
     now = now or time.time(); tfs = tf * 60
     day0 = datetime.fromtimestamp(now, IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
     c = CT._ro(path)
     try:
-        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND kind='EQUITY' AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts", (symbol, _iso(day0 - 2 * 86400), _floor(c, lo, path))).fetchall()
+        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE " + where + " AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
+                         (*params, _iso(day0 - 2 * 86400), _floor(c, lo, path))).fetchall()
     finally: c.close()
-    out["candles"] = _candles(rows, tf, lo)
+    out["candles"] = _candles(rows, tf, lo); out["last"] = last_fn(); return out
+
+
+def premium_equity(symbol: str, tf: int = 1, since: float | None = None, now: float | None = None, path: str | None = None) -> dict:
+    """OHLC candles (tf minutes) of an NSE cash-equity symbol's last-traded price for today's session, from the captured quotes (same shape as premium())."""
     from . import equity as EQ
-    out["last"] = EQ.latest_quote(symbol, path); return out
+    return _premium("symbol=? AND kind='EQUITY'", (symbol,), tf, since, now, path, lambda: EQ.latest_quote(symbol, path))
 
 
 def premium(underlying: str, expiry_iso: str, strike: float, ot: str, tf: int = 1, since: float | None = None, now: float | None = None, path: str | None = None) -> dict:
     """OHLC candles (tf minutes) of the contract's last-traded price for today's session, from the exchange-stamped quotes (one per exchange second). `since` (UTC epoch of the last candle the client has) returns only that candle onwards."""
-    now = now or time.time(); tfs = tf * 60
-    day0 = datetime.fromtimestamp(now, IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    lo = day0 if since is None else max(day0, since - tfs); out = {"candles": [], "last": None, "tf": tf, "now": now}
-    c = CT._ro(path)
-    try:
-        rows = c.execute("SELECT received_ts, ltp FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL AND exch_ts>=? AND id>?" + CT.NOT_FUTURE + " ORDER BY exch_ts, id",
-                         (underlying, snap_expiry(expiry_iso), float(strike), ot, _iso(day0 - 2 * 86400), _floor(c, lo, path))).fetchall()                       # the contract's (symbol, expiry, strike, type, exch_ts) index: a few thousand rows, never a table scan (heartbeat rows keep an OLD exch_ts, hence the 2-day lower bound)
-    finally: c.close()
-    # time axis = when OUR capture stored the price (heartbeat rows included): an illiquid contract whose exchange timestamp does not change still stands at that price, so its chart is continuous instead of 6 candles in 5 hours
-    out["candles"] = _candles(rows, tf, lo)
-    out["last"] = CT.latest_quote(underlying, expiry_iso, float(strike), ot, path); return out
+    return _premium("symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL'", (underlying, snap_expiry(expiry_iso), float(strike), ot), tf, since, now, path,
+                    lambda: CT.latest_quote(underlying, expiry_iso, float(strike), ot, path))
 
 
 def _spot(sym: str):

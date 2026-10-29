@@ -37,16 +37,9 @@ function eqQuoteLine(q) {
   const l = q.last, age = q.age_s != null ? ` · ${Math.round(q.age_s)}s old` : "";
   return `${q.symbol} (${q.name}) · LTP ${eqFmt(l.ltp)} · bid ${eqFmt(l.bid)} / ask ${eqFmt(l.ask)}${age}`;
 }
-/* server-sent events: split a text buffer into complete events (JSON payloads of "data:" lines) and the unfinished rest */
-function eqParseSse(buf) {
-  const events = []; let rest = buf, i;
-  while ((i = rest.indexOf("\n\n")) >= 0) {
-    const block = rest.slice(0, i); rest = rest.slice(i + 2);
-    const data = block.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("");
-    if (data) { try { events.push(JSON.parse(data)); } catch (e) { /* ignore a malformed block */ } }
-  }
-  return { events, rest };
-}
+/* server-sent events: split a text buffer into complete events (JSON payloads of "data:" lines) and the unfinished rest. ONE implementation, shared with the order-push stream (arena_push.js: a browser global, a require() in node tests) */
+const _eqPushParse = typeof pushParse === "function" ? pushParse : require("./arena_push.js").pushParse;
+function eqParseSse(buf) { return _eqPushParse(buf); }
 /* price of a symbol's tick for the entry field: the live last-traded price */
 function eqTickPrice(t) { return t && t.ltp != null && t.ltp > 0 ? Number(t.ltp) : null; }
 function eqSrcLabel(t) { return !t || t.src == null ? "no quote" : t.src === "ws" ? "live push" : t.src === "upstox" ? "backup feed (Upstox)" : "1 s tape" + (t.age_s != null ? ` · ${t.age_s}s old` : ""); }

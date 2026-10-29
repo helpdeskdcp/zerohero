@@ -227,3 +227,41 @@ def test_signals_endpoint_reports_scored_and_excluded(client, monkeypatch):
     for _ in range(2): assert client.post("/api/arena/public/submit", json=GOOD, headers=H).status_code == 200
     j = client.get("/api/arena/public/signals", headers=H).json()["signals"]
     assert [(s["id"], s["scored"], s["excluded"]) for s in j] == [("H00001", False, True), ("H00002", True, False)]
+
+
+def test_participants_behind_one_address_do_not_share_a_rate_limit(client, monkeypatch, tmp_path):
+    """The limit is per participant: one busy terminal (or one stuck page) cannot lock the others out of the same office address."""
+    import hashlib, json
+    pf = tmp_path / "participants.json"; pf.write_text(json.dumps({"B_USER": {"token_sha256": hashlib.sha256(b"b-token-1234567890abcdef").hexdigest()}})); monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(pf))
+    monkeypatch.setattr(A, "RATE_PER_MIN", 5); A._hits.clear()
+    assert [client.get("/api/arena/public/state", headers=H).status_code for _ in range(7)] == [200] * 5 + [429] * 2             # participant 1 is limited ...
+    assert client.get("/api/arena/public/state", headers={"X-Arena-Token": "b-token-1234567890abcdef"}).status_code == 200      # ... participant 2 on the same address is not
+
+
+def test_bad_tokens_are_throttled_per_address_and_counters_are_forgotten(client, monkeypatch):
+    monkeypatch.setattr(A, "BAD_TOKEN_PER_MIN", 4); A._hits.clear()
+    assert [client.get("/api/arena/public/state", headers={"X-Arena-Token": "wrong"}).status_code for _ in range(6)] == [401] * 4 + [429] * 2
+    assert client.get("/api/arena/public/state", headers=H).status_code == 429                                  # the address is refused until the minute has passed
+    A._hits.clear(); [A._hits[("ip", f"10.0.{i // 250}.{i % 250}")].append(1.0) for i in range(2100)]            # long-idle counters
+    A._gc_hits(1000.0); assert len(A._hits) == 0
+
+
+def test_body_limit_covers_chunked_bodies_and_a_bad_length_header_is_a_400(client):
+    big = b'{"x": "' + b"a" * 5000 + b'"}'
+    assert client.post("/api/arena/public/submit", content=big, headers={**H, "Content-Type": "application/json"}).status_code == 413
+    assert client.post("/api/arena/public/submit", content=iter([big[:2500], big[2500:]]), headers={**H, "Content-Type": "application/json"}).status_code == 413       # chunked, no Content-Length
+    assert client.post("/api/arena/public/submit", content=b"{}", headers={**H, "Content-Type": "application/json", "Content-Length": "abc"}).status_code in (400, 422)
+
+
+def test_a_non_numeric_field_is_a_422_not_a_500(client):
+    for bad in ({"strike": "abc"}, {"entry": "inf"}, {"targets": 12}, {"valid_sec": "x"}):
+        r = client.post("/api/arena/public/submit", json={**GOOD, **bad}, headers=H); assert r.status_code == 422, (bad, r.status_code, r.text)
+    assert SU.load() == []
+
+
+def test_one_malformed_participant_entry_does_not_break_the_configuration_for_everyone(client, monkeypatch, tmp_path):
+    import json
+    pf = tmp_path / "participants.json"; pf.write_text(json.dumps({"BAD_ONE": {"default_lots": "many", "display": "Bad"}, "NULL_ONE": {"default_lots": None}, "BIG_ONE": {"default_lots": 999}, "OK_ONE": {"default_lots": 3}, "NOT_A_DICT": 5}))
+    monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(pf)); c = A.cfg()
+    assert [c["flags"][k]["default_lots"] for k in ("BAD_ONE", "NULL_ONE", "BIG_ONE", "OK_ONE")] == [1, 1, 1, 3] and "NOT_A_DICT" not in c["flags"]
+    assert client.get("/api/arena/public/state", headers=H).status_code == 200                                    # the arena still answers

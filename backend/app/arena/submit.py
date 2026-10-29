@@ -6,6 +6,7 @@ import contextlib
 import fcntl
 import functools
 import inspect
+import math
 import os
 import re
 import threading
@@ -13,8 +14,9 @@ import time
 from datetime import datetime, timezone
 
 from ..forward_test import ledger as L
+from .jsonio import read_json_cached
 
-ALLOWED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM")
+from .markets import ALLOWED  # noqa: F401,E402  (single source: markets.py)
 MODES = ("ABOVE", "NEAR", "MARKET", "LIMIT")
 ACTIONS = ("AMEND_SL", "AMEND_TARGETS", "TRAIL_SL", "EXIT_NOW", "CANCEL", "AMEND_LOTS", "AMEND_ENTRY")
 MAX_LOTS = 10
@@ -67,6 +69,31 @@ def _locked(fn):
     return wrapper
 
 
+def _num(d: dict, k: str) -> float | None:
+    """A numeric field of a submission: None when absent / blank, a finite float otherwise. Text, NaN and +-Infinity are a normal rejection (422), never a crash and never written to the ledger (`Infinity` is not valid JSON)."""
+    v = d.get(k)
+    if v is None or (isinstance(v, str) and not v.strip()): return None
+    if isinstance(v, bool): raise SubmissionError(f"{k} must be a number")
+    try: x = float(v)
+    except (TypeError, ValueError): raise SubmissionError(f"{k} must be a number") from None
+    if not math.isfinite(x): raise SubmissionError(f"{k} must be a finite number")
+    return x
+
+
+def _targets(d: dict) -> list[float]:
+    t = d.get("targets")
+    if t is None or t == "": return []
+    if not isinstance(t, (list, tuple)): raise SubmissionError("targets must be a list of numbers")
+    return sorted({_num({"t": x}, "t") for x in t if x is not None and str(x).strip() != ""})
+
+
+def _valid_sec(d: dict) -> int | None:
+    x = _num(d, "valid_sec")
+    if x is None: return None
+    if not (60 <= x <= 28800 and x == int(x)): raise SubmissionError("valid_sec between 60 and 28800")
+    return int(x)
+
+
 def norm_expiry(s: str) -> str:
     """'27OCT2026' | '27-Oct-2026' | '2026-10-27' -> ISO date"""
     s = s.strip().upper()
@@ -83,20 +110,18 @@ def validate_equity(d: dict) -> dict:
     sym = str(d.get("underlying") or d.get("symbol") or "").strip().upper(); need(EQ_SYMBOL_RE.fullmatch(sym) is not None, "equity symbol: NSE trading symbol, e.g. RELIANCE")
     side = str(d.get("side", "BUY")).upper(); need(side in ("BUY", "SELL"), "side BUY|SELL")
     mode = str(d.get("entry_mode", "NEAR")).upper(); need(mode in MODES, f"entry_mode {MODES}")
-    num = lambda k: float(d[k]) if d.get(k) is not None else None
-    entry, sl = num("entry"), num("sl"); need(entry and entry > 0, "entry > 0")
-    tg = sorted({float(x) for x in (d.get("targets") or [])}, reverse=(side == "SELL"))
+    entry, sl = _num(d, "entry"), _num(d, "sl"); need(entry and entry > 0, "entry > 0")
+    tg = sorted(_targets(d), reverse=(side == "SELL"))
     if side == "BUY": need(sl is None or 0 < sl < entry, "stop-loss is optional; for BUY it must be below the entry"); need(all(x > entry for x in tg), "for BUY every target must be above the entry")
     else: need(sl is None or sl > entry, "stop-loss is optional; for SELL it must be above the entry"); need(all(0 < x < entry for x in tg), "for SELL every target must be below the entry (and above 0)")
-    try: qty = int(d.get("qty", d.get("lots")))
-    except (TypeError, ValueError): qty = 0
-    need(1 <= qty <= MAX_EQ_QTY and qty == float(d.get("qty", d.get("lots"))), f"quantity: whole number of shares, 1 to {MAX_EQ_QTY}")
+    qx = _num({"q": d.get("qty", d.get("lots"))}, "q"); qty = int(qx) if qx is not None and qx == int(qx) else 0
+    need(1 <= qty <= MAX_EQ_QTY, f"quantity: whole number of shares, 1 to {MAX_EQ_QTY}")
     need(qty * entry <= MAX_EQ_NOTIONAL, f"order value (entry x quantity) is above the paper limit of Rs {MAX_EQ_NOTIONAL:,.0f}")
     need(str(d.get("participant", "")).strip(), "participant required")
     out = {"participant": str(d["participant"]).strip(), "instrument": "EQUITY", "side": side, "underlying": sym, "expiry": "", "strike": 0.0, "option_type": "EQ", "entry_mode": mode, "entry": entry, "sl": sl,
            "targets": tg, "lots": qty, "qty": qty, "note": str(d.get("note", ""))[:300]}
-    if d.get("valid_sec") is not None:
-        vs = int(d["valid_sec"]); need(60 <= vs <= 28800, "valid_sec between 60 and 28800"); out["valid_sec"] = vs
+    vs = _valid_sec(d)
+    if vs is not None: out["valid_sec"] = vs
     return out
 
 
@@ -106,22 +131,22 @@ def validate(d: dict) -> dict:
     u = str(d.get("underlying", "")).upper(); need(u in ALLOWED, f"underlying must be one of {ALLOWED}")
     ot = str(d.get("option_type", "")).upper(); need(ot in ("CE", "PE"), "option_type CE|PE")
     mode = str(d.get("entry_mode", "NEAR")).upper(); need(mode in MODES, f"entry_mode {MODES}")
-    num = lambda k: float(d[k]) if d.get(k) is not None else None
-    strike, entry, sl = num("strike"), num("entry"), num("sl")
+    strike, entry, sl = _num(d, "strike"), _num(d, "entry"), _num(d, "sl")
     need(strike and strike > 0, "strike > 0"); need(entry and entry > 0, "entry > 0"); need(sl is None or 0 < sl < entry, "stop-loss is optional; if given it must be below the entry (long options only)")
-    tg = sorted({float(x) for x in (d.get("targets") or [])}); need(all(x > entry for x in tg), "targets are optional; if given every target must be above the entry")
+    tg = _targets(d); need(all(x > entry for x in tg), "targets are optional; if given every target must be above the entry")
     need(str(d.get("participant", "")).strip(), "participant required")
     out = {"participant": str(d["participant"]).strip(), "underlying": u, "expiry": norm_expiry(str(d["expiry"])), "strike": strike, "option_type": ot, "entry_mode": mode, "entry": entry, "sl": sl,
            "targets": tg, "note": str(d.get("note", ""))[:300]}
-    if d.get("entry_hi") is not None:                                                    # "Above 570 - 575": trigger at 570, never buy above 575 (the zone)
-        eh = float(d["entry_hi"]); need(eh >= entry, "entry zone upper end must be at or above the entry")
+    eh = _num(d, "entry_hi")
+    if eh is not None:                                                                   # "Above 570 - 575": trigger at 570, never buy above 575 (the zone)
+        need(eh >= entry, "entry zone upper end must be at or above the entry")
         if eh > entry: out["entry_hi"] = eh
-    if d.get("lots") is not None:
-        try: lots = int(d["lots"])
-        except (TypeError, ValueError): lots = 0
-        need(1 <= lots <= MAX_LOTS and lots == float(d["lots"]), f"quantity must be a whole number of lots, 1 to {MAX_LOTS}"); out["lots"] = lots
-    if d.get("valid_sec") is not None:
-        vs = int(d["valid_sec"]); need(60 <= vs <= 28800, "valid_sec between 60 and 28800"); out["valid_sec"] = vs
+    lx = _num(d, "lots")
+    if lx is not None:
+        lots = int(lx) if lx == int(lx) else 0
+        need(1 <= lots <= MAX_LOTS, f"quantity must be a whole number of lots, 1 to {MAX_LOTS}"); out["lots"] = lots
+    vs = _valid_sec(d)
+    if vs is not None: out["valid_sec"] = vs
     return out
 
 
@@ -136,7 +161,8 @@ def submit(d: dict, path: str | None = None, now: float | None = None, practice:
 def load(path: str | None = None) -> list[dict]:
     import json
     p = path or PATH
-    return [json.loads(x) for x in open(p) if x.strip()] if os.path.exists(p) else []
+    if not os.path.exists(p): return []
+    with open(p) as f: return [json.loads(x) for x in f if x.strip()]
 
 
 def validate_event(d: dict, equity: bool = False, side: str = "BUY") -> dict:
@@ -144,21 +170,21 @@ def validate_event(d: dict, equity: bool = False, side: str = "BUY") -> dict:
     need = lambda c, m: (_ for _ in ()).throw(SubmissionError(m)) if not c else None
     a = str(d.get("action", "")).upper(); need(a in ACTIONS, f"action must be one of {ACTIONS}")
     out = {"signal_id": str(d.get("signal_id", "")).strip(), "action": a}; need(out["signal_id"], "signal_id required")
-    if a == "AMEND_SL": sl = float(d.get("sl") or 0); need(sl > 0, "sl > 0"); out["sl"] = sl
+    if a == "AMEND_SL": sl = _num(d, "sl") or 0.0; need(sl > 0, "sl > 0"); out["sl"] = sl
     elif a == "AMEND_ENTRY":                                                                                  # a WAITING ABOVE / LIMIT order only: the trigger price moves, never retroactively
-        en = float(d.get("entry") or 0); need(en > 0, "entry > 0"); out["entry"] = en
-        if d.get("entry_hi") not in (None, ""): hi = float(d["entry_hi"]); need(hi >= en, "entry_hi must be >= entry"); out["entry_hi"] = hi
+        en = _num(d, "entry") or 0.0; need(en > 0, "entry > 0"); out["entry"] = en
+        hi = _num(d, "entry_hi")
+        if hi is not None: need(hi >= en, "entry_hi must be >= entry"); out["entry_hi"] = hi
     elif a == "AMEND_LOTS":
-        try: lots = int(d.get("lots"))
-        except (TypeError, ValueError): lots = 0
+        lx = _num(d, "lots"); lots = int(lx) if lx is not None and lx == int(lx) else 0
         cap = MAX_EQ_QTY if equity else MAX_LOTS
-        need(1 <= lots <= cap and lots == float(d["lots"]), f"quantity must be a whole number of {'shares' if equity else 'lots'}, 1 to {cap}"); out["lots"] = lots
+        need(1 <= lots <= cap, f"quantity must be a whole number of {'shares' if equity else 'lots'}, 1 to {cap}"); out["lots"] = lots
     elif a == "AMEND_TARGETS":
-        tg = sorted({float(x) for x in (d.get("targets") or [])}); need(tg and all(x > 0 for x in tg), "targets: at least one value > 0"); out["targets"] = tg
+        tg = _targets(d); need(tg and all(x > 0 for x in tg), "targets: at least one value > 0"); out["targets"] = tg
     elif a == "TRAIL_SL":
-        pts, pct = d.get("trail_points"), d.get("trail_pct"); need((pts is None) != (pct is None), "give exactly one of trail_points or trail_pct")
-        if pts is not None: need(float(pts) > 0, "trail_points > 0"); out["trail_points"] = float(pts)
-        else: need(0 < float(pct) < 100, "0 < trail_pct < 100"); need(not (equity and side == "SELL"), "a SELL (short) trails by points only"); out["trail_pct"] = float(pct)
+        pts, pct = _num(d, "trail_points"), _num(d, "trail_pct"); need((pts is None) != (pct is None), "give exactly one of trail_points or trail_pct")
+        if pts is not None: need(pts > 0, "trail_points > 0"); out["trail_points"] = pts
+        else: need(0 < pct < 100, "0 < trail_pct < 100"); need(not (equity and side == "SELL"), "a SELL (short) trails by points only"); out["trail_pct"] = pct
     out["note"] = str(d.get("note", ""))[:200]
     return out
 
@@ -235,8 +261,7 @@ def submit_status_correction(signal_id: str, status: str, reason: str, path: str
 
 def default_lots(participant: str, participants_file: str | None = None) -> int:
     """Default quantity (lots) of a profile: `default_lots` in data/arena/participants.json, else 1."""
-    import json as _j
     f = participants_file or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "participants.json")
-    try: n = int((_j.load(open(f, encoding="utf-8")).get(str(participant).upper(), {}) or {}).get("default_lots", 1))
+    try: n = int(((read_json_cached(f, {}) or {}).get(str(participant).upper(), {}) or {}).get("default_lots", 1))
     except Exception: n = 1
     return n if 1 <= n <= MAX_LOTS else 1

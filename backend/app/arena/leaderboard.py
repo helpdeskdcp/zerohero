@@ -1,11 +1,11 @@
 """Leaderboard rows from settled results: rank by NET profit after costs (identical settlement for everyone, the AI included). Pure function; shows totals only, never signals."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from . import settle as S
 
-IST = timezone(timedelta(hours=5, minutes=30))
+from .markets import IST  # noqa: E402
 DEFAULT_DISPLAY = {"ZEROHERO_AI": "ZeroHero AI", "ZEROHERO_AI_EVENT": "ZeroHero AI - NG event rule (separate shadow line)", "INSTITUTION_TRADER": "Mohit Agrawal", "NEERAJ_JOSHI": "Neeraj Joshi", "DHANANJAY_DALVI": "Dhananjay Dalvi"}
 
 

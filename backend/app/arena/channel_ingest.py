@@ -6,20 +6,18 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
-import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from . import channel_parse as CP
 from . import contracts as CT
 from . import submit as SU
+from .jsonio import read_json, write_json
 
-IST = timezone(timedelta(hours=5, minutes=30))
+from .markets import EXCH, IST  # noqa: E402,F401
 DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena")
 STATE = os.path.join(DIR, "channel_ingest_state.json")
 LOG = os.path.join(DIR, "channel_ingest_log.jsonl")
-EXCH = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE", "NATURALGAS": "MCX", "CRUDEOIL": "MCX", "GOLDM": "MCX"}
 
 
 def channel_ids() -> set[str]:
@@ -27,29 +25,14 @@ def channel_ids() -> set[str]:
 
 
 def _load(p, default):
-    try: return json.load(open(p))
-    except Exception: return default
-
-
-_SAVE_LOCK = threading.Lock()
+    return read_json(p, default)
 
 
 def save_json(path: str, obj) -> None:
     """Atomic JSON write: dump to a temp file in the SAME directory, then os.replace over the target. A crash or kill at any instant leaves either the complete old file or the complete new one, never the
     truncated file that `open(path, "w")` + dump leaves behind (the dedupe record `seen` lives in this state file: a truncated one would let an already submitted post be submitted again).
     Set TG_STATE_FSYNC=1 to also fsync before the rename (survives power loss, but an fsync on this shared disk can take 100+ ms inside the event loop, so it is off by default)."""
-    d = os.path.dirname(os.path.abspath(path)); os.makedirs(d, exist_ok=True)
-    with _SAVE_LOCK:
-        fd, tmp = tempfile.mkstemp(dir=d, prefix=os.path.basename(path) + ".", suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as f:
-                json.dump(obj, f)
-                if os.environ.get("TG_STATE_FSYNC") == "1": f.flush(); os.fsync(f.fileno())
-            os.replace(tmp, path)
-        except BaseException:
-            try: os.unlink(tmp)
-            except OSError: pass
-            raise
+    write_json(path, obj, fsync=os.environ.get("TG_STATE_FSYNC") == "1")
 
 
 def _log(rec: dict, log: str):

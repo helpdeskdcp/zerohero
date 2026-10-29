@@ -11,9 +11,10 @@
   * costs: brokerage + STT/exchange/regulatory-fee/stamp/GST via the cost models, slippage already inside the fills (not added twice). One lot per signal."""
 from __future__ import annotations
 
-import math
+import json
 import os
 import sqlite3
+import time
 from datetime import datetime, timezone
 
 from ..institutional_edge.costs import estimate_cost, estimate_index_option_cost
@@ -35,7 +36,10 @@ def snap_expiry(iso: str) -> str:
     d = datetime.fromisoformat(iso); return f"{d.day:02d}{MON[d.month - 1]}{d.year}"
 
 
-def _ep(ts: str) -> float: return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+def iso_epoch(ts: str) -> float: return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+
+
+_ep = iso_epoch
 
 
 def load_snaps(underlying: str, expiry_iso: str, strike: float, ot: str, day: str, path: str | None = None, since: float | None = None, instrument: str = "OPTION") -> list[dict]:
@@ -99,13 +103,31 @@ def cost_total_rs(und: str, entry: float, exit_: float, unit: int, lots: int = 1
 RULES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "rule_effective.json")
 
 
+_RULES_CACHE: dict = {"key": None, "val": {}}
+
+
+def _rules() -> dict:
+    """rule_effective.json, re-read only when the file changes (settlement asks for several rules per signal and per event: it used to open and parse the file every time). Missing / unreadable -> {} (no rule active)."""
+    try: st = os.stat(RULES_FILE)
+    except OSError: return {}
+    key = (RULES_FILE, st.st_ino, st.st_mtime_ns, st.st_size)
+    if _RULES_CACHE["key"] != key or time.time() - st.st_mtime < 2.0:                    # a file touched in the last 2 s is re-read every time (timestamps are coarse: two quick rewrites can look identical)
+        try:
+            with open(RULES_FILE, encoding="utf-8") as f: val = json.load(f)
+        except Exception: val = {}
+        _RULES_CACHE.update(key=key, val=val if isinstance(val, dict) else {})
+    return _RULES_CACHE["val"]
+
+
+def _rule_ts(name: str) -> float | None:
+    v = _rules().get(name)
+    try: return float(v) if v is not None else None
+    except (TypeError, ValueError): return None
+
+
 def rule_from(name: str) -> float | None:
     """Epoch from which a named rule applies (rule_effective.json; NOT retroactive). Absent -> inactive."""
-    try:
-        import json
-        v = json.load(open(RULES_FILE)).get(name); return float(v) if v is not None else None
-    except Exception:
-        return None
+    return _rule_ts(name)
 
 
 def latency_at(t: float, default: float = LATENCY_SEC) -> float:
@@ -113,8 +135,7 @@ def latency_at(t: float, default: float = LATENCY_SEC) -> float:
     1 s from 2026-10-29): the LAST step whose from_ts <= t applies, the same for every participant and both sides, NEVER retroactive (an earlier signal or event keeps the delay it was stamped under). Files from before the
     schedule only have `latency_from_ts` + `latency_sec` (one step). The value can only shorten the delay, never lengthen it."""
     try:
-        import json
-        d = json.load(open(RULES_FILE)); steps = d.get("latency_schedule")
+        d = _rules(); steps = d.get("latency_schedule")
         if not steps and d.get("latency_from_ts") is not None and d.get("latency_sec") is not None: steps = [[d["latency_from_ts"], d["latency_sec"]]]
         cur = None
         for f, v in sorted(([float(a), float(b)] for a, b in (steps or [])), key=lambda x: x[0]):
@@ -126,17 +147,12 @@ def latency_at(t: float, default: float = LATENCY_SEC) -> float:
 
 
 def current_latency(now: float | None = None) -> float:
-    import time as _t
-    return latency_at(now or _t.time(), LATENCY_SEC)
+    return latency_at(now or time.time(), LATENCY_SEC)
 
 
 def sl_at_fill_from() -> float | None:
     """Epoch from which the SL-at-fill rule applies (written at deployment; NOT retroactive). Absent file -> rule inactive."""
-    try:
-        import json
-        v = json.load(open(RULES_FILE)).get("sl_at_fill_from_ts"); return float(v) if v is not None else None
-    except Exception:
-        return None
+    return _rule_ts("sl_at_fill_from_ts")
 
 
 def _apply(ev: dict, st: dict) -> None:

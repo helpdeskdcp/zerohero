@@ -8,7 +8,6 @@ from datetime import datetime, timedelta, timezone
 
 from . import settle as S, spread_model as SM, submit as SU
 
-IST = timezone(timedelta(hours=5, minutes=30))
 CAPITAL = 50000.0
 
 
@@ -55,13 +54,13 @@ def _is_final(r: dict, day: str) -> bool:
 
 def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", capital: float = CAPITAL, cache: dict | None = None) -> dict:
     """cache (optional, in-memory, owned by the caller): final results are stored under the signal's full content + policy and reused, so a refresh only re-settles OPEN signals (speed with many participants)."""
-    by_part: dict[str, list] = {}; spread_cache: dict[str, dict] = {}
+    by_part: dict[str, list] = {}; spread_cache: dict[str, dict] = {}; shown: dict[str, dict] = {}         # spread_cache = measured models used for settling; shown = what the answer reports (also for cached results)
     import json as _json
     for s in sigs:
         day = datetime.fromtimestamp(s["t"] + S.IST_SEC, tz=timezone.utc).strftime("%Y-%m-%d")
         key = (_json.dumps(s, sort_keys=True, default=str), policy) if cache is not None else None
         if key is not None and key in cache:
-            r = cache[key]; spread_cache.setdefault(s["underlying"], {"half_spread": None, "source": r.get("spread_source")}); by_part.setdefault(s["participant"], []).append(r); continue
+            r = cache[key]; shown.setdefault(s["underlying"], {"half_spread": None, "source": r.get("spread_source")}); by_part.setdefault(s["participant"], []).append(r); continue           # NOT spread_cache: a placeholder with half_spread=None there was picked up by the next open signal of the same underlying (TypeError on any locked / one-sided quote)
         hs = spread_cache.get(s["underlying"])
         if hs is None and s.get("instrument") == "EQUITY":                                                    # equity quotes carry a real bid / ask; this only backs up a one-sided frame
             hs = {"half_spread": 0.0005, "source": "EQUITY_FALLBACK 0.05% [assumption]"}; spread_cache[s["underlying"]] = hs
@@ -79,4 +78,4 @@ def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", c
         r["spread_source"] = hs["source"]
         if key is not None and _is_final(r, day): cache[key] = r
         by_part.setdefault(s["participant"], []).append(r)
-    return {p: {"summary": S.summarize(rs, capital), "results": rs} for p, rs in by_part.items()} | {"_spread_models": spread_cache}
+    return {p: {"summary": S.summarize(rs, capital), "results": rs} for p, rs in by_part.items()} | {"_spread_models": {**shown, **spread_cache}}

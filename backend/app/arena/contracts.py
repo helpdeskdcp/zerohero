@@ -2,15 +2,15 @@
 become unscorable (wrong expiry, uncaptured strike, premium wildly off the market). READ-ONLY, cached 120 s, indexed queries only (session_date_ist, symbol)."""
 from __future__ import annotations
 
-import json
 import os
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from .settle import FUTURE_STAMP_SEC
 from .submit import norm_expiry
+from .jsonio import read_json, write_json
 
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "market_history.db")
 _cache: dict = {}
@@ -65,7 +65,7 @@ _CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.pa
 _refreshing: set = set(); _rlock = threading.Lock(); _file_loaded = [False]
 
 
-_IST = timezone(timedelta(hours=5, minutes=30))
+from .markets import IST as _IST  # noqa: E402
 
 
 def live_expiries(cap: dict, today: str | None = None) -> dict:
@@ -80,17 +80,15 @@ def _load_file() -> None:
     """Cold start: the previous answer (a few minutes old at worst) is served at once while a fresh one is computed in the background."""
     if _file_loaded[0]: return
     _file_loaded[0] = True
-    try:
-        d = json.load(open(_CACHE_FILE))
+    d = read_json(_CACHE_FILE, {})
+    if isinstance(d, dict):
         for u, v in d.items(): _cache.setdefault((u, None, None), (0.0, v))
-    except Exception:
-        pass
 
 
 def _persist() -> None:
     try:
         d = {k[0]: v[1] for k, v in _cache.items() if k[1] is None and k[2] is None}
-        tmp = _CACHE_FILE + ".tmp"; os.makedirs(os.path.dirname(_CACHE_FILE), exist_ok=True); json.dump(d, open(tmp, "w")); os.replace(tmp, _CACHE_FILE)
+        write_json(_CACHE_FILE, d)
     except Exception:
         pass
 
@@ -173,7 +171,6 @@ def check(underlying: str, expiry_iso: str, strike: float, ot: str, entry: float
 
 def spot_for(underlying: str, option_expiry_iso: str | None = None, path: str | None = None) -> tuple[float | None, str]:
     """Underlying price for ATM detection: the INDEX quote for index options; for MCX the FUTURE whose expiry is the nearest one on/after the option expiry. Latest polls only (PK range)."""
-    from datetime import date
     c = _ro(path)
     try:
         mx = c.execute("SELECT MAX(id) FROM quote_snapshots").fetchone()[0] or 0
@@ -248,19 +245,23 @@ def _chain(underlying: str, expiry_iso: str, option_type: str, n: int = 7, path:
 _lq_cache: dict = {}
 
 
-def latest_quote(underlying: str, expiry_iso: str, strike: float, ot: str, path: str | None = None) -> dict | None:
-    """Newest captured quote of ONE contract via the (symbol, expiry, strike, option_type, exch_ts) index: {"ltp","bid","ask","t"} or None. Cached for 1 s (many screens, one lookup)."""
-    from .settle import snap_expiry
-    key = (underlying, expiry_iso, float(strike), ot, path); hit = _lq_cache.get(key)
+def latest_by(where: str, params: tuple, path: str | None, cache: dict, key) -> dict | None:
+    """Newest captured quote selected by `where` (constant SQL text built by the callers, values in `params`) via the (symbol, ..., exch_ts) indexes: {"ltp","bid","ask","t"} or None. Cached for 1 s per `key` (many screens, one
+    lookup); the cache is emptied if it ever grows past 2000 keys. Shared by the option and the equity quote lookups."""
+    hit = cache.get(key)
     if hit and time.time() - hit[0] < 1.0: return hit[1]
     c = _ro(path)
     try:
-        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL' AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY exch_ts DESC LIMIT 1",
-                      (underlying, snap_expiry(expiry_iso), float(strike), ot)).fetchone()
+        r = c.execute("SELECT ltp,bid,ask,received_ts FROM quote_snapshots WHERE " + where + " AND ltp IS NOT NULL" + NOT_FUTURE + " ORDER BY exch_ts DESC LIMIT 1", params).fetchone()
     finally:
         c.close()
-    out = None
-    if r:
-        from datetime import datetime
-        out = {"ltp": r[0], "bid": r[1], "ask": r[2], "t": datetime.fromisoformat(r[3].replace("Z", "+00:00")).timestamp()}
-    _lq_cache[key] = (time.time(), out); return out
+    out = {"ltp": r[0], "bid": r[1], "ask": r[2], "t": datetime.fromisoformat(r[3].replace("Z", "+00:00")).timestamp()} if r else None
+    if len(cache) > 2000: cache.clear()
+    cache[key] = (time.time(), out); return out
+
+
+def latest_quote(underlying: str, expiry_iso: str, strike: float, ot: str, path: str | None = None) -> dict | None:
+    """Newest captured quote of ONE contract: {"ltp","bid","ask","t"} or None."""
+    from .settle import snap_expiry
+    return latest_by("symbol=? AND expiry=? AND strike=? AND option_type=? AND kind='OPTION' AND source='ANGELONE_QUOTE_FULL'", (underlying, snap_expiry(expiry_iso), float(strike), ot), path, _lq_cache,
+                     (underlying, expiry_iso, float(strike), ot, path))
