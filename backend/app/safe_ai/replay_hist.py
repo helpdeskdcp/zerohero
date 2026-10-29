@@ -24,20 +24,21 @@ from . import signals as SG
 IST = timezone(timedelta(hours=5, minutes=30))
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "historical", "upstox", "upstox_research.db")
 SL_FRAC, T1_FRAC, MIN_PREMIUM, MAX_TRADES_DAY, COOLDOWN_MIN = 0.25, 0.20, 30.0, 2, 30
+MAX_DTE = 2                      # the Safe AI trades only on the expiry day and the two days before it (memory: ATM +/-4 strikes of the expiry-1 spot are pulled; gamma is highest there; Mohit: 18 of 29 index posts)
 SPLIT = "2026-04-01"            # dev (Sep-2025 .. Mar-2026) / hold-out (Apr-2026 .. Oct-2026)
 
 
 def _ts(x: str) -> float: return datetime.fromisoformat(x).timestamp()
 
 
-def load(db=DB):
+def load(db=DB, und="NIFTY"):
     c = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=60)
     idx = defaultdict(list); hl: dict = {}
-    for t, o, h, l, cl in c.execute("SELECT timestamp, open, high, low, close FROM normalized_bars WHERE symbol='NIFTY' AND timeframe='1m' ORDER BY timestamp"):
+    for t, o, h, l, cl in c.execute("SELECT timestamp, open, high, low, close FROM normalized_bars WHERE symbol=? AND timeframe='1m' ORDER BY timestamp", (und,)):
         idx[t[:10]].append((_ts(t) + 60.0, float(cl)))                       # a bar's close is known at its end
         a = hl.setdefault(t[:10], [float(h), float(l)]); a[0] = max(a[0], float(h)); a[1] = min(a[1], float(l))
     opt = defaultdict(dict)                                                  # (expiry, strike, type) -> {bar_start_epoch: (o,h,l,c)}
-    for e, k, ot, t, o, h, l, cl, oi in c.execute("SELECT expiry, strike, option_type, timestamp, open, high, low, close, open_interest FROM normalized_option_bars WHERE interval='1minute' AND open IS NOT NULL AND high IS NOT NULL AND low IS NOT NULL ORDER BY timestamp"):
+    for e, k, ot, t, o, h, l, cl, oi in c.execute("SELECT expiry, strike, option_type, timestamp, open, high, low, close, open_interest FROM normalized_option_bars WHERE underlying=? AND interval='1minute' AND open IS NOT NULL AND high IS NOT NULL AND low IS NOT NULL AND substr(timestamp,1,10) <= expiry AND substr(timestamp,1,10) >= date(expiry,'-2 day') ORDER BY timestamp", (und,)):
         opt[(e, float(k), ot)][_ts(t)] = (float(o), float(h), float(l), float(cl), None if oi is None else float(oi))
     c.close(); load.hl = hl; return idx, opt
 
@@ -62,9 +63,9 @@ def oi_confirms(opt, exp, k, side, t, minutes=15, step=50.0):
     return score > 0 if side == "CE" else score < 0
 
 
-def simulate(idx, opt, thrust=0.005, half_spread=0.005, since="2025-09-01", until="2026-12-31", family="uturn", sl_frac=None, t1_frac=None, oi_filter=False):
+def simulate(idx, opt, thrust=0.005, half_spread=0.005, since="2025-09-01", until="2026-12-31", family="uturn", sl_frac=None, t1_frac=None, oi_filter=False, und="NIFTY", atm_tol=50.0):
     sl_frac = SL_FRAC if sl_frac is None else sl_frac; t1_frac = T1_FRAC if t1_frac is None else t1_frac
-    p = SG.Params(thrust=thrust) if family == "uturn" else SG.SweepParams(); hl = getattr(load, "hl", {}); days_sorted = sorted(idx); lot = int(get_instrument_profile("NIFTY").lot_size.value); trades = []; skipped = defaultdict(int)
+    p = SG.Params(thrust=thrust) if family == "uturn" else SG.SweepParams(); hl = getattr(load, "hl", {}); days_sorted = sorted(idx); lot = int(get_instrument_profile(und).lot_size.value); trades = []; skipped = defaultdict(int)
     expiries = sorted({k[0] for k in opt}); strikes_by_exp = defaultdict(set)
     for (e, k, ot) in opt: strikes_by_exp[e].add(k)
     for day in sorted(d for d in idx if since <= d <= until):
@@ -72,7 +73,9 @@ def simulate(idx, opt, thrust=0.005, half_spread=0.005, since="2025-09-01", unti
         if len(ticks) < 200: skipped["short_day"] += 1; continue
         exps = [e for e in expiries if e >= day]
         if not exps: skipped["no_option_data_for_day"] += 1; continue
-        exp = exps[0]; expiry_day = exp == day; n_day = 0; busy = 0.0; stopped = False
+        exp = exps[0]
+        if (datetime.fromisoformat(exp).date() - datetime.fromisoformat(day).date()).days > MAX_DTE: skipped["dte_above_limit"] += 1; continue          # only days 0..2 before the expiry are loaded and traded
+        expiry_day = exp == day; n_day = 0; busy = 0.0; stopped = False
         for i in range(20, len(ticks)):
             t, px = ticks[i]
             if stopped or n_day >= MAX_TRADES_DAY or t < busy or not SG.in_window(t, p, expiry_day): continue
@@ -84,8 +87,8 @@ def simulate(idx, opt, thrust=0.005, half_spread=0.005, since="2025-09-01", unti
             ks = strikes_by_exp.get(exp) or set()
             if not ks: skipped["no_strikes"] += 1; continue
             k = min(ks, key=lambda s: abs(s - px))
-            if abs(k - px) > 50: skipped["atm_strike_not_in_data"] += 1; continue
-            if oi_filter and not oi_confirms(opt, exp, k, sig["side"], t): skipped["oi_not_confirming"] += 1; continue
+            if abs(k - px) > atm_tol: skipped["atm_strike_not_in_data"] += 1; continue
+            if oi_filter and not oi_confirms(opt, exp, k, sig["side"], t, step=atm_tol): skipped["oi_not_confirming"] += 1; continue
             bars = opt.get((exp, k, sig["side"])) or {}
             nxt = sorted(b for b in bars if b >= t)
             if not nxt or nxt[0] - t > 180: skipped["no_option_bar_after_signal"] += 1; continue
@@ -105,7 +108,7 @@ def simulate(idx, opt, thrust=0.005, half_spread=0.005, since="2025-09-01", unti
                 last = [b for b in nxt if b < end_t]
                 if not last: skipped["no_exit_bar"] += 1; n_day -= 1; continue
                 exit_px, why, exit_t = bars[last[-1]][3], "TIME", last[-1]
-            sell = exit_px * (1 - half_spread); gross = (sell - fill) * lot; cost = S.cost_total_rs("NIFTY", fill, sell, lot, 1) or 0.0
+            sell = exit_px * (1 - half_spread); gross = (sell - fill) * lot; cost = S.cost_total_rs(und, fill, sell, lot, 1) or 0.0
             trades.append({"day": day, "t": datetime.fromtimestamp(t, IST).strftime("%H:%M"), "side": sig["side"], "expiry": exp, "dte": (datetime.fromisoformat(exp).date() - datetime.fromisoformat(day).date()).days, "strike": k, "fill": round(fill, 2),
                            "exit": round(sell, 2), "why": why, "gross": round(gross, 1), "cost": round(cost, 1), "net": round(gross - cost, 1), "thrust": sig["features"].get("thrust_pct", sig["features"].get("overshoot_pct"))})
             busy = exit_t + 60 + COOLDOWN_MIN * 60

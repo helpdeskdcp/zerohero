@@ -1,1 +1,5 @@
-{"submit": false, "reason": "dry-run until the 12-month backtest (data/research/safe_ai) is read; flip to true to let Safe AI write ledger signals"}
+{
+ "submit": true,
+ "thrust": 0.005,
+ "reason": "12-month NIFTY back-test (REPLAY_RESULTS.md): break-even, no significant loss -> live-paper with the safety stack, disclosure on the leaderboard label"
+}

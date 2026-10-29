@@ -1,653 +1,1809 @@
 {
- "uturn_0.0035_0.0025": {
+ "uturn_0.0035_0.005_oi0": {
   "all": {
    "label": "all",
-   "trades": 57,
-   "days_traded": 46,
-   "win_rate": 0.421,
-   "net_rs": -18785,
-   "net_per_trade": -329.6,
+   "trades": 110,
+   "days_traded": 78,
+   "win_rate": 0.527,
+   "net_rs": -10280,
+   "net_per_trade": -93.5,
    "ci95_per_trade": [
-    -686,
-    -8
+    -332,
+    133
    ],
-   "avg_win": 1048,
-   "avg_loss": -1331,
-   "profit_factor": 0.57,
-   "worst": -2396,
-   "max_drawdown": 22222,
+   "avg_win": 989,
+   "avg_loss": -1301,
+   "profit_factor": 0.85,
+   "worst": -3899,
+   "max_drawdown": 17372,
    "exits": {
-    "SL": 31,
-    "TARGET": 23,
+    "SL": 49,
+    "SL(gap)": 1,
+    "TARGET": 55,
+    "TARGET(gap)": 2,
     "TIME": 3
    }
   },
   "dev": {
    "label": "dev",
-   "trades": 57,
-   "days_traded": 46,
-   "win_rate": 0.421,
-   "net_rs": -18785,
-   "net_per_trade": -329.6,
+   "trades": 54,
+   "days_traded": 40,
+   "win_rate": 0.463,
+   "net_rs": -10254,
+   "net_per_trade": -189.9,
    "ci95_per_trade": [
-    -686,
-    -8
+    -548,
+    146
    ],
-   "avg_win": 1048,
-   "avg_loss": -1331,
-   "profit_factor": 0.57,
-   "worst": -2396,
-   "max_drawdown": 22222,
+   "avg_win": 1108,
+   "avg_loss": -1309,
+   "profit_factor": 0.73,
+   "worst": -3899,
+   "max_drawdown": 17372,
    "exits": {
-    "SL": 31,
-    "TARGET": 23,
-    "TIME": 3
+    "SL": 27,
+    "SL(gap)": 1,
+    "TARGET": 25,
+    "TIME": 1
    }
   },
   "hold": {
    "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "atm_strike_not_in_data": 41,
-   "premium_too_low": 12,
-   "short_day": 1,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.0035_0.005": {
-  "all": {
-   "label": "all",
-   "trades": 57,
-   "days_traded": 46,
-   "win_rate": 0.404,
-   "net_rs": -21664,
-   "net_per_trade": -380.1,
+   "trades": 56,
+   "days_traded": 38,
+   "win_rate": 0.589,
+   "net_rs": -26,
+   "net_per_trade": -0.5,
    "ci95_per_trade": [
-    -738,
-    -52
+    -311,
+    281
    ],
-   "avg_win": 1043,
-   "avg_loss": -1343,
-   "profit_factor": 0.53,
-   "worst": -2419,
-   "max_drawdown": 24780,
+   "avg_win": 899,
+   "avg_loss": -1291,
+   "profit_factor": 1.0,
+   "worst": -2570,
+   "max_drawdown": 12489,
    "exits": {
-    "SL": 32,
-    "TARGET": 22,
-    "TIME": 3
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 57,
-   "days_traded": 46,
-   "win_rate": 0.404,
-   "net_rs": -21664,
-   "net_per_trade": -380.1,
-   "ci95_per_trade": [
-    -738,
-    -52
-   ],
-   "avg_win": 1043,
-   "avg_loss": -1343,
-   "profit_factor": 0.53,
-   "worst": -2419,
-   "max_drawdown": 24780,
-   "exits": {
-    "SL": 32,
-    "TARGET": 22,
-    "TIME": 3
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "atm_strike_not_in_data": 41,
-   "premium_too_low": 12,
-   "short_day": 1,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.0035_0.01": {
-  "all": {
-   "label": "all",
-   "trades": 57,
-   "days_traded": 46,
-   "win_rate": 0.404,
-   "net_rs": -23331,
-   "net_per_trade": -409.3,
-   "ci95_per_trade": [
-    -769,
-    -82
-   ],
-   "avg_win": 1011,
-   "avg_loss": -1370,
-   "profit_factor": 0.5,
-   "worst": -2466,
-   "max_drawdown": 26027,
-   "exits": {
-    "SL": 32,
-    "TARGET": 22,
-    "TIME": 3
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 57,
-   "days_traded": 46,
-   "win_rate": 0.404,
-   "net_rs": -23331,
-   "net_per_trade": -409.3,
-   "ci95_per_trade": [
-    -769,
-    -82
-   ],
-   "avg_win": 1011,
-   "avg_loss": -1370,
-   "profit_factor": 0.5,
-   "worst": -2466,
-   "max_drawdown": 26027,
-   "exits": {
-    "SL": 32,
-    "TARGET": 22,
-    "TIME": 3
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "atm_strike_not_in_data": 41,
-   "premium_too_low": 12,
-   "short_day": 1,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.005_0.0025": {
-  "all": {
-   "label": "all",
-   "trades": 27,
-   "days_traded": 23,
-   "win_rate": 0.481,
-   "net_rs": -7111,
-   "net_per_trade": -263.4,
-   "ci95_per_trade": [
-    -720,
-    161
-   ],
-   "avg_win": 904,
-   "avg_loss": -1347,
-   "profit_factor": 0.62,
-   "worst": -2252,
-   "max_drawdown": 7111,
-   "exits": {
-    "SL": 14,
-    "TARGET": 11,
+    "SL": 22,
+    "TARGET": 30,
+    "TARGET(gap)": 2,
     "TIME": 2
    }
   },
-  "dev": {
-   "label": "dev",
-   "trades": 27,
-   "days_traded": 23,
-   "win_rate": 0.481,
-   "net_rs": -7111,
-   "net_per_trade": -263.4,
-   "ci95_per_trade": [
-    -720,
-    161
-   ],
-   "avg_win": 904,
-   "avg_loss": -1347,
-   "profit_factor": 0.62,
-   "worst": -2252,
-   "max_drawdown": 7111,
-   "exits": {
-    "SL": 14,
-    "TARGET": 11,
-    "TIME": 2
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
   "skipped": {
+   "dte_above_limit": 171,
+   "premium_too_low": 16,
    "short_day": 1,
-   "atm_strike_not_in_data": 20,
-   "no_option_data_for_day": 204
+   "atm_strike_not_in_data": 145,
+   "no_option_data_for_day": 1
   }
  },
- "uturn_0.005_0.005": {
+ "uturn_0.0035_0.0025_oi0": {
   "all": {
    "label": "all",
-   "trades": 27,
-   "days_traded": 23,
-   "win_rate": 0.444,
-   "net_rs": -9460,
-   "net_per_trade": -350.4,
+   "trades": 110,
+   "days_traded": 78,
+   "win_rate": 0.536,
+   "net_rs": -6811,
+   "net_per_trade": -61.9,
    "ci95_per_trade": [
-    -797,
-    74
-   ],
-   "avg_win": 895,
-   "avg_loss": -1346,
-   "profit_factor": 0.53,
-   "worst": -2274,
-   "max_drawdown": 9460,
-   "exits": {
-    "SL": 15,
-    "TARGET": 10,
-    "TIME": 2
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 27,
-   "days_traded": 23,
-   "win_rate": 0.444,
-   "net_rs": -9460,
-   "net_per_trade": -350.4,
-   "ci95_per_trade": [
-    -797,
-    74
-   ],
-   "avg_win": 895,
-   "avg_loss": -1346,
-   "profit_factor": 0.53,
-   "worst": -2274,
-   "max_drawdown": 9460,
-   "exits": {
-    "SL": 15,
-    "TARGET": 10,
-    "TIME": 2
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "short_day": 1,
-   "atm_strike_not_in_data": 20,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.005_0.01": {
-  "all": {
-   "label": "all",
-   "trades": 27,
-   "days_traded": 23,
-   "win_rate": 0.444,
-   "net_rs": -10286,
-   "net_per_trade": -380.9,
-   "ci95_per_trade": [
-    -823,
-    43
-   ],
-   "avg_win": 858,
-   "avg_loss": -1372,
-   "profit_factor": 0.5,
-   "worst": -2318,
-   "max_drawdown": 10286,
-   "exits": {
-    "SL": 15,
-    "TARGET": 10,
-    "TIME": 2
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 27,
-   "days_traded": 23,
-   "win_rate": 0.444,
-   "net_rs": -10286,
-   "net_per_trade": -380.9,
-   "ci95_per_trade": [
-    -823,
-    43
-   ],
-   "avg_win": 858,
-   "avg_loss": -1372,
-   "profit_factor": 0.5,
-   "worst": -2318,
-   "max_drawdown": 10286,
-   "exits": {
-    "SL": 15,
-    "TARGET": 10,
-    "TIME": 2
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "short_day": 1,
-   "atm_strike_not_in_data": 20,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.007_0.0025": {
-  "all": {
-   "label": "all",
-   "trades": 11,
-   "days_traded": 8,
-   "win_rate": 0.636,
-   "net_rs": 1428,
-   "net_per_trade": 129.8,
-   "ci95_per_trade": [
-    -601,
-    774
-   ],
-   "avg_win": 985,
-   "avg_loss": -1367,
-   "profit_factor": 1.26,
-   "worst": -1855,
-   "max_drawdown": 1904,
-   "exits": {
-    "SL": 4,
-    "TARGET": 7
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 11,
-   "days_traded": 8,
-   "win_rate": 0.636,
-   "net_rs": 1428,
-   "net_per_trade": 129.8,
-   "ci95_per_trade": [
-    -601,
-    774
-   ],
-   "avg_win": 985,
-   "avg_loss": -1367,
-   "profit_factor": 1.26,
-   "worst": -1855,
-   "max_drawdown": 1904,
-   "exits": {
-    "SL": 4,
-    "TARGET": 7
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "short_day": 1,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.007_0.005": {
-  "all": {
-   "label": "all",
-   "trades": 11,
-   "days_traded": 8,
-   "win_rate": 0.636,
-   "net_rs": 1282,
-   "net_per_trade": 116.6,
-   "ci95_per_trade": [
-    -615,
-    759
-   ],
-   "avg_win": 972,
-   "avg_loss": -1380,
-   "profit_factor": 1.23,
-   "worst": -1873,
-   "max_drawdown": 1949,
-   "exits": {
-    "SL": 4,
-    "TARGET": 7
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 11,
-   "days_traded": 8,
-   "win_rate": 0.636,
-   "net_rs": 1282,
-   "net_per_trade": 116.6,
-   "ci95_per_trade": [
-    -615,
-    759
-   ],
-   "avg_win": 972,
-   "avg_loss": -1380,
-   "profit_factor": 1.23,
-   "worst": -1873,
-   "max_drawdown": 1949,
-   "exits": {
-    "SL": 4,
-    "TARGET": 7
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "short_day": 1,
-   "no_option_data_for_day": 204
-  }
- },
- "uturn_0.007_0.01": {
-  "all": {
-   "label": "all",
-   "trades": 11,
-   "days_traded": 8,
-   "win_rate": 0.636,
-   "net_rs": 989,
-   "net_per_trade": 89.9,
-   "ci95_per_trade": [
-    -644,
-    729
-   ],
-   "avg_win": 945,
-   "avg_loss": -1406,
-   "profit_factor": 1.18,
-   "worst": -1909,
-   "max_drawdown": 2041,
-   "exits": {
-    "SL": 4,
-    "TARGET": 7
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 11,
-   "days_traded": 8,
-   "win_rate": 0.636,
-   "net_rs": 989,
-   "net_per_trade": 89.9,
-   "ci95_per_trade": [
-    -644,
-    729
-   ],
-   "avg_win": 945,
-   "avg_loss": -1406,
-   "profit_factor": 1.18,
-   "worst": -1909,
-   "max_drawdown": 2041,
-   "exits": {
-    "SL": 4,
-    "TARGET": 7
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "short_day": 1,
-   "no_option_data_for_day": 204
-  }
- },
- "sweep_0.005_0.0025": {
-  "all": {
-   "label": "all",
-   "trades": 14,
-   "days_traded": 14,
-   "win_rate": 0.5,
-   "net_rs": -3870,
-   "net_per_trade": -276.5,
-   "ci95_per_trade": [
-    -1005,
-    424
-   ],
-   "avg_win": 1013,
-   "avg_loss": -1566,
-   "profit_factor": 0.65,
-   "worst": -2480,
-   "max_drawdown": 7738,
-   "exits": {
-    "SL": 7,
-    "TARGET": 7
-   }
-  },
-  "dev": {
-   "label": "dev",
-   "trades": 14,
-   "days_traded": 14,
-   "win_rate": 0.5,
-   "net_rs": -3870,
-   "net_per_trade": -276.5,
-   "ci95_per_trade": [
-    -1005,
-    424
-   ],
-   "avg_win": 1013,
-   "avg_loss": -1566,
-   "profit_factor": 0.65,
-   "worst": -2480,
-   "max_drawdown": 7738,
-   "exits": {
-    "SL": 7,
-    "TARGET": 7
-   }
-  },
-  "hold": {
-   "label": "hold-out",
-   "trades": 0
-  },
-  "skipped": {
-   "atm_strike_not_in_data": 31,
-   "short_day": 1,
-   "no_option_bar_after_signal": 9,
-   "no_option_data_for_day": 204
-  }
- },
- "sweep_0.005_0.005": {
-  "all": {
-   "label": "all",
-   "trades": 14,
-   "days_traded": 14,
-   "win_rate": 0.5,
-   "net_rs": -4072,
-   "net_per_trade": -290.9,
-   "ci95_per_trade": [
-    -1020,
-    410
+    -297,
+    168
    ],
    "avg_win": 1000,
-   "avg_loss": -1581,
-   "profit_factor": 0.63,
-   "worst": -2504,
-   "max_drawdown": 7887,
+   "avg_loss": -1291,
+   "profit_factor": 0.9,
+   "worst": -3861,
+   "max_drawdown": 15071,
    "exits": {
-    "SL": 7,
-    "TARGET": 7
+    "SL": 48,
+    "SL(gap)": 1,
+    "TARGET": 56,
+    "TARGET(gap)": 2,
+    "TIME": 3
    }
   },
   "dev": {
    "label": "dev",
-   "trades": 14,
-   "days_traded": 14,
-   "win_rate": 0.5,
-   "net_rs": -4072,
-   "net_per_trade": -290.9,
+   "trades": 54,
+   "days_traded": 40,
+   "win_rate": 0.481,
+   "net_rs": -7554,
+   "net_per_trade": -139.9,
    "ci95_per_trade": [
-    -1020,
-    410
+    -495,
+    197
    ],
-   "avg_win": 1000,
-   "avg_loss": -1581,
-   "profit_factor": 0.63,
-   "worst": -2504,
-   "max_drawdown": 7887,
+   "avg_win": 1111,
+   "avg_loss": -1301,
+   "profit_factor": 0.79,
+   "worst": -3861,
+   "max_drawdown": 15071,
    "exits": {
-    "SL": 7,
-    "TARGET": 7
+    "SL": 26,
+    "SL(gap)": 1,
+    "TARGET": 26,
+    "TIME": 1
    }
   },
   "hold": {
    "label": "hold-out",
-   "trades": 0
+   "trades": 56,
+   "days_traded": 38,
+   "win_rate": 0.589,
+   "net_rs": 744,
+   "net_per_trade": 13.3,
+   "ci95_per_trade": [
+    -298,
+    296
+   ],
+   "avg_win": 914,
+   "avg_loss": -1278,
+   "profit_factor": 1.03,
+   "worst": -2546,
+   "max_drawdown": 12157,
+   "exits": {
+    "SL": 22,
+    "TARGET": 30,
+    "TARGET(gap)": 2,
+    "TIME": 2
+   }
   },
   "skipped": {
-   "atm_strike_not_in_data": 31,
+   "dte_above_limit": 171,
+   "premium_too_low": 16,
    "short_day": 1,
-   "no_option_bar_after_signal": 9,
-   "no_option_data_for_day": 204
+   "atm_strike_not_in_data": 145,
+   "no_option_data_for_day": 1
   }
  },
- "sweep_0.005_0.01": {
+ "uturn_0.0035_0.01_oi0": {
   "all": {
    "label": "all",
-   "trades": 14,
-   "days_traded": 14,
-   "win_rate": 0.5,
-   "net_rs": -4477,
-   "net_per_trade": -319.8,
+   "trades": 110,
+   "days_traded": 78,
+   "win_rate": 0.527,
+   "net_rs": -13297,
+   "net_per_trade": -120.9,
    "ci95_per_trade": [
-    -1049,
-    382
+    -358,
+    104
    ],
-   "avg_win": 972,
-   "avg_loss": -1612,
-   "profit_factor": 0.6,
-   "worst": -2553,
-   "max_drawdown": 8186,
+   "avg_win": 960,
+   "avg_loss": -1326,
+   "profit_factor": 0.81,
+   "worst": -3975,
+   "max_drawdown": 18036,
    "exits": {
-    "SL": 7,
-    "TARGET": 7
+    "SL": 50,
+    "TARGET": 55,
+    "TARGET(gap)": 2,
+    "TIME": 3
    }
   },
   "dev": {
    "label": "dev",
-   "trades": 14,
-   "days_traded": 14,
-   "win_rate": 0.5,
-   "net_rs": -4477,
-   "net_per_trade": -319.8,
+   "trades": 54,
+   "days_traded": 40,
+   "win_rate": 0.463,
+   "net_rs": -11723,
+   "net_per_trade": -217.1,
    "ci95_per_trade": [
-    -1049,
-    382
+    -570,
+    117
    ],
-   "avg_win": 972,
-   "avg_loss": -1612,
-   "profit_factor": 0.6,
-   "worst": -2553,
-   "max_drawdown": 8186,
+   "avg_win": 1077,
+   "avg_loss": -1333,
+   "profit_factor": 0.7,
+   "worst": -3975,
+   "max_drawdown": 18036,
    "exits": {
-    "SL": 7,
-    "TARGET": 7
+    "SL": 28,
+    "TARGET": 25,
+    "TIME": 1
    }
   },
   "hold": {
    "label": "hold-out",
-   "trades": 0
+   "trades": 56,
+   "days_traded": 38,
+   "win_rate": 0.589,
+   "net_rs": -1575,
+   "net_per_trade": -28.1,
+   "ci95_per_trade": [
+    -337,
+    254
+   ],
+   "avg_win": 871,
+   "avg_loss": -1318,
+   "profit_factor": 0.95,
+   "worst": -2620,
+   "max_drawdown": 13157,
+   "exits": {
+    "SL": 22,
+    "TARGET": 30,
+    "TARGET(gap)": 2,
+    "TIME": 2
+   }
   },
   "skipped": {
-   "atm_strike_not_in_data": 31,
+   "dte_above_limit": 171,
+   "premium_too_low": 16,
+   "short_day": 1,
+   "atm_strike_not_in_data": 145,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.005_0.005_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 67,
+   "days_traded": 49,
+   "win_rate": 0.597,
+   "net_rs": 1315,
+   "net_per_trade": 19.6,
+   "ci95_per_trade": [
+    -321,
+    338
+   ],
+   "avg_win": 1065,
+   "avg_loss": -1529,
+   "profit_factor": 1.03,
+   "worst": -3899,
+   "max_drawdown": 8223,
+   "exits": {
+    "SL": 26,
+    "SL(gap)": 1,
+    "TARGET": 38,
+    "TARGET(gap)": 1,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 36,
+   "days_traded": 27,
+   "win_rate": 0.556,
+   "net_rs": -1288,
+   "net_per_trade": -35.8,
+   "ci95_per_trade": [
+    -587,
+    460
+   ],
+   "avg_win": 1183,
+   "avg_loss": -1559,
+   "profit_factor": 0.95,
+   "worst": -3899,
+   "max_drawdown": 7424,
+   "exits": {
+    "SL": 15,
+    "SL(gap)": 1,
+    "TARGET": 20
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 31,
+   "days_traded": 22,
+   "win_rate": 0.645,
+   "net_rs": 2603,
+   "net_per_trade": 84.0,
+   "ci95_per_trade": [
+    -357,
+    484
+   ],
+   "avg_win": 947,
+   "avg_loss": -1485,
+   "profit_factor": 1.16,
+   "worst": -2570,
+   "max_drawdown": 8223,
+   "exits": {
+    "SL": 11,
+    "TARGET": 18,
+    "TARGET(gap)": 1,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "atm_strike_not_in_data": 134,
+   "premium_too_low": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.005_0.0025_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 67,
+   "days_traded": 49,
+   "win_rate": 0.612,
+   "net_rs": 4286,
+   "net_per_trade": 64.0,
+   "ci95_per_trade": [
+    -276,
+    387
+   ],
+   "avg_win": 1074,
+   "avg_loss": -1528,
+   "profit_factor": 1.11,
+   "worst": -3861,
+   "max_drawdown": 8046,
+   "exits": {
+    "SL": 25,
+    "SL(gap)": 1,
+    "TARGET": 39,
+    "TARGET(gap)": 1,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 36,
+   "days_traded": 27,
+   "win_rate": 0.583,
+   "net_rs": 1218,
+   "net_per_trade": 33.8,
+   "ci95_per_trade": [
+    -510,
+    538
+   ],
+   "avg_win": 1179,
+   "avg_loss": -1570,
+   "profit_factor": 1.05,
+   "worst": -3861,
+   "max_drawdown": 5834,
+   "exits": {
+    "SL": 14,
+    "SL(gap)": 1,
+    "TARGET": 21
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 31,
+   "days_traded": 22,
+   "win_rate": 0.645,
+   "net_rs": 3068,
+   "net_per_trade": 99.0,
+   "ci95_per_trade": [
+    -342,
+    500
+   ],
+   "avg_win": 962,
+   "avg_loss": -1471,
+   "profit_factor": 1.19,
+   "worst": -2546,
+   "max_drawdown": 8046,
+   "exits": {
+    "SL": 11,
+    "TARGET": 18,
+    "TARGET(gap)": 1,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "atm_strike_not_in_data": 134,
+   "premium_too_low": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.005_0.01_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 67,
+   "days_traded": 49,
+   "win_rate": 0.597,
+   "net_rs": -701,
+   "net_per_trade": -10.5,
+   "ci95_per_trade": [
+    -350,
+    306
+   ],
+   "avg_win": 1033,
+   "avg_loss": -1556,
+   "profit_factor": 0.98,
+   "worst": -3975,
+   "max_drawdown": 8716,
+   "exits": {
+    "SL": 27,
+    "TARGET": 38,
+    "TARGET(gap)": 1,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 36,
+   "days_traded": 27,
+   "win_rate": 0.556,
+   "net_rs": -2367,
+   "net_per_trade": -65.7,
+   "ci95_per_trade": [
+    -619,
+    428
+   ],
+   "avg_win": 1150,
+   "avg_loss": -1585,
+   "profit_factor": 0.91,
+   "worst": -3975,
+   "max_drawdown": 7746,
+   "exits": {
+    "SL": 16,
+    "TARGET": 20
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 31,
+   "days_traded": 22,
+   "win_rate": 0.645,
+   "net_rs": 1665,
+   "net_per_trade": 53.7,
+   "ci95_per_trade": [
+    -388,
+    452
+   ],
+   "avg_win": 916,
+   "avg_loss": -1513,
+   "profit_factor": 1.1,
+   "worst": -2620,
+   "max_drawdown": 8716,
+   "exits": {
+    "SL": 11,
+    "TARGET": 18,
+    "TARGET(gap)": 1,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "atm_strike_not_in_data": 134,
+   "premium_too_low": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.007_0.005_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 35,
+   "days_traded": 25,
+   "win_rate": 0.686,
+   "net_rs": 3086,
+   "net_per_trade": 88.2,
+   "ci95_per_trade": [
+    -333,
+    454
+   ],
+   "avg_win": 1068,
+   "avg_loss": -2049,
+   "profit_factor": 1.14,
+   "worst": -3899,
+   "max_drawdown": 8614,
+   "exits": {
+    "SL": 11,
+    "TARGET": 21,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 20,
+   "days_traded": 13,
+   "win_rate": 0.65,
+   "net_rs": -308,
+   "net_per_trade": -15.4,
+   "ci95_per_trade": [
+    -668,
+    518
+   ],
+   "avg_win": 1296,
+   "avg_loss": -2452,
+   "profit_factor": 0.98,
+   "worst": -3899,
+   "max_drawdown": 8614,
+   "exits": {
+    "SL": 7,
+    "TARGET": 13
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 15,
+   "days_traded": 12,
+   "win_rate": 0.733,
+   "net_rs": 3393,
+   "net_per_trade": 226.2,
+   "ci95_per_trade": [
+    -377,
+    701
+   ],
+   "avg_win": 797,
+   "avg_loss": -1344,
+   "profit_factor": 1.63,
+   "worst": -2092,
+   "max_drawdown": 4333,
+   "exits": {
+    "SL": 4,
+    "TARGET": 8,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "atm_strike_not_in_data": 104,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.007_0.0025_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 35,
+   "days_traded": 25,
+   "win_rate": 0.686,
+   "net_rs": 3777,
+   "net_per_trade": 107.9,
+   "ci95_per_trade": [
+    -313,
+    474
+   ],
+   "avg_win": 1086,
+   "avg_loss": -2026,
+   "profit_factor": 1.17,
+   "worst": -3861,
+   "max_drawdown": 8439,
+   "exits": {
+    "SL": 11,
+    "TARGET": 21,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 20,
+   "days_traded": 13,
+   "win_rate": 0.65,
+   "net_rs": 123,
+   "net_per_trade": 6.2,
+   "ci95_per_trade": [
+    -641,
+    534
+   ],
+   "avg_win": 1314,
+   "avg_loss": -2423,
+   "profit_factor": 1.01,
+   "worst": -3861,
+   "max_drawdown": 8439,
+   "exits": {
+    "SL": 7,
+    "TARGET": 13
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 15,
+   "days_traded": 12,
+   "win_rate": 0.733,
+   "net_rs": 3654,
+   "net_per_trade": 243.6,
+   "ci95_per_trade": [
+    -358,
+    718
+   ],
+   "avg_win": 816,
+   "avg_loss": -1331,
+   "profit_factor": 1.69,
+   "worst": -2072,
+   "max_drawdown": 4292,
+   "exits": {
+    "SL": 4,
+    "TARGET": 8,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "atm_strike_not_in_data": 104,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.007_0.01_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 34,
+   "days_traded": 25,
+   "win_rate": 0.676,
+   "net_rs": -1666,
+   "net_per_trade": -49.0,
+   "ci95_per_trade": [
+    -571,
+    383
+   ],
+   "avg_win": 965,
+   "avg_loss": -2168,
+   "profit_factor": 0.93,
+   "worst": -3975,
+   "max_drawdown": 10157,
+   "exits": {
+    "SL": 11,
+    "TARGET": 20,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 19,
+   "days_traded": 13,
+   "win_rate": 0.632,
+   "net_rs": -4537,
+   "net_per_trade": -238.8,
+   "ci95_per_trade": [
+    -1052,
+    407
+   ],
+   "avg_win": 1153,
+   "avg_loss": -2625,
+   "profit_factor": 0.75,
+   "worst": -3975,
+   "max_drawdown": 10063,
+   "exits": {
+    "SL": 7,
+    "TARGET": 12
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 15,
+   "days_traded": 12,
+   "win_rate": 0.733,
+   "net_rs": 2871,
+   "net_per_trade": 191.4,
+   "ci95_per_trade": [
+    -404,
+    664
+   ],
+   "avg_win": 759,
+   "avg_loss": -1369,
+   "profit_factor": 1.52,
+   "worst": -2132,
+   "max_drawdown": 4416,
+   "exits": {
+    "SL": 4,
+    "TARGET": 8,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "atm_strike_not_in_data": 104,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.0035_0.005_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 101,
+   "days_traded": 74,
+   "win_rate": 0.545,
+   "net_rs": -9624,
+   "net_per_trade": -95.3,
+   "ci95_per_trade": [
+    -367,
+    146
+   ],
+   "avg_win": 952,
+   "avg_loss": -1347,
+   "profit_factor": 0.84,
+   "worst": -3899,
+   "max_drawdown": 15947,
+   "exits": {
+    "SL": 44,
+    "SL(gap)": 1,
+    "TARGET": 53,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 48,
+   "days_traded": 38,
+   "win_rate": 0.458,
+   "net_rs": -13307,
+   "net_per_trade": -277.2,
+   "ci95_per_trade": [
+    -712,
+    122
+   ],
+   "avg_win": 1029,
+   "avg_loss": -1382,
+   "profit_factor": 0.63,
+   "worst": -3899,
+   "max_drawdown": 15947,
+   "exits": {
+    "SL": 25,
+    "SL(gap)": 1,
+    "TARGET": 22
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 53,
+   "days_traded": 36,
+   "win_rate": 0.623,
+   "net_rs": 3683,
+   "net_per_trade": 69.5,
+   "ci95_per_trade": [
+    -249,
+    350
+   ],
+   "avg_win": 900,
+   "avg_loss": -1301,
+   "profit_factor": 1.14,
+   "worst": -2570,
+   "max_drawdown": 5771,
+   "exits": {
+    "SL": 19,
+    "TARGET": 31,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 141,
+   "short_day": 1,
+   "premium_too_low": 19,
+   "atm_strike_not_in_data": 152,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.0035_0.0025_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 101,
+   "days_traded": 74,
+   "win_rate": 0.545,
+   "net_rs": -8241,
+   "net_per_trade": -81.6,
+   "ci95_per_trade": [
+    -353,
+    160
+   ],
+   "avg_win": 966,
+   "avg_loss": -1334,
+   "profit_factor": 0.87,
+   "worst": -3861,
+   "max_drawdown": 15634,
+   "exits": {
+    "SL": 44,
+    "SL(gap)": 1,
+    "TARGET": 53,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 48,
+   "days_traded": 38,
+   "win_rate": 0.458,
+   "net_rs": -12649,
+   "net_per_trade": -263.5,
+   "ci95_per_trade": [
+    -698,
+    137
+   ],
+   "avg_win": 1043,
+   "avg_loss": -1369,
+   "profit_factor": 0.64,
+   "worst": -3861,
+   "max_drawdown": 15634,
+   "exits": {
+    "SL": 25,
+    "SL(gap)": 1,
+    "TARGET": 22
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 53,
+   "days_traded": 36,
+   "win_rate": 0.623,
+   "net_rs": 4408,
+   "net_per_trade": 83.2,
+   "ci95_per_trade": [
+    -235,
+    364
+   ],
+   "avg_win": 914,
+   "avg_loss": -1288,
+   "profit_factor": 1.17,
+   "worst": -2546,
+   "max_drawdown": 5502,
+   "exits": {
+    "SL": 19,
+    "TARGET": 31,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 141,
+   "short_day": 1,
+   "premium_too_low": 19,
+   "atm_strike_not_in_data": 152,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.0035_0.01_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 101,
+   "days_traded": 74,
+   "win_rate": 0.545,
+   "net_rs": -12343,
+   "net_per_trade": -122.2,
+   "ci95_per_trade": [
+    -392,
+    118
+   ],
+   "avg_win": 923,
+   "avg_loss": -1372,
+   "profit_factor": 0.8,
+   "worst": -3975,
+   "max_drawdown": 16513,
+   "exits": {
+    "SL": 45,
+    "TARGET": 53,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 48,
+   "days_traded": 38,
+   "win_rate": 0.458,
+   "net_rs": -14568,
+   "net_per_trade": -303.5,
+   "ci95_per_trade": [
+    -735,
+    97
+   ],
+   "avg_win": 1000,
+   "avg_loss": -1407,
+   "profit_factor": 0.6,
+   "worst": -3975,
+   "max_drawdown": 16513,
+   "exits": {
+    "SL": 26,
+    "TARGET": 22
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 53,
+   "days_traded": 36,
+   "win_rate": 0.623,
+   "net_rs": 2226,
+   "net_per_trade": 42.0,
+   "ci95_per_trade": [
+    -273,
+    321
+   ],
+   "avg_win": 872,
+   "avg_loss": -1328,
+   "profit_factor": 1.08,
+   "worst": -2620,
+   "max_drawdown": 6759,
+   "exits": {
+    "SL": 19,
+    "TARGET": 31,
+    "TARGET(gap)": 1,
+    "TIME": 2
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 141,
+   "short_day": 1,
+   "premium_too_low": 19,
+   "atm_strike_not_in_data": 152,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.005_0.005_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 65,
+   "days_traded": 49,
+   "win_rate": 0.615,
+   "net_rs": 4347,
+   "net_per_trade": 66.9,
+   "ci95_per_trade": [
+    -264,
+    374
+   ],
+   "avg_win": 1060,
+   "avg_loss": -1522,
+   "profit_factor": 1.11,
+   "worst": -3899,
+   "max_drawdown": 6882,
+   "exits": {
+    "SL": 24,
+    "SL(gap)": 1,
+    "TARGET": 39,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 35,
+   "days_traded": 27,
+   "win_rate": 0.6,
+   "net_rs": 964,
+   "net_per_trade": 27.5,
+   "ci95_per_trade": [
+    -514,
+    515
+   ],
+   "avg_win": 1120,
+   "avg_loss": -1612,
+   "profit_factor": 1.04,
+   "worst": -3899,
+   "max_drawdown": 6882,
+   "exits": {
+    "SL": 13,
+    "SL(gap)": 1,
+    "TARGET": 21
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 30,
+   "days_traded": 22,
+   "win_rate": 0.633,
+   "net_rs": 3383,
+   "net_per_trade": 112.8,
+   "ci95_per_trade": [
+    -326,
+    515
+   ],
+   "avg_win": 993,
+   "avg_loss": -1407,
+   "profit_factor": 1.22,
+   "worst": -2570,
+   "max_drawdown": 6523,
+   "exits": {
+    "SL": 11,
+    "TARGET": 18,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 48,
+   "short_day": 1,
+   "atm_strike_not_in_data": 141,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.005_0.0025_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 65,
+   "days_traded": 49,
+   "win_rate": 0.615,
+   "net_rs": 5336,
+   "net_per_trade": 82.1,
+   "ci95_per_trade": [
+    -247,
+    388
+   ],
+   "avg_win": 1075,
+   "avg_loss": -1507,
+   "profit_factor": 1.14,
+   "worst": -3861,
+   "max_drawdown": 6709,
+   "exits": {
+    "SL": 24,
+    "SL(gap)": 1,
+    "TARGET": 39,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 35,
+   "days_traded": 27,
+   "win_rate": 0.6,
+   "net_rs": 1508,
+   "net_per_trade": 43.1,
+   "ci95_per_trade": [
+    -497,
+    531
+   ],
+   "avg_win": 1136,
+   "avg_loss": -1596,
+   "profit_factor": 1.07,
+   "worst": -3861,
+   "max_drawdown": 6709,
+   "exits": {
+    "SL": 13,
+    "SL(gap)": 1,
+    "TARGET": 21
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 30,
+   "days_traded": 22,
+   "win_rate": 0.633,
+   "net_rs": 3827,
+   "net_per_trade": 127.6,
+   "ci95_per_trade": [
+    -312,
+    531
+   ],
+   "avg_win": 1009,
+   "avg_loss": -1394,
+   "profit_factor": 1.25,
+   "worst": -2546,
+   "max_drawdown": 6394,
+   "exits": {
+    "SL": 11,
+    "TARGET": 18,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 48,
+   "short_day": 1,
+   "atm_strike_not_in_data": 141,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.005_0.01_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 65,
+   "days_traded": 49,
+   "win_rate": 0.615,
+   "net_rs": 2420,
+   "net_per_trade": 37.2,
+   "ci95_per_trade": [
+    -294,
+    341
+   ],
+   "avg_win": 1029,
+   "avg_loss": -1549,
+   "profit_factor": 1.06,
+   "worst": -3975,
+   "max_drawdown": 7166,
+   "exits": {
+    "SL": 25,
+    "TARGET": 39,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 35,
+   "days_traded": 27,
+   "win_rate": 0.6,
+   "net_rs": -68,
+   "net_per_trade": -1.9,
+   "ci95_per_trade": [
+    -546,
+    484
+   ],
+   "avg_win": 1089,
+   "avg_loss": -1639,
+   "profit_factor": 1.0,
+   "worst": -3975,
+   "max_drawdown": 7166,
+   "exits": {
+    "SL": 14,
+    "TARGET": 21
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 30,
+   "days_traded": 22,
+   "win_rate": 0.633,
+   "net_rs": 2488,
+   "net_per_trade": 82.9,
+   "ci95_per_trade": [
+    -354,
+    483
+   ],
+   "avg_win": 961,
+   "avg_loss": -1434,
+   "profit_factor": 1.16,
+   "worst": -2620,
+   "max_drawdown": 6918,
+   "exits": {
+    "SL": 11,
+    "TARGET": 18,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 48,
+   "short_day": 1,
+   "atm_strike_not_in_data": 141,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.007_0.005_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 32,
+   "days_traded": 25,
+   "win_rate": 0.656,
+   "net_rs": -2343,
+   "net_per_trade": -73.2,
+   "ci95_per_trade": [
+    -604,
+    388
+   ],
+   "avg_win": 1030,
+   "avg_loss": -2179,
+   "profit_factor": 0.9,
+   "worst": -3899,
+   "max_drawdown": 11272,
+   "exits": {
+    "SL": 11,
+    "TARGET": 20,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 18,
+   "days_traded": 13,
+   "win_rate": 0.667,
+   "net_rs": -2422,
+   "net_per_trade": -134.5,
+   "ci95_per_trade": [
+    -978,
+    532
+   ],
+   "avg_win": 1169,
+   "avg_loss": -2742,
+   "profit_factor": 0.85,
+   "worst": -3899,
+   "max_drawdown": 8843,
+   "exits": {
+    "SL": 6,
+    "TARGET": 12
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 14,
+   "days_traded": 12,
+   "win_rate": 0.643,
+   "net_rs": 78,
+   "net_per_trade": 5.6,
+   "ci95_per_trade": [
+    -684,
+    575
+   ],
+   "avg_win": 843,
+   "avg_loss": -1502,
+   "profit_factor": 1.01,
+   "worst": -2137,
+   "max_drawdown": 5941,
+   "exits": {
+    "SL": 5,
+    "TARGET": 8,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 33,
+   "short_day": 1,
+   "atm_strike_not_in_data": 104,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.007_0.0025_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 32,
+   "days_traded": 25,
+   "win_rate": 0.656,
+   "net_rs": -1778,
+   "net_per_trade": -55.6,
+   "ci95_per_trade": [
+    -583,
+    405
+   ],
+   "avg_win": 1046,
+   "avg_loss": -2158,
+   "profit_factor": 0.93,
+   "worst": -3861,
+   "max_drawdown": 10945,
+   "exits": {
+    "SL": 11,
+    "TARGET": 20,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 18,
+   "days_traded": 13,
+   "win_rate": 0.667,
+   "net_rs": -2071,
+   "net_per_trade": -115.1,
+   "ci95_per_trade": [
+    -956,
+    547
+   ],
+   "avg_win": 1185,
+   "avg_loss": -2716,
+   "profit_factor": 0.87,
+   "worst": -3861,
+   "max_drawdown": 8671,
+   "exits": {
+    "SL": 6,
+    "TARGET": 12
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 14,
+   "days_traded": 12,
+   "win_rate": 0.643,
+   "net_rs": 294,
+   "net_per_trade": 21.0,
+   "ci95_per_trade": [
+    -668,
+    589
+   ],
+   "avg_win": 859,
+   "avg_loss": -1488,
+   "profit_factor": 1.04,
+   "worst": -2117,
+   "max_drawdown": 5872,
+   "exits": {
+    "SL": 5,
+    "TARGET": 8,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 33,
+   "short_day": 1,
+   "atm_strike_not_in_data": 104,
+   "no_option_data_for_day": 1
+  }
+ },
+ "uturn_0.007_0.01_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 32,
+   "days_traded": 25,
+   "win_rate": 0.656,
+   "net_rs": -3481,
+   "net_per_trade": -108.8,
+   "ci95_per_trade": [
+    -646,
+    356
+   ],
+   "avg_win": 997,
+   "avg_loss": -2221,
+   "profit_factor": 0.86,
+   "worst": -3975,
+   "max_drawdown": 11931,
+   "exits": {
+    "SL": 11,
+    "TARGET": 20,
+    "TIME": 1
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 18,
+   "days_traded": 13,
+   "win_rate": 0.667,
+   "net_rs": -3127,
+   "net_per_trade": -173.7,
+   "ci95_per_trade": [
+    -1024,
+    501
+   ],
+   "avg_win": 1137,
+   "avg_loss": -2796,
+   "profit_factor": 0.81,
+   "worst": -3975,
+   "max_drawdown": 9189,
+   "exits": {
+    "SL": 6,
+    "TARGET": 12
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 14,
+   "days_traded": 12,
+   "win_rate": 0.643,
+   "net_rs": -354,
+   "net_per_trade": -25.3,
+   "ci95_per_trade": [
+    -716,
+    541
+   ],
+   "avg_win": 811,
+   "avg_loss": -1531,
+   "profit_factor": 0.95,
+   "worst": -2178,
+   "max_drawdown": 6080,
+   "exits": {
+    "SL": 5,
+    "TARGET": 8,
+    "TIME": 1
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "oi_not_confirming": 33,
+   "short_day": 1,
+   "atm_strike_not_in_data": 104,
+   "no_option_data_for_day": 1
+  }
+ },
+ "sweep_0.005_0.005_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 24,
+   "days_traded": 23,
+   "win_rate": 0.625,
+   "net_rs": 3791,
+   "net_per_trade": 158.0,
+   "ci95_per_trade": [
+    -390,
+    644
+   ],
+   "avg_win": 1056,
+   "avg_loss": -1338,
+   "profit_factor": 1.31,
+   "worst": -3010,
+   "max_drawdown": 4125,
+   "exits": {
+    "SL": 9,
+    "TARGET": 15
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 16,
+   "days_traded": 15,
+   "win_rate": 0.625,
+   "net_rs": 1144,
+   "net_per_trade": 71.5,
+   "ci95_per_trade": [
+    -648,
+    681
+   ],
+   "avg_win": 989,
+   "avg_loss": -1458,
+   "profit_factor": 1.13,
+   "worst": -3010,
+   "max_drawdown": 4125,
+   "exits": {
+    "SL": 6,
+    "TARGET": 10
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 8,
+   "days_traded": 8,
+   "win_rate": 0.625,
+   "net_rs": 2647,
+   "net_per_trade": 330.9,
+   "ci95_per_trade": [
+    -485,
+    1083
+   ],
+   "avg_win": 1188,
+   "avg_loss": -1098,
+   "profit_factor": 1.8,
+   "worst": -1333,
+   "max_drawdown": 1333,
+   "exits": {
+    "SL": 3,
+    "TARGET": 5
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
    "short_day": 1,
    "no_option_bar_after_signal": 9,
-   "no_option_data_for_day": 204
+   "atm_strike_not_in_data": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "sweep_0.005_0.0025_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 24,
+   "days_traded": 23,
+   "win_rate": 0.625,
+   "net_rs": 4123,
+   "net_per_trade": 171.8,
+   "ci95_per_trade": [
+    -376,
+    658
+   ],
+   "avg_win": 1070,
+   "avg_loss": -1325,
+   "profit_factor": 1.35,
+   "worst": -2981,
+   "max_drawdown": 4059,
+   "exits": {
+    "SL": 9,
+    "TARGET": 15
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 16,
+   "days_traded": 15,
+   "win_rate": 0.625,
+   "net_rs": 1363,
+   "net_per_trade": 85.2,
+   "ci95_per_trade": [
+    -633,
+    695
+   ],
+   "avg_win": 1003,
+   "avg_loss": -1444,
+   "profit_factor": 1.16,
+   "worst": -2981,
+   "max_drawdown": 4059,
+   "exits": {
+    "SL": 6,
+    "TARGET": 10
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 8,
+   "days_traded": 8,
+   "win_rate": 0.625,
+   "net_rs": 2759,
+   "net_per_trade": 344.9,
+   "ci95_per_trade": [
+    -473,
+    1100
+   ],
+   "avg_win": 1204,
+   "avg_loss": -1088,
+   "profit_factor": 1.85,
+   "worst": -1320,
+   "max_drawdown": 1320,
+   "exits": {
+    "SL": 3,
+    "TARGET": 5
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "no_option_bar_after_signal": 9,
+   "atm_strike_not_in_data": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "sweep_0.005_0.01_oi0": {
+  "all": {
+   "label": "all",
+   "trades": 24,
+   "days_traded": 23,
+   "win_rate": 0.625,
+   "net_rs": 3124,
+   "net_per_trade": 130.2,
+   "ci95_per_trade": [
+    -419,
+    615
+   ],
+   "avg_win": 1026,
+   "avg_loss": -1363,
+   "profit_factor": 1.25,
+   "worst": -3068,
+   "max_drawdown": 4256,
+   "exits": {
+    "SL": 9,
+    "TARGET": 15
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 16,
+   "days_traded": 15,
+   "win_rate": 0.625,
+   "net_rs": 703,
+   "net_per_trade": 43.9,
+   "ci95_per_trade": [
+    -678,
+    654
+   ],
+   "avg_win": 962,
+   "avg_loss": -1486,
+   "profit_factor": 1.08,
+   "worst": -3068,
+   "max_drawdown": 4256,
+   "exits": {
+    "SL": 6,
+    "TARGET": 10
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 8,
+   "days_traded": 8,
+   "win_rate": 0.625,
+   "net_rs": 2422,
+   "net_per_trade": 302.7,
+   "ci95_per_trade": [
+    -507,
+    1049
+   ],
+   "avg_win": 1155,
+   "avg_loss": -1119,
+   "profit_factor": 1.72,
+   "worst": -1358,
+   "max_drawdown": 1358,
+   "exits": {
+    "SL": 3,
+    "TARGET": 5
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "no_option_bar_after_signal": 9,
+   "atm_strike_not_in_data": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "sweep_0.005_0.005_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 23,
+   "days_traded": 23,
+   "win_rate": 0.609,
+   "net_rs": 1422,
+   "net_per_trade": 61.8,
+   "ci95_per_trade": [
+    -468,
+    564
+   ],
+   "avg_win": 1001,
+   "avg_loss": -1398,
+   "profit_factor": 1.11,
+   "worst": -3010,
+   "max_drawdown": 3222,
+   "exits": {
+    "SL": 9,
+    "TARGET": 14
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 15,
+   "days_traded": 15,
+   "win_rate": 0.667,
+   "net_rs": 1540,
+   "net_per_trade": 102.7,
+   "ci95_per_trade": [
+    -617,
+    724
+   ],
+   "avg_win": 936,
+   "avg_loss": -1563,
+   "profit_factor": 1.2,
+   "worst": -3010,
+   "max_drawdown": 3222,
+   "exits": {
+    "SL": 5,
+    "TARGET": 10
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 8,
+   "days_traded": 8,
+   "win_rate": 0.5,
+   "net_rs": -118,
+   "net_per_trade": -14.8,
+   "ci95_per_trade": [
+    -879,
+    799
+   ],
+   "avg_win": 1163,
+   "avg_loss": -1192,
+   "profit_factor": 0.98,
+   "worst": -1476,
+   "max_drawdown": 2693,
+   "exits": {
+    "SL": 4,
+    "TARGET": 4
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "oi_not_confirming": 39,
+   "atm_strike_not_in_data": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "sweep_0.005_0.0025_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 23,
+   "days_traded": 23,
+   "win_rate": 0.609,
+   "net_rs": 1734,
+   "net_per_trade": 75.4,
+   "ci95_per_trade": [
+    -451,
+    577
+   ],
+   "avg_win": 1014,
+   "avg_loss": -1385,
+   "profit_factor": 1.14,
+   "worst": -2981,
+   "max_drawdown": 3166,
+   "exits": {
+    "SL": 9,
+    "TARGET": 14
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 15,
+   "days_traded": 15,
+   "win_rate": 0.667,
+   "net_rs": 1744,
+   "net_per_trade": 116.2,
+   "ci95_per_trade": [
+    -603,
+    738
+   ],
+   "avg_win": 949,
+   "avg_loss": -1548,
+   "profit_factor": 1.23,
+   "worst": -2981,
+   "max_drawdown": 3166,
+   "exits": {
+    "SL": 5,
+    "TARGET": 10
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 8,
+   "days_traded": 8,
+   "win_rate": 0.5,
+   "net_rs": -10,
+   "net_per_trade": -1.2,
+   "ci95_per_trade": [
+    -868,
+    816
+   ],
+   "avg_win": 1179,
+   "avg_loss": -1181,
+   "profit_factor": 1.0,
+   "worst": -1462,
+   "max_drawdown": 2667,
+   "exits": {
+    "SL": 4,
+    "TARGET": 4
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "oi_not_confirming": 39,
+   "atm_strike_not_in_data": 1,
+   "no_option_data_for_day": 1
+  }
+ },
+ "sweep_0.005_0.01_oi1": {
+  "all": {
+   "label": "all",
+   "trades": 23,
+   "days_traded": 23,
+   "win_rate": 0.609,
+   "net_rs": 794,
+   "net_per_trade": 34.5,
+   "ci95_per_trade": [
+    -495,
+    535
+   ],
+   "avg_win": 973,
+   "avg_loss": -1425,
+   "profit_factor": 1.06,
+   "worst": -3068,
+   "max_drawdown": 3335,
+   "exits": {
+    "SL": 9,
+    "TARGET": 14
+   }
+  },
+  "dev": {
+   "label": "dev",
+   "trades": 15,
+   "days_traded": 15,
+   "win_rate": 0.667,
+   "net_rs": 1131,
+   "net_per_trade": 75.4,
+   "ci95_per_trade": [
+    -644,
+    697
+   ],
+   "avg_win": 910,
+   "avg_loss": -1593,
+   "profit_factor": 1.14,
+   "worst": -3068,
+   "max_drawdown": 3335,
+   "exits": {
+    "SL": 5,
+    "TARGET": 10
+   }
+  },
+  "hold": {
+   "label": "hold-out",
+   "trades": 8,
+   "days_traded": 8,
+   "win_rate": 0.5,
+   "net_rs": -337,
+   "net_per_trade": -42.1,
+   "ci95_per_trade": [
+    -902,
+    769
+   ],
+   "avg_win": 1131,
+   "avg_loss": -1215,
+   "profit_factor": 0.93,
+   "worst": -1504,
+   "max_drawdown": 2744,
+   "exits": {
+    "SL": 4,
+    "TARGET": 4
+   }
+  },
+  "skipped": {
+   "dte_above_limit": 171,
+   "short_day": 1,
+   "oi_not_confirming": 39,
+   "atm_strike_not_in_data": 1,
+   "no_option_data_for_day": 1
   }
  }
 }

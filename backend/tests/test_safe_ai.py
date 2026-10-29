@@ -115,3 +115,17 @@ def test_sweep_and_rejection_of_the_previous_day_high_and_low():
     r = SG.detect_sweep(dn, dn[-1][0], pdh, pdl); assert r and r["side"] == "CE"
     assert SG.detect_sweep(up[:25], up[24][0], pdh, pdl) is None                                                                                    # not back inside yet
     inside = [(T0 + m * 60, 99.7 + 0.001 * (m % 3)) for m in range(60)]; assert SG.detect_sweep(inside, inside[-1][0], pdh, pdl) is None            # never touched a level
+
+
+def test_thrust_follows_the_control_file_and_ignores_nonsense(tmp_path, monkeypatch):
+    cf = tmp_path / "control.json"; monkeypatch.setattr(L, "CONTROL", str(cf)); w = World(tmp_path)
+    cf.write_text('{"submit": true, "thrust": 0.007}'); import time; time.sleep(2.1); w.e.tick(); assert w.e.p.thrust == 0.007                                # the 0.70 % threshold is in force
+    cf.write_text('{"thrust": "big"}'); time.sleep(2.1); w.e.tick(); assert w.e.p.thrust == 0.007                                                          # nonsense keeps the last good value
+    cf.write_text('{"thrust": 0.5}'); time.sleep(2.1); w.e.tick(); assert w.e.p.thrust == 0.007                                                           # out of the allowed range
+
+
+def test_only_the_expiry_day_and_the_two_days_before_are_traded(tmp_path):
+    w = World(tmp_path); w.e.chain = lambda s: {"day": DAY, "expiries": {"2026-11-06": {"strikes": [99.0, 100.0, 101.0]}}} if s == "NIFTY" else {}                  # nearest expiry is 3 days away
+    assert w.e.tick() == [] and not w.submitted and any(x["kind"] == "skip:dte_above_limit" for x in w.log())
+    w2 = World(tmp_path / "w2" if False else tmp_path); w2.e.state = {}; w2.e.chain = lambda s: {"day": DAY, "expiries": {"2026-11-05": {"strikes": [99.0, 100.0, 101.0]}}} if s == "NIFTY" else {}     # 2 days away: allowed
+    assert len(w2.e.tick()) == 1

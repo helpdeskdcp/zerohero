@@ -2,7 +2,7 @@
 
 Safety stack, in the order it is applied (each refusal is written to data/safe_ai/decisions.jsonl with its reason, once per 5 min per symbol/reason):
   kill switches (SAFE_AI_LIVE=0 stops the runner, SAFE_AI_SUBMIT=0 = decide + log only) -> arena mode (never after the contest) -> exchange open -> time window (09:35-14:30, expiry day of the traded option 09:35-13:30)
-  -> fresh index price (<= 20 s) -> day lock (one loss ends the day for that index; the day's total net <= -DAY_LOSS_RS ends it for all) -> at most MAX_TRADES_DAY trades a day in total, MAX_PER_SYMBOL per index, ONE position open at a time
+  -> expiry within 2 days -> fresh index price (<= 20 s) -> day lock (one loss ends the day for that index; the day's total net <= -DAY_LOSS_RS ends it for all) -> at most MAX_TRADES_DAY trades a day in total, MAX_PER_SYMBOL per index, ONE position open at a time
   -> the U-turn rule (signals.py) -> an ATM option of the nearest expiry with a quote not older than 75 s, ask >= Rs 30, spread <= 3 % -> 1 lot, stop 25 % of the premium, first target +20 %.
 It never raises into the application, never places a broker order (the arena has no order path), and claims no edge."""
 from __future__ import annotations
@@ -13,6 +13,7 @@ import os
 import threading
 import time
 from collections import defaultdict
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 from ..arena import jsonio
@@ -28,6 +29,7 @@ SYMS = ("NIFTY", "SENSEX", "BANKNIFTY")
 SL_FRAC, T1_FRAC = 0.25, 0.20
 MAX_TRADES_DAY, MAX_PER_SYMBOL, DAY_LOSS_RS = 3, 2, 6000.0
 MAX_SPREAD, MIN_PREMIUM, MAX_QUOTE_AGE_S, MAX_SPOT_AGE_S, COOLDOWN_MIN = 0.03, 30.0, 75.0, 20.0, 30
+MAX_DTE = 2          # only the expiry day and the two days before it: that is where the 12-month test was run (and where Mohit trades: 18 of 29 index posts)
 TICK_PERIOD_S = 10.0
 
 
@@ -35,11 +37,15 @@ def enabled() -> bool: return os.environ.get("SAFE_AI_LIVE", "1").strip().lower(
 CONTROL = os.path.join(DIR, "control.json")
 
 
+def control() -> dict:
+    c = jsonio.read_json_cached(CONTROL, {}) or {}
+    return c if isinstance(c, dict) else {}
+
+
 def submit_enabled() -> bool:
     """Signals reach the ledger only if SAFE_AI_SUBMIT is not 0 AND data/safe_ai/control.json does not say {"submit": false}. The control file is read at every decision, so it can be flipped without a restart."""
     if os.environ.get("SAFE_AI_SUBMIT", "1").strip().lower() in ("0", "false", "off", "no"): return False
-    c = jsonio.read_json_cached(CONTROL, {}) or {}
-    return bool(c.get("submit", True)) if isinstance(c, dict) else True
+    return bool(control().get("submit", True))
 
 
 def _tick(x: float) -> float: return round(round(x / 0.05) * 0.05, 2)
@@ -101,6 +107,8 @@ class Engine:
         """One decision pass over the indices. -> the ledger rows submitted (usually none)."""
         out = []; now = self.now()
         if not enabled(): return out
+        th = control().get("thrust")                                                 # the thrust threshold can be changed in control.json without a restart (0.0035 / 0.005 / 0.007 are the pre-registered values)
+        if isinstance(th, (int, float)) and 0.002 <= th <= 0.02 and th != self.p.thrust: self.p = replace(self.p, thrust=float(th))
         md = self.mode()
         if md == "ENDED": return out
         st = self._st()
@@ -124,6 +132,7 @@ class Engine:
         cap = self.chain(sym) or {}; exps = sorted(e for e in (cap.get("expiries") or {}) if e >= day)
         if not exps: return self._skip(sym, "no_option_expiry")
         exp = exps[0]; expiry_day = exp == day
+        if (datetime.fromisoformat(exp).date() - datetime.fromisoformat(day).date()).days > MAX_DTE: return self._skip(sym, "dte_above_limit", expiry=exp)
         if not SG.in_window(now, self.p, expiry_day): return None
         self._refresh_outcomes()
         if st["locked"]: return self._skip(sym, "day_loss_lock")
