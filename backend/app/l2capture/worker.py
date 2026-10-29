@@ -116,7 +116,7 @@ def _any_market_trading() -> bool:
         return True  # fail open -- capture is harmless; the socket just idles
 
 
-# ---- shared socket (arena tick tape): Angel allows ~2-3 WebSocket connections per client and the app already uses them, so the arena's quote tape rides THIS connection instead of opening another.
+# ---- shared socket (quote tape): Angel allows ~2-3 WebSocket connections per client and the app already uses them, so the shared quote tape rides THIS connection instead of opening another.
 # Frame hooks see every binary frame (called on the event-loop thread: they must be fast and never raise); extra subscribe / unsubscribe messages are queued and sent on the live socket. The worker's own
 # research store still receives only its own tokens.
 _FRAME_HOOKS: list = []
@@ -135,7 +135,7 @@ class L2CaptureWorker:
     def __init__(self):
         global _SHARED
         _SHARED = self
-        self._ext_q: queue.Queue = queue.Queue(maxsize=1000)       # extra messages for the live socket (arena tick tape subscriptions)
+        self._ext_q: queue.Queue = queue.Queue(maxsize=1000)       # extra messages for the live socket (quote-tape subscriptions)
         self.session_no = 0                                        # +1 for every new connection: whoever subscribed extra tokens must do it again
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()

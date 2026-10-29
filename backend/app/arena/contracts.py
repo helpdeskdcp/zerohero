@@ -184,9 +184,30 @@ def spot_for(underlying: str, option_expiry_iso: str | None = None, path: str | 
         try: iso = norm_expiry(raw)
         except Exception: continue
         best.setdefault(iso, (float(ltp), ts))
-    if not best: return None, "NO_SPOT"
+    if not best: return _feed_spot(underlying)
     pick = next((e for e in sorted(best) if not option_expiry_iso or e >= option_expiry_iso), sorted(best)[0])
     return best[pick][0], f"FUTURE {pick} @ {best[pick][1]}"
+
+
+_spot_feed_cache: dict = {}
+INDEX_UNDERLYINGS = ("NIFTY", "BANKNIFTY", "SENSEX")
+
+
+def _feed_spot(underlying: str) -> tuple[float | None, str]:
+    """Last resort when the stored quotes have no usable index price (the REST quote path returned API_ERROR rows): the live WebSocket index price from the shared Angel feed. Without a spot the chain cannot find the ATM,
+    shows no ladder, registers no strike for the tick tape, and the order form has nothing to pick. Cached 2 s; index options only."""
+    if underlying not in INDEX_UNDERLYINGS: return None, "NO_SPOT"
+    hit = _spot_feed_cache.get(underlying)
+    if hit and time.time() - hit[0] < 2.0: return hit[1]
+    out = (None, "NO_SPOT")
+    try:
+        from ..connectors.angelone import _market_sdk
+        from ..mathematical_confluence import context as _ctx
+        v = _ctx._feed_spot(underlying, _market_sdk(require_auth=True))
+        if v: out = (float(v), "WS FEED (shared Angel stream)")
+    except Exception:
+        pass
+    _spot_feed_cache[underlying] = (time.time(), out); return out
 
 
 _chain_cache: dict = {}
