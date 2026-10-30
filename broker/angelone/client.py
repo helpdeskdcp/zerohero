@@ -123,6 +123,13 @@ class AngelOneClient:
 
     def authenticate(self):
         if self.jwt and time.time() - self.login_ts < 3600: return True
+        try: from app.connectors import angelone as _conn                       # inside the app the connector owns the ONE session (single-flight login + backoff); a second login path here ended the other's session
+        except Exception: _conn = None
+        if _conn is not None:
+            st, jwt, err = _conn._get_jwt()
+            if st == "OK":
+                self.jwt, self.feed_token, self.login_ts = jwt, _conn._session_cache.get("feed_token"), _conn._session_cache.get("ts", time.time()); self.last_auth = {"status": "OK"}; return True
+            self.last_auth = {"status": st, "errorcode": err}; return False
         key, cid, pwd, secret = (os.getenv(k) for k in ("ANGEL_API_KEY", "ANGEL_CLIENT_ID", "ANGEL_PASSWORD", "ANGEL_TOTP_SECRET"))
         self.last_auth = {"status": "CONFIG_REQUIRED", "fields": {"api_key": bool(key), "client_id": bool(cid), "password": bool(pwd), "totp_secret": bool(secret)}}
         if not all((key, cid, pwd, secret)): return False

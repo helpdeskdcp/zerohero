@@ -102,20 +102,40 @@ def _freshness_meta(last_t, market):
     return stale_sec, market_open, market_status, data_status
 
 
+_tls = threading.local()
+
+
+def _session():
+    """A keep-alive HTTP session per thread (a fresh TLS connection costs ~0.4 s, a reused one ~0.13 s). Dropped on any error so a broken connection is never reused."""
+    sess = getattr(_tls, "http", None)
+    if sess is None:
+        sess = requests.Session(); sess.mount("https://", requests.adapters.HTTPAdapter(pool_connections=2, pool_maxsize=4, max_retries=0)); _tls.http = sess
+    return sess
+
+
+def _drop_session():
+    sess = getattr(_tls, "http", None); _tls.http = None
+    try:
+        if sess is not None: sess.close()
+    except Exception:
+        pass
+
+
 def _http(method: str, url: str, **kw):
-    """requests.{get,post} with a small retry on connection errors / 5xx.
+    """requests.{get,post} (keep-alive session per thread) with a small retry on connection errors / 5xx.
     Raises the last exception if all attempts fail (callers already catch)."""
     last = None
+    timeout = kw.pop("timeout", 10)
     for attempt in range(_RETRIES + 1):
         try:
-            resp = requests.request(method, url, timeout=kw.pop("timeout", 10), **kw)
+            resp = _session().request(method, url, timeout=timeout, **kw)
             if resp.status_code >= 500 and attempt < _RETRIES:
                 last = RuntimeError(f"HTTP {resp.status_code}")
                 time.sleep(_RETRY_BACKOFF * (attempt + 1))
                 continue
             return resp
         except requests.RequestException as e:
-            last = e
+            last = e; _drop_session()
             if attempt < _RETRIES:
                 time.sleep(_RETRY_BACKOFF * (attempt + 1))
     raise last
@@ -130,47 +150,79 @@ def _creds():
     }
 
 
-def _login():
-    """Returns (status, jwt_or_None, error_code)."""
-    creds = _creds()
-    if not all(creds.values()):
-        return "CONFIG_REQUIRED", None, ""
+_login_lock = threading.Lock()                           # ONE login at a time: concurrent logins from many threads (and a new login can end the older session) were the failure mode
+_login_fail = {"n": 0, "until": 0.0}                     # after a failed login nobody retries until `until` (15 s, doubling, max 300 s): no login hammering while the broker is glitching
+LOGIN_ATTEMPTS = 3                                       # an empty / non-JSON 200 body is a known Angel glitch: retry inside one login
+AUTH_ERRORS = ("AG8001", "AG8002", "AB1010", "AB8050")   # invalid / expired token codes: drop the cached session and log in again once
+
+
+def _fresh() -> bool:
+    return bool(_session_cache["jwt"]) and (time.time() - _session_cache["ts"]) < SESSION_TTL_SEC
+
+
+def _login_once(creds):
+    """ONE login request. Returns (status, jwt, err) or None when the answer was unusable (network error / empty body) and a retry makes sense."""
     try:
         totp = pyotp.TOTP(creds["totp_secret"]).now()
     except Exception as e:
         _log.warning("_login: TOTP generation failed (bad secret format?): %s", type(e).__name__)
         return "CONFIG_REQUIRED", None, "bad_totp_secret"
-
-    headers = dict(_HEADERS_BASE)
-    headers["X-PrivateKey"] = creds["api_key"]
-    body = {
-        "clientcode": creds["client_id"],
-        "password": creds["password"],
-        "totp": totp,
-    }
+    headers = dict(_HEADERS_BASE); headers["X-PrivateKey"] = creds["api_key"]
+    body = {"clientcode": creds["client_id"], "password": creds["password"], "totp": totp}
     try:
         resp = _http("POST", LOGIN_URL, json=body, headers=headers)
-        data = resp.json() if resp.content else {}
+        data = resp.json() if resp.content else None
     except Exception as e:
-        _log.warning("_login: network error contacting broker: %r", e)
-        return "AUTH_FAILED", None, "network_error"
-
-    if data.get("status") is True and data.get("data", {}).get("jwtToken"):
+        _log.warning("_login: network error contacting broker: %r", e); _drop_session()
+        return None
+    if not isinstance(data, dict) or not data:
+        _log.warning("_login: empty or non-JSON answer from broker (HTTP %s)", getattr(resp, "status_code", "?")); _drop_session()
+        return None
+    if data.get("status") is True and (data.get("data") or {}).get("jwtToken"):
         jwt = data["data"]["jwtToken"]
-        _session_cache["jwt"] = jwt
-        _session_cache["feed_token"] = data["data"].get("feedToken")
-        _session_cache["ts"] = time.time()
+        _session_cache["jwt"] = jwt; _session_cache["feed_token"] = data["data"].get("feedToken"); _session_cache["ts"] = time.time()
         return "OK", jwt, ""
-
     code = data.get("errorcode") or data.get("error_type") or ""
-    missing = not data or "status" not in data
-    return ("CONFIG_REQUIRED" if missing else "AUTH_FAILED"), None, str(code)[:40]
+    return ("CONFIG_REQUIRED" if "status" not in data else "AUTH_FAILED"), None, str(code)[:40]
+
+
+def _login_locked():
+    """Caller holds _login_lock. Backoff gate, then up to LOGIN_ATTEMPTS tries."""
+    creds = _creds()
+    if not all(creds.values()):
+        return "CONFIG_REQUIRED", None, ""
+    if time.time() < _login_fail["until"]:
+        return "AUTH_FAILED", None, "login_backoff"
+    r = None
+    for attempt in range(LOGIN_ATTEMPTS):
+        r = _login_once(creds)
+        if r is not None: break
+        if attempt < LOGIN_ATTEMPTS - 1: time.sleep(_RETRY_BACKOFF * (attempt + 1))
+    if r is not None and r[0] == "OK":
+        _login_fail["n"] = 0; _login_fail["until"] = 0.0
+        return r
+    _login_fail["n"] += 1; _login_fail["until"] = time.time() + min(300.0, 15.0 * 2 ** (_login_fail["n"] - 1))
+    return r if r is not None else ("AUTH_FAILED", None, "network_error")
+
+
+def _login():
+    """Returns (status, jwt_or_None, error_code). Forced login (callers that want a new session), serialised and backed off."""
+    with _login_lock:
+        return _login_locked()
+
+
+def invalidate_session():
+    """The broker said the token is invalid / expired: forget it so the next _get_jwt() logs in (once, under the lock)."""
+    _session_cache["jwt"] = None; _session_cache["ts"] = 0
 
 
 def _get_jwt():
-    if _session_cache["jwt"] and (time.time() - _session_cache["ts"]) < SESSION_TTL_SEC:
+    if _fresh():
         return "OK", _session_cache["jwt"], ""
-    return _login()
+    with _login_lock:
+        if _fresh():                                       # another thread logged in while this one waited for the lock
+            return "OK", _session_cache["jwt"], ""
+        return _login_locked()
 
 
 def get_stream_credentials():
@@ -226,7 +278,7 @@ def fetch_candles(market, symbol, exchange, symboltoken, interval, fromdate, tod
     return result
 
 
-def _fetch_candles_uncached(market, symbol, exchange, symboltoken, interval, fromdate, todate, timeframe=None, instrument=None):
+def _fetch_candles_uncached(market, symbol, exchange, symboltoken, interval, fromdate, todate, timeframe=None, instrument=None, _auth_retry=True):
     """
     Fetch historical candles from AngelOne SmartAPI.
     Returns a normalized dict matching the n8n 'Normalize Candles' contract.
@@ -341,6 +393,9 @@ def _fetch_candles_uncached(market, symbol, exchange, symboltoken, interval, fro
         _log.warning("fetch_candles(%s): network error contacting broker: %r", symbol, last_err)
         return out("DATA_UNAVAILABLE", {"reason": "FACT: network error contacting broker"})
 
+    if _auth_retry and isinstance(res, dict) and res.get("status") is False and str(res.get("errorcode", "")) in AUTH_ERRORS:
+        invalidate_session()                                           # token ended on the broker side: log in again once and repeat the request
+        return _fetch_candles_uncached(market, symbol, exchange, symboltoken, interval, fromdate, todate, timeframe=timeframe, instrument=instrument, _auth_retry=False)
     if not isinstance(res, dict):
         return out("DATA_UNAVAILABLE", {"reason": "FACT: non-object broker response"})
     if res.get("status") is False:
@@ -450,7 +505,7 @@ def fetch_positions() -> dict:
     return {"status": "OK", "positions": positions, "closed": closed, "raw_count": len(data)}
 
 
-def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> dict:
+def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL", _auth_retry: bool = True) -> dict:
     """Read-only SmartAPI quote/OI snapshot; never calls an order endpoint."""
     exchange, token = str(exchange or "").upper(), str(symboltoken or "")
     # BFO (BSE options, e.g. SENSEX/BANKEX) was missing -- found 2026-09-29
@@ -479,6 +534,8 @@ def fetch_market_quote(exchange: str, symboltoken: str, mode: str = "FULL") -> d
     except Exception as e:
         _log.warning("fetch_market_quote(%s:%s): network error contacting broker: %r", exchange, token, e)
         return {"status": "API_ERROR", "data_status": "API_ERROR"}
+    if _auth_retry and isinstance(body, dict) and body.get("status") is False and str(body.get("errorcode", "")) in AUTH_ERRORS:
+        invalidate_session(); return fetch_market_quote(exchange, symboltoken, mode, _auth_retry=False)
     if not isinstance(body, dict) or body.get("status") is False:
         return {"status": "API_ERROR", "data_status": "API_ERROR"}
     data = body.get("data") or {}

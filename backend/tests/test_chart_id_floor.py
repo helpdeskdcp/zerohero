@@ -19,7 +19,7 @@ def _ts(e): return datetime.fromtimestamp(e, timezone.utc).strftime(Z)
 @pytest.fixture(scope="module")
 def dbfile(tmp_path_factory):
     p = str(tmp_path_factory.mktemp("d") / "m.db"); c = sqlite3.connect(p)
-    c.executescript("""CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, received_ts TEXT NOT NULL, exch_ts TEXT, symbol TEXT, kind TEXT, source TEXT, expiry TEXT, strike REAL, option_type TEXT, ltp REAL, bid REAL, ask REAL);
+    c.executescript("""CREATE TABLE quote_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, received_ts TEXT NOT NULL, exch_ts TEXT, symbol TEXT, kind TEXT, source TEXT, expiry TEXT, strike REAL, option_type TEXT, ltp REAL, bid REAL, ask REAL, volume REAL);
         CREATE INDEX ix_quotes_opt ON quote_snapshots(symbol, expiry, strike, option_type, exch_ts); CREATE INDEX ix_quotes_lookup ON quote_snapshots(symbol, kind, exch_ts);""")
     rnd = random.Random(11); rows = []; w = DAY0 + 9.25 * 3600; px = 280.0
     while w < DAY0 + 15.5 * 3600:
