@@ -148,7 +148,8 @@ def parse_mcx(s: str) -> dict:
 UPDATES = [("CANCEL", r"\b(TRADE\s*)?CANCEL(L?ED)?\b|\bCANCEL\s*(THIS|THE)?\s*(TRADE|CALL)\b|\bIGNORE\s*(THIS)?\s*(TRADE|CALL)\b"),
            ("SL_HIT", r"\b(SL|STOP\s*LOSS|STOPLOSS)\s*(HIT|TRIGGER(ED)?)\b"),
            ("T_HIT", r"\b(TARGET|TGT|T)\s*(\d)\s*(HIT|DONE|ACHIEVED|ACHEIVED|COMPLETE(D)?)\b|\bTARGET\s*(HIT|DONE|ACHIEVED)\b|\bPOINTS?\s*(ACHIEVED|ACHEIVED)\b|\b\d+\s*POINTS?\b"),
-           ("EXIT", r"\b(EXIT|BOOK\s*(ALL|FULL|PROFIT)|SQUARE\s*OFF|SQ\s*OFF)\b")]
+           ("EXIT", r"\b(EXIT|BOOK\s*(ALL|FULL|PROFIT)|SQUARE\s*OFF|SQ\s*OFF)\b"),
+           ("GAIN_UPDATE", r"\bGAINING\b|\bBOOK\s*PARTIAL\b|\bPARTIAL\s*PROFIT\b|\bTRAIL\s*(YOUR\s*)?(SL|STOP\s*LOSS)\b")]            # "430 TO 490 #SENSEX 73800 PE GAINING RS 2,400 ... BOOK PARTIAL PROFIT OR TRAIL SL": a progress post without a price instruction -> recorded as a claim, never scored
 
 
 def parse_update(text: str) -> dict | None:

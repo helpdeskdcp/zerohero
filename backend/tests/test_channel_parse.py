@@ -117,3 +117,16 @@ def test_finobulls_group_posts_entry_with_paid_stop_and_targets_and_the_profit_d
     c = CP.parse_signal("SENSEX 22 OCT  73500  CE \\nBuy above 19\\nTARGET:paid\\nSL: paid")["signal"]; assert (c["strike"], c["entry"], c["expiry_hint"]) == (73500.0, 19.0, {"day": 22, "month": 10})
     for claim in ("Call no 07\\n\\U0001f4a5 SENSEX---- 73600 CE\\n\\U0001f449BUY --- 06\\n\\U0001f449HIGH -- 12++\\n\\U0001f449 Money double", "Call no 02\\n\\U0001f4a5 Nifty ---- 22650 CE\\n\\U0001f449BUY --- 173\\n\\U0001f449HIGH -- 190++\\n\\U0001f449 17++ points profit done"):
         assert CP.parse_signal(claim)["ok"] is False
+
+
+def test_gaining_progress_posts_are_recorded_as_claims_not_ignored_and_never_become_signals():
+    for txt in ("430 TO 490 #SENSEX 73800 PE\n\nGAINING RS- 2,400-/ 2 LOTS 🐎🐎\n\nFIRST TARGET ALMOST HIT 🎯 🎯\n\nBOOK PARTIAL PROFIT OR TRAIL SL ✅",
+                "160 TO 200 #NIFTY 23000 PE\n\nGAINING RS- 6,000/ 2 LOTS\nBOOK PARTIAL PROFIT OR TRAIL SL"):
+        assert CP.parse_signal(txt)["ok"] is False                                  # it is not an entry signal
+        u = CP.parse_update(txt); assert u is not None and u["kind"] == "GAIN_UPDATE"
+
+
+def test_a_normal_signal_still_parses_and_an_ad_is_still_ignored():
+    sig = "#SENSEX  _74300 PE\nBuy Range : 430-450\nTarget : 600/770/940\nStoploss : 350\nHorizon: Intraday"
+    assert CP.parse_signal(sig)["ok"] is True
+    assert CP.parse_update("SPECIAL DISCOUNT OFFER 1 Month 2199 JOIN NOW") is None
