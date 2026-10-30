@@ -149,7 +149,7 @@ app.add_middleware(_AuthGateMiddleware)
 
 class _ArenaNoCacheMiddleware:
     """Pure ASGI: the arena pages/script are always revalidated (a participant must never see a stale page after a wording or rule change)."""
-    _PATHS = ("/static/arena.html", "/static/js/arena.js", "/static/js/arena_terminal.js", "/static/leaderboard.html")
+    _PATHS = ("/static/mohit_signals.html", "/static/arena.html", "/static/js/arena.js", "/static/js/arena_terminal.js", "/static/leaderboard.html")
 
     def __init__(self, app): self.app = app
 

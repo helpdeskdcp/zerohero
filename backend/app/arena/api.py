@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from .markets import EXCH, IST  # noqa: E402,F401
 from . import equity as EQ  # noqa: E402
-PUBLIC_STATIC = ("/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
+PUBLIC_STATIC = ("/static/mohit_signals.html", "/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY = 4096
 RATE_PER_MIN = 900                                                   # per PARTICIPANT (a terminal open polls 2-3 times a second); many participants share one office address, so this is not per IP
