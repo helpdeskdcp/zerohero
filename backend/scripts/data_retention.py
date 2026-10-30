@@ -16,13 +16,14 @@ IST = timezone(timedelta(hours=5, minutes=30))
 BATCH, PAUSE = 5000, 0.2
 REMOTE = os.environ.get("RETENTION_REMOTE", "gdrive-guardianx:ZeroHero-archive")            # rclone remote:folder
 QUOTA_GUARD = int(float(os.environ.get("RETENTION_QUOTA_GIB", "11")) * 2 ** 30)                # archive stops when the whole Drive account is above this
-DISK_PANIC_PCT = 92
+DISK_PANIC_FREE_GIB = float(os.environ.get("RETENTION_PANIC_FREE_GIB", "1.0"))      # archiving needs only one day's temp file: skip it ONLY when less than this is free (was: disk > 92 % full, which on a 99 GB disk meant deleting unarchived data at 7 GB free)
+KEEP_QUOTES = int(os.environ.get("RETENTION_KEEP_QUOTES", "60"))                         # days of quote_snapshots / option_greeks kept locally (older days go to the Drive archive first)
 ARCHIVE = {("l2_capture.db", "snapquote_ticks"), ("market_history.db", "quote_snapshots"), ("market_history.db", "option_greeks")}
 # (db, table, time column, kind, keep_days, protected_from_contest_start)
 POLICY = [("l2_capture.db", "raw_frames", "received_ts", "ts", 7, False),
           ("l2_capture.db", "snapquote_ticks", "session_date_ist", "day", 21, False),
-          ("market_history.db", "quote_snapshots", "session_date_ist", "day", 60, True),
-          ("market_history.db", "option_greeks", "session_date_ist", "day", 60, True)]
+          ("market_history.db", "quote_snapshots", "session_date_ist", "day", KEEP_QUOTES, True),
+          ("market_history.db", "option_greeks", "session_date_ist", "day", KEEP_QUOTES, True)]
 
 
 def cutoff_id(c, table, col, kind, limit):
@@ -128,8 +129,8 @@ def run(apply: bool, force: bool = False, data_dir: str | None = None, now: date
         try:
             cid = cutoff_id(c, table, col, kind, limit); n = 0; arch_info = None
             if cid is not None and archiver is not None and (dbf, table) in ARCHIVE:
-                pct = shutil.disk_usage(d).used * 100 / shutil.disk_usage(d).total
-                if pct > DISK_PANIC_PCT: alert(f"disk {pct:.0f}% full: {dbf}.{table} deleted WITHOUT archive"); arch_info = {"stopped": "DISK_PANIC"}
+                free_gib = shutil.disk_usage(d).free / 2 ** 30
+                if free_gib < DISK_PANIC_FREE_GIB: alert(f"only {free_gib:.1f} GiB free: {dbf}.{table} deleted WITHOUT archive"); arch_info = {"stopped": "DISK_PANIC"}
                 else:
                     tmp = tempfile.mkdtemp(prefix="retention_", dir=d)
                     try: cid, arch_info = archive_upto(c, dbf, table, col, cid, archiver, tmp, log, not apply)
