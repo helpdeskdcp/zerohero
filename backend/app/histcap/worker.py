@@ -676,6 +676,15 @@ class CaptureWorker:
         self._dhan_expiry_cache[sym] = (time.time() + 3600, chosen)
         return chosen
 
+    def _dhan_due(self) -> bool:
+        """Dhan's full chain (quotes + greeks + the raw JSON) was ~80 % of all captured rows and the disk-growth driver: capture it every CHANAKYA_HIST_DHAN_EVERY-th cycle (default 1 = every cycle, unchanged)."""
+        try:
+            every = max(1, int(_env("CHANAKYA_HIST_DHAN_EVERY", "1")))
+        except (TypeError, ValueError):
+            every = 1
+        n = getattr(self, "_dhan_n", 0); self._dhan_n = n + 1
+        return every <= 1 or n % every == 0
+
     def _capture_dhan_all(self, recv, rid, counts, integ, errors):
         """Independent Dhan chain capture (MCP 3.3 continuation) -- runs
         alongside, never instead of, the AngelOne capture in run_once()
@@ -687,6 +696,8 @@ class CaptureWorker:
         every AngelOne capture step already treats its own failures --
         never blocks, slows, or affects anything else in this cycle."""
         if not self.cfg.get("dhan_capture", True):
+            return
+        if not self._dhan_due():
             return
         try:
             dhan_ok = bool(self._dhan_auth_checker())
