@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mohit Signals Chart</title>
+<style>
+:root{--bg:#0b0f14;--card:#141a24;--fg:#dbe4f0;--mut:#8b97b3;--ok:#22c55e;--bad:#ef4444;--gold:#f5c542;--line:#223048;--blue:#60a5fa}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#f4f6fb;--card:#fff;--fg:#1b2438;--mut:#667394;--line:#dfe4f0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
+h1{font-size:18px;margin:4px 0}.sub{color:var(--mut);font-size:12px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:minmax(360px,1fr) minmax(0,1.6fr);gap:12px}@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px}
+.list{max-height:70vh;overflow:auto}table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:left}th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card)}
+tr.row{cursor:pointer}tr.row:hover{background:rgba(96,165,250,.10)}tr.on{background:rgba(245,197,66,.15)}tr.day td{background:rgba(255,255,255,.04);color:var(--mut);font-weight:600;text-align:left}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.mut{color:var(--mut)}
+#chart{height:58vh;min-height:320px}.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+button,select,input{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:5px 10px}button.on{border-color:var(--gold);color:var(--gold)}
+.lv{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin:6px 0}.lv span{padding:2px 8px;border:1px solid var(--line);border-radius:999px}
+</style></head><body><div class="wrap">
+<h1>Mohit (INSTITUTION_TRADER) — channel signals on the chart</h1>
+<div class="sub">Every call he posted: date, time, entry (the top of his Buy Range, a LIMIT), stop-loss and T1 / T2 / T3, drawn on the option-premium candles of that day. The days the owner excluded from AI learning are not listed. Settlement figures are the arena's (ask in / bid out, charges included); nothing here changes any score.</div>
+<div class="bar"><span id="who" class="mut"></span><select id="fu"><option value="">all instruments</option></select><select id="fd"><option value="">all dates</option></select>
+<button id="tok" title="paste the arena token (kept for this browser tab only)">token</button></div>
+<div class="grid"><div class="card list"><table><thead><tr><th>Date</th><th>Time</th><th>Contract</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>T3</th><th>Result</th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="card"><div class="bar"><b id="ttl">select a signal</b><span class="mut" id="msg"></span><span style="flex:1"></span><button data-tf="1" class="on">1m</button><button data-tf="5">5m</button></div><div class="lv" id="lv"></div><div id="chart"></div></div></div>
+</div>
+<script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id), LW = window.LightweightCharts, IST = 19800;
+  let rows = [], sel = null, tf = 1, chart = null, cs = null, lines = [], mk = null;
+  const tok = () => { try { return sessionStorage.getItem("arena_token") || ""; } catch (e) { return ""; } };
+  async function api(p) { const r = await fetch("/api/arena/public" + p, { headers: { "X-Arena-Token": tok() }, cache: "no-store" }); if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "token missing or wrong (press 'token')" : "error " + r.status); return r.json(); }
+  const fmt = (v) => v == null ? "–" : (Math.abs(v) >= 1000 ? v.toLocaleString("en-IN") : String(v));
+  const money = (v) => v == null ? "" : (v >= 0 ? "+" : "−") + "₹" + Math.abs(Math.round(v)).toLocaleString("en-IN");
+  const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+  function resultCell(r) { const s = r.result; if (!s) return el("td", "mut", "–"); if (s.status !== "SETTLED") return el("td", "mut", s.status.replace("NO_DATA:", "").slice(0, 14)); return el("td", s.net_rs >= 0 ? "ok" : "bad", money(s.net_rs) + " " + (s.exit_reason || "")); }
+  function render() {
+    const fu = $("fu").value, fd = $("fd").value, tb = $("tb"); tb.replaceChildren(); let last = "";
+    rows.filter((r) => (!fu || r.underlying === fu) && (!fd || r.date === fd)).forEach((r) => {
+      if (r.date !== last) { last = r.date; const d = el("tr", "day"); const c = el("td", null, r.date); c.colSpan = 9; d.append(c); tb.append(d); }
+      const tr = el("tr", "row" + (sel && sel.id === r.id ? " on" : "")); tr.dataset.id = r.id;
+      [r.date.slice(5), r.time.slice(0, 5), `${r.underlying} ${fmt(r.strike)} ${r.option_type}`, fmt(r.entry), fmt(r.sl), fmt(r.t1), fmt(r.t2), fmt(r.t3)].forEach((x) => tr.append(el("td", null, x))); tr.append(resultCell(r));
+      tr.onclick = () => { sel = r; render(); load(); }; tb.append(tr);
+    });
+  }
+  function ensureChart() {
+    if (chart) return; chart = LW.createChart($("chart"), { layout: { background: { color: "#0b0f14" }, textColor: "#dbe4f0" }, grid: { vertLines: { color: "#18212f" }, horzLines: { color: "#18212f" } }, timeScale: { timeVisible: true, secondsVisible: false }, autoSize: true });
+    cs = chart.addSeries(LW.CandlestickSeries, { upColor: "#22c55e", downColor: "#ef4444", borderVisible: false, wickUpColor: "#22c55e", wickDownColor: "#ef4444" }); mk = LW.createSeriesMarkers(cs, []);
+  }
+  function snap(times, t) { let a = null; for (const x of times) { if (x <= t) a = x; else break; } return a; }
+  async function load() {
+    if (!sel) return; ensureChart(); $("ttl").textContent = `${sel.date} ${sel.time.slice(0, 5)} · ${sel.underlying} ${fmt(sel.strike)} ${sel.option_type} (exp ${sel.expiry})`; $("msg").textContent = "loading…";
+    let d; try { d = await api("/mohit/chart?id=" + encodeURIComponent(sel.id) + "&tf=" + tf); } catch (e) { $("msg").textContent = String(e.message || e); return; }
+    lines.forEach((l) => { try { cs.removePriceLine(l); } catch (e) { /* ok */ } }); lines = [];
+    cs.setData(d.candles); const s = d.signal, lv = $("lv"); lv.replaceChildren();
+    const L = [["ENTRY (limit)", s.entry, "#60a5fa"], ["SL", s.sl, "#ef4444"], ["T1", s.t1, "#22c55e"], ["T2", s.t2, "#22c55e"], ["T3", s.t3, "#22c55e"]];
+    L.forEach(([n, p, c]) => { if (p == null) return; lines.push(cs.createPriceLine({ price: p, color: c, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: n })); const sp = el("span", null, `${n} ${fmt(p)}`); sp.style.color = c; lv.append(sp); });
+    const times = d.candles.map((c) => c.time), m = []; const post = snap(times, s.post_shift);
+    if (post != null) m.push({ time: post, position: "belowBar", color: "#f5c542", shape: "arrowUp", text: "POST " + s.time.slice(0, 5) });
+    const r = sel.result; if (r && r.fill_t) { const ft = snap(times, r.fill_t + IST); if (ft != null) m.push({ time: ft, position: "belowBar", color: "#60a5fa", shape: "circle", text: "FILL " + fmt(r.fill) }); if (r.hold_sec && r.exit != null) { const xt = snap(times, r.fill_t + r.hold_sec + IST); if (xt != null) m.push({ time: xt, position: "aboveBar", color: r.net_rs >= 0 ? "#22c55e" : "#ef4444", shape: "arrowDown", text: (r.exit_reason || "EXIT") + " " + fmt(r.exit) }); } }
+    mk.setMarkers(m.sort((a, b) => a.time - b.time)); chart.timeScale().fitContent();
+    const hi = d.candles.length ? Math.max(...d.candles.map((c) => c.high)) : null; $("msg").textContent = d.candles.length ? `${d.candles.length} candles · day high ${fmt(hi)}` : "no stored quotes for this contract";
+  }
+  document.querySelectorAll("[data-tf]").forEach((b) => (b.onclick = () => { tf = +b.dataset.tf; document.querySelectorAll("[data-tf]").forEach((x) => x.classList.toggle("on", x === b)); load(); }));
+  $("fu").onchange = render; $("fd").onchange = render;
+  $("tok").onclick = () => { const v = prompt("Arena token (stored for this browser tab only):"); if (v) { try { sessionStorage.setItem("arena_token", v.trim()); } catch (e) { /* blocked */ } start(); } };
+  async function start() {
+    try { rows = (await api("/mohit/signals")).signals; } catch (e) { $("who").textContent = String(e.message || e); return; }
+    $("who").textContent = rows.length + " signals"; const us = [...new Set(rows.map((r) => r.underlying))], ds = [...new Set(rows.map((r) => r.date))];
+    $("fu").replaceChildren(new Option("all instruments", "")); us.forEach((u) => $("fu").append(new Option(u, u))); $("fd").replaceChildren(new Option("all dates", "")); ds.forEach((x) => $("fd").append(new Option(x, x)));
+    render(); if (!sel && rows.length) { sel = rows[rows.length - 1]; render(); load(); }
+  }
+  start();
+})();
+</script></body></html>

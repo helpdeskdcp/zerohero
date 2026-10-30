@@ -25,7 +25,8 @@ def at(ser, t):
         else: break
     return lo
 
-sigs = [s for s in R.human_signals(include_practice=True) if s["participant"] == "INSTITUTION_TRADER"]
+from app.arena import learning as LRN
+sigs = LRN.for_learning([s for s in R.human_signals(include_practice=True) if s["participant"] == "INSTITUTION_TRADER"])          # days the owner excluded from learning (see data/arena/learning_exclusions.json) are not profiled
 res = {r["id"]: r for r in R.run(sigs, market_db="data/market_history.db")["INSTITUTION_TRADER"]["results"]}
 out = []
 for s in sorted(sigs, key=lambda x: x["t"]):

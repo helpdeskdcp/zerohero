@@ -375,6 +375,24 @@ def standings(request: Request):
     return _cache["by"][c["name"]][1]
 
 
+@router.get("/mohit/signals")
+def mohit_signals(request: Request):
+    """Chart page: every INSTITUTION_TRADER channel signal (date, time, entry, stop, T1-T3, settled result) except the days the owner excluded from learning."""
+    _auth(request)
+    from . import mohit_view as MV
+    return {"signals": MV.list_signals()}
+
+
+@router.get("/mohit/chart")
+def mohit_chart(request: Request, id: str, tf: int = 1):
+    _auth(request)
+    if tf not in (1, 3, 5, 15): raise HTTPException(422, "bad tf")
+    from . import mohit_view as MV
+    out = MV.chart_for(id, tf)
+    if out is None: raise HTTPException(404, "not a shown signal")
+    return out
+
+
 @router.get("/chart")
 def chart(request: Request, underlying: str, expiry: str, strike: float, option_type: str = "CE", tf: int = 1, since: float | None = None):
     """Terminal tab: candles (tf minutes) of one option contract from the captured quotes of today's session; `since` = UTC epoch of the newest candle the client already has (incremental refresh)."""

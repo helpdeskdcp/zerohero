@@ -106,3 +106,7 @@ backend/data/safe_ai/state.json
 
 # live broker session token (never commit)
 backend/data/angel_session.json*
+
+# local-only: owner decisions about a participant and the cached charts of his posts (not published)
+backend/data/arena/learning_exclusions.json
+backend/data/arena/mohit_cache/
