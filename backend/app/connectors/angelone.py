@@ -3,6 +3,7 @@ AngelOne SmartAPI connector — login (TOTP) + historical candle fetch.
 Ported from AI-ANGELONE-CONNECTOR.json. Never logs or returns the JWT.
 Credentials are read from environment variables only (see .env).
 """
+import json
 import logging
 import math
 import os
@@ -156,6 +157,57 @@ LOGIN_ATTEMPTS = 3                                       # an empty / non-JSON 2
 AUTH_ERRORS = ("AG8001", "AG8002", "AB1010", "AB8050")   # invalid / expired token codes: drop the cached session and log in again once
 
 
+def _shared_path() -> str | None:
+    """File that lets every process (the app, the 5-minute cron scans, scripts) reuse ONE Angel session instead of each logging in on its own (the hedging cron alone made ~90 extra logins a day).
+    Under pytest nothing is read or written unless ANGEL_SESSION_FILE is set explicitly."""
+    p = os.environ.get("ANGEL_SESSION_FILE")
+    if p: return p
+    if os.environ.get("PYTEST_CURRENT_TEST"): return None
+    return str(Path(__file__).resolve().parents[2] / "data" / "angel_session.json")
+
+
+def _load_shared() -> bool:
+    path = _shared_path()
+    if not path: return False
+    try:
+        d = json.loads(Path(path).read_text())
+        if d.get("jwt") and d.get("client") == os.environ.get("ANGEL_CLIENT_ID") and 0 <= time.time() - float(d.get("ts", 0)) < SESSION_TTL_SEC:
+            _session_cache.update({"jwt": d["jwt"], "feed_token": d.get("feed_token"), "ts": float(d["ts"])}); return True
+    except Exception:
+        pass
+    return False
+
+
+def _save_shared() -> None:
+    path = _shared_path()
+    if not path: return
+    try:
+        tmp = path + f".{os.getpid()}.tmp"
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f: json.dump({"jwt": _session_cache["jwt"], "feed_token": _session_cache.get("feed_token"), "ts": _session_cache["ts"], "client": os.environ.get("ANGEL_CLIENT_ID")}, f)
+        os.replace(tmp, path)
+    except Exception as e:
+        _log.warning("angel session file not written: %r", type(e).__name__)
+
+
+class _ProcessLock:
+    """flock on a side file: only one PROCESS logs in at a time; the others wait, then find the fresh session in the shared file."""
+    def __enter__(self):
+        self.f = None; path = _shared_path()
+        if path:
+            try:
+                import fcntl
+                self.f = open(path + ".lock", "a"); fcntl.flock(self.f, fcntl.LOCK_EX)
+            except Exception:
+                self.f = None
+        return self
+    def __exit__(self, *a):
+        try:
+            if self.f: self.f.close()
+        except Exception:
+            pass
+
+
 def _fresh() -> bool:
     return bool(_session_cache["jwt"]) and (time.time() - _session_cache["ts"]) < SESSION_TTL_SEC
 
@@ -194,10 +246,14 @@ def _login_locked():
     if time.time() < _login_fail["until"]:
         return "AUTH_FAILED", None, "login_backoff"
     r = None
-    for attempt in range(LOGIN_ATTEMPTS):
-        r = _login_once(creds)
-        if r is not None: break
-        if attempt < LOGIN_ATTEMPTS - 1: time.sleep(_RETRY_BACKOFF * (attempt + 1))
+    with _ProcessLock():
+        if not _FORCE.get("on") and _load_shared():                    # another process logged in while this one waited
+            return "OK", _session_cache["jwt"], ""
+        for attempt in range(LOGIN_ATTEMPTS):
+            r = _login_once(creds)
+            if r is not None: break
+            if attempt < LOGIN_ATTEMPTS - 1: time.sleep(_RETRY_BACKOFF * (attempt + 1))
+        if r is not None and r[0] == "OK": _save_shared()
     if r is not None and r[0] == "OK":
         _login_fail["n"] = 0; _login_fail["until"] = 0.0
         return r
@@ -205,15 +261,25 @@ def _login_locked():
     return r if r is not None else ("AUTH_FAILED", None, "network_error")
 
 
+_FORCE = {"on": False}
+
+
 def _login():
     """Returns (status, jwt_or_None, error_code). Forced login (callers that want a new session), serialised and backed off."""
     with _login_lock:
-        return _login_locked()
+        _FORCE["on"] = True
+        try: return _login_locked()
+        finally: _FORCE["on"] = False
 
 
 def invalidate_session():
     """The broker said the token is invalid / expired: forget it so the next _get_jwt() logs in (once, under the lock)."""
     _session_cache["jwt"] = None; _session_cache["ts"] = 0
+    path = _shared_path()
+    try:
+        if path: os.remove(path)
+    except OSError:
+        pass
 
 
 def _get_jwt():
@@ -221,6 +287,8 @@ def _get_jwt():
         return "OK", _session_cache["jwt"], ""
     with _login_lock:
         if _fresh():                                       # another thread logged in while this one waited for the lock
+            return "OK", _session_cache["jwt"], ""
+        if _load_shared():                                 # another process (app / cron) already has a session: use it, no login
             return "OK", _session_cache["jwt"], ""
         return _login_locked()
 

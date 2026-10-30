@@ -17,7 +17,8 @@ OK = b'{"status": true, "data": {"jwtToken": "J1", "feedToken": "F1"}}'
 
 
 @pytest.fixture(autouse=True)
-def clean(monkeypatch):
+def clean(monkeypatch, tmp_path):
+    monkeypatch.setenv("ANGEL_SESSION_FILE", str(tmp_path / "angel_session.json"))
     for k, v in (("ANGEL_API_KEY", "k"), ("ANGEL_CLIENT_ID", "c"), ("ANGEL_PASSWORD", "p"), ("ANGEL_TOTP_SECRET", "JBSWY3DPEHPK3PXP")): monkeypatch.setenv(k, v)
     A._session_cache.update({"jwt": None, "feed_token": None, "ts": 0}); A._login_fail.update({"n": 0, "until": 0.0}); monkeypatch.setattr(A, "_RETRY_BACKOFF", 0.0)
 
@@ -63,3 +64,23 @@ def test_invalid_token_answer_drops_the_session_and_repeats_the_quote_once(monke
     monkeypatch.setattr(A, "_http", lambda *a, **k: answers.pop(0))
     q = A.fetch_market_quote("NSE", "99926000")
     assert q["status"] == "OK" and q["ltp"] == 5 and A._session_cache["jwt"] == "J1"
+
+
+def test_a_second_process_reuses_the_shared_session_file_instead_of_logging_in(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(A, "_http", lambda *a, **k: (calls.append(1), _Resp(OK))[1])
+    assert A._get_jwt()[0] == "OK" and len(calls) == 1                                  # the app logs in and writes the file
+    path = tmp_path / "angel_session.json"; assert path.exists() and (path.stat().st_mode & 0o777) == 0o600
+    A._session_cache.update({"jwt": None, "feed_token": None, "ts": 0})                 # a cron process starts with an empty memory
+    st, jwt, _ = A._get_jwt()
+    assert (st, jwt) == ("OK", "J1") and len(calls) == 1 and A._session_cache["feed_token"] == "F1"
+
+
+def test_the_shared_file_is_ignored_when_stale_or_for_another_client_and_removed_on_invalid_token(monkeypatch, tmp_path):
+    import json
+    path = tmp_path / "angel_session.json"
+    path.write_text(json.dumps({"jwt": "OLD", "ts": time.time() - 99999, "client": "c"}))
+    monkeypatch.setattr(A, "_http", lambda *a, **k: _Resp(OK)); assert A._get_jwt()[1] == "J1"          # stale -> a real login
+    A._session_cache.update({"jwt": None, "ts": 0}); path.write_text(json.dumps({"jwt": "OTHER", "ts": time.time(), "client": "someone-else"}))
+    assert A._get_jwt()[1] == "J1"                                                                      # another client's session is never used
+    A.invalidate_session(); assert not path.exists() and A._session_cache["jwt"] is None
