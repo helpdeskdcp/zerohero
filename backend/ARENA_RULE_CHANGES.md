@@ -118,3 +118,9 @@ Infrastructure (no scoring rule): the two capture stalls were already fixed on 2
 - **Feed choice:** measured from stored ticks on 29-Oct: Angel WS (mode 3) p50 tick lag 1.7 s with ms stamps and bid/ask depth; Dhan WS 1.2 s but second-resolution stamps and down (daily token); no Upstox stream in the connector. Angel is the primary; the others are not used for settlement.
 - **Safety:** HOT contracts (signal in the last 90 min) store every change up to 4 a second, others 1 a second; kill switches `ARENA_TICK_TAPE=0` or the file `data/arena/TICK_TAPE_OFF` (no restart); the tape opens its own socket (Angel allows 3 per client).
 - **Also:** `/live` recomputes its settlement part every 2 s (was 5 s); the order ticket hides a stored bid/ask older than 5 s next to a fresh websocket price.
+
+## 2026-10-30 — A deleted post on a trade that is already filled is a market exit (owner's decision; same for every participant)
+- **Why:** INSTITUTION_TRADER deleted his SENSEX 73800 PE post (H00295) at 10:17:08 when he replaced it with a new call, but the trade had filled at 09:20; the old rule (delete = cancel the ORDER) changed nothing after a fill, so the position sat until its stop (-Rs 5,753). Withdrawing a call that is already live is an exit, not an unfilled order.
+- **Rule:** a channel-post deletion (`CANCEL` event, note "channel: post deleted") that takes effect AFTER the fill exits at the bid after the execution delay (exit reason EMERGENCY, same as `EXIT_NOW`). Before the fill it still only cancels the order. Same for every participant and both sides.
+- **Applies ONLY** to events stamped at or after 2026-10-30 00:00 IST (`delete_after_fill_exit_from_ts` in rule_effective.json); not retroactive: the earlier 28-Oct Dhananjay cases keep their results.
+- **Not changed:** entry rules, stop/target handling, claims are still never scored; a posted "gaining / book partial" message with no price is not an instruction (use an explicit exit / SL event).

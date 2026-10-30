@@ -165,7 +165,12 @@ def _apply(ev: dict, st: dict) -> None:
     elif a == "AMEND_ENTRY":
         if not st.get("filled") and ev.get("entry") is not None:                                           # a malformed event (no price) is ignored, never a crash                                                                                   # only while the order is still waiting (ABOVE / LIMIT); ignored once active
             st["entry"] = float(ev["entry"]); st["entry_hi"] = float(ev["entry_hi"]) if ev.get("entry_hi") else None
-    elif a == "CANCEL" or a == "EXIT_NOW": st[a] = True
+    elif a == "CANCEL":
+        # a deleted post on a trade that is ALREADY filled withdraws the call: market exit (same as EXIT_NOW). Before the fill it only cancels the order. Dated rule, NOT retroactive (events stamped before it keep the old behaviour).
+        f = rule_from("delete_after_fill_exit_from_ts")
+        if st.get("filled") and f is not None and ev.get("t", 0) >= f: st["EXIT_NOW"] = True
+        else: st["CANCEL"] = True
+    elif a == "EXIT_NOW": st[a] = True
 
 
 def equity_cost_rs(side: str, fill: float, exit_: float, qty: int) -> float:

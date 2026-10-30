@@ -16,5 +16,7 @@
    1793237933.1407425,
    1.0
   ]
- ]
+ ],
+ "delete_after_fill_exit_from_ts": 1793298600.0,
+ "delete_after_fill_note": "A channel post deleted AFTER its trade filled withdraws the call: market exit at the bid after the execution delay (like EXIT_NOW). Before the fill it still only cancels the order. Applies to events stamped at or after 2026-10-30 00:00 IST for every participant; not retroactive (owner's decision 2026-10-30, after the INSTITUTION_TRADER H00295 case)."
 }

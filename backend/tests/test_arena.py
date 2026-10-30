@@ -366,3 +366,30 @@ def test_status_correction_rejects_unknown_signal_and_bad_status(tmp_path):
     p = str(tmp_path / "h.jsonl")
     with pytest.raises(SU.SubmissionError): SU.submit_status_correction("nope", "DATA_GAP", "x", path=p)
     with pytest.raises(SU.SubmissionError): SU.submit_status_correction("nope", "WIN", "x", path=p)
+
+
+def _rule_file(tmp_path, monkeypatch, from_ts):
+    p = tmp_path / "rule_effective.json"; p.write_text(json.dumps({"delete_after_fill_exit_from_ts": from_ts})); monkeypatch.setattr(S, "RULES_FILE", str(p))
+
+
+def test_deleted_post_after_the_fill_exits_at_market_when_the_rule_is_on(tmp_path, monkeypatch):
+    _rule_file(tmp_path, monkeypatch, ep("09:00"))
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 108, 107, 109), ("10:10", 60, 59, 61), ("10:30", 95, 94, 96)])
+    r = S.settle(sig(targets=[200.0], sl=50.0, events=[ev("10:04", "CANCEL")]), sn, half_spread=H)
+    assert r["status"] == "SETTLED" and r["exit_reason"] == "EMERGENCY" and r["exit"] == 107 and r["fill"] == 101
+
+
+def test_deleted_post_before_the_fill_still_only_cancels_the_order(tmp_path, monkeypatch):
+    _rule_file(tmp_path, monkeypatch, ep("09:00"))
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 108, 107, 109)])
+    r = S.settle(sig(entry_mode="LIMIT", entry=90.0, entry_hi=90.0, events=[ev("10:00", "CANCEL")]), sn, half_spread=H)
+    assert r["status"] == "CANCELLED"
+
+
+def test_the_delete_rule_is_not_retroactive_and_off_without_the_file(tmp_path, monkeypatch):
+    sn = snaps([("10:01", 100, 99, 101), ("10:05", 108, 107, 109), ("10:10", 60, 59, 61), ("10:30", 95, 94, 96)])
+    s_ = sig(targets=[200.0], sl=50.0, events=[ev("10:04", "CANCEL")])
+    _rule_file(tmp_path, monkeypatch, ep("12:00"))                                                  # the rule starts after the event: old behaviour (cancel after fill changes nothing)
+    assert S.settle(s_, sn, half_spread=H).get("exit_reason") != "EMERGENCY"
+    monkeypatch.setattr(S, "RULES_FILE", str(tmp_path / "missing.json"))
+    assert S.settle(s_, sn, half_spread=H).get("exit_reason") != "EMERGENCY"
