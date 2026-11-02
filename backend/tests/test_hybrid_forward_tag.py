@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from app.research_engines.hybrid_sr_mtf import forward_tag as F
+from app.arena import mohit_forward as F
 
 
 def sig(i, day, hhmm, und="NIFTY", ot="CE"):

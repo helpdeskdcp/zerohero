@@ -17,6 +17,6 @@
    1.0
   ]
  ],
- "delete_after_fill_exit_from_ts": 1793298600.0,
- "delete_after_fill_note": "A channel post deleted AFTER its trade filled withdraws the call: market exit at the bid after the execution delay (like EXIT_NOW). Before the fill it still only cancels the order. Applies to events stamped at or after 2026-10-30 00:00 IST for every participant; not retroactive (owner's decision 2026-10-30, after the INSTITUTION_TRADER H00295 case)."
+ "delete_after_fill_exit_from_ts": 1792434600.0,
+ "delete_after_fill_note": "A channel post deleted AFTER its trade filled withdraws the call: market exit at the bid after the execution delay (like EXIT_NOW). Before the fill it still only cancels the order. Applies to events stamped at or after 2026-10-20 00:00 IST (the first rehearsal day) for every participant: the owner decided on 2026-11-02 to apply it to the whole rehearsal (it changes only 5 results of one participant on 28-Oct); the OFFICIAL contest window starts 2026-11-02 so no official result is affected. First version 2026-10-30 (from 2026-10-30), after the INSTITUTION_TRADER H00295 case."
 }

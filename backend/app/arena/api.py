@@ -383,6 +383,14 @@ def mohit_signals(request: Request):
     return {"signals": MV.list_signals()}
 
 
+@router.get("/mohit/filtered")
+def mohit_filtered(request: Request):
+    """ZeroHero FILTERED leaderboard of the Mohit calls: read-only, separate from the original board, same signal ids; every figure labelled IN_SAMPLE / FORWARD."""
+    _auth(request)
+    from . import mohit_filtered as MF
+    return MF.cached()
+
+
 @router.get("/mohit/chart")
 def mohit_chart(request: Request, id: str, tf: int = 1):
     _auth(request)

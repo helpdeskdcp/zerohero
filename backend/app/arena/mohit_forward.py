@@ -16,7 +16,7 @@ RULE_VERSION = "mohit-profile-v1-2026-10-30"
 FORWARD_FROM = "2026-11-02"
 INDEX_UNDERLYINGS = ("NIFTY", "BANKNIFTY", "SENSEX")
 WINDOW = (9 * 60 + 15, 10 * 60 + 15)
-BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DIR = os.path.join(BASE, "data", "research", "hybrid_sr_mtf", "forward")
 
 
@@ -32,7 +32,7 @@ def decide(und: str, minute_of_day: int, side: int, bias: int | None) -> dict:
 
 
 def _bias_at(und: str, t: float, cache: dict):
-    from . import data as D, engine as E
+    from ..research_engines.hybrid_sr_mtf import data as D, engine as E
     dt = datetime.fromtimestamp(t, IST); key = (und, dt.date())
     if key not in cache:
         start = (dt - timedelta(days=12)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"); end = (dt + timedelta(days=1)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
@@ -70,6 +70,64 @@ def tag_new(signals: list[dict], tags_path: str, bias_fn=None, now: datetime | N
     return new
 
 
+def control_decisions(und: str, minute_of_day: int) -> dict:
+    """Controls tagged on the SAME calls so the full filter can be attributed (a filter must beat both): time-only (posted 09:15-10:15, any instrument) and index-only (NIFTY / BANKNIFTY / SENSEX, any time)."""
+    return {"time_only": "ACCEPT" if WINDOW[0] <= minute_of_day <= WINDOW[1] else "REJECT", "index_only": "ACCEPT" if und in INDEX_UNDERLYINGS else "REJECT"}
+
+
+def tag_controls(signals: list[dict], controls_path: str, now: datetime | None = None) -> list[dict]:
+    """Append-only control tags (own file, the frozen rule's tag file is never touched)."""
+    done = set()
+    if os.path.exists(controls_path):
+        for line in open(controls_path, encoding="utf-8"):
+            try: done.add(json.loads(line)["id"])
+            except Exception: pass
+    now = now or datetime.now(IST); new = []
+    for s in sorted(signals, key=lambda x: x["t"]):
+        if s["id"] in done: continue
+        dt = datetime.fromtimestamp(s["t"], IST)
+        new.append({"id": s["id"], "post_ist": dt.strftime("%Y-%m-%d %H:%M:%S"), "period": "FORWARD" if dt.strftime("%Y-%m-%d") >= FORWARD_FROM else "IN_SAMPLE", "underlying": s["underlying"], **control_decisions(s["underlying"], dt.hour * 60 + dt.minute), "tagged_at": now.isoformat(timespec="seconds")})
+    if new:
+        os.makedirs(os.path.dirname(controls_path), exist_ok=True)
+        with open(controls_path, "a", encoding="utf-8") as f:
+            for r in new: f.write(json.dumps(r) + "\n")
+    return new
+
+
+SNAPSHOT_NAME = "mohit_results_snapshot.jsonl"
+_KEEP = ("status", "net_rs", "gross_rs", "cost_rs", "fill", "exit", "exit_reason", "fill_t", "hold_sec", "lot", "lots")
+
+
+def snapshot_results(results: dict, signals: list[dict], path: str, now: datetime | None = None) -> int:
+    """Freeze the Arena outcome of a call once it is final (SETTLED always; any other status only after the call's own day): the Arena recomputes outcomes from the captured quotes, and the capture database keeps only
+    ~5 days (older rows are archived), so an old outcome can no longer be recomputed. Append-only, one record per call id, never rewritten."""
+    done = set()
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            try: done.add(json.loads(line)["id"])
+            except Exception: pass
+    now = now or datetime.now(IST); today = now.strftime("%Y-%m-%d"); new = []
+    for s in signals:
+        r = results.get(s["id"])
+        if s["id"] in done or not r: continue
+        day = datetime.fromtimestamp(s["t"], IST).strftime("%Y-%m-%d")
+        if r.get("status") == "SETTLED" or day < today: new.append({"id": s["id"], **{k: r.get(k) for k in _KEEP}, "frozen_at": now.isoformat(timespec="seconds"), "source": "arena_settlement"})
+    if new:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            for r in new: f.write(json.dumps(r) + "\n")
+    return len(new)
+
+
+def load_snapshot(path: str) -> dict:
+    out = {}
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            try: r = json.loads(line); out.setdefault(r["id"], r)
+            except Exception: pass
+    return out
+
+
 def _stats(nets: list[float], days: list[str]) -> dict:
     if not nets: return {"settled": 0}
     a = np.array(nets); import pandas as pd
@@ -95,10 +153,11 @@ def summarize(tags_path: str, results: dict[str, dict]) -> dict:
 
 
 def run(tags_path: str | None = None, out_dir: str | None = None) -> dict:
-    from ...arena import mohit_view as MV, run as R
+    from . import mohit_view as MV, run as R
     tags_path = tags_path or os.path.join(DIR, "mohit_filter_tags.jsonl"); out_dir = out_dir or DIR
     sigs = MV._signals()                                              # learning-excluded days are already left out here
     new = tag_new(sigs, tags_path)
+    tag_controls(sigs, os.path.join(os.path.dirname(tags_path), "mohit_filter_controls.jsonl"))
     res = {}
     try:
         for part in R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db")).values():
@@ -106,6 +165,7 @@ def run(tags_path: str | None = None, out_dir: str | None = None) -> dict:
                 for x in part.get("results", []): res[x["id"]] = x
     except Exception as e:
         res = {}; new_err = f"{type(e).__name__}: {e}"
+    if res: snapshot_results(res, sigs, os.path.join(os.path.dirname(tags_path), SNAPSHOT_NAME))
     summ = summarize(tags_path, res); summ["new_tags"] = len(new); summ["updated"] = datetime.now(IST).isoformat(timespec="seconds")
     os.makedirs(out_dir, exist_ok=True)
     json.dump(summ, open(os.path.join(out_dir, "summary.json"), "w"), indent=1)

@@ -14,13 +14,15 @@ tr.row{cursor:pointer}tr.row:hover{background:rgba(96,165,250,.10)}tr.on{backgro
 .ok{color:var(--ok)}.bad{color:var(--bad)}.mut{color:var(--mut)}
 #chart{height:58vh;min-height:320px}.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
 button,select,input{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:5px 10px}button.on{border-color:var(--gold);color:var(--gold)}
-.lv{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin:6px 0}.lv span{padding:2px 8px;border:1px solid var(--line);border-radius:999px}
+[hidden]{display:none!important}.tabs{display:flex;gap:8px;margin:0 0 10px}.tabs button.on{border-color:var(--gold);color:var(--gold)}.banner{border:1px solid var(--gold);border-radius:8px;padding:6px 10px;font-size:12.5px;margin:0 0 10px;color:var(--gold)}.cmp td:first-child,.cmp th:first-child{text-align:left}.cmp td,.cmp th{text-align:right}.sm{font-size:12px}.lv{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;margin:6px 0}.lv span{padding:2px 8px;border:1px solid var(--line);border-radius:999px}
 </style></head><body><div class="wrap">
 <h1>Mohit (INSTITUTION_TRADER) — channel signals on the chart</h1>
 <div class="sub">Every call he posted: date, time, entry (the top of his Buy Range, a LIMIT), stop-loss and T1 / T2 / T3, drawn on the option-premium candles of that day. The days the owner excluded from AI learning are not listed. Settlement figures are the arena's (ask in / bid out, charges included); nothing here changes any score.</div>
 <div class="bar"><span id="who" class="mut"></span><select id="fu"><option value="">all instruments</option></select><select id="fd"><option value="">all dates</option></select>
 <button id="tok" title="paste the arena token (kept for this browser tab only)">token</button></div>
-<div class="grid"><div class="card list"><table><thead><tr><th>Date</th><th>Time</th><th>Contract</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>T3</th><th>Result</th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="tabs"><button id="tabCalls" class="on">Calls &amp; charts</button><button id="tabFilt">ZeroHero Filtered</button></div>
+<div id="filt" hidden><div class="banner" id="fbanner">loading…</div><div class="card" style="margin-bottom:10px;overflow:auto"><table class="cmp" id="ftab"></table></div><div class="card sm" id="fnote" style="margin-bottom:10px"></div><div class="card list"><table id="frows"><thead><tr><th>Date</th><th>Time</th><th>Contract</th><th>Filter</th><th>Why</th><th>Result</th><th>Class</th></tr></thead><tbody id="frb"></tbody></table></div></div>
+<div class="grid" id="calls"><div class="card list"><table><thead><tr><th>Date</th><th>Time</th><th>Contract</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>T3</th><th>Result</th></tr></thead><tbody id="tb"></tbody></table></div>
 <div class="card"><div class="bar"><b id="ttl">select a signal</b><span class="mut" id="msg"></span><span style="flex:1"></span><button data-tf="1" class="on">1m</button><button data-tf="5">5m</button></div><div class="lv" id="lv"></div><div id="chart"></div></div></div>
 </div>
 <script src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js"></script>
@@ -70,6 +72,28 @@ button,select,input{font:inherit;border-radius:8px;border:1px solid var(--line);
     $("fu").replaceChildren(new Option("all instruments", "")); us.forEach((u) => $("fu").append(new Option(u, u))); $("fd").replaceChildren(new Option("all dates", "")); ds.forEach((x) => $("fd").append(new Option(x, x)));
     render(); if (!sel && rows.length) { sel = rows[rows.length - 1]; render(); load(); }
   }
+  // ---- ZeroHero Filtered leaderboard (separate, read-only; same signal ids as the original list)
+  const rs = (v) => v == null ? "–" : (v >= 0 ? "+" : "−") + "₹" + Math.abs(Math.round(v)).toLocaleString("en-IN"), pc = (v) => v == null ? "–" : Math.round(v * 100) + " %";
+  function cell(tr, t, cls) { const c = el("td", cls || null, t); tr.append(c); return c; }
+  function stat(g) { return g && g.settled ? [g.calls, g.settled, pc(g.win_rate), rs(g.net_total_rs), rs(g.net_per_trade_rs), g.profit_factor == null ? "–" : g.profit_factor, pc(g.completeness)] : [g ? g.calls : 0, g ? g.settled || 0 : 0, "–", "–", "–", "–", g && g.completeness != null ? pc(g.completeness) : "–"]; }
+  async function loadFilt() {
+    let d; try { d = await api("/mohit/filtered"); } catch (e) { $("fbanner").textContent = String(e.message || e); return; }
+    const g = d.gate, fw = d.periods.FORWARD, ins = d.periods.IN_SAMPLE;
+    $("fbanner").textContent = "ZeroHero Filtered view — separate from the original list, same signal ids, nothing is overwritten. IN_SAMPLE = the rule was read from these calls (descriptive, NOT evidence). FORWARD = calls posted from 2 Nov. Forward gate: " + g.status + " (" + g.have + " / " + g.needed_settled_forward_accepts + " settled accepted calls).";
+    const t = $("ftab"); t.replaceChildren(); const head = el("tr"); ["Group", "Calls", "Settled", "Win", "Net ₹", "₹ / trade", "PF", "Data complete"].forEach((h) => head.append(el("th", null, h))); t.append(head);
+    const row = (name, s_, cls) => { const tr = el("tr", cls); cell(tr, name); stat(s_).forEach((x) => cell(tr, String(x))); t.append(tr); };
+    row("ORIGINAL — all Mohit calls (unchanged)", d.original, "mut");
+    row("IN_SAMPLE · ACCEPT", ins.accept_stats); row("IN_SAMPLE · REJECT", ins.reject_stats);
+    row("FORWARD · ACCEPT", fw.accept_stats); row("FORWARD · REJECT", fw.reject_stats);
+    ["time_only", "index_only"].forEach((k) => { row("control " + k.replace("_", "-") + " · IN_SAMPLE", d.controls[k].IN_SAMPLE, "mut"); row("control " + k.replace("_", "-") + " · FORWARD", d.controls[k].FORWARD, "mut"); });
+    const nt = $("fnote"); nt.replaceChildren();
+    [["IN_SAMPLE", ins], ["FORWARD", fw]].forEach(([n, p]) => nt.append(el("div", null, `${n}: ${p.calls_received} calls · ${p.accept} ACCEPT · ${p.reject} REJECT · ${p.pending_tag} not tagged yet · true accept ${p.true_accept} / false accept ${p.false_accept} (${rs(p.loss_taken_by_false_accepts_rs)}) · true reject ${p.true_reject} (${rs(p.losses_avoided_rs)} avoided) / false reject ${p.false_reject} (${rs(p.profit_filtered_out_rs)} filtered out) · accuracy ${pc(p.filter_accuracy)} of ${p.verified_calls} verified`)));
+    nt.append(el("div", "mut", "Only executable (settled) calls are counted as won / lost; calls that never filled are shown as not executable. Controls: the full filter must beat both simpler filters on the same calls before it means anything."));
+    const rb = $("frb"); rb.replaceChildren();
+    d.rows.slice().reverse().forEach((r) => { const tr = el("tr"); cell(tr, r.post_ist.slice(5, 10)); cell(tr, r.post_ist.slice(11, 16)); cell(tr, `${r.underlying} ${fmt(r.strike)} ${r.option_type}`); cell(tr, r.decision.replace("UNTAGGED_NO_INDEX_DATA", "n/a"), r.decision === "ACCEPT" ? "ok" : r.decision === "REJECT" ? "bad" : "mut"); cell(tr, (r.reasons || []).join(", ").replaceAll("_", " ").toLowerCase()); cell(tr, r.net_rs == null ? r.status.replace("NO_DATA:", "").slice(0, 14) : rs(r.net_rs), r.net_rs == null ? "mut" : r.net_rs >= 0 ? "ok" : "bad"); cell(tr, r.verified_class.replaceAll("_", " ").toLowerCase(), "mut"); rb.append(tr); });
+  }
+  $("tabCalls").onclick = () => { $("calls").hidden = false; $("filt").hidden = true; $("tabCalls").classList.add("on"); $("tabFilt").classList.remove("on"); };
+  $("tabFilt").onclick = () => { $("calls").hidden = true; $("filt").hidden = false; $("tabFilt").classList.add("on"); $("tabCalls").classList.remove("on"); loadFilt(); };
   start();
 })();
 </script></body></html>

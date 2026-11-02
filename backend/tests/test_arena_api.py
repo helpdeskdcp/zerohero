@@ -285,3 +285,10 @@ def test_zhsmc_chart_route_needs_the_token_validates_the_request_and_never_raise
     monkeypatch.setattr(Z, "view", lambda u, tf, opt, **k: seen.update(u=u, tf=tf, opt=opt) or {"markers": [], "levels": [], "dash": [], "error": None})
     assert client.get("/api/arena/public/chart/zhsmc?underlying=nifty&tf=15", headers=H).status_code == 200 and seen == {"u": "NIFTY", "tf": 15, "opt": None}
     r = client.get("/api/arena/public/chart/zhsmc?underlying=NIFTY&tf=5&expiry=27OCT2026&strike=23000&option_type=pe", headers=H); assert r.status_code == 200 and seen["opt"] == ("2026-10-27", 23000.0, "PE")
+
+
+def test_mohit_filtered_route_is_token_protected_and_read_only(client, monkeypatch):
+    from app.arena import mohit_filtered as MF
+    assert client.get("/api/arena/public/mohit/filtered").status_code == 401
+    monkeypatch.setattr(MF, "cached", lambda **k: {"original": {}, "periods": {}, "rows": []})
+    assert client.get("/api/arena/public/mohit/filtered", headers=H).json() == {"original": {}, "periods": {}, "rows": []}
