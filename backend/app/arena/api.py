@@ -549,6 +549,21 @@ def chart_underlying(request: Request, underlying: str, tf: int = 15):
     return TM.underlying_view(u, int(tf))
 
 
+@router.get("/chart/zhsmc")
+def chart_zhsmc(request: Request, underlying: str, tf: int = 5, expiry: str | None = None, strike: float | None = None, option_type: str | None = None):
+    """Terminal tab: the ZeroHero AI SMC (Pine v1.3.4) indicator on the underlying (5 / 15 m) or, with expiry + strike + option_type, on that option's premium candles."""
+    _auth(request); u = underlying.upper()
+    if u not in SU.ALLOWED or tf not in (1, 3, 5, 15): raise HTTPException(422, "bad underlying / tf")
+    opt = None
+    if expiry is not None or strike is not None or option_type is not None:
+        ot = (option_type or "").upper()
+        if ot not in ("CE", "PE") or strike is None or not expiry: raise HTTPException(422, "option chart needs expiry + strike + option_type")
+        try: opt = (SU.norm_expiry(expiry), float(strike), ot)
+        except SU.SubmissionError as ex: raise HTTPException(422, str(ex)) from None
+    from . import zh_smc
+    return zh_smc.view(u, int(tf), opt)
+
+
 @router.get("/live")
 def live(request: Request):
     """Broker-style watch of the caller's signals of TODAY: WAITING (not filled yet) / ACTIVE (live ltp, bid/ask, open P&L) / CLOSED (final) / EXPIRED / CANCELLED. The settlement part is cached 5 s, the quote overlay is ~1 s fresh."""

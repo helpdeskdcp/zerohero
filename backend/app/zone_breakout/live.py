@@ -49,11 +49,11 @@ def _entry_features(c, sym: str, di: pd.DataFrame, i: int, ts, side: str, px: fl
         prior = pd.DataFrame([dict(side=r[0], entry=r[1], entry_ts=pd.Timestamp(r[2]), exit_ts=pd.Timestamp(r[3]), reason=r[4], session=sess, risk_bp=1.0, signal_i=max(i - 1, 0))
                               for r in c.execute("SELECT side, entry, entry_ts, exit_ts, reason FROM trades WHERE symbol=? AND status='CLOSED' AND exit_ts IS NOT NULL", (sym,)).fetchall()
                               if pd.Timestamp(r[2]).tz_convert("Asia/Kolkata").date() == sess])
-        cur = pd.DataFrame([dict(side=side, entry=px, entry_ts=pd.Timestamp(ts), exit_ts=pd.NaT, reason="", session=sess, risk_bp=abs(px - sl) / px * 1e4, signal_i=max(i - 1, 0))])
+        cur = pd.DataFrame([dict(side=side, entry=px, entry_ts=pd.Timestamp(ts), exit_ts=pd.Timestamp(ts), reason="", session=sess, risk_bp=abs(px - sl) / px * 1e4, signal_i=max(i - 1, 0))])
         t = pd.concat([prior, cur], ignore_index=True); f = TF.build(di.iloc[:i + 1].reset_index(drop=True), t, only=len(t) - 1)
         return json.dumps({k: (None if pd.isna(f.iloc[0][k]) else float(f.iloc[0][k])) for k in TF.FEATURES})
     except Exception as e:
-        _log.debug("trap features failed (cosmetic): %r", e); return None
+        _log.warning("trap features failed (the trade is still logged): %r", e); return None
 
 
 def recent_5m(sym: str, now_epoch: float, days: int = 9, db: str | None = None) -> pd.DataFrame:

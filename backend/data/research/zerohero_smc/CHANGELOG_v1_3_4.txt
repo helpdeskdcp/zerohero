@@ -1,0 +1,14 @@
+//=============================================================================
+// CHANGELOG v1.3.3 -> v1.3.4 (review of 2026-11-02)
+//  1. FIX  daily signal quota never reset on session-only charts (NSE / BSE / MCX): "inSession and not inSession[1]" is false at the next open because the previous bar is the
+//          last bar of the previous day. After maxSignalsDay signals in the WHOLE history no further signal could appear. A calendar-day change now starts a session.
+//          The same fault left previousSessionHigh / Low (and currentSession*) stale; fixed with the same session start.
+//  2. FIX  an unfinished trade stayed open across days until SL / T4 and blocked every later signal: end-of-session square-off added (input, default ON).
+//  3. FIX  timeframe.change("D") was evaluated inside "or / and" (lazy evaluation may skip a history-dependent call): assigned to a variable first.
+//  4. FIX  the six right-side price tags stayed on the chart after a trade closed.
+//  5. FIX  syminfo.prefix is "" outside TradingView (Smart Chart / PineTS) so the profile fell back to Custom (NSE hours) and MCX symbols were gated out: MCX / BSE detected from the ticker name, else NSE.
+//  6. REFACTOR  the exit block existed three times (SL long, SL short, T4 long, T4 short); now one block.
+//  7. NEW  Option CE / PE premium charts (input or Auto from the ticker): only the bullish setup of that premium is a BUY, marker named BUY CE / BUY PE accordingly.
+//  8. NEW  BUY and exit (SL / T4 / EOD) markers with a size input; dashboard defaults to Tiny text and a 5-row Compact layout (Full = all modules).
+//  Known limits (unchanged): costs / spread / option greeks are NOT modelled; M14 / M17 need volume (indices have none -> volRatio = 1); Daily / 4H bias modules need >= 50 HTF bars of history.
+//=============================================================================

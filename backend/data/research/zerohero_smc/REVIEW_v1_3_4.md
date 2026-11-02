@@ -1,0 +1,20 @@
+# ZeroHero AI SMC Intelligence Engine — review of v1.3.3 and what v1.3.4 changes (2026-11-02)
+Reviewed: the pasted v1.3.3 (23 modules, ~700 lines). Method: read the script end to end, then ran it on the Smart Chart engine (PineTS 0.13.0, Vela 0.9.0) with 1,366 NIFTY 5-minute bars (21-Oct..30-Oct) and compared micro-tests of the session logic. The script was NOT run on TradingView here; TradingView-specific behaviour is stated as reasoning, not as a test.
+## Bugs found (ordered by impact)
+| # | Bug | Evidence | Fix in v1.3.4 |
+|---|---|---|---|
+| 1 | **The daily signal quota never resets** on NSE / BSE / MCX charts. `sessionStart = inSession and not inSession[1]` is false at the next open (the previous bar, the last bar of the previous day, is inside the session), and `newDay` only had `timeframe.change("D") and not inSession` as a second path, which is also false. Micro-test over 19 day changes: the old `newDay` fired **1** time, the new logic **20**. Effect: after `maxSignalsDay` (4) signals in the whole history there are no more. The same fault freezes `previousSessionHigh/Low`. | `sess.pine` micro-test | session starts on a calendar-day change; previous-session levels taken at that moment |
+| 2 | An unfinished trade stays open across days until SL or T4 (no time exit), and `canSignal` needs `tradeDir == 0` — one stuck trade blocks every later signal. | code (section 24) | input `Square-off Open Trade At Next Session Open`, default ON (closes at the last close) |
+| 3 | `timeframe.change("D")` was evaluated inside an `or`/`and` expression; Pine's lazy evaluation may skip a history-dependent call. | code, known Pine v6 pitfall | assigned to `dayChanged` first |
+| 4 | The six right-side price tags of a closed trade stay on the chart until the next signal. | code | deleted at exit |
+| 5 | Outside TradingView `syminfo.prefix` is empty (Smart Chart: prefix "", timezone UTC): profile fell to Custom (NSE hours) so MCX symbols were gated out of session. | headless run printed prefix=[] | MCX / BSE detected from the ticker name, else NSE |
+| 6 | The exit block was copied 3×; any later edit would have to be made in all copies. | code | one block (SL / T4 / EOD) |
+| 7 | No option-premium mode: on a CE/PE premium chart the bearish setup means "premium falling" and was labelled BUY PE. | code | `Chart Instrument Type` input (Auto from ticker ending CE / PE): only bullish setups of that premium, marker BUY CE or BUY PE by the option side |
+## Not bugs but limits you should know
+* Costs, bid/ask spread, theta/delta of an option are not modelled; R is the chart-series R. "Win %" counts trades with positive modelled R.
+* With the default thresholds (score 60, votes 5, dominance 10) the NIFTY 5m series produced **no signal** in 18 sessions on the Smart Chart engine (best bull score 44, best bear 47); at score 36 / votes 4 it gave 9 signals (CE 3, PE 6) over 9 different days, 4 SL, 2 T4, 3 EOD. Thresholds were not changed; this is a measurement, not a recommendation.
+* Smart Chart / Arena load only a few hundred bars: Daily and 4H bias (EMA 50 of D / 4H) cannot be computed there; 1H and 15M still work. M17 (volume) needs volume, which indices lack (the Arena uses the front future's volume for the underlying chart).
+* Same-bar SL and target is resolved SL first (conservative); after T1 the stop is NOT moved to entry, so a trade that hit T1 can still end below 0R.
+## Smart Chart / Arena integration
+* Smart Chart: template `zerohero-smc-v134` and a saved script in the library; Pine file `app/smart_chart/pine_scripts/zerohero_smc_v1_3_4.pine` (63 KB: the editor limit is 64,000 bytes, so the changelog lives here, not in the script).
+* Arena Terminal: new switch **ZeroHero SMC** (on/off, remembered in the browser) next to Winners Scalper and Safe U-turn. Underlying chart (5 / 15 m) = Underlying / Index mode; option chart (1 / 3 / 5 / 15 m) = option CE / PE mode on that contract's premium candles. Shows BUY CE / BUY PE + SL / T4 / EOD markers, the live Entry / SL / T1-T4 lines and a tiny dashboard box. Endpoint `GET /api/arena/public/chart/zhsmc` (token-protected, cached 15 s, read-only).

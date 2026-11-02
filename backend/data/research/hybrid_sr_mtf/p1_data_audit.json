@@ -1,0 +1,189 @@
+{
+ "NIFTY": {
+  "rows": 936025,
+  "first": "2017-06-01 09:15:00+05:30",
+  "last": "2026-10-30 15:28:00+05:30",
+  "trading_days": 2340,
+  "raw_duplicate_timestamps": 0,
+  "sources": {
+   "ANGELONE_CANDLES": 13852,
+   "DHAN_HISTORICAL": 928805
+  },
+  "days_with_375_bars": 2088,
+  "days_below_360_bars": 28,
+  "median_bars_per_day": 375.0,
+  "bars_outside_0915_1529": 63475,
+  "missing_minutes_inside_sessions": 1250,
+  "longest_gap_min": 219,
+  "ohlc_inconsistent_bars": 12,
+  "flat_ohlc_bars": 1718,
+  "bars_in_5plus_unchanged_close_runs": 1340,
+  "volume_nonzero_bars": 76566,
+  "by_year": {
+   "2017": {
+    "bars": 54375,
+    "days": 145
+   },
+   "2018": {
+    "bars": 91874,
+    "days": 245
+   },
+   "2019": {
+    "bars": 91500,
+    "days": 244
+   },
+   "2020": {
+    "bars": 94125,
+    "days": 251
+   },
+   "2021": {
+    "bars": 125757,
+    "days": 252
+   },
+   "2022": {
+    "bars": 124909,
+    "days": 254
+   },
+   "2023": {
+    "bars": 91949,
+    "days": 246
+   },
+   "2024": {
+    "bars": 92528,
+    "days": 249
+   },
+   "2025": {
+    "bars": 93090,
+    "days": 249
+   },
+   "2026": {
+    "bars": 75918,
+    "days": 205
+   }
+  },
+  "worst_days": {
+   "2022-02-05": 37,
+   "2021-08-21": 56,
+   "2024-11-01": 60,
+   "2025-10-21": 60,
+   "2022-10-24": 60,
+   "2022-04-23": 60,
+   "2023-11-12": 61,
+   "2022-01-22": 84
+  }
+ },
+ "BANKNIFTY": {
+  "rows": 525904,
+  "first": "2021-09-29 05:58:00+05:30",
+  "last": "2026-10-30 15:28:00+05:30",
+  "trading_days": 1269,
+  "raw_duplicate_timestamps": 0,
+  "sources": {
+   "ANGELONE_CANDLES": 13118,
+   "DHAN_HISTORICAL": 518500
+  },
+  "days_with_375_bars": 1059,
+  "days_below_360_bars": 22,
+  "median_bars_per_day": 375.0,
+  "bars_outside_0915_1529": 54902,
+  "missing_minutes_inside_sessions": 1057,
+  "longest_gap_min": 191,
+  "ohlc_inconsistent_bars": 4,
+  "flat_ohlc_bars": 974,
+  "bars_in_5plus_unchanged_close_runs": 682,
+  "volume_nonzero_bars": 76567,
+  "by_year": {
+   "2021": {
+    "bars": 47411,
+    "days": 66
+   },
+   "2022": {
+    "bars": 124824,
+    "days": 254
+   },
+   "2023": {
+    "bars": 91949,
+    "days": 246
+   },
+   "2024": {
+    "bars": 92528,
+    "days": 249
+   },
+   "2025": {
+    "bars": 93090,
+    "days": 249
+   },
+   "2026": {
+    "bars": 76102,
+    "days": 205
+   }
+  },
+  "worst_days": {
+   "2022-02-05": 37,
+   "2024-11-01": 60,
+   "2022-10-24": 60,
+   "2025-10-21": 60,
+   "2022-04-23": 60,
+   "2023-11-12": 61,
+   "2022-01-22": 84,
+   "2024-05-18": 106
+  }
+ },
+ "SENSEX": {
+  "rows": 506228,
+  "first": "2021-09-29 08:12:00+05:30",
+  "last": "2026-10-30 15:28:00+05:30",
+  "trading_days": 1269,
+  "raw_duplicate_timestamps": 0,
+  "sources": {
+   "ANGELONE_CANDLES": 13347,
+   "DHAN_HISTORICAL": 498815
+  },
+  "days_with_375_bars": 1053,
+  "days_below_360_bars": 25,
+  "median_bars_per_day": 375.0,
+  "bars_outside_0915_1529": 35573,
+  "missing_minutes_inside_sessions": 1018,
+  "longest_gap_min": 183,
+  "ohlc_inconsistent_bars": 68,
+  "flat_ohlc_bars": 939,
+  "bars_in_5plus_unchanged_close_runs": 636,
+  "volume_nonzero_bars": 76474,
+  "by_year": {
+   "2021": {
+    "bars": 38205,
+    "days": 68
+   },
+   "2022": {
+    "bars": 114151,
+    "days": 250
+   },
+   "2023": {
+    "bars": 91884,
+    "days": 246
+   },
+   "2024": {
+    "bars": 92648,
+    "days": 249
+   },
+   "2025": {
+    "bars": 93089,
+    "days": 249
+   },
+   "2026": {
+    "bars": 76251,
+    "days": 207
+   }
+  },
+  "worst_days": {
+   "2026-08-01": 3,
+   "2026-03-21": 17,
+   "2022-02-05": 37,
+   "2021-11-27": 59,
+   "2024-11-01": 60,
+   "2025-10-21": 60,
+   "2022-10-24": 60,
+   "2023-11-12": 61
+  }
+ }
+}

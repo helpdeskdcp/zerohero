@@ -73,3 +73,13 @@ if ta.crossover(r, 30)
 plot(a, "ATR", display=display.none)
 """},
 ]
+
+
+def _load_pine_file(name: str) -> str:
+    import os
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pine_scripts", name), encoding="utf-8") as f: return f.read()
+
+
+TEMPLATES.append({"id": "zerohero-smc-v134", "name": "ZeroHero AI SMC Intelligence Engine v1.3.4", "kind": "indicator",
+                  "description": "23-module SMC engine: BUY CE / BUY PE markers with Entry / SL / T1-T4 lines, exit markers, tiny compact dashboard. Works on index charts AND on option CE / PE premium charts (Auto from the ticker). Signals on confirmed 5-minute bars; costs not modelled.",
+                  "source": _load_pine_file("zerohero_smc_v1_3_4.pine")})

@@ -1,0 +1,368 @@
+{
+ "NIFTY": {
+  "ROOM_ALL/S1_SWEEP_REVERSAL": {
+   "n": 14,
+   "gross_R_strategy": 0.011,
+   "gross_R_strategy_ci90": [
+    -0.543,
+    0.559
+   ],
+   "gross_R_mirror": 0.044,
+   "paired_diff_R": -0.033,
+   "paired_diff_ci90": [
+    -1.138,
+    0.986
+   ],
+   "gross_pts_per_trade": -1.49,
+   "gross_pts_ci90": [
+    -13.729,
+    11.144
+   ],
+   "breakeven_index_pts_for_option_friction": 3.95
+  },
+  "ROOM_ALL/S2_BREAK_RETEST": {
+   "n": 206,
+   "gross_R_strategy": 0.065,
+   "gross_R_strategy_ci90": [
+    -0.106,
+    0.243
+   ],
+   "gross_R_mirror": -0.243,
+   "paired_diff_R": 0.308,
+   "paired_diff_ci90": [
+    0.043,
+    0.578
+   ],
+   "gross_pts_per_trade": 0.71,
+   "gross_pts_ci90": [
+    -3.564,
+    5.252
+   ],
+   "breakeven_index_pts_for_option_friction": 3.95
+  },
+  "ROOM_ALL/S3_TREND_PULLBACK": {
+   "n": 48,
+   "gross_R_strategy": 0.074,
+   "gross_R_strategy_ci90": [
+    -0.252,
+    0.412
+   ],
+   "gross_R_mirror": -0.125,
+   "paired_diff_R": 0.199,
+   "paired_diff_ci90": [
+    -0.388,
+    0.766
+   ],
+   "gross_pts_per_trade": 5.88,
+   "gross_pts_ci90": [
+    -6.851,
+    19.213
+   ],
+   "breakeven_index_pts_for_option_friction": 3.95
+  },
+  "ROOM_MAJOR/S1_SWEEP_REVERSAL": {
+   "n": 33,
+   "gross_R_strategy": -0.09,
+   "gross_R_strategy_ci90": [
+    -0.455,
+    0.32
+   ],
+   "gross_R_mirror": 0.335,
+   "paired_diff_R": -0.425,
+   "paired_diff_ci90": [
+    -1.125,
+    0.31
+   ],
+   "gross_pts_per_trade": -2.46,
+   "gross_pts_ci90": [
+    -12.91,
+    9.378
+   ],
+   "breakeven_index_pts_for_option_friction": 3.95
+  },
+  "ROOM_MAJOR/S2_BREAK_RETEST": {
+   "n": 290,
+   "gross_R_strategy": -0.035,
+   "gross_R_strategy_ci90": [
+    -0.172,
+    0.112
+   ],
+   "gross_R_mirror": -0.062,
+   "paired_diff_R": 0.028,
+   "paired_diff_ci90": [
+    -0.212,
+    0.273
+   ],
+   "gross_pts_per_trade": -1.8,
+   "gross_pts_ci90": [
+    -5.036,
+    1.604
+   ],
+   "breakeven_index_pts_for_option_friction": 3.95
+  },
+  "ROOM_MAJOR/S3_TREND_PULLBACK": {
+   "n": 162,
+   "gross_R_strategy": -0.061,
+   "gross_R_strategy_ci90": [
+    -0.237,
+    0.123
+   ],
+   "gross_R_mirror": -0.017,
+   "paired_diff_R": -0.044,
+   "paired_diff_ci90": [
+    -0.36,
+    0.26
+   ],
+   "gross_pts_per_trade": -2.42,
+   "gross_pts_ci90": [
+    -8.995,
+    4.218
+   ],
+   "breakeven_index_pts_for_option_friction": 3.95
+  }
+ },
+ "BANKNIFTY": {
+  "ROOM_ALL/S1_SWEEP_REVERSAL": {
+   "n": 8,
+   "gross_R_strategy": 0.003,
+   "gross_R_strategy_ci90": [
+    -0.787,
+    0.858
+   ],
+   "gross_R_mirror": 0.023,
+   "paired_diff_R": -0.02,
+   "paired_diff_ci90": [
+    -1.409,
+    1.43
+   ],
+   "gross_pts_per_trade": 39.05,
+   "gross_pts_ci90": [
+    -29.64,
+    112.403
+   ],
+   "breakeven_index_pts_for_option_friction": 10.61
+  },
+  "ROOM_ALL/S2_BREAK_RETEST": {
+   "n": 164,
+   "gross_R_strategy": 0.035,
+   "gross_R_strategy_ci90": [
+    -0.156,
+    0.228
+   ],
+   "gross_R_mirror": -0.056,
+   "paired_diff_R": 0.092,
+   "paired_diff_ci90": [
+    -0.226,
+    0.409
+   ],
+   "gross_pts_per_trade": 8.22,
+   "gross_pts_ci90": [
+    -5.785,
+    23.181
+   ],
+   "breakeven_index_pts_for_option_friction": 10.61
+  },
+  "ROOM_ALL/S3_TREND_PULLBACK": {
+   "n": 39,
+   "gross_R_strategy": -0.263,
+   "gross_R_strategy_ci90": [
+    -0.587,
+    0.08
+   ],
+   "gross_R_mirror": 0.095,
+   "paired_diff_R": -0.358,
+   "paired_diff_ci90": [
+    -0.941,
+    0.228
+   ],
+   "gross_pts_per_trade": -22.5,
+   "gross_pts_ci90": [
+    -52.393,
+    8.954
+   ],
+   "breakeven_index_pts_for_option_friction": 10.61
+  },
+  "ROOM_MAJOR/S1_SWEEP_REVERSAL": {
+   "n": 18,
+   "gross_R_strategy": -0.221,
+   "gross_R_strategy_ci90": [
+    -0.68,
+    0.291
+   ],
+   "gross_R_mirror": 0.145,
+   "paired_diff_R": -0.366,
+   "paired_diff_ci90": [
+    -1.278,
+    0.555
+   ],
+   "gross_pts_per_trade": -6.17,
+   "gross_pts_ci90": [
+    -41.672,
+    31.811
+   ],
+   "breakeven_index_pts_for_option_friction": 10.61
+  },
+  "ROOM_MAJOR/S2_BREAK_RETEST": {
+   "n": 237,
+   "gross_R_strategy": 0.025,
+   "gross_R_strategy_ci90": [
+    -0.138,
+    0.193
+   ],
+   "gross_R_mirror": -0.039,
+   "paired_diff_R": 0.063,
+   "paired_diff_ci90": [
+    -0.216,
+    0.336
+   ],
+   "gross_pts_per_trade": 10.19,
+   "gross_pts_ci90": [
+    -3.245,
+    24.316
+   ],
+   "breakeven_index_pts_for_option_friction": 10.61
+  },
+  "ROOM_MAJOR/S3_TREND_PULLBACK": {
+   "n": 139,
+   "gross_R_strategy": -0.12,
+   "gross_R_strategy_ci90": [
+    -0.302,
+    0.062
+   ],
+   "gross_R_mirror": 0.157,
+   "paired_diff_R": -0.277,
+   "paired_diff_ci90": [
+    -0.61,
+    0.065
+   ],
+   "gross_pts_per_trade": -15.81,
+   "gross_pts_ci90": [
+    -39.927,
+    7.599
+   ],
+   "breakeven_index_pts_for_option_friction": 10.61
+  }
+ },
+ "SENSEX": {
+  "ROOM_ALL/S1_SWEEP_REVERSAL": {
+   "n": 8,
+   "gross_R_strategy": -0.413,
+   "gross_R_strategy_ci90": [
+    -1.008,
+    0.361
+   ],
+   "gross_R_mirror": 0.607,
+   "paired_diff_R": -1.02,
+   "paired_diff_ci90": [
+    -2.418,
+    0.368
+   ],
+   "gross_pts_per_trade": -32.09,
+   "gross_pts_ci90": [
+    -69.984,
+    11.032
+   ],
+   "breakeven_index_pts_for_option_friction": 13.58
+  },
+  "ROOM_ALL/S2_BREAK_RETEST": {
+   "n": 191,
+   "gross_R_strategy": 0.109,
+   "gross_R_strategy_ci90": [
+    -0.079,
+    0.316
+   ],
+   "gross_R_mirror": 0.019,
+   "paired_diff_R": 0.091,
+   "paired_diff_ci90": [
+    -0.233,
+    0.411
+   ],
+   "gross_pts_per_trade": 17.15,
+   "gross_pts_ci90": [
+    0.241,
+    35.692
+   ],
+   "breakeven_index_pts_for_option_friction": 13.58
+  },
+  "ROOM_ALL/S3_TREND_PULLBACK": {
+   "n": 54,
+   "gross_R_strategy": 0.292,
+   "gross_R_strategy_ci90": [
+    -0.077,
+    0.66
+   ],
+   "gross_R_mirror": 0.044,
+   "paired_diff_R": 0.248,
+   "paired_diff_ci90": [
+    -0.392,
+    0.839
+   ],
+   "gross_pts_per_trade": 24.03,
+   "gross_pts_ci90": [
+    -22.973,
+    67.825
+   ],
+   "breakeven_index_pts_for_option_friction": 13.58
+  },
+  "ROOM_MAJOR/S1_SWEEP_REVERSAL": {
+   "n": 38,
+   "gross_R_strategy": -0.076,
+   "gross_R_strategy_ci90": [
+    -0.438,
+    0.343
+   ],
+   "gross_R_mirror": 0.011,
+   "paired_diff_R": -0.087,
+   "paired_diff_ci90": [
+    -0.87,
+    0.685
+   ],
+   "gross_pts_per_trade": -3.57,
+   "gross_pts_ci90": [
+    -34.353,
+    32.469
+   ],
+   "breakeven_index_pts_for_option_friction": 13.58
+  },
+  "ROOM_MAJOR/S2_BREAK_RETEST": {
+   "n": 267,
+   "gross_R_strategy": 0.037,
+   "gross_R_strategy_ci90": [
+    -0.121,
+    0.201
+   ],
+   "gross_R_mirror": 0.103,
+   "paired_diff_R": -0.065,
+   "paired_diff_ci90": [
+    -0.334,
+    0.195
+   ],
+   "gross_pts_per_trade": 9.56,
+   "gross_pts_ci90": [
+    -3.78,
+    23.054
+   ],
+   "breakeven_index_pts_for_option_friction": 13.58
+  },
+  "ROOM_MAJOR/S3_TREND_PULLBACK": {
+   "n": 173,
+   "gross_R_strategy": 0.07,
+   "gross_R_strategy_ci90": [
+    -0.12,
+    0.261
+   ],
+   "gross_R_mirror": 0.014,
+   "paired_diff_R": 0.056,
+   "paired_diff_ci90": [
+    -0.266,
+    0.363
+   ],
+   "gross_pts_per_trade": -0.95,
+   "gross_pts_ci90": [
+    -21.392,
+    19.186
+   ],
+   "breakeven_index_pts_for_option_friction": 13.58
+  }
+ }
+}

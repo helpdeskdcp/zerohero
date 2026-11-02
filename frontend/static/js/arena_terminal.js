@@ -11,7 +11,7 @@ function tmBucket(r) { return r.state === "WAITING" || r.state === "NO DATA" ? "
 /* nearest candle time at or before t (t and candle times are both already IST-shifted seconds) */
 function tmSnap(times, t) { let lo = 0, hi = times.length - 1, ans = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (times[m] <= t) { ans = times[m]; lo = m + 1; } else hi = m - 1; } return ans; }
 /* ---- Pine indicators on the underlying chart: two scripts, each switched on / off like an indicator or strategy (the choice is remembered in the browser) */
-const TM_INDICATORS = [{ key: "winners", label: "Winners Scalper", title: "Winners Scalper (Pine): trailing-stop lines, BUY / SELL arrows, MA34" }, { key: "uturn", label: "Safe U-turn", title: "Safe U-turn (Pine): CALL / PUT idea after a confirmed turn at the session high or low, with its historical base rate" }];
+const TM_INDICATORS = [{ key: "winners", label: "Winners Scalper", title: "Winners Scalper (Pine): trailing-stop lines, BUY / SELL arrows, MA34" }, { key: "uturn", label: "Safe U-turn", title: "Safe U-turn (Pine): CALL / PUT idea after a confirmed turn at the session high or low, with its historical base rate" }, { key: "zhsmc", label: "ZeroHero SMC", title: "ZeroHero AI SMC (Pine v1.3.4): BUY CE / BUY PE + SL / T4 / EOD markers, live Entry / SL / T1-T4 lines, tiny dashboard. Works on the underlying and on the option premium chart." }];
 function tmIndLoad(raw) {
   const on = Object.fromEntries(TM_INDICATORS.map((x) => [x.key, true]));
   try { const o = JSON.parse(raw || "{}"); for (const x of TM_INDICATORS) if (typeof o[x.key] === "boolean") on[x.key] = o[x.key]; } catch (e) { /* unreadable setting: all on */ }
@@ -36,8 +36,18 @@ function tmUturnMarkers(times, list, opt) {
     ? { time: t, position: "belowBar", color: "#38bdf8", shape: "arrowUp", text: tmUturnText(m, opt) }
     : { time: t, position: "aboveBar", color: "#c084fc", shape: "arrowDown", text: tmUturnText(m, opt) }));
 }
-function tmBuildMarkers(times, u, ind, orderMarker, opt) {
-  const out = []; if (u && ind.winners) out.push(...tmPineMarkers(times, u.markers)); if (u && ind.uturn) out.push(...tmUturnMarkers(times, u.uturn, opt)); if (orderMarker) out.push(orderMarker);
+function tmZhMarkers(times, ms) {
+  return (ms || []).map((m) => ({ t: tmSnap(times, m.time), m })).filter((x) => x.t != null).map(({ t, m }) => (m.kind === "buy"
+    ? (m.side === "BUY CE" ? { time: t, position: "belowBar", color: "#16a34a", shape: "arrowUp", text: "ZH BUY CE" } : { time: t, position: "belowBar", color: "#dc2626", shape: "arrowUp", text: "ZH BUY PE" })
+    : { time: t, position: "aboveBar", color: m.side === "SL" ? "#f87171" : m.side === "T4" ? "#4ade80" : "#9ca3af", shape: "square", text: m.side }));
+}
+const TM_ZH_COLORS = { ENTRY: "#60a5fa", SL: "#ef4444", T1: "#22c55e", T2: "#84cc16", T3: "#22d3ee", T4: "#e879f9" };
+function tmZhDashText(z) {
+  if (!z) return ""; if (z.error) return "ZH SMC: " + z.error; const d = z.dash || []; if (d.length < 5) return "ZH SMC: waiting for data";
+  return [d[0][0], `score ${d[1][1]} | ${d[1][2]}`, `${d[2][1]} | ${d[2][2]}`, `${d[3][1]}  ${d[3][2]}`, `${d[4][1]} ${d[4][2]}`].join("\n");
+}
+function tmBuildMarkers(times, u, ind, orderMarker, opt, zh) {
+  const out = []; if (zh && ind.zhsmc) out.push(...tmZhMarkers(times, zh.markers)); if (u && ind.winners) out.push(...tmPineMarkers(times, u.markers)); if (u && ind.uturn) out.push(...tmUturnMarkers(times, u.uturn, opt)); if (orderMarker) out.push(orderMarker);
   return out.sort((a, b) => a.time - b.time);
 }
 /* where the Safe U-turn rule stands right now, in words (an indicator that says nothing looks broken) + the session high / low it is working from */
@@ -164,7 +174,7 @@ function tmEditHtml(r) {
     + `<div class="tm-edit-b"><button class="tm-save" data-act="save">Save changes</button>${r.state === "ACTIVE" && r.fill != null ? '<button data-act="sl2cost">SL → cost</button>' : ""}${ed.cancel ? '<button class="tm-cancelo" data-act="cancel">Cancel order</button>' : ""}<span id="tmEditMsg" class="tm-edit-m"></span></div>`
     + `<div class="mut tm-edit-n">A change takes effect after the contest execution delay (same for everyone), never retroactively.</div>`;
 }
-if (typeof module !== "undefined") module.exports = { tmDayRange, tmSnapWithin, tmCumToVolume, tmVolume, tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
+if (typeof module !== "undefined") module.exports = { tmDayRange, tmSnapWithin, tmCumToVolume, tmVolume, tmUturnStatus, tmUturnLevels, TM_INDICATORS, tmIndLoad, tmPineMarkers, tmZhMarkers, tmZhDashText, tmUturnMarkers, tmUturnText, tmBuildMarkers, tmIndNote, tmBreakdown, tmChartPath, tmBucket, tmSnap, tmLevels, tmRowHtml, tmRs, tmExitUi, tmEditable, tmEditEvents, tmEditHtml, tmParseList };
 
 if (typeof document !== "undefined") (function () {
   const $ = (id) => document.getElementById(id), pane = document.querySelector('[data-pane="terminal"]');
@@ -221,7 +231,7 @@ if (typeof document !== "undefined") (function () {
   }
   function clearChart() {
     for (const k of Object.keys(series)) { try { chart.removeSeries(series[k]); } catch (e) { /* ok */ } }
-    series = {}; lines = []; uLines = []; hlLines = []; mk = null; vmk = null; lastVol = null; optCandles = []; lastBar = null; forming = null;
+    series = {}; lines = []; uLines = []; hlLines = []; zhLines = []; mk = null; vmk = null; lastVol = null; optCandles = []; lastBar = null; forming = null;
   }
   const lineStyle = (s) => ({ solid: 0, dotted: 1, dashed: 2 }[s] ?? 0);
   function addCandles() {
@@ -236,6 +246,7 @@ if (typeof document !== "undefined") (function () {
   let ind = (() => { try { return tmIndLoad(localStorage.getItem("arena_ind")); } catch (e) { return tmIndLoad(""); } })(), lastTimes = [], lastOrder = null;
   const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
   let lastR = null, uLines = [], hlLines = [], vmk = null, lastVol = null, optCandles = []; lastR = null;
+  let lastZh = null, zhLines = [], zhTs = 0;
   function drawUturnLines() {
     uLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); uLines = [];
     if (series.c && ind.uturn) tmUturnLevels(lastUnderlying).forEach((L) => uLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: L.title })));
@@ -246,9 +257,23 @@ if (typeof document !== "undefined") (function () {
     hlLines.push(series.c.createPriceLine({ price: R.hi, color: "#c084fc", lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: "Day high" }));
     hlLines.push(series.c.createPriceLine({ price: R.lo, color: "#38bdf8", lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: "Day low" }));
   }
+  function drawZh() {                                                                            // ZeroHero SMC: live Entry / SL / T1-T4 price lines + the tiny dashboard box (both follow the switch at once)
+    zhLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); zhLines = [];
+    if (series.c && ind.zhsmc && lastZh) (lastZh.levels || []).forEach((L) => zhLines.push(series.c.createPriceLine({ price: L.price, color: TM_ZH_COLORS[L.head] || "#9ca3af", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "ZH " + L.title })));
+    const host = $("tmChart"); if (!host) return; let box = $("tmZhDash");
+    if (!box) { box = document.createElement("div"); box.id = "tmZhDash"; box.style.cssText = "position:absolute;left:6px;top:6px;z-index:5;background:rgba(17,22,33,.82);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;pointer-events:none;max-width:70%;white-space:pre"; host.appendChild(box); }
+    const t = ind.zhsmc ? tmZhDashText(lastZh) : ""; box.textContent = t; box.style.display = t ? "block" : "none";
+  }
+  async function loadZh(r) {
+    if (!r || r.instrument === "EQUITY" || !ind.zhsmc) return; const my = gen, opt = view === "option", e = encodeURIComponent; zhTs = Date.now();
+    const q = opt ? `/chart/zhsmc?underlying=${e(r.underlying)}&tf=${tf}&expiry=${e(r.expiry)}&strike=${r.strike}&option_type=${r.option_type}` : `/chart/zhsmc?underlying=${e(r.underlying)}&tf=${utf}`;
+    let z; try { z = await api(q); } catch (err) { z = { markers: [], levels: [], dash: [], error: String(err.message || err) }; }
+    if (my !== gen || !ind.zhsmc) return; lastZh = z;
+    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder, view === "option", lastZh)); drawZh();                    // only this script's markers / lines / box are redrawn
+  }
   function applyInd() {                                                                          // a switch was flipped: lines, markers and the note follow at once, no reload
     for (const k of ["up", "dn", "ma"]) if (series[k]) series[k].applyOptions({ visible: !!ind.winners });
-    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder, view === "option")); drawUturnLines();
+    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder, view === "option", lastZh)); drawUturnLines(); drawZh(); if (ind.zhsmc && !lastZh && sel) loadZh(sel);
     if (lastUnderlying) setNote(tmIndNote(ind, lastUnderlying));
   }
 
@@ -259,7 +284,7 @@ if (typeof document !== "undefined") (function () {
     optCandles = c.candles.slice(); drawDayRange(); const vol = tmVolume(tmCumToVolume(optCandles)); lastVol = vol; vmk = null;
     if (vol.any) { const LW = window.LightweightCharts; series.v = chart.addSeries(LW.HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "vol", priceLineVisible: false, lastValueVisible: false }); chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } }); series.v.setData(vol.bars); vmk = LW.createSeriesMarkers(series.v, vol.marks); }
     const times = c.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times); lastUnderlying = u;
-    setMarkers(tmBuildMarkers(times, u, ind, lastOrder, true)); if (!userZoomed) chart.timeScale().fitContent();
+    setMarkers(tmBuildMarkers(times, u, ind, lastOrder, true, lastZh)); drawZh(); if (!userZoomed) chart.timeScale().fitContent();
     setNote(c.candles.length ? `${c.candles.length} candles · ${tf}m · exchange-stamped quotes` + (r.instrument === "EQUITY" ? ` · ${r.underlying} cash equity` : ` · Pine arrows on ${r.underlying}: ${tmIndNote(ind, u)}`) : "No quotes captured for this contract yet today.");
   }
   async function refreshOption(r) {
@@ -281,7 +306,7 @@ if (typeof document !== "undefined") (function () {
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } }); series.v.setData(vol.bars); vmk = LW.createSeriesMarkers(series.v, vol.marks);
     } else vmk = null;
     const times = u.candles.map((x) => x.time); lastTimes = times; lastOrder = orderMarker(r, times);
-    setMarkers(tmBuildMarkers(times, u, ind, lastOrder)); drawUturnLines(); if (!userZoomed) chart.timeScale().fitContent();
+    setMarkers(tmBuildMarkers(times, u, ind, lastOrder, false, lastZh)); drawUturnLines(); drawZh(); if (!userZoomed) chart.timeScale().fitContent();
     setNote(`${r.underlying} ${utf}m · ${u.source} · ${tmIndNote(ind, u)}` + (ind.winners ? " · green/red = Winners trailing stop, orange = MA34" : "") + (lastVol && lastVol.any ? " · bottom = volume, 2x/3x = vs 20-bar average" : " · no volume stored for this symbol") + (u.spot ? ` · spot ${tmNum(u.spot)} (live feed)` : ""));
   }
   async function refreshUnderlying(r) {
@@ -299,13 +324,15 @@ if (typeof document !== "undefined") (function () {
   async function openChart(r) {
     if (!ensureChart()) { setNote("chart library not loaded", true); return; }
     if (r.instrument === "EQUITY" && view !== "option") { view = "option"; document.querySelectorAll("[data-tmview]").forEach((x) => x.classList.toggle("on", x.dataset.tmview === "option")); }          // cash equity has no Pine / underlying view
-    sel = r; gen += 1; userZoomed = false; const my = gen; renderHeader(); highlight();
+    sel = r; gen += 1; userZoomed = false; lastZh = null; const my = gen; renderHeader(); highlight();
     try { if (view === "option") await loadOption(r, my); else await loadUnderlying(r, my); } catch (e) { setNote("chart: " + e.message, true); }
+    if (my === gen && ind.zhsmc) loadZh(r);
   }
   async function chartTick() {
     if (!sel || !series.c || document.hidden) return; const my = gen;
     try { if (view === "option") await refreshOption(sel); else await refreshUnderlying(sel); } catch (e) { /* next tick */ }
     if (my !== gen) return;
+    if (ind.zhsmc && Date.now() - zhTs > 20000) loadZh(sel);                                      // the Pine run is cached 15 s on the server: ask at most every 20 s
   }
 
   /* ---------------------------------------------------------------- right panel */

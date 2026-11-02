@@ -273,3 +273,15 @@ def test_leaderboard_lists_every_visible_participant_not_only_ten(client, monkey
     monkeypatch.setattr(A, "PARTICIPANTS_FILE", str(pf)); A._cache.pop("lb", None)
     r = client.get("/api/arena/public/leaderboard", params={"scope": "all"}, headers=H).json()
     shown = [x["participant"] for x in r["rows"]]; assert len([n for n in shown if n.startswith("P_")]) == 14 and "HID" not in shown and r["n_participants"] == len(shown)
+
+
+def test_zhsmc_chart_route_needs_the_token_validates_the_request_and_never_raises(client, monkeypatch):
+    from app.arena import zh_smc as Z
+    assert client.get("/api/arena/public/chart/zhsmc?underlying=NIFTY&tf=5").status_code == 401
+    assert client.get("/api/arena/public/chart/zhsmc?underlying=FOO&tf=5", headers=H).status_code == 422
+    assert client.get("/api/arena/public/chart/zhsmc?underlying=NIFTY&tf=7", headers=H).status_code == 422
+    assert client.get("/api/arena/public/chart/zhsmc?underlying=NIFTY&tf=5&strike=23000", headers=H).status_code == 422          # an option chart needs expiry + strike + option_type together
+    seen = {}
+    monkeypatch.setattr(Z, "view", lambda u, tf, opt, **k: seen.update(u=u, tf=tf, opt=opt) or {"markers": [], "levels": [], "dash": [], "error": None})
+    assert client.get("/api/arena/public/chart/zhsmc?underlying=nifty&tf=15", headers=H).status_code == 200 and seen == {"u": "NIFTY", "tf": 15, "opt": None}
+    r = client.get("/api/arena/public/chart/zhsmc?underlying=NIFTY&tf=5&expiry=27OCT2026&strike=23000&option_type=pe", headers=H); assert r.status_code == 200 and seen["opt"] == ("2026-10-27", 23000.0, "PE")

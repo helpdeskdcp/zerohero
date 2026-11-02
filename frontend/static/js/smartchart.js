@@ -152,10 +152,38 @@
     try {
       const h = c.addIndicator(script.source, { id: "zh-" + script.id, title: script.name, inputs: script.inputs || {} });
       st.handles.set(script.id, h);
+      pineDebug(h, script);
       h.on("error", (ev) => { if (st.cur && st.cur.id === script.id) { st.diags = [{ severity: "error", code: "CHART_RUNTIME", message: (ev.error && ev.error.message) || String(ev.error), line: null }]; renderDiag(); } });
       renderScripts();
       return h;
     } catch (e) { if (!quiet) showErr("#scErr", e); return null; }
+  }
+  // Pine debug line (temporary, mobile-friendly): what the engine produced for this script and whether the chart got it. Tap it to hide; add ?pinedebug=1 to the URL to show it.
+  function pineDebug(h, script) {
+    try {
+      if (!/[?&]pinedebug=1/.test(location.search)) return;
+      let el = document.getElementById("pineDbg");
+      if (!el) {
+        el = document.createElement("div"); el.id = "pineDbg";
+        el.style.cssText = "position:fixed;left:6px;right:6px;bottom:6px;z-index:9999;background:#111c;color:#9fe;font:11px/1.4 monospace;padding:6px 8px;border-radius:6px;max-height:34vh;overflow:auto;white-space:pre-wrap";
+        el.onclick = () => el.remove(); document.body.appendChild(el);
+      }
+      const put = (m) => { el.textContent = "Pine debug · " + script.name + "\n" + m + "\n(tap to hide)"; };
+      put("waiting for the engine…");
+      const pull = async (why) => {
+        try {
+          const c = await h.context();
+          if (!c) { put(why + ": no context yet"); return; }
+          const pl = c.plots || {}; const keys = Object.keys(pl);
+          const cnt = (k) => { const v = pl[k]; const a = Array.isArray(v) ? v : (v && (v.data || v.values)) || []; return Array.isArray(a) ? a.length : "?"; };
+          put(why + ": bar=" + c.barIndex + " phase=" + c.phase + "\nplots/series=" + keys.length + " · warnings=" + (c.warnings || []).length +
+              "\n" + keys.slice(0, 12).map((k) => k + "=" + cnt(k)).join("  ") + ((c.warnings || []).length ? "\nwarn: " + (c.warnings[0].message || "").slice(0, 120) : ""));
+        } catch (e) { put(why + ": context failed: " + (e && e.message || e)); }
+      };
+      h.on("ready", () => pull("ready"));
+      try { h.on("context:changed", () => pull("changed")); } catch (_) { /* event not available */ }
+      h.on("error", (ev) => put("ENGINE ERROR: " + ((ev.error && ev.error.message) || ev.error)));
+    } catch (e) { /* debug must never break the page */ }
   }
   function removeFromChart(id) { const h = st.handles.get(id); if (h) { try { h.remove(); } catch (_) { /* ignore */ } st.handles.delete(id); renderScripts(); } }
 

@@ -1,0 +1,925 @@
+//@version=6
+indicator("ZeroHero AI SMC Intelligence Engine v1.3.4 | Auto NSE BSE MCX + Option CE/PE", shorttitle="ZHSMC23H", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=100)
+//=============================================================================
+// ZEROHERO AI v1.3.4 — 23-module signal engine (v1.3.3 + review fixes, see CHANGELOG at the bottom)
+// 23 rule-based modules. No broker orders. Signals only on confirmed bar close.
+// Works on the UNDERLYING / INDEX chart and on an OPTION (CE / PE) premium chart.
+//=============================================================================
+// 01. SIGNAL ENGINE
+gSignal = "01. Signal Engine"
+minScore       = input.int(40, "Minimum Confluence Score", minval=1, maxval=100, group=gSignal)
+minVotes       = input.int(5, "Minimum Active Module Votes", minval=1, maxval=23, group=gSignal)
+minDominance   = input.int(10, "Minimum Bull/Bear Score Difference", minval=0, maxval=100, group=gSignal)
+cooldownBars   = input.int(6, "Signal Cooldown Bars", minval=1, maxval=100, group=gSignal)
+maxSignalsDay  = input.int(4, "Maximum Signals Per Day", minval=1, maxval=20, group=gSignal)
+allowCE        = input.bool(true, "Enable BUY CE", group=gSignal)
+allowPE        = input.bool(true, "Enable BUY PE", group=gSignal)
+requireTrigger = input.bool(true, "Require Structure/Liquidity/FVG Trigger", group=gSignal)
+useSessionGate = input.bool(true, "Restrict Entries To Active Exchange Session", group=gSignal)
+require5m      = input.bool(true, "Allow Signals Only On 5-Minute Chart", group=gSignal)
+useVwapFilter  = input.bool(false, "Require VWAP Direction", group=gSignal)
+useAdxFilter   = input.bool(false, "Require ADX Trend Strength", group=gSignal)
+adxMin         = input.float(18.0, "Minimum ADX", minval=5, maxval=50, step=0.5, group=gSignal)
+useRsiFilter   = input.bool(false, "Require RSI Direction", group=gSignal)
+rsiBullMin     = input.float(50.0, "Bull RSI Minimum", minval=1, maxval=99, step=0.5, group=gSignal)
+rsiBearMax     = input.float(50.0, "Bear RSI Maximum", minval=1, maxval=99, step=0.5, group=gSignal)
+chartKind      = input.string("Auto", "Chart Instrument Type", options=["Auto","Underlying / Index","Option CE chart","Option PE chart"], group=gSignal, tooltip="Underlying / Index: BUY CE on bullish setups, BUY PE on bearish setups. Option CE / PE chart (premium series): only bullish setups of THIS premium are signalled (you buy the option you are looking at). Auto reads the ticker ending CE / PE.")
+squareOffEOD   = input.bool(true, "Square-off Open Trade At Next Session Open (v1.3.4)", group=gSignal, tooltip="v1.3.3 kept a trade alive until SL or T4 even across days, which blocked every later signal. ON = an unfinished trade is closed at the last close of the session.")
+// 02. TIMEFRAMES / SESSION
+gTF = "02. Timeframe Alignment / Session"
+tfDaily       = input.timeframe("D", "Daily Bias Timeframe", group=gTF)
+tf4H          = input.timeframe("240", "4H Bias Timeframe", group=gTF)
+tf1H          = input.timeframe("60", "1H Bias Timeframe", group=gTF)
+tf15          = input.timeframe("15", "15M Bias Timeframe", group=gTF)
+sessionTz          = input.string("Asia/Kolkata", "Session Timezone", group=gTF)
+marketSessionMode  = input.string("Auto", "Market Session Profile", options=["Auto","NSE","BSE","MCX Non-Agri","MCX Agri","Custom"], group=gTF)
+nseSession          = input.session("0915-1530:23456", "NSE Session", group=gTF)
+bseSession          = input.session("0915-1530:23456", "BSE Session", group=gTF)
+mcxNonAgriSession   = input.session("0900-2355:23456", "MCX Non-Agri Session (winter default)", group=gTF)
+mcxAgriSession      = input.session("0900-1700:23456", "MCX Agri Session", group=gTF)
+customSession       = input.session("0915-1530:23456", "Custom Session", group=gTF)
+// 03. STRUCTURE / ZONES
+gStructure = "03. Structure / SMC"
+pivotLen   = input.int(5, "Confirmed Swing Pivot Length", minval=2, maxval=20, group=gStructure)
+obLookback = input.int(12, "Order Block Search Bars", minval=2, maxval=40, group=gStructure)
+zoneLife   = input.int(40, "FVG / OB Validity Bars", minval=5, maxval=200, group=gStructure)
+rangeLen   = input.int(20, "Origin Block / Range Lookback", minval=5, maxval=100, group=gStructure)
+vLookback  = input.int(12, "V-Shape Lookback", minval=5, maxval=50, group=gStructure)
+// 04. RISK
+gRisk = "04. Smart Risk Engine"
+atrLen   = input.int(14, "ATR Length", minval=2, group=gRisk)
+slATR    = input.float(1.3, "Fallback SL ATR Multiplier", minval=0.3, step=0.1, group=gRisk)
+slBuffer = input.float(0.15, "Structure SL Buffer ATR", minval=0, step=0.05, group=gRisk)
+maxSLATR = input.float(3.0, "Maximum Structure SL Distance ATR", minval=0.5, step=0.25, group=gRisk)
+rr1      = input.float(1.0, "T1 R Multiple", minval=0.25, step=0.25, group=gRisk)
+rr2      = input.float(2.0, "T2 R Multiple", minval=0.5, step=0.25, group=gRisk)
+rr3      = input.float(3.0, "T3 R Multiple", minval=1.0, step=0.25, group=gRisk)
+rr4      = input.float(4.0, "T4 R Multiple", minval=1.5, step=0.25, group=gRisk)
+// 05. CHART DISPLAY
+gDisplay = "05. Chart Display"
+showStructure = input.bool(true, "Show BOS / CHoCH / MSS", group=gDisplay)
+showZones     = input.bool(true, "Show OB / FVG Zones", group=gDisplay)
+showTrendline = input.bool(true, "Show Projected Swing Trendlines", group=gDisplay)
+showTradeLvls = input.bool(true, "Show Entry / SL / T1-T4 Lines", group=gDisplay)
+showLabels    = input.bool(true, "Show Detailed Signal Labels", group=gDisplay)
+showSignalTag = input.bool(true, "Show BUY CE / BUY PE Markers", group=gDisplay)
+showExitTag   = input.bool(true, "Show Exit Markers (SL / T4 / EOD)", group=gDisplay)
+markerSizeIn  = input.string("Small", "BUY / EXIT Marker Size", options=["Tiny","Small","Normal","Large"], group=gDisplay)
+showPriceTags = input.bool(true, "Show Right-Side Price Tags", group=gDisplay)
+showVwap      = input.bool(false, "Show VWAP", group=gDisplay)
+showEMAs      = input.bool(false, "Show EMA 20 / 50", group=gDisplay)
+showLiquidityLevels = input.bool(true, "Show Previous Day / Session Liquidity", group=gDisplay)
+labelOffsetATR = input.float(0.25, "Signal Label Vertical Offset (ATR)", minval=0, maxval=3, step=0.05, group=gDisplay)
+priceTagOffset = input.int(8, "Right-Side Price Tag Offset (bars)", minval=1, maxval=50, group=gDisplay)
+entryLineWidth = input.int(2, "Entry Line Width", minval=1, maxval=4, group=gDisplay)
+targetLineWidth = input.int(2, "Target Line Width", minval=1, maxval=4, group=gDisplay)
+stopLineWidth = input.int(2, "Stop Line Width", minval=1, maxval=4, group=gDisplay)
+showHistoricalTrades = input.bool(true, "Keep Historical Trade Drawings", group=gDisplay)
+historyTradeLimit = input.int(50, "Historical Trades To Keep", minval=10, maxval=70, group=gDisplay)
+showTradeOutcomeInLabel = input.bool(true, "Update Historical Labels With Outcome", group=gDisplay)
+showPerformancePanel = input.bool(true, "Show Historical Performance Panel", group=gDisplay)
+performancePosition = input.string("Bottom Left", "Performance Panel Position", options=["Top Right","Top Left","Bottom Right","Bottom Left"], group=gDisplay)
+// 06. DASHBOARD
+gDash = "06. Dashboard Layout"
+showDash = input.bool(true, "Show Dashboard", group=gDash)
+dashMode = input.string("Compact", "Dashboard Layout", options=["Compact","Full"], group=gDash, tooltip="Compact = 5 rows (decision, score, trade, filters, session). Full = all 23 module rows.")
+dashPosition = input.string("Top Right", "Dashboard Position", options=["Top Right","Top Left","Bottom Right","Bottom Left","Middle Right","Middle Left","Top Center","Bottom Center"], group=gDash)
+dashSize = input.string("Tiny", "Dashboard Text Size", options=["Tiny","Small","Normal","Large"], group=gDash)
+dashBg = input.color(color.rgb(17,22,33), "Dashboard Background", group=gDash)
+dashTransparency = input.int(8, "Dashboard Transparency", minval=0, maxval=100, group=gDash)
+dashText = input.color(color.white, "Dashboard Text", group=gDash)
+bullColor = input.color(color.rgb(0,180,115), "Bull Color", group=gDash)
+bearColor = input.color(color.rgb(225,55,75), "Bear Color", group=gDash)
+neutralColor = input.color(color.rgb(95,105,125), "Neutral Color", group=gDash)
+dashPos = switch dashPosition
+    "Top Left" => position.top_left
+    "Bottom Right" => position.bottom_right
+    "Bottom Left" => position.bottom_left
+    "Middle Right" => position.middle_right
+    "Middle Left" => position.middle_left
+    "Top Center" => position.top_center
+    "Bottom Center" => position.bottom_center
+    => position.top_right
+dashTextSize = switch dashSize
+    "Tiny" => size.tiny
+    "Normal" => size.normal
+    "Large" => size.large
+    => size.small
+markerSize = switch markerSizeIn
+    "Tiny" => size.tiny
+    "Normal" => size.normal
+    "Large" => size.large
+    => size.small
+// 06B. INSTRUMENT TYPE (v1.3.4): underlying / index or an option premium chart
+string tkUp = str.upper(syminfo.ticker)
+bool tkLooksOption = str.length(tkUp) >= 8 and (str.endswith(tkUp, "CE") or str.endswith(tkUp, "PE"))
+int optMode = chartKind == "Option CE chart" ? 1 : chartKind == "Option PE chart" ? 2 : chartKind == "Auto" and tkLooksOption ? (str.endswith(tkUp, "CE") ? 1 : 2) : 0
+bool isOptChart = optMode != 0
+string optSideText = optMode == 2 ? "BUY PE" : "BUY CE"
+// 07. CORE INDICATORS
+atr = ta.atr(atrLen)
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
+rsi14 = ta.rsi(close, 14)
+volAvg = ta.sma(volume, 20)
+vwapValue = ta.vwap(hlc3)
+[diPlus, diMinus, adxValue] = ta.dmi(14, 14)
+priceBullDivPivot = ta.pivotlow(low, 3, 3)
+priceBearDivPivot = ta.pivothigh(high, 3, 3)
+rsiAtBullPricePivot = rsi14[3]
+rsiAtBearPricePivot = rsi14[3]
+var float lastPricePivotLow = na
+var float lastRsiPivotLow = na
+var float lastPricePivotHigh = na
+var float lastRsiPivotHigh = na
+bullRsiDivergence = false
+bearRsiDivergence = false
+if not na(priceBullDivPivot) and not na(rsiAtBullPricePivot)
+    bullRsiDivergence := not na(lastPricePivotLow) and priceBullDivPivot < lastPricePivotLow and rsiAtBullPricePivot > lastRsiPivotLow
+    lastPricePivotLow := priceBullDivPivot
+    lastRsiPivotLow := rsiAtBullPricePivot
+if not na(priceBearDivPivot) and not na(rsiAtBearPricePivot)
+    bearRsiDivergence := not na(lastPricePivotHigh) and priceBearDivPivot > lastPricePivotHigh and rsiAtBearPricePivot < lastRsiPivotHigh
+    lastPricePivotHigh := priceBearDivPivot
+    lastRsiPivotHigh := rsiAtBearPricePivot
+volRatio = not na(volAvg) and volAvg > 0 ? volume / volAvg : 1.0
+body = math.abs(close - open)
+barRange = math.max(high - low, syminfo.mintick)
+lowerWick = math.min(open, close) - low
+upperWick = high - math.max(open, close)
+closeLocation = (close - low) / barRange
+ema20Rising2 = ta.rising(ema20, 2)
+ema20Falling2 = ta.falling(ema20, 2)
+closeRising2 = ta.rising(close, 2)
+closeFalling2 = ta.falling(close, 2)
+bullTrend = ema20 > ema50 and close > ema20 and ema20Rising2
+bearTrend = ema20 < ema50 and close < ema20 and ema20Falling2
+bullImpulse = close > open and body >= atr * 0.45 and closeLocation >= 0.70
+bearImpulse = close < open and body >= atr * 0.45 and closeLocation <= 0.30
+plot(showVwap ? vwapValue : na, "VWAP", color=color.new(color.yellow, 0), linewidth=2)
+plot(showEMAs ? ema20 : na, "EMA 20", color=color.new(color.aqua, 0), linewidth=1)
+plot(showEMAs ? ema50 : na, "EMA 50", color=color.new(color.orange, 0), linewidth=1)
+// 08. CLOSED HTF DATA: [1] + lookahead_on prevents use of the unfinished HTF candle.
+[dClose, dEma20, dEma50] = request.security(syminfo.tickerid, tfDaily, [close[1], ta.ema(close,20)[1], ta.ema(close,50)[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+[h4Close, h4Ema20, h4Ema50] = request.security(syminfo.tickerid, tf4H, [close[1], ta.ema(close,20)[1], ta.ema(close,50)[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+[h1Close, h1Ema20, h1Ema50] = request.security(syminfo.tickerid, tf1H, [close[1], ta.ema(close,20)[1], ta.ema(close,50)[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+[m15Close, m15Ema20, m15Ema50] = request.security(syminfo.tickerid, tf15, [close[1], ta.ema(close,20)[1], ta.ema(close,50)[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+dailyBull = dClose > dEma20 and dEma20 > dEma50
+dailyBear = dClose < dEma20 and dEma20 < dEma50
+h4Bull = h4Close > h4Ema20 and h4Ema20 > h4Ema50
+h4Bear = h4Close < h4Ema20 and h4Ema20 < h4Ema50
+h1Bull = h1Close > h1Ema20 and h1Ema20 > h1Ema50
+h1Bear = h1Close < h1Ema20 and h1Ema20 < h1Ema50
+htf15Bull = m15Close > m15Ema20 and m15Ema20 > m15Ema50
+htf15Bear = m15Close < m15Ema20 and m15Ema20 < m15Ema50
+// 09. AUTO EXCHANGE SESSION + PREVIOUS SESSION LEVELS
+// v1.3.4: TradingView gives syminfo.prefix (NSE / BSE / MCX); other hosts give "" -> fall back to well-known MCX / B...
+string symbolPrefix = str.upper(syminfo.prefix)
+bool nameMCX = str.contains(tkUp, "NATURALGAS") or str.contains(tkUp, "NATGAS") or str.contains(tkUp, "CRUDE") or str.contains(tkUp, "GOLD") or str.contains(tkUp, "SILVER") or str.contains(tkUp, "COPPER") or str.contains(tkUp, "ZINC") or str.contains(tkUp, "LEAD") or str.contains(tkUp, "NICKEL") or str.contains(tkUp, "ALUMINIUM")
+bool nameBSE = str.contains(tkUp, "SENSEX") or str.contains(tkUp, "BANKEX")
+bool detectedMCX = str.contains(symbolPrefix, "MCX") or (symbolPrefix == "" and nameMCX)
+bool detectedBSE = not detectedMCX and (str.contains(symbolPrefix, "BSE") or (symbolPrefix == "" and nameBSE))
+bool detectedNSE = not detectedMCX and not detectedBSE and (str.contains(symbolPrefix, "NSE") or symbolPrefix == "")
+string activeMarketProfile = marketSessionMode == "Auto" ? (detectedMCX ? "MCX NON-AGRI" : detectedBSE ? "BSE" : detectedNSE ? "NSE" : "CUSTOM") : marketSessionMode
+string activeSession = marketSessionMode == "Auto" ? (detectedMCX ? mcxNonAgriSession : detectedBSE ? bseSession : detectedNSE ? nseSession : customSession) : marketSessionMode == "NSE" ? nseSession : marketSessionMode == "BSE" ? bseSession : marketSessionMode == "MCX Non-Agri" ? mcxNonAgriSession : marketSessionMode == "MCX Agri" ? mcxAgriSession : customSession
+inSession = not na(time(timeframe.period, activeSession, sessionTz))
+// v1.3.4 FIX: on a session-only chart (NSE / BSE / MCX) the bar before the next open is the previous day's last bar,...
+// "inSession and not inSession[1]" never fired and the daily signal quota never reset (after maxSignalsDay signals i...
+// Computed into a variable first: a history-dependent call inside and / or may be skipped (lazy evaluation).
+bool dayChanged = timeframe.change("D")
+sessionStart = inSession and (bar_index == 0 or not inSession[1] or dayChanged)
+var float currentSessionHigh = na
+var float currentSessionLow = na
+var float previousSessionHigh = na
+var float previousSessionLow = na
+if sessionStart
+    if not na(currentSessionHigh)
+        previousSessionHigh := currentSessionHigh
+        previousSessionLow := currentSessionLow
+    currentSessionHigh := high
+    currentSessionLow := low
+else if inSession
+    currentSessionHigh := math.max(nz(currentSessionHigh, high), high)
+    currentSessionLow := math.min(nz(currentSessionLow, low), low)
+prevDayHigh = request.security(syminfo.tickerid, "D", high[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+prevDayLow = request.security(syminfo.tickerid, "D", low[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+plot(showLiquidityLevels ? prevDayHigh : na, "Previous Day High", color=color.new(color.red, 30), style=plot.style_linebr)
+plot(showLiquidityLevels ? prevDayLow : na, "Previous Day Low", color=color.new(color.green, 30), style=plot.style_linebr)
+plot(showLiquidityLevels ? previousSessionHigh : na, "Previous Session High", color=color.new(color.orange, 25), style=plot.style_linebr)
+plot(showLiquidityLevels ? previousSessionLow : na, "Previous Session Low", color=color.new(color.aqua, 25), style=plot.style_linebr)
+// 10. CONFIRMED SWING STRUCTURE / BOS / CHoCH / MSS
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low, pivotLen, pivotLen)
+var float lastPH = na
+var float prevPH = na
+var int lastPHBar = na
+var int prevPHBar = na
+var float lastPL = na
+var float prevPL = na
+var int lastPLBar = na
+var int prevPLBar = na
+var int marketTrend = 0
+if not na(ph)
+    prevPH := lastPH
+    prevPHBar := lastPHBar
+    lastPH := ph
+    lastPHBar := bar_index - pivotLen
+if not na(pl)
+    prevPL := lastPL
+    prevPLBar := lastPLBar
+    lastPL := pl
+    lastPLBar := bar_index - pivotLen
+crossAboveLastPH = not na(lastPH) and not na(lastPH[1]) and lastPH == lastPH[1] and close > lastPH and close[1] <= lastPH
+crossBelowLastPL = not na(lastPL) and not na(lastPL[1]) and lastPL == lastPL[1] and close < lastPL and close[1] >= lastPL
+bullBreak = crossAboveLastPH
+bearBreak = crossBelowLastPL
+bullCHoCH = bullBreak and marketTrend == -1
+bearCHoCH = bearBreak and marketTrend == 1
+bullBOS = bullBreak and not bullCHoCH
+bearBOS = bearBreak and not bearCHoCH
+bullMSS = bullCHoCH and bullImpulse
+bearMSS = bearCHoCH and bearImpulse
+if bullBreak
+    marketTrend := 1
+if bearBreak
+    marketTrend := -1
+plotshape(showStructure and bullBOS, title="Bull BOS", style=shape.labelup, location=location.belowbar, color=color.green, text="BOS", textcolor=color.white, size=size.tiny)
+plotshape(showStructure and bearBOS, title="Bear BOS", style=shape.labeldown, location=location.abovebar, color=color.red, text="BOS", textcolor=color.white, size=size.tiny)
+plotshape(showStructure and bullCHoCH, title="Bull CHoCH", style=shape.labelup, location=location.belowbar, color=color.blue, text="CHoCH", textcolor=color.white, size=size.tiny)
+plotshape(showStructure and bearCHoCH, title="Bear CHoCH", style=shape.labeldown, location=location.abovebar, color=color.orange, text="CHoCH", textcolor=color.white, size=size.tiny)
+plotshape(showStructure and bullMSS, title="Bull MSS", style=shape.labelup, location=location.belowbar, color=color.aqua, text="MSS", textcolor=color.black, size=size.tiny)
+plotshape(showStructure and bearMSS, title="Bear MSS", style=shape.labeldown, location=location.abovebar, color=color.fuchsia, text="MSS", textcolor=color.white, size=size.tiny)
+// 11. FVG / IFVG STATE
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+var float bullFvgTop = na
+var float bullFvgBottom = na
+var int bullFvgBar = na
+var bool bullFvgActive = false
+var float bearFvgTop = na
+var float bearFvgBottom = na
+var int bearFvgBar = na
+var bool bearFvgActive = false
+var bool bullIFVGActive = false
+var bool bearIFVGActive = false
+var int bullIFVGBar = na
+var int bearIFVGBar = na
+var float bullIFVGTop = na
+var float bullIFVGBottom = na
+var float bearIFVGTop = na
+var float bearIFVGBottom = na
+if bullFVG
+    bullFvgTop := low
+    bullFvgBottom := high[2]
+    bullFvgBar := bar_index
+    bullFvgActive := true
+if bearFVG
+    bearFvgTop := low[2]
+    bearFvgBottom := high
+    bearFvgBar := bar_index
+    bearFvgActive := true
+if bullFvgActive and (bar_index - bullFvgBar > zoneLife or close < bullFvgBottom)
+    bullFvgActive := false
+    if close < bullFvgBottom
+        bearIFVGActive := true
+        bearIFVGBar := bar_index
+        bearIFVGTop := bullFvgTop
+        bearIFVGBottom := bullFvgBottom
+if bearFvgActive and (bar_index - bearFvgBar > zoneLife or close > bearFvgTop)
+    bearFvgActive := false
+    if close > bearFvgTop
+        bullIFVGActive := true
+        bullIFVGBar := bar_index
+        bullIFVGTop := bearFvgTop
+        bullIFVGBottom := bearFvgBottom
+if bullIFVGActive and (bar_index - bullIFVGBar > zoneLife or close < bullIFVGTop)
+    bullIFVGActive := false
+if bearIFVGActive and (bar_index - bearIFVGBar > zoneLife or close > bearIFVGBottom)
+    bearIFVGActive := false
+bullFvgTouch = bullFvgActive and bar_index > bullFvgBar and low <= bullFvgTop and high >= bullFvgBottom and close > bullFvgBottom
+bearFvgTouch = bearFvgActive and bar_index > bearFvgBar and high >= bearFvgBottom and low <= bearFvgTop and close < bearFvgTop
+bullIFVGSignal = bullIFVGActive and not na(bullIFVGTop) and close > bullIFVGTop and close[1] <= bullIFVGTop
+bearIFVGSignal = bearIFVGActive and not na(bearIFVGBottom) and close < bearIFVGBottom and close[1] >= bearIFVGBottom
+// 12. ORDER BLOCK STATE / MITIGATION
+var float bullOBTop = na
+var float bullOBBottom = na
+var int bullOBBar = na
+var bool bullOBActive = false
+var float bearOBTop = na
+var float bearOBBottom = na
+var int bearOBBar = na
+var bool bearOBActive = false
+if bullBreak
+    bool foundBullOB = false
+    for i = 1 to obLookback
+        if not foundBullOB and close[i] < open[i]
+            bullOBTop := high[i]
+            bullOBBottom := low[i]
+            bullOBBar := bar_index
+            bullOBActive := true
+            foundBullOB := true
+if bearBreak
+    bool foundBearOB = false
+    for i = 1 to obLookback
+        if not foundBearOB and close[i] > open[i]
+            bearOBTop := high[i]
+            bearOBBottom := low[i]
+            bearOBBar := bar_index
+            bearOBActive := true
+            foundBearOB := true
+if bullOBActive and (bar_index - bullOBBar > zoneLife or close < bullOBBottom)
+    bullOBActive := false
+if bearOBActive and (bar_index - bearOBBar > zoneLife or close > bearOBTop)
+    bearOBActive := false
+bullOBTouch = bullOBActive and bar_index > bullOBBar and low <= bullOBTop and high >= bullOBBottom and close > bullOBBottom
+bearOBTouch = bearOBActive and bar_index > bearOBBar and high >= bearOBBottom and low <= bearOBTop and close < bearOBTop
+// 13. LIQUIDITY / TRAPS / SESSION LEVELS
+priorRangeHigh = ta.highest(high[1], rangeLen)
+priorRangeLow = ta.lowest(low[1], rangeLen)
+bslSweep = not na(lastPH) and high > lastPH and close < lastPH
+sslSweep = not na(lastPL) and low < lastPL and close > lastPL
+bslAcceptance = not na(lastPH) and close > lastPH and close[1] <= lastPH
+sslAcceptance = not na(lastPL) and close < lastPL and close[1] >= lastPL
+bullFailedBreak = low < priorRangeLow and close > priorRangeLow and close > open
+bearFailedBreak = high > priorRangeHigh and close < priorRangeHigh and close < open
+bullPrevDaySweep = low < prevDayLow and close > prevDayLow
+bearPrevDaySweep = high > prevDayHigh and close < prevDayHigh
+bullPrevSessionSweep = not na(previousSessionLow) and low < previousSessionLow and close > previousSessionLow
+bearPrevSessionSweep = not na(previousSessionHigh) and high > previousSessionHigh and close < previousSessionHigh
+// 14. PROJECTED SWING TRENDLINES
+upperSlope = not na(prevPHBar) and not na(lastPHBar) and lastPHBar > prevPHBar ? (lastPH - prevPH) / (lastPHBar - prevPHBar) : na
+lowerSlope = not na(prevPLBar) and not na(lastPLBar) and lastPLBar > prevPLBar ? (lastPL - prevPL) / (lastPLBar - prevPLBar) : na
+projectedUpper = not na(upperSlope) and not na(lastPHBar) ? lastPH + upperSlope * (bar_index - lastPHBar) : na
+projectedLower = not na(lowerSlope) and not na(lastPLBar) ? lastPL + lowerSlope * (bar_index - lastPLBar) : na
+bullTrendlineBreak = not na(projectedUpper) and not na(projectedUpper[1]) and close > projectedUpper and close[1] <= projectedUpper[1]
+bearTrendlineBreak = not na(projectedLower) and not na(projectedLower[1]) and close < projectedLower and close[1] >= projectedLower[1]
+plot(showTrendline ? projectedUpper : na, "Projected Swing High Trendline", color=color.new(color.orange, 15), linewidth=1, style=plot.style_linebr)
+plot(showTrendline ? projectedLower : na, "Projected Swing Low Trendline", color=color.new(color.aqua, 15), linewidth=1, style=plot.style_linebr)
+// MODULES 1-23 (unchanged from v1.3.3)
+bullEngulf = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+bearEngulf = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+bullPin = lowerWick > body * 2 and upperWick <= body and close > open
+bearPin = upperWick > body * 2 and lowerWick <= body and close < open
+m1Bull = bullEngulf or bullPin
+m1Bear = bearEngulf or bearPin
+m2Bull = bullTrend
+m2Bear = bearTrend
+m3Bull = bullFailedBreak and bullImpulse
+m3Bear = bearFailedBreak and bearImpulse
+m4Bull = sslSweep and bullImpulse
+m4Bear = bslSweep and bearImpulse
+m5Bull = (h1Bull or h4Bull or dailyBull or htf15Bull) and bullFvgTouch
+m5Bear = (h1Bear or h4Bear or dailyBear or htf15Bear) and bearFvgTouch
+swingRange = not na(lastPH) and not na(lastPL) ? lastPH - lastPL : na
+bullRetrace = not na(swingRange) and swingRange > syminfo.mintick ? (lastPH - close) / swingRange : na
+bearRetrace = not na(swingRange) and swingRange > syminfo.mintick ? (close - lastPL) / swingRange : na
+m6Bull = marketTrend == 1 and not na(bullRetrace) and bullRetrace >= 0.50 and bullRetrace <= 0.78 and close > open and close > close[1]
+m6Bear = marketTrend == -1 and not na(bearRetrace) and bearRetrace >= 0.50 and bearRetrace <= 0.78 and close < open and close < close[1]
+recentLow = ta.lowest(low, vLookback)
+recentHigh = ta.highest(high, vLookback)
+barsFromLow = ta.barssince(low == recentLow)
+barsFromHigh = ta.barssince(high == recentHigh)
+m7Bull = not na(barsFromLow) and barsFromLow <= 3 and close - recentLow >= atr * 1.5 and closeRising2
+m7Bear = not na(barsFromHigh) and barsFromHigh <= 3 and recentHigh - close >= atr * 1.5 and closeFalling2
+m8Bull = bullMSS and (bullFvgTouch or bullIFVGSignal or bullImpulse)
+m8Bear = bearMSS and (bearFvgTouch or bearIFVGSignal or bearImpulse)
+m9Bull = bullOBTouch and marketTrend == 1 and (bullBOS or bullCHoCH or bullMSS or bullImpulse)
+m9Bear = bearOBTouch and marketTrend == -1 and (bearBOS or bearCHoCH or bearMSS or bearImpulse)
+m10Bull = bullTrendlineBreak or (not na(projectedLower) and low <= projectedLower + atr * 0.25 and close > open and close > projectedLower)
+m10Bear = bearTrendlineBreak or (not na(projectedUpper) and high >= projectedUpper - atr * 0.25 and close < open and close < projectedUpper)
+bullSweepConfirmed = (sslSweep and (bullImpulse or (close > high[1] and close > open))) or (bslAcceptance and bullImpulse)
+bearSweepConfirmed = (bslSweep and (bearImpulse or (close < low[1] and close < open))) or (sslAcceptance and bearImpulse)
+m11Bull = bullSweepConfirmed
+m11Bear = bearSweepConfirmed
+m12Bull = (bullPrevDaySweep or bullPrevSessionSweep) and (bullImpulse or (close > high[1] and close > open))
+m12Bear = (bearPrevDaySweep or bearPrevSessionSweep) and (bearImpulse or (close < low[1] and close < open))
+originHigh = ta.highest(high[1], rangeLen)
+originLow = ta.lowest(low[1], rangeLen)
+var float bullOriginTop = na
+var float bullOriginBottom = na
+var int bullOriginBar = na
+var float bearOriginTop = na
+var float bearOriginBottom = na
+var int bearOriginBar = na
+if low < originLow and close > originLow and close > open
+    bullOriginTop := math.max(open, close)
+    bullOriginBottom := low
+    bullOriginBar := bar_index
+if high > originHigh and close < originHigh and close < open
+    bearOriginTop := high
+    bearOriginBottom := math.min(open, close)
+    bearOriginBar := bar_index
+bullOriginFresh = not na(bullOriginBar) and bar_index - bullOriginBar <= zoneLife
+bearOriginFresh = not na(bearOriginBar) and bar_index - bearOriginBar <= zoneLife
+bullOriginRetest = bullOriginFresh and bar_index > bullOriginBar and low <= bullOriginTop and close > bullOriginTop and close > open
+bearOriginRetest = bearOriginFresh and bar_index > bearOriginBar and high >= bearOriginBottom and close < bearOriginBottom and close < open
+m13Bull = bullOriginRetest
+m13Bear = bearOriginRetest
+buyPressure = closeLocation * volRatio
+sellPressure = (1.0 - closeLocation) * volRatio
+m14Bull = buyPressure > 0.75 and buyPressure > sellPressure * 1.25 and close > open
+m14Bear = sellPressure > 0.75 and sellPressure > buyPressure * 1.25 and close < open
+m15Bull = marketTrend == 1 and not na(bullRetrace) and bullRetrace >= 0.70 and bullRetrace <= 0.78 and close > open and close > close[1] and rsi14 > rsi14[1]
+m15Bear = marketTrend == -1 and not na(bearRetrace) and bearRetrace >= 0.70 and bearRetrace <= 0.78 and close < open and close < close[1] and rsi14 < rsi14[1]
+prevBody = math.abs(close[1] - open[1])
+prev2Body = math.abs(close[2] - open[2])
+bullHarami = close[1] < open[1] and close > open and math.max(open, close) < open[1] and math.min(open, close) > close[1]
+bearHarami = close[1] > open[1] and close < open and math.max(open, close) < close[1] and math.min(open, close) > open[1]
+bullPiercing = close[1] < open[1] and close > open and open < low[1] and close > (open[1] + close[1]) / 2 and close < open[1]
+bearDarkCloud = close[1] > open[1] and close < open and open > high[1] and close < (open[1] + close[1]) / 2 and close > open[1]
+bullMorningStar = close[2] < open[2] and prev2Body > atr[2] * 0.5 and prevBody < prev2Body * 0.6 and close > open and close > (open[2] + close[2]) / 2
+bearEveningStar = close[2] > open[2] and prev2Body > atr[2] * 0.5 and prevBody < prev2Body * 0.6 and close < open and close < (open[2] + close[2]) / 2
+bullTweezer = math.abs(low - low[1]) <= atr * 0.08 and close > open and close[1] < open[1]
+bearTweezer = math.abs(high - high[1]) <= atr * 0.08 and close < open and close[1] > open[1]
+bullThreeSoldiers = close > open and close[1] > open[1] and close[2] > open[2] and close > close[1] and close[1] > close[2]
+bearThreeCrows = close < open and close[1] < open[1] and close[2] < open[2] and close < close[1] and close[1] < close[2]
+doji = body <= barRange * 0.10
+bullDojiContext = doji and lowerWick > upperWick * 1.5 and close > ema20
+bearDojiContext = doji and upperWick > lowerWick * 1.5 and close < ema20
+bullKicker = close > open and close[1] < open[1] and open > high[1]
+bearKicker = close < open and close[1] > open[1] and open < low[1]
+bullHammerContext = lowerWick > body * 2 and upperWick < body and close > open and close < ema20
+bearStarContext = upperWick > body * 2 and lowerWick < body and close < open and close > ema20
+m16Bull = bullHarami or bullPiercing or bullMorningStar or bullTweezer or bullThreeSoldiers or bullDojiContext or bullKicker or bullHammerContext or bullRsiDivergence
+m16Bear = bearHarami or bearDarkCloud or bearEveningStar or bearTweezer or bearThreeCrows or bearDojiContext or bearKicker or bearStarContext or bearRsiDivergence
+m17Bull = volRatio >= 1.25 and close > open and closeLocation >= 0.65
+m17Bear = volRatio >= 1.25 and close < open and closeLocation <= 0.35
+m18Bull = inSession and (bullTrend or bullImpulse) and not bearTrend
+m18Bear = inSession and (bearTrend or bearImpulse) and not bullTrend
+localNeckHigh = ta.highest(high[1], 5)
+localNeckLow = ta.lowest(low[1], 5)
+m19Bull = not na(barsFromLow) and barsFromLow <= 6 and close > localNeckHigh and close > open and bullImpulse
+m19Bear = not na(barsFromHigh) and barsFromHigh <= 6 and close < localNeckLow and close < open and bearImpulse
+m20Bull = bullMSS or (bullCHoCH and bullImpulse and close > ema20)
+m20Bear = bearMSS or (bearCHoCH and bearImpulse and close < ema20)
+m21Bull = bullOBTouch and close > open and marketTrend == 1
+m21Bear = bearOBTouch and close < open and marketTrend == -1
+m22Bull = bullFvgTouch or bullIFVGSignal
+m22Bear = bearFvgTouch or bearIFVGSignal
+correctionBull = marketTrend == 1 and not na(bullRetrace) and bullRetrace >= 0.20 and bullRetrace <= 0.65
+correctionBear = marketTrend == -1 and not na(bearRetrace) and bearRetrace >= 0.20 and bearRetrace <= 0.65
+m23Bull = correctionBull and close > open and close > ema20 and bullImpulse
+m23Bear = correctionBear and close < open and close < ema20 and bearImpulse
+bullScore = (m1Bull?5:0)+(m2Bull?6:0)+(m3Bull?5:0)+(m4Bull?5:0)+(m5Bull?6:0)+(m6Bull?4:0)+(m7Bull?4:0)+(m8Bull?5:0)+(m9Bull?5:0)+(m10Bull?4:0)+(m11Bull?6:0)+(m12Bull?4:0)+(m13Bull?5:0)+(m14Bull?5:0)+(m15Bull?4:0)+(m16Bull?4:0)+(m17Bull?4:0)+(m18Bull?3:0)+(m19Bull?3:0)+(m20Bull?4:0)+(m21Bull?3:0)+(m22Bull?3:0)+(m23Bull?3:0)
+bearScore = (m1Bear?5:0)+(m2Bear?6:0)+(m3Bear?5:0)+(m4Bear?5:0)+(m5Bear?6:0)+(m6Bear?4:0)+(m7Bear?4:0)+(m8Bear?5:0)+(m9Bear?5:0)+(m10Bear?4:0)+(m11Bear?6:0)+(m12Bear?4:0)+(m13Bear?5:0)+(m14Bear?5:0)+(m15Bear?4:0)+(m16Bear?4:0)+(m17Bear?4:0)+(m18Bear?3:0)+(m19Bear?3:0)+(m20Bear?4:0)+(m21Bear?3:0)+(m22Bear?3:0)+(m23Bear?3:0)
+bullVotes = (m1Bull?1:0)+(m2Bull?1:0)+(m3Bull?1:0)+(m4Bull?1:0)+(m5Bull?1:0)+(m6Bull?1:0)+(m7Bull?1:0)+(m8Bull?1:0)+(m9Bull?1:0)+(m10Bull?1:0)+(m11Bull?1:0)+(m12Bull?1:0)+(m13Bull?1:0)+(m14Bull?1:0)+(m15Bull?1:0)+(m16Bull?1:0)+(m17Bull?1:0)+(m18Bull?1:0)+(m19Bull?1:0)+(m20Bull?1:0)+(m21Bull?1:0)+(m22Bull?1:0)+(m23Bull?1:0)
+bearVotes = (m1Bear?1:0)+(m2Bear?1:0)+(m3Bear?1:0)+(m4Bear?1:0)+(m5Bear?1:0)+(m6Bear?1:0)+(m7Bear?1:0)+(m8Bear?1:0)+(m9Bear?1:0)+(m10Bear?1:0)+(m11Bear?1:0)+(m12Bear?1:0)+(m13Bear?1:0)+(m14Bear?1:0)+(m15Bear?1:0)+(m16Bear?1:0)+(m17Bear?1:0)+(m18Bear?1:0)+(m19Bear?1:0)+(m20Bear?1:0)+(m21Bear?1:0)+(m22Bear?1:0)+(m23Bear?1:0)
+bullDominant = bullScore - bearScore >= minDominance
+bearDominant = bearScore - bullScore >= minDominance
+bullTrigger = bullBOS or bullCHoCH or bullMSS or bullSweepConfirmed or bullFvgTouch or bullIFVGSignal or bullOBTouch or m12Bull or bullOriginRetest or bullTrendlineBreak
+bearTrigger = bearBOS or bearCHoCH or bearMSS or bearSweepConfirmed or bearFvgTouch or bearIFVGSignal or bearOBTouch or m12Bear or bearOriginRetest or bearTrendlineBreak
+sessionAllowed = not useSessionGate or inSession
+chartTFAllowed = not require5m or (timeframe.isminutes and timeframe.multiplier == 5)
+vwapBullAllowed = not useVwapFilter or close > vwapValue
+vwapBearAllowed = not useVwapFilter or close < vwapValue
+adxAllowed = not useAdxFilter or adxValue >= adxMin
+rsiBullAllowed = not useRsiFilter or rsi14 >= rsiBullMin
+rsiBearAllowed = not useRsiFilter or rsi14 <= rsiBearMax
+// v1.3.4: on an option premium chart only the bullish setup of THIS premium is a BUY; the bearish setup (premium fal...
+bool bullAllowedSide = isOptChart ? true : allowCE
+bool bearAllowedSide = isOptChart ? false : allowPE
+bullSetup = bullAllowedSide and chartTFAllowed and bullScore >= minScore and bullVotes >= minVotes and bullDominant and (not requireTrigger or bullTrigger) and sessionAllowed and vwapBullAllowed and adxAllowed and rsiBullAllowed
+bearSetup = bearAllowedSide and chartTFAllowed and bearScore >= minScore and bearVotes >= minVotes and bearDominant and (not requireTrigger or bearTrigger) and sessionAllowed and vwapBearAllowed and adxAllowed and rsiBearAllowed
+// 24. PERSISTENT TRADE STATE + HISTORICAL PERFORMANCE
+newDay = sessionStart
+var int tradeDir = 0
+var int lastSignalBar = na
+var int signalsToday = 0
+var float entryPrice = na
+var float stopPrice = na
+var float riskPts = na
+var float target1 = na
+var float target2 = na
+var float target3 = na
+var float target4 = na
+var bool t1Hit = false
+var bool t2Hit = false
+var bool t3Hit = false
+var bool t4Hit = false
+var string tradeStatus = "WAIT"
+var line entryLine = na
+var line stopLine = na
+var line t1Line = na
+var line t2Line = na
+var line t3Line = na
+var line t4Line = na
+var label activeSignalLabel = na
+var label entryPriceTag = na
+var label stopPriceTag = na
+var label t1PriceTag = na
+var label t2PriceTag = na
+var label t3PriceTag = na
+var label t4PriceTag = na
+var int activeScore = 0
+var array<line> histEntryLines = array.new<line>()
+var array<line> histStopLines = array.new<line>()
+var array<line> histT1Lines = array.new<line>()
+var array<line> histT2Lines = array.new<line>()
+var array<line> histT3Lines = array.new<line>()
+var array<line> histT4Lines = array.new<line>()
+var array<label> histSignalLabels = array.new<label>()
+var int closedTrades = 0
+var int profitableTrades = 0
+var int stopLossTrades = 0
+var int t1Trades = 0
+var int t2Trades = 0
+var int t3Trades = 0
+var int t4Trades = 0
+var int ceClosed = 0
+var int ceProfitable = 0
+var int peClosed = 0
+var int peProfitable = 0
+var float grossProfitR = 0.0
+var float grossLossR = 0.0
+var float netR = 0.0
+var float equityPeakR = 0.0
+var float maxDrawdownR = 0.0
+if newDay
+    signalsToday := 0
+cooldownOK = na(lastSignalBar) or bar_index - lastSignalBar >= cooldownBars
+canSignal = tradeDir == 0 and cooldownOK and signalsToday < maxSignalsDay
+// Extend only the currently active trade's lines. On exit they remain frozen at the exit bar.
+if tradeDir != 0
+    if not na(entryLine)
+        line.set_x2(entryLine, bar_index)
+    if not na(stopLine)
+        line.set_x2(stopLine, bar_index)
+    if not na(t1Line)
+        line.set_x2(t1Line, bar_index)
+    if not na(t2Line)
+        line.set_x2(t2Line, bar_index)
+    if not na(t3Line)
+        line.set_x2(t3Line, bar_index)
+    if not na(t4Line)
+        line.set_x2(t4Line, bar_index)
+// v1.3.4: ONE exit block (v1.3.3 had the same ~40 lines three times). Order: end-of-session square-off, stop-loss, t...
+// If the SL and a target are inside one candle the SL is assumed first (conservative). Targets are four 25 % scale-o...
+bool eodExit = squareOffEOD and tradeDir != 0 and sessionStart and bar_index > 0
+bool slHit = not eodExit and ((tradeDir == 1 and low <= stopPrice) or (tradeDir == -1 and high >= stopPrice))
+if tradeDir != 0 and not eodExit and not slHit
+    if tradeDir == 1
+        if high >= target1
+            t1Hit := true
+        if high >= target2
+            t2Hit := true
+        if high >= target3
+            t3Hit := true
+        if high >= target4
+            t4Hit := true
+    else
+        if low <= target1
+            t1Hit := true
+        if low <= target2
+            t2Hit := true
+        if low <= target3
+            t3Hit := true
+        if low <= target4
+            t4Hit := true
+bool t4Done = tradeDir != 0 and not eodExit and not slHit and t4Hit
+bool tradeClosed = eodExit or slHit or t4Done
+bool exitSLBar = false
+bool exitT4Bar = false
+bool exitEODBar = false
+if tradeClosed
+    int closingDir = tradeDir
+    float hitCount = (t1Hit ? 1.0 : 0.0) + (t2Hit ? 1.0 : 0.0) + (t3Hit ? 1.0 : 0.0) + (t4Hit ? 1.0 : 0.0)
+    float partialR = 0.25 * ((t1Hit ? rr1 : 0.0) + (t2Hit ? rr2 : 0.0) + (t3Hit ? rr3 : 0.0) + (t4Hit ? rr4 : 0.0))
+    float restFrac = 1.0 - hitCount * 0.25
+    float restR = -restFrac
+    string why = "SL HIT"
+    if t4Done
+        restR := 0.0
+        why := "T4 HIT"
+        exitT4Bar := true
+    else if eodExit
+        restR := restFrac * (nz(close[1]) - entryPrice) * closingDir / riskPts
+        why := "EOD EXIT"
+        exitEODBar := true
+    else
+        exitSLBar := true
+    float realisedR = partialR + restR
+    closedTrades += 1
+    if slHit
+        stopLossTrades += 1
+    if t1Hit
+        t1Trades += 1
+    if t2Hit
+        t2Trades += 1
+    if t3Hit
+        t3Trades += 1
+    if t4Hit
+        t4Trades += 1
+    if closingDir == 1
+        ceClosed += 1
+    else
+        peClosed += 1
+    grossProfitR += math.max(realisedR, 0.0)
+    grossLossR += math.max(-realisedR, 0.0)
+    if realisedR > 0
+        profitableTrades += 1
+        if closingDir == 1
+            ceProfitable += 1
+        else
+            peProfitable += 1
+    netR += realisedR
+    equityPeakR := math.max(equityPeakR, netR)
+    maxDrawdownR := math.max(maxDrawdownR, equityPeakR - netR)
+    tradeDir := 0
+    tradeStatus := why
+    if showTradeOutcomeInLabel and not na(activeSignalLabel)
+        label.set_text(activeSignalLabel, label.get_text(activeSignalLabel) + "\nRESULT: " + why + " | " + str.tostring(realisedR, "#.##") + "R")
+    // the right-side price tags belong to a LIVE trade only
+    if not na(entryPriceTag)
+        label.delete(entryPriceTag)
+    if not na(stopPriceTag)
+        label.delete(stopPriceTag)
+    if not na(t1PriceTag)
+        label.delete(t1PriceTag)
+    if not na(t2PriceTag)
+        label.delete(t2PriceTag)
+    if not na(t3PriceTag)
+        label.delete(t3PriceTag)
+    if not na(t4PriceTag)
+        label.delete(t4PriceTag)
+    entryPriceTag := na
+    stopPriceTag := na
+    t1PriceTag := na
+    t2PriceTag := na
+    t3PriceTag := na
+    t4PriceTag := na
+if not na(t1Line)
+    line.set_color(t1Line, t1Hit ? color.gray : color.green)
+if not na(t2Line)
+    line.set_color(t2Line, t2Hit ? color.gray : color.lime)
+if not na(t3Line)
+    line.set_color(t3Line, t3Hit ? color.gray : color.aqua)
+if not na(t4Line)
+    line.set_color(t4Line, t4Hit ? color.gray : color.fuchsia)
+buyCE = barstate.isconfirmed and canSignal and bullSetup
+buyPE = barstate.isconfirmed and canSignal and bearSetup and not buyCE
+if buyCE
+    tradeDir := 1
+    entryPrice := close
+    float candidateSL = not na(lastPL) ? lastPL - atr * slBuffer : na
+    float fallbackSL = close - atr * slATR
+    stopPrice := not na(candidateSL) and candidateSL < close and close - candidateSL <= atr * maxSLATR ? candidateSL : fallbackSL
+    float risk = math.max(entryPrice - stopPrice, syminfo.mintick)
+    riskPts := risk
+    target1 := entryPrice + risk * rr1
+    target2 := entryPrice + risk * rr2
+    target3 := entryPrice + risk * rr3
+    target4 := entryPrice + risk * rr4
+    lastSignalBar := bar_index
+    signalsToday += 1
+    t1Hit := false
+    t2Hit := false
+    t3Hit := false
+    t4Hit := false
+    activeScore := bullScore
+    tradeStatus := optSideText + " ACTIVE"
+if buyPE
+    tradeDir := -1
+    entryPrice := close
+    float candidateSL = not na(lastPH) ? lastPH + atr * slBuffer : na
+    float fallbackSL = close + atr * slATR
+    stopPrice := not na(candidateSL) and candidateSL > close and candidateSL - close <= atr * maxSLATR ? candidateSL : fallbackSL
+    float risk = math.max(stopPrice - entryPrice, syminfo.mintick)
+    riskPts := risk
+    target1 := entryPrice - risk * rr1
+    target2 := entryPrice - risk * rr2
+    target3 := entryPrice - risk * rr3
+    target4 := entryPrice - risk * rr4
+    lastSignalBar := bar_index
+    signalsToday += 1
+    t1Hit := false
+    t2Hit := false
+    t3Hit := false
+    t4Hit := false
+    activeScore := bearScore
+    tradeStatus := "BUY PE ACTIVE"
+// On an option chart a bullish setup is always a purchase of THIS option; the label names the option side.
+string sideNameCE = isOptChart ? optSideText : "BUY CE"
+// 25. DRAW AND RETAIN EVERY HISTORICAL SIGNAL / TRADE
+if buyCE or buyPE
+    if showTradeLvls and showHistoricalTrades
+        entryLine := line.new(bar_index, entryPrice, bar_index, entryPrice, extend=extend.none, color=color.blue, width=entryLineWidth)
+        stopLine := line.new(bar_index, stopPrice, bar_index, stopPrice, extend=extend.none, color=color.red, width=stopLineWidth)
+        t1Line := line.new(bar_index, target1, bar_index, target1, extend=extend.none, color=color.green, width=targetLineWidth)
+        t2Line := line.new(bar_index, target2, bar_index, target2, extend=extend.none, color=color.lime, width=targetLineWidth)
+        t3Line := line.new(bar_index, target3, bar_index, target3, extend=extend.none, color=color.aqua, width=targetLineWidth)
+        t4Line := line.new(bar_index, target4, bar_index, target4, extend=extend.none, color=color.fuchsia, width=targetLineWidth)
+    else
+        entryLine := na
+        stopLine := na
+        t1Line := na
+        t2Line := na
+        t3Line := na
+        t4Line := na
+    array.push(histEntryLines, entryLine)
+    array.push(histStopLines, stopLine)
+    array.push(histT1Lines, t1Line)
+    array.push(histT2Lines, t2Line)
+    array.push(histT3Lines, t3Line)
+    array.push(histT4Lines, t4Line)
+    string sideText = buyCE ? sideNameCE : "BUY PE"
+    string entryStamp = str.format_time(time, "yyyy-MM-dd HH:mm", sessionTz)
+    string details = sideText + "\n" + entryStamp + "\nScore: " + str.tostring(activeScore) + "/100" + "\nEntry: " + str.tostring(entryPrice, format.mintick) + "\nSL: " + str.tostring(stopPrice, format.mintick) + "\nT1: " + str.tostring(target1, format.mintick) + "\nT2: " + str.tostring(target2, format.mintick) + "\nT3: " + str.tostring(target3, format.mintick) + "\nT4: " + str.tostring(target4, format.mintick) + "\nSTATUS: ACTIVE"
+    float signalY = buyCE ? low - atr * labelOffsetATR : high + atr * labelOffsetATR
+    activeSignalLabel := showLabels and showHistoricalTrades ? label.new(bar_index, signalY, details, style=buyCE ? label.style_label_up : label.style_label_down, color=buyCE ? bullColor : bearColor, textcolor=color.white, size=size.small) : na
+    array.push(histSignalLabels, activeSignalLabel)
+    while array.size(histEntryLines) > historyTradeLimit
+        line oldEntry = array.shift(histEntryLines)
+        line oldStop = array.shift(histStopLines)
+        line oldT1 = array.shift(histT1Lines)
+        line oldT2 = array.shift(histT2Lines)
+        line oldT3 = array.shift(histT3Lines)
+        line oldT4 = array.shift(histT4Lines)
+        label oldSignal = array.shift(histSignalLabels)
+        if not na(oldEntry)
+            line.delete(oldEntry)
+        if not na(oldStop)
+            line.delete(oldStop)
+        if not na(oldT1)
+            line.delete(oldT1)
+        if not na(oldT2)
+            line.delete(oldT2)
+        if not na(oldT3)
+            line.delete(oldT3)
+        if not na(oldT4)
+            line.delete(oldT4)
+        if not na(oldSignal)
+            label.delete(oldSignal)
+    if showTradeLvls and showPriceTags
+        entryPriceTag := label.new(bar_index + priceTagOffset, entryPrice, "ENTRY " + str.tostring(entryPrice, format.mintick), style=label.style_label_left, color=color.blue, textcolor=color.white, size=size.tiny)
+        stopPriceTag := label.new(bar_index + priceTagOffset, stopPrice, "SL " + str.tostring(stopPrice, format.mintick), style=label.style_label_left, color=color.red, textcolor=color.white, size=size.tiny)
+        t1PriceTag := label.new(bar_index + priceTagOffset, target1, "T1 " + str.tostring(target1, format.mintick), style=label.style_label_left, color=color.green, textcolor=color.white, size=size.tiny)
+        t2PriceTag := label.new(bar_index + priceTagOffset, target2, "T2 " + str.tostring(target2, format.mintick), style=label.style_label_left, color=color.lime, textcolor=color.black, size=size.tiny)
+        t3PriceTag := label.new(bar_index + priceTagOffset, target3, "T3 " + str.tostring(target3, format.mintick), style=label.style_label_left, color=color.aqua, textcolor=color.black, size=size.tiny)
+        t4PriceTag := label.new(bar_index + priceTagOffset, target4, "T4 " + str.tostring(target4, format.mintick), style=label.style_label_left, color=color.fuchsia, textcolor=color.white, size=size.tiny)
+// BUY / EXIT markers (constant text per plotshape: underlying CE, underlying PE, option-CE-chart buy, option-PE-char...
+plotshape(showSignalTag and buyCE and optMode == 0, title="BUY CE Confirmed", style=shape.labelup, location=location.belowbar, color=bullColor, text="BUY CE", textcolor=color.white, size=markerSize)
+plotshape(showSignalTag and buyPE, title="BUY PE Confirmed", style=shape.labeldown, location=location.abovebar, color=bearColor, text="BUY PE", textcolor=color.white, size=markerSize)
+plotshape(showSignalTag and buyCE and optMode == 1, title="BUY CE (option chart)", style=shape.labelup, location=location.belowbar, color=bullColor, text="BUY CE", textcolor=color.white, size=markerSize)
+plotshape(showSignalTag and buyCE and optMode == 2, title="BUY PE (option chart)", style=shape.labelup, location=location.belowbar, color=bearColor, text="BUY PE", textcolor=color.white, size=markerSize)
+plotshape(showExitTag and exitSLBar, title="Exit SL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 20), text="SL", textcolor=color.white, size=size.tiny)
+plotshape(showExitTag and exitT4Bar, title="Exit T4", style=shape.labeldown, location=location.abovebar, color=color.new(color.green, 20), text="T4", textcolor=color.white, size=size.tiny)
+plotshape(showExitTag and exitEODBar, title="Exit EOD", style=shape.labeldown, location=location.abovebar, color=color.new(color.gray, 20), text="EOD", textcolor=color.white, size=size.tiny)
+// 26. LIVE PRICE TAG POSITION + PERFORMANCE METRICS
+if barstate.islast
+    int tagX = bar_index + priceTagOffset
+    if not na(entryPriceTag)
+        label.set_x(entryPriceTag, tagX)
+    if not na(stopPriceTag)
+        label.set_x(stopPriceTag, tagX)
+    if not na(t1PriceTag)
+        label.set_x(t1PriceTag, tagX)
+        label.set_color(t1PriceTag, t1Hit ? color.gray : color.green)
+        label.set_text(t1PriceTag, (t1Hit ? "T1 HIT " : "T1 ") + str.tostring(target1, format.mintick))
+    if not na(t2PriceTag)
+        label.set_x(t2PriceTag, tagX)
+        label.set_color(t2PriceTag, t2Hit ? color.gray : color.lime)
+        label.set_text(t2PriceTag, (t2Hit ? "T2 HIT " : "T2 ") + str.tostring(target2, format.mintick))
+    if not na(t3PriceTag)
+        label.set_x(t3PriceTag, tagX)
+        label.set_color(t3PriceTag, t3Hit ? color.gray : color.aqua)
+        label.set_text(t3PriceTag, (t3Hit ? "T3 HIT " : "T3 ") + str.tostring(target3, format.mintick))
+    if not na(t4PriceTag)
+        label.set_x(t4PriceTag, tagX)
+        label.set_color(t4PriceTag, t4Hit ? color.gray : color.fuchsia)
+        label.set_text(t4PriceTag, (t4Hit ? "T4 HIT " : "T4 ") + str.tostring(target4, format.mintick))
+winRate = closedTrades > 0 ? 100.0 * profitableTrades / closedTrades : na
+slRate = closedTrades > 0 ? 100.0 * stopLossTrades / closedTrades : na
+ceWinRate = ceClosed > 0 ? 100.0 * ceProfitable / ceClosed : na
+peWinRate = peClosed > 0 ? 100.0 * peProfitable / peClosed : na
+t1Rate = closedTrades > 0 ? 100.0 * t1Trades / closedTrades : na
+t2Rate = closedTrades > 0 ? 100.0 * t2Trades / closedTrades : na
+t3Rate = closedTrades > 0 ? 100.0 * t3Trades / closedTrades : na
+t4Rate = closedTrades > 0 ? 100.0 * t4Trades / closedTrades : na
+expectancyR = closedTrades > 0 ? netR / closedTrades : na
+profitFactor = grossLossR > 0 ? grossProfitR / grossLossR : na
+// 26B. HISTORICAL PERFORMANCE PANEL
+perfPos = switch performancePosition
+    "Top Right" => position.top_right
+    "Top Left" => position.top_left
+    "Bottom Right" => position.bottom_right
+    => position.bottom_left
+var table perf = table.new(perfPos, 2, 12, border_width=1, frame_color=color.gray, frame_width=1)
+f_perfRow(_row, _name, _value, _bg, _txt, _size) =>
+    table.cell(perf, 0, _row, _name, bgcolor=_bg, text_color=_txt, text_size=_size)
+    table.cell(perf, 1, _row, _value, bgcolor=_bg, text_color=_txt, text_size=_size)
+if barstate.islast
+    if showPerformancePanel
+        color perfBg = color.rgb(17,22,33)
+        table.cell(perf, 0, 0, "HISTORICAL TEST", bgcolor=color.rgb(15,35,55), text_color=color.white, text_size=dashTextSize)
+        table.cell(perf, 1, 0, "RESULT", bgcolor=color.rgb(15,35,55), text_color=color.white, text_size=dashTextSize)
+        f_perfRow(1, "Closed Trades", str.tostring(closedTrades), perfBg, dashText, dashTextSize)
+        f_perfRow(2, "Net Profitable Win %", na(winRate) ? "N/A" : str.tostring(winRate, "#.0") + "%", perfBg, dashText, dashTextSize)
+        f_perfRow(3, "BUY CE Win %", ceClosed == 0 ? "N/A" : str.tostring(ceWinRate, "#.0") + "%", perfBg, dashText, dashTextSize)
+        f_perfRow(4, "BUY PE Win %", peClosed == 0 ? "N/A" : str.tostring(peWinRate, "#.0") + "%", perfBg, dashText, dashTextSize)
+        f_perfRow(5, "T1 / T2 Hit %", (na(t1Rate) ? "N/A" : str.tostring(t1Rate, "#.0") + "%") + " / " + (na(t2Rate) ? "N/A" : str.tostring(t2Rate, "#.0") + "%"), perfBg, dashText, dashTextSize)
+        f_perfRow(6, "T3 / T4 Hit %", (na(t3Rate) ? "N/A" : str.tostring(t3Rate, "#.0") + "%") + " / " + (na(t4Rate) ? "N/A" : str.tostring(t4Rate, "#.0") + "%"), perfBg, dashText, dashTextSize)
+        f_perfRow(7, "SL Rate", na(slRate) ? "N/A" : str.tostring(slRate, "#.0") + "%", perfBg, dashText, dashTextSize)
+        f_perfRow(8, "Expectancy", na(expectancyR) ? "N/A" : str.tostring(expectancyR, "#.##") + "R", perfBg, dashText, dashTextSize)
+        f_perfRow(9, "Profit Factor", na(profitFactor) ? "N/A" : str.tostring(profitFactor, "#.##"), perfBg, dashText, dashTextSize)
+        f_perfRow(10, "Max Drawdown", str.tostring(maxDrawdownR, "#.##") + "R", perfBg, dashText, dashTextSize)
+        f_perfRow(11, "Net Modelled R", str.tostring(netR, "#.##") + "R", perfBg, dashText, dashTextSize)
+    else
+        table.clear(perf, 0, 0, 1, 11)
+// 26C. ZONE PLOTS
+plot(showZones and bullFvgActive ? bullFvgTop : na, "Bull FVG Top", color=color.new(color.aqua, 20), style=plot.style_linebr)
+plot(showZones and bullFvgActive ? bullFvgBottom : na, "Bull FVG Bottom", color=color.new(color.aqua, 20), style=plot.style_linebr)
+plot(showZones and bearFvgActive ? bearFvgTop : na, "Bear FVG Top", color=color.new(color.orange, 20), style=plot.style_linebr)
+plot(showZones and bearFvgActive ? bearFvgBottom : na, "Bear FVG Bottom", color=color.new(color.orange, 20), style=plot.style_linebr)
+plot(showZones and bullOBActive ? bullOBTop : na, "Bull OB Top", color=color.new(color.green, 35), style=plot.style_linebr)
+plot(showZones and bullOBActive ? bullOBBottom : na, "Bull OB Bottom", color=color.new(color.green, 35), style=plot.style_linebr)
+plot(showZones and bearOBActive ? bearOBTop : na, "Bear OB Top", color=color.new(color.red, 35), style=plot.style_linebr)
+plot(showZones and bearOBActive ? bearOBBottom : na, "Bear OB Bottom", color=color.new(color.red, 35), style=plot.style_linebr)
+// 27. DASHBOARD (Compact by default, Full = every module row)
+var table dash = table.new(dashPos, 3, dashMode == "Full" ? 29 : 5, border_width=1, frame_color=color.gray, frame_width=1)
+f_moduleRow(_row, _name, _bull, _bear, _bg, _txt, _size) =>
+    table.cell(dash, 0, _row, _name, bgcolor=_bg, text_color=_txt, text_size=_size)
+    table.cell(dash, 1, _row, _bull ? "YES" : "-", bgcolor=_bull ? color.new(bullColor, 12) : _bg, text_color=_txt, text_size=_size)
+    table.cell(dash, 2, _row, _bear ? "YES" : "-", bgcolor=_bear ? color.new(bearColor, 12) : _bg, text_color=_txt, text_size=_size)
+if barstate.islast and showDash
+    color dashBackground = color.new(dashBg, dashTransparency)
+    string bullWaitReason = not bullAllowedSide ? "OFF" : not chartTFAllowed ? "5M ONLY" : useSessionGate and not inSession ? "OUT OF SESSION" : bullScore < minScore ? "SCORE " + str.tostring(bullScore) + "/" + str.tostring(minScore) : bullVotes < minVotes ? "VOTES " + str.tostring(bullVotes) + "/" + str.tostring(minVotes) : not bullDominant ? "NO DOMINANCE" : useVwapFilter and not vwapBullAllowed ? "VWAP BLOCK" : useAdxFilter and not adxAllowed ? "ADX BLOCK" : useRsiFilter and not rsiBullAllowed ? "RSI BLOCK" : requireTrigger and not bullTrigger ? "NO TRIGGER" : "WAIT"
+    string bearWaitReason = not bearAllowedSide ? (isOptChart ? "n/a (option)" : "OFF") : not chartTFAllowed ? "5M ONLY" : useSessionGate and not inSession ? "OUT OF SESSION" : bearScore < minScore ? "SCORE " + str.tostring(bearScore) + "/" + str.tostring(minScore) : bearVotes < minVotes ? "VOTES " + str.tostring(bearVotes) + "/" + str.tostring(minVotes) : not bearDominant ? "NO DOMINANCE" : useVwapFilter and not vwapBearAllowed ? "VWAP BLOCK" : useAdxFilter and not adxAllowed ? "ADX BLOCK" : useRsiFilter and not rsiBearAllowed ? "RSI BLOCK" : requireTrigger and not bearTrigger ? "NO TRIGGER" : "WAIT"
+    string targetState = "T1:"+(t1Hit?"Y":"-")+" T2:"+(t2Hit?"Y":"-")+" T3:"+(t3Hit?"Y":"-")+" T4:"+(t4Hit?"Y":"-")
+    string kindText = optMode == 1 ? "CE chart" : optMode == 2 ? "PE chart" : "Index"
+    string vwapState = not useVwapFilter ? "OFF" : close > vwapValue ? "BULL" : close < vwapValue ? "BEAR" : "FLAT"
+    string filterState = (chartTFAllowed ? "5M OK" : "5M ONLY") + " | ADX " + (adxAllowed ? "OK" : "NO") + " | VWAP " + vwapState
+    string bullDecision = bullSetup ? sideNameCE : bullWaitReason
+    if dashMode == "Full"
+        table.cell(dash, 0, 0, "ZEROHERO AI v1.3.4 · " + kindText, bgcolor=color.rgb(15,35,55), text_color=color.white, text_size=dashTextSize)
+        table.cell(dash, 1, 0, "BULL", bgcolor=bullColor, text_color=color.white, text_size=dashTextSize)
+        table.cell(dash, 2, 0, "BEAR", bgcolor=bearColor, text_color=color.white, text_size=dashTextSize)
+        f_moduleRow(1,"M1 Candle",m1Bull,m1Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(2,"M2 Trend",m2Bull,m2Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(3,"M3 Operator Trap",m3Bull,m3Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(4,"M4 Liquidity",m4Bull,m4Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(5,"M5 HTF + FVG",m5Bull,m5Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(6,"M6 Retracement",m6Bull,m6Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(7,"M7 V-Shape",m7Bull,m7Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(8,"M8 MSS + FVG",m8Bull,m8Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(9,"M9 SMC + OB",m9Bull,m9Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(10,"M10 Trendline",m10Bull,m10Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(11,"M11 Dual Liquidity",m11Bull,m11Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(12,"M12 PSH / PSL",m12Bull,m12Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(13,"M13 Origin Trap",m13Bull,m13Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(14,"M14 Buyer / Seller",m14Bull,m14Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(15,"M15 Deep Retrace",m15Bull,m15Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(16,"M16 Advanced Candle",m16Bull,m16Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(17,"M17 Volume",m17Bull,m17Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(18,"M18 Session",m18Bull,m18Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(19,"M19 V Confirm",m19Bull,m19Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(20,"M20 MSS",m20Bull,m20Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(21,"M21 OB Lifecycle",m21Bull,m21Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(22,"M22 FVG / IFVG",m22Bull,m22Bear,dashBackground,dashText,dashTextSize)
+        f_moduleRow(23,"M23 Impulse",m23Bull,m23Bear,dashBackground,dashText,dashTextSize)
+        table.cell(dash,0,24,"SCORE / VOTES",bgcolor=color.rgb(35,42,58),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,1,24,str.tostring(bullScore)+" / "+str.tostring(bullVotes),bgcolor=color.new(bullColor,20),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,24,str.tostring(bearScore)+" / "+str.tostring(bearVotes),bgcolor=color.new(bearColor,20),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,25,"DECISION / WHY WAIT",bgcolor=color.rgb(35,42,58),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,1,25,bullDecision,bgcolor=bullSetup?bullColor:dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,25,bearSetup?"BUY PE":bearWaitReason,bgcolor=bearSetup?bearColor:dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,26,"TRADE STATUS",bgcolor=color.rgb(35,42,58),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,1,26,tradeStatus,bgcolor=color.new(neutralColor,35),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,26,targetState,bgcolor=dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,27,"FILTER STATUS",bgcolor=color.rgb(35,42,58),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,1,27,filterState,bgcolor=chartTFAllowed and adxAllowed ? color.new(bullColor,25) : color.new(bearColor,25),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,27,"RSI " + str.tostring(rsi14, "#.0"),bgcolor=dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,28,"MARKET / SESSION",bgcolor=color.rgb(35,42,58),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,1,28,activeMarketProfile,bgcolor=color.new(color.blue,35),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,28,inSession ? "SESSION OPEN" : "SESSION CLOSED",bgcolor=inSession?color.new(bullColor,25):color.new(bearColor,25),text_color=color.white,text_size=dashTextSize)
+    else
+        table.cell(dash,0,0,"ZH v1.3.4 · " + kindText,bgcolor=color.rgb(15,35,55),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,1,0,optMode == 0 ? "CE" : "BUY",bgcolor=bullColor,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,0,optMode == 0 ? "PE" : "-",bgcolor=optMode == 0 ? bearColor : neutralColor,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,1,"SCORE/VOTES",bgcolor=dashBackground,text_color=dashText,text_size=dashTextSize)
+        table.cell(dash,1,1,str.tostring(bullScore)+"/"+str.tostring(bullVotes),bgcolor=color.new(bullColor,25),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,1,optMode == 0 ? str.tostring(bearScore)+"/"+str.tostring(bearVotes) : "-",bgcolor=color.new(bearColor,25),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,2,"DECISION",bgcolor=dashBackground,text_color=dashText,text_size=dashTextSize)
+        table.cell(dash,1,2,bullDecision,bgcolor=bullSetup?bullColor:dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,2,bearSetup?"BUY PE":bearWaitReason,bgcolor=bearSetup?bearColor:dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,3,"TRADE",bgcolor=dashBackground,text_color=dashText,text_size=dashTextSize)
+        table.cell(dash,1,3,tradeStatus,bgcolor=color.new(neutralColor,35),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,3,targetState,bgcolor=dashBackground,text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,0,4,"MARKET",bgcolor=dashBackground,text_color=dashText,text_size=dashTextSize)
+        table.cell(dash,1,4,activeMarketProfile,bgcolor=color.new(color.blue,35),text_color=color.white,text_size=dashTextSize)
+        table.cell(dash,2,4,inSession ? "OPEN" : "CLOSED",bgcolor=inSession?color.new(bullColor,25):color.new(bearColor,25),text_color=color.white,text_size=dashTextSize)
+// 28. ALERTS
+alertcondition(buyCE, title="ZeroHero AI BUY CE", message="ZeroHero AI BUY CE confirmed on {{ticker}} at {{close}}")
+alertcondition(buyPE, title="ZeroHero AI BUY PE", message="ZeroHero AI BUY PE confirmed on {{ticker}} at {{close}}")
+alertcondition(bullBOS, title="Bullish BOS", message="Bullish BOS confirmed on {{ticker}}")
+alertcondition(bearBOS, title="Bearish BOS", message="Bearish BOS confirmed on {{ticker}}")
+alertcondition(bullCHoCH, title="Bullish CHoCH", message="Bullish CHoCH confirmed on {{ticker}}")
+alertcondition(bearCHoCH, title="Bearish CHoCH", message="Bearish CHoCH confirmed on {{ticker}}")
+alertcondition(bullMSS, title="Bullish MSS", message="Bullish MSS confirmed on {{ticker}}")
+alertcondition(bearMSS, title="Bearish MSS", message="Bearish MSS confirmed on {{ticker}}")
+alertcondition(sslSweep, title="Sell-Side Liquidity Sweep", message="SSL sweep detected on {{ticker}}")
+alertcondition(bslSweep, title="Buy-Side Liquidity Sweep", message="BSL sweep detected on {{ticker}}")
+alertcondition(bullFvgTouch, title="Bullish FVG Retest", message="Bullish FVG retest on {{ticker}}")
+alertcondition(bearFvgTouch, title="Bearish FVG Retest", message="Bearish FVG retest on {{ticker}}")
+alertcondition(bullRsiDivergence, title="Bullish RSI Divergence", message="Bullish RSI divergence confirmed on {{ticker}}")
+alertcondition(bearRsiDivergence, title="Bearish RSI Divergence", message="Bearish RSI divergence confirmed on {{ticker}}")
+// v1.3.4 changelog and review notes: data/research/zerohero_smc/ (REVIEW_v1_3_4.md)
