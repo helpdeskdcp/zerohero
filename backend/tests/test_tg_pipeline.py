@@ -217,5 +217,10 @@ def test_replaying_real_logged_posts_through_the_journal_path_keeps_every_classi
     while TP.process_pending(J, state, process_fn=proc, participant_for=TR.participant_for, default_participant="P", mode_fn=lambda: "PRACTICE", save_state=lambda: None, batch=200): pass
     out = {(x["chat_id"], x["message_id"]): x["outcome"] for x in [dict(y) for y in J._c().execute("SELECT * FROM tg_capture")]}
     want = {(r["chat_id"], int(r["message_id"])): r["outcome"] for r in uniq}
+    # 2026-11-03: "GAINING ... BOOK PARTIAL PROFIT / TRAIL SL" progress posts used to be IGNORED_NOT_A_SIGNAL and are now recorded as claims (never scored). That is the ONLY allowed difference from the historical log.
+    from app.arena import channel_parse as CP
+    texts = {(r["chat_id"], int(r["message_id"])): r.get("text") or "" for r in uniq}
+    for k, o in list(want.items()):
+        if o == "IGNORED_NOT_A_SIGNAL" and out.get(k) == "CLAIM_RECORDED" and (CP.parse_update(texts[k]) or {}).get("kind") == "GAIN_UPDATE": want[k] = "CLAIM_RECORDED"
     assert {k: v for k, v in out.items()} == {(c, m): o for (c, m), o in want.items()}
     assert J.summary()["by_status"] == {"PROCESSED": len(uniq)}
