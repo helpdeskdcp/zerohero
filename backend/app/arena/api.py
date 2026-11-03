@@ -619,6 +619,8 @@ def live(request: Request):
             row.update(entry=r.get("entry_now", row["entry"]), sl=r.get("sl_now", row["sl"]), targets=r.get("targets_now", row["targets"]), lots=r.get("lots", row["lots"]))
         if st == "SETTLED":
             row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why=r["exit_reason"], pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
+        elif st == "OWNER_ADJUSTED":                                                                     # operator-assisted exit: shown closed, labelled, never counted in the ranking
+            row.update(state="CLOSED", fill=r["fill"], exit=r["exit"], why="OWNER ADJUSTMENT (not a market fill, not in the ranking)", pnl_rs=round(r["net_rs"], 1), ltp=None, bid=None, ask=None, quote_age_s=None)
         elif st == "CANCELLED": row.update(state="CANCELLED")
         elif st.startswith("NO_DATA:no_exit_snapshot") and eqs:                                           # open equity position: ONE valuation (positions.open_valuation): gross at the LTP, charges once, net; exit-now figure separate
             sd = s.get("side", "BUY"); fill = r["fill"]; qty = r.get("lots") or s.get("lots") or 1; lq = r.get("last") or {}

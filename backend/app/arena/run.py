@@ -1,6 +1,7 @@
 """Run the arena: load both sides' signals, settle with the same engine, summarize, report. AI side = ZeroHero AUTOSCALP paper trades opened since the arena start, re-settled by
 the arena rules (entry as signalled, SL, T1) - NOT their own simulated exits - so both sides are judged by identical rules."""
 from __future__ import annotations
+import os
 
 import sqlite3
 import time
@@ -52,6 +53,31 @@ def _is_final(r: dict, day: str) -> bool:
     return st in ("SETTLED", "CANCELLED", "DATA_GAP", "INVALID_LEVELS") or (st == "NOT_TRIGGERED" and day < datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d"))
 
 
+
+ADJ_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "arena", "owner_adjustments.json")
+
+
+def _owner_adjust(r: dict) -> dict:
+    """OWNER ADJUSTMENT (operator-assisted exit written into data/arena/owner_adjustments.json): the result is shown as a closed trade at the owner's stated price, with status OWNER_ADJUSTED. It is NOT a market fill:
+    summarize() counts only SETTLED, so an adjusted trade never enters the leaderboard or any statistic. Only a result that has a recorded fill can be adjusted."""
+    try:
+        adj = (_json_load(ADJ_PATH) or {}).get(str(r.get("id")))
+        if not adj or r.get("status") == "SETTLED" or r.get("fill") is None: return r
+        lot = r.get("lot") or 1; lots = r.get("lots") or 1; fill = float(r["fill"]); px = float(adj["exit_price"])
+        cost = S.cost_total_rs(r.get("underlying"), fill, px, lot, lots) or 0.0
+        gross = (px - fill) * lot * lots
+        return {**r, "status": "OWNER_ADJUSTED", "exit": px, "exit_reason": "OWNER_ADJUSTMENT", "net_rs": round(gross - cost, 2), "gross_rs": round(gross, 2), "owner_adjustment": adj}
+    except Exception:
+        return r
+
+
+def _json_load(path):
+    import json as _j
+    try:
+        with open(path, encoding="utf-8") as f: return _j.load(f)
+    except (OSError, ValueError): return None
+
+
 def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", capital: float = CAPITAL, cache: dict | None = None) -> dict:
     """cache (optional, in-memory, owned by the caller): final results are stored under the signal's full content + policy and reused, so a refresh only re-settles OPEN signals (speed with many participants)."""
     by_part: dict[str, list] = {}; spread_cache: dict[str, dict] = {}; shown: dict[str, dict] = {}         # spread_cache = measured models used for settling; shown = what the answer reports (also for cached results)
@@ -78,4 +104,5 @@ def run(sigs: list[dict], *, market_db: str | None = None, policy: str = "T1", c
         r["spread_source"] = hs["source"]
         if key is not None and _is_final(r, day): cache[key] = r
         by_part.setdefault(s["participant"], []).append(r)
+    by_part = {p: [_owner_adjust(r) for r in rs] for p, rs in by_part.items()}
     return {p: {"summary": S.summarize(rs, capital), "results": rs} for p, rs in by_part.items()} | {"_spread_models": {**shown, **spread_cache}}
