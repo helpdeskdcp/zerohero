@@ -42,8 +42,9 @@ def build(excl_path: str | None = None, tags_path: str = TAGS, controls_path: st
     sigs = signals if signals is not None else MV._signals(excl_path)
     if results is None:
         results = {}
+        frozen = FT.load_snapshot(snapshot_path); todo = [s for s in sigs if s["id"] not in frozen]                     # speed: calls with a frozen outcome are not settled again
         try:
-            for part in R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db")).values():
+            for part in (R.run(todo, market_db=os.path.join(BASE, "data", "market_history.db")).values() if todo else []):
                 if isinstance(part, dict):
                     for x in part.get("results", []): results[x["id"]] = x
         except Exception:

@@ -34,13 +34,18 @@ def _row(s: dict, res: dict | None) -> dict:
 def list_signals(excl_path: str | None = None, results: dict | None = None) -> list[dict]:
     sigs = _signals(excl_path)
     if results is None:
-        results = {}
-        try:
-            for part in R.run(sigs, market_db=os.path.join(BASE, "data", "market_history.db")).values():
-                if isinstance(part, dict):
-                    for x in part.get("results", []): results[x["id"]] = x
-        except Exception:
-            results = {}
+        # speed (2026-11-03): this list took 37 s because every call of every day was re-settled against the quote store. Final outcomes are frozen in the snapshot
+        # (old quotes are archived anyway), so only calls without a frozen outcome are settled live.
+        from . import mohit_forward as FT
+        results = {k: v for k, v in FT.load_snapshot(os.path.join(FT.DIR, FT.SNAPSHOT_NAME)).items()}
+        todo = [s for s in sigs if s["id"] not in results]
+        if todo:
+            try:
+                for part in R.run(todo, market_db=os.path.join(BASE, "data", "market_history.db")).values():
+                    if isinstance(part, dict):
+                        for x in part.get("results", []): results[x["id"]] = x
+            except Exception:
+                pass
     return [_row(s, results.get(s["id"])) for s in sigs]
 
 

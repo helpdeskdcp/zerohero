@@ -380,7 +380,9 @@ def mohit_signals(request: Request):
     """Chart page: every INSTITUTION_TRADER channel signal (date, time, entry, stop, T1-T3, settled result) except the days the owner excluded from learning."""
     _auth(request)
     from . import mohit_view as MV
-    return {"signals": MV.list_signals()}
+    hit = _cache.get("mohit_signals")
+    if hit and time.time() - hit[0] < 30: return hit[1]                                                    # 30 s cache: the list changes only when a call is posted or settles
+    out = {"signals": MV.list_signals()}; _cache["mohit_signals"] = (time.time(), out); return out
 
 
 @router.get("/mohit/filtered")
