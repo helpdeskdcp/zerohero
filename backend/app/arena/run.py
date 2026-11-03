@@ -66,7 +66,11 @@ def _owner_adjust(r: dict) -> dict:
         lot = r.get("lot") or 1; lots = r.get("lots") or 1; fill = float(r["fill"]); px = float(adj["exit_price"])
         cost = S.cost_total_rs(r.get("underlying"), fill, px, lot, lots) or 0.0
         gross = (px - fill) * lot * lots
-        return {**r, "status": "OWNER_ADJUSTED", "exit": px, "exit_reason": "OWNER_ADJUSTMENT", "net_rs": round(gross - cost, 2), "gross_rs": round(gross, 2), "owner_adjustment": adj}
+        net = round(gross - cost, 2)
+        out = {**r, "status": "OWNER_ADJUSTED", "exit": px, "exit_reason": "OWNER_ADJUSTMENT", "net_rs": net, "gross_rs": round(gross, 2), "owner_adjustment": adj}
+        if adj.get("count_in_ranking"):                                                                  # owner decision 2026-11-03: counted in the leaderboard, still labelled OWNER_ADJUSTMENT (flag owner_adjustment stays on the row)
+            out.update(status="SETTLED", net_rs_1lot=round(net / lots, 2), fill_t=r.get("fill_t") or r.get("t"), fill_real_quote=False, exit_real_quote=False, cost_rs=round(cost, 2), exit_t=r.get("last", {}).get("t"))
+        return out
     except Exception:
         return r
 
