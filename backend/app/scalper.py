@@ -142,6 +142,7 @@ class ScalpRunner:
         self.broker_sync_status = None
         self._alerted = {}          # trade_id -> "TARGET" | "STOP" (latch, monitor-only)
         self._broker_miss = {}      # token -> consecutive syncs it was absent
+        self._closed_conf = {}      # token -> consecutive syncs it was reported round-turned while a mirror is open (not persisted: restarts the confirmation)
         self._ws_alerted = {}      # trade_id -> True once a WRONG_SIDE alert fired
         self._sig_cache = {}        # underlying token -> (epoch, signal dict)
         self._rev_alerted = {}      # symbol -> "BULLISH"|"BEARISH" last alerted
@@ -865,6 +866,8 @@ class ScalpRunner:
             except Exception:
                 return False
         closed_today_tokens = {str(t.get("symboltoken") or "") for t in closed_manual if _closed_today_ist(t.get("closed_ts"))}
+        for k in list(self._closed_conf):
+            if k not in closed_tokens: self._closed_conf.pop(k, None)               # the token is open again (or gone): the confirmation starts over
         for p in res.get("closed", []):
             tok = str(p.get("symboltoken") or "")
             rsn = f"broker realised {p.get('realised_pnl')}"
@@ -872,6 +875,13 @@ class ScalpRunner:
             b, s = p.get("buy_avg") or 0, p.get("sell_avg") or 0
             mirror = open_by_tok.get(tok)
             if mirror:
+                # 2026-11-03: a token flapping between open (netqty != 0) and round-turned (netqty read as 0) opened and closed a mirror ~70x an hour
+                # (1,235 rows on 26-27 Oct, each carrying the day's CUMULATIVE realised P&L). Same rule as broker-flat: the round-turned state must be seen on
+                # `broker_flat_confirm` consecutive syncs before a mirror is closed with it; any sync where the token is open again resets the count.
+                n_seen = self._closed_conf.get(tok, 0) + 1; self._closed_conf[tok] = n_seen
+                if n_seen < int(cfg.get("broker_flat_confirm") or 3):
+                    continue
+                self._closed_conf.pop(tok, None)
                 await asyncio.to_thread(close_trade, mirror["trade_id"], s or b, None, "BROKER_REALISED")
                 db.update_trade(mirror["trade_id"], {
                     "pnl": rp, "result": "WIN" if rp > 0 else ("LOSS" if rp < 0 else "FLAT"),

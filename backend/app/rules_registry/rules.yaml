@@ -258,6 +258,7 @@ env_flags:
   - {name: TG_DELETES, category: FEATURE_FLAG, note: "Telegram reader: a deleted channel post cancels its unfilled order / drops a post still waiting for data; never affects a filled trade (default on; 0 = deletions ignored)"}
   - {name: TG_RECONCILE_SEC, category: TUNING, note: "Telegram reader: seconds between reconciliation rounds (source history vs capture journal)"}
   - {name: TG_FETCH_CAP, category: TUNING, note: "Telegram reader: max posts fetched per channel per poll, oldest first (a bigger backlog drains over consecutive polls)"}
+  - {name: ANGEL_SESSION_FILE, category: TUNING, note: "path of the shared Angel One session file (one login for the whole app; tests only read/write it when this is set explicitly)"}
   - {name: TG_STATE_FSYNC, category: TUNING, note: "Telegram reader: 1 = fsync the dedupe/pointer state files before the atomic rename"}
   - {name: ARENA_TOKEN_HUMAN, category: SECRET_OR_ID}
   - {name: ARENA_HUMAN_NAME, category: TUNING}

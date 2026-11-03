@@ -1,0 +1,99 @@
+{
+ "note": "Safe AI U-turn rule on MCX FUTURES (NATURALGAS, CRUDEOIL) 1-minute candles since 2026-07 -- RESEARCH ONLY (no order path, Safe AI code untouched).\nPre-registered BEFORE looking at any result: the unchanged Safe-AI detector (app.arena.safe_ai.signals.detect), thrust levels {0.6 %, 1.0 %, 1.5 %} for both symbols (all three reported, none selected), MCX window 09:35-22:30 IST,\none trade a day, entry = open of the bar after the signal, SL = extreme -/+ 0.2 ATR5, T1 / T2 / T3 = 0.8 / 1.6 / 2.4 R (legs 40 / 30 / 30), time exit 23:15, round-trip cost on the FUTURE = FUT_COST_BP of net_edge (NG 4 bp, CRUDE 3 bp);\nthe option vehicle is not tested (MCX option premium history is too short). Verdict gate (same spirit as before): net per trade lower bound > 0 with >= 100 trades -- impossible with ~4 months, so this can only say 'no signal of an edge' or 'worth collecting more'.",
+ "results": {
+  "NATURALGAS": {
+   "sessions": 89,
+   "first": "2026-06-30 09:11:00+05:30",
+   "last": "2026-11-02 23:30:00+05:30",
+   "thrust0.006": {
+    "trades": 40,
+    "win_rate_net": 0.625,
+    "gross_bp_per_trade": 10.6,
+    "cost_bp": 4.0,
+    "net_bp_per_trade": 6.6,
+    "ci90_net_bp": [
+     -6.5,
+     19.8
+    ],
+    "R_mean": 0.121,
+    "median_risk_bp": 39.1,
+    "long_share": 0.42
+   },
+   "thrust0.01": {
+    "trades": 39,
+    "win_rate_net": 0.667,
+    "gross_bp_per_trade": 18.2,
+    "cost_bp": 4.0,
+    "net_bp_per_trade": 14.2,
+    "ci90_net_bp": [
+     -2.7,
+     31.8
+    ],
+    "R_mean": 0.238,
+    "median_risk_bp": 56.9,
+    "long_share": 0.51
+   },
+   "thrust0.015": {
+    "trades": 28,
+    "win_rate_net": 0.643,
+    "gross_bp_per_trade": 15.7,
+    "cost_bp": 4.0,
+    "net_bp_per_trade": 11.7,
+    "ci90_net_bp": [
+     -11.9,
+     36.5
+    ],
+    "R_mean": 0.165,
+    "median_risk_bp": 73.1,
+    "long_share": 0.36
+   }
+  },
+  "CRUDEOIL": {
+   "sessions": 84,
+   "first": "2026-07-02 13:58:00+05:30",
+   "last": "2026-11-02 23:30:00+05:30",
+   "thrust0.006": {
+    "trades": 36,
+    "win_rate_net": 0.417,
+    "gross_bp_per_trade": -7.7,
+    "cost_bp": 3.0,
+    "net_bp_per_trade": -10.7,
+    "ci90_net_bp": [
+     -23.7,
+     2.3
+    ],
+    "R_mean": -0.113,
+    "median_risk_bp": 35.9,
+    "long_share": 0.5
+   },
+   "thrust0.01": {
+    "trades": 32,
+    "win_rate_net": 0.438,
+    "gross_bp_per_trade": -11.4,
+    "cost_bp": 3.0,
+    "net_bp_per_trade": -14.4,
+    "ci90_net_bp": [
+     -29.4,
+     1.9
+    ],
+    "R_mean": -0.209,
+    "median_risk_bp": 48.2,
+    "long_share": 0.5
+   },
+   "thrust0.015": {
+    "trades": 18,
+    "win_rate_net": 0.389,
+    "gross_bp_per_trade": -14.9,
+    "cost_bp": 3.0,
+    "net_bp_per_trade": -17.9,
+    "ci90_net_bp": [
+     -47.6,
+     13.4
+    ],
+    "R_mean": -0.206,
+    "median_risk_bp": 72.5,
+    "long_share": 0.39
+   }
+  }
+ }
+}
