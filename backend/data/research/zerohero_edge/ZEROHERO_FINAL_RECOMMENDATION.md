@@ -1,0 +1,4 @@
+# FINAL RECOMMENDATION
+**REJECT ZHX as a money-making strategy for live use. INCONCLUSIVE for the early-session variant (keep as a SHADOW hypothesis).**
+Why: gross edge ~0 before costs (R +0.006..+0.12 by split), net negative out of sample on NIFTY, BANKNIFTY and SENSEX after real costs; 14 ablation variants tested with a pre-registered selection rule - none passes the ACCEPT gate; the one candidate (09:35-10:30) has a pooled OOS interval of -198..+290 Rs and flips sign across years; stacking filters leaves 13-18 OOS trades. Options profitability is UNVALIDATED (11 days of data). Repainting audit: no leakage found in PineTS; TradingView compile still to be confirmed.
+Live trading: NOT ready; no live orders were enabled or built. Shadow testing continues (configured, not completed). Dev source: `zhx_dev_v2.pine` (defaults identical to v1, plus an OFF-by-default early-window switch). Baseline preserved in `baseline_backup/`.

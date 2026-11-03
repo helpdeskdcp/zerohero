@@ -1,0 +1,4 @@
+# OPTIONS PREMIUM VALIDATION - status: UNVALIDATED
+Actual option history on this server: `data/hist_options.db` has NIFTY 1-minute option bars for 11 trading days (2026-08-03..08-17, 8,470 rows). Earlier one-year Upstox option data was deleted after previous NO-GO studies. 11 days gives roughly a dozen ZHX signals - far too few to say anything about premium entry, IV, theta or spread. BANKNIFTY and SENSEX have no stored historical option bars.
+Therefore: index results are converted with a stated model (delta 0.5, no theta/gamma/IV change) and option profitability is **UNVALIDATED**. Theta would make long-option results worse. Safe AI's SHADOW monitor already applies real-time gates (spread <= 3%, premium >= 30, DTE <= 2, OI walls/PCR/IV skew) on live captured chains and logs the decisions; that log is the only genuine option-level evidence that can accumulate.
+Greeks / IV / OI are never inferred in Pine; Pine cannot read them.
