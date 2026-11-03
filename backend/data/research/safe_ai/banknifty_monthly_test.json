@@ -1,0 +1,243 @@
+{
+ "note": "BANKNIFTY for Safe AI -- RESEARCH ONLY (owner's request 2026-11-03: today BANKNIFTY is skipped because only MONTHLY options exist, 56 days to expiry, and the rule trades only the last 3 days before an expiry).\nQuestion 1 (index level, 2021-09..2026-10, 1-minute): does the unchanged U-turn rule (thrust 0.5 % = v1, 0.6 % = v2, window 09:35-14:30 = the Safe-AI window) have any GROSS information on BANKNIFTY? Splits DEV 2021-09..2022-12, VALIDATION 2023, OOS 2024-01..2026-10; mirror control; geometry SL = extreme -/+ 0.2 ATR5, T1/T2/T3 0.8/1.6/2.4 R, EOD 15:15 (same as the H-M study).\nQuestion 2 (vehicle): what would a MONTHLY ATM option cost? Real far-dated BANKNIFTY option bars are NOT stored (the capture has only the 29-Sep contract, <= 2 days to expiry, ATM premium 0.45 % of spot), so the premium is ESTIMATED from Black-Scholes ATM (0.4 x sigma x sqrt(T)) with sigma 15 %: 30 days -> 1.7 % of spot, 56 days -> 2.4 %. delta 0.5, theta / gamma not modelled, costs = monitored cost model.",
+ "results": {
+  "thrust_0.005": {
+   "trades_all": 604,
+   "splits": {
+    "DEV": {
+     "n": 202,
+     "gross_pts_per_trade": -0.6,
+     "R_mean": -0.005,
+     "mirror_gross_pts": 6.4,
+     "vehicle": {
+      "weekly_assumption_350": {
+       "premium": 350.0,
+       "net_per_trade_rs": -168.7,
+       "ci90": [
+        -411.2,
+        43.7
+       ],
+       "win": 0.5693,
+       "breakeven_index_pts": 10.6
+      },
+      "monthly_30d_est_1.7pct": {
+       "premium": 634.0,
+       "net_per_trade_rs": -221.3,
+       "ci90": [
+        -463.8,
+        -8.9
+       ],
+       "win": 0.5693,
+       "breakeven_index_pts": 14.1
+      },
+      "monthly_56d_est_2.4pct": {
+       "premium": 895.0,
+       "net_per_trade_rs": -269.6,
+       "ci90": [
+        -512.1,
+        -57.2
+       ],
+       "win": 0.5693,
+       "breakeven_index_pts": 17.3
+      }
+     }
+    },
+    "VALIDATION": {
+     "n": 99,
+     "gross_pts_per_trade": 11.3,
+     "R_mean": 0.094,
+     "mirror_gross_pts": -5.6,
+     "vehicle": {
+      "weekly_assumption_350": {
+       "premium": 350.0,
+       "net_per_trade_rs": 10.0,
+       "ci90": [
+        -331.7,
+        355.2
+       ],
+       "win": 0.5859,
+       "breakeven_index_pts": 10.6
+      },
+      "monthly_30d_est_1.7pct": {
+       "premium": 731.0,
+       "net_per_trade_rs": -60.5,
+       "ci90": [
+        -402.2,
+        284.7
+       ],
+       "win": 0.5859,
+       "breakeven_index_pts": 15.3
+      },
+      "monthly_56d_est_2.4pct": {
+       "premium": 1032.0,
+       "net_per_trade_rs": -116.3,
+       "ci90": [
+        -457.9,
+        229.0
+       ],
+       "win": 0.5758,
+       "breakeven_index_pts": 19.0
+      }
+     }
+    },
+    "OOS": {
+     "n": 302,
+     "gross_pts_per_trade": -10.1,
+     "R_mean": -0.059,
+     "mirror_gross_pts": 14.9,
+     "vehicle": {
+      "weekly_assumption_350": {
+       "premium": 350.0,
+       "net_per_trade_rs": -310.0,
+       "ci90": [
+        -520.6,
+        -97.2
+       ],
+       "win": 0.5132,
+       "breakeven_index_pts": 10.6
+      },
+      "monthly_30d_est_1.7pct": {
+       "premium": 894.0,
+       "net_per_trade_rs": -410.8,
+       "ci90": [
+        -621.3,
+        -198.0
+       ],
+       "win": 0.5132,
+       "breakeven_index_pts": 17.3
+      },
+      "monthly_56d_est_2.4pct": {
+       "premium": 1262.0,
+       "net_per_trade_rs": -478.9,
+       "ci90": [
+        -689.4,
+        -266.1
+       ],
+       "win": 0.5132,
+       "breakeven_index_pts": 21.9
+      }
+     }
+    }
+   }
+  },
+  "thrust_0.006": {
+   "trades_all": 416,
+   "splits": {
+    "DEV": {
+     "n": 164,
+     "gross_pts_per_trade": -4.2,
+     "R_mean": -0.046,
+     "mirror_gross_pts": 15.9,
+     "vehicle": {
+      "weekly_assumption_350": {
+       "premium": 350.0,
+       "net_per_trade_rs": -222.2,
+       "ci90": [
+        -478.2,
+        38.0
+       ],
+       "win": 0.5549,
+       "breakeven_index_pts": 10.6
+      },
+      "monthly_30d_est_1.7pct": {
+       "premium": 632.0,
+       "net_per_trade_rs": -274.4,
+       "ci90": [
+        -530.4,
+        -14.2
+       ],
+       "win": 0.5549,
+       "breakeven_index_pts": 14.1
+      },
+      "monthly_56d_est_2.4pct": {
+       "premium": 892.0,
+       "net_per_trade_rs": -322.5,
+       "ci90": [
+        -578.5,
+        -62.3
+       ],
+       "win": 0.5549,
+       "breakeven_index_pts": 17.3
+      }
+     }
+    },
+    "VALIDATION": {
+     "n": 50,
+     "gross_pts_per_trade": 10.7,
+     "R_mean": 0.121,
+     "mirror_gross_pts": -6.1,
+     "vehicle": {
+      "weekly_assumption_350": {
+       "premium": 350.0,
+       "net_per_trade_rs": 1.1,
+       "ci90": [
+        -586.4,
+        595.7
+       ],
+       "win": 0.56,
+       "breakeven_index_pts": 10.6
+      },
+      "monthly_30d_est_1.7pct": {
+       "premium": 723.0,
+       "net_per_trade_rs": -68.0,
+       "ci90": [
+        -655.4,
+        526.6
+       ],
+       "win": 0.56,
+       "breakeven_index_pts": 15.2
+      },
+      "monthly_56d_est_2.4pct": {
+       "premium": 1021.0,
+       "net_per_trade_rs": -123.2,
+       "ci90": [
+        -710.6,
+        471.5
+       ],
+       "win": 0.56,
+       "breakeven_index_pts": 18.9
+      }
+     }
+    },
+    "OOS": {
+     "n": 202,
+     "gross_pts_per_trade": -9.3,
+     "R_mean": -0.05,
+     "mirror_gross_pts": 19.9,
+     "vehicle": {
+      "weekly_assumption_350": {
+       "premium": 350.0,
+       "net_per_trade_rs": -298.7,
+       "ci90": [
+        -588.6,
+        -3.8
+       ],
+       "win": 0.5248,
+       "breakeven_index_pts": 10.6
+      },
+      "monthly_30d_est_1.7pct": {
+       "premium": 887.0,
+       "net_per_trade_rs": -398.1,
+       "ci90": [
+        -688.0,
+        -103.2
+       ],
+       "win": 0.5248,
+       "breakeven_index_pts": 17.2
+      },
+      "monthly_56d_est_2.4pct": {
+       "premium": 1253.0,
+       "net_per_trade_rs": -465.9,
+       "ci90": [
+        -755.8,
+        -171.0
+       ],
+       "win": 0.5248,
+       "breakeven_index_pts": 21.8
+      }
+     }
+    }
+   }
+  }
+ }
+}
