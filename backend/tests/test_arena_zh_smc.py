@@ -6,18 +6,16 @@ TIMES = [1_790_000_000_000 + i * 300_000 for i in range(50)]
 def _res():
     n = len(TIMES); vals = lambda *idx: [True if i in idx else None for i in range(n)]
     return {"ok": True, "plots": [{"title": "BUY CE Confirmed", "values": vals(10)}, {"title": "BUY PE Confirmed", "values": vals(20)}, {"title": "BUY PE (option chart)", "values": vals(30)},
-                                  {"title": "Exit SL", "values": vals(25)}, {"title": "Exit EOD", "values": vals(40)}, {"title": "Bull BOS", "values": vals(3)}],
-            "drawings": {"labels": [{"text": "ENTRY 100.5", "x": n + 7, "y": 100.5, "xloc": "bar_index"}, {"text": "SL 95", "x": n + 7, "y": 95.0, "xloc": "bar_index"}, {"text": "T1 HIT 105", "x": n + 7, "y": 105.0, "xloc": "bar_index"},
-                                       {"text": "BUY CE\n2026\nScore", "x": 10, "y": 99.0, "xloc": "bar_index"}, {"text": "SSL", "x": n + 7, "y": 1.0, "xloc": "bar_time"}],
-                         "tables": [{"rows": 5, "columns": 3, "cells": [[{"text": "ZH"}, {"text": "CE"}, {"text": "PE"}]] + [[{"text": "r"}, {"text": "a"}, {"text": "b"}]] * 4}, {"rows": 12, "columns": 2, "cells": [[{"text": "HIST"}, {"text": "RES"}]] + [[{"text": "Closed"}, {"text": "3"}]] * 11}]}}
+                                  {"title": "Exit SL", "values": vals(25)}, {"title": "Exit EOD", "values": vals(40)}, {"title": "Exit T3", "values": vals(45)}, {"title": "Bull BOS", "values": vals(3)}, {"title": "ZHX Active Entry", "values": [100.5 if i == n - 1 else None for i in range(n)]}, {"title": "ZHX Active SL", "values": [95.0 if i == n - 1 else None for i in range(n)]}, {"title": "ZHX Active T1", "values": [105.0 if i == n - 1 else None for i in range(n)]}],
+            "drawings": {"labels": [], "tables": [{"rows": 5, "columns": 2, "cells": [[{"text": "ZHX"}, {"text": "OPEN"}]] + [[{"text": "r"}, {"text": "v"}]] * 4}]}}
 
 
 def test_shape_returns_only_entry_and_exit_markers_on_the_chart_axis_and_the_live_levels():
     s = Z.shape(_res(), TIMES)
-    assert [(m["side"], m["kind"]) for m in s["markers"]] == [("BUY CE", "buy"), ("BUY PE", "buy"), ("SL", "exit"), ("BUY PE", "buy"), ("EOD", "exit")]      # BOS (structure) is not a signal marker
+    assert [(m["side"], m["kind"]) for m in s["markers"]] == [("BUY CE", "buy"), ("BUY PE", "buy"), ("SL", "exit"), ("BUY PE", "buy"), ("EOD", "exit"), ("T3", "exit")]      # BOS (structure) is not a signal marker
     assert s["markers"][0]["time"] == TIMES[10] // 1000 + 19800 and s["markers"] == sorted(s["markers"], key=lambda m: m["time"])
-    assert [(l["head"], l["price"]) for l in s["levels"]] == [("ENTRY", 100.5), ("SL", 95.0), ("T1", 105.0)]              # only the right-side tags of the live trade, not the historical detail labels
-    assert s["dash"][0][0] == "ZH" and len(s["perf"]) == 3
+    assert [(l["head"], l["price"]) for l in s["levels"]] == [("ENTRY", 100.5), ("SL", 95.0), ("T1", 105.0)]              # the live trade = the "active" plots of the last bar
+    assert s["dash"][0][0] == "ZHX" and len(s["dash"]) == 5
 
 
 def test_view_never_raises_and_reports_a_clear_error_when_there_are_too_few_candles(monkeypatch):

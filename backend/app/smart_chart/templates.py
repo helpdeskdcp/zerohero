@@ -83,3 +83,8 @@ def _load_pine_file(name: str) -> str:
 TEMPLATES.append({"id": "zerohero-smc-v134", "name": "ZeroHero AI SMC Intelligence Engine v1.3.4", "kind": "indicator",
                   "description": "23-module SMC engine: BUY CE / BUY PE markers with Entry / SL / T1-T4 lines, exit markers, tiny compact dashboard. Works on index charts AND on option CE / PE premium charts (Auto from the ticker). Signals on confirmed 5-minute bars; costs not modelled.",
                   "source": _load_pine_file("zerohero_smc_v1_3_4.pine")})
+
+
+TEMPLATES.append({"id": "zhx-v1", "name": "ZeroHero ZHX v1 | Liquidity + Stop-Hunt Engine", "kind": "indicator",
+                  "description": "ONE script for index charts and option CE / PE premium charts: liquidity pools (PDH/PDL, equal highs/lows, opening range), stop-hunt sweep + displacement, BUY CE / BUY PE with SL and T1-T3 at the next pools, exit markers, tiny dashboard. Price-only: OI / IV / bid-ask are added by Safe AI. Validation report in data/research/zhx/ (no net edge demonstrated).",
+                  "source": _load_pine_file("zhx_v1.pine")})

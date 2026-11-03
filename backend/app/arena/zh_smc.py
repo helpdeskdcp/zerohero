@@ -1,4 +1,4 @@
-"""ZeroHero AI SMC Intelligence Engine (Pine v1.3.4) for the Arena Terminal chart: the SAME Pine script as the Smart Chart template, executed by the Smart Chart Node/PineTS runner on the chart's own candles
+"""ZeroHero ZHX (Pine, liquidity / stop-hunt engine) for the Arena Terminal chart: the SAME Pine script as the Smart Chart template, executed by the Smart Chart Node/PineTS runner on the chart's own candles
 (underlying 5 / 15 m, or an option contract's premium candles). Read-only: no order path, nothing is written. Returns BUY CE / BUY PE + exit markers, the live trade's Entry / SL / T1-T4 levels and a tiny dashboard.
 A failure never breaks the chart: the response then carries `error` and empty lists."""
 from __future__ import annotations
@@ -16,7 +16,7 @@ _SRC: dict = {}
 
 
 def _source() -> str:
-    if "s" not in _SRC: _SRC["s"] = templates._load_pine_file("zerohero_smc_v1_3_4.pine")
+    if "s" not in _SRC: _SRC["s"] = templates._load_pine_file("zhx_v1.pine")
     return _SRC["s"]
 
 
@@ -43,22 +43,17 @@ def shape(res: dict, times_ms: list[int]) -> dict:
     ax = lambda i: int(times_ms[i] // 1000) + IST_S                                               # the chart axis = epoch + IST shift, like the candles
     markers = []
     for title, side, kind in (("BUY CE Confirmed", "BUY CE", "buy"), ("BUY PE Confirmed", "BUY PE", "buy"), ("BUY CE (option chart)", "BUY CE", "buy"), ("BUY PE (option chart)", "BUY PE", "buy"),
-                              ("Exit SL", "SL", "exit"), ("Exit T4", "T4", "exit"), ("Exit EOD", "EOD", "exit")):
+                              ("Exit SL", "SL", "exit"), ("Exit T3", "T3", "exit"), ("Exit EOD", "EOD", "exit")):
         for i in hits(title): markers.append({"time": ax(i), "side": side, "kind": kind})
     markers.sort(key=lambda m: m["time"])
     dr = res.get("drawings", {}); last = len(times_ms) - 1; levels = []
-    for l in dr.get("labels", []):                                                                 # the live trade's right-side tags: "ENTRY 23100.5", "SL ..", "T1 HIT .."
-        txt = str(l.get("text", "")); x = l.get("x")
-        if x is not None and l.get("xloc", "bi") in ("bi", "bar_index") and x > last:
-            head = txt.split(" ")[0]
-            if head in ("ENTRY", "SL", "T1", "T2", "T3", "T4"): levels.append({"title": txt.replace("  ", " "), "price": l["y"], "head": head})
+    for title, head in (("ZHX Active Entry", "ENTRY"), ("ZHX Active SL", "SL"), ("ZHX Active T1", "T1"), ("ZHX Active T2", "T2"), ("ZHX Active T3", "T3")):         # the live trade's levels = the "active" plots of the LAST bar
+        v = (P.get(title) or {"values": []})["values"]
+        if last >= 0 and last < len(v) and v[last] is not None: levels.append({"title": f"{head} {round(float(v[last]), 2)}", "price": float(v[last]), "head": head})
     dash = []
     for t in dr.get("tables", []):
-        if t.get("rows") == 5 and t.get("columns") == 3:
-            dash = [[(c or {}).get("text", "") for c in row] for row in t["cells"]]
+        if t.get("rows") == 5 and t.get("columns") == 2: dash = [[(c or {}).get("text", "") for c in row] for row in t["cells"]]
     perf = []
-    for t in dr.get("tables", []):
-        if t.get("rows") == 12: perf = [[(c or {}).get("text", "") for c in row] for row in t["cells"][1:4]]
     return {"markers": markers, "levels": levels, "dash": dash, "perf": perf}
 
 
@@ -67,7 +62,7 @@ def view(und: str, tf: int, option: tuple | None = None, now: float | None = Non
     now = now or time.time(); key = (und, tf, option, path)
     hit = _CACHE.get(key)
     if hit and now - hit[0] < TTL_SEC and execute is None: return hit[1]
-    out = {"underlying": und, "tf": tf, "mode": "option" if option else "underlying", "script": "ZeroHero AI SMC v1.3.4", "markers": [], "levels": [], "dash": [], "perf": [], "bars": 0, "error": None}
+    out = {"underlying": und, "tf": tf, "mode": "option" if option else "underlying", "script": "ZeroHero ZHX v1", "markers": [], "levels": [], "dash": [], "perf": [], "bars": 0, "error": None}
     try:
         cs = _candles_option(und, option[0], option[1], option[2], tf, now, path) if option else _candles_underlying(und, tf, now, path)
         out["bars"] = len(cs)

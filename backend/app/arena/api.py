@@ -559,6 +559,14 @@ def chart_underlying(request: Request, underlying: str, tf: int = 15):
     return TM.underlying_view(u, int(tf))
 
 
+@router.get("/safe_ai/zhx")
+def safe_ai_zhx(request: Request, n: int = 50):
+    """Safe AI SHADOW decisions on the ZHX Pine signals (recommendations only; nothing is submitted)."""
+    _auth(request)
+    from .safe_ai import zhx_monitor
+    return {"mode": "SHADOW", "decisions": zhx_monitor.recent(max(1, min(int(n), 200)))}
+
+
 @router.get("/chart/zhsmc")
 def chart_zhsmc(request: Request, underlying: str, tf: int = 5, expiry: str | None = None, strike: float | None = None, option_type: str | None = None):
     """Terminal tab: the ZeroHero AI SMC (Pine v1.3.4) indicator on the underlying (5 / 15 m) or, with expiry + strike + option_type, on that option's premium candles."""

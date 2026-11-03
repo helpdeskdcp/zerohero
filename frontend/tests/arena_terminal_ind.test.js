@@ -1,11 +1,11 @@
 /* Run: node tests/arena_terminal_ind.test.js — the two Pine scripts on the underlying chart switch on / off like indicators, and the choice is remembered. */
 const assert = require("assert");
 const T = require("../static/js/arena_terminal.js");
-assert.deepStrictEqual(T.TM_INDICATORS.map((x) => x.key), ["winners", "uturn", "zhsmc"]);
-assert.deepStrictEqual(T.tmIndLoad(null), { winners: true, uturn: true, zhsmc: true });                       // nothing stored: all on
-assert.deepStrictEqual(T.tmIndLoad('{"winners":false}'), { winners: false, uturn: true, zhsmc: true });        // stored: kept
-assert.deepStrictEqual(T.tmIndLoad('{"winners":"no","uturn":0,"x":1}'), { winners: true, uturn: true, zhsmc: true });      // wrong types ignored
-assert.deepStrictEqual(T.tmIndLoad("{not json"), { winners: true, uturn: true, zhsmc: true });                        // unreadable: all on
+assert.deepStrictEqual(T.TM_INDICATORS.map((x) => x.key), ["zhsmc"]);
+assert.deepStrictEqual(T.tmIndLoad(null), { zhsmc: true });                       // nothing stored: all on
+assert.deepStrictEqual(T.tmIndLoad('{"winners":false}'), { zhsmc: true });        // stored: kept
+assert.deepStrictEqual(T.tmIndLoad('{"winners":"no","uturn":0,"x":1}'), { zhsmc: true });      // wrong types ignored
+assert.deepStrictEqual(T.tmIndLoad("{not json"), { zhsmc: true });                        // unreadable: all on
 const times = [100, 200, 300, 400];
 const u = { underlying: "NIFTY", markers: [{ time: 210, side: "BUY", strong: true }, { time: 390, side: "SELL", strong: false }], uturn: [{ time: 305, side: "CE", thrust_pct: 0.62, base_rate: { n: 20, target_hit: 0.65 } }, { time: 150, side: "PE", base_rate: null }],
   uturn_calibration: { overall: { n: 67, target_hit: 0.6 } } };
@@ -18,8 +18,8 @@ const ut = T.tmBuildMarkers(times, u, { winners: false, uturn: true }, null); as
 assert.strictEqual(ut[1].shape, "arrowUp"); assert.strictEqual(ut[0].shape, "arrowDown");                      // CE idea = up arrow below the bar, PE idea = down arrow above it
 assert.deepStrictEqual(T.tmBuildMarkers(times, u, { winners: false, uturn: false }, order).map((m) => m.text), ["ORDER"]);   // both off: only the order marker stays
 assert.deepStrictEqual(T.tmBuildMarkers(times, null, { winners: true, uturn: true }, order).map((m) => m.text), ["ORDER"]);  // no underlying data (equity): same
-assert.ok(T.tmIndNote({ winners: true, uturn: true, zhsmc: false }, u).includes("Winners Scalper + Safe U-turn") && T.tmIndNote({ winners: true, uturn: true }, u).includes("60% of 67") && T.tmIndNote({ winners: true, uturn: true }, u).includes("no proven edge"));
-assert.ok(!T.tmIndNote({ winners: true, uturn: false }, u).includes("U-turn history")); assert.ok(T.tmIndNote({ winners: false, uturn: false }, u).startsWith("Indicators: none"));
+assert.ok(T.tmIndNote({ zhsmc: true }, u).startsWith("Indicators: ZeroHero ZHX"));
+assert.ok(!T.tmIndNote({ zhsmc: true }, u).includes("U-turn history")); assert.ok(T.tmIndNote({ zhsmc: false }, u).startsWith("Indicators: none"));
 console.log("arena_terminal_ind ok");
 
 /* the state line + session levels (an indicator with no signal must still say where it stands) */
@@ -29,7 +29,7 @@ assert.ok(T.tmUturnStatus({ uturn_state: { ...u2.uturn_state, is_today: false } 
 assert.strictEqual(T.tmUturnStatus({}), ""); assert.strictEqual(T.tmUturnStatus(null), "");
 assert.deepStrictEqual(T.tmUturnLevels(u2), [{ price: 74152, color: "#c084fc", title: "session high" }, { price: 73249, color: "#38bdf8", title: "session low" }]);
 assert.deepStrictEqual(T.tmUturnLevels({ uturn_state: { ...u2.uturn_state, is_today: false } }), []);                       // no lines for a past session
-assert.ok(T.tmIndNote({ winners: true, uturn: true }, u2).includes("Safe U-turn: Watching:")); assert.ok(!T.tmIndNote({ winners: true, uturn: false }, u2).includes("Watching"));
+// (U-turn / Winners notes removed: ZHX is the single indicator)
 console.log("arena_terminal_ind status ok");
 
 /* volume strip + relative-volume text */
@@ -58,8 +58,8 @@ console.log("arena_terminal_ind status ok");
   const m = T.tmUturnMarkers(times, [{ time: 90, side: "CE" }, { time: 400, side: "PE" }], true);
   assert.strictEqual(m.length, 1); assert.strictEqual(m[0].text, "U-turn CE (underlying)"); assert.strictEqual(T.tmUturnMarkers(times, [{ time: 90, side: "CE" }])[0].text, "U-turn CE");
   const cal = { overall: { n: 45, target_hit: 0.64 } };
-  assert.ok(T.tmIndNote({ winners: false, uturn: true }, { underlying: "NIFTY", uturn_calibration: cal }).includes("64% of 45"));
-  const n2 = T.tmIndNote({ winners: false, uturn: true }, { underlying: "CRUDEOIL", uturn_calibration: cal }); assert.ok(!n2.includes("64%") && n2.includes("NIFTY options only"));
+
+
   console.log("uturn fixes ok");
 }
 {
@@ -75,6 +75,6 @@ const zon = T.tmBuildMarkers(times, null, { winners: false, uturn: false, zhsmc:
 assert.deepStrictEqual(zon.map((m) => m.text), ["ZH BUY CE", "ZH BUY PE", "SL", "EOD"]); assert.strictEqual(zon[0].position, "belowBar"); assert.strictEqual(zon[2].position, "aboveBar");
 assert.deepStrictEqual(T.tmBuildMarkers(times, null, { winners: false, uturn: false, zhsmc: false }, null, false, zh), []);       // switch off: nothing from this script
 assert.deepStrictEqual(T.tmBuildMarkers(times, null, { winners: false, uturn: false, zhsmc: true }, null, false, null), []);       // not loaded yet: nothing, no crash
-assert.strictEqual(T.tmZhDashText(zh), "ZH v1.3.4 · Index\nscore 30/4 | 12/2\nSCORE 30/60 | SCORE 12/60\nWAIT  T1:- T2:- T3:- T4:-\nNSE OPEN");
-assert.strictEqual(T.tmZhDashText({ error: "not enough candles yet" }), "ZH SMC: not enough candles yet"); assert.strictEqual(T.tmZhDashText(null), "");
+assert.strictEqual(T.tmZhDashText(zh), "ZH v1.3.4 · Index  CE\nSCORE/VOTES  30/4\nDECISION  SCORE 30/60\nTRADE  WAIT\nMARKET  NSE");
+assert.strictEqual(T.tmZhDashText({ error: "not enough candles yet" }), "ZHX: not enough candles yet"); assert.strictEqual(T.tmZhDashText(null), "");
 console.log("arena_terminal_ind zhsmc ok");

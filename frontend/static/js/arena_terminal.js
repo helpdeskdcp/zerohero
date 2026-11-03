@@ -11,7 +11,7 @@ function tmBucket(r) { return r.state === "WAITING" || r.state === "NO DATA" ? "
 /* nearest candle time at or before t (t and candle times are both already IST-shifted seconds) */
 function tmSnap(times, t) { let lo = 0, hi = times.length - 1, ans = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (times[m] <= t) { ans = times[m]; lo = m + 1; } else hi = m - 1; } return ans; }
 /* ---- Pine indicators on the underlying chart: two scripts, each switched on / off like an indicator or strategy (the choice is remembered in the browser) */
-const TM_INDICATORS = [{ key: "winners", label: "Winners Scalper", title: "Winners Scalper (Pine): trailing-stop lines, BUY / SELL arrows, MA34" }, { key: "uturn", label: "Safe U-turn", title: "Safe U-turn (Pine): CALL / PUT idea after a confirmed turn at the session high or low, with its historical base rate" }, { key: "zhsmc", label: "ZeroHero SMC", title: "ZeroHero AI SMC (Pine v1.3.4): BUY CE / BUY PE + SL / T4 / EOD markers, live Entry / SL / T1-T4 lines, tiny dashboard. Works on the underlying and on the option premium chart." }];
+const TM_INDICATORS = [{ key: "zhsmc", label: "ZeroHero ZHX", title: "ZeroHero ZHX (Pine): liquidity pools, stop-hunt sweep + displacement, BUY CE / BUY PE with SL and T1-T3, live Entry / SL / T1-T3 lines, tiny dashboard. Works on the underlying and on the option premium chart. Price-only: Safe AI adds OI / IV / bid-ask." }];
 function tmIndLoad(raw) {
   const on = Object.fromEntries(TM_INDICATORS.map((x) => [x.key, true]));
   try { const o = JSON.parse(raw || "{}"); for (const x of TM_INDICATORS) if (typeof o[x.key] === "boolean") on[x.key] = o[x.key]; } catch (e) { /* unreadable setting: all on */ }
@@ -43,8 +43,8 @@ function tmZhMarkers(times, ms) {
 }
 const TM_ZH_COLORS = { ENTRY: "#60a5fa", SL: "#ef4444", T1: "#22c55e", T2: "#84cc16", T3: "#22d3ee", T4: "#e879f9" };
 function tmZhDashText(z) {
-  if (!z) return ""; if (z.error) return "ZH SMC: " + z.error; const d = z.dash || []; if (d.length < 5) return "ZH SMC: waiting for data";
-  return [d[0][0], `score ${d[1][1]} | ${d[1][2]}`, `${d[2][1]} | ${d[2][2]}`, `${d[3][1]}  ${d[3][2]}`, `${d[4][1]} ${d[4][2]}`].join("\n");
+  if (!z) return ""; if (z.error) return "ZHX: " + z.error; const d = z.dash || []; if (d.length < 5) return "ZHX: waiting for data";
+  return d.map((r) => r.slice(0, 2).filter(Boolean).join("  ")).join("\n");
 }
 function tmBuildMarkers(times, u, ind, orderMarker, opt, zh) {
   const out = []; if (zh && ind.zhsmc) out.push(...tmZhMarkers(times, zh.markers)); if (u && ind.winners) out.push(...tmPineMarkers(times, u.markers)); if (u && ind.uturn) out.push(...tmUturnMarkers(times, u.uturn, opt)); if (orderMarker) out.push(orderMarker);
