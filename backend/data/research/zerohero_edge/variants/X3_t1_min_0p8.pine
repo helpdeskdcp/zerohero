@@ -1,0 +1,564 @@
+//@version=6
+indicator("ZeroHero ZHX DEV | Liquidity + Stop-Hunt Engine (Index & Option CE/PE)", shorttitle="ZHX-dev", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=100)
+//=============================================================================
+// ZHX v1 — one script: where retail stops sit (liquidity pools), who hunts them (sweep + close back), and the displacement that follows.
+// Price-only and fully reproducible on TradingView; OI / IV / bid-ask / spread are applied by ZeroHero Safe AI on top (it reads the signal plots below).
+// Signals only on a CONFIRMED bar close. No profitability claim: see ZHX_REPORT in data/research/zhx/.
+//=============================================================================
+gS = "01. Signal"
+minScore     = input.float(6.0, "Minimum Score (max 10)", minval=1, maxval=10, step=0.5, group=gS, tooltip="6 = the value chosen on development data only (pooled DEV net per trade); VALIDATION / OOS were looked at once afterwards.")
+sweepBufATR  = input.float(0.05, "Sweep Must Pierce Pool By (ATR)", minval=0, step=0.01, group=gS)
+confirmBars  = input.int(3, "Bars Allowed From Sweep To Displacement", minval=1, maxval=6, group=gS)
+dispATR      = input.float(0.7, "Displacement Body (ATR)", minval=0.3, step=0.1, group=gS)
+eqTolATR     = input.float(0.15, "Equal High / Low Tolerance (ATR)", minval=0.02, step=0.01, group=gS)
+cooldownBars = input.int(6, "Cooldown Bars", minval=1, maxval=100, group=gS)
+maxSigDay    = input.int(3, "Max Signals Per Day", minval=1, maxval=10, group=gS)
+allowCE      = input.bool(true, "Enable BUY CE (long)", group=gS)
+allowPE      = input.bool(true, "Enable BUY PE (short)", group=gS)
+useSession   = input.bool(true, "Only Inside Exchange Session", group=gS)
+skipOpenMin  = input.int(5, "Skip First N Minutes Of Session", minval=0, maxval=30, group=gS)
+earlyOnly    = input.bool(false, "DEV: Only Entries In The Early Window (experimental, NOT proven)", group=gS, tooltip="Offline study 2026-11-03: pooled OOS +41 Rs/trade, 90% interval -198..+290, n=284, negative in 2025-26 on NIFTY/SENSEX -> INCONCLUSIVE. Default OFF = identical to ZHX v1.")
+earlyFrom    = input.int(20, "DEV: Early Window Starts (minutes after open)", minval=0, maxval=120, group=gS)
+earlyTo      = input.int(75, "DEV: Early Window Ends (minutes after open)", minval=5, maxval=240, group=gS)
+skipCloseMin = input.int(20, "No New Signals In Last N Minutes (NSE/BSE 15:30, MCX 23:55)", minval=0, maxval=60, group=gS)
+require5m    = input.bool(true, "Signals Only On 5-Minute Chart", group=gS)
+squareOffEOD = input.bool(true, "Square-Off Open Trade At Next Session Open", group=gS)
+chartKind    = input.string("Auto", "Chart Instrument Type", options=["Auto","Underlying / Index","Option CE chart","Option PE chart"], group=gS, tooltip="Option CE / PE premium chart: only the bullish setup of THIS premium is a BUY. Auto reads the ticker ending CE / PE.")
+gR = "02. Risk / Targets"
+atrLen   = input.int(14, "ATR Length", minval=2, group=gR)
+slBufATR = input.float(0.15, "SL Beyond Sweep Extreme (ATR)", minval=0, step=0.05, group=gR)
+minRiskATR = input.float(0.4, "Min Risk (ATR)", minval=0.1, step=0.1, group=gR)
+maxRiskATR = input.float(3.0, "Max Risk (ATR)", minval=0.5, step=0.25, group=gR)
+t1MinR   = input.float(0.8, "T1 Minimum R", minval=0.5, step=0.25, group=gR)
+t2MinR   = input.float(1.8, "T2 Minimum R", minval=1.0, step=0.25, group=gR)
+t3MinR   = input.float(3.0, "T3 Minimum R", minval=1.5, step=0.25, group=gR)
+legT1    = input.float(40.0, "Exit % At T1", minval=10, maxval=80, group=gR)
+legT2    = input.float(30.0, "Exit % At T2", minval=10, maxval=80, group=gR)
+beAfterT1 = input.bool(false, "Move SL To Entry After T1", group=gR)
+timeStopBars = input.int(0, "DEV: Time Stop (bars after entry, 0 = off)", minval=0, maxval=200, group=gR, tooltip="Closes the open trade at the bar close N bars after entry. 0 = identical to ZHX v1.")
+gTF = "03. Session / Timeframes"
+tf15 = input.timeframe("15", "15M Bias Timeframe", group=gTF)
+tf1H = input.timeframe("60", "1H Bias Timeframe", group=gTF)
+sessionTz = input.string("Asia/Kolkata", "Session Timezone", group=gTF)
+marketMode = input.string("Auto", "Market Session Profile", options=["Auto","NSE","BSE","MCX Non-Agri","MCX Agri","Custom"], group=gTF)
+nseSession = input.session("0915-1530:23456", "NSE Session", group=gTF)
+bseSession = input.session("0915-1530:23456", "BSE Session", group=gTF)
+mcxSession = input.session("0900-2355:23456", "MCX Non-Agri Session (winter)", group=gTF)
+mcxAgri    = input.session("0900-1700:23456", "MCX Agri Session", group=gTF)
+customSess = input.session("0915-1530:23456", "Custom Session", group=gTF)
+gD = "04. Display"
+showZones   = input.bool(true, "Show Stop-Hunt Zone Boxes", group=gD)
+showLevels  = input.bool(true, "Show Entry / SL / T1-T3 Lines", group=gD)
+showLabels  = input.bool(true, "Show Signal Labels", group=gD)
+showPools   = input.bool(true, "Show Liquidity Pools (PDH/PDL, EQH/EQL, OR)", group=gD)
+markerSizeIn = input.string("Small", "BUY / EXIT Marker Size", options=["Tiny","Small","Normal","Large"], group=gD)
+historyKeep = input.int(30, "Historical Trades To Keep", minval=5, maxval=60, group=gD)
+showDash    = input.bool(true, "Show Dashboard", group=gD)
+dashPosition = input.string("Top Right", "Dashboard Position", options=["Top Right","Top Left","Bottom Right","Bottom Left"], group=gD)
+bullColor = input.color(color.rgb(0,180,115), "Bull Color", group=gD)
+bearColor = input.color(color.rgb(225,55,75), "Bear Color", group=gD)
+dashPos = switch dashPosition
+    "Top Left" => position.top_left
+    "Bottom Right" => position.bottom_right
+    "Bottom Left" => position.bottom_left
+    => position.top_right
+markerSize = switch markerSizeIn
+    "Tiny" => size.tiny
+    "Normal" => size.normal
+    "Large" => size.large
+    => size.small
+// ---- instrument type
+string tkUp = str.upper(syminfo.ticker)
+bool tkOpt = str.length(tkUp) >= 8 and (str.endswith(tkUp, "CE") or str.endswith(tkUp, "PE"))
+int optMode = chartKind == "Option CE chart" ? 1 : chartKind == "Option PE chart" ? 2 : chartKind == "Auto" and tkOpt ? (str.endswith(tkUp, "CE") ? 1 : 2) : 0
+bool isOpt = optMode != 0
+string optSide = optMode == 2 ? "BUY PE" : "BUY CE"
+// ---- core series
+atr = ta.atr(atrLen)
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
+volAvg = ta.sma(volume, 20)
+volRatio = not na(volAvg) and volAvg > 0 ? volume / volAvg : 1.0
+hasVol = not na(volAvg) and volAvg > 0
+body = math.abs(close - open)
+barRange = math.max(high - low, syminfo.mintick)
+closeLoc = (close - low) / barRange
+[m15C, m15E20, m15E50] = request.security(syminfo.tickerid, tf15, [close[1], ta.ema(close,20)[1], ta.ema(close,50)[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+[h1C, h1E20, h1E50] = request.security(syminfo.tickerid, tf1H, [close[1], ta.ema(close,20)[1], ta.ema(close,50)[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+htfBull = (m15C > m15E20 and m15E20 > m15E50) or (h1C > h1E20 and h1E20 > h1E50)
+htfBear = (m15C < m15E20 and m15E20 < m15E50) or (h1C < h1E20 and h1E20 < h1E50)
+prevDayHigh = request.security(syminfo.tickerid, "D", high[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+prevDayLow = request.security(syminfo.tickerid, "D", low[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+// ---- exchange session (TradingView gives syminfo.prefix; other hosts give "": fall back on well-known names)
+string pfx = str.upper(syminfo.prefix)
+bool nameMCX = str.contains(tkUp, "NATURALGAS") or str.contains(tkUp, "NATGAS") or str.contains(tkUp, "CRUDE") or str.contains(tkUp, "GOLD") or str.contains(tkUp, "SILVER") or str.contains(tkUp, "COPPER") or str.contains(tkUp, "ZINC") or str.contains(tkUp, "LEAD") or str.contains(tkUp, "NICKEL") or str.contains(tkUp, "ALUMINIUM")
+bool nameBSE = str.contains(tkUp, "SENSEX") or str.contains(tkUp, "BANKEX")
+bool isMCX = str.contains(pfx, "MCX") or (pfx == "" and nameMCX)
+bool isBSE = not isMCX and (str.contains(pfx, "BSE") or (pfx == "" and nameBSE))
+bool isNSE = not isMCX and not isBSE and (str.contains(pfx, "NSE") or pfx == "")
+string profile = marketMode == "Auto" ? (isMCX ? "MCX" : isBSE ? "BSE" : isNSE ? "NSE" : "CUSTOM") : marketMode
+string activeSession = marketMode == "Auto" ? (isMCX ? mcxSession : isBSE ? bseSession : isNSE ? nseSession : customSess) : marketMode == "NSE" ? nseSession : marketMode == "BSE" ? bseSession : marketMode == "MCX Non-Agri" ? mcxSession : marketMode == "MCX Agri" ? mcxAgri : customSess
+inSession = not na(time(timeframe.period, activeSession, sessionTz))
+bool dayChanged = timeframe.change("D")
+sessionStart = inSession and (bar_index == 0 or not inSession[1] or dayChanged)
+var int sessStartTime = na
+var float orHigh = na
+var float orLow = na
+var float prevSessHigh = na
+var float prevSessLow = na
+var float curSessHigh = na
+var float curSessLow = na
+if sessionStart
+    if not na(curSessHigh)
+        prevSessHigh := curSessHigh
+        prevSessLow := curSessLow
+    curSessHigh := high
+    curSessLow := low
+    sessStartTime := time
+    orHigh := high
+    orLow := low
+else if inSession
+    curSessHigh := math.max(nz(curSessHigh, high), high)
+    curSessLow := math.min(nz(curSessLow, low), low)
+    if not na(sessStartTime) and (time - sessStartTime) < 15 * 60000
+        orHigh := math.max(nz(orHigh, high), high)
+        orLow := math.min(nz(orLow, low), low)
+bool orValid = not na(sessStartTime) and (time - sessStartTime) >= 15 * 60000
+float minsIn = na(sessStartTime) ? 0.0 : (time - sessStartTime) / 60000.0
+int sessLenMin = isMCX ? 895 : 375
+bool timeOK = not useSession or (inSession and minsIn >= skipOpenMin and minsIn <= sessLenMin - skipCloseMin)
+bool earlyOK = not earlyOnly or (minsIn >= earlyFrom and minsIn <= earlyTo)
+// ---- swing pivots (confirmed, never repaint) and liquidity pools
+pivotLen = 3
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low, pivotLen, pivotLen)
+var array<float> pHi = array.new<float>()
+var array<float> pLo = array.new<float>()
+var array<int> pHiBar = array.new<int>()
+var array<int> pLoBar = array.new<int>()
+var float lastPH = na
+var float lastPL = na
+if not na(ph)
+    array.push(pHi, ph)
+    array.push(pHiBar, bar_index - pivotLen)
+    lastPH := ph
+    if array.size(pHi) > 8
+        array.shift(pHi)
+        array.shift(pHiBar)
+if not na(pl)
+    array.push(pLo, pl)
+    array.push(pLoBar, bar_index - pivotLen)
+    lastPL := pl
+    if array.size(pLo) > 8
+        array.shift(pLo)
+        array.shift(pLoBar)
+// equal highs / equal lows: two of the last pivots within tolerance form ONE pool (the level above/below which many stops rest)
+float eqHigh = na
+float eqLow = na
+int nHi = array.size(pHi)
+int nLo = array.size(pLo)
+if nHi >= 2
+    for i = 0 to nHi - 2
+        for j = i + 1 to nHi - 1
+            if math.abs(array.get(pHi, i) - array.get(pHi, j)) <= eqTolATR * atr
+                eqHigh := na(eqHigh) ? math.max(array.get(pHi, i), array.get(pHi, j)) : math.max(eqHigh, math.max(array.get(pHi, i), array.get(pHi, j)))
+if nLo >= 2
+    for i = 0 to nLo - 2
+        for j = i + 1 to nLo - 1
+            if math.abs(array.get(pLo, i) - array.get(pLo, j)) <= eqTolATR * atr
+                eqLow := na(eqLow) ? math.min(array.get(pLo, i), array.get(pLo, j)) : math.min(eqLow, math.min(array.get(pLo, i), array.get(pLo, j)))
+plot(showPools ? prevDayHigh : na, "PDH", color=color.new(color.red, 40), style=plot.style_linebr)
+plot(showPools ? prevDayLow : na, "PDL", color=color.new(color.green, 40), style=plot.style_linebr)
+plot(showPools and orValid ? orHigh : na, "OR High", color=color.new(color.orange, 40), style=plot.style_linebr)
+plot(showPools and orValid ? orLow : na, "OR Low", color=color.new(color.aqua, 40), style=plot.style_linebr)
+plot(showPools ? eqHigh : na, "EQH", color=color.new(color.fuchsia, 30), style=plot.style_circles, linewidth=2)
+plot(showPools ? eqLow : na, "EQL", color=color.new(color.lime, 30), style=plot.style_circles, linewidth=2)
+// ---- stop hunt = pierce a pool by a wick and CLOSE BACK inside; remember the extreme and which pool it was
+var float bslLevel = na
+var float bslExt = na
+var int bslBar = na
+var int bslW = 0
+var string bslName = ""
+var float sslLevel = na
+var float sslExt = na
+var int sslBar = na
+var int sslW = 0
+var string sslName = ""
+float pierceHi = sweepBufATR * atr
+float sweptH = na
+int swW = 0
+string swN = ""
+f_pickH(_lvl, _w, _n, _cur, _curW, _curN) =>
+    float lv = _cur
+    int w = _curW
+    string nm = _curN
+    if not na(_lvl) and high > _lvl + pierceHi and close < _lvl and _w >= w
+        lv := _lvl
+        w := _w
+        nm := _n
+    [lv, w, nm]
+[h1v, h1w, h1n] = f_pickH(prevDayHigh, 3, "PDH", na, 0, "")
+[h2v, h2w, h2n] = f_pickH(prevSessHigh, 3, "PSH", h1v, h1w, h1n)
+[h3v, h3w, h3n] = f_pickH(eqHigh, 3, "EQH", h2v, h2w, h2n)
+[h4v, h4w, h4n] = f_pickH(orValid ? orHigh : na, 2, "ORH", h3v, h3w, h3n)
+[h5v, h5w, h5n] = f_pickH(lastPH, 1, "SWH", h4v, h4w, h4n)
+if not na(h5v)
+    bslLevel := h5v
+    bslExt := high
+    bslBar := bar_index
+    bslW := h5w
+    bslName := h5n
+else if not na(bslBar) and bar_index - bslBar <= confirmBars and high > bslExt
+    bslExt := high
+f_pickL(_lvl, _w, _n, _cur, _curW, _curN) =>
+    float lv = _cur
+    int w = _curW
+    string nm = _curN
+    if not na(_lvl) and low < _lvl - pierceHi and close > _lvl and _w >= w
+        lv := _lvl
+        w := _w
+        nm := _n
+    [lv, w, nm]
+[l1v, l1w, l1n] = f_pickL(prevDayLow, 3, "PDL", na, 0, "")
+[l2v, l2w, l2n] = f_pickL(prevSessLow, 3, "PSL", l1v, l1w, l1n)
+[l3v, l3w, l3n] = f_pickL(eqLow, 3, "EQL", l2v, l2w, l2n)
+[l4v, l4w, l4n] = f_pickL(orValid ? orLow : na, 2, "ORL", l3v, l3w, l3n)
+[l5v, l5w, l5n] = f_pickL(lastPL, 1, "SWL", l4v, l4w, l4n)
+if not na(l5v)
+    sslLevel := l5v
+    sslExt := low
+    sslBar := bar_index
+    sslW := l5w
+    sslName := l5n
+else if not na(sslBar) and bar_index - sslBar <= confirmBars and low < sslExt
+    sslExt := low
+// ---- displacement: a strong candle AGAINST the hunt, closing back through the pool; origin FVG / break of structure add confidence
+bool bullDisp = close > open and body >= dispATR * atr and closeLoc >= 0.65
+bool bearDisp = close < open and body >= dispATR * atr and closeLoc <= 0.35
+bool bullFVG = low > high[2] and close[1] > open[1]
+bool bearFVG = high < low[2] and close[1] < open[1]
+bool bullBOS = not na(lastPH) and close > lastPH
+bool bearBOS = not na(lastPL) and close < lastPL
+float mid = (not na(lastPH) and not na(lastPL)) ? (lastPH + lastPL) / 2 : na
+bool inDiscount = not na(mid) and close <= mid
+bool inPremium = not na(mid) and close >= mid
+bool longWindow = not na(sslBar) and bar_index - sslBar <= confirmBars and sslBar != bar_index or (not na(sslBar) and sslBar == bar_index and bullDisp)
+bool shortWindow = not na(bslBar) and bar_index - bslBar <= confirmBars and bslBar != bar_index or (not na(bslBar) and bslBar == bar_index and bearDisp)
+float longScore = 0.0
+float shortScore = 0.0
+if longWindow and bullDisp and close > sslLevel
+    longScore := sslW + (body >= 1.2 * atr ? 2.0 : 1.0) + (bullFVG ? 1.0 : 0.0) + (bullBOS ? 1.0 : 0.0) + (inDiscount ? 1.0 : 0.0) + (htfBull ? 1.0 : htfBear ? -1.0 : 0.0) + (hasVol and volRatio >= 1.3 ? 1.0 : 0.0) + (close > ema20 ? 0.5 : 0.0)
+if shortWindow and bearDisp and close < bslLevel
+    shortScore := bslW + (body >= 1.2 * atr ? 2.0 : 1.0) + (bearFVG ? 1.0 : 0.0) + (bearBOS ? 1.0 : 0.0) + (inPremium ? 1.0 : 0.0) + (htfBear ? 1.0 : htfBull ? -1.0 : 0.0) + (hasVol and volRatio >= 1.3 ? 1.0 : 0.0) + (close < ema20 ? 0.5 : 0.0)
+tfAllowed = not require5m or (timeframe.isminutes and timeframe.multiplier == 5)
+bool bullAllowed = isOpt ? true : allowCE
+bool bearAllowed = isOpt ? false : allowPE
+bullSetup = bullAllowed and tfAllowed and timeOK and earlyOK and longScore >= minScore
+bearSetup = bearAllowed and tfAllowed and timeOK and earlyOK and shortScore >= minScore
+// ---- targets = the next liquidity pools in the trade direction (nearest first), each at least a minimum R away; fallback = fixed R
+f_targets(_dir, _entry, _risk) =>
+    array<float> c = array.new<float>()
+    if _dir < 0
+        if not na(prevDayLow)
+            array.push(c, prevDayLow)
+        if not na(prevSessLow)
+            array.push(c, prevSessLow)
+        if not na(eqLow)
+            array.push(c, eqLow)
+        if orValid and not na(orLow)
+            array.push(c, orLow)
+        if array.size(pLo) > 0
+            for k = 0 to array.size(pLo) - 1
+                array.push(c, array.get(pLo, k))
+        if array.size(c) > 1
+            array.sort(c, order.descending)
+    else
+        if not na(prevDayHigh)
+            array.push(c, prevDayHigh)
+        if not na(prevSessHigh)
+            array.push(c, prevSessHigh)
+        if not na(eqHigh)
+            array.push(c, eqHigh)
+        if orValid and not na(orHigh)
+            array.push(c, orHigh)
+        if array.size(pHi) > 0
+            for k = 0 to array.size(pHi) - 1
+                array.push(c, array.get(pHi, k))
+        if array.size(c) > 1
+            array.sort(c, order.ascending)
+    float t1 = _entry + _dir * t1MinR * _risk
+    float t2 = _entry + _dir * t2MinR * _risk
+    float t3 = _entry + _dir * t3MinR * _risk
+    bool f1 = false
+    bool f2 = false
+    bool f3 = false
+    if array.size(c) > 0
+        for k = 0 to array.size(c) - 1
+            float lv = array.get(c, k)
+            float dist = (lv - _entry) * _dir
+            if not f1 and dist >= t1MinR * _risk
+                t1 := lv
+                f1 := true
+            else if f1 and not f2 and dist >= t2MinR * _risk and (lv - t1) * _dir > 0.25 * _risk
+                t2 := lv
+                f2 := true
+            else if f2 and not f3 and dist >= t3MinR * _risk and (lv - t2) * _dir > 0.25 * _risk
+                t3 := lv
+                f3 := true
+    if (t2 - t1) * _dir <= 0.25 * _risk
+        t2 := t1 + _dir * 0.8 * _risk
+    if (t3 - t2) * _dir <= 0.25 * _risk
+        t3 := t2 + _dir * 0.8 * _risk
+    [t1, t2, t3, f1, f2, f3]
+// ---- trade state
+var int tradeDir = 0
+var int lastSigBar = na
+var int sigsToday = 0
+var float entryPx = na
+var float stopPx = na
+var float riskPts = na
+var float tg1 = na
+var float tg2 = na
+var float tg3 = na
+var bool h1Hit = false
+var bool h2Hit = false
+var bool h3Hit = false
+var string tradeStatus = "WAIT"
+var float activeScore = 0.0
+var string activeSweep = ""
+var line lnE = na
+var line lnS = na
+var line lnT1 = na
+var line lnT2 = na
+var line lnT3 = na
+var label lbSig = na
+var box bxZone = na
+var array<line> hist1 = array.new<line>()
+var array<line> hist2 = array.new<line>()
+var array<line> hist3 = array.new<line>()
+var array<line> hist4 = array.new<line>()
+var array<line> hist5 = array.new<line>()
+var array<label> histLb = array.new<label>()
+var array<box> histBx = array.new<box>()
+var int closedN = 0
+var int winN = 0
+var float netR = 0.0
+var float grossP = 0.0
+var float grossL = 0.0
+var float peakR = 0.0
+var float maxDD = 0.0
+var int t1N = 0
+var int t2N = 0
+var int t3N = 0
+if sessionStart
+    sigsToday := 0
+float f1p = legT1 / 100.0
+float f2p = legT2 / 100.0
+float f3p = math.max(0.0, 1.0 - f1p - f2p)
+cooldownOK = na(lastSigBar) or bar_index - lastSigBar >= cooldownBars
+canSignal = tradeDir == 0 and cooldownOK and sigsToday < maxSigDay
+if tradeDir != 0
+    if not na(lnE)
+        line.set_x2(lnE, bar_index)
+    if not na(lnS)
+        line.set_x2(lnS, bar_index)
+    if not na(lnT1)
+        line.set_x2(lnT1, bar_index)
+    if not na(lnT2)
+        line.set_x2(lnT2, bar_index)
+    if not na(lnT3)
+        line.set_x2(lnT3, bar_index)
+// ONE exit block: EOD square-off, stop-loss (assumed first when SL and a target share a candle), targets
+bool eodExit = squareOffEOD and tradeDir != 0 and sessionStart and bar_index > 0
+bool slHit = not eodExit and ((tradeDir == 1 and low <= stopPx) or (tradeDir == -1 and high >= stopPx))
+if tradeDir != 0 and not eodExit and not slHit
+    if tradeDir == 1
+        if high >= tg1
+            h1Hit := true
+        if high >= tg2
+            h2Hit := true
+        if high >= tg3
+            h3Hit := true
+    else
+        if low <= tg1
+            h1Hit := true
+        if low <= tg2
+            h2Hit := true
+        if low <= tg3
+            h3Hit := true
+    if beAfterT1 and h1Hit
+        stopPx := tradeDir == 1 ? math.max(stopPx, entryPx) : math.min(stopPx, entryPx)
+bool t3Done = tradeDir != 0 and not eodExit and not slHit and h3Hit
+bool timeExit = timeStopBars > 0 and tradeDir != 0 and not eodExit and not slHit and not h3Hit and not na(lastSigBar) and bar_index - lastSigBar >= timeStopBars
+bool tradeClosed = eodExit or slHit or t3Done or timeExit
+bool exSL = false
+bool exT3 = false
+bool exEOD = false
+float realisedOut = na
+float openRisk = na
+if tradeClosed
+    int cdir = tradeDir
+    float r1 = math.abs(tg1 - entryPx) / riskPts
+    float r2 = math.abs(tg2 - entryPx) / riskPts
+    float r3 = math.abs(tg3 - entryPx) / riskPts
+    float banked = (h1Hit ? f1p * r1 : 0.0) + (h2Hit ? f2p * r2 : 0.0)
+    float restFrac = 1.0 - (h1Hit ? f1p : 0.0) - (h2Hit ? f2p : 0.0)
+    float restR = 0.0
+    string why = "SL HIT"
+    if t3Done
+        restR := restFrac * r3
+        why := "T3 HIT"
+        exT3 := true
+    else if eodExit
+        restR := restFrac * (nz(close[1]) - entryPx) * cdir / riskPts
+        why := "EOD EXIT"
+        exEOD := true
+    else if timeExit
+        restR := restFrac * (close - entryPx) * cdir / riskPts
+        why := "TIME EXIT"
+        exEOD := true
+    else
+        restR := restFrac * ((stopPx - entryPx) * cdir / riskPts)
+        exSL := true
+    float realised = banked + restR
+    realisedOut := realised
+    openRisk := riskPts
+    closedN += 1
+    if realised > 0
+        winN += 1
+    if h1Hit
+        t1N += 1
+    if h2Hit
+        t2N += 1
+    if h3Hit
+        t3N += 1
+    grossP += math.max(realised, 0.0)
+    grossL += math.max(-realised, 0.0)
+    netR += realised
+    peakR := math.max(peakR, netR)
+    maxDD := math.max(maxDD, peakR - netR)
+    tradeDir := 0
+    tradeStatus := why
+    if not na(lbSig)
+        label.set_text(lbSig, label.get_text(lbSig) + "\nRESULT: " + why + " | " + str.tostring(realised, "#.##") + "R")
+if not na(lnT1)
+    line.set_color(lnT1, h1Hit ? color.gray : color.green)
+if not na(lnT2)
+    line.set_color(lnT2, h2Hit ? color.gray : color.lime)
+if not na(lnT3)
+    line.set_color(lnT3, h3Hit ? color.gray : color.aqua)
+buyCE = barstate.isconfirmed and canSignal and bullSetup
+buyPE = barstate.isconfirmed and canSignal and bearSetup and not buyCE
+float sigScore = buyCE ? longScore : buyPE ? shortScore : 0.0
+int sigDir = buyCE ? 1 : buyPE ? -1 : 0
+bool riskOK = true
+float newStop = na
+float newRisk = na
+if sigDir == 1
+    newStop := sslExt - slBufATR * atr
+    newRisk := close - newStop
+if sigDir == -1
+    newStop := bslExt + slBufATR * atr
+    newRisk := newStop - close
+if sigDir != 0
+    riskOK := newRisk >= minRiskATR * atr and newRisk <= maxRiskATR * atr
+bool fireBuy = buyCE and riskOK
+bool fireSell = buyPE and riskOK
+if fireBuy or fireSell
+    tradeDir := sigDir
+    entryPx := close
+    stopPx := newStop
+    riskPts := newRisk
+    [a1, a2, a3, b1, b2, b3] = f_targets(sigDir, close, newRisk)
+    tg1 := a1
+    tg2 := a2
+    tg3 := a3
+    lastSigBar := bar_index
+    sigsToday += 1
+    h1Hit := false
+    h2Hit := false
+    h3Hit := false
+    activeScore := sigScore
+    activeSweep := fireBuy ? sslName : bslName
+    tradeStatus := (fireBuy ? (isOpt ? optSide : "BUY CE") : "BUY PE") + " ACTIVE"
+    int sweepBar = fireBuy ? sslBar : bslBar
+    float zTop = fireBuy ? sslLevel : bslExt
+    float zBot = fireBuy ? sslExt : bslLevel
+    if showZones
+        bxZone := box.new(sweepBar, math.max(zTop, zBot), bar_index, math.min(zTop, zBot), border_color=color.new(fireBuy ? bullColor : bearColor, 30), bgcolor=color.new(fireBuy ? bullColor : bearColor, 85))
+        array.push(histBx, bxZone)
+    if showLevels
+        lnE := line.new(bar_index, entryPx, bar_index, entryPx, color=color.blue, width=2)
+        lnS := line.new(bar_index, stopPx, bar_index, stopPx, color=color.red, width=2)
+        lnT1 := line.new(bar_index, tg1, bar_index, tg1, color=color.green, width=2)
+        lnT2 := line.new(bar_index, tg2, bar_index, tg2, color=color.lime, width=2)
+        lnT3 := line.new(bar_index, tg3, bar_index, tg3, color=color.aqua, width=2)
+        array.push(hist1, lnE)
+        array.push(hist2, lnS)
+        array.push(hist3, lnT1)
+        array.push(hist4, lnT2)
+        array.push(hist5, lnT3)
+    if showLabels
+        string head = fireBuy ? (isOpt ? optSide : "BUY CE") + " · LONG" : "BUY PE · SHORT"
+        string det = head + "\nScore " + str.tostring(sigScore, "#.#") + "/10 · hunt: " + activeSweep + "\nEntry " + str.tostring(entryPx, format.mintick) + "\nSL " + str.tostring(stopPx, format.mintick) + "\nT1 " + str.tostring(tg1, format.mintick) + " · T2 " + str.tostring(tg2, format.mintick) + " · T3 " + str.tostring(tg3, format.mintick)
+        lbSig := label.new(bar_index, fireBuy ? low : high, det, style=fireBuy ? label.style_label_up : label.style_label_down, color=fireBuy ? bullColor : bearColor, textcolor=color.white, size=size.small)
+        array.push(histLb, lbSig)
+    while array.size(hist1) > historyKeep
+        line d1 = array.shift(hist1)
+        line d2 = array.shift(hist2)
+        line d3 = array.shift(hist3)
+        line d4 = array.shift(hist4)
+        line d5 = array.shift(hist5)
+        line.delete(d1)
+        line.delete(d2)
+        line.delete(d3)
+        line.delete(d4)
+        line.delete(d5)
+    while array.size(histLb) > historyKeep
+        label dl = array.shift(histLb)
+        label.delete(dl)
+    while array.size(histBx) > historyKeep
+        box db = array.shift(histBx)
+        box.delete(db)
+plotshape(fireBuy and optMode == 0, title="BUY CE Confirmed", style=shape.labelup, location=location.belowbar, color=bullColor, text="BUY CE", textcolor=color.white, size=markerSize)
+plotshape(fireSell, title="BUY PE Confirmed", style=shape.labeldown, location=location.abovebar, color=bearColor, text="BUY PE", textcolor=color.white, size=markerSize)
+plotshape(fireBuy and optMode == 1, title="BUY CE (option chart)", style=shape.labelup, location=location.belowbar, color=bullColor, text="BUY CE", textcolor=color.white, size=markerSize)
+plotshape(fireBuy and optMode == 2, title="BUY PE (option chart)", style=shape.labelup, location=location.belowbar, color=bearColor, text="BUY PE", textcolor=color.white, size=markerSize)
+plotshape(exSL, title="Exit SL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 20), text="SL", textcolor=color.white, size=size.tiny)
+plotshape(exT3, title="Exit T3", style=shape.labeldown, location=location.abovebar, color=color.new(color.green, 20), text="T3", textcolor=color.white, size=size.tiny)
+plotshape(exEOD, title="Exit EOD", style=shape.labeldown, location=location.abovebar, color=color.new(color.gray, 20), text="EOD", textcolor=color.white, size=size.tiny)
+// ---- machine-readable outputs for ZeroHero Safe AI (hidden in the data window; read from the LAST confirmed bar)
+plot(fireBuy ? 1 : fireSell ? -1 : 0, "ZHX Signal", display=display.data_window)
+plot(fireBuy or fireSell ? close : na, "ZHX Entry", display=display.data_window)
+plot(fireBuy or fireSell ? stopPx : na, "ZHX SL", display=display.data_window)
+plot(fireBuy or fireSell ? tg1 : na, "ZHX T1", display=display.data_window)
+plot(fireBuy or fireSell ? tg2 : na, "ZHX T2", display=display.data_window)
+plot(fireBuy or fireSell ? tg3 : na, "ZHX T3", display=display.data_window)
+plot(fireBuy or fireSell ? sigScore : na, "ZHX Score", display=display.data_window)
+plot(tradeDir, "ZHX Open Trade Dir", display=display.data_window)
+plot(realisedOut, "ZHX Realised R", display=display.data_window)
+plot(tradeDir != 0 ? entryPx : na, "ZHX Active Entry", display=display.data_window)
+plot(tradeDir != 0 ? stopPx : na, "ZHX Active SL", display=display.data_window)
+plot(tradeDir != 0 ? tg1 : na, "ZHX Active T1", display=display.data_window)
+plot(tradeDir != 0 ? tg2 : na, "ZHX Active T2", display=display.data_window)
+plot(tradeDir != 0 ? tg3 : na, "ZHX Active T3", display=display.data_window)
+plot(openRisk, "ZHX Closed Risk Pts", display=display.data_window)
+// ---- compact dashboard
+var table dash = table.new(dashPos, 2, 5, border_width=1, frame_color=color.gray, frame_width=1)
+float wr = closedN > 0 ? 100.0 * winN / closedN : na
+float pf = grossL > 0 ? grossP / grossL : na
+if barstate.islast and showDash
+    color bg = color.new(color.rgb(17,22,33), 8)
+    table.cell(dash, 0, 0, "ZHX · " + (optMode == 1 ? "CE chart" : optMode == 2 ? "PE chart" : "Index") + " · " + profile, bgcolor=color.rgb(15,35,55), text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 0, inSession ? "OPEN" : "CLOSED", bgcolor=inSession ? color.new(bullColor, 25) : color.new(bearColor, 25), text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 0, 1, "Score L/S", bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 1, str.tostring(longScore, "#.#") + " / " + str.tostring(shortScore, "#.#") + " (min " + str.tostring(minScore, "#.#") + ")", bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 0, 2, "Trade", bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 2, tradeStatus + (tradeDir != 0 ? "  T1:" + (h1Hit ? "Y" : "-") + " T2:" + (h2Hit ? "Y" : "-") + " T3:" + (h3Hit ? "Y" : "-") : ""), bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 0, 3, "Chart test", bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 3, str.tostring(closedN) + " trades · win " + (na(wr) ? "–" : str.tostring(wr, "#") + "%") + " · " + str.tostring(netR, "#.#") + "R · PF " + (na(pf) ? "–" : str.tostring(pf, "#.##")), bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 0, 4, "Why wait", bgcolor=bg, text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 4, not tfAllowed ? "5M ONLY" : not timeOK ? "OUT OF WINDOW" : (na(sslBar) and na(bslBar)) ? "NO HUNT YET" : "WAIT FOR SWEEP + DISPLACEMENT", bgcolor=bg, text_color=color.white, text_size=size.tiny)
+alertcondition(fireBuy, title="ZHX BUY CE", message="ZHX BUY CE (long) on {{ticker}} at {{close}}")
+alertcondition(fireSell, title="ZHX BUY PE", message="ZHX BUY PE (short) on {{ticker}} at {{close}}")
+// Costs, spread, option greeks and OI are NOT modelled here: ZeroHero Safe AI adds them (live chain: OI walls, PCR, IV, GEX, bid-ask) before any decision.

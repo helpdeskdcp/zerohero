@@ -567,6 +567,14 @@ def safe_ai_zhx(request: Request, n: int = 50):
     return {"mode": "SHADOW", "decisions": zhx_monitor.recent(max(1, min(int(n), 200)))}
 
 
+@router.get("/safe_ai/zhx/outcomes")
+def safe_ai_zhx_outcomes(request: Request):
+    """Forward outcomes of every logged ZHX signal (index-level R, before costs; option premium UNVALIDATED)."""
+    _auth(request)
+    from .safe_ai import zhx_outcomes
+    return zhx_outcomes.summary()
+
+
 @router.get("/chart/zhsmc")
 def chart_zhsmc(request: Request, underlying: str, tf: int = 5, expiry: str | None = None, strike: float | None = None, option_type: str | None = None):
     """Terminal tab: the ZeroHero AI SMC (Pine v1.3.4) indicator on the underlying (5 / 15 m) or, with expiry + strike + option_type, on that option's premium candles."""
