@@ -20,3 +20,9 @@ Data: 5-minute bars built from stored 1-minute index candles (NIFTY 2017-06..202
 Multiple-testing: 12 single variants + 1 combination + F1-F3 (earlier) -> several 'positive' cells are expected by chance. The selection rule (pooled DEV+VAL improvement >= Rs30 and n >= 150) is what was fixed in advance; nothing was re-tuned after seeing OOS.
 Not tested (not available): volume engine (index volume = 0), OI/IV/Greeks inside Pine.
 Files: `data/research/zhx/{ablation.py,ablation.json,swin_check.py,filters.py,filters.json,validate_e.py,validate_v1d.json}`.
+
+## Exit-rule experiments 2026-11-04 (pre-registered, same gate, `variants/`, `zhx/compare_variants.py`)
+OOS net per trade Rs (n) [gross R]: baseline NIFTY -75 (398) [0.026] / BANKNIFTY -72 (368) [0.006] / SENSEX -56 (389) [0.019].
+X1 SL to entry after T1: -96 (405) [0.010] / -71 (374) [0.007] / -61 (402) [0.021] -> REJECT (0/3).  X2 time stop 12 bars: -90 (433) [0.021] / -59 (393) [0.023] / -60 (427) [0.024] -> REJECT (0/3; SENSEX DEV +93 vs VALIDATION -102).
+X3 T1 minimum 0.8R: -69 (398) [0.031] / -100 (368) [-0.003] / -72 (389) [0.010] -> REJECT (0/3).  X4 X1+X2: -92 (434) [0.021] / -66 (393) [0.014] / -58 (427) [0.029] -> REJECT (0/3).
+Reading: exits move gross R by at most +-0.01; the lack of edge is in the ENTRY, not the exit. Nothing added to the script (dev v3 keeps the optional time stop OFF; v1 unchanged).
