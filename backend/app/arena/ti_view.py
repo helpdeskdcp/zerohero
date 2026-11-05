@@ -8,6 +8,12 @@ from datetime import datetime, timedelta, timezone
 IST = timezone(timedelta(hours=5, minutes=30))
 TI_DIR = os.environ.get("TI_DIR", "/root/zerohero_v2")
 COVERED = ("NIFTY", "BANKNIFTY", "SENSEX", "NATURALGAS", "CRUDEOIL", "GOLDM")
+SESSION = {"NIFTY": (555, 930, "NSE 09:15-15:30"), "BANKNIFTY": (555, 930, "NSE 09:15-15:30"), "SENSEX": (555, 930, "BSE 09:15-15:30"), "NATURALGAS": (540, 1435, "MCX 09:00-23:55"), "CRUDEOIL": (540, 1435, "MCX 09:00-23:55"), "GOLDM": (540, 1435, "MCX 09:00-23:55")}
+
+
+def _open_now(u: str, now: float) -> tuple:
+    t = datetime.fromtimestamp(now, IST); lo, hi, label = SESSION.get(u, (555, 930, "")); m = t.hour * 60 + t.minute
+    return (t.weekday() < 5 and lo <= m <= hi), label
 
 
 def _lines(path: str, last: int = 400) -> list:
@@ -75,17 +81,20 @@ def view(underlying: str, expiry: str | None = None, strike: float | None = None
         g, src = ref; m = g["mfe_q"]; cell = (g.get("cells") or {}).get("sl0.2_t0.1") or {}
         out["reference"] = {"regime": regime, "sl_pct": -0.20, "targets_pct": [m[q] for q in ("0.5", "0.75", "0.9", "0.95")], "p_target_first_10pct": cell.get("p_target_first_cons"), "p_stop_20pct": cell.get("p_stop"), "n": g.get("n"),
                             "note": f"REFERENCE levels from {src}: 15-minute premium-excursion statistics; NOT a signal. T = 50/75/90/95th percentile of the favourable move."}
-    out["paper"] = _paper(d, expiry, strike, option_type)
-    rows = [["TI v2 · " + u, "paper-only, no orders"], ["Edge", edge["text"]]]
+    out["paper"] = _paper(d, expiry, strike, option_type) if u == "NIFTY" else {"trades": [], "summary": None}
+    is_open, label = _open_now(u, now); rows = [["TI v2 · " + u, "paper-only, no orders"], ["Edge", edge["text"]]]
     if last:
         age = now - last.get("ts", now); out["decision"] = {k: last.get(k) for k in ("action", "mode", "confidence", "regime", "reasons", "entry", "sl", "targets", "expected_cost_rs", "breakeven_points", "p_target_first", "p_stop", "ist", "spot", "atm", "option_type", "strike", "expiry", "legs", "cost_verified")}; out["decision"]["age_s"] = round(age)
-        reason = (last.get("reasons") or [""])[0]
-        rows += [["Now", f"{last.get('action')}" + (f" ({int(age // 60)} min ago)" if age > 120 else "")], ["Score", f"{last.get('confidence')}" if last.get("confidence") is not None else "-"], ["Why", reason[:70]]]
+        stale = age > 900; when = f"last cycle {str(last.get('ist') or '')[-8:-3]} IST" if stale else "now"
+        rows.append(["Now", f"{last.get('action')} ({when}{', market closed' if (stale and not is_open) else ''})" if stale else f"{last.get('action')}"])
+        if last.get("confidence") is not None: rows.append(["Score", f"{last.get('confidence')}"])
+        rows.append(["Why", ((last.get("reasons") or [""])[0])[:70]])
         if last.get("expected_cost_rs"): rows.append(["Cost", f"Rs{last['expected_cost_rs']:.0f}/lot · breakeven +{last.get('breakeven_points')} pts" + ("" if last.get("cost_verified", True) else " (cost UNVERIFIED)")])
         leg = (last.get("legs") or {}).get("CE") or {}
         if leg.get("spread_pct") is not None: rows.append(["ATM", f"{last.get('atm')} · spread {leg['spread_pct']}% · {'liquid' if leg.get('tradable') else 'not tradable'}" + (f" · {last.get('regime')}" if last.get("regime") else "")])
     else:
-        rows.append(["Now", "no decision yet (market closed?)"])
-    s = out["paper"]["summary"]
-    if s: rows.append(["Paper", f"{s['closed']}/{s['milestone']} closed · net Rs{s['net_rs']:.0f}"])
+        rows.append(["Now", (f"no cycle yet this session ({label})" if is_open else f"market closed ({label} IST) - next decision when it opens")])
+    if not out["reference"]: rows.append(["Levels", "not calibrated for this instrument yet"])
+    s2 = out["paper"]["summary"]
+    rows.append(["Paper", (f"{s2['closed']}/{s2['milestone']} closed · net Rs{s2['net_rs']:.0f}" if s2 else "none") if u == "NIFTY" else "forward paper test runs on NIFTY only"])
     out["dash"] = rows; return out

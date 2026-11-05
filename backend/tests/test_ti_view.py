@@ -10,13 +10,13 @@ def _dir():
     c.execute("insert into paper_trades(opened_ts, closed_ts, expiry, strike, option_type, entry, sl, t1, t2, t3, t4, exit, exit_reason, net_rs) values (1000, 1900, '2026-11-09', 24400, 'CE', 100, 80, 105, 110, 120, 130, 98, 'SL', -300)"); c.commit(); c.close(); return d
 def test_dashboard_says_no_validated_edge_and_labels_the_decision():
     d = _dir(); v = T.view("NIFTY", "2026-11-09", 24400, "CE", ti_dir=d); rows = dict((a, b) for a, b in v["dash"])
-    assert v["covered"] and not v["edge"]["validated"] and "NO VALIDATED EDGE (2/2" in rows["Edge"] and rows["Now"] == "NO TRADE" and "0.413" in rows["Why"] and v["decision"]["age_s"] in range(25, 40)
+    assert v["covered"] and not v["edge"]["validated"] and "NO VALIDATED EDGE (2/2" in rows["Edge"] and rows["Now"] == "NO TRADE" and "Paper" in rows and "0.413" in rows["Why"] and v["decision"]["age_s"] in range(25, 40)
 def test_reference_levels_are_marked_as_not_a_signal_and_switch_on_expiry_day():
     d = _dir(); today = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 19800)); n = T.view("NIFTY", "2026-11-09", None, None, ti_dir=d)["reference"]; e = T.view("NIFTY", today, None, None, ti_dir=d)["reference"]
     assert n["regime"] == "normal" and e["regime"] == "expiry_day" and "NOT a signal" in n["note"] and len(n["targets_pct"]) == 4 and n["sl_pct"] == -0.2
 def test_paper_trades_are_filtered_to_the_contract_and_other_underlyings_are_not_covered():
     d = _dir(); assert len(T.view("NIFTY", "2026-11-09", 24400, "CE", ti_dir=d)["paper"]["trades"]) == 1 and T.view("NIFTY", "2026-11-09", 24500, "CE", ti_dir=d)["paper"]["trades"] == []
-    o = T.view("CRUDEOIL", ti_dir=d); assert o["covered"] and o["decision"] is None and o["reference"] is None and any("no decision" in r[1] for r in o["dash"])        # every Arena instrument is covered; no data yet -> honest empty state
+    o = T.view("CRUDEOIL", ti_dir=d); assert o["covered"] and o["decision"] is None and o["reference"] is None and any(("market closed" in r[1] or "no cycle yet" in r[1]) for r in o["dash"]) and dict((a, b) for a, b in o["dash"])["Paper"] == "forward paper test runs on NIFTY only" and "Levels" in dict((a, b) for a, b in o["dash"])        # every Arena instrument is covered; no data yet -> honest empty state
     assert not T.view("FOO", ti_dir=d)["covered"]
 def test_missing_directory_does_not_raise():
     v = T.view("NIFTY", ti_dir="/nonexistent/x"); assert v["dash"] and not v["edge"]["validated"]
@@ -29,3 +29,10 @@ def test_other_instruments_show_their_own_decision_context_and_calibrated_levels
     v = T.view("CRUDEOIL", ti_dir=d); rows = dict((a, b) for a, b in v["dash"])
     assert v["decision"]["action"] == "NO TRADE" and "Rs184 /lot" not in rows["Cost"] and "184" in rows["Cost"] and "8500" in rows["ATM"] and "0.19%" in rows["ATM"] and v["reference"]["n"] == 900 and v["reference"]["targets_pct"][0] == 0.03 and "Drive quote archive" in v["reference"]["note"]
     nifty = T.view("NIFTY", ti_dir=d); assert nifty["decision"]["action"] == "NO TRADE" and "0.413" in dict((a, b) for a, b in nifty["dash"])["Why"]                       # NIFTY row is not replaced by the crude row
+
+def test_old_decisions_are_labelled_as_last_cycle_and_scores_only_show_when_present():
+    d = _dir(); old = time.time() - 5 * 3600
+    with open(os.path.join(d, "data", "decisions.jsonl"), "w") as f: f.write(json.dumps({"ts": old, "ist": "2026-11-05 15:10:00", "underlying": "NIFTY", "action": "NO TRADE", "confidence": 0.4, "reasons": ["x"]}) + "\n")
+    r = dict((a, b) for a, b in T.view("NIFTY", ti_dir=d)["dash"]); assert "last cycle 15:10 IST" in r["Now"] and r["Score"] == "0.4"
+    with open(os.path.join(d, "data", "decisions.jsonl"), "w") as f: f.write(json.dumps({"ts": time.time(), "ist": "2026-11-05 15:10:00", "underlying": "SENSEX", "action": "NO TRADE", "confidence": None, "reasons": ["no model"]}) + "\n")
+    assert "Score" not in dict((a, b) for a, b in T.view("SENSEX", ti_dir=d)["dash"])
