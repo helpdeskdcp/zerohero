@@ -10,6 +10,7 @@ B = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); DB = os.path.jo
 LOG = os.path.join(B, "data", "ops", "compact_into.log"); RES = os.path.join(B, "data", "ops", "compact_into_result.json")
 BACKUP = "gdrive200:ZeroHero-archive/backups/market_history_20261103_logical_dump.sql.gz"; BACKUP_MD5 = "bbc825915f11d0ae5905e423e4f06ee9"; BACKUP_MIN_BYTES = 1_500_000_000
 import fcntl
+AUTO_VAC = os.environ.get("COMPACT_AUTO_VACUUM", "").lower() == "incremental"
 DRY = "--dry-run" in sys.argv; FORCE_HOURS = "--force-hours" in sys.argv; GiB = 2 ** 30
 def log(m):
     line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {m}"; print(line, flush=True)
@@ -57,6 +58,15 @@ def app_results(path, bounds):
         try: out[k] = c.execute(qq.format(q=bounds.get("quote_snapshots", 0), c=bounds.get("market_candles", 0), g=bounds.get("option_greeks", 0))).fetchall()
         except sqlite3.Error as e: out[k] = f"ERR {e}"
     c.close(); return out
+def fk_counts(path, bounds):
+    """foreign_key_check violations per (child table -> parent), only rows with id <= the snapshot bound. The live DB has OLD violations (raw_responses rows removed by retention while market_candles.raw_id still points at them): the copy must have exactly the same ones, not zero."""
+    import collections
+    c = ro(path); cnt = collections.Counter()
+    for tbl, rowid, parent, fkid in c.execute("pragma foreign_key_check"):
+        if rowid is not None and rowid <= bounds.get(tbl, 0): cnt[f"{tbl}->{parent}"] += 1
+    c.close(); return dict(cnt)
+
+
 def main():
     lk = open(os.path.join(B, "data", "ops", "compact_into.lock"), "w")
     try: fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -71,14 +81,15 @@ def main():
         while not stop.wait(5):
             if shutil.disk_usage(B).free < 1.5 * GiB: aborted.append(shutil.disk_usage(B).free); sh("pkill -f 'VACUUM INTO'"); return
     threading.Thread(target=guard, daemon=True).start(); s = time.time()
-    r = sh(f"nice -n 15 ionice -c3 sqlite3 \"{DB}\" \"PRAGMA busy_timeout=120000; VACUUM INTO '{NEW}'\""); stop.set()
+    avp = "PRAGMA auto_vacuum=2; " if AUTO_VAC else ""
+    r = sh(f"nice -n 15 ionice -c3 sqlite3 \"{DB}\" \"PRAGMA busy_timeout=120000; {avp}VACUUM INTO '{NEW}'\""); stop.set()
     res = {"started": datetime.now().isoformat(timespec="seconds"), "original_bytes_before": size_before, "vacuum_rc": r.returncode, "stderr": r.stderr.strip()[:300], "seconds": int(time.time() - s), "guard_abort_free_bytes": aborted or None, "bounds_M": bounds}
     if r.returncode != 0 or aborted or not os.path.exists(NEW):
         res["verdict"] = "FAILED: original untouched; partial target (if any) left in place for the owner"; log(json.dumps(res)); json.dump(res, open(RES, "w"), indent=1); return 1
-    res["new_bytes"] = os.path.getsize(NEW); n = ro(NEW); ic = n.execute("pragma integrity_check").fetchall(); fk = n.execute("pragma foreign_key_check").fetchall(); n.close()
+    res["new_bytes"] = os.path.getsize(NEW); n = ro(NEW); ic = n.execute("pragma integrity_check").fetchall(); av_new = n.execute("pragma auto_vacuum").fetchone()[0]; n.close(); fk_o, fk_n = fk_counts(DB, bounds), fk_counts(NEW, bounds); fk = [] if fk_o == fk_n else [fk_o, fk_n]; res["fk_violations_original"] = fk_o; res["fk_violations_new"] = fk_n; res["auto_vacuum_new"] = av_new
     fo, so = table_facts(DB, bounds); fn, sn = table_facts(NEW, bounds); ao, an = app_results(DB, bounds), app_results(NEW, bounds); res["app_queries_same"] = {k: (ao[k] == an[k]) for k in ao}; res["app_queries_errors"] = [k for k in ao if isinstance(ao[k], str)]
     res.update(integrity_check=[x[0] for x in ic][:3], fk_violations=len(fk), schema_same=(so == sn), counts_same=(fo == fn), facts_original=fo, facts_new=fn)
-    res["verdict"] = "VERIFIED (not swapped)" if (ic == [("ok",)] and not fk and so == sn and fo == fn and all(res["app_queries_same"].values()) and not res["app_queries_errors"]) else "VALIDATION FAILED (not swapped)"
+    res["verdict"] = "VERIFIED (not swapped)" if (ic == [("ok",)] and not fk and so == sn and fo == fn and all(res["app_queries_same"].values()) and (av_new == 2 or not AUTO_VAC) and not res["app_queries_errors"]) else "VALIDATION FAILED (not swapped)"
     res["free_after_bytes"] = shutil.disk_usage(B).free; log(json.dumps({k: v for k, v in res.items() if k not in ("facts_original", "facts_new", "bounds_M")})); json.dump(res, open(RES, "w"), indent=1, default=str)
     return 0 if res["verdict"].startswith("VERIFIED") else 1
 if __name__ == "__main__": sys.exit(main())

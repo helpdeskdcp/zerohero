@@ -117,6 +117,21 @@ def contest_start():
     except Exception: return None
 
 
+def shrink(c, log=print, max_seconds: float = 900.0, step_pages: int = 2000, keep_free_bytes: int = 64 * 2 ** 20) -> int:
+    """Give deleted pages back to the filesystem in small committed steps (live writers keep going between steps). Only acts on auto_vacuum=INCREMENTAL files; returns the bytes released."""
+    try:
+        if c.execute("PRAGMA auto_vacuum").fetchone()[0] != 2: return 0
+        ps = c.execute("PRAGMA page_size").fetchone()[0]; t0 = time.time(); released = 0
+        while time.time() - t0 < max_seconds:
+            fl = c.execute("PRAGMA freelist_count").fetchone()[0]
+            if fl * ps <= keep_free_bytes: break
+            c.execute(f"PRAGMA incremental_vacuum({step_pages})").fetchall(); c.commit(); released += min(fl, step_pages) * ps; time.sleep(PAUSE)
+        if released: log(f"incremental_vacuum released about {released // 2 ** 20} MiB")
+        return released
+    except Exception as e:
+        log(f"incremental_vacuum skipped: {type(e).__name__}: {e}"); return 0
+
+
 def run(apply: bool, force: bool = False, data_dir: str | None = None, now: datetime | None = None, log=print, archiver=None) -> list[dict]:
     if apply and not force and market_open(): log("market is trading: refusing to delete (use --force)"); return []
     d = data_dir or os.path.join(HERE, "data"); now = now or datetime.now(IST); cs = contest_start(); out = []
@@ -148,6 +163,7 @@ def run(apply: bool, force: bool = False, data_dir: str | None = None, now: date
                         if cur.rowcount <= 0: break
                         done += cur.rowcount; time.sleep(PAUSE)
                     n = done
+                    if done: shrink(c, log)
             rec = {"db": dbf, "table": table, "keep_days": keep, "older_than": limit, "rows": n, "applied": apply, **({"archive": arch_info} if arch_info else {})}; out.append(rec); log(json.dumps(rec))
         finally:
             c.close()
