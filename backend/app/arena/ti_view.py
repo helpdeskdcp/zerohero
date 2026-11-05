@@ -82,19 +82,20 @@ def view(underlying: str, expiry: str | None = None, strike: float | None = None
         out["reference"] = {"regime": regime, "sl_pct": -0.20, "targets_pct": [m[q] for q in ("0.5", "0.75", "0.9", "0.95")], "p_target_first_10pct": cell.get("p_target_first_cons"), "p_stop_20pct": cell.get("p_stop"), "n": g.get("n"),
                             "note": f"REFERENCE levels from {src}: 15-minute premium-excursion statistics; NOT a signal. T = 50/75/90/95th percentile of the favourable move."}
     out["paper"] = _paper(d, expiry, strike, option_type) if u == "NIFTY" else {"trades": [], "summary": None}
-    is_open, label = _open_now(u, now); rows = [["TI v2 · " + u, "paper-only, no orders"], ["Edge", edge["text"]]]
+    is_open, label = _open_now(u, now); n = 36; c = lambda x: (str(x) if len(str(x)) <= n else str(x)[: n - 1] + "…")
+    rows = [["TI · " + u, "paper only"], ["Edge", c(f"none validated · {edge.get('rejected', 0)} tests rejected" if not edge["validated"] else "validated")]]
     if last:
         age = now - last.get("ts", now); out["decision"] = {k: last.get(k) for k in ("action", "mode", "confidence", "regime", "reasons", "entry", "sl", "targets", "expected_cost_rs", "breakeven_points", "p_target_first", "p_stop", "ist", "spot", "atm", "option_type", "strike", "expiry", "legs", "cost_verified")}; out["decision"]["age_s"] = round(age)
-        stale = age > 900; when = f"last cycle {str(last.get('ist') or '')[-8:-3]} IST" if stale else "now"
-        rows.append(["Now", f"{last.get('action')} ({when}{', market closed' if (stale and not is_open) else ''})" if stale else f"{last.get('action')}"])
-        if last.get("confidence") is not None: rows.append(["Score", f"{last.get('confidence')}"])
-        rows.append(["Why", ((last.get("reasons") or [""])[0])[:70]])
-        if last.get("expected_cost_rs"): rows.append(["Cost", f"Rs{last['expected_cost_rs']:.0f}/lot · breakeven +{last.get('breakeven_points')} pts" + ("" if last.get("cost_verified", True) else " (cost UNVERIFIED)")])
+        stale = age > 900; hhmm = str(last.get("ist") or "")[11:16]
+        rows.append(["Now", c(f"{last.get('action')}" + (f" · last {hhmm}" + ("" if is_open else " · closed") if stale else ""))])
+        reason = (last.get("reasons") or [""])[0]
+        if last.get("mode") == "CONTEXT_ONLY" or "no model has been trained" in reason: rows.append(["Mode", "data only (no model)"])
+        elif last.get("confidence") is not None: rows.append(["Score", c(f"{last.get('confidence')} · " + ("below threshold" if "below" in reason else "ok"))])
+        if last.get("expected_cost_rs"): rows.append(["Cost", c(f"Rs{last['expected_cost_rs']:.0f}/lot · BE +{last.get('breakeven_points')} pts" + ("" if last.get("cost_verified", True) else " ~"))])
         leg = (last.get("legs") or {}).get("CE") or {}
-        if leg.get("spread_pct") is not None: rows.append(["ATM", f"{last.get('atm')} · spread {leg['spread_pct']}% · {'liquid' if leg.get('tradable') else 'not tradable'}" + (f" · {last.get('regime')}" if last.get("regime") else "")])
+        if leg.get("spread_pct") is not None: rows.append(["ATM", c(f"{last.get('atm'):g} · spread {leg['spread_pct']}% · " + ("liquid" if leg.get("tradable") else "thin"))])
     else:
-        rows.append(["Now", (f"no cycle yet this session ({label})" if is_open else f"market closed ({label} IST) - next decision when it opens")])
-    if not out["reference"]: rows.append(["Levels", "not calibrated for this instrument yet"])
+        rows.append(["Now", c("waiting for first cycle" if is_open else f"closed · {label.split(' ')[1].split('-')[0]} IST opens")])
     s2 = out["paper"]["summary"]
-    rows.append(["Paper", (f"{s2['closed']}/{s2['milestone']} closed · net Rs{s2['net_rs']:.0f}" if s2 else "none") if u == "NIFTY" else "forward paper test runs on NIFTY only"])
+    if u == "NIFTY" and s2: rows.append(["Paper", c(f"{s2['closed']}/{s2['milestone']} · net Rs{s2['net_rs']:.0f}")])
     out["dash"] = rows; return out

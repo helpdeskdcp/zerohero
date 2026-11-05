@@ -68,7 +68,7 @@
   function drawTi() {                                                                            // Trading Intelligence: dashboard box + grey REFERENCE levels around the last premium + open paper-trade levels
     tiLinesPv.forEach((l) => { try { cs.removePriceLine(l); } catch (e) { /* ok */ } }); tiLinesPv = [];
     if (cs && tiOn && lastTi && last) tiRefLines(last.close, lastTi).forEach((L) => tiLinesPv.push(cs.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
-    const d = $("pvTiDash"); if (!d) return; const t = tiOn ? tiDashText(lastTi) : ""; d.textContent = t; d.style.display = t ? "block" : "none";
+    const d = $("pvTiDash"); if (!d) return; const t = tiOn && el.clientWidth >= 520 ? tiDashText(lastTi) : ""; d.textContent = t; d.style.display = t ? "block" : "none";
   }
   async function loadTi(s, my) {
     tiTs = Date.now(); let z; try { z = await api(`/chart/ti?${q(s)}`); } catch (e) { z = { error: String(e.message || e) }; }

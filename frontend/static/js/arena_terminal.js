@@ -253,8 +253,8 @@ if (typeof document !== "undefined") (function () {
     tiLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); tiLines = [];
     if (series.c && ind.ti && lastTi && view === "option" && lastBar) tiRefLines(lastBar.close, lastTi).forEach((L) => tiLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
     const host = $("tmChart"); if (!host) return; let box = $("tmTiDash");
-    if (!box) { box = document.createElement("div"); box.id = "tmTiDash"; box.style.cssText = "position:absolute;right:56px;top:6px;z-index:5;background:rgba(17,22,33,.82);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;pointer-events:none;max-width:48%;white-space:pre"; host.appendChild(box); }
-    const t = ind.ti ? tiDashText(lastTi) : ""; box.textContent = t; box.style.display = t ? "block" : "none";
+    if (!box) { box = document.createElement("div"); box.id = "tmTiDash"; box.style.cssText = "position:absolute;right:56px;top:6px;z-index:5;background:rgba(17,22,33,.82);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;pointer-events:none;max-width:min(300px,46%);max-height:46%;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere"; host.appendChild(box); }
+    const t = ind.ti && host.clientWidth >= 520 ? tiDashText(lastTi) : ""; box.textContent = t; box.style.display = t ? "block" : "none";
   }
   async function loadTi(r) {
     if (!r || r.instrument === "EQUITY" || !ind.ti) return; const my = gen, e = encodeURIComponent; tiTs = Date.now();
