@@ -99,7 +99,7 @@ def test_ws_rows_are_stored_and_settlement_fills_a_buy_about_one_second_after_th
     """The point of the tape: ticks every ~0.3 s -> the engine's first ask at/after signal time + 1 s delay is ~1 s away (the REST tape made it 3-9 s)."""
     st = HistStore(str(tmp_path / "m.db")); c = core(hot=True); rows = []
     for k in range(40):                                                                          # 12 seconds of ticks, price drifting up 0.05 per tick, spread 0.2
-        px = 100.0 + 0.05 * k; rows += c.on_ticks(parse_snapquote(pkt(seq=k + 1, t=T0 + 0.3 * k, ltp=px, bid=px - 0.1, ask=px + 0.1)), T0 + 0.3 * k)
+        px = 100.0 + 0.05 * k; rows += c.on_ticks(parse_snapquote(pkt(seq=k + 1, t=T0 + 0.3 * k, ltp=px, bid=px - 0.1, ask=px + 0.1)), T0 + 0.3 * k, datetime.fromtimestamp(T0 + 0.3 * k, timezone.utc).isoformat().replace("+00:00", "Z"))      # simulated receive time (NOT the wall clock: the test used to pass only on the day it was written)
     tape = TT.TickTape(store=st, targets_fn=lambda: [], market_open_fn=lambda: True); assert tape._write(rows) == len(rows) >= 30
     snaps = S.load_snaps("NIFTY", "2026-11-03", 25000.0, "CE", "2026-11-03", str(tmp_path / "m.db"), since=T0 - 5)
     assert len(snaps) >= 30 and all(abs((snaps[i + 1]["t"] - snaps[i]["t"]) - 0.3) < 0.31 for i in range(5))
