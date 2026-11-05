@@ -1,11 +1,11 @@
 /* Run: node tests/arena_terminal_ind.test.js — the two Pine scripts on the underlying chart switch on / off like indicators, and the choice is remembered. */
 const assert = require("assert");
 const T = require("../static/js/arena_terminal.js");
-assert.deepStrictEqual(T.TM_INDICATORS.map((x) => x.key), ["zhsmc"]);
-assert.deepStrictEqual(T.tmIndLoad(null), { zhsmc: true });                       // nothing stored: all on
-assert.deepStrictEqual(T.tmIndLoad('{"winners":false}'), { zhsmc: true });        // stored: kept
-assert.deepStrictEqual(T.tmIndLoad('{"winners":"no","uturn":0,"x":1}'), { zhsmc: true });      // wrong types ignored
-assert.deepStrictEqual(T.tmIndLoad("{not json"), { zhsmc: true });                        // unreadable: all on
+assert.deepStrictEqual(T.TM_INDICATORS.map((x) => x.key), ["zhsmc", "ti"]);
+assert.deepStrictEqual(T.tmIndLoad(null), { zhsmc: true, ti: true });                       // nothing stored: all on
+assert.deepStrictEqual(T.tmIndLoad('{"winners":false}'), { zhsmc: true, ti: true });        // stored: kept
+assert.deepStrictEqual(T.tmIndLoad('{"winners":"no","uturn":0,"x":1}'), { zhsmc: true, ti: true });      // wrong types ignored
+assert.deepStrictEqual(T.tmIndLoad("{not json"), { zhsmc: true, ti: true });                        // unreadable: all on
 const times = [100, 200, 300, 400];
 const u = { underlying: "NIFTY", markers: [{ time: 210, side: "BUY", strong: true }, { time: 390, side: "SELL", strong: false }], uturn: [{ time: 305, side: "CE", thrust_pct: 0.62, base_rate: { n: 20, target_hit: 0.65 } }, { time: 150, side: "PE", base_rate: null }],
   uturn_calibration: { overall: { n: 67, target_hit: 0.6 } } };

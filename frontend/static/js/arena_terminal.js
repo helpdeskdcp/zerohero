@@ -11,7 +11,8 @@ function tmBucket(r) { return r.state === "WAITING" || r.state === "NO DATA" ? "
 /* nearest candle time at or before t (t and candle times are both already IST-shifted seconds) */
 function tmSnap(times, t) { let lo = 0, hi = times.length - 1, ans = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (times[m] <= t) { ans = times[m]; lo = m + 1; } else hi = m - 1; } return ans; }
 /* ---- Pine indicators on the underlying chart: two scripts, each switched on / off like an indicator or strategy (the choice is remembered in the browser) */
-const TM_INDICATORS = [{ key: "zhsmc", label: "ZeroHero ZHX", title: "ZeroHero ZHX (Pine): liquidity pools, stop-hunt sweep + displacement, BUY CE / BUY PE with SL and T1-T3, live Entry / SL / T1-T3 lines, tiny dashboard. Works on the underlying and on the option premium chart. Price-only: Safe AI adds OI / IV / bid-ask." }];
+const TM_INDICATORS = [{ key: "zhsmc", label: "ZeroHero ZHX", title: "ZeroHero ZHX (Pine): liquidity pools, stop-hunt sweep + displacement, BUY CE / BUY PE with SL and T1-T3, live Entry / SL / T1-T3 lines, tiny dashboard. Works on the underlying and on the option premium chart. Price-only: Safe AI adds OI / IV / bid-ask." },
+  { key: "ti", label: "Trading Intelligence", title: "ZeroHero V2 Trading Intelligence: edge status, latest paper-only decision, cost / breakeven, REFERENCE stop / target levels from premium statistics (not a signal) and paper trades of this contract. Works on NIFTY." }];
 function tmIndLoad(raw) {
   const on = Object.fromEntries(TM_INDICATORS.map((x) => [x.key, true]));
   try { const o = JSON.parse(raw || "{}"); for (const x of TM_INDICATORS) if (typeof o[x.key] === "boolean") on[x.key] = o[x.key]; } catch (e) { /* unreadable setting: all on */ }
@@ -231,7 +232,7 @@ if (typeof document !== "undefined") (function () {
   }
   function clearChart() {
     for (const k of Object.keys(series)) { try { chart.removeSeries(series[k]); } catch (e) { /* ok */ } }
-    series = {}; lines = []; uLines = []; hlLines = []; zhLines = []; mk = null; vmk = null; lastVol = null; optCandles = []; lastBar = null; forming = null;
+    series = {}; lines = []; uLines = []; hlLines = []; zhLines = []; tiLines = []; mk = null; vmk = null; lastVol = null; optCandles = []; lastBar = null; forming = null;
   }
   const lineStyle = (s) => ({ solid: 0, dotted: 1, dashed: 2 }[s] ?? 0);
   function addCandles() {
@@ -242,11 +243,25 @@ if (typeof document !== "undefined") (function () {
     lines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); lines = [];
     tmLevels(r).forEach((L) => lines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: lineStyle(L.style), axisLabelVisible: true, title: L.title })));
   }
-  function setMarkers(list) { if (mk) mk.setMarkers(list.sort((a, b) => a.time - b.time)); }
+  function setMarkers(list) { if (!mk) return; const extra = (ind.ti && lastTi && typeof tiMarkers === "function") ? tiMarkers(lastTimes, lastTi, tmSnap, IST_SHIFT) : []; mk.setMarkers(list.concat(extra).sort((a, b) => a.time - b.time)); }
   let ind = (() => { try { return tmIndLoad(localStorage.getItem("arena_ind")); } catch (e) { return tmIndLoad(""); } })(), lastTimes = [], lastOrder = null;
   const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
   let lastR = null, uLines = [], hlLines = [], vmk = null, lastVol = null, optCandles = []; lastR = null;
   let lastZh = null, zhLines = [], zhTs = 0;
+  let lastTi = null, tiLines = [], tiTs = 0;
+  function drawTi() {                                                                            // Trading Intelligence: dashboard box (right) + grey REFERENCE lines + open paper-trade lines on the option premium chart
+    tiLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); tiLines = [];
+    if (series.c && ind.ti && lastTi && view === "option" && lastBar) tiRefLines(lastBar.close, lastTi).forEach((L) => tiLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
+    const host = $("tmChart"); if (!host) return; let box = $("tmTiDash");
+    if (!box) { box = document.createElement("div"); box.id = "tmTiDash"; box.style.cssText = "position:absolute;right:56px;top:6px;z-index:5;background:rgba(17,22,33,.82);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;pointer-events:none;max-width:48%;white-space:pre"; host.appendChild(box); }
+    const t = ind.ti ? tiDashText(lastTi) : ""; box.textContent = t; box.style.display = t ? "block" : "none";
+  }
+  async function loadTi(r) {
+    if (!r || r.instrument === "EQUITY" || !ind.ti) return; const my = gen, e = encodeURIComponent; tiTs = Date.now();
+    const q = view === "option" && r.expiry ? `/chart/ti?underlying=${e(r.underlying)}&expiry=${e(r.expiry)}&strike=${r.strike}&option_type=${r.option_type}` : `/chart/ti?underlying=${e(r.underlying)}`;
+    let z; try { z = await api(q); } catch (err) { z = { error: String(err.message || err) }; }
+    if (my !== gen || !ind.ti) return; lastTi = z; setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder, view === "option", lastZh)); drawTi();
+  }
   function drawUturnLines() {
     uLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); uLines = [];
     if (series.c && ind.uturn) tmUturnLevels(lastUnderlying).forEach((L) => uLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: L.title })));
@@ -273,7 +288,7 @@ if (typeof document !== "undefined") (function () {
   }
   function applyInd() {                                                                          // a switch was flipped: lines, markers and the note follow at once, no reload
     for (const k of ["up", "dn", "ma"]) if (series[k]) series[k].applyOptions({ visible: !!ind.winners });
-    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder, view === "option", lastZh)); drawUturnLines(); drawZh(); if (ind.zhsmc && !lastZh && sel) loadZh(sel);
+    setMarkers(tmBuildMarkers(lastTimes, lastUnderlying, ind, lastOrder, view === "option", lastZh)); drawUturnLines(); drawZh(); if (ind.zhsmc && !lastZh && sel) loadZh(sel); if (ind.ti && !lastTi && sel) loadTi(sel); drawTi();
     if (lastUnderlying) setNote(tmIndNote(ind, lastUnderlying));
   }
 
@@ -324,14 +339,16 @@ if (typeof document !== "undefined") (function () {
   async function openChart(r) {
     if (!ensureChart()) { setNote("chart library not loaded", true); return; }
     if (r.instrument === "EQUITY" && view !== "option") { view = "option"; document.querySelectorAll("[data-tmview]").forEach((x) => x.classList.toggle("on", x.dataset.tmview === "option")); }          // cash equity has no Pine / underlying view
-    sel = r; gen += 1; userZoomed = false; lastZh = null; const my = gen; renderHeader(); highlight();
+    sel = r; gen += 1; userZoomed = false; lastZh = null; lastTi = null; const my = gen; renderHeader(); highlight();
     try { if (view === "option") await loadOption(r, my); else await loadUnderlying(r, my); } catch (e) { setNote("chart: " + e.message, true); }
     if (my === gen && ind.zhsmc) loadZh(r);
+    if (my === gen && ind.ti) loadTi(r);
   }
   async function chartTick() {
     if (!sel || !series.c || document.hidden) return; const my = gen;
     try { if (view === "option") await refreshOption(sel); else await refreshUnderlying(sel); } catch (e) { /* next tick */ }
     if (my !== gen) return;
+    if (ind.ti && Date.now() - tiTs > 30000) loadTi(sel); else if (ind.ti) drawTi();
     if (ind.zhsmc && Date.now() - zhTs > 20000) loadZh(sel);                                      // the Pine run is cached 15 s on the server: ask at most every 20 s
   }
 

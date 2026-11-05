@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/arena/public", tags=["arena-public"])
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from .markets import EXCH, IST  # noqa: E402,F401
 from . import equity as EQ  # noqa: E402
-PUBLIC_STATIC = ("/static/mohit_signals.html", "/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/js/arena_preview.js", "/static/js/arena_equity.js", "/static/js/arena_push.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
+PUBLIC_STATIC = ("/static/mohit_signals.html", "/static/arena.html", "/static/js/arena.js", "/static/leaderboard.html", "/static/js/arena_terminal.js", "/static/js/arena_preview.js", "/static/js/arena_ti.js", "/static/js/arena_equity.js", "/static/js/arena_push.js", "/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js")
 _hits: dict = defaultdict(deque); _lock = threading.Lock(); _cache = {"t": 0.0, "v": None, "by": {}}
 MAX_BODY = 4096
 RATE_PER_MIN = 900                                                   # per PARTICIPANT (a terminal open polls 2-3 times a second); many participants share one office address, so this is not per IP
@@ -573,6 +573,15 @@ def safe_ai_zhx_outcomes(request: Request):
     _auth(request)
     from .safe_ai import zhx_outcomes
     return zhx_outcomes.summary()
+
+
+@router.get("/chart/ti")
+def chart_ti(request: Request, underlying: str, expiry: str | None = None, strike: float | None = None, option_type: str | None = None):
+    """Trading Intelligence overlay data (read-only view of the V2 output files). Never raises: a missing V2 directory gives an explanatory dashboard."""
+    _auth(request)
+    from . import ti_view
+    try: return ti_view.view(underlying, expiry, strike, option_type)
+    except Exception as ex: return {"underlying": underlying, "covered": False, "dash": [["TI", "unavailable: " + type(ex).__name__]], "reference": None, "paper": {"trades": [], "summary": None}, "decision": None, "edge": {"validated": False, "text": "unavailable"}}
 
 
 @router.get("/chart/zhsmc")

@@ -5,7 +5,7 @@
   const $ = (id) => document.getElementById(id), form = $("f"), box = $("pvBox");
   if (!form || !box || !window.LightweightCharts) return;
   const pane = document.querySelector('[data-pane="submit"]'), LW = window.LightweightCharts, el = $("pvChart");
-  let cand = [], srOn = true, meanOn = true, srLines = [], vw = null, em = null, chart = null, cs = null, mk = null, key = "", gen = 0, tf = 1, zhOn = true, last = null, lastZh = null, zhTs = 0, zhLines = [], myLines = [], timer = null, debounce = null;
+  let tiOn = true, lastTi = null, tiTs = 0, tiLinesPv = [], cand = [], srOn = true, meanOn = true, srLines = [], vw = null, em = null, chart = null, cs = null, mk = null, key = "", gen = 0, tf = 1, zhOn = true, last = null, lastZh = null, zhTs = 0, zhLines = [], myLines = [], timer = null, debounce = null;
   const read = () => { try { return sessionStorage.getItem("arena_token") || ""; } catch (e) { return ""; } };
   async function api(path) { const r = await fetch("/api/arena/public" + path, { headers: { "X-Arena-Token": read() }, cache: "no-store" }); if (!r.ok) throw new Error(path.split("?")[0] + " " + r.status); return r.json(); }
   const num = (v) => { const x = parseFloat(String(v || "").replace(",", ".")); return isFinite(x) && x > 0 ? x : null; };
@@ -61,10 +61,19 @@
   function drawZh(times) {
     zhLines.forEach((l) => { try { cs.removePriceLine(l); } catch (e) { /* ok */ } }); zhLines = [];
     if (zhOn && lastZh) (lastZh.levels || []).forEach((L) => zhLines.push(cs.createPriceLine({ price: L.price, color: TM_ZH_COLORS[L.head] || "#9ca3af", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "ZHX " + L.title })));
-    mk.setMarkers(zhOn && lastZh ? tmZhMarkers(times, lastZh.markers).sort((a, b) => a.time - b.time) : []);
+    mk.setMarkers(((zhOn && lastZh ? tmZhMarkers(times, lastZh.markers) : []).concat(tiOn && lastTi && typeof tiMarkers === "function" ? tiMarkers(times, lastTi, tmSnap, IST_SHIFT) : [])).sort((a, b) => a.time - b.time));
     const d = $("pvDash"); const t = zhOn ? tmZhDashText(lastZh) : ""; d.textContent = t; d.style.display = t ? "block" : "none";
   }
   let times = [];
+  function drawTi() {                                                                            // Trading Intelligence: dashboard box + grey REFERENCE levels around the last premium + open paper-trade levels
+    tiLinesPv.forEach((l) => { try { cs.removePriceLine(l); } catch (e) { /* ok */ } }); tiLinesPv = [];
+    if (cs && tiOn && lastTi && last) tiRefLines(last.close, lastTi).forEach((L) => tiLinesPv.push(cs.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
+    const d = $("pvTiDash"); if (!d) return; const t = tiOn ? tiDashText(lastTi) : ""; d.textContent = t; d.style.display = t ? "block" : "none";
+  }
+  async function loadTi(s, my) {
+    tiTs = Date.now(); let z; try { z = await api(`/chart/ti?${q(s)}`); } catch (e) { z = { error: String(e.message || e) }; }
+    if (my !== gen) return; lastTi = z; drawTi(); drawZh(times);
+  }
   async function loadZh(s, my) {
     zhTs = Date.now(); let z; try { z = await api(`/chart/zhsmc?${q(s)}&tf=${tf}`); } catch (e) { z = { markers: [], levels: [], dash: [], error: String(e.message || e) }; }
     if (my !== gen) return; lastZh = z; drawZh(times);
@@ -72,9 +81,9 @@
   async function full(s) {
     const my = ++gen; ensure(); fresh(); $("pvTitle").textContent = `${s.u} ${s.st} ${s.ot} · ${s.ex}`; $("pvNote").textContent = "loading…";
     let c; try { c = await api(`/chart?${q(s)}&tf=${tf}`); } catch (e) { if (my === gen) $("pvNote").textContent = "chart not available: " + e.message; return; }
-    if (my !== gen) return; cs.setData(c.candles); cand = c.candles.slice(); drawGuides(); last = c.candles.length ? c.candles[c.candles.length - 1] : null; times = c.candles.map((x) => x.time);
+    if (my !== gen) return; cs.setData(c.candles); cand = c.candles.slice(); drawGuides(); lastTi = null; last = c.candles.length ? c.candles[c.candles.length - 1] : null; times = c.candles.map((x) => x.time);
     $("pvNote").textContent = c.candles.length ? `${c.candles.length} candles · ${tf}m · live` : "No quotes captured for this contract yet today (new contract or market closed).";
-    $("pvLtp").textContent = last ? `LTP ${last.close.toFixed(2)}` : ""; chart.timeScale().fitContent(); drawMine(); if (zhOn) loadZh(s, my);
+    $("pvLtp").textContent = last ? `LTP ${last.close.toFixed(2)}` : ""; chart.timeScale().fitContent(); drawMine(); if (zhOn) loadZh(s, my); if (tiOn) loadTi(s, my);
   }
   async function tick() {
     if (!pane || pane.hidden || document.hidden || !cs) return; const s = sel(); if (!s) return; const my = gen;
@@ -84,7 +93,7 @@
       drawGuides();
       if (last) $("pvLtp").textContent = `LTP ${last.close.toFixed(2)}`;
     } catch (e) { /* next tick */ }
-    drawMine(); if (zhOn && Date.now() - zhTs > 20000) loadZh(s, my);                                  // the Pine run is cached 15 s on the server
+    drawMine(); if (tiOn && Date.now() - tiTs > 30000) loadTi(s, my); else if (tiOn) drawTi(); if (zhOn && Date.now() - zhTs > 20000) loadZh(s, my);                                  // the Pine run is cached 15 s on the server
   }
   function changed() {
     clearTimeout(debounce); debounce = setTimeout(() => { if (!pane || pane.hidden) return; const s = sel(); if (!s) { $("pvNote").textContent = "Choose underlying, expiry, strike and CE / PE to see the live chart."; return; }
@@ -95,6 +104,7 @@
   new MutationObserver(changed).observe(form.expiry, { childList: true }); new MutationObserver(changed).observe(form.strike, { childList: true });
   document.querySelectorAll("[data-pvtf]").forEach((b) => b.addEventListener("click", () => { tf = +b.dataset.pvtf; document.querySelectorAll("[data-pvtf]").forEach((x) => x.classList.toggle("on", x === b)); key = ""; changed(); }));
   $("pvSr").addEventListener("change", (e) => { srOn = e.target.checked; drawSr(); }); $("pvMean").addEventListener("change", (e) => { meanOn = e.target.checked; drawMean(); });
+  $("pvTi").addEventListener("change", (e) => { tiOn = e.target.checked; if (tiOn && !lastTi) { const s = sel(); if (s) loadTi(s, gen); } else { drawTi(); drawZh(times); } });
   $("pvZh").addEventListener("change", (e) => { zhOn = e.target.checked; if (zhOn && !lastZh) { const s = sel(); if (s) loadZh(s, gen); } else drawZh(times); });
   document.querySelectorAll(".tabs button, nav button, [data-tab]").forEach((b) => b.addEventListener("click", () => setTimeout(changed, 100)));
   timer = setInterval(tick, 3000); setTimeout(changed, 800);
