@@ -251,7 +251,7 @@ if (typeof document !== "undefined") (function () {
   let lastTi = null, tiLines = [], tiTs = 0, tiExpanded = false;
   function drawTi() {                                                                            // Trading Intelligence: dashboard box (right) + grey REFERENCE lines + open paper-trade lines on the option premium chart
     tiLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); tiLines = [];
-    if (series.c && ind.ti && lastTi && view === "option" && lastBar) tiRefLines(lastBar.close, lastTi).forEach((L) => tiLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
+    if (series.c && ind.ti && lastTi && view === "option" && lastBar) tiRefLines(lastBar.close, lastTi, sel ? { strike: sel.strike, option_type: sel.option_type } : null).forEach((L) => tiLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
     const host = $("tmChart"); if (!host) return; let box = $("tmTiDash");
     if (!box) { box = document.createElement("div"); box.id = "tmTiDash"; box.style.cssText = "position:absolute;z-index:5;background:rgba(17,22,33,.86);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;cursor:pointer;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere"; box.onclick = () => { tiExpanded = !tiExpanded; drawTi(); }; host.appendChild(box); }
     const narrow = host.clientWidth < 520; const t = ind.ti ? tiBoxText(lastTi, narrow, tiExpanded) : "";

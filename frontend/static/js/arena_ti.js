@@ -16,15 +16,22 @@ const TI_LEGEND = [
   "Cost  = १ lot चा खर्च; BE = नफ्यासाठी option ची किमान वाढ (points)",
   "ATM  = मधला strike; spread = खरेदी/विक्री भावातील फरक; thin = कमी liquid",
   "Paper  = कागदी (खोटे) ट्रेड, खरे order नाहीत",
-  "राखाडी रेषा = सरासरी आकडेवारीवरून संदर्भ पातळ्या, signal नाही",
+  "निळी ENTRY / लाल SL / हिरवे T1-T4 (तुटक) = 'आत्ता घेतले तर' आराखडा, signal नाही; सलग रेषा = खरा paper ट्रेड",
 ].join("\n");
 function tiBoxText(ti, compact, expanded) { return expanded ? tiDashText(ti, false) + "\n\n" + TI_LEGEND + "\n(बंद करायला पुन्हा टॅप करा)" : tiDashText(ti, compact) + (ti && !ti.error ? "\nⓘ टॅप = अर्थ" : ""); }
-/* price lines for the selected OPTION premium chart: grey dashed REFERENCE levels around the last price + the levels of OPEN paper trades of this contract */
-function tiRefLines(lastPrice, ti) {
-  const out = []; if (!ti || !(lastPrice > 0)) return out; const r = ti.reference;
-  if (r) {
-    out.push({ price: +(lastPrice * (1 + r.sl_pct)).toFixed(2), color: TI_COLORS.ref, style: 2, title: `TI ref SL ${Math.round(r.sl_pct * 100)}%` + (r.p_stop_20pct != null ? ` (p stop ${Math.round(r.p_stop_20pct * 100)}%)` : "") });
-    (r.targets_pct || []).forEach((p, i) => out.push({ price: +(lastPrice * (1 + p)).toFixed(2), color: TI_COLORS.ref, style: 2, title: `TI ref T${i + 1} +${(p * 100).toFixed(1)}%` + (i === 1 && r.p_target_first_10pct != null ? ` (p +10% before -20%: ${Math.round(r.p_target_first_10pct * 100)}%)` : "") }));
+/* price lines for the selected OPTION premium chart.
+   PLAN = what the levels would be if you bought this option NOW: blue ENTRY at the last premium, red SL, green T1-T4 (statistics of the instrument's own 15-minute premium excursions). It is a plan, not a signal.
+   If the latest decision of this contract is a BUY (paper candidate) its own levels are drawn instead, solid. Open PAPER trades of this contract draw their levels solid too. */
+function tiRefLines(lastPrice, ti, contract) {
+  const out = []; if (!ti || !(lastPrice > 0)) return out; const r = ti.reference, d = ti.decision;
+  const buy = d && /^BUY/.test(d.action || "") && d.entry && d.sl && (d.targets || []).length && d.strike != null && contract && Math.abs(d.strike - Number(contract.strike)) < 1e-9 && d.option_type === contract.option_type;
+  if (buy) {
+    out.push({ price: d.entry, color: TI_COLORS.paper, style: 0, title: `TI ${d.action} ENTRY` }); out.push({ price: d.sl, color: TI_COLORS.sl, style: 0, title: "TI SL" });
+    d.targets.forEach((p, i) => out.push({ price: p, color: TI_COLORS.t[i] || TI_COLORS.ref, style: 0, title: "TI T" + (i + 1) }));
+  } else if (r) {
+    out.push({ price: +lastPrice.toFixed(2), color: TI_COLORS.paper, style: 2, title: "TI plan ENTRY" });
+    out.push({ price: +(lastPrice * (1 + r.sl_pct)).toFixed(2), color: TI_COLORS.sl, style: 2, title: `TI plan SL ${Math.round(r.sl_pct * 100)}%` + (r.p_stop_20pct != null ? ` (stop hit ${Math.round(r.p_stop_20pct * 100)}%)` : "") });
+    (r.targets_pct || []).forEach((p, i) => out.push({ price: +(lastPrice * (1 + p)).toFixed(2), color: TI_COLORS.t[i] || TI_COLORS.ref, style: 2, title: `TI plan T${i + 1} +${(p * 100).toFixed(1)}%` + (i === 0 && r.p_target_first_10pct != null ? ` (+10% before -20%: ${Math.round(r.p_target_first_10pct * 100)}%)` : "") }));
   }
   ((ti.paper && ti.paper.trades) || []).filter((t) => t.closed == null).forEach((t) => {
     out.push({ price: t.entry, color: TI_COLORS.paper, style: 0, title: "TI paper ENTRY" }); out.push({ price: t.sl, color: TI_COLORS.sl, style: 0, title: "TI paper SL" });

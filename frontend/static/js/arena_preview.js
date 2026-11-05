@@ -67,7 +67,7 @@
   let times = [];
   function drawTi() {                                                                            // Trading Intelligence: dashboard box + grey REFERENCE levels around the last premium + open paper-trade levels
     tiLinesPv.forEach((l) => { try { cs.removePriceLine(l); } catch (e) { /* ok */ } }); tiLinesPv = [];
-    if (cs && tiOn && lastTi && last) tiRefLines(last.close, lastTi).forEach((L) => tiLinesPv.push(cs.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
+    if (cs && tiOn && lastTi && last) tiRefLines(last.close, lastTi, { strike: form.strike.value, option_type: form.option_type.value }).forEach((L) => tiLinesPv.push(cs.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
     const d = $("pvTiDash"); if (!d) return; if (!d.dataset.bound) { d.dataset.bound = "1"; d.onclick = () => { tiExp = !tiExp; drawTi(); }; }
     const narrow = el.clientWidth < 520, t = tiOn ? tiBoxText(lastTi, narrow, tiExp) : "";
     if (narrow) { d.style.left = "6px"; d.style.right = "auto"; d.style.top = "auto"; d.style.bottom = "34px"; d.style.maxWidth = tiExp ? "92%" : "64%"; } else { d.style.right = "56px"; d.style.left = "auto"; d.style.top = "6px"; d.style.bottom = "auto"; d.style.maxWidth = tiExp ? "min(460px,70%)" : "min(300px,46%)"; }
