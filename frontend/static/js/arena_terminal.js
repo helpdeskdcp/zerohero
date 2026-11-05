@@ -248,13 +248,16 @@ if (typeof document !== "undefined") (function () {
   const orderMarker = (r, times) => { if (!r.posted_ts) return null; const t = tmSnap(times, Math.floor(r.posted_ts) + IST_SHIFT); return t != null ? { time: t, position: "belowBar", color: "#60a5fa", shape: "circle", text: "ORDER" } : null; };
   let lastR = null, uLines = [], hlLines = [], vmk = null, lastVol = null, optCandles = []; lastR = null;
   let lastZh = null, zhLines = [], zhTs = 0;
-  let lastTi = null, tiLines = [], tiTs = 0;
+  let lastTi = null, tiLines = [], tiTs = 0, tiExpanded = false;
   function drawTi() {                                                                            // Trading Intelligence: dashboard box (right) + grey REFERENCE lines + open paper-trade lines on the option premium chart
     tiLines.forEach((l) => { try { series.c.removePriceLine(l); } catch (e) { /* ok */ } }); tiLines = [];
     if (series.c && ind.ti && lastTi && view === "option" && lastBar) tiRefLines(lastBar.close, lastTi).forEach((L) => tiLines.push(series.c.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
     const host = $("tmChart"); if (!host) return; let box = $("tmTiDash");
-    if (!box) { box = document.createElement("div"); box.id = "tmTiDash"; box.style.cssText = "position:absolute;right:56px;top:6px;z-index:5;background:rgba(17,22,33,.82);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;pointer-events:none;max-width:min(300px,46%);max-height:46%;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere"; host.appendChild(box); }
-    const t = ind.ti && host.clientWidth >= 520 ? tiDashText(lastTi) : ""; box.textContent = t; box.style.display = t ? "block" : "none";
+    if (!box) { box = document.createElement("div"); box.id = "tmTiDash"; box.style.cssText = "position:absolute;z-index:5;background:rgba(17,22,33,.86);color:#dbe4f0;font:10px/1.3 ui-monospace,monospace;padding:3px 6px;border-radius:4px;cursor:pointer;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere"; box.onclick = () => { tiExpanded = !tiExpanded; drawTi(); }; host.appendChild(box); }
+    const narrow = host.clientWidth < 520; const t = ind.ti ? tiBoxText(lastTi, narrow, tiExpanded) : "";
+    if (narrow) { box.style.left = "6px"; box.style.right = "auto"; box.style.top = "auto"; box.style.bottom = "34px"; box.style.maxWidth = tiExpanded ? "92%" : "64%"; }                    // phone: small box bottom-left, never over the ZHX box
+    else { box.style.right = "56px"; box.style.left = "auto"; box.style.top = "6px"; box.style.bottom = "auto"; box.style.maxWidth = tiExpanded ? "min(460px,70%)" : "min(300px,46%)"; }
+    box.style.maxHeight = tiExpanded ? "80%" : "46%"; box.textContent = t; box.style.display = t ? "block" : "none";
   }
   async function loadTi(r) {
     if (!r || r.instrument === "EQUITY" || !ind.ti) return; const my = gen, e = encodeURIComponent; tiTs = Date.now();

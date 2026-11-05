@@ -1,10 +1,24 @@
 /* Trading Intelligence (ZeroHero V2) overlay helpers for the Arena charts. Pure functions (node-testable) shared by the Terminal chart and the Submit chart.
    The backend sends dashboard rows, REFERENCE level percentages (statistics, not a signal) and paper trades; nothing here can place an order. */
 const TI_COLORS = { sl: "#ef4444", t: ["#22c55e", "#84cc16", "#22d3ee", "#e879f9"], ref: "#9ca3af", paper: "#60a5fa" };
-function tiDashText(ti) {
+function tiDashText(ti, compact) {
   if (!ti) return ""; if (ti.error) return "TI: " + ti.error; const d = ti.dash || [];
-  return d.length ? d.map((r) => r.filter(Boolean).join("  ")).join("\n") : "TI: waiting for data";
+  if (!d.length) return "TI: waiting for data";
+  const pick = compact ? d.filter((r, i) => i === 0 || ["Now", "Edge", "Cost"].includes(r[0])) : d;      // narrow chart (phone): title + Now + Edge + Cost only
+  return pick.map((r) => r.filter(Boolean).join("  ")).join("\n");
 }
+/* plain-language meaning of every line, shown when the box is tapped */
+const TI_LEGEND = [
+  "Edge  = सिद्ध झालेला फायदा (none validated = अजून कोणताही नियम खर्चानंतर नफा देत नाही)",
+  "Now  = सध्याचा निर्णय. NO TRADE = ट्रेड घेऊ नका",
+  "Mode  = data only: या instrument चे मॉडेल नाही, फक्त खरे भाव आणि खर्च दाखवतो",
+  "Score  = मॉडेलचा अंदाज; threshold च्या खाली = निवडला जात नाही",
+  "Cost  = १ lot चा खर्च; BE = नफ्यासाठी option ची किमान वाढ (points)",
+  "ATM  = मधला strike; spread = खरेदी/विक्री भावातील फरक; thin = कमी liquid",
+  "Paper  = कागदी (खोटे) ट्रेड, खरे order नाहीत",
+  "राखाडी रेषा = सरासरी आकडेवारीवरून संदर्भ पातळ्या, signal नाही",
+].join("\n");
+function tiBoxText(ti, compact, expanded) { return expanded ? tiDashText(ti, false) + "\n\n" + TI_LEGEND + "\n(बंद करायला पुन्हा टॅप करा)" : tiDashText(ti, compact) + (ti && !ti.error ? "\nⓘ टॅप = अर्थ" : ""); }
 /* price lines for the selected OPTION premium chart: grey dashed REFERENCE levels around the last price + the levels of OPEN paper trades of this contract */
 function tiRefLines(lastPrice, ti) {
   const out = []; if (!ti || !(lastPrice > 0)) return out; const r = ti.reference;
@@ -27,4 +41,4 @@ function tiMarkers(times, ti, snap, shift) {
   }
   return out;
 }
-if (typeof module !== "undefined") module.exports = { tiDashText, tiRefLines, tiMarkers, TI_COLORS };
+if (typeof module !== "undefined") module.exports = { tiDashText, tiBoxText, TI_LEGEND, tiRefLines, tiMarkers, TI_COLORS };

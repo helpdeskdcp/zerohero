@@ -5,7 +5,7 @@
   const $ = (id) => document.getElementById(id), form = $("f"), box = $("pvBox");
   if (!form || !box || !window.LightweightCharts) return;
   const pane = document.querySelector('[data-pane="submit"]'), LW = window.LightweightCharts, el = $("pvChart");
-  let tiOn = true, lastTi = null, tiTs = 0, tiLinesPv = [], cand = [], srOn = true, meanOn = true, srLines = [], vw = null, em = null, chart = null, cs = null, mk = null, key = "", gen = 0, tf = 1, zhOn = true, last = null, lastZh = null, zhTs = 0, zhLines = [], myLines = [], timer = null, debounce = null;
+  let tiOn = true, tiExp = false, lastTi = null, tiTs = 0, tiLinesPv = [], cand = [], srOn = true, meanOn = true, srLines = [], vw = null, em = null, chart = null, cs = null, mk = null, key = "", gen = 0, tf = 1, zhOn = true, last = null, lastZh = null, zhTs = 0, zhLines = [], myLines = [], timer = null, debounce = null;
   const read = () => { try { return sessionStorage.getItem("arena_token") || ""; } catch (e) { return ""; } };
   async function api(path) { const r = await fetch("/api/arena/public" + path, { headers: { "X-Arena-Token": read() }, cache: "no-store" }); if (!r.ok) throw new Error(path.split("?")[0] + " " + r.status); return r.json(); }
   const num = (v) => { const x = parseFloat(String(v || "").replace(",", ".")); return isFinite(x) && x > 0 ? x : null; };
@@ -68,7 +68,10 @@
   function drawTi() {                                                                            // Trading Intelligence: dashboard box + grey REFERENCE levels around the last premium + open paper-trade levels
     tiLinesPv.forEach((l) => { try { cs.removePriceLine(l); } catch (e) { /* ok */ } }); tiLinesPv = [];
     if (cs && tiOn && lastTi && last) tiRefLines(last.close, lastTi).forEach((L) => tiLinesPv.push(cs.createPriceLine({ price: L.price, color: L.color, lineWidth: 1, lineStyle: L.style, axisLabelVisible: true, title: L.title })));
-    const d = $("pvTiDash"); if (!d) return; const t = tiOn && el.clientWidth >= 520 ? tiDashText(lastTi) : ""; d.textContent = t; d.style.display = t ? "block" : "none";
+    const d = $("pvTiDash"); if (!d) return; if (!d.dataset.bound) { d.dataset.bound = "1"; d.onclick = () => { tiExp = !tiExp; drawTi(); }; }
+    const narrow = el.clientWidth < 520, t = tiOn ? tiBoxText(lastTi, narrow, tiExp) : "";
+    if (narrow) { d.style.left = "6px"; d.style.right = "auto"; d.style.top = "auto"; d.style.bottom = "34px"; d.style.maxWidth = tiExp ? "92%" : "64%"; } else { d.style.right = "56px"; d.style.left = "auto"; d.style.top = "6px"; d.style.bottom = "auto"; d.style.maxWidth = tiExp ? "min(460px,70%)" : "min(300px,46%)"; }
+    d.style.maxHeight = tiExp ? "80%" : "46%"; d.textContent = t; d.style.display = t ? "block" : "none";
   }
   async function loadTi(s, my) {
     tiTs = Date.now(); let z; try { z = await api(`/chart/ti?${q(s)}`); } catch (e) { z = { error: String(e.message || e) }; }
